@@ -766,10 +766,11 @@ serve(async (req) => {
     let targetUserId = user.id;
     try { const body = await req.json(); if (body.user_id) targetUserId = body.user_id; } catch { /* no body */ }
 
-    // Fetch rules and onboarding in parallel
-    const [onbResult, rulesResult] = await Promise.all([
+    // Fetch rules, onboarding and user_schedule in parallel
+    const [onbResult, rulesResult, scheduleResult] = await Promise.all([
       supabase.from("onboarding").select("*").eq("user_id", targetUserId).single(),
       supabase.from("training_rules").select("*").limit(1).single(),
+      supabase.from("user_schedule").select("gym_slots").eq("user_id", targetUserId).maybeSingle(),
     ]);
 
     const onb = onbResult.data;
@@ -812,10 +813,18 @@ serve(async (req) => {
     const goal = onb.goal || "general_health";
     const specificGoal = onb.specific_goal || "";
     const sports = onb.sports ? onb.sports.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
-    const daysAvailable = parseInt(
+    // Prefer real weekly schedule (gym_slots) over onboarding availability when present
+    const gymSlots = Array.isArray(scheduleResult.data?.gym_slots)
+      ? (scheduleResult.data!.gym_slots as Array<{ day: number; start: string; duration: number }>)
+      : [];
+    const scheduleDays = gymSlots.length > 0 ? gymSlots.length : null;
+    const daysAvailable = scheduleDays ?? parseInt(
       typeof onb.availability === "object" && onb.availability !== null
         ? (onb.availability as any).days || "4" : "4"
     );
+    if (scheduleDays) {
+      console.log(`[GENERATE-PLAN] Using user_schedule: ${scheduleDays} gym slots/week`);
+    }
     const intensityLevel = onb.intensity_level || 5;
     const userLevel = intensityToLevel(intensityLevel);
     let equipmentType = onb.equipment_type || "Mixto";

@@ -11,8 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Save, Camera, Trash2, Loader2, User, Lock, ClipboardList,
-  CreditCard, ExternalLink, Calendar, Crown,
+  CreditCard, ExternalLink, Calendar, Crown, CalendarClock,
 } from "lucide-react";
+import CalendarExportDialog from "@/components/dashboard/CalendarExportDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -282,6 +283,30 @@ const SettingsPanel = () => {
           {!isActive && paymentStatus !== "paid" && (
             <p className="text-sm text-muted-foreground text-center">No tienes una suscripción activa. Vuelve al inicio para suscribirte.</p>
           )}
+        </div>
+      </div>
+
+      {/* Calendar */}
+      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+        <div className="flex items-center gap-2 mb-4">
+          <CalendarClock className="w-5 h-5 text-primary" />
+          <h2 className="font-bold font-display text-lg">Calendario</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Tu plan se vive en tu Google Calendar real. Configura tus horarios y sincroniza.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Button variant="outline" onClick={() => navigate("/my-schedule")}>
+            <CalendarClock className="w-4 h-4 mr-2" /> Mi semana real
+          </Button>
+          <CalendarExportDialog
+            dayPlans={[]}
+            trigger={
+              <Button variant="default">
+                <Calendar className="w-4 h-4 mr-2" /> Sincronizar Calendar
+              </Button>
+            }
+          />
         </div>
       </div>
 

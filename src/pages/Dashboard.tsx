@@ -272,53 +272,72 @@ const Dashboard = () => {
 
             {/* Home section */}
             {hasPlan && section === "home" && (
-              <div className="space-y-8 max-w-4xl">
+              <div className="space-y-6 max-w-7xl mx-auto">
                 <Greeting name={profileName} createdAt={profileCreatedAt} completedDays={completedDays} />
+
+                {/* CALENDAR HERO — main desktop CTA */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent rounded-2xl p-6 lg:p-8 border-2 border-primary/30 card-shadow"
+                >
+                  <div className="grid lg:grid-cols-[1fr_auto] gap-6 items-center">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                        <CalendarIcon className="w-7 h-7 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold font-display text-xl lg:text-2xl mb-1">Tu plan vive en tu Google Calendar</h3>
+                        <p className="text-sm text-muted-foreground max-w-xl">
+                          Entrenos y comidas sincronizados a las horas que tú eliges. Sin app móvil. Todo en el calendario que ya usas.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:min-w-[220px]">
+                      <Button variant="hero" size="default" onClick={() => navigate("/my-schedule")} className="lg:w-full">
+                        <CalendarClock className="w-4 h-4 mr-1.5" /> Configurar mi semana
+                      </Button>
+                      <CalendarExportDialog
+                        dayPlans={dayPlans}
+                        trigger={
+                          <Button variant="outline" size="default" className="lg:w-full">
+                            <CalendarIcon className="w-4 h-4 mr-1.5" /> Sincronizar Calendar
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* WEEKLY PROGRESS full-width */}
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                   {user && <WeeklyProgress userId={user.id} dayPlans={dayPlans} />}
                 </motion.div>
-                <HomeOverview
-                  dayPlans={dayPlans}
-                  macros={macros}
-                  meals={meals}
-                  onNavigate={setSection}
-                  weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0}
-                  completedDays={completedDays}
-                />
-                {user && <TravelModeCard userId={user.id} />}
-                {user && <PRsList userId={user.id} />}
-                <ReferralShare />
 
-                {/* Exportar plan a PDF */}
-                {/* Sincronización Calendario — CTA principal */}
-                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl p-6 border-2 border-primary/30 card-shadow space-y-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                      <CalendarIcon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold font-display text-lg mb-1">Tu plan, en tu Google Calendar</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Sincroniza entrenos y comidas a las horas que tú eliges. Sin app móvil. Todo en el calendario que ya usas.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate("/my-schedule")}>
-                      <CalendarClock className="w-4 h-4 mr-1.5" /> Configurar mis horarios
-                    </Button>
-                    <CalendarExportDialog
+                {/* MAIN GRID — overview left, side panel right */}
+                <div className="grid lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2 space-y-6">
+                    <HomeOverview
                       dayPlans={dayPlans}
-                      trigger={
-                        <Button variant="hero" size="sm">
-                          <CalendarIcon className="w-4 h-4 mr-1.5" /> Sincronizar con Calendar
-                        </Button>
-                      }
+                      macros={macros}
+                      meals={meals}
+                      onNavigate={setSection}
+                      weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0}
+                      completedDays={completedDays}
                     />
+                    {user && <PRsList userId={user.id} />}
                   </div>
-                  <Button variant="ghost" size="sm" onClick={handleExportPDF} className="w-full text-xs text-muted-foreground">
-                    <Download className="w-3.5 h-3.5 mr-1.5" /> O descarga el PDF
-                  </Button>
+                  <aside className="space-y-6">
+                    {user && <TravelModeCard userId={user.id} />}
+                    <ReferralShare />
+                    <div className="bg-card rounded-xl p-4 border border-border space-y-2">
+                      <p className="text-sm font-semibold">¿Prefieres papel?</p>
+                      <p className="text-xs text-muted-foreground">Descarga tu plan completo en PDF.</p>
+                      <Button variant="outline" size="sm" onClick={handleExportPDF} className="w-full">
+                        <Download className="w-3.5 h-3.5 mr-1.5" /> Descargar PDF
+                      </Button>
+                    </div>
+                  </aside>
                 </div>
               </div>
             )}

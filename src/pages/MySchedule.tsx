@@ -118,7 +118,15 @@ const MySchedule = () => {
         { onConflict: "user_id" }
       );
       if (error) throw error;
-      toast.success("Horarios guardados. Tu calendario se actualizará en unos minutos.");
+      toast.success("Horarios guardados. Regenerando tu plan…");
+      // Regenerate plan in background so the new gym_slots take effect
+      supabase.functions.invoke("generate-plan").then(({ error: genErr }) => {
+        if (genErr) {
+          toast.error("Plan no regenerado: " + genErr.message);
+        } else {
+          toast.success("Plan actualizado a tu nueva semana ✓");
+        }
+      });
     } catch (e) {
       toast.error("Error al guardar");
     } finally {
