@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,18 +139,17 @@ const Onboarding = () => {
   const update = (field: string, value: any) => setData((d) => ({ ...d, [field]: value }));
 
   // Detectar si volvemos del OAuth de Google Calendar y saltar al paso del calendario.
-  // El callback redirige a /onboarding?gcal=connected
-  useState(() => {
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("gcal") === "connected") {
       setStep(12);
-      // limpiar query para no re-disparar
+      setGcalConnected(true);
       window.history.replaceState({}, "", "/onboarding");
     }
-  });
+  }, []);
 
-  // Comprobar estado de conexión cuando estamos en el step de Google Calendar
-  useState(() => {
+  // Comprobar estado de conexión a Google Calendar
+  useEffect(() => {
     if (!user) return;
     supabase
       .from("google_calendar_tokens")
@@ -158,7 +157,7 @@ const Onboarding = () => {
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => setGcalConnected(!!data));
-  });
+  }, [user]);
 
   const handleConnectGoogle = async () => {
     setGcalLoading(true);
