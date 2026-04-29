@@ -11,9 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import {
   Save, Camera, Trash2, Loader2, User, Lock, ClipboardList,
-  CreditCard, ExternalLink, Calendar, Crown, CalendarClock,
+  CreditCard, ExternalLink, Calendar, Crown, CalendarClock, Check, Zap, Unplug, RefreshCw,
 } from "lucide-react";
-import CalendarExportDialog from "@/components/dashboard/CalendarExportDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -56,6 +55,11 @@ const SettingsPanel = () => {
   });
   const [hasOnboarding, setHasOnboarding] = useState(false);
 
+  // Google Calendar connection
+  const [gcalConnected, setGcalConnected] = useState(false);
+  const [gcalLastSync, setGcalLastSync] = useState<string | null>(null);
+  const [gcalLoading, setGcalLoading] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
@@ -94,9 +98,63 @@ const SettingsPanel = () => {
       supabase.functions.invoke("check-subscription").then(({ data }) => {
         if (data?.plan === "monthly" || data?.plan === "yearly") setCurrentPlan(data.plan);
       });
+
+      // Fetch Google Calendar connection status
+      supabase
+        .from("google_calendar_tokens")
+        .select("last_sync_at")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          setGcalConnected(!!data);
+          setGcalLastSync(data?.last_sync_at || null);
+        });
     };
     fetch();
   }, [user]);
+
+  const handleConnectGoogle = async () => {
+    setGcalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gcal-oauth-start", {
+        body: { return_to: window.location.href },
+      });
+      if (error) throw error;
+      if (data?.url) window.location.href = data.url;
+    } catch {
+      toast.error("No se pudo iniciar la conexión con Google");
+      setGcalLoading(false);
+    }
+  };
+
+  const handleSyncGoogle = async () => {
+    setGcalLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("gcal-sync");
+      if (error) throw error;
+      toast.success(`✅ ${data.synced}/${data.total} eventos sincronizados`);
+      setGcalLastSync(new Date().toISOString());
+    } catch {
+      toast.error("Error al sincronizar");
+    } finally {
+      setGcalLoading(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    setGcalLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke("gcal-disconnect");
+      if (error) throw error;
+      setGcalConnected(false);
+      setGcalLastSync(null);
+      toast.success("Google Calendar desconectado");
+    } catch {
+      toast.error("Error al desconectar");
+    } finally {
+      setGcalLoading(false);
+    }
+  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,24 +348,50 @@ const SettingsPanel = () => {
       <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-4">
           <CalendarClock className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Calendario</h2>
+          <h2 className="font-bold font-display text-lg">Google Calendar</h2>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Tu plan se vive en tu Google Calendar real. Configura tus horarios y sincroniza.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Button variant="outline" onClick={() => navigate("/my-schedule")}>
-            <CalendarClock className="w-4 h-4 mr-2" /> Mi semana real
-          </Button>
-          <CalendarExportDialog
-            dayPlans={[]}
-            trigger={
-              <Button variant="default">
-                <Calendar className="w-4 h-4 mr-2" /> Sincronizar Calendar
+        {gcalConnected ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-xl text-sm">
+              <Check className="w-4 h-4 text-primary shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">Conectado</p>
+                {gcalLastSync && (
+                  <p className="text-xs text-muted-foreground">
+                    Última sync: {new Date(gcalLastSync).toLocaleString("es-ES")}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-2">
+              <Button variant="outline" onClick={() => navigate("/my-schedule")} size="sm">
+                <CalendarClock className="w-4 h-4 mr-2" /> Mi semana
               </Button>
-            }
-          />
-        </div>
+              <Button variant="default" onClick={handleSyncGoogle} disabled={gcalLoading} size="sm">
+                {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                Sincronizar
+              </Button>
+              <Button variant="outline" onClick={handleDisconnectGoogle} disabled={gcalLoading} size="sm">
+                <Unplug className="w-4 h-4 mr-2" /> Desconectar
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Sincroniza tus entrenos y comidas directamente en tu Google Calendar.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => navigate("/my-schedule")} size="sm">
+                <CalendarClock className="w-4 h-4 mr-2" /> Mi semana
+              </Button>
+              <Button variant="hero" onClick={handleConnectGoogle} disabled={gcalLoading} size="sm">
+                {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                Conectar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Password */}
