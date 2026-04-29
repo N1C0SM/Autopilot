@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap } from "lucide-react";
 import PricingTiers from "@/components/PricingTiers";
 
 const STEPS = [
@@ -24,6 +24,7 @@ const STEPS = [
   "Tests de Nivel",
   "Lesiones",
   "Nutrición",
+  "Google Calendar",
   "Resumen",
 ];
 
