@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle, CalendarClock } from "lucide-react";
+import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle } from "lucide-react";
 import { Download, Calendar as CalendarIcon } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import { toast } from "sonner";
@@ -25,7 +25,6 @@ import SettingsPanel from "@/components/SettingsPanel";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import ReferralShare from "@/components/ReferralShare";
 import { exportPlanPDF } from "@/lib/exportPlanPDF";
-import CalendarExportDialog from "@/components/dashboard/CalendarExportDialog";
 
 export interface Profile {
   user_id: string;
@@ -274,40 +273,6 @@ const Dashboard = () => {
             {hasPlan && section === "home" && (
               <div className="space-y-6 max-w-7xl mx-auto">
                 <Greeting name={profileName} createdAt={profileCreatedAt} completedDays={completedDays} />
-
-                {/* CALENDAR HERO — main desktop CTA */}
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent rounded-2xl p-6 lg:p-8 border-2 border-primary/30 card-shadow"
-                >
-                  <div className="grid lg:grid-cols-[1fr_auto] gap-6 items-center">
-                    <div className="flex items-start gap-4">
-                      <div className="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                        <CalendarIcon className="w-7 h-7 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold font-display text-xl lg:text-2xl mb-1">Tu plan vive en tu Google Calendar</h3>
-                        <p className="text-sm text-muted-foreground max-w-xl">
-                          Entrenos y comidas sincronizados a las horas que tú eliges. Sin app móvil. Todo en el calendario que ya usas.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 lg:min-w-[220px]">
-                      <Button variant="hero" size="default" onClick={() => navigate("/my-schedule")} className="lg:w-full">
-                        <CalendarClock className="w-4 h-4 mr-1.5" /> Configurar mi semana
-                      </Button>
-                      <CalendarExportDialog
-                        dayPlans={dayPlans}
-                        trigger={
-                          <Button variant="outline" size="default" className="lg:w-full">
-                            <CalendarIcon className="w-4 h-4 mr-1.5" /> Sincronizar Calendar
-                          </Button>
-                        }
-                      />
-                    </div>
-                  </div>
-                </motion.div>
 
                 {/* WEEKLY PROGRESS full-width */}
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
