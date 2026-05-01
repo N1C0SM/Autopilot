@@ -940,6 +940,29 @@ serve(async (req) => {
 
     console.log(`[GENERATE-PLAN] Plan generated for ${targetUserId}: ${weeklyPlan.length} days, skill="${specificGoal}"`);
 
+    // Auto-sync Google Calendar (fire-and-forget) if user has connected
+    try {
+      const { data: tok } = await supabase
+        .from("google_calendar_tokens")
+        .select("user_id")
+        .eq("user_id", targetUserId)
+        .maybeSingle();
+      if (tok) {
+        const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/gcal-sync`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${serviceKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user_id: targetUserId }),
+        }).catch((e) => console.log(`[GENERATE-PLAN] gcal-sync trigger failed: ${e}`));
+        console.log(`[GENERATE-PLAN] Triggered gcal-sync for ${targetUserId}`);
+      }
+    } catch (e) {
+      console.log(`[GENERATE-PLAN] gcal-sync skipped: ${e}`);
+    }
+
     return new Response(JSON.stringify({
       success: true, training_days: weeklyPlan.length, macros, meals_count: meals.length,
       skill_profile: skillProfile ? { muscles: skillProfile.priorityMuscles, patterns: skillProfile.priorityPatterns } : null,
