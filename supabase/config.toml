@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.gcal-disconnect]
 verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = true
