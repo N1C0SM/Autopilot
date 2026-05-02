@@ -127,6 +127,24 @@ const MySchedule = () => {
           toast.success("Plan actualizado a tu nueva semana ✓");
         }
       });
+
+      // Auto-sync Google Calendar in background if connected
+      const { data: gcalTok } = await supabase
+        .from("google_calendar_tokens")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (gcalTok) {
+        supabase.functions.invoke("gcal-sync").then(({ data, error: syncErr }) => {
+          if (syncErr) {
+            toast.error("No se pudo sincronizar Google Calendar");
+          } else {
+            const synced = (data as any)?.synced ?? 0;
+            const deleted = (data as any)?.deleted ?? 0;
+            toast.success(`Google Calendar sincronizado · ${synced} eventos${deleted ? ` · ${deleted} obsoletos eliminados` : ""}`);
+          }
+        });
+      }
     } catch (e) {
       toast.error("Error al guardar");
     } finally {
