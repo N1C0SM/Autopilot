@@ -10,6 +10,7 @@ import UserDetail from "@/components/admin/UserDetail";
 import PaymentModeToggle from "@/components/admin/PaymentModeToggle";
 import ExerciseLibrary from "@/components/admin/ExerciseLibrary";
 import TrainingRulesEditor from "@/components/admin/TrainingRulesEditor";
+import PaymentReminders from "@/components/admin/PaymentReminders";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export interface Profile {
@@ -22,7 +23,7 @@ export interface Profile {
   travel_equipment?: string | null;
 }
 
-export type AdminSection = "dashboard" | "users" | "exercises" | "rules" | "settings";
+export type AdminSection = "dashboard" | "users" | "reminders" | "exercises" | "rules" | "settings";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -96,6 +97,7 @@ const Admin = () => {
             <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground">
               {section === "dashboard" && "Panel general"}
               {section === "users" && (selectedUser ? selectedUser.email : "Usuarios")}
+              {section === "reminders" && "Recordatorios de pago"}
               {section === "exercises" && "Biblioteca de ejercicios"}
               {section === "rules" && "Reglas de generación"}
               {section === "settings" && "Configuración"}
@@ -184,6 +186,12 @@ const Admin = () => {
                     }}
                   />
                 )}
+              </div>
+            )}
+
+            {section === "reminders" && (
+              <div className="max-w-5xl">
+                <PaymentReminders users={users.filter(u => !adminIds.has(u.user_id))} />
               </div>
             )}
 
