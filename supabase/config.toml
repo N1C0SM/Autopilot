@@ -1,52 +1,39 @@
 project_id = "enebrcdrdnfkyduzyrzm"
 
-[functions.create-checkout]
-verify_jwt = false
-
-[functions.create-payment]
-verify_jwt = false
-
-[functions.customer-portal]
-verify_jwt = false
-
-[functions.check-subscription]
-verify_jwt = false
-
-[functions.notify-plan-ready]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.auto-tasks]
-verify_jwt = false
-
-[functions.generate-plan]
-verify_jwt = false
-
-[functions.gcal-oauth-start]
-verify_jwt = false
-
-[functions.gcal-oauth-callback]
-verify_jwt = false
-
-[functions.gcal-sync]
-verify_jwt = false
-
-[functions.gcal-disconnect]
-verify_jwt = false
-
-[functions.process-email-queue]
-verify_jwt = true
-
-[functions.send-transactional-email]
-verify_jwt = true
-
-[functions.preview-transactional-email]
-verify_jwt = false
-
-[functions.handle-email-unsubscribe]
-verify_jwt = false
-
-[functions.handle-email-suppression]
-verify_jwt = false
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.auto-tasks]
+    verify_jwt = false
+  [functions.check-subscription]
+    verify_jwt = false
+  [functions.create-checkout]
+    verify_jwt = false
+  [functions.create-payment]
+    verify_jwt = false
+  [functions.customer-portal]
+    verify_jwt = false
+  [functions.gcal-disconnect]
+    verify_jwt = false
+  [functions.gcal-oauth-callback]
+    verify_jwt = false
+  [functions.gcal-oauth-start]
+    verify_jwt = false
+  [functions.gcal-sync]
+    verify_jwt = false
+  [functions.generate-plan]
+    verify_jwt = false
+  [functions.handle-email-suppression]
+    verify_jwt = false
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false
+  [functions.notify-plan-ready]
+    verify_jwt = false
+  [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.send-transactional-email]
+    verify_jwt = true
+  [functions.stripe-webhook]
+    verify_jwt = false
