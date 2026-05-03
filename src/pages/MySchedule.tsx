@@ -105,6 +105,7 @@ const MySchedule = () => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+    const toastId = toast.loading("Guardando tu semana…");
     try {
       const { error } = await supabase.from("user_schedule").upsert(
         {
@@ -118,35 +119,34 @@ const MySchedule = () => {
         { onConflict: "user_id" }
       );
       if (error) throw error;
-      toast.success("Horarios guardados. Regenerando tu plan…");
-      // Regenerate plan in background so the new gym_slots take effect
-      supabase.functions.invoke("generate-plan").then(({ error: genErr }) => {
-        if (genErr) {
-          toast.error("Plan no regenerado: " + genErr.message);
-        } else {
-          toast.success("Plan actualizado a tu nueva semana ✓");
-        }
-      });
 
-      // Auto-sync Google Calendar in background if connected
+      toast.loading("Regenerando tu plan…", { id: toastId });
+
+      // Run plan regeneration + (optional) calendar sync in parallel
       const { data: gcalTok } = await supabase
         .from("google_calendar_tokens")
         .select("user_id")
         .eq("user_id", user.id)
         .maybeSingle();
-      if (gcalTok) {
-        supabase.functions.invoke("gcal-sync").then(({ data, error: syncErr }) => {
-          if (syncErr) {
-            toast.error("No se pudo sincronizar Google Calendar");
-          } else {
-            const synced = (data as any)?.synced ?? 0;
-            const deleted = (data as any)?.deleted ?? 0;
-            toast.success(`Google Calendar sincronizado · ${synced} eventos${deleted ? ` · ${deleted} obsoletos eliminados` : ""}`);
-          }
-        });
+
+      const tasks: Promise<any>[] = [supabase.functions.invoke("generate-plan")];
+      if (gcalTok) tasks.push(supabase.functions.invoke("gcal-sync"));
+
+      const [planRes, syncRes] = await Promise.all(tasks);
+
+      if (planRes?.error) {
+        toast.error("Guardado, pero no se pudo regenerar el plan", { id: toastId });
+        return;
+      }
+
+      if (gcalTok && syncRes?.data) {
+        const synced = (syncRes.data as any)?.synced ?? 0;
+        toast.success(`Plan actualizado · ${synced} eventos en Google Calendar`, { id: toastId });
+      } else {
+        toast.success("Plan actualizado a tu nueva semana ✓", { id: toastId });
       }
     } catch (e) {
-      toast.error("Error al guardar");
+      toast.error("No se pudo guardar tu semana", { id: toastId });
     } finally {
       setSaving(false);
     }

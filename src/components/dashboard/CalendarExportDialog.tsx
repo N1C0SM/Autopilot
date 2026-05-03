@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Calendar as CalendarIcon, Download, Link2, Copy, Check, Loader2, RefreshCw, Unplug, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,6 +40,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLastSync, setGcalLastSync] = useState<string | null>(null);
   const [gcalLoading, setGcalLoading] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (!open || !user) return;
@@ -168,11 +171,57 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-primary" /> Sincronizar con tu calendario
+            <CalendarIcon className="w-5 h-5 text-primary" /> Tu plan en tu calendario
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Conexión OAuth Google Calendar — HERO */}
+          <div className="bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/30 rounded-xl p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold">Google Calendar · 1 clic</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Sincroniza tu plan directo en tu calendario. Se actualiza solo.
+                </p>
+              </div>
+            </div>
+            {!gcalConnected ? (
+              <Button onClick={handleConnectGoogle} disabled={gcalLoading} className="w-full" variant="hero">
+                {gcalLoading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
+                Conectar Google Calendar
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 text-primary" />
+                  Conectado{gcalLastSync ? ` · ${new Date(gcalLastSync).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSyncGoogle} disabled={gcalLoading} className="flex-1" variant="hero">
+                    {gcalLoading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
+                    Sincronizar ahora
+                  </Button>
+                  <Button onClick={handleDisconnectGoogle} disabled={gcalLoading} size="icon" variant="outline" title="Desconectar">
+                    <Unplug className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Otras opciones (plegado) */}
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground py-2 px-1 transition-colors">
+                <span>Otras opciones (Apple, Outlook, .ics)</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-2">
           {/* Configuración */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -263,41 +312,8 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
               </div>
             )}
           </div>
-
-          {/* Conexión OAuth Google Calendar */}
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-lg p-4 space-y-2">
-            <div className="flex items-start gap-3">
-              <Zap className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Conectar con Google Calendar (1 clic)</p>
-                <p className="text-xs text-muted-foreground">
-                  Sincroniza tu plan directamente en tu calendario. Sin pegar URLs.
-                </p>
-              </div>
-            </div>
-            {!gcalConnected ? (
-              <Button onClick={handleConnectGoogle} disabled={gcalLoading} className="w-full" size="sm" variant="hero">
-                {gcalLoading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
-                Conectar Google Calendar
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Check className="w-3.5 h-3.5 text-primary" />
-                  Conectado{gcalLastSync ? ` · Última sync: ${new Date(gcalLastSync).toLocaleString("es-ES")}` : ""}
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleSyncGoogle} disabled={gcalLoading} size="sm" className="flex-1" variant="hero">
-                    {gcalLoading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
-                    Sincronizar ahora
-                  </Button>
-                  <Button onClick={handleDisconnectGoogle} disabled={gcalLoading} size="sm" variant="outline">
-                    <Unplug className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </DialogContent>
     </Dialog>
