@@ -1,77 +1,184 @@
+
+# Funnel de captación y conversión "Empezar gratis"
+
 ## Objetivo
+Reducir fricción del CTA principal y aumentar percepción de personalización antes de pedir email/registro. Hoy el CTA de la landing lleva a `/signup` (login upfront). Cambiamos a quiz primero → preview → registro → trial.
 
-Que cuando el usuario abra **su Google Calendar**, vea su semana real perfectamente organizada — entrenos en su hora, 5 comidas con kcal/macros propios, recordatorios — y que se mantenga sincronizado solo cuando edita "Mi semana real" o regenera plan, **sin solapes**.
+## Arquitectura de rutas nuevas
 
-## Cambios
+```text
+/                       Landing (rediseño hero + social proof + lead magnet)
+/quiz                   Quiz largo (1–2 min, 6–8 pasos) — sin auth
+/quiz/preview           Preview del plan personalizado + CTA registro
+/signup?from=quiz       Registro con datos del quiz pre-rellenados → trial 7 días
+/mini-plan              Lead magnet (3–4 preguntas) + captura email
+```
 
-### 1. `supabase/functions/gcal-sync/index.ts` — sync más inteligente
+Estado del quiz se guarda en `sessionStorage` (`autopilot_quiz`) para sobrevivir al registro y pre-poblar el onboarding existente, evitando repetir preguntas.
 
-**a) Macros y kcal por comida** (no solo total diario)
-- Leer `meal.kcal`, `meal.protein`, `meal.carbs`, `meal.fats` desde `meals_json` si existen.
-- Si no vienen por comida, dividir el total diario (`macros_json`) entre el número de comidas activas, redondeando.
-- Descripción de cada evento: `"450 kcal · 35g P · 50g C · 12g G\n\n<descripción de la comida>"`.
+## PRIORIDAD 1 — Landing + Funnel sin fricción
 
-**b) Resolver conflictos moviendo el ENTRENO** (decisión del usuario)
-- Construir primero los slots de comidas (son fijos por preferencia del usuario).
-- Para cada entreno, comprobar solape con cualquier comida del mismo día.
-- Si solapa: mover el entreno al **siguiente hueco libre** del día (probar +30min, +60min, +90min hasta encontrar hueco que no choque con ninguna comida ni `busy_blocks`). Tope: 22:00; si no cabe, dejar la hora original y añadir aviso al `errors[]` para que el frontend lo muestre.
-- La hora final se refleja en el evento de Google Calendar.
+### Wireframe landing (`/`)
 
-**c) Recurrencia desde el lunes de esta semana**, no desde "el próximo día X"
-- Cambiar `nextDateForDayHM` por una función `thisWeekDayHM(dow, h, m)` que ancle siempre al lunes de la semana actual. Así el usuario ve la semana en curso completa al instante.
+```text
+┌─────────────────────────────────────────────┐
+│ NAV: Autopilot                  [Login]     │
+├─────────────────────────────────────────────┤
+│ HERO                                        │
+│  H1: "Tu plan de gym y dieta,               │
+│       ajustado a ti cada semana."           │
+│  Sub: Entrenador humano + plan que se       │
+│       adapta. Sin apps confusas, todo en    │
+│       tu Google Calendar.                   │
+│  [▶ Empezar gratis (2 min)]   ← /quiz       │
+│  ✓ 7 días gratis  ✓ Sin tarjeta para empezar│
+│  Mockup calendario + chat                   │
+├─────────────────────────────────────────────┤
+│ PROBLEMAS (los 4 ya existentes)             │
+├─────────────────────────────────────────────┤
+│ CÓMO FUNCIONA — 3 pasos                     │
+│  1. Cuestionario 2 min                      │
+│  2. Recibes tu plan personalizado           │
+│  3. Lo vives desde Google Calendar          │
+├─────────────────────────────────────────────┤
+│ PERSONALIZACIÓN (las 4 cards existentes)    │
+├─────────────────────────────────────────────┤
+│ SOCIAL PROOF                                │
+│  - 3 testimonios con foto/iniciales         │
+│  - 2 transformaciones antes/después         │
+│    + narrativa emocional (3-4 líneas)       │
+│  - Métricas: "+500 planes generados"        │
+├─────────────────────────────────────────────┤
+│ LEAD MAGNET                                 │
+│  "¿Aún no estás listo? Recibe tu mini-plan  │
+│   personalizado gratis en 60 segundos"      │
+│  [Quiero mi mini-plan] → /mini-plan         │
+├─────────────────────────────────────────────┤
+│ PRICING (existente, simplificado)           │
+│  19€/mes · 7 días gratis                    │
+├─────────────────────────────────────────────┤
+│ FAQ + CTA final                             │
+│  [Empezar gratis] → /quiz                   │
+└─────────────────────────────────────────────┘
+```
 
-**d) Pequeñas mejoras**
-- Evitar generar eventos de comida cuyo slot no exista en `meals_json` (ya está, mantener).
-- Añadir `colorId` distinto para entrenos (`9` graphite/azul) y comidas (`10` verde) y recordatorios (`5` amarillo) para que visualmente se distingan en Google Calendar.
+Cambio clave: **todos los CTAs principales** apuntan a `/quiz`, no a `/signup`. Solo "Login" en nav va a `/login`.
 
-### 2. Auto-sync al guardar "Mi semana real" — `src/pages/MySchedule.tsx`
+### Quiz `/quiz` (sin auth)
 
-- Tras `upsert` exitoso de `user_schedule`, comprobar si existe registro en `google_calendar_tokens` para el usuario.
-- Si existe: invocar `supabase.functions.invoke('gcal-sync')` en background (sin bloquear el guardado) y mostrar toast secundario `"Calendario sincronizado · X eventos"` o `"No se pudo sincronizar el calendario"` si falla.
-- Si no hay token: silencio, no molestar.
+Componente nuevo `src/pages/Quiz.tsx`. Cada paso = pantalla full con barra de progreso, una pregunta, opciones grandes tappables, animación `framer-motion` slide.
 
-### 3. Edge function `generate-plan` (ya dispara sync) — verificar
-- Confirmar que el invoke a `gcal-sync` con service-role pasa el `user_id` correcto. Sin cambios si ya está bien.
+Pasos:
+1. **Objetivo** — perder grasa / ganar músculo / rendimiento / salud
+2. **Nivel actual** — principiante / intermedio / avanzado
+3. **Frecuencia disponible** — 2/3/4/5+ días por semana
+4. **Equipamiento** — gym / calistenia / mixto
+5. **Tiempo por sesión** — 30/45/60/90 min
+6. **Problema principal** — falta de constancia / no sé qué hacer / no veo resultados / lesiones
+7. **Edad + sexo** (compactos en una pantalla)
+8. **Generando tu plan…** — loader 2-3s con mensajes "Analizando tu nivel… Cruzando con 9 reglas de progresión… Listo."
+
+### Preview `/quiz/preview`
+
+Pantalla con resultado generado **client-side** (sin backend, sin coste) usando reglas determinísticas a partir de las respuestas:
+
+```text
+┌─────────────────────────────────────────────┐
+│ ✓ Tu plan está listo, [Nombre opcional]     │
+│                                             │
+│ ENFOQUE: Hipertrofia + déficit moderado     │
+│ FRECUENCIA: 4 entrenos/semana · 60 min      │
+│ ESTRUCTURA SEMANAL:                         │
+│   L  Empuje superior      ░░░░░             │
+│   M  Tren inferior        ░░░░░             │
+│   X  Descanso             ─────             │
+│   J  Tirón superior       ░░░░░ 🔒          │
+│   V  Full body            ░░░░░ 🔒          │
+│                                             │
+│ NUTRICIÓN:                                  │
+│   ~2.100 kcal · 160g proteína 🔒            │
+│                                             │
+│ INSIGHT CLAVE:                              │
+│   "Tu mayor bloqueo es la constancia.       │
+│    Por eso tu plan vive en tu Calendar      │
+│    y se reajusta cuando fallas un día."     │
+│                                             │
+│ [Desbloquear mi plan completo — 7 días gratis]│
+│  ✓ Sin tarjeta · ✓ Cancelas cuando quieras  │
+└─────────────────────────────────────────────┘
+```
+
+Bloques marcados con 🔒 generan curiosidad. CTA → `/signup?from=quiz`.
+
+### Registro post-quiz
+
+`Signup.tsx` lee `sessionStorage.autopilot_quiz`. Tras crear cuenta y verificar email, el usuario salta directamente al `Onboarding` con los pasos del quiz **pre-rellenados y saltables** (objetivo, frecuencia, equipamiento, nivel). Solo queda completar lo que el quiz no cubre (lesiones, horarios reales, etc.).
+
+Trial: aprovechamos el flujo Stripe existente con periodo de prueba 7 días (config ya en `settings`). Mensaje claro en pantalla post-registro: "Tienes 7 días gratis. No te cobramos nada hasta el día 8."
+
+## PRIORIDAD 2 — Lead Magnet `/mini-plan`
+
+Funnel ultra-corto para tráfico frío:
+
+1. 4 preguntas: objetivo, días/semana, mayor bloqueo, edad
+2. Resultado **inmediato en pantalla** (no requiere email para verlo, pero lo muestra parcialmente):
+   - **Insight**: "Entrenas 3 días pero tu bloqueo es nutrición, no volumen."
+   - **Error común**: "Estás haciendo demasiado cardio para tu objetivo."
+   - **Acción concreta hoy**: "Sube proteína a 1.6 g/kg y mide solo eso esta semana."
+3. CTA: "Recibe el mini-plan completo por email + un PDF de 7 días"
+4. Captura email → llama a edge function `send-transactional-email` con un nuevo template `mini-plan.tsx`
+5. Email guarda lead en nueva tabla `leads (email, quiz_answers jsonb, created_at)` para retargeting
+
+## PRIORIDAD 3 — Social Proof
+
+Componente nuevo `TransformationStories.tsx`:
+- 2-3 historias con estructura: foto antes/después (placeholder por ahora) + nombre + "antes sentía X, ahora Y" + métrica concreta
+- Carrusel de testimonios reescrito: enfocado en cambio mental ("dejé de pensar qué entrenar"), no solo físico
+- Banda de métricas sociales: planes generados, % de usuarios activos a los 30 días, rating
+
+## PRIORIDAD 4 — UX y Copy
+
+Principios aplicados:
+- Copy en segunda persona, dolor concreto: "Vas al gym sin saber qué tocar hoy" (ya existe, mantener tono)
+- Eliminar genéricos: fuera "mejora tu vida" / "transforma tu cuerpo"
+- Cada CTA dice qué pasa después: "Empezar gratis (2 min)" en vez de "Empezar"
+- Mobile-first real: quiz es full-screen, botones grandes (h-14), tipografía 18px+ en móvil
+- Animaciones `framer-motion` sutiles en transiciones de paso (slide 200ms)
 
 ## Detalles técnicos
 
-**Algoritmo de resolución de conflicto** (en `gcal-sync`):
-```text
-para cada entreno del día D:
-  candidates = [hora_original, +30, +60, +90, +120, +150, +180]
-  para cada candidate hasta 22:00:
-    si no solapa con ninguna meal[D] y no solapa con busy_blocks[D]:
-      usar candidate; break
-  si ninguno cabe:
-    usar hora_original y añadir errors.push("⚠️ Entreno X solapa con comidas")
+Archivos nuevos:
+- `src/pages/Quiz.tsx` — quiz multi-step + preview en la misma página, controlado por `step` state
+- `src/pages/MiniPlan.tsx` — lead magnet
+- `src/lib/quizPreview.ts` — función pura que genera el preview a partir de respuestas (reglas si/entonces)
+- `src/components/landing/TransformationStories.tsx`
+- `src/components/landing/HowItWorks.tsx`
+- `supabase/functions/_shared/transactional-email-templates/mini-plan.tsx`
+
+Archivos editados:
+- `src/pages/Index.tsx` — nuevo hero, CTAs apuntan a `/quiz`, añadir `HowItWorks`, `TransformationStories`, sección lead magnet
+- `src/pages/Signup.tsx` — leer `sessionStorage.autopilot_quiz`, mostrar banner "Tu plan ya está reservado" y mensaje 7 días gratis
+- `src/pages/Onboarding.tsx` — pre-rellenar y permitir saltar pasos cuyo dato venga del quiz
+- `src/App.tsx` — rutas `/quiz`, `/mini-plan` (públicas)
+- Registrar nuevo template en `_shared/transactional-email-templates/registry.ts`
+
+Migración SQL:
+```sql
+create table public.leads (
+  id uuid primary key default gen_random_uuid(),
+  email text not null,
+  quiz_answers jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+alter table public.leads enable row level security;
+create policy "admins read leads" on public.leads for select
+  to authenticated using (public.has_role(auth.uid(), 'admin'));
+-- inserts vía edge function con service role
 ```
 
-**Macros por comida (fallback)**:
-```text
-si meal.kcal existe → usar meal.kcal/protein/carbs/fats
-sino:
-  per_meal_kcal = round(macros.kcal / activeMealsCount)
-  per_meal_protein = round(macros.protein / activeMealsCount)
-  ...
-```
+Tracking: añadir eventos simples a `console`/futuro analytics en cada paso del quiz (`quiz_started`, `quiz_step_{n}`, `quiz_completed`, `preview_viewed`, `signup_from_quiz`) usando un helper único.
 
-**Anclar a semana actual**:
-```text
-function thisWeekDayHM(dow, h, m):
-  hoy = new Date()
-  diasDesdeLunes = (hoy.getDay() + 6) % 7
-  lunes = hoy - diasDesdeLunes días
-  offset = (dow + 6) % 7  // Lun=0...Dom=6
-  return lunes + offset días, set HH:MM
-```
-
-## Archivos modificados
-
-- `supabase/functions/gcal-sync/index.ts` — macros por comida, anti-solape de entrenos, anclaje semanal, colorId.
-- `src/pages/MySchedule.tsx` — invoke `gcal-sync` tras guardar si hay token conectado.
-
-## Fuera de alcance (no se toca)
-
-- Cron diario nocturno (descartado: el usuario solo quiere sync tras guardar Mi semana real + el ya existente tras `generate-plan`).
-- Edición bidireccional (si el usuario mueve un evento en Google, no se refleja en Autopilot).
-- Cambios en el panel de Settings (ya tiene "Conectar / Sincronizar / Desconectar").
+## Fuera de alcance (siguiente iteración)
+- A/B testing de variantes
+- Integración real con herramienta de analytics (PostHog/GA)
+- Fotos reales de transformación (placeholders por ahora; el admin podrá subirlas luego)
