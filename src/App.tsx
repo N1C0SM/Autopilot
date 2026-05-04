@@ -18,6 +18,8 @@ import MySchedule from "./pages/MySchedule";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
+import Quiz from "./pages/Quiz";
+import MiniPlan from "./pages/MiniPlan";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/quiz" element={<Quiz />} />
+            <Route path="/mini-plan" element={<MiniPlan />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
