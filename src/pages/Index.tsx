@@ -184,11 +184,10 @@ const Index = () => {
               onClick={() => navigate("/quiz")}
               className="hover-scale"
             >
-              Quiero mi plan + acompañamiento
+              Empezar gratis (2 min)
             </Button>
             <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1.5">
-              <ShieldCheck className="w-3 h-3" /> Solo 2 minutos · 7 días gratis · Cancela
-              cuando quieras
+              <ShieldCheck className="w-3 h-3" /> Sin tarjeta para empezar · 7 días gratis · Cancela cuando quieras
             </p>
           </motion.div>
         </div>
