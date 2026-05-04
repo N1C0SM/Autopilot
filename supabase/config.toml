@@ -35,5 +35,7 @@ project_id = "enebrcdrdnfkyduzyrzm"
     verify_jwt = true
   [functions.send-transactional-email]
     verify_jwt = true
+  [functions.send-mini-plan]
+    verify_jwt = false
   [functions.stripe-webhook]
     verify_jwt = false
