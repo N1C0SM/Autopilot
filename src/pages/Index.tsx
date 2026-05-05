@@ -131,7 +131,7 @@ const Index = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
-            <Button variant="default" size="sm" onClick={() => navigate("/quiz")}>
+            <Button variant="default" size="sm" onClick={() => navigate("/signup")}>
               Empezar gratis
             </Button>
           </div>
@@ -181,7 +181,7 @@ const Index = () => {
             <Button
               variant="hero"
               size="xl"
-              onClick={() => navigate("/quiz")}
+              onClick={() => navigate("/signup")}
               className="hover-scale"
             >
               Empezar gratis (2 min)
@@ -674,7 +674,7 @@ const Index = () => {
 
           {/* CARD PRINCIPAL */}
           <ScrollReveal delay={0.2}>
-            <PricingTiers onSelect={(plan) => navigate("/quiz")} />
+            <PricingTiers onSelect={(plan) => navigate("/signup")} />
             <div className="max-w-md mx-auto mt-6 bg-success/10 border border-success/30 rounded-xl p-4 flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
               <div>
@@ -714,24 +714,6 @@ const Index = () => {
               </ScrollReveal>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* LEAD MAGNET */}
-      <section className="py-16 px-4 bg-gradient-to-b from-card/30 to-background border-y border-border">
-        <div className="container mx-auto max-w-2xl text-center">
-          <ScrollReveal>
-            <Sparkles className="w-8 h-8 text-primary mx-auto mb-4" />
-            <h2 className="text-2xl sm:text-3xl font-bold font-display mb-3">
-              ¿Aún no estás listo? Llévate tu mini-plan gratis
-            </h2>
-            <p className="text-muted-foreground mb-6 text-sm">
-              4 preguntas, 60 segundos. Te enviamos al correo el insight clave, el error que estás cometiendo y la acción para hoy.
-            </p>
-            <Button variant="outline" size="lg" onClick={() => navigate("/mini-plan")}>
-              Quiero mi mini-plan
-            </Button>
-          </ScrollReveal>
         </div>
       </section>
 
@@ -781,7 +763,7 @@ const Index = () => {
             <Button
               variant="hero"
               size="xl"
-              onClick={() => navigate("/quiz")}
+              onClick={() => navigate("/signup")}
               className="hover-scale"
             >
               Quiero mi plan + acompañamiento
@@ -804,7 +786,7 @@ const Index = () => {
 
       {/* Floating CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-md border-t border-border z-50 md:hidden">
-        <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/quiz")}>
+        <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/signup")}>
           Empezar mis 7 días gratis
         </Button>
       </div>
