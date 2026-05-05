@@ -693,6 +693,9 @@ export type Database = {
           price_id_yearly_live: string | null
           price_id_yearly_test: string | null
           referral_coupon_id: string | null
+          trainer_bio: string | null
+          trainer_name: string | null
+          trainer_photo_url: string | null
           updated_at: string
           webhook_secret_live: string | null
           webhook_secret_test: string | null
@@ -711,6 +714,9 @@ export type Database = {
           price_id_yearly_live?: string | null
           price_id_yearly_test?: string | null
           referral_coupon_id?: string | null
+          trainer_bio?: string | null
+          trainer_name?: string | null
+          trainer_photo_url?: string | null
           updated_at?: string
           webhook_secret_live?: string | null
           webhook_secret_test?: string | null
@@ -729,10 +735,49 @@ export type Database = {
           price_id_yearly_live?: string | null
           price_id_yearly_test?: string | null
           referral_coupon_id?: string | null
+          trainer_bio?: string | null
+          trainer_name?: string | null
+          trainer_photo_url?: string | null
           updated_at?: string
           webhook_secret_live?: string | null
           webhook_secret_test?: string | null
           yearly_price_eur?: number | null
+        }
+        Relationships: []
+      }
+      site_testimonials: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          photo_url: string | null
+          result: string
+          sort_order: number
+          text: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          photo_url?: string | null
+          result?: string
+          sort_order?: number
+          text: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+          result?: string
+          sort_order?: number
+          text?: string
+          updated_at?: string
+          visible?: boolean
         }
         Relationships: []
       }
