@@ -21,7 +21,9 @@ import {
   Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import ScrollReveal from "@/components/ScrollReveal";
 import PricingTiers from "@/components/PricingTiers";
@@ -70,24 +72,24 @@ const liveFeatures = [
   { title: "Si tienes una duda", desc: "Me escribes y te respondo. Sin tickets, sin chatbots." },
 ];
 
-const testimonials = [
+const fallbackTestimonials = [
   {
     name: "María G.",
     result: "−8 kg en 3 meses",
     text: "Lo que marcó la diferencia fue poder escribir cuando algo no iba. Ajustó la dieta dos veces hasta que encajó con mi trabajo.",
-    avatar: "MG",
+    photo_url: null as string | null,
   },
   {
     name: "Carlos R.",
     result: "+5 kg de músculo",
     text: "No es un PDF que olvidas. Cada semana revisamos cómo va y cambiamos lo que no funciona. Por fin un plan vivo.",
-    avatar: "CR",
+    photo_url: null,
   },
   {
     name: "Laura M.",
     result: "−12% grasa corporal",
     text: "Tuve una molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso no te lo da ninguna app.",
-    avatar: "LM",
+    photo_url: null,
   },
 ];
 
@@ -120,6 +122,25 @@ const faqs = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const [testimonials, setTestimonials] = useState(fallbackTestimonials);
+  const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: t }, { data: s }] = await Promise.all([
+        supabase.from("site_testimonials").select("name, result, text, photo_url").eq("visible", true).order("sort_order"),
+        supabase.from("settings").select("trainer_name, trainer_photo_url, trainer_bio").limit(1).maybeSingle(),
+      ]);
+      if (t && t.length > 0) setTestimonials(t as any);
+      if (s) setTrainer({
+        trainer_name: s.trainer_name || "Nicolás",
+        trainer_photo_url: s.trainer_photo_url || "",
+        trainer_bio: s.trainer_bio || "",
+      });
+    })();
+  }, []);
+
+  const CTA_LABEL = "Empezar 7 días gratis";
 
   return (
     <div className="min-h-screen bg-background relative">
@@ -184,7 +205,7 @@ const Index = () => {
               onClick={() => navigate("/signup")}
               className="hover-scale"
             >
-              Empezar gratis (2 min)
+              {CTA_LABEL}
             </Button>
             <p className="text-xs text-muted-foreground mt-3 flex items-center justify-center gap-1.5">
               <ShieldCheck className="w-3 h-3" /> Sin tarjeta para empezar · 7 días gratis · Cancela cuando quieras
@@ -425,23 +446,31 @@ const Index = () => {
             <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold mb-3">
               Quién está al otro lado del chat
             </span>
+            {trainer.trainer_photo_url && (
+              <img
+                src={trainer.trainer_photo_url}
+                alt={trainer.trainer_name}
+                loading="lazy"
+                className="w-32 h-32 rounded-full object-cover mx-auto mb-6 border-2 border-primary/30"
+              />
+            )}
             <h2 className="text-3xl sm:text-4xl font-bold font-display mb-6 leading-tight">
-              Hola, soy <span className="text-gradient">Nicolás</span>.
+              Hola, soy <span className="text-gradient">{trainer.trainer_name}</span>.
             </h2>
-            <p className="text-muted-foreground mb-4 leading-relaxed">
-              Llevo años ayudando a personas a mejorar su físico y rendimiento con
-              planes claros y fáciles de seguir. Mi especialidad es{" "}
-              <span className="text-foreground font-semibold">
-                simplificar el entrenamiento y la progresión
-              </span>{" "}
-              para que consigas resultados reales sin complicarte.
-            </p>
-            <p className="text-muted-foreground mb-10 leading-relaxed">
-              He trabajado con perfiles muy distintos, desde principiantes que nunca
-              pisaron un gym hasta niveles avanzados de calistenia y fuerza. Por eso
-              Autopilot funciona igual de bien tanto si tu objetivo es el gimnasio,
-              la calistenia o un mix de los dos.
-            </p>
+            {trainer.trainer_bio ? (
+              <p className="text-muted-foreground mb-10 leading-relaxed whitespace-pre-line">
+                {trainer.trainer_bio}
+              </p>
+            ) : (
+              <>
+                <p className="text-muted-foreground mb-4 leading-relaxed">
+                  Llevo años ayudando a personas a mejorar su físico y rendimiento con planes claros y fáciles de seguir.
+                </p>
+                <p className="text-muted-foreground mb-10 leading-relaxed">
+                  He trabajado con perfiles muy distintos, desde principiantes que nunca pisaron un gym hasta niveles avanzados de calistenia y fuerza.
+                </p>
+              </>
+            )}
             <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto">
               <div className="bg-card border border-border rounded-xl p-4 text-center">
                 <Users className="w-5 h-5 text-primary mx-auto mb-2" />
@@ -610,9 +639,13 @@ const Index = () => {
                   </div>
                   <p className="text-sm text-muted-foreground flex-1 mb-4">"{t.text}"</p>
                   <div className="flex items-center gap-3 pt-3 border-t border-border">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                      {t.avatar}
-                    </div>
+                    {t.photo_url ? (
+                      <img src={t.photo_url} alt={t.name} loading="lazy" className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                        {t.name.split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <div className="text-sm font-semibold">{t.name}</div>
                       <div className="text-xs text-primary font-medium">{t.result}</div>
@@ -766,7 +799,7 @@ const Index = () => {
               onClick={() => navigate("/signup")}
               className="hover-scale"
             >
-              Quiero mi plan + acompañamiento
+              {CTA_LABEL}
             </Button>
             <p className="text-xs text-muted-foreground mt-4 flex items-center justify-center gap-1.5">
               <ShieldCheck className="w-3 h-3" /> 2 minutos · 7 días gratis · Cancela
@@ -778,16 +811,21 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="py-10 px-4 border-t border-border">
-        <div className="container mx-auto text-center text-muted-foreground text-sm">
-          <span className="font-display font-bold text-gradient">Autopilot</span> &copy;{" "}
-          {new Date().getFullYear()}. Todos los derechos reservados.
+        <div className="container mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4 text-muted-foreground text-sm">
+          <span><span className="font-display font-bold text-gradient">Autopilot</span> &copy; {new Date().getFullYear()}</span>
+          <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center">
+            <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
+            <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
+            <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
+            <Link to="/legal/privacidad" className="hover:text-foreground transition-colors">Privacidad</Link>
+          </div>
         </div>
       </footer>
 
       {/* Floating CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-md border-t border-border z-50 md:hidden">
         <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/signup")}>
-          Empezar mis 7 días gratis
+          {CTA_LABEL}
         </Button>
       </div>
     </div>
