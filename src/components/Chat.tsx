@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Image, Video, X, Play } from "lucide-react";
+import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatMediaGallery from "@/components/chat/ChatMediaGallery";
@@ -32,6 +32,8 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [viewMedia, setViewMedia] = useState<{ url: string; type: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"chat" | "media">("chat");
+  const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<{ label: string; text: string }[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -125,6 +127,31 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
     setUploading(false);
   };
 
+  const fetchAISuggestions = async () => {
+    const lastUser = [...messages].reverse().find((m) => m.sender_id === conversationUserId);
+    if (!lastUser) {
+      toast.info("No hay mensajes del cliente todavía");
+      return;
+    }
+    setAiSuggestLoading(true);
+    setAiSuggestions([]);
+    try {
+      const history = messages.slice(-8).map((m) => ({
+        role: m.sender_id === conversationUserId ? "user" : "assistant",
+        content: m.content,
+      }));
+      const { data, error } = await supabase.functions.invoke("ai-chat-suggestions", {
+        body: { lastUserMessage: lastUser.content, history },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setAiSuggestions(data?.replies || []);
+    } catch (e: any) {
+      toast.error(e.message || "Error con IA");
+    }
+    setAiSuggestLoading(false);
+  };
+
   const mediaCount = messages.filter(m => m.media_url).length;
 
   return (
@@ -189,11 +216,31 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
         {/* Input */}
         {activeTab === "chat" && (
           <div className="p-3 border-t border-border">
+            {isAdmin && aiSuggestions.length > 0 && (
+              <div className="mb-2 space-y-1.5">
+                {aiSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setNewMsg(s.text); setAiSuggestions([]); }}
+                    className="w-full text-left text-xs bg-secondary hover:bg-secondary/80 rounded-lg px-3 py-2 border border-border transition-colors"
+                  >
+                    <div className="text-[10px] font-bold uppercase text-primary tracking-wider mb-0.5">{s.label}</div>
+                    <div className="text-foreground/90">{s.text}</div>
+                  </button>
+                ))}
+              </div>
+            )}
             <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
               <Button type="button" variant="ghost" size="icon" onClick={() => fileRef.current?.click()} className="shrink-0" disabled={uploading}>
                 <Image className="w-5 h-5" />
               </Button>
               <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileSelect} />
+              {isAdmin && (
+                <Button type="button" variant="ghost" size="icon" onClick={fetchAISuggestions} disabled={aiSuggestLoading} className="shrink-0" title="Sugerir respuesta con IA">
+                  {aiSuggestLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-primary" />}
+                </Button>
+              )}
               <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1" />
               <Button type="submit" size="icon" disabled={sending || (!newMsg.trim() && !previewFile)}>
                 <Send className="w-4 h-4" />

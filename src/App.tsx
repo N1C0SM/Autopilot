@@ -18,6 +18,7 @@ import MySchedule from "./pages/MySchedule";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
+import Legal from "./pages/Legal";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/legal/:slug" element={<Legal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
