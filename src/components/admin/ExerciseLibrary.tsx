@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video } from "lucide-react";
+import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2 } from "lucide-react";
 import type { Exercise } from "@/types/training";
 import {
   MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
@@ -88,6 +88,7 @@ const ExerciseFormDialog = ({
 }) => {
   const [form, setForm] = useState<Partial<Exercise>>({});
   const [altSearch, setAltSearch] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -101,6 +102,22 @@ const ExerciseFormDialog = ({
   }, [open, initial]);
 
   const set = (k: keyof Exercise, v: any) => setForm((f) => ({ ...f, [k]: v }));
+
+  const autofillWithAI = async () => {
+    const name = form.name?.trim();
+    if (!name) { toast.error("Escribe un nombre primero"); return; }
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("ai-classify-exercise", { body: { name } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setForm((f) => ({ ...f, ...data, name: f.name }));
+      toast.success("Campos rellenados con IA");
+    } catch (e: any) {
+      toast.error(e.message || "Error con IA");
+    }
+    setAiLoading(false);
+  };
 
   // Filter exercises for alternative selection: different type, same muscle group preferred
   const altCandidates = useMemo(() => {
@@ -140,7 +157,14 @@ const ExerciseFormDialog = ({
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Información básica</p>
             <div>
               <Label className="text-xs">Nombre</Label>
-              <Input className="mt-1" value={form.name || ""} onChange={(e) => set("name", e.target.value)} placeholder="Press banca" />
+              <div className="flex gap-2 mt-1">
+                <Input value={form.name || ""} onChange={(e) => set("name", e.target.value)} placeholder="Press banca" />
+                <Button type="button" variant="secondary" size="sm" onClick={autofillWithAI} disabled={aiLoading || !form.name?.trim()} className="shrink-0 gap-1.5">
+                  {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  IA
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Escribe el nombre y pulsa IA para clasificar automáticamente todos los campos.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
