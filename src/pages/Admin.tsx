@@ -11,6 +11,7 @@ import PaymentModeToggle from "@/components/admin/PaymentModeToggle";
 import ExerciseLibrary from "@/components/admin/ExerciseLibrary";
 import TrainingRulesEditor from "@/components/admin/TrainingRulesEditor";
 import PaymentReminders from "@/components/admin/PaymentReminders";
+import SiteContentEditor from "@/components/admin/SiteContentEditor";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export interface Profile {
@@ -23,7 +24,7 @@ export interface Profile {
   travel_equipment?: string | null;
 }
 
-export type AdminSection = "dashboard" | "users" | "reminders" | "exercises" | "rules" | "settings";
+export type AdminSection = "dashboard" | "users" | "reminders" | "exercises" | "rules" | "landing" | "settings";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -100,6 +101,7 @@ const Admin = () => {
               {section === "reminders" && "Recordatorios de pago"}
               {section === "exercises" && "Biblioteca de ejercicios"}
               {section === "rules" && "Reglas de generación"}
+              {section === "landing" && "Contenido de la landing"}
               {section === "settings" && "Configuración"}
             </h1>
           </header>
@@ -204,6 +206,12 @@ const Admin = () => {
             {section === "rules" && (
               <div className="max-w-2xl">
                 <TrainingRulesEditor />
+              </div>
+            )}
+
+            {section === "landing" && (
+              <div className="max-w-3xl">
+                <SiteContentEditor />
               </div>
             )}
 
