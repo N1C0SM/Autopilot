@@ -438,6 +438,7 @@ export type Database = {
           created_at: string
           equipment_type: string
           goal: string | null
+          goal_photo_url: string | null
           height: number | null
           id: string
           initial_tests: Json | null
@@ -458,6 +459,7 @@ export type Database = {
           created_at?: string
           equipment_type?: string
           goal?: string | null
+          goal_photo_url?: string | null
           height?: number | null
           id?: string
           initial_tests?: Json | null
@@ -478,6 +480,7 @@ export type Database = {
           created_at?: string
           equipment_type?: string
           goal?: string | null
+          goal_photo_url?: string | null
           height?: number | null
           id?: string
           initial_tests?: Json | null

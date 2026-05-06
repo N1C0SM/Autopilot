@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap, Upload, Image as ImageIcon, X } from "lucide-react";
 import PricingTiers from "@/components/PricingTiers";
 
 const STEPS = [
@@ -25,6 +25,7 @@ const STEPS = [
   "Lesiones",
   "Nutrición",
   "Google Calendar",
+  "Foto Objetivo",
   "Resumen",
 ];
 
@@ -134,6 +135,7 @@ const Onboarding = () => {
     injuries: "",
     nutrition_preferences: "",
     allergies: "",
+    goal_photo_url: "",
   });
 
   const update = (field: string, value: any) => setData((d) => ({ ...d, [field]: value }));
@@ -262,6 +264,7 @@ const Onboarding = () => {
         },
         nutrition_preferences: data.nutrition_preferences,
         allergies: data.allergies,
+        goal_photo_url: data.goal_photo_url || null,
       },
       { onConflict: "user_id" }
     );
@@ -888,8 +891,79 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 13: Summary */}
+          {/* Step 13: Goal physique photo (optional) */}
           {step === 13 && (
+            <div className="space-y-5">
+              <div className="text-center mb-2">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                  <ImageIcon className="w-7 h-7 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold font-display">Tu físico objetivo</h2>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Sube una foto del físico que quieres conseguir. Tu entrenador la usará como referencia para personalizar mejor tu plan.
+                  <br />
+                  <span className="text-xs">Es opcional — puedes saltar este paso.</span>
+                </p>
+              </div>
+
+              {data.goal_photo_url ? (
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img src={data.goal_photo_url} alt="Físico objetivo" className="w-full max-h-80 object-contain bg-secondary" />
+                  <button
+                    type="button"
+                    onClick={() => update("goal_photo_url", "")}
+                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer block">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !user) return;
+                      if (file.size > 8 * 1024 * 1024) { toast.error("Máx 8MB"); return; }
+                      setLoading(true);
+                      try {
+                        const ext = file.name.split(".").pop() || "jpg";
+                        const path = `${user.id}/goal-${Date.now()}.${ext}`;
+                        const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, file, { upsert: false });
+                        if (upErr) throw upErr;
+                        const { data: pub } = supabase.storage.from("progress-photos").getPublicUrl(path);
+                        update("goal_photo_url", pub.publicUrl);
+                        toast.success("Foto subida");
+                      } catch (err: any) {
+                        toast.error(err.message || "Error al subir");
+                      }
+                      setLoading(false);
+                    }}
+                  />
+                  <div className="border-2 border-dashed border-border rounded-xl p-10 text-center hover:border-primary/50 transition-colors">
+                    {loading ? (
+                      <Loader2 className="w-8 h-8 mx-auto text-primary animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Sube tu foto de referencia</p>
+                        <p className="text-xs text-muted-foreground mt-1">JPG, PNG · máx 8MB</p>
+                      </>
+                    )}
+                  </div>
+                </label>
+              )}
+
+              <p className="text-[11px] text-center text-muted-foreground">
+                Solo tu entrenador podrá verla. Nunca la compartiremos públicamente.
+              </p>
+            </div>
+          )}
+
+          {/* Step 14: Summary */}
+          {step === 14 && (
             <div className="space-y-5">
               <div className="text-center mb-2">
                 <div className="text-4xl mb-2">🎯</div>
