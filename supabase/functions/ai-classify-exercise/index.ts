@@ -1,4 +1,7 @@
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 const MUSCLE_GROUPS = ["Pecho","Espalda","Hombros","Bíceps","Tríceps","Piernas","Glúteos","Core","Cardio","Cuerpo completo","Isquiotibiales","Gemelos","Antebrazos","Trapecios","Romboides","Lumbares","Serrato","Aductores","Abductores","Cuello"];
 const EXERCISE_TYPES = ["Calistenia","Gimnasio","Mixto"];
@@ -40,17 +43,16 @@ Deno.serve(async (req) => {
                 muscle_group: { type: "string", enum: MUSCLE_GROUPS },
                 exercise_type: { type: "string", enum: EXERCISE_TYPES },
                 movement_pattern: { type: "string", enum: MOVEMENT_PATTERNS },
-                level: { type: "integer", enum: [1,2,3], description: "1=Básico, 2=Intermedio, 3=Avanzado" },
-                priority: { type: "integer", enum: [1,2,3], description: "1=Base (compuesto principal), 2=Desarrollo, 3=Accesorio" },
+                level: { type: "integer", description: "1=Básico, 2=Intermedio, 3=Avanzado (solo 1, 2 o 3)" },
+                priority: { type: "integer", description: "1=Base (compuesto principal), 2=Desarrollo, 3=Accesorio (solo 1, 2 o 3)" },
                 stimulus_type: { type: "string", enum: STIMULUS_TYPES },
                 load_level: { type: "string", enum: LOAD_LEVELS },
                 fatigue_level: { type: "string", enum: FATIGUE_LEVELS },
-                recommended_order: { type: "integer", enum: [1,2,3], description: "1=Inicio sesión, 2=Medio, 3=Final" },
-                skill_tag: { type: ["string","null"], enum: [...SKILL_TAGS, null] },
-                progression_order: { type: ["integer","null"], description: "1=más fácil de la skill" },
+                recommended_order: { type: "integer", description: "1=Inicio sesión, 2=Medio, 3=Final (solo 1, 2 o 3)" },
+                skill_tag: { type: "string", description: `Una de: ${SKILL_TAGS.join(", ")} o cadena vacía si no aplica` },
+                progression_order: { type: "integer", description: "1=más fácil de la skill, 0 si no aplica" },
               },
               required: ["muscle_group","exercise_type","movement_pattern","level","priority","stimulus_type","load_level","fatigue_level","recommended_order"],
-              additionalProperties: false,
             },
           },
         }],
