@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target } from "lucide-react";
 import UserProgressPanel from "./UserProgressPanel";
+import UserGoalPanel from "./UserGoalPanel";
 import CalendarView from "@/components/dashboard/CalendarView";
 import {
   AlertDialog,
@@ -297,12 +298,15 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
         </div>
       )}
       <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className={`grid w-full bg-secondary/50 ${profile.payment_status === "paid" ? "grid-cols-6" : "grid-cols-1"}`}>
+        <TabsList className={`grid w-full bg-secondary/50 ${profile.payment_status === "paid" ? "grid-cols-7" : "grid-cols-1"}`}>
           <TabsTrigger value="info" className="text-xs gap-1.5">
             <User2 className="w-3.5 h-3.5" /> Info
           </TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
+              <TabsTrigger value="goal" className="text-xs gap-1.5">
+                <Target className="w-3.5 h-3.5" /> Objetivo
+              </TabsTrigger>
               <TabsTrigger value="progress" className="text-xs gap-1.5">
                 <TrendingUp className="w-3.5 h-3.5" /> Progreso
               </TabsTrigger>
@@ -452,6 +456,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
               <p className="text-sm text-muted-foreground">El usuario aún no ha completado el onboarding.</p>
             </div>
           )}
+        </TabsContent>
+
+        {/* Tab: Goal */}
+        <TabsContent value="goal">
+          <UserGoalPanel userId={profile.user_id} email={profile.email} />
         </TabsContent>
 
         {/* Tab: Progress */}

@@ -931,7 +931,37 @@ serve(async (req) => {
 
     const diet = detectDiet((onb as any).nutrition_preferences);
     const macros = calcMacros(weight, goal, diet);
-    const meals = getMeals(goal, diet, (onb as any).allergies);
+    let meals = getMeals(goal, diet, (onb as any).allergies);
+
+    // Try AI-personalized meals based on user's actual food preferences
+    try {
+      const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-generate-meals`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          preferences: (onb as any).nutrition_preferences || "",
+          allergies: (onb as any).allergies || "",
+          goal,
+          macros,
+          weight,
+        }),
+      });
+      if (aiResp.ok) {
+        const aiData = await aiResp.json();
+        if (Array.isArray(aiData.meals) && aiData.meals.length >= 3) {
+          meals = aiData.meals;
+          console.log(`[GENERATE-PLAN] AI meals OK: ${meals.length}`);
+        }
+      } else {
+        console.log(`[GENERATE-PLAN] AI meals fallback (status ${aiResp.status})`);
+      }
+    } catch (e) {
+      console.log(`[GENERATE-PLAN] AI meals error, using fallback: ${e}`);
+    }
+
     console.log(`[GENERATE-PLAN] Nutrition: diet=${diet}, goal=${goal}, macros=${JSON.stringify(macros)}, meals=${meals.length}`);
 
     await supabase.from("training_plan").upsert({ user_id: targetUserId, workouts_json: weeklyPlan });
