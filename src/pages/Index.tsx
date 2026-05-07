@@ -770,11 +770,11 @@ const Index = () => {
 
           {/* GARANTÍA */}
           <ScrollReveal delay={0.3}>
-            <div className="max-w-2xl mx-auto mt-10 bg-gradient-to-br from-success/15 to-success/5 border border-success/30 rounded-3xl p-8 text-center relative overflow-hidden">
-              <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full bg-success/20 border border-success/40 flex items-center justify-center">
+            <div className="max-w-2xl mx-auto mt-20 bg-gradient-to-br from-success/15 to-success/5 border border-success/30 rounded-3xl p-8 pt-14 text-center relative">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 rounded-full bg-success/20 border border-success/40 flex items-center justify-center">
                 <ShieldCheck className="w-9 h-9 text-success" />
               </div>
-              <div className="pt-10">
+              <div>
                 <h3 className="text-xl font-bold font-display mb-2">Garantía 30 días</h3>
                 <p className="text-sm text-muted-foreground max-w-md mx-auto mb-3">
                   Si no notas la diferencia de tener estructura, seguimiento y acompañamiento real,
