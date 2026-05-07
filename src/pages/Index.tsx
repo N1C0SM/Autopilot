@@ -215,14 +215,14 @@ const Index = () => {
       </nav>
 
       {/* HERO */}
-      <section className="pt-52 sm:pt-64 pb-44 px-4 overflow-hidden">
+      <section className="pt-40 sm:pt-48 pb-32 px-4 overflow-hidden">
         <div className="container mx-auto max-w-5xl">
           {/* Trust bar arriba */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="flex items-center justify-center gap-3 mb-20"
+            className="flex items-center justify-center gap-3 mb-14"
           >
             {trainer.trainer_photo_url ? (
               <img
@@ -257,7 +257,7 @@ const Index = () => {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg sm:text-xl text-muted-foreground mb-20 max-w-2xl mx-auto leading-relaxed"
+              className="text-lg sm:text-xl text-muted-foreground mb-14 max-w-2xl mx-auto leading-relaxed"
             >
               Plan de entrenamiento y nutrición personalizado + acompañamiento diario por chat
               para ayudarte a crear hábitos duraderos y progresar sin improvisar.
@@ -267,7 +267,7 @@ const Index = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-20 text-sm"
+              className="flex flex-wrap justify-center gap-x-6 gap-y-3 mb-14 text-sm"
             >
               {heroBullets.map((b) => (
                 <li key={b} className="flex items-center gap-1.5 text-foreground/85">
@@ -291,7 +291,7 @@ const Index = () => {
       </section>
 
       {/* MENSAJE CENTRAL */}
-      <section className="py-36 px-4 border-y border-border bg-card/30">
+      <section className="py-28 px-4 border-y border-border bg-card/30">
         <div className="container mx-auto max-w-3xl text-center">
           <ScrollReveal>
             <p className="text-2xl sm:text-3xl font-display font-medium leading-snug">
@@ -303,10 +303,10 @@ const Index = () => {
       </section>
 
       {/* BENEFICIOS RÁPIDOS */}
-      <section className="py-44 px-4">
+      <section className="py-32 px-4">
         <div className="container mx-auto max-w-5xl">
           <ScrollReveal>
-            <div className="text-center mb-24">
+            <div className="text-center mb-16">
               <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold mb-3">
                 Qué cambia para ti
               </span>
@@ -333,10 +333,10 @@ const Index = () => {
       </section>
 
       {/* DOLOR / IDENTIFICACIÓN */}
-      <section className="py-44 px-4 bg-card/30 border-y border-border">
+      <section className="py-32 px-4 bg-card/30 border-y border-border">
         <div className="container mx-auto max-w-3xl">
           <ScrollReveal>
-            <div className="text-center mb-20">
+            <div className="text-center mb-14">
               <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold mb-3">
                 Si llevas tiempo intentándolo solo
               </span>
@@ -368,13 +368,13 @@ const Index = () => {
       </section>
 
       {/* CÓMO FUNCIONA */}
-      <section className="py-44 px-4">
+      <section className="py-32 px-4">
         <div className="container mx-auto max-w-5xl">
           <ScrollReveal>
             <h2 className="text-3xl sm:text-4xl font-bold font-display text-center mb-4">
               Cómo funciona
             </h2>
-            <p className="text-muted-foreground text-center mb-24 max-w-lg mx-auto">
+            <p className="text-muted-foreground text-center mb-16 max-w-lg mx-auto">
               Simple, rápido, sin complicaciones. Y con una persona real al otro lado.
             </p>
           </ScrollReveal>
@@ -398,10 +398,10 @@ const Index = () => {
       </section>
 
       {/* DIFERENCIACIÓN */}
-      <section className="py-44 px-4 bg-card/40 border-y border-border">
+      <section className="py-32 px-4 bg-card/40 border-y border-border">
         <div className="container mx-auto max-w-4xl">
           <ScrollReveal>
-            <div className="text-center mb-20">
+            <div className="text-center mb-14">
               <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold mb-3">
                 Qué hace diferente a Autopilot
               </span>
@@ -415,7 +415,7 @@ const Index = () => {
             </div>
           </ScrollReveal>
 
-          <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-20">
+          <div className="grid md:grid-cols-2 gap-4 max-w-3xl mx-auto mb-14">
             <div className="bg-background/40 rounded-2xl p-8 border border-border">
               <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-4">
                 Lo de siempre
@@ -526,7 +526,7 @@ const Index = () => {
       </section>
 
       {/* SOBRE MÍ */}
-      <section className="py-44 px-4">
+      <section className="py-32 px-4">
         <div className="container mx-auto max-w-3xl text-center">
           <ScrollReveal>
             <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold mb-3">
@@ -579,10 +579,10 @@ const Index = () => {
       </section>
 
       {/* QUÉ INCLUYE / RESULTADOS REALES */}
-      <section className="py-44 px-4 bg-card/30 border-y border-border">
+      <section className="py-32 px-4 bg-card/30 border-y border-border">
         <div className="container mx-auto max-w-5xl">
           <ScrollReveal>
-            <div className="text-center mb-24">
+            <div className="text-center mb-16">
               <span className="inline-block text-xs uppercase tracking-widest text-primary font-semibold mb-3">
                 Para qué te sirve
               </span>
@@ -593,7 +593,7 @@ const Index = () => {
             </div>
           </ScrollReveal>
 
-          <div className="grid md:grid-cols-3 gap-4 mb-20">
+          <div className="grid md:grid-cols-3 gap-4 mb-14">
             <div className="bg-card rounded-2xl p-8 border border-border h-full">
               <Dumbbell className="w-8 h-8 text-primary mb-4" />
               <h3 className="text-lg font-bold font-display mb-3">Entrenamiento</h3>
@@ -669,13 +669,13 @@ const Index = () => {
       </section>
 
       {/* TESTIMONIOS */}
-      <section className="py-44 px-4">
+      <section className="py-32 px-4">
         <div className="container mx-auto max-w-5xl">
           <ScrollReveal>
             <h2 className="text-3xl sm:text-4xl font-bold font-display text-center mb-4">
               Lo que dicen quienes ya están dentro
             </h2>
-            <p className="text-muted-foreground text-center mb-24 max-w-lg mx-auto">
+            <p className="text-muted-foreground text-center mb-16 max-w-lg mx-auto">
               Personas reales que dejaron de improvisar y empezaron a progresar de verdad.
             </p>
           </ScrollReveal>
@@ -719,10 +719,10 @@ const Index = () => {
       </section>
 
       {/* PRECIO */}
-      <section className="py-44 px-4 bg-card/40 border-y border-border">
+      <section className="py-32 px-4 bg-card/40 border-y border-border">
         <div className="container mx-auto max-w-5xl">
           <ScrollReveal>
-            <div className="text-center mb-20">
+            <div className="text-center mb-14">
               <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4">
                 Mucho más barato que perder meses entrenando mal
               </h2>
@@ -733,7 +733,7 @@ const Index = () => {
           </ScrollReveal>
 
           <ScrollReveal delay={0.1}>
-            <div className="grid md:grid-cols-3 gap-4 mb-20 max-w-4xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-4 mb-14 max-w-4xl mx-auto">
               <div className="bg-background/40 rounded-2xl p-5 border border-border opacity-70">
                 <div className="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-2">
                   Entrenador presencial
@@ -788,13 +788,13 @@ const Index = () => {
       </section>
 
       {/* FAQ */}
-      <section className="py-44 px-4">
+      <section className="py-32 px-4">
         <div className="container mx-auto max-w-2xl">
           <ScrollReveal>
             <h2 className="text-3xl sm:text-4xl font-bold font-display text-center mb-4">
               Resolvemos tus dudas
             </h2>
-            <p className="text-muted-foreground text-center mb-20">
+            <p className="text-muted-foreground text-center mb-14">
               Las preguntas que más me hacen antes de empezar.
             </p>
           </ScrollReveal>
@@ -820,7 +820,7 @@ const Index = () => {
       </section>
 
       {/* CTA FINAL */}
-      <section className="py-48 px-4 bg-card/30 border-t border-border">
+      <section className="py-28 px-4 bg-card/30 border-t border-border">
         <div className="container mx-auto max-w-2xl text-center">
           <ScrollReveal>
             <h2 className="text-3xl sm:text-5xl font-bold font-display mb-6 leading-[1.1]">
