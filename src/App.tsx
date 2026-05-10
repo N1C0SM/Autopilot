@@ -19,6 +19,7 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
 import Legal from "./pages/Legal";
+import Scan from "./pages/Scan";
 
 const queryClient = new QueryClient();
 
