@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import ScrollReveal from "@/components/ScrollReveal";
 import PricingTiers from "@/components/PricingTiers";
+import AIScanSection from "@/components/AIScanSection";
 import {
   Accordion,
   AccordionContent,
@@ -289,6 +290,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* AI ATTRACTIVENESS SCAN */}
+      <AIScanSection />
 
       {/* MENSAJE CENTRAL */}
       <section className="py-28 px-4 border-y border-border bg-card/30">
