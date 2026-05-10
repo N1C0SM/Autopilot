@@ -161,11 +161,11 @@ const AIScanSection = () => {
                 <Button
                   variant="hero"
                   size="xl"
-                  onClick={() => navigate("/signup")}
+                  onClick={() => navigate("/scan")}
                   className="hover-scale group"
                 >
                   <ScanLine className="w-5 h-5 mr-1" />
-                  Escanear mi físico
+                  Escanear mi físico gratis
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </motion.div>
