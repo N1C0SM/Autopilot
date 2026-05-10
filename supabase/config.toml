@@ -39,3 +39,5 @@ project_id = "enebrcdrdnfkyduzyrzm"
     verify_jwt = false
   [functions.stripe-webhook]
     verify_jwt = false
+  [functions.analyze-physique]
+    verify_jwt = false
