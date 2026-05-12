@@ -662,13 +662,16 @@ const Scan = () => {
                       </span>
                     </div>
                     <h3 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-4">
-                      ¿Quieres lograr{" "}
-                      <span className="text-gradient">este físico</span>?
+                      Llega ahí en{" "}
+                      <span className="text-gradient">
+                        {result.months_with_plan ?? result.estimated_months} meses
+                      </span>
+                      , no en {result.months_without_plan ?? Math.max((result.months_with_plan ?? result.estimated_months) * 3, 24)}
                     </h3>
                     <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-                      Tu IA detectó {result.improvements.length} puntos de mejora.
-                      Sin un plan que los ataque, en 3 meses estarás igual.
-                      Empieza hoy con tu plan personalizado de entrenamiento + nutrición.
+                      La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
+                      Te montamos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin él, dentro de 6 meses
+                      estarás haciéndote el mismo scan con el mismo resultado.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <Button
