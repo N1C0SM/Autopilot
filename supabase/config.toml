@@ -41,3 +41,5 @@ project_id = "enebrcdrdnfkyduzyrzm"
     verify_jwt = false
   [functions.analyze-physique]
     verify_jwt = false
+  [functions.generate-future-self]
+    verify_jwt = false

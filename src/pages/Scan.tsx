@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Result = {
   attractiveness: number;
@@ -143,11 +144,46 @@ const ScoreCard = ({ label, value, highlight }: { label: string; value: number; 
 
 const Scan = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isPaid, setIsPaid] = useState(false);
   const [currentImg, setCurrentImg] = useState<string | null>(null);
   const [objectiveImg, setObjectiveImg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
+  const [futureImg, setFutureImg] = useState<string | null>(null);
+  const [genLoading, setGenLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("payment_status")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => setIsPaid(data?.payment_status === "paid"));
+  }, [user]);
+
+  const generateFuture = async () => {
+    if (!currentImg || !result) return;
+    setGenLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-future-self", {
+        body: {
+          currentImage: currentImg,
+          months: result.months_with_plan ?? result.estimated_months,
+          goal: result.inferred_goal,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setFutureImg(data.imageUrl);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Error generando la simulación");
+    } finally {
+      setGenLoading(false);
+    }
+  };
 
   useEffect(() => {
     const prevTitle = document.title;
@@ -586,33 +622,67 @@ const Scan = () => {
                   {/* Yo futuro bloqueado — gancho visceral */}
                   <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-4 relative overflow-hidden">
                     <div className="text-[10px] uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
-                      <Lock className="w-3 h-3" /> Tu yo en {result.months_with_plan ?? result.estimated_months} meses
+                      {isPaid ? <Sparkles className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                      Tu yo en {result.months_with_plan ?? result.estimated_months} meses
                     </div>
                     <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-secondary">
-                      {currentImg && (
+                      {futureImg ? (
+                        <img src={futureImg} alt="futuro IA" className="w-full h-full object-cover" />
+                      ) : currentImg ? (
                         <img
                           src={currentImg}
                           alt="futuro"
                           className="w-full h-full object-cover scale-110"
-                          style={{ filter: "blur(18px) brightness(1.1) contrast(1.1)" }}
+                          style={{
+                            filter: isPaid && !genLoading
+                              ? "brightness(1.05) contrast(1.05)"
+                              : "blur(18px) brightness(1.1) contrast(1.1)",
+                          }}
                         />
+                      ) : null}
+                      {!futureImg && (
+                        <>
+                          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-4">
+                            {isPaid ? (
+                              <>
+                                <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur border border-primary/40 flex items-center justify-center">
+                                  {genLoading ? (
+                                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                                  ) : (
+                                    <Sparkles className="w-5 h-5 text-primary" />
+                                  )}
+                                </div>
+                                <Button
+                                  variant="hero"
+                                  size="sm"
+                                  onClick={generateFuture}
+                                  disabled={genLoading}
+                                >
+                                  {genLoading ? "Generando con IA..." : "Generar simulación IA"}
+                                </Button>
+                                <div className="text-[11px] text-muted-foreground max-w-xs">
+                                  Tarda ~15s. Misma identidad, físico transformado.
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur border border-primary/40 flex items-center justify-center">
+                                  <Lock className="w-5 h-5 text-primary" />
+                                </div>
+                                <div className="text-sm font-semibold">Visualiza tu transformación</div>
+                                <div className="text-[11px] text-muted-foreground max-w-xs">
+                                  Simulación generada con IA al activar tu plan
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-4">
-                        <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur border border-primary/40 flex items-center justify-center">
-                          <Lock className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="text-sm font-semibold">
-                          Visualiza tu transformación
-                        </div>
-                        <div className="text-[11px] text-muted-foreground max-w-xs">
-                          Simulación generada con IA al activar tu plan
-                        </div>
-                      </div>
                     </div>
                   </div>
 
-                  {result.locked_insights && result.locked_insights.length > 0 && (
+                  {!isPaid && result.locked_insights && result.locked_insights.length > 0 && (
                     <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-4">
                       <div className="text-[10px] uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
                         <Lock className="w-3 h-3" /> Bloqueado · Plan completo
@@ -645,6 +715,7 @@ const Scan = () => {
               </div>
 
               {/* FUNNEL CTA */}
+              {!isPaid ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -704,6 +775,17 @@ const Scan = () => {
                   </div>
                 </div>
               </motion.div>
+              ) : (
+                <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button variant="hero" size="xl" onClick={() => navigate("/dashboard")}>
+                    Volver al dashboard
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="xl" onClick={reset}>
+                    Hacer otro scan
+                  </Button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
