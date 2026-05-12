@@ -1,184 +1,180 @@
 
-# Funnel de captación y conversión "Empezar gratis"
 
-## Objetivo
-Reducir fricción del CTA principal y aumentar percepción de personalización antes de pedir email/registro. Hoy el CTA de la landing lleva a `/signup` (login upfront). Cambiamos a quiz primero → preview → registro → trial.
+# Funnel Scan → Pago: quitar fricción y subir conversión
 
-## Arquitectura de rutas nuevas
+Objetivo: que el usuario que hace el scan llegue a pagar con el mínimo esfuerzo. Hoy se pierde el contexto entre scan, signup y onboarding. Vamos a propagar los datos del scan por todo el embudo y añadir ganchos de conversión donde más cae la gente.
 
-```text
-/                       Landing (rediseño hero + social proof + lead magnet)
-/quiz                   Quiz largo (1–2 min, 6–8 pasos) — sin auth
-/quiz/preview           Preview del plan personalizado + CTA registro
-/signup?from=quiz       Registro con datos del quiz pre-rellenados → trial 7 días
-/mini-plan              Lead magnet (3–4 preguntas) + captura email
+## 1. Persistir el resultado del scan (base de todo)
+
+En `src/pages/Scan.tsx`, al recibir el resultado guardar en `sessionStorage` bajo la key `autopilot_scan`:
+
+```ts
+{
+  result: { attractiveness, potential, physique, style, similarity, estimated_months, improvements, summary },
+  currentImg, // dataURL para mostrar miniatura en signup
+  objectiveImg,
+  inferred: { goal, primary_focus, intensity_level }, // ver §3
+  createdAt: Date.now(),
+}
 ```
 
-Estado del quiz se guarda en `sessionStorage` (`autopilot_quiz`) para sobrevivir al registro y pre-poblar el onboarding existente, evitando repetir preguntas.
+Caduca a las 24h al leerla.
 
-## PRIORIDAD 1 — Landing + Funnel sin fricción
+Ampliar el edge function `analyze-physique` para que devuelva 2 campos extra ya inferidos por la IA, útiles para pre-rellenar onboarding:
+- `inferred_goal`: uno de `"perder_grasa" | "ganar_musculo" | "recomposicion" | "rendimiento"`
+- `inferred_focus`: uno de `"gym" | "calistenia" | "mixto"` (lo más probable según el físico)
+- `inferred_intensity`: 1–10
+- `inferred_specific_goals`: array corto de strings (ej: "definir abdomen", "más volumen hombros") derivado de `improvements` priority Alta
 
-### Wireframe landing (`/`)
+## 2. Cambiar el CTA del scan a `/signup?from=scan`
 
-```text
-┌─────────────────────────────────────────────┐
-│ NAV: Autopilot                  [Login]     │
-├─────────────────────────────────────────────┤
-│ HERO                                        │
-│  H1: "Tu plan de gym y dieta,               │
-│       ajustado a ti cada semana."           │
-│  Sub: Entrenador humano + plan que se       │
-│       adapta. Sin apps confusas, todo en    │
-│       tu Google Calendar.                   │
-│  [▶ Empezar gratis (2 min)]   ← /quiz       │
-│  ✓ 7 días gratis  ✓ Sin tarjeta para empezar│
-│  Mockup calendario + chat                   │
-├─────────────────────────────────────────────┤
-│ PROBLEMAS (los 4 ya existentes)             │
-├─────────────────────────────────────────────┤
-│ CÓMO FUNCIONA — 3 pasos                     │
-│  1. Cuestionario 2 min                      │
-│  2. Recibes tu plan personalizado           │
-│  3. Lo vives desde Google Calendar          │
-├─────────────────────────────────────────────┤
-│ PERSONALIZACIÓN (las 4 cards existentes)    │
-├─────────────────────────────────────────────┤
-│ SOCIAL PROOF                                │
-│  - 3 testimonios con foto/iniciales         │
-│  - 2 transformaciones antes/después         │
-│    + narrativa emocional (3-4 líneas)       │
-│  - Métricas: "+500 planes generados"        │
-├─────────────────────────────────────────────┤
-│ LEAD MAGNET                                 │
-│  "¿Aún no estás listo? Recibe tu mini-plan  │
-│   personalizado gratis en 60 segundos"      │
-│  [Quiero mi mini-plan] → /mini-plan         │
-├─────────────────────────────────────────────┤
-│ PRICING (existente, simplificado)           │
-│  19€/mes · 7 días gratis                    │
-├─────────────────────────────────────────────┤
-│ FAQ + CTA final                             │
-│  [Empezar gratis] → /quiz                   │
-└─────────────────────────────────────────────┘
+En `src/pages/Scan.tsx` botón "Empezar mi plan":
+```ts
+navigate("/signup?from=scan")
 ```
 
-Cambio clave: **todos los CTAs principales** apuntan a `/quiz`, no a `/signup`. Solo "Login" en nav va a `/login`.
+## 3. Signup con contexto del scan
 
-### Quiz `/quiz` (sin auth)
+`src/pages/Signup.tsx` ya soporta `from=quiz`. Añadir caso `from=scan`:
 
-Componente nuevo `src/pages/Quiz.tsx`. Cada paso = pantalla full con barra de progreso, una pregunta, opciones grandes tappables, animación `framer-motion` slide.
+- Leer `sessionStorage.autopilot_scan`. Si existe, mostrar arriba un banner premium:
+  ```text
+  ┌─────────────────────────────────────────┐
+  │ [thumb actual] Tu AI Report está listo  │
+  │   Potencial 8.5/10 · Físico 7.2/10      │
+  │   3 mejoras detectadas esperándote      │
+  └─────────────────────────────────────────┘
+  ```
+- Subtítulo: "Último paso para desbloquear tu plan personalizado"
+- Microcopy debajo del botón: "7 días gratis · Sin tarjeta · Cancelas cuando quieras"
 
-Pasos:
-1. **Objetivo** — perder grasa / ganar músculo / rendimiento / salud
-2. **Nivel actual** — principiante / intermedio / avanzado
-3. **Frecuencia disponible** — 2/3/4/5+ días por semana
-4. **Equipamiento** — gym / calistenia / mixto
-5. **Tiempo por sesión** — 30/45/60/90 min
-6. **Problema principal** — falta de constancia / no sé qué hacer / no veo resultados / lesiones
-7. **Edad + sexo** (compactos en una pantalla)
-8. **Generando tu plan…** — loader 2-3s con mensajes "Analizando tu nivel… Cruzando con 9 reglas de progresión… Listo."
+## 4. Pre-rellenar onboarding desde el scan
 
-### Preview `/quiz/preview`
+`src/pages/Onboarding.tsx` (steps 0–8). Al montar:
 
-Pantalla con resultado generado **client-side** (sin backend, sin coste) usando reglas determinísticas a partir de las respuestas:
-
-```text
-┌─────────────────────────────────────────────┐
-│ ✓ Tu plan está listo, [Nombre opcional]     │
-│                                             │
-│ ENFOQUE: Hipertrofia + déficit moderado     │
-│ FRECUENCIA: 4 entrenos/semana · 60 min      │
-│ ESTRUCTURA SEMANAL:                         │
-│   L  Empuje superior      ░░░░░             │
-│   M  Tren inferior        ░░░░░             │
-│   X  Descanso             ─────             │
-│   J  Tirón superior       ░░░░░ 🔒          │
-│   V  Full body            ░░░░░ 🔒          │
-│                                             │
-│ NUTRICIÓN:                                  │
-│   ~2.100 kcal · 160g proteína 🔒            │
-│                                             │
-│ INSIGHT CLAVE:                              │
-│   "Tu mayor bloqueo es la constancia.       │
-│    Por eso tu plan vive en tu Calendar      │
-│    y se reajusta cuando fallas un día."     │
-│                                             │
-│ [Desbloquear mi plan completo — 7 días gratis]│
-│  ✓ Sin tarjeta · ✓ Cancelas cuando quieras  │
-└─────────────────────────────────────────────┘
+```ts
+const scan = JSON.parse(sessionStorage.getItem("autopilot_scan") || "null");
+if (scan?.inferred) {
+  setData(prev => ({
+    ...prev,
+    goal: prev.goal || scan.inferred.goal,
+    primary_focus: prev.primary_focus || scan.inferred.focus,
+    intensity_level: prev.intensity_level || scan.inferred.intensity,
+    specific_goal: prev.specific_goal || scan.inferred.specific_goals.join(", "),
+    goal_photo_url: prev.goal_photo_url || scan.objectiveImgUploaded, // ver abajo
+  }));
+}
 ```
 
-Bloques marcados con 🔒 generan curiosidad. CTA → `/signup?from=quiz`.
+Cambios visuales en cada step pre-rellenado:
+- Badge "✨ Detectado por IA · puedes cambiarlo" sobre el campo
+- Si todos los campos del step están pre-rellenados, mostrar botón secundario "Saltar, ya está bien" además de "Continuar"
 
-### Registro post-quiz
+Foto objetivo: si el usuario subió `objectiveImg` en el scan, subirla automáticamente al bucket `progress-photos` la primera vez que el usuario llega al step 8 y guardarla como `goal_photo_url`. Así no la vuelve a subir.
 
-`Signup.tsx` lee `sessionStorage.autopilot_quiz`. Tras crear cuenta y verificar email, el usuario salta directamente al `Onboarding` con los pasos del quiz **pre-rellenados y saltables** (objetivo, frecuencia, equipamiento, nivel). Solo queda completar lo que el quiz no cubre (lesiones, horarios reales, etc.).
+Resultado esperado: onboarding pasa de ~9 pantallas con todo en blanco a ~9 pantallas con 4–5 ya rellenas y saltables. Tiempo estimado < 90s en lugar de 4 min.
 
-Trial: aprovechamos el flujo Stripe existente con periodo de prueba 7 días (config ya en `settings`). Mensaje claro en pantalla post-registro: "Tienes 7 días gratis. No te cobramos nada hasta el día 8."
+## 5. Ganchos de conversión en el resultado del scan
 
-## PRIORIDAD 2 — Lead Magnet `/mini-plan`
+Modificaciones en el bloque "Mejoras detectadas" + CTA final de `Scan.tsx`:
 
-Funnel ultra-corto para tráfico frío:
+**Locked items** — mostrar 2 cards bloqueadas debajo de las mejoras:
+```text
+🔒 Tu plan exacto para [hombros]      → Desbloquear
+🔒 Tu déficit calórico óptimo: ___ kcal → Desbloquear
+🔒 Tiempo real para tu objetivo: ___ semanas
+```
 
-1. 4 preguntas: objetivo, días/semana, mayor bloqueo, edad
-2. Resultado **inmediato en pantalla** (no requiere email para verlo, pero lo muestra parcialmente):
-   - **Insight**: "Entrenas 3 días pero tu bloqueo es nutrición, no volumen."
-   - **Error común**: "Estás haciendo demasiado cardio para tu objetivo."
-   - **Acción concreta hoy**: "Sube proteína a 1.6 g/kg y mide solo eso esta semana."
-3. CTA: "Recibe el mini-plan completo por email + un PDF de 7 días"
-4. Captura email → llama a edge function `send-transactional-email` con un nuevo template `mini-plan.tsx`
-5. Email guarda lead en nueva tabla `leads (email, quiz_answers jsonb, created_at)` para retargeting
+**Frame de pérdida** en el CTA:
+- Antes: "El análisis es gratis. El plan que te lleva ahí no."
+- Después: "Tu IA detectó 3 puntos de mejora. Sin un plan que los ataque, en 3 meses estarás igual. **Empieza hoy gratis 7 días.**"
 
-## PRIORIDAD 3 — Social Proof
+**Countdown de reserva** (sessionStorage timer 15 min):
+"⏱ Tu AI Report está reservado · expira en 14:32"
 
-Componente nuevo `TransformationStories.tsx`:
-- 2-3 historias con estructura: foto antes/después (placeholder por ahora) + nombre + "antes sentía X, ahora Y" + métrica concreta
-- Carrusel de testimonios reescrito: enfocado en cambio mental ("dejé de pensar qué entrenar"), no solo físico
-- Banda de métricas sociales: planes generados, % de usuarios activos a los 30 días, rating
+## 6. Captura de email pre-resultado (lead magnet de los que abandonan)
 
-## PRIORIDAD 4 — UX y Copy
+Antes de mostrar el resultado, mientras carga el análisis, abrir un mini modal opcional:
 
-Principios aplicados:
-- Copy en segunda persona, dolor concreto: "Vas al gym sin saber qué tocar hoy" (ya existe, mantener tono)
-- Eliminar genéricos: fuera "mejora tu vida" / "transforma tu cuerpo"
-- Cada CTA dice qué pasa después: "Empezar gratis (2 min)" en vez de "Empezar"
-- Mobile-first real: quiz es full-screen, botones grandes (h-14), tipografía 18px+ en móvil
-- Animaciones `framer-motion` sutiles en transiciones de paso (slide 200ms)
+```text
+"Te enviamos también el AI Report a tu email para que lo guardes"
+[input email]  [Sí, enviármelo]   [No, gracias]
+```
+
+Si introduce email → `INSERT` en tabla `leads` (ya existe) con `source='scan'` y `quiz_answers` = `{ scan_result, has_objective }`. Disparar email transaccional con el resultado + CTA al plan (template nuevo `scan-report.tsx` análogo a `mini-plan.tsx`).
+
+Esto NO bloquea ver el resultado: el modal se puede cerrar siempre. El email captura sirve para retargeting de los que no se registran.
+
+Edge function nueva `save-scan-lead` (con service role) para insertar en `leads` sin auth.
+
+## 7. Prueba social específica del scan
+
+En `Scan.tsx` debajo del hero del upload:
+- Contador animado: `+2.847 escaneos esta semana` (valor mock realista o leer `count` de `leads` con `source='scan'`)
+- 3 mini-testimonios en línea: "*El scan clavó mis 2 puntos débiles* — Carlos, 6m"
+
+## 8. Tracking mínimo de embudo
+
+Helper `src/lib/track.ts` que hace `console.log` + `INSERT` en una tabla nueva `funnel_events (event, session_id, payload, created_at)` (RLS solo admin lee).
+
+Eventos:
+- `scan_started`, `scan_completed`, `scan_email_captured`, `scan_cta_click`
+- `signup_view_from_scan`, `signup_completed_from_scan`
+- `onboarding_step_{n}_view`, `onboarding_completed`
+- `paywall_view`, `checkout_started`, `payment_completed`
+
+Panel admin: añadir tarjeta simple en `Admin.tsx` que cuente cada evento de los últimos 7 días → calcular ratios.
+
+---
 
 ## Detalles técnicos
 
-Archivos nuevos:
-- `src/pages/Quiz.tsx` — quiz multi-step + preview en la misma página, controlado por `step` state
-- `src/pages/MiniPlan.tsx` — lead magnet
-- `src/lib/quizPreview.ts` — función pura que genera el preview a partir de respuestas (reglas si/entonces)
-- `src/components/landing/TransformationStories.tsx`
-- `src/components/landing/HowItWorks.tsx`
-- `supabase/functions/_shared/transactional-email-templates/mini-plan.tsx`
+**Archivos editados:**
+- `src/pages/Scan.tsx` — sessionStorage save, locked items, countdown, CTA copy, email modal pre-resultado, contador social
+- `src/pages/Signup.tsx` — banner `from=scan` con thumb + scores
+- `src/pages/Onboarding.tsx` — pre-rellenar desde sessionStorage, badge IA, botón saltar, auto-upload de goal_photo
+- `src/pages/Index.tsx` — link al scan en hero (verificar que ya está)
+- `src/components/admin/AdminStats.tsx` o nueva `FunnelStats.tsx` — métricas de embudo
 
-Archivos editados:
-- `src/pages/Index.tsx` — nuevo hero, CTAs apuntan a `/quiz`, añadir `HowItWorks`, `TransformationStories`, sección lead magnet
-- `src/pages/Signup.tsx` — leer `sessionStorage.autopilot_quiz`, mostrar banner "Tu plan ya está reservado" y mensaje 7 días gratis
-- `src/pages/Onboarding.tsx` — pre-rellenar y permitir saltar pasos cuyo dato venga del quiz
-- `src/App.tsx` — rutas `/quiz`, `/mini-plan` (públicas)
-- Registrar nuevo template en `_shared/transactional-email-templates/registry.ts`
+**Archivos nuevos:**
+- `src/lib/track.ts` — helper de eventos
+- `supabase/functions/save-scan-lead/index.ts` — captura email pre-resultado
+- `supabase/functions/_shared/transactional-email-templates/scan-report.tsx` — email del AI Report
+- Registrar template en `_shared/transactional-email-templates/registry.ts`
 
-Migración SQL:
+**Archivos editados (backend):**
+- `supabase/functions/analyze-physique/index.ts` — añadir 4 campos `inferred_*` al schema y al prompt
+
+**Migración SQL:**
 ```sql
-create table public.leads (
+create table public.funnel_events (
   id uuid primary key default gen_random_uuid(),
-  email text not null,
-  quiz_answers jsonb not null default '{}'::jsonb,
+  event text not null,
+  session_id text,
+  user_id uuid,
+  payload jsonb default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
-alter table public.leads enable row level security;
-create policy "admins read leads" on public.leads for select
-  to authenticated using (public.has_role(auth.uid(), 'admin'));
--- inserts vía edge function con service role
+alter table public.funnel_events enable row level security;
+create policy "anyone insert events" on public.funnel_events
+  for insert to anon, authenticated with check (true);
+create policy "admins read events" on public.funnel_events
+  for select to authenticated using (public.has_role(auth.uid(), 'admin'));
+create index funnel_events_event_created_idx on public.funnel_events (event, created_at desc);
 ```
 
-Tracking: añadir eventos simples a `console`/futuro analytics en cada paso del quiz (`quiz_started`, `quiz_step_{n}`, `quiz_completed`, `preview_viewed`, `signup_from_quiz`) usando un helper único.
+## Orden de implementación (lo que más urge primero)
 
-## Fuera de alcance (siguiente iteración)
-- A/B testing de variantes
-- Integración real con herramienta de analytics (PostHog/GA)
-- Fotos reales de transformación (placeholders por ahora; el admin podrá subirlas luego)
+1. Persistir scan en sessionStorage + ampliar edge function con campos `inferred_*`
+2. Pre-rellenar onboarding (esto es lo que tú pediste como prioridad)
+3. Banner de scan en signup
+4. Locked items + nuevo copy del CTA en el resultado del scan
+5. Captura de email pre-resultado + email transaccional
+6. Tracking de eventos + panel admin
+7. Prueba social y countdown
+
+## Fuera de alcance
+- A/B testing real
+- Integración con PostHog/GA externos
+- Foto antes/después reales (placeholders)
+
