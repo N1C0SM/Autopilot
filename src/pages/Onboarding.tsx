@@ -129,6 +129,67 @@ const Onboarding = () => {
     }
   }, []);
 
+  // Pre-rellenar desde el AI Scan si existe en sessionStorage
+  const [scanPrefill, setScanPrefill] = useState<{
+    goal?: string;
+    primary_focus?: string;
+    intensity?: number;
+    specific_goal?: string;
+    objectiveImg?: string;
+    used: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("autopilot_scan");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Date.now() - (parsed.createdAt || 0) > 24 * 60 * 60 * 1000) {
+        sessionStorage.removeItem("autopilot_scan");
+        return;
+      }
+      const r = parsed.result || {};
+      const goal = ["lose_weight", "gain_muscle", "recomp", "improve_endurance", "general_health", "skill_based"].includes(r.inferred_goal)
+        ? r.inferred_goal
+        : undefined;
+      const focus = ["gimnasio", "calistenia", "mixto"].includes(r.inferred_focus) ? r.inferred_focus : undefined;
+      const specific = Array.isArray(r.inferred_specific_goals) ? r.inferred_specific_goals.join(", ") : undefined;
+      setScanPrefill({
+        goal,
+        primary_focus: focus,
+        intensity: typeof r.inferred_intensity === "number" ? r.inferred_intensity : undefined,
+        specific_goal: specific,
+        objectiveImg: parsed.objectiveImg,
+        used: false,
+      });
+      setData((d) => ({
+        ...d,
+        goal: d.goal || goal || "",
+        primary_focus: d.primary_focus || focus || "",
+        specific_goal: d.specific_goal || specific || "",
+      }));
+    } catch {}
+  }, []);
+
+  // Subir foto objetivo del scan al bucket si no hay aún
+  useEffect(() => {
+    if (!user || !scanPrefill?.objectiveImg || data.goal_photo_url || scanPrefill.used) return;
+    (async () => {
+      try {
+        // dataURL a Blob
+        const res = await fetch(scanPrefill.objectiveImg!);
+        const blob = await res.blob();
+        const ext = (blob.type.split("/")[1] || "jpg").split("+")[0];
+        const path = `${user.id}/scan-goal-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, blob, { upsert: false });
+        if (upErr) return;
+        const { data: pub } = supabase.storage.from("progress-photos").getPublicUrl(path);
+        update("goal_photo_url", pub.publicUrl);
+        setScanPrefill((p) => (p ? { ...p, used: true } : p));
+      } catch {}
+    })();
+  }, [user, scanPrefill, data.goal_photo_url]);
+
   useEffect(() => {
     if (!user) return;
     supabase
