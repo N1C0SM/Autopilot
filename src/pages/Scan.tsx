@@ -482,6 +482,58 @@ const Scan = () => {
                 />
               </div>
 
+              {/* Guía para tomar las fotos */}
+              <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
+                    <Eye className="w-4 h-4 text-primary" />
+                  </div>
+                  <h2 className="font-display font-bold text-base">Cómo tomar las fotos para un análisis preciso</h2>
+                </div>
+                <div className="grid sm:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-1.5">Distancia</div>
+                    <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
+                      <li>· Cámara a 2-3 m, a la altura del ombligo</li>
+                      <li>· Cuerpo entero (de la cabeza a los pies)</li>
+                      <li>· Móvil en vertical y bien apoyado o trípode</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-1.5">Luz y fondo</div>
+                    <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
+                      <li>· Luz natural de día, frontal y uniforme</li>
+                      <li>· Evita contraluz, sombras duras y flash</li>
+                      <li>· Fondo liso y claro, sin objetos detrás</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-1.5">Postura y ropa</div>
+                    <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
+                      <li>· Ropa ajustada (sin camiseta o top + short)</li>
+                      <li>· Pies a la anchura de los hombros</li>
+                      <li>· Brazos relajados a los lados, sin flexionar</li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-border/60 grid sm:grid-cols-2 gap-4 text-[13px]">
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">1</div>
+                    <div>
+                      <div className="font-semibold mb-0.5">Foto de delante</div>
+                      <div className="text-muted-foreground">Mira al frente, hombros relajados y palmas hacia el cuerpo. Que se te vea de cabeza a pies.</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">2</div>
+                    <div>
+                      <div className="font-semibold mb-0.5">Foto de atrás</div>
+                      <div className="text-muted-foreground">Date la vuelta sin moverte de sitio. Misma postura, brazos relajados y mirada al frente para no curvar la espalda.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex flex-col items-center gap-4">
                 <Button
                   variant="hero"
