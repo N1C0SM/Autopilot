@@ -490,6 +490,22 @@ const Scan = () => {
                 ) : (
                   <p className="text-muted-foreground max-w-2xl mx-auto">{result.summary}</p>
                 )}
+                <div className="mt-5 flex justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleShare}
+                    disabled={sharing}
+                    className="hover-scale"
+                  >
+                    {sharing ? (
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                    ) : (
+                      <Share2 className="w-4 h-4 mr-1" />
+                    )}
+                    Compartir mi resultado
+                  </Button>
+                </div>
               </div>
 
               {/* HERO STATS — datos imposibles de ChatGPT */}
