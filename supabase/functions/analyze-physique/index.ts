@@ -15,6 +15,14 @@ const AnalysisSchema = z.object({
     priority: z.string(),
   })).min(1).max(6),
   summary: z.string(),
+  inferred_goal: z.string().optional(),
+  inferred_focus: z.string().optional(),
+  inferred_intensity: z.number().min(1).max(10).optional(),
+  inferred_specific_goals: z.array(z.string()).max(5).optional(),
+  locked_insights: z.array(z.object({
+    label: z.string(),
+    teaser: z.string(),
+  })).max(3).optional(),
 });
 
 const createLovableAiGatewayProvider = (lovableApiKey: string) =>
@@ -67,7 +75,7 @@ Deno.serve(async (req) => {
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-pro"),
       system:
-        'Eres un coach experto en estética y composición corporal. Analizas fotos para dar feedback útil. Sé honesto pero respetuoso y motivador. Devuelve SOLO JSON válido, sin markdown ni texto extra, con esta forma exacta: {"attractiveness":0,"potential":0,"physique":0,"style":0,"similarity":0,"estimated_months":0,"improvements":[{"label":"","priority":"Alta"}],"summary":""}. Todo el texto debe estar en español. attractiveness, potential, physique y style van de 0 a 10; similarity de 0 a 100; estimated_months son meses estimados; priority debe ser Alta, Media o Baja; summary en 2-3 frases.',
+        'Eres un coach experto en estética y composición corporal. Analizas fotos para dar feedback útil. Sé honesto pero respetuoso y motivador. Devuelve SOLO JSON válido, sin markdown ni texto extra, con esta forma exacta: {"attractiveness":0,"potential":0,"physique":0,"style":0,"similarity":0,"estimated_months":0,"improvements":[{"label":"","priority":"Alta"}],"summary":"","inferred_goal":"","inferred_focus":"","inferred_intensity":7,"inferred_specific_goals":[],"locked_insights":[{"label":"","teaser":""}]}. Todo el texto en español. attractiveness, potential, physique y style 0-10; similarity 0-100; estimated_months meses estimados; priority Alta/Media/Baja; summary 2-3 frases. inferred_goal debe ser uno de: "lose_weight", "gain_muscle", "recomp", "improve_endurance", "general_health". inferred_focus debe ser uno de: "gimnasio", "calistenia", "mixto" (elige según el físico observado y lo que más le conviene). inferred_intensity 1-10 según condición percibida. inferred_specific_goals: 2-3 metas concretas derivadas de las mejoras prioritarias (ej: "definir abdomen", "más volumen hombros"). locked_insights: 2 insights premium con label corto y teaser intrigante (ej: label "Tu déficit calórico exacto", teaser "Calculado para tu composición"). NO reveles los valores en locked_insights, solo describe qué desbloqueará.',
       messages: [{ role: "user", content: userContent }],
     });
 

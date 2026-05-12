@@ -28,6 +28,11 @@ type Result = {
   estimated_months: number;
   improvements: { label: string; priority: "Alta" | "Media" | "Baja" }[];
   summary: string;
+  inferred_goal?: string;
+  inferred_focus?: string;
+  inferred_intensity?: number;
+  inferred_specific_goals?: string[];
+  locked_insights?: { label: string; teaser: string }[];
 };
 
 const fileToDataUrl = (file: File): Promise<string> =>
