@@ -477,6 +477,11 @@ const Onboarding = () => {
           {step === 1 && (
             <div>
               <Label className="mb-3 block">¿En qué quieres centrarte?</Label>
+              {scanPrefill?.primary_focus && (
+                <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
+                  <Sparkles className="w-3 h-3" /> Detectado por IA · puedes cambiarlo
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-2">
                 {PRIMARY_FOCUS_OPTIONS.map((opt) => (
                   <button
