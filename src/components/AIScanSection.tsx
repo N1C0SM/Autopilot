@@ -92,21 +92,6 @@ const AIScanSection = () => {
               Escanear mi físico gratis
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Button>
-
-            <div className="flex items-center gap-4 mt-5 text-xs text-muted-foreground flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                100% privado
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                Análisis en 60s
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                7 días gratis
-              </div>
-            </div>
           </div>
 
           <motion.div
