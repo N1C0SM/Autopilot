@@ -811,7 +811,7 @@ const Scan = () => {
                               </div>
                             </div>
                             <button
-                              onClick={() => navigate("/signup?from=scan")}
+                              onClick={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
                               className="text-[10px] uppercase tracking-wider text-primary hover:underline flex-shrink-0 ml-2"
                             >
                               Desbloquear →
@@ -858,10 +858,10 @@ const Scan = () => {
                       <Button
                         variant="hero"
                         size="xl"
-                        onClick={() => navigate("/signup?from=scan")}
+                        onClick={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
                         className="hover-scale group"
                       >
-                        Empezar mi plan
+                        {user ? "Volver a mi cuenta" : "Empezar mi plan"}
                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </Button>
                       <Button variant="outline" size="xl" onClick={reset}>
