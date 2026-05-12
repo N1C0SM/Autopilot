@@ -1,103 +1,59 @@
-# Landing premium: menos densidad, más respiración
+## Objetivo
+Rediseñar la tarjeta compartible del AI Scan para que:
+1. Incluya la **foto del físico actual** y, si existe, la **foto del físico objetivo**.
+2. Use la paleta **negro + amarillo** (en vez del violeta/rosa actual).
+3. Se parezca lo más posible a lo que el usuario ve en pantalla en la página de resultados (mismas secciones y jerarquía visual).
 
-ChatGPT tiene razón. El problema ya no es la longitud — es que **todas las secciones gritan al mismo volumen**. Cada bloque tiene título + subtítulo + grid + cards + badges + bordes + fondo distinto. No hay jerarquía ni descanso.
+Solo se toca el JSX oculto del `shareRef` y `StatBox` en `src/pages/Scan.tsx`. Nada de la página visible cambia.
 
-## Principio rector
+## Nueva paleta
+- Fondo: `#0a0a0a` con un sutil glow amarillo (`radial-gradient` `rgba(250,204,21,0.18)` arriba-izq y `rgba(250,204,21,0.08)` abajo-der).
+- Acento: amarillo `#facc15` (gradiente `#fde047 → #facc15` para los números).
+- Texto principal: `#ffffff`. Texto secundario: `#a1a1aa`. Bordes: `rgba(250,204,21,0.35)`.
 
-**Alternar ritmo**: bloque denso → bloque respirado → bloque denso. Nunca dos secciones con la misma intensidad seguidas.
+## Estructura de la tarjeta (1080×1350, lo que se ve en pantalla, condensado)
 
 ```
-Hero (respirado, fuerte)
-↓
-AI Scan (denso, visual — el "wow")
-↓
-Cómo funciona (respirado, tipográfico)
-↓
-Diferenciación + chat (denso, visual)
-↓
-Testimonios (respirado, una sola voz)
-↓
-Pricing (denso, decisión)
-↓
-FAQ + CTA (respirado, cierre)
+┌──────────────────────────────────────────┐
+│ Logo Autopilot ⚡   ·   AI PHYSIQUE SCAN │
+├──────────────────────────────────────────┤
+│  [ FOTO ACTUAL ]   →   [ FOTO OBJETIVO ] │  ← solo "ACTUAL" centrado si no hay objetivo
+│   AHORA                  OBJETIVO        │
+├──────────────────────────────────────────┤
+│ DIAGNÓSTICO                              │
+│ "headline_diagnosis…" (truncado ~110ch)  │
+├──────────────────────────────────────────┤
+│ [Percentil]  [Edad estética]  [A meta]   │ ← StatBox amarillos
+├──────────────────────────────────────────┤
+│ Haz tu scan gratis · autopilotplan.com/scan │
+└──────────────────────────────────────────┘
 ```
 
-## Cambios concretos
+## Cambios concretos en `src/pages/Scan.tsx`
 
-### 1. Whitespace y ancho
+1. **Bloque de fotos** (nuevo, debajo del header):
+   - Contenedor `display: flex, gap: 24, alignItems: center, justifyContent: center`.
+   - Cada foto: `width: 380, height: 500, borderRadius: 24, objectFit: cover, border: 2px solid #facc15, boxShadow: 0 0 60px rgba(250,204,21,0.25)`.
+   - Etiqueta debajo de cada foto en amarillo (`#facc15`, uppercase, tracking 3, fontSize 16): "AHORA" / "OBJETIVO".
+   - Flecha "→" entre las dos fotos en círculo amarillo translúcido (60×60, `background: rgba(250,204,21,0.15)`, borde amarillo).
+   - Si no hay `objectiveImg`: una sola foto centrada `460×580` con etiqueta "MI FÍSICO".
+   - `<img>` usa `currentImg` / `objectiveImg` (data URLs, compatibles con `html-to-image`).
 
-- `py-20` → `py-28` o `py-32` en secciones respiradas (hero, cómo funciona, testimonios, FAQ, CTA)
-- Mantener `py-20` solo en secciones densas (AI scan, diferenciación, pricing)
-- Limitar ancho de texto: `max-w-2xl` para párrafos, `max-w-3xl` para titulares
-- Aumentar `gap` entre cards de 4 a 6/8
+2. **Header**: cambiar el cuadrito violeta del logo a amarillo (`background: rgba(250,204,21,0.18)`, `border: 1px solid rgba(250,204,21,0.5)`). Badge "ANÁLISIS IA" con borde y texto amarillos.
 
-### 2. Eliminar repetición de trust badges
+3. **Diagnóstico**: reducir `fontSize` de 56 → 40, `lineHeight: 1.15`, truncar a 110 caracteres con `…`.
 
-Aparecen 4-5 veces "7 días gratis · sin permanencia · cancelas cuando quieras":
-- Hero: mantener (es la primera vez)
-- AI Scan: **quitar** los 3 badges "100% privado / Análisis 60s / 7 días gratis"
-- Pricing: mantener microcopy
-- CTA final: mantener microcopy
-- Quitar de todos los demás CTAs intermedios
+4. **`StatBox`**: cambiar el gradiente del valor de `#a78bfa→#ec4899` a `#fde047→#facc15`. Borde sutil amarillo (`rgba(250,204,21,0.2)`).
 
-### 3. Reducir cards/cajas
+5. **Footer**: el texto del dominio en amarillo `#facc15`.
 
-**Cómo funciona** (4 cards iguales):
-- Cambiar de 4 cards con borde a **timeline tipográfico** sin bordes: número grande + título + descripción, separados por espacio. Más editorial, menos "dashboard".
+6. **Padding/espaciado**: reducir `padding` del card de 72 → 56 y usar `gap` controlado entre secciones para que entren las fotos sin overflow.
 
-**Resultados sostenibles** (3 columnas Entrenamiento/Nutrición/Acompañamiento):
-- Demasiadas listas. Reducir a **3 bloques tipográficos** sin borde ni card: icono grande + título + 1 frase corta (no lista de 4 items)
-- Mover esto al hero o eliminarlo (redundante con "cómo funciona")
-
-**Testimonios**:
-- 3 cards con estrellas+borde+avatar = ruido. Cambiar a **1 testimonio destacado grande** (cita en tipografía display) + 2 más pequeños debajo sin borde
-
-### 4. Diferenciación + chat
-
-Actualmente: 2 cards (lo de siempre vs Autopilot) + chat mockup grande, todo con bordes.
-- Reducir las 2 listas a **una sola fila comparativa horizontal** simple (ej: "Otros: bot · Autopilot: persona real")
-- O eliminar las listas y dejar **solo el chat mockup** centrado con un titular fuerte arriba ("Así es el chat. Soy yo respondiendo.")
-
-### 5. Un solo CTA por bloque
-
-Actualmente CTA en: hero, AI scan, diferenciación, testimonios, pricing, CTA final.
-- Hero → CTA principal
-- AI Scan → CTA secundario "Escanear gratis" (diferente acción)
-- Pricing → botón implícito en `PricingTiers`
-- CTA final → CTA cierre
-- **Quitar** CTAs intermedios de testimonios y diferenciación
-
-### 6. Bordes y fondos
-
-- Quitar `border border-border` de cards tipográficas (testimonios, cómo funciona)
-- Mantener solo en pricing y AI scan (donde el card tiene sentido)
-- Reducir alternancia `bg-card/30` ↔ `bg-background` — usar fondos solo 2-3 veces, no en cada sección
-
-### 7. Pricing
-
-- Quitar el titular largo "Un precio. Plan + acompañamiento real incluidos." → solo "Precio"
-- Más aire alrededor de `PricingTiers`
-- Garantía: convertir el card grande con icono flotante en una **línea simple bajo el precio** + badge ShieldCheck
-
-### 8. Hero
-
-- Quitar trainer trust-bar de arriba (foto+nombre antes del titular). Ya hay nav y aporta ruido. Mover al final del hero o a la sección "diferenciación"
-- O dejarlo pero sin caja, solo foto + texto inline más pequeño
-
-## Resultado esperado
-
-- **Mismo contenido, mitad de elementos visuales**
-- Cada sección tiene UN propósito visual claro
-- El ojo descansa entre secciones densas
-- Sensación: "esto es simple y premium" en lugar de "esto tiene mucho valor amontonado"
-
-## Archivos a tocar
-
-- `src/pages/Index.tsx` — reescritura de secciones para reducir densidad
-- `src/components/AIScanSection.tsx` — quitar 3 badges duplicados, ajustar paddings
+## Notas técnicas
+- No se cambia `handleShare`, ni `analyze-physique`, ni la UI visible.
+- No se añaden dependencias.
+- `html-to-image` ya soporta `<img src="data:…">` sin config CORS extra.
 
 ## Fuera de alcance
-
-- No cambiar paleta ni fuentes
-- No tocar pricing logic ni `PricingTiers`
-- No reescribir copy nuevo (solo recortar)
+- No se rediseña la página de resultados visible.
+- No se toca dashboard ni nada del trabajo previo.

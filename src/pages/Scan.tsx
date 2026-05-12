@@ -863,10 +863,10 @@ const Scan = () => {
                     width: 1080,
                     height: 1350,
                     background:
-                      "radial-gradient(circle at 20% 10%, rgba(99,102,241,0.25), transparent 55%), radial-gradient(circle at 85% 90%, rgba(236,72,153,0.18), transparent 50%), #08080c",
+                      "radial-gradient(circle at 20% 10%, rgba(250,204,21,0.18), transparent 55%), radial-gradient(circle at 85% 90%, rgba(250,204,21,0.08), transparent 50%), #0a0a0a",
                     color: "#fff",
                     fontFamily: "Inter, system-ui, sans-serif",
-                    padding: 72,
+                    padding: 56,
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
@@ -880,8 +880,8 @@ const Scan = () => {
                           width: 56,
                           height: 56,
                           borderRadius: 16,
-                          background: "rgba(99,102,241,0.18)",
-                          border: "1px solid rgba(99,102,241,0.45)",
+                          background: "rgba(250,204,21,0.18)",
+                          border: "1px solid rgba(250,204,21,0.5)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -900,11 +900,11 @@ const Scan = () => {
                     <div
                       style={{
                         fontSize: 13,
-                        color: "#c4b5fd",
+                        color: "#facc15",
                         textTransform: "uppercase",
                         letterSpacing: 2,
                         padding: "8px 14px",
-                        border: "1px solid rgba(196,181,253,0.4)",
+                        border: "1px solid rgba(250,204,21,0.5)",
                         borderRadius: 999,
                       }}
                     >
@@ -912,12 +912,87 @@ const Scan = () => {
                     </div>
                   </div>
 
+                  {currentImg && (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>
+                      {objectiveImg ? (
+                        <>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                            <img
+                              src={currentImg}
+                              style={{
+                                width: 380,
+                                height: 500,
+                                borderRadius: 24,
+                                objectFit: "cover",
+                                border: "2px solid #facc15",
+                                boxShadow: "0 0 60px rgba(250,204,21,0.25)",
+                              }}
+                            />
+                            <div style={{ fontSize: 16, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
+                              Ahora
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              width: 60,
+                              height: 60,
+                              borderRadius: 999,
+                              background: "rgba(250,204,21,0.15)",
+                              border: "1px solid rgba(250,204,21,0.5)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 28,
+                              color: "#facc15",
+                              flexShrink: 0,
+                            }}
+                          >
+                            →
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                            <img
+                              src={objectiveImg}
+                              style={{
+                                width: 380,
+                                height: 500,
+                                borderRadius: 24,
+                                objectFit: "cover",
+                                border: "2px solid #facc15",
+                                boxShadow: "0 0 60px rgba(250,204,21,0.25)",
+                              }}
+                            />
+                            <div style={{ fontSize: 16, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
+                              Objetivo
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+                          <img
+                            src={currentImg}
+                            style={{
+                              width: 460,
+                              height: 580,
+                              borderRadius: 28,
+                              objectFit: "cover",
+                              border: "2px solid #facc15",
+                              boxShadow: "0 0 80px rgba(250,204,21,0.3)",
+                            }}
+                          />
+                          <div style={{ fontSize: 18, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
+                            Mi físico
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div>
                     <div style={{ fontSize: 22, color: "#a1a1aa", marginBottom: 18, textTransform: "uppercase", letterSpacing: 3 }}>
                       Diagnóstico
                     </div>
-                    <div style={{ fontSize: 56, fontWeight: 700, lineHeight: 1.1, letterSpacing: -1.5 }}>
-                      "{result.headline_diagnosis ?? result.summary?.slice(0, 140)}"
+                    <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.15, letterSpacing: -1 }}>
+                      "{(result.headline_diagnosis ?? result.summary ?? "").slice(0, 110)}{((result.headline_diagnosis ?? result.summary ?? "").length > 110) ? "…" : ""}"
                     </div>
                   </div>
 
@@ -951,7 +1026,7 @@ const Scan = () => {
                     }}
                   >
                     <div style={{ fontSize: 18, color: "#a1a1aa" }}>Haz tu scan gratis en</div>
-                    <div style={{ fontSize: 26, fontWeight: 700, color: "#c4b5fd" }}>
+                    <div style={{ fontSize: 26, fontWeight: 700, color: "#facc15" }}>
                       autopilotplan.com/scan
                     </div>
                   </div>
@@ -968,8 +1043,8 @@ const Scan = () => {
 const StatBox = ({ label, value, sub }: { label: string; value: string; sub: string }) => (
   <div
     style={{
-      background: "rgba(255,255,255,0.04)",
-      border: "1px solid rgba(255,255,255,0.08)",
+      background: "rgba(250,204,21,0.05)",
+      border: "1px solid rgba(250,204,21,0.2)",
       borderRadius: 24,
       padding: 28,
     }}
@@ -982,7 +1057,7 @@ const StatBox = ({ label, value, sub }: { label: string; value: string; sub: str
         fontSize: 56,
         fontWeight: 700,
         letterSpacing: -1.5,
-        background: "linear-gradient(135deg,#a78bfa,#ec4899)",
+        background: "linear-gradient(135deg,#fde047,#facc15)",
         WebkitBackgroundClip: "text",
         WebkitTextFillColor: "transparent",
         lineHeight: 1,
