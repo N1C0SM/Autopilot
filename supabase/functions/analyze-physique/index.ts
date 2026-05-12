@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
                 type: "object",
                 properties: {
                   label: { type: "string" },
-                  priority: { type: "string", enum: ["Alta", "Media", "Baja"] },
+                  priority: { type: "string", description: "Alta, Media o Baja" },
                 },
                 required: ["label", "priority"],
               },
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "system",
