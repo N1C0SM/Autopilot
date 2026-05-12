@@ -61,10 +61,8 @@ const Dashboard = () => {
   const [profileCreatedAt, setProfileCreatedAt] = useState<string>("");
   const [completedDays, setCompletedDays] = useState(0);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!user) return;
-
-    const fetchData = async () => {
       // Sync subscription status with Stripe
       supabase.functions.invoke("check-subscription").catch(() => {});
 
@@ -106,9 +104,29 @@ const Dashboard = () => {
         }
       }
       setLoading(false);
-    };
+  };
 
+  useEffect(() => {
+    if (!user) return;
     fetchData();
+
+    // Realtime: refetch when this user's plan changes (e.g. after scan auto-apply)
+    const channel = supabase
+      .channel(`dashboard-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "training_plan", filter: `user_id=eq.${user.id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${user.id}` }, () => fetchData())
+      .subscribe();
+
+    // Refetch when tab regains focus (e.g. user returns from /scan)
+    const onFocus = () => fetchData();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
 
   const handleCompletePayment = async (plan: "monthly" | "yearly" = "monthly") => {
