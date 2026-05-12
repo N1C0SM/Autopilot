@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -138,6 +138,86 @@ const Scan = () => {
   const [loading, setLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
+
+  useEffect(() => {
+    const prevTitle = document.title;
+    const title = "AI Scan Autopilot Plan – Analiza tu físico con IA gratis";
+    const description =
+      "AI Scan de Autopilot Plan: sube una foto y la IA analiza tu físico, potencial y mejoras en 60 segundos. Gratis y sin registro.";
+    document.title = title;
+
+    const setMeta = (selector: string, attr: string, value: string, create?: () => HTMLElement) => {
+      let el = document.head.querySelector(selector) as HTMLElement | null;
+      if (!el && create) {
+        el = create();
+        document.head.appendChild(el);
+      }
+      if (el) el.setAttribute(attr, value);
+      return el;
+    };
+
+    setMeta('meta[name="description"]', "content", description, () => {
+      const m = document.createElement("meta");
+      m.setAttribute("name", "description");
+      return m;
+    });
+    setMeta('meta[property="og:title"]', "content", title, () => {
+      const m = document.createElement("meta");
+      m.setAttribute("property", "og:title");
+      return m;
+    });
+    setMeta('meta[property="og:description"]', "content", description, () => {
+      const m = document.createElement("meta");
+      m.setAttribute("property", "og:description");
+      return m;
+    });
+    setMeta('meta[property="og:url"]', "content", "https://autopilotplan.com/scan", () => {
+      const m = document.createElement("meta");
+      m.setAttribute("property", "og:url");
+      return m;
+    });
+    setMeta('meta[name="twitter:title"]', "content", title, () => {
+      const m = document.createElement("meta");
+      m.setAttribute("name", "twitter:title");
+      return m;
+    });
+    setMeta('meta[name="twitter:description"]', "content", description, () => {
+      const m = document.createElement("meta");
+      m.setAttribute("name", "twitter:description");
+      return m;
+    });
+
+    let canonical = document.head.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", "https://autopilotplan.com/scan");
+
+    const ldId = "scan-jsonld";
+    let ld = document.getElementById(ldId) as HTMLScriptElement | null;
+    if (!ld) {
+      ld = document.createElement("script");
+      ld.type = "application/ld+json";
+      ld.id = ldId;
+      document.head.appendChild(ld);
+    }
+    ld.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: "Autopilot Plan AI Scan",
+      url: "https://autopilotplan.com/scan",
+      applicationCategory: "HealthApplication",
+      description,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+    });
+
+    return () => {
+      document.title = prevTitle;
+      document.getElementById(ldId)?.remove();
+    };
+  }, []);
 
   const handleAnalyze = async () => {
     if (!currentImg) {
