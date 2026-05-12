@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -19,6 +20,8 @@ import {
   Clock,
   AlertTriangle,
   Eye,
+  Share2,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -153,6 +156,8 @@ const Scan = () => {
   const [result, setResult] = useState<Result | null>(null);
   const [futureImg, setFutureImg] = useState<string | null>(null);
   const [genLoading, setGenLoading] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -163,6 +168,45 @@ const Scan = () => {
       .single()
       .then(({ data }) => setIsPaid(data?.payment_status === "paid"));
   }, [user]);
+
+  const handleShare = async () => {
+    if (!shareRef.current) return;
+    setSharing(true);
+    try {
+      const dataUrl = await toPng(shareRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#0a0a0a",
+      });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], "autopilot-scan.png", { type: "image/png" });
+
+      const navAny = navigator as any;
+      if (navAny.canShare?.({ files: [file] })) {
+        try {
+          await navAny.share({
+            files: [file],
+            title: "Mi AI Physique Scan",
+            text: "Mi físico analizado por IA en autopilotplan.com/scan",
+          });
+          return;
+        } catch {
+          // fall through to download
+        }
+      }
+
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = "autopilot-scan.png";
+      link.click();
+      toast.success("Tarjeta descargada");
+    } catch (e: any) {
+      console.error(e);
+      toast.error("No se pudo generar la tarjeta");
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const generateFuture = async () => {
     if (!currentImg || !result) return;
