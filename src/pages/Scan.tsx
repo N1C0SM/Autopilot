@@ -15,6 +15,10 @@ import {
   Loader2,
   X,
   Lock,
+  Users,
+  Clock,
+  AlertTriangle,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
