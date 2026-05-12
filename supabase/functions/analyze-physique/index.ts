@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { currentImage, objectiveImage } = await req.json();
-    if (!currentImage) {
-      return new Response(JSON.stringify({ error: "Falta la foto actual" }), {
+    const { currentImage, backImage, objectiveImage } = await req.json();
+    if (!currentImage || !backImage) {
+      return new Response(JSON.stringify({ error: "Faltan las fotos de delante y/o atrás" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -68,10 +68,11 @@ Deno.serve(async (req) => {
       {
         type: "text",
         text: objectiveImage
-          ? "Analiza la PRIMERA imagen (físico actual del usuario) y compárala con la SEGUNDA imagen (físico objetivo / referencia). Devuelve un análisis honesto pero motivador en español."
-          : "Analiza esta foto del físico del usuario y devuelve un análisis honesto pero motivador en español.",
+          ? "Analiza la PRIMERA imagen (físico del usuario de FRENTE) y la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico, y compáralo con la TERCERA imagen (físico objetivo / referencia). Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. Devuelve un análisis honesto pero motivador en español."
+          : "Analiza la PRIMERA imagen (físico del usuario de FRENTE) junto con la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico. Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. Devuelve un análisis honesto pero motivador en español.",
       },
       { type: "image", image: currentImage },
+      { type: "image", image: backImage },
     ];
     if (objectiveImage) {
       userContent.push({ type: "image", image: objectiveImage });
