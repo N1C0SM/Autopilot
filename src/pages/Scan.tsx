@@ -158,6 +158,7 @@ const Scan = () => {
   const [genLoading, setGenLoading] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
+  const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "success" | "error">("idle");
 
   useEffect(() => {
     if (!user) return;
@@ -355,6 +356,7 @@ const Scan = () => {
 
   const applyScanToPlan = async (r: Result) => {
     if (!user) return;
+    setPlanApplyState("applying");
     try {
       const { data: existing } = await supabase
         .from("onboarding")
@@ -364,6 +366,7 @@ const Scan = () => {
 
       if (!existing) {
         // Sin onboarding previo no podemos generar plan (faltan edad/peso/etc.)
+        setPlanApplyState("idle");
         return;
       }
 
@@ -380,7 +383,10 @@ const Scan = () => {
         updates.specific_goal = r.inferred_specific_goals.join(", ");
       }
 
-      if (Object.keys(updates).length === 0) return;
+      if (Object.keys(updates).length === 0) {
+        setPlanApplyState("idle");
+        return;
+      }
 
       const { error: updErr } = await (supabase as any)
         .from("onboarding")
@@ -390,10 +396,13 @@ const Scan = () => {
 
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
-      supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
-      toast.success("Aplicando el scan a tu plan… se está regenerando 🎯");
+      const { error: genErr } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
+      if (genErr) throw genErr;
+      setPlanApplyState("success");
+      toast.success("Plan actualizado con tu scan ✓");
     } catch (e: any) {
       console.error("applyScanToPlan", e);
+      setPlanApplyState("error");
       toast.error("No se pudo aplicar al plan automáticamente");
     }
   };
