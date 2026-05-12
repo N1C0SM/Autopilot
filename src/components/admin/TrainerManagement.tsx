@@ -90,6 +90,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
   const removeTrainerRole = async (userId: string) => {
     if (!confirm("¿Quitar el rol de entrenador? Sus asignaciones se eliminarán.")) return;
     await supabase.from("trainer_assignments").delete().eq("trainer_id", userId);
+    await supabase.from("trainer_profiles").delete().eq("user_id", userId);
     const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "trainer" as any);
     if (error) { toast.error("Error: " + error.message); return; }
     toast.success("Rol de entrenador eliminado");
