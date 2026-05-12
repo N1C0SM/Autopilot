@@ -1,5 +1,5 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
-import { generateText, Output } from "npm:ai";
+import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { z } from "npm:zod";
 
@@ -26,6 +26,14 @@ const createLovableAiGatewayProvider = (lovableApiKey: string) =>
       "X-Lovable-AIG-SDK": "vercel-ai-sdk",
     },
   });
+
+const extractJson = (text: string) => {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) throw new Error("Sin resultado del análisis");
+  return JSON.parse(cleaned.slice(start, end + 1));
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -56,13 +64,14 @@ Deno.serve(async (req) => {
     }
 
     const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-    const { output: parsed } = await generateText({
+    const { text } = await generateText({
       model: gateway("google/gemini-2.5-pro"),
       system:
-        "Eres un coach experto en estética y composición corporal. Analizas fotos para dar feedback útil. Sé honesto pero respetuoso y motivador. Devuelve todo en español. Puntúa de forma realista: attractiveness, potential, physique y style de 0 a 10; similarity de 0 a 100; estimated_months como meses estimados; improvements con prioridad Alta, Media o Baja; summary en 2-3 frases.",
+        'Eres un coach experto en estética y composición corporal. Analizas fotos para dar feedback útil. Sé honesto pero respetuoso y motivador. Devuelve SOLO JSON válido, sin markdown ni texto extra, con esta forma exacta: {"attractiveness":0,"potential":0,"physique":0,"style":0,"similarity":0,"estimated_months":0,"improvements":[{"label":"","priority":"Alta"}],"summary":""}. Todo el texto debe estar en español. attractiveness, potential, physique y style van de 0 a 10; similarity de 0 a 100; estimated_months son meses estimados; priority debe ser Alta, Media o Baja; summary en 2-3 frases.',
       messages: [{ role: "user", content: userContent }],
-      output: Output.object({ schema: AnalysisSchema }),
     });
+
+    const parsed = AnalysisSchema.parse(extractJson(text));
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
