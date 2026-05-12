@@ -339,12 +339,62 @@ const Scan = () => {
         );
       } catch {}
       setTimeout(() => setResult(r), 400);
+
+      // Auto-aplicar al plan si el usuario está pagado y logueado
+      if (user && isPaid && (r.inferred_goal || r.inferred_focus || r.inferred_specific_goals?.length)) {
+        applyScanToPlan(r);
+      }
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message ?? "Error analizando la imagen");
     } finally {
       clearInterval(interval);
       setLoading(false);
+    }
+  };
+
+  const applyScanToPlan = async (r: Result) => {
+    if (!user) return;
+    try {
+      const { data: existing } = await supabase
+        .from("onboarding")
+        .select("id, specific_goal")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!existing) {
+        // Sin onboarding previo no podemos generar plan (faltan edad/peso/etc.)
+        return;
+      }
+
+      const updates: Record<string, any> = {};
+      if (r.inferred_goal) updates.goal = r.inferred_goal;
+      if (r.inferred_focus) {
+        updates.primary_focus = r.inferred_focus;
+        updates.equipment_type =
+          r.inferred_focus === "gimnasio" ? "Gimnasio" :
+          r.inferred_focus === "calistenia" ? "Calistenia" : "Mixto";
+      }
+      if (typeof r.inferred_intensity === "number") updates.intensity_level = r.inferred_intensity;
+      if (r.inferred_specific_goals?.length) {
+        updates.specific_goal = r.inferred_specific_goals.join(", ");
+      }
+
+      if (Object.keys(updates).length === 0) return;
+
+      const { error: updErr } = await supabase
+        .from("onboarding")
+        .update(updates)
+        .eq("user_id", user.id);
+      if (updErr) throw updErr;
+
+      await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
+
+      supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
+      toast.success("Aplicando el scan a tu plan… se está regenerando 🎯");
+    } catch (e: any) {
+      console.error("applyScanToPlan", e);
+      toast.error("No se pudo aplicar al plan automáticamente");
     }
   };
 
