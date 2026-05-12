@@ -10,7 +10,8 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export type UserSection = "home" | "training" | "nutrition" | "chat" | "settings";
 
@@ -33,6 +34,7 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
 const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvatar }: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const navigate = useNavigate();
 
   return (
     <Sidebar collapsible="icon">
@@ -64,6 +66,23 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Herramientas</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/scan")}
+                  className="cursor-pointer text-primary hover:bg-sidebar-accent/50"
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {!collapsed && <span>AI Physique Scan</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
