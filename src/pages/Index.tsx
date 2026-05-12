@@ -340,8 +340,7 @@ const Index = () => {
           <ScrollReveal>
             <h2 className="text-3xl sm:text-5xl font-bold font-display mb-8 leading-[1.1]">
               Empieza con{" "}
-              <span class
-="text-gradient">dirección</span>.
+              <span className="text-gradient">dirección</span>.
             </h2>
             <Button variant="hero" size="xl" onClick={() => navigate("/signup")} className="hover-scale">
               Empezar gratis
