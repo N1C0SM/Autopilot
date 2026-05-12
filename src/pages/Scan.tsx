@@ -715,6 +715,7 @@ const Scan = () => {
               </div>
 
               {/* FUNNEL CTA */}
+              {!isPaid ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -774,6 +775,17 @@ const Scan = () => {
                   </div>
                 </div>
               </motion.div>
+              ) : (
+                <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button variant="hero" size="xl" onClick={() => navigate("/dashboard")}>
+                    Volver al dashboard
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                  <Button variant="outline" size="xl" onClick={reset}>
+                    Hacer otro scan
+                  </Button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
