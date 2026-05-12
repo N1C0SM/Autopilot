@@ -71,6 +71,7 @@ const TrainerPage = () => {
             <UserDetail
               profile={selected}
               onBack={() => setSelected(null)}
+              restricted
               onUpdate={(uid, updates) => {
                 setUsers((u) => u.map((p) => (p.user_id === uid ? { ...p, ...updates } : p)));
                 setSelected((p) => (p?.user_id === uid ? { ...p, ...updates } : p));
