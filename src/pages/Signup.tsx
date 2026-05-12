@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Zap } from "lucide-react";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -23,7 +23,24 @@ const Signup = () => {
   const referralCode = searchParams.get("ref") || "";
   const isFree = searchParams.get("free") === "true";
   const fromQuiz = searchParams.get("from") === "quiz";
+  const fromScan = searchParams.get("from") === "scan";
+  const [scanCtx, setScanCtx] = useState<any>(null);
   const { signUp } = useAuth();
+
+  useEffect(() => {
+    if (!fromScan) return;
+    try {
+      const raw = sessionStorage.getItem("autopilot_scan");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      // Expira a las 24h
+      if (Date.now() - (parsed.createdAt || 0) > 24 * 60 * 60 * 1000) {
+        sessionStorage.removeItem("autopilot_scan");
+        return;
+      }
+      setScanCtx(parsed);
+    } catch {}
+  }, [fromScan]);
 
   const checkAvailability = async (field: "name" | "email", value: string) => {
     if (!value.trim()) return;
@@ -113,9 +130,34 @@ const Signup = () => {
               ? "Acceso completo por invitación"
               : fromQuiz
               ? "Último paso para desbloquear tu plan"
+              : fromScan
+              ? "Último paso para desbloquear tu AI Report y plan completo"
               : "Empieza tu transformación hoy"}
           </p>
         </div>
+
+        {fromScan && scanCtx?.result && (
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 mb-4 flex items-center gap-3">
+            {scanCtx.currentImg && (
+              <img
+                src={scanCtx.currentImg}
+                alt="Tu scan"
+                className="w-14 h-14 rounded-xl object-cover border border-primary/40 flex-shrink-0"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-primary font-medium flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5" /> Tu AI Report está reservado
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Potencial <span className="font-bold text-foreground">{scanCtx.result.potential.toFixed(1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                7 días gratis · Sin tarjeta · Cancelas cuando quieras
+              </p>
+            </div>
+          </div>
+        )}
 
         {fromQuiz && (
           <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 mb-4 text-center">
