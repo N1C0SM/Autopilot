@@ -46,7 +46,19 @@ const Login = () => {
         toast.error("Credenciales incorrectas");
       }
     } else {
-      navigate("/dashboard");
+      // Resolve destination based on role
+      const { data: { user: authedUser } } = await supabase.auth.getUser();
+      if (authedUser) {
+        const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
+          supabase.rpc("has_role", { _user_id: authedUser.id, _role: "admin" }),
+          supabase.rpc("has_role", { _user_id: authedUser.id, _role: "trainer" as any }),
+        ]);
+        if (isAdmin) navigate("/admin");
+        else if (isTrainer) navigate("/trainer");
+        else navigate("/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     }
   };
 
