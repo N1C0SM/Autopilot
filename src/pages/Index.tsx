@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import ScrollReveal from "@/components/ScrollReveal";
 import PricingTiers from "@/components/PricingTiers";
 import AIScanSection from "@/components/AIScanSection";
+import TrainersSection from "@/components/TrainersSection";
 import {
   Accordion,
   AccordionContent,
