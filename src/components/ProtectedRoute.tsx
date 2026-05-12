@@ -36,8 +36,9 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // If user hasn't completed onboarding, redirect there (unless already on /onboarding)
-  if (planStatus === "onboarding" && location.pathname !== "/onboarding") {
+  // If user hasn't completed onboarding, redirect there (unless already on /onboarding, /admin or /trainer)
+  const skipOnboardingRedirect = ["/onboarding", "/admin", "/trainer"].some((p) => location.pathname.startsWith(p));
+  if (planStatus === "onboarding" && !skipOnboardingRedirect) {
     return <Navigate to="/onboarding" replace />;
   }
 

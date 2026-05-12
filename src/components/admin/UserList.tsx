@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Search, Shield } from "lucide-react";
+import { Users, Search, Shield, UserCog } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { Profile } from "@/pages/Admin";
@@ -7,6 +7,7 @@ import type { Profile } from "@/pages/Admin";
 interface Props {
   users: Profile[];
   adminIds: Set<string>;
+  trainerIds?: Set<string>;
   onSelectUser: (user: Profile) => void;
 }
 
@@ -19,7 +20,8 @@ const STATUS_FILTERS = [
   { label: "✈️ En viaje", value: "traveling" },
 ] as const;
 
-const UserList = ({ users, adminIds, onSelectUser }: Props) => {
+const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
+  const trainerSet = trainerIds ?? new Set<string>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
 
@@ -36,18 +38,21 @@ const UserList = ({ users, adminIds, onSelectUser }: Props) => {
 
   const isTraveling = (u: Profile) => !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
 
-  const regularUsers = users.filter((u) => !adminIds.has(u.user_id) && matchesFilters(u));
+  const regularUsers = users.filter((u) => !adminIds.has(u.user_id) && !trainerSet.has(u.user_id) && matchesFilters(u));
+  const trainerUsers = users.filter((u) => trainerSet.has(u.user_id) && !adminIds.has(u.user_id) && matchesFilters(u));
   const adminUsers = users.filter((u) => adminIds.has(u.user_id) && matchesFilters(u));
 
-  const renderUserCard = (u: Profile, isAdminCard = false) => (
+  const renderUserCard = (u: Profile, kind: "user" | "admin" | "trainer" = "user") => (
     <div
       key={u.user_id}
       className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5 group"
       onClick={() => onSelectUser(u)}
     >
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isAdminCard ? "bg-primary/20" : "bg-secondary"}`}>
-        {isAdminCard ? (
+      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kind === "admin" ? "bg-primary/20" : kind === "trainer" ? "bg-amber-500/20" : "bg-secondary"}`}>
+        {kind === "admin" ? (
           <Shield className="w-4 h-4 text-primary" />
+        ) : kind === "trainer" ? (
+          <UserCog className="w-4 h-4 text-amber-400" />
         ) : (
           <span className="text-sm font-bold text-muted-foreground">
             {u.email.charAt(0).toUpperCase()}
@@ -62,9 +67,13 @@ const UserList = ({ users, adminIds, onSelectUser }: Props) => {
         </div>
       </div>
 
-      {isAdminCard ? (
+      {kind === "admin" ? (
         <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30 hover:bg-primary/20">
           Admin
+        </Badge>
+      ) : kind === "trainer" ? (
+        <Badge className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
+          Entrenador
         </Badge>
       ) : (
         <div className="flex gap-2 shrink-0 flex-wrap justify-end">
@@ -97,7 +106,7 @@ const UserList = ({ users, adminIds, onSelectUser }: Props) => {
         <Users className="w-5 h-5 text-primary" />
         <h1 className="text-2xl font-bold font-display">Usuarios</h1>
         <span className="text-sm text-muted-foreground ml-2">
-          ({users.length - adminIds.size} usuarios · {adminIds.size} admin)
+          ({regularUsers.length + trainerUsers.length} usuarios · {trainerSet.size} entrenadores · {adminIds.size} admin)
         </span>
       </div>
 
@@ -135,7 +144,7 @@ const UserList = ({ users, adminIds, onSelectUser }: Props) => {
           Usuarios ({regularUsers.length})
         </h2>
         <div className="space-y-2">
-          {regularUsers.map((u) => renderUserCard(u, false))}
+          {regularUsers.map((u) => renderUserCard(u, "user"))}
           {regularUsers.length === 0 && (
             <div className="text-center py-8 text-muted-foreground text-sm">
               No se encontraron usuarios
@@ -144,6 +153,18 @@ const UserList = ({ users, adminIds, onSelectUser }: Props) => {
         </div>
       </div>
 
+      {/* Trainers */}
+      {trainerUsers.length > 0 && (
+        <div className="mb-8">
+          <h2 className="font-display font-bold text-xs uppercase tracking-widest text-amber-400 mb-3 flex items-center gap-2">
+            <UserCog className="w-3 h-3" /> Entrenadores ({trainerUsers.length})
+          </h2>
+          <div className="space-y-2">
+            {trainerUsers.map((u) => renderUserCard(u, "trainer"))}
+          </div>
+        </div>
+      )}
+
       {/* Admins */}
       {adminUsers.length > 0 && (
         <div>
@@ -151,7 +172,7 @@ const UserList = ({ users, adminIds, onSelectUser }: Props) => {
             <Shield className="w-3 h-3" /> Administradores ({adminUsers.length})
           </h2>
           <div className="space-y-2">
-            {adminUsers.map((u) => renderUserCard(u, true))}
+            {adminUsers.map((u) => renderUserCard(u, "admin"))}
           </div>
         </div>
       )}

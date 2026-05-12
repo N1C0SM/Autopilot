@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import Unsubscribe from "./pages/Unsubscribe";
 import Legal from "./pages/Legal";
 import Scan from "./pages/Scan";
+import Trainer from "./pages/Trainer";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/trainer" element={<ProtectedRoute><Trainer /></ProtectedRoute>} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/legal/:slug" element={<Legal />} />
             <Route path="*" element={<NotFound />} />

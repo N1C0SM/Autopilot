@@ -1,59 +1,84 @@
-## Objetivo
-Rediseñar la tarjeta compartible del AI Scan para que:
-1. Incluya la **foto del físico actual** y, si existe, la **foto del físico objetivo**.
-2. Use la paleta **negro + amarillo** (en vez del violeta/rosa actual).
-3. Se parezca lo más posible a lo que el usuario ve en pantalla en la página de resultados (mismas secciones y jerarquía visual).
+# Plan: Rol de Entrenadores
 
-Solo se toca el JSX oculto del `shareRef` y `StatBox` en `src/pages/Scan.tsx`. Nada de la página visible cambia.
+Añadir un rol `trainer` para que entrenadores puedan gestionar usuarios asignados, con sección pública en la landing y chat con el admin.
 
-## Nueva paleta
-- Fondo: `#0a0a0a` con un sutil glow amarillo (`radial-gradient` `rgba(250,204,21,0.18)` arriba-izq y `rgba(250,204,21,0.08)` abajo-der).
-- Acento: amarillo `#facc15` (gradiente `#fde047 → #facc15` para los números).
-- Texto principal: `#ffffff`. Texto secundario: `#a1a1aa`. Bordes: `rgba(250,204,21,0.35)`.
+## 1. Base de datos
 
-## Estructura de la tarjeta (1080×1350, lo que se ve en pantalla, condensado)
+**Nuevo valor en enum `app_role`:** añadir `'trainer'`.
 
-```
-┌──────────────────────────────────────────┐
-│ Logo Autopilot ⚡   ·   AI PHYSIQUE SCAN │
-├──────────────────────────────────────────┤
-│  [ FOTO ACTUAL ]   →   [ FOTO OBJETIVO ] │  ← solo "ACTUAL" centrado si no hay objetivo
-│   AHORA                  OBJETIVO        │
-├──────────────────────────────────────────┤
-│ DIAGNÓSTICO                              │
-│ "headline_diagnosis…" (truncado ~110ch)  │
-├──────────────────────────────────────────┤
-│ [Percentil]  [Edad estética]  [A meta]   │ ← StatBox amarillos
-├──────────────────────────────────────────┤
-│ Haz tu scan gratis · autopilotplan.com/scan │
-└──────────────────────────────────────────┘
-```
+**Nueva tabla `trainer_assignments`:**
+- `trainer_id uuid` (entrenador)
+- `user_id uuid` (cliente asignado)
+- `assigned_at`, `assigned_by`
+- Unique (trainer_id, user_id), un user solo puede tener 1 trainer activo (unique parcial sobre user_id).
 
-## Cambios concretos en `src/pages/Scan.tsx`
+**Nueva tabla `trainer_profiles`** (perfil público para la landing):
+- `user_id uuid` (FK al auth user que es trainer)
+- `display_name`, `headline`, `bio`, `photo_url`, `specialty`, `sort_order`, `visible`
 
-1. **Bloque de fotos** (nuevo, debajo del header):
-   - Contenedor `display: flex, gap: 24, alignItems: center, justifyContent: center`.
-   - Cada foto: `width: 380, height: 500, borderRadius: 24, objectFit: cover, border: 2px solid #facc15, boxShadow: 0 0 60px rgba(250,204,21,0.25)`.
-   - Etiqueta debajo de cada foto en amarillo (`#facc15`, uppercase, tracking 3, fontSize 16): "AHORA" / "OBJETIVO".
-   - Flecha "→" entre las dos fotos en círculo amarillo translúcido (60×60, `background: rgba(250,204,21,0.15)`, borde amarillo).
-   - Si no hay `objectiveImg`: una sola foto centrada `460×580` con etiqueta "MI FÍSICO".
-   - `<img>` usa `currentImg` / `objectiveImg` (data URLs, compatibles con `html-to-image`).
+**Nueva función SQL `is_trainer_of(_trainer uuid, _user uuid)`** SECURITY DEFINER → bool.
 
-2. **Header**: cambiar el cuadrito violeta del logo a amarillo (`background: rgba(250,204,21,0.18)`, `border: 1px solid rgba(250,204,21,0.5)`). Badge "ANÁLISIS IA" con borde y texto amarillos.
+**RLS — actualizar políticas existentes** para permitir que un trainer vea/edite los datos de SUS usuarios asignados en:
+`profiles`, `onboarding`, `training_plan`, `nutrition_plan`, `workout_logs`, `day_completions`, `weight_logs`, `personal_records`, `progress_photos`, `external_activities`, `user_schedule`, `training_schedule_overrides`, `notifications`, `chat_messages`.
 
-3. **Diagnóstico**: reducir `fontSize` de 56 → 40, `lineHeight: 1.15`, truncar a 110 caracteres con `…`.
+Patrón: añadir policy `Trainers can view/manage assigned users data` con `is_trainer_of(auth.uid(), user_id)`.
 
-4. **`StatBox`**: cambiar el gradiente del valor de `#a78bfa→#ec4899` a `#fde047→#facc15`. Borde sutil amarillo (`rgba(250,204,21,0.2)`).
+**Chat admin↔trainer:** ampliar `chat_messages.conversation_user_id` para representar también conversaciones admin↔trainer (el `conversation_user_id` será el user_id del trainer cuando hable con admin). RLS ya cubre admin; añadir policy para que el trainer vea su propia conversación con admin.
 
-5. **Footer**: el texto del dominio en amarillo `#facc15`.
+## 2. Edge functions
 
-6. **Padding/espaciado**: reducir `padding` del card de 72 → 56 y usar `gap` controlado entre secciones para que entren las fotos sin overflow.
+- `admin-delete-user`: sin cambios mayores, sigue siendo solo admin.
+- Nuevo endpoint **no necesario** — gestión de roles trainer y asignaciones via tabla con RLS de admin.
 
-## Notas técnicas
-- No se cambia `handleShare`, ni `analyze-physique`, ni la UI visible.
-- No se añaden dependencias.
-- `html-to-image` ya soporta `<img src="data:…">` sin config CORS extra.
+## 3. Frontend — Admin Dashboard
 
-## Fuera de alcance
-- No se rediseña la página de resultados visible.
-- No se toca dashboard ni nada del trabajo previo.
+**`AdminSidebar`:** añadir item "Entrenadores".
+
+**`Admin.tsx`:** nueva sección `trainers`:
+- Lista de entrenadores con email, nº usuarios asignados, perfil público completado o no.
+- Botón "Promover a entrenador" desde detalle de usuario → inserta rol trainer.
+- Detalle de entrenador: editar perfil público, lista de usuarios asignados, asignar/desasignar usuarios, abrir chat con el entrenador.
+
+**`UserList`:** mostrar trainer asignado en cada card, separar visualmente:
+- Sección "Usuarios" (clientes finales)
+- Sección "Entrenadores"
+- Sección "Administradores"
+
+**`UserDetail`:** selector "Asignar entrenador" + badge mostrando trainer actual.
+
+**Nuevo `AdminChatWithTrainers`** (similar a Chat existente) en sección entrenadores.
+
+## 4. Frontend — Trainer Dashboard
+
+Nueva ruta `/trainer` protegida (solo rol trainer):
+- Lista de usuarios asignados (mismo card style que admin).
+- Al seleccionar un usuario: reutilizar `UserDetail` (o versión recortada sin acciones destructivas: sin borrar cuenta, sin tocar pagos, sin dar rol).
+- Tab "Chat con admin".
+
+**Routing:** redirigir tras login según rol → admin → `/admin`, trainer → `/trainer`, user → `/dashboard`.
+
+## 5. Landing — Sección Entrenadores
+
+Nuevo componente `<TrainersSection />` en `pages/Index.tsx`:
+- Grid de tarjetas con foto, nombre, especialidad, bio corta.
+- Lee de `trainer_profiles` donde `visible = true` ordenado por `sort_order`.
+- Estética minimalista premium acorde al resto de la landing.
+
+**Editor en admin "Landing"** (`SiteContentEditor`): añadir tab para gestionar visibilidad/orden de los perfiles públicos.
+
+## Detalles técnicos
+
+- Todas las nuevas RLS usan `is_trainer_of()` security-definer para evitar recursión.
+- Idempotente: upsert por `(trainer_id, user_id)`.
+- `chat_messages` admin↔trainer: cuando admin escribe a trainer, `conversation_user_id = trainer.user_id`, `sender_id = admin.user_id`. El trainer accede via nueva policy: `auth.uid() = conversation_user_id AND has_role(auth.uid(), 'trainer')`.
+- Migración no destructiva, no toca datos existentes.
+- UI 100% en español, estilo existente.
+
+## Orden de implementación
+
+1. Migración (enum + tablas + función + policies).
+2. Routing + ProtectedRoute para rol trainer.
+3. Admin: sección Entrenadores + asignaciones + promover.
+4. Trainer Dashboard.
+5. Landing: TrainersSection + editor admin.
+6. Chat admin↔trainer.

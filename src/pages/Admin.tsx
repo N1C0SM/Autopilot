@@ -12,6 +12,7 @@ import ExerciseLibrary from "@/components/admin/ExerciseLibrary";
 import TrainingRulesEditor from "@/components/admin/TrainingRulesEditor";
 import PaymentReminders from "@/components/admin/PaymentReminders";
 import SiteContentEditor from "@/components/admin/SiteContentEditor";
+import TrainerManagement from "@/components/admin/TrainerManagement";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export interface Profile {
@@ -24,7 +25,7 @@ export interface Profile {
   travel_equipment?: string | null;
 }
 
-export type AdminSection = "dashboard" | "users" | "reminders" | "exercises" | "rules" | "landing" | "settings";
+export type AdminSection = "dashboard" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "settings";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -33,6 +34,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<Profile[]>([]);
   const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
+  const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [section, setSection] = useState<AdminSection>("dashboard");
 
@@ -47,14 +49,25 @@ const Admin = () => {
       setIsAdmin(true);
       const [{ data: profiles }, { data: roles }] = await Promise.all([
         supabase.from("profiles").select("*"),
-        supabase.from("user_roles").select("user_id").eq("role", "admin"),
+        supabase.from("user_roles").select("user_id, role"),
       ]);
       if (profiles) setUsers(profiles as unknown as Profile[]);
-      if (roles) setAdminIds(new Set(roles.map((r) => r.user_id)));
+      if (roles) {
+        setAdminIds(new Set(roles.filter((r: any) => r.role === "admin").map((r: any) => r.user_id)));
+        setTrainerIds(new Set(roles.filter((r: any) => r.role === "trainer").map((r: any) => r.user_id)));
+      }
       setLoading(false);
     };
     checkAdmin();
   }, [user, navigate]);
+
+  const refreshRoles = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    if (roles) {
+      setAdminIds(new Set(roles.filter((r: any) => r.role === "admin").map((r: any) => r.user_id)));
+      setTrainerIds(new Set(roles.filter((r: any) => r.role === "trainer").map((r: any) => r.user_id)));
+    }
+  };
 
   const updateUserInList = (userId: string, updates: Partial<Profile>) => {
     setUsers((u) => u.map((p) => p.user_id === userId ? { ...p, ...updates } : p));
@@ -98,6 +111,7 @@ const Admin = () => {
             <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground">
               {section === "dashboard" && "Panel general"}
               {section === "users" && (selectedUser ? selectedUser.email : "Usuarios")}
+              {section === "trainers" && "Entrenadores"}
               {section === "reminders" && "Recordatorios de pago"}
               {section === "exercises" && "Biblioteca de ejercicios"}
               {section === "rules" && "Reglas de generación"}
@@ -176,7 +190,7 @@ const Admin = () => {
             {section === "users" && (
               <div className="max-w-5xl">
                 {!selectedUser ? (
-                  <UserList users={users} adminIds={adminIds} onSelectUser={handleSelectUser} />
+                  <UserList users={users} adminIds={adminIds} trainerIds={trainerIds} onSelectUser={handleSelectUser} />
                 ) : (
                   <UserDetail
                     profile={selectedUser}
@@ -188,6 +202,17 @@ const Admin = () => {
                     }}
                   />
                 )}
+              </div>
+            )}
+
+            {section === "trainers" && (
+              <div className="max-w-5xl">
+                <TrainerManagement
+                  allUsers={users}
+                  trainerIds={trainerIds}
+                  adminIds={adminIds}
+                  onRolesChange={refreshRoles}
+                />
               </div>
             )}
 
