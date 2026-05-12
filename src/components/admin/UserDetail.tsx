@@ -69,9 +69,10 @@ interface Props {
   onBack: () => void;
   onUpdate: (userId: string, updates: Partial<Profile>) => void;
   onDelete?: (userId: string) => void;
+  restricted?: boolean;
 }
 
-const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
+const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }: Props) => {
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState({ protein: "", carbs: "", fats: "" });
@@ -267,7 +268,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
             </Button>
           </>
         )}
-        <AlertDialog>
+        {!restricted && <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting}>
               <Trash2 className="w-4 h-4" />
@@ -287,7 +288,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+        </AlertDialog>}
       </div>
 
       {/* Tabs */}
@@ -329,7 +330,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
         {/* Tab: Info */}
         <TabsContent value="info" className="space-y-6">
           {/* Payment status toggle */}
-          <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
+          {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
               <CreditCard className="w-5 h-5 text-primary" />
               <div>
@@ -359,10 +360,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
                 }
               }}
             />
-          </div>
+          </div>}
 
           {/* Admin role toggle */}
-          <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
+          {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-primary" />
               <div>
@@ -373,7 +374,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete }: Props) => {
               </div>
             </div>
             <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} />
-          </div>
+          </div>}
 
           {onboarding ? (
             <div className="bg-card rounded-xl p-6 border border-border">
