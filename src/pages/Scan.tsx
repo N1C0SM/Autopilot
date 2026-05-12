@@ -150,6 +150,7 @@ const Scan = () => {
   const { user } = useAuth();
   const [isPaid, setIsPaid] = useState(false);
   const [currentImg, setCurrentImg] = useState<string | null>(null);
+  const [backImg, setBackImg] = useState<string | null>(null);
   const [objectiveImg, setObjectiveImg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -311,8 +312,8 @@ const Scan = () => {
   }, []);
 
   const handleAnalyze = async () => {
-    if (!currentImg) {
-      toast.error("Sube tu foto actual primero");
+    if (!currentImg || !backImg) {
+      toast.error("Sube la foto de delante y la de atrás");
       return;
     }
     setLoading(true);
@@ -322,7 +323,7 @@ const Scan = () => {
     }, 300);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-physique", {
-        body: { currentImage: currentImg, objectiveImage: objectiveImg },
+        body: { currentImage: currentImg, backImage: backImg, objectiveImage: objectiveImg },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -410,6 +411,7 @@ const Scan = () => {
   const reset = () => {
     setResult(null);
     setCurrentImg(null);
+    setBackImg(null);
     setObjectiveImg(null);
     setScanProgress(0);
   };
@@ -452,17 +454,24 @@ const Scan = () => {
                   <span className="text-gradient">IA. Gratis.</span>
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  Sube tu foto actual y opcionalmente un físico de referencia. La IA te dice qué te limita y cuánto te falta para llegar.
+                  Sube una foto de delante y otra de atrás (y opcionalmente un físico de referencia). La IA te dice qué te limita y cuánto te falta para llegar.
                 </p>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-8">
+              <div className="grid sm:grid-cols-3 gap-5 max-w-4xl mx-auto mb-8">
                 <Dropzone
-                  label="Tu físico actual"
-                  hint="Foto cuerpo completo · obligatoria"
+                  label="Foto de delante"
+                  hint="Cuerpo completo · obligatoria"
                   image={currentImg}
                   onFile={async (f) => setCurrentImg(await fileToDataUrl(f))}
                   onClear={() => setCurrentImg(null)}
+                />
+                <Dropzone
+                  label="Foto de atrás"
+                  hint="Cuerpo completo · obligatoria"
+                  image={backImg}
+                  onFile={async (f) => setBackImg(await fileToDataUrl(f))}
+                  onClear={() => setBackImg(null)}
                 />
                 <Dropzone
                   label="Tu físico objetivo"
@@ -478,7 +487,7 @@ const Scan = () => {
                   variant="hero"
                   size="xl"
                   onClick={handleAnalyze}
-                  disabled={loading || !currentImg}
+                  disabled={loading || !currentImg || !backImg}
                   className="hover-scale group min-w-[280px]"
                 >
                   {loading ? (
