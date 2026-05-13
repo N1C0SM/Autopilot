@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,14 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Helmet>
+        <title>Iniciar sesión · Autopilot</title>
+        <meta name="description" content="Accede a tu plan de Autopilot: entrenamiento, nutrición y chat con tu entrenador." />
+        <link rel="canonical" href="https://autopilotplan.com/login" />
+        <meta property="og:title" content="Iniciar sesión · Autopilot" />
+        <meta property="og:description" content="Entra a tu cuenta de Autopilot." />
+        <meta property="og:url" content="https://autopilotplan.com/login" />
+      </Helmet>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>

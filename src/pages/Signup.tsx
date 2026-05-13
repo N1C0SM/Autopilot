@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -121,6 +122,14 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+      <Helmet>
+        <title>Crear cuenta · Autopilot</title>
+        <meta name="description" content="Crea tu cuenta de Autopilot y empieza con 7 días gratis tu plan personalizado de entrenamiento y nutrición." />
+        <link rel="canonical" href="https://autopilotplan.com/signup" />
+        <meta property="og:title" content="Crear cuenta · Autopilot" />
+        <meta property="og:description" content="7 días gratis. Plan personalizado de entrenamiento y nutrición con seguimiento real." />
+        <meta property="og:url" content="https://autopilotplan.com/signup" />
+      </Helmet>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>

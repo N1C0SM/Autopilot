@@ -1,0 +1,17 @@
+# Autopilot
+
+> Entrenador personal online con plan personalizado de entrenamiento y nutrición + chat con tu entrenador. 19€/mes, 7 días gratis.
+
+Autopilot crea un plan vivo para ti: entrenamiento + nutrición ajustados a tu nivel, equipamiento, horarios y objetivos. El plan se ajusta semana a semana mediante chat con un entrenador real (no es IA respondiendo).
+
+## Pages
+
+- [Inicio](/): Cómo funciona, precio, testimonios y FAQ.
+- [AI Body Scan](/scan): Análisis IA gratuito de tu físico a partir de una foto.
+- [Crear cuenta](/signup): Registro con 7 días gratis.
+- [Iniciar sesión](/login): Acceso a tu plan.
+
+## Optional
+
+- [Términos](/legal/terminos): Términos y condiciones del servicio.
+- [Privacidad](/legal/privacidad): Política de privacidad y RGPD.

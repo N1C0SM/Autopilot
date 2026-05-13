@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Upload,
@@ -418,6 +419,14 @@ const Scan = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
+      <Helmet>
+        <title>AI Body Scan · Autopilot</title>
+        <meta name="description" content="Sube una foto y recibe un análisis IA de tu físico con recomendaciones personalizadas." />
+        <link rel="canonical" href="https://autopilotplan.com/scan" />
+        <meta property="og:title" content="AI Body Scan · Autopilot" />
+        <meta property="og:description" content="Análisis IA gratuito de tu físico con recomendaciones personalizadas." />
+        <meta property="og:url" content="https://autopilotplan.com/scan" />
+      </Helmet>
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[160px]" />
