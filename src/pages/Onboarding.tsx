@@ -750,27 +750,29 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 5: Tu nivel */}
-          {step === 5 && (
+          {/* Tu nivel — campos según enfoque */}
+          {currentKey === "level" && (
             <div>
               <Label className="mb-1.5 block">¿Cuál es tu nivel ahora?</Label>
               <p className="text-xs text-muted-foreground mb-5">
-                Aproxima sin obsesionarte. Déjalo en blanco si no lo sabes.
+                Solo lo relevante para tu enfoque. Déjalo en blanco si no lo sabes.
               </p>
               <div className="space-y-3">
-                <div>
-                  <Label className="text-sm">Dominadas máximas</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={data.initial_tests.pullups}
-                    onChange={(e) =>
-                      setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, pullups: e.target.value } }))
-                    }
-                    placeholder="0 si no haces ninguna"
-                    className="mt-1.5"
-                  />
-                </div>
+                {(data.primary_focus === "calistenia" || data.primary_focus === "mixto" || !data.primary_focus) && (
+                  <div>
+                    <Label className="text-sm">Dominadas máximas</Label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={data.initial_tests.pullups}
+                      onChange={(e) =>
+                        setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, pullups: e.target.value } }))
+                      }
+                      placeholder="0 si no haces ninguna"
+                      className="mt-1.5"
+                    />
+                  </div>
+                )}
                 <div>
                   <Label className="text-sm">Flexiones máximas</Label>
                   <Input
@@ -784,19 +786,21 @@ const Onboarding = () => {
                     className="mt-1.5"
                   />
                 </div>
-                <div>
-                  <Label className="text-sm">Sentadilla con tu peso (reps)</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={data.initial_tests.squat}
-                    onChange={(e) =>
-                      setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, squat: e.target.value } }))
-                    }
-                    placeholder="Ej: 30"
-                    className="mt-1.5"
-                  />
-                </div>
+                {(data.primary_focus === "gimnasio" || data.primary_focus === "mixto") && (
+                  <div>
+                    <Label className="text-sm">Sentadilla con tu peso (reps)</Label>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={data.initial_tests.squat}
+                      onChange={(e) =>
+                        setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, squat: e.target.value } }))
+                      }
+                      placeholder="Ej: 30"
+                      className="mt-1.5"
+                    />
+                  </div>
+                )}
                 <div>
                   <Label className="text-sm">Plancha frontal (segundos)</Label>
                   <Input
@@ -814,23 +818,19 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 6: Lesiones */}
-          {step === 6 && (
-            <div>
-              <Label className="mb-1.5 block">¿Lesiones o molestias?</Label>
-              <p className="text-xs text-muted-foreground mb-3">Déjalo vacío si no tienes ninguna</p>
-              <Textarea
-                value={data.injuries}
-                onChange={(e) => update("injuries", e.target.value)}
-                placeholder="Ej: Lumbar, tendinitis hombro derecho…"
-                rows={3}
-              />
-            </div>
-          )}
-
-          {/* Step 7: Nutrición */}
-          {step === 7 && (
+          {/* Salud + Nutrición (combinados) */}
+          {currentKey === "health" && (
             <div className="space-y-4">
+              <div>
+                <Label>¿Lesiones o molestias?</Label>
+                <Textarea
+                  value={data.injuries}
+                  onChange={(e) => update("injuries", e.target.value)}
+                  placeholder="Ej: Lumbar, tendinitis hombro derecho…"
+                  className="mt-1.5"
+                  rows={2}
+                />
+              </div>
               <div>
                 <Label>Preferencias nutricionales</Label>
                 <Textarea
@@ -854,8 +854,8 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 8: Resumen + extras opcionales */}
-          {step === 8 && (
+          {/* Resumen */}
+          {currentKey === "summary" && (
             <div className="space-y-5">
               <div className="text-center mb-2">
                 <div className="text-4xl mb-2">🎯</div>
