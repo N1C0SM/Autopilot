@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 const CONTENT: Record<string, { title: string; body: string[] }> = {
   terminos: {
@@ -27,8 +28,17 @@ const CONTENT: Record<string, { title: string; body: string[] }> = {
 const Legal = () => {
   const { slug } = useParams();
   const data = CONTENT[slug || ""] || CONTENT.terminos;
+  const path = `/legal/${slug || "terminos"}`;
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{`${data.title} · Autopilot`}</title>
+        <meta name="description" content={data.body[0]} />
+        <link rel="canonical" href={`https://autopilotplan.com${path}`} />
+        <meta property="og:title" content={`${data.title} · Autopilot`} />
+        <meta property="og:description" content={data.body[0]} />
+        <meta property="og:url" content={`https://autopilotplan.com${path}`} />
+      </Helmet>
       <nav className="border-b border-border">
         <div className="container mx-auto h-16 flex items-center px-4">
           <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
