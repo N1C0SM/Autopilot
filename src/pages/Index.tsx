@@ -11,6 +11,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import ScrollReveal from "@/components/ScrollReveal";
 import PricingTiers from "@/components/PricingTiers";
 import AIScanSection from "@/components/AIScanSection";
@@ -66,6 +67,23 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative">
+      <Helmet>
+        <title>Autopilot – Entrenador personal online</title>
+        <meta name="description" content="Plan personalizado de entrenamiento y nutrición por €19/mes. Chat con tu entrenador, progreso real y plan que evoluciona contigo." />
+        <link rel="canonical" href="https://autopilotplan.com/" />
+        <meta property="og:title" content="Autopilot – Entrenador personal online" />
+        <meta property="og:description" content="Plan personalizado de entrenamiento y nutrición por €19/mes. Chat con tu entrenador y progreso real." />
+        <meta property="og:url" content="https://autopilotplan.com/" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f) => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        })}</script>
+      </Helmet>
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
@@ -81,6 +99,7 @@ const Index = () => {
         </div>
       </nav>
 
+      <main>
       {/* HERO — respirado */}
       <section className="pt-40 sm:pt-48 pb-36 px-4">
         <div className="container mx-auto max-w-3xl text-center">
