@@ -984,7 +984,7 @@ const Onboarding = () => {
             <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
               <ArrowLeft className="w-4 h-4 mr-1" /> Atrás
             </Button>
-            {step < STEPS.length - 1 ? (
+            {step < activeSteps.length - 1 ? (
               <Button variant="default" onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
                 Siguiente <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
