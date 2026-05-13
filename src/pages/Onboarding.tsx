@@ -429,7 +429,7 @@ const Onboarding = () => {
 
         <div className="bg-card rounded-2xl p-8 border border-border card-shadow">
           {/* Step 0: Sobre ti */}
-          {step === 0 && (
+          {currentKey === "about" && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -497,44 +497,38 @@ const Onboarding = () => {
             </div>
           )}
 
-          {/* Step 1: Tu enfoque */}
-          {step === 1 && (
-            <div>
-              <Label className="mb-3 block">¿En qué quieres centrarte?</Label>
-              {scanPrefill?.primary_focus && (
-                <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
-                  <Sparkles className="w-3 h-3" /> Detectado por IA · puedes cambiarlo
-                </div>
-              )}
-              <div className="grid grid-cols-1 gap-2">
-                {PRIMARY_FOCUS_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => update("primary_focus", opt.value)}
-                    className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                      data.primary_focus === opt.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <span className="text-2xl mt-0.5">{opt.emoji}</span>
-                    <div>
-                      <span className="font-medium block">{opt.label}</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Objetivo + meta específica */}
-          {step === 2 && (
+          {/* Enfoque + Objetivo (combinados) */}
+          {currentKey === "focus_goal" && (
             <div className="space-y-5">
               <div>
-                <Label className="mb-3 block">Tu objetivo principal</Label>
+                <Label className="mb-2 block text-xs">¿En qué quieres centrarte?</Label>
+                {scanPrefill?.primary_focus && (
+                  <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
+                    <Sparkles className="w-3 h-3" /> Detectado por IA
+                  </div>
+                )}
+                <div className="grid grid-cols-3 gap-2">
+                  {PRIMARY_FOCUS_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => update("primary_focus", opt.value)}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-center transition-all ${
+                        data.primary_focus === opt.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <span className="text-2xl">{opt.emoji}</span>
+                      <span className="font-medium text-xs">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="mb-2 block text-xs">Tu objetivo principal</Label>
                 {scanPrefill?.goal && (
-                  <div className="mb-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
-                    <Sparkles className="w-3 h-3" /> Detectado por IA · puedes cambiarlo
+                  <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
+                    <Sparkles className="w-3 h-3" /> Detectado por IA
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-2">
@@ -553,13 +547,18 @@ const Onboarding = () => {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
 
-              <div>
-                <Label className="mb-1.5 block text-xs">Meta concreta (opcional)</Label>
+          {/* Skill concreto: solo si goal === skill_based */}
+          {currentKey === "specific_goal" && (
+            <div>
+              <Label className="mb-1.5 block">¿Qué skill quieres conseguir?</Label>
+              <p className="text-xs text-muted-foreground mb-3">Elige uno o varios, o escribe el tuyo</p>
                 <Textarea
                   value={data.specific_goal}
                   onChange={(e) => update("specific_goal", e.target.value)}
-                  placeholder="Ej: handstand, press banca 100kg…"
+                  placeholder="Ej: handstand, muscle up, press banca 100kg…"
                   rows={2}
                   className="mb-2"
                 />
@@ -587,40 +586,35 @@ const Onboarding = () => {
                     );
                   })}
                 </div>
-              </div>
             </div>
           )}
 
-          {/* Step 3: Deportes */}
-          {step === 3 && (
+          {/* Deportes + Horarios (combinados) */}
+          {currentKey === "sports_schedule" && (
             <div>
-              <Label className="mb-3 block">¿Qué deportes practicas?</Label>
-              <p className="text-xs text-muted-foreground mb-4">Selecciona los que hagas con regularidad</p>
-              <div className="grid grid-cols-2 gap-2">
-                {SPORTS.map((s) => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => toggleSport(s.value)}
-                    className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all text-sm ${
-                      data.sports.includes(s.value) ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <span className="text-xl">{s.emoji}</span>
-                    <span className="font-medium">{s.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Horarios */}
-          {step === 4 && (
-            <div>
-              <Label className="mb-1.5 block">Tu agenda fija</Label>
+              <Label className="mb-1.5 block">Deportes y agenda</Label>
               <p className="text-xs text-muted-foreground mb-4">
-                Indica cuándo haces cada deporte y cualquier otra cosa fija (trabajo, clases…). Encajaremos los entrenos en los huecos libres.
+                Marca los deportes que practicas y añade cosas fijas (trabajo, clases…). Encajaremos los entrenos en tus huecos libres.
               </p>
+
+              <div className="mb-4">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">Deportes</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {SPORTS.map((s) => (
+                    <button
+                      key={s.value}
+                      type="button"
+                      onClick={() => toggleSport(s.value)}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg border-2 text-left transition-all text-sm ${
+                        data.sports.includes(s.value) ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <span className="text-lg">{s.emoji}</span>
+                      <span className="font-medium">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
                 {(() => {
