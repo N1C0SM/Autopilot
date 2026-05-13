@@ -132,8 +132,9 @@ const Onboarding = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("gcal") === "connected") {
-      setStep(STEPS.length - 1);
       setGcalConnected(true);
+      // Saltamos al último paso una vez se conozcan los pasos activos
+      setTimeout(() => setStep(99), 0);
       window.history.replaceState({}, "", "/onboarding");
     }
   }, []);
@@ -362,14 +363,28 @@ const Onboarding = () => {
     }
   };
 
+  // Pasos dinámicos según datos
+  const activeSteps: StepKey[] = (() => {
+    const arr: StepKey[] = ["about", "focus_goal"];
+    if (data.goal === "skill_based") arr.push("specific_goal");
+    arr.push("sports_schedule", "level", "health", "summary");
+    return arr;
+  })();
+
+  // Si el step actual se sale del rango (p.ej. tras cambio dinámico), lo recortamos
+  useEffect(() => {
+    if (step > activeSteps.length - 1) setStep(activeSteps.length - 1);
+  }, [activeSteps.length, step]);
+
+  const currentKey = activeSteps[Math.min(step, activeSteps.length - 1)];
+
   const canNext = () => {
-    if (step === 0) {
+    if (currentKey === "about") {
       if (!(data.age && data.height && data.weight && data.sex && data.occupation)) return false;
       if (data.occupation === "otro" && !data.occupation_detail.trim()) return false;
       return true;
     }
-    if (step === 1) return !!data.primary_focus;
-    if (step === 2) return !!data.goal;
+    if (currentKey === "focus_goal") return !!data.primary_focus && !!data.goal;
     return true;
   };
 
