@@ -375,6 +375,7 @@ const Index = () => {
           </ScrollReveal>
         </div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="py-10 px-4 border-t border-border">
