@@ -105,6 +105,7 @@
     --gradient-hero: linear-gradient(135deg, hsl(48 100% 50%) 0%, hsl(40 100% 45%) 100%);
     --shadow-glow: 0 0 30px hsl(48 100% 50% / 0.2);
     --shadow-card: 0 4px 24px hsl(0 0% 0% / 0.4);
+    --shadow-premium: 0 20px 60px -20px hsl(48 100% 50% / 0.15), 0 0 0 1px hsl(0 0% 100% / 0.04);
   }
 }
 
@@ -137,5 +138,14 @@
 
   .card-shadow {
     box-shadow: var(--shadow-card);
+  }
+
+  .premium-shadow {
+    box-shadow: var(--shadow-premium);
+  }
+
+  .grain {
+    background-image: radial-gradient(hsl(0 0% 100% / 0.02) 1px, transparent 1px);
+    background-size: 3px 3px;
   }
 }
