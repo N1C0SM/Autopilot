@@ -99,7 +99,11 @@ serve(async (req) => {
     let plan: "monthly" | "yearly" | null = null;
 
     if (hasActiveSub) {
-      subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+      const periodEnd =
+        (sub as any).current_period_end ??
+        sub.items?.data?.[0]?.current_period_end ??
+        null;
+      subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
       tier = sub.metadata?.tier || "personal";
 
       // Detect plan by comparing price_id
@@ -115,9 +119,9 @@ serve(async (req) => {
       const updateData: Record<string, string> = {
         subscription_status: sub.status,
         payment_status: "paid",
-        subscription_end: subscriptionEnd!,
         subscription_tier: tier,
       };
+      if (subscriptionEnd) updateData.subscription_end = subscriptionEnd;
       // Auto-activate: if user was onboarding, move to plan_pending
       if (profile?.plan_status === "onboarding") {
         updateData.plan_status = "plan_pending";
