@@ -5,9 +5,6 @@ import {
   Image as ImageIcon,
   Send,
   User,
-  Users,
-  Clock,
-  Trophy,
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,12 +29,6 @@ const howItWorks = [
   { step: "02", title: "Plan diseñado para ti", desc: "Entrenamiento y nutrición construidos a mano sobre tu nivel, equipo y horarios. Sin plantillas." },
   { step: "03", title: "Empiezas esta semana", desc: "Sabes qué hacer cada día. Sincronizado con tu Google Calendar." },
   { step: "04", title: "Ajustes continuos por chat", desc: "Hablamos cada semana. El plan evoluciona con tus resultados, no al revés." },
-];
-
-const trustStats = [
-  { icon: Users, value: "+200", label: "alumnos activos" },
-  { icon: Clock, value: "+8 años", label: "entrenando" },
-  { icon: Trophy, value: "97%", label: "renueva al mes 2" },
 ];
 
 const pillars = [
@@ -73,18 +64,27 @@ const Index = () => {
     { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null },
   ]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
+  const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
 
   useEffect(() => {
     (async () => {
-      const [{ data: t }, { data: s }] = await Promise.all([
+      const [{ data: t }, { data: s }, paidRes, activeRes] = await Promise.all([
         supabase.from("site_testimonials").select("name, result, text, photo_url").eq("visible", true).order("sort_order"),
         supabase.from("settings").select("trainer_name, trainer_photo_url, trainer_bio").limit(1).maybeSingle(),
+        supabase.from("profiles").select("user_id", { count: "exact", head: true }).eq("payment_status", "paid"),
+        supabase.from("profiles").select("user_id", { count: "exact", head: true }).eq("payment_status", "paid").eq("subscription_status", "active"),
       ]);
       if (t && t.length > 0) setTestimonials(t as any);
       if (s) setTrainer({
         trainer_name: s.trainer_name || "Nicolás",
         trainer_photo_url: s.trainer_photo_url || "",
         trainer_bio: s.trainer_bio || "",
+      });
+      const paid = paidRes.count ?? 0;
+      const active = activeRes.count ?? 0;
+      setStats({
+        paid,
+        activePct: paid > 0 ? Math.round((active / paid) * 100) : null,
       });
     })();
   }, []);
@@ -219,26 +219,25 @@ const Index = () => {
                   </div>
                 )}
                 <div className="text-left">
-                  <div className="font-semibold text-foreground text-xs">{trainer.trainer_name} · Entrenador personal</div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="w-2.5 h-2.5 fill-primary text-primary" />
-                      ))}
-                    </div>
-                    <span>4.9/5 · +200 reseñas</span>
-                  </div>
+                  <div className="font-semibold text-foreground text-xs">{trainer.trainer_name} · Fundador</div>
+                  <div className="text-[11px] text-muted-foreground">Detrás de cada plan y cada mensaje</div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 sm:gap-8 max-w-md w-full">
-                {trustStats.map((s) => (
-                  <div key={s.label} className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold font-display text-gradient">{s.value}</div>
-                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{s.label}</div>
+              {stats.paid > 0 && (
+                <div className="grid grid-cols-2 gap-6 sm:gap-12 max-w-sm w-full">
+                  <div className="text-center">
+                    <div className="text-xl sm:text-2xl font-bold font-display text-gradient">{stats.paid}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">alumnos de pago</div>
                   </div>
-                ))}
-              </div>
+                  {stats.activePct !== null && (
+                    <div className="text-center">
+                      <div className="text-xl sm:text-2xl font-bold font-display text-gradient">{stats.activePct}%</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">siguen activos</div>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </div>
         </section>
