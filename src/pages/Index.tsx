@@ -6,6 +6,11 @@ import {
   Send,
   User,
   Check,
+  ArrowRight,
+  ScanLine,
+  Brain,
+  Wrench,
+  Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -17,6 +22,10 @@ import ScrollReveal from "@/components/ScrollReveal";
 import PricingTiers from "@/components/PricingTiers";
 import AIScanSection from "@/components/AIScanSection";
 import TrainersSection from "@/components/TrainersSection";
+import PostScanFlow from "@/components/PostScanFlow";
+import PremiumTransformation from "@/components/PremiumTransformation";
+import ComparisonTable from "@/components/ComparisonTable";
+import type { PlanKey } from "@/config/tiers";
 import {
   Accordion,
   AccordionContent,
@@ -24,36 +33,23 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-const howItWorks = [
-  { step: "01", title: "Diagnóstico real", desc: "Cuestionario corto + AI Scan opcional. Vemos exactamente desde dónde partes." },
-  { step: "02", title: "Plan diseñado para ti", desc: "Entrenamiento y nutrición construidos a mano sobre tu nivel, equipo y horarios. Sin plantillas." },
-  { step: "03", title: "Empiezas esta semana", desc: "Sabes qué hacer cada día. Sincronizado con tu Google Calendar." },
-  { step: "04", title: "Ajustes continuos por chat", desc: "Hablamos cada semana. El plan evoluciona con tus resultados, no al revés." },
-];
-
-const pillars = [
-  {
-    title: "No es una app automática",
-    desc: "Cada mensaje lo lee una persona. Sin bots, sin respuestas genéricas.",
-  },
-  {
-    title: "Plan vivo",
-    desc: "Si esta semana solo entrenas 3 días, lo reorganizamos sin perder progreso.",
-  },
-  {
-    title: "Transformación visible",
-    desc: "Métricas, fotos y PRs. No celebramos el esfuerzo, celebramos el resultado.",
-  },
+const whyWorks = [
+  { icon: Brain, title: "Diagnóstico claro", desc: "La IA te muestra qué deberías mejorar primero, sin generalidades." },
+  { icon: Wrench, title: "Plan humano", desc: "Un entrenador real convierte ese diagnóstico en entrenamiento y nutrición." },
+  { icon: Repeat, title: "Ajustes continuos", desc: "El plan cambia contigo según tus resultados, horarios y sensaciones." },
 ];
 
 const faqs = [
+  { q: "¿El diagnóstico es gratis?", a: "Sí. El AI Physique Scan es 100% gratis, sin tarjeta y sin necesidad de crear cuenta primero." },
+  { q: "¿Necesito tarjeta para hacer el scan?", a: "No. Solo necesitas una foto. El resultado lo recibes en 60 segundos." },
+  { q: "¿Qué pasa después del scan?", a: "Recibes un diagnóstico visual con tus prioridades. Si te interesa, eliges plan (Entrenamiento o Completo) y un entrenador real te construye un plan adaptado." },
+  { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
+  { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
+  { q: "¿Es IA o una persona?", a: "Ambas. La IA hace el diagnóstico inicial. Después es un entrenador humano quien diseña tu plan y responde a tus mensajes." },
+  { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Sin permanencia. Cancelas en un clic desde tu cuenta cuando quieras." },
+  { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis, pero incluye diagnóstico + llamada gratis con un asesor antes de empezar." },
+  { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y se construye sobre eso. Calistenia, mancuernas en casa o cero material." },
   { q: "¿Y si nunca he entrenado?", a: "Mejor. El plan se construye desde tu nivel real y vamos paso a paso, sin saltar fases." },
-  { q: "¿Y si entreno en casa o sin material?", a: "Sin problema. Indicas tu equipamiento exacto y se construye sobre eso. Calistenia, gimnasio, mancuernas en casa o cero material." },
-  { q: "¿Es IA o una persona?", a: "Una persona. Yo leo tus mensajes, ajusto el plan y respondo. La IA solo se usa para el diagnóstico inicial." },
-  { q: "¿Y si tengo lesiones?", a: "Cada ejercicio se elige respetando lo que tu cuerpo permite. Tienes molestia, lo cambio al día siguiente." },
-  { q: "¿Cuánto tardo en ver resultados?", a: "Cambios visibles en composición a las 6-8 semanas si hay adherencia. Cambios en fuerza y energía la primera semana." },
-  { q: "¿Y si no me convence?", a: "7 días gratis y 30 días de garantía. Cancelas en un clic, sin permanencia ni preguntas." },
-  { q: "¿Cuánto tiempo necesito a la semana?", a: "Desde 3 horas. Tú marcas la disponibilidad real, yo construyo sobre eso." },
 ];
 
 const Index = () => {
@@ -65,20 +61,24 @@ const Index = () => {
   ]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
+  const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
 
   useEffect(() => {
     (async () => {
       const [{ data: t }, { data: s }, statsRes] = await Promise.all([
         supabase.from("site_testimonials").select("name, result, text, photo_url").eq("visible", true).order("sort_order"),
-        supabase.from("settings").select("trainer_name, trainer_photo_url, trainer_bio").limit(1).maybeSingle(),
+        supabase.from("settings").select("trainer_name, trainer_photo_url, trainer_bio, contact_email").limit(1).maybeSingle(),
         (supabase.rpc as any)("get_public_stats"),
       ]);
       if (t && t.length > 0) setTestimonials(t as any);
-      if (s) setTrainer({
-        trainer_name: s.trainer_name || "Nicolás",
-        trainer_photo_url: s.trainer_photo_url || "",
-        trainer_bio: s.trainer_bio || "",
-      });
+      if (s) {
+        setTrainer({
+          trainer_name: s.trainer_name || "Nicolás",
+          trainer_photo_url: s.trainer_photo_url || "",
+          trainer_bio: s.trainer_bio || "",
+        });
+        if ((s as any).contact_email) setContactEmail((s as any).contact_email);
+      }
       const row = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
       const paid = Number(row?.paid_count ?? 0);
       const active = Number(row?.active_count ?? 0);
@@ -89,17 +89,26 @@ const Index = () => {
     })();
   }, []);
 
+  const goToPricing = () => {
+    const el = document.getElementById("pricing");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const selectPlan = (plan: PlanKey) => {
+    navigate(`/signup?plan=${plan}`);
+  };
+
   const featured = testimonials[0];
   const rest = testimonials.slice(1, 3);
 
   return (
     <div className="min-h-screen bg-background relative">
       <Helmet>
-        <title>Autopilot — Entrenador personal online con seguimiento humano real</title>
-        <meta name="description" content="Plan de entrenamiento y nutrición diseñado por un entrenador real, no por una app. Chat directo, ajustes semanales y resultados visibles. 7 días gratis, sin permanencia." />
+        <title>Autopilot — Diagnóstico físico gratis + coaching real online</title>
+        <meta name="description" content="Haz tu diagnóstico físico con IA en 60 segundos. Un entrenador real lo convierte en un plan de entrenamiento y nutrición a tu medida. Sin tarjeta. Primera semana gratis." />
         <link rel="canonical" href="https://autopilotplan.com/" />
-        <meta property="og:title" content="Autopilot — Entrenador personal online con seguimiento humano real" />
-        <meta property="og:description" content="Plan de entrenamiento y nutrición diseñado por un entrenador real. Chat directo, ajustes semanales, resultados visibles. 7 días gratis." />
+        <meta property="og:title" content="Autopilot — Diagnóstico físico gratis + coaching real online" />
+        <meta property="og:description" content="Diagnóstico con IA en 60s y un entrenador humano que lo convierte en plan. Primera semana gratis en planes mensuales." />
         <meta property="og:url" content="https://autopilotplan.com/" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
@@ -113,10 +122,14 @@ const Index = () => {
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Service",
-          serviceType: "Entrenador personal online",
+          serviceType: "Coaching fitness online con entrenador humano",
           provider: { "@type": "Organization", name: "Autopilot", url: "https://autopilotplan.com/" },
           areaServed: "ES",
-          offers: { "@type": "Offer", price: "19", priceCurrency: "EUR" },
+          offers: [
+            { "@type": "Offer", name: "Entrenamiento", price: "29", priceCurrency: "EUR" },
+            { "@type": "Offer", name: "Completo", price: "49", priceCurrency: "EUR" },
+            { "@type": "Offer", name: "Transformación 12 semanas", price: "299", priceCurrency: "EUR" },
+          ],
         })}</script>
       </Helmet>
 
@@ -124,12 +137,15 @@ const Index = () => {
       <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <span className="font-display text-xl font-bold text-gradient">Autopilot</span>
-          <div className="flex gap-2 sm:gap-3">
+          <div className="flex gap-2 sm:gap-3 items-center">
+            <button onClick={goToPricing} className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              Planes
+            </button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
-            <Button variant="default" size="sm" onClick={() => navigate("/signup")}>
-              7 días gratis
+            <Button variant="default" size="sm" onClick={() => navigate("/scan")}>
+              Diagnóstico gratis
             </Button>
           </div>
         </div>
@@ -137,7 +153,7 @@ const Index = () => {
 
       <main>
         {/* HERO */}
-        <section className="relative pt-36 sm:pt-44 pb-28 sm:pb-36 px-4 overflow-hidden">
+        <section className="relative pt-36 sm:pt-44 pb-24 sm:pb-32 px-4 overflow-hidden">
           <div className="absolute inset-0 -z-10 pointer-events-none">
             <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/[0.07] blur-[160px]" />
           </div>
@@ -151,7 +167,7 @@ const Index = () => {
             >
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                Plazas limitadas · Coaching 1 a 1
+                Diagnóstico con IA + Entrenador real
               </span>
             </motion.div>
 
@@ -162,8 +178,7 @@ const Index = () => {
               className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight"
             >
               El cuerpo que quieres.{" "}
-              <span className="text-gradient">Sin perder más años</span>{" "}
-              probando rutinas que no funcionan.
+              <span className="text-gradient">Sin seguir improvisando.</span>
             </motion.h1>
 
             <motion.p
@@ -172,7 +187,7 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
             >
-              Plan de entrenamiento y nutrición diseñado por un entrenador real, ajustado contigo cada semana por chat. No es una app. Es un copiloto.
+              Empieza con un diagnóstico físico gratuito. La IA detecta tus prioridades y un entrenador real convierte ese diagnóstico en un plan de entrenamiento y nutrición adaptado a ti.
             </motion.p>
 
             <motion.div
@@ -181,18 +196,31 @@ const Index = () => {
               transition={{ duration: 0.5, delay: 0.3 }}
               className="flex flex-col items-center"
             >
-              <Button
-                variant="hero"
-                size="xl"
-                onClick={() => navigate("/signup")}
-                className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8"
-              >
-                Empezar mis 7 días gratis
-              </Button>
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 7 días gratis</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Sin permanencia</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Cancelas en 1 clic</span>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Button
+                  variant="hero"
+                  size="xl"
+                  onClick={() => navigate("/scan")}
+                  className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
+                >
+                  <ScanLine className="w-4 h-4" />
+                  Hacer mi diagnóstico gratis
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="xl"
+                  onClick={goToPricing}
+                  className="text-base px-8"
+                >
+                  Ver planes
+                </Button>
+              </div>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Gratis</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Sin tarjeta</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 60 segundos</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 100% privado</span>
               </div>
             </motion.div>
 
@@ -207,7 +235,7 @@ const Index = () => {
                 {trainer.trainer_photo_url ? (
                   <img
                     src={trainer.trainer_photo_url}
-                    alt={`${trainer.trainer_name}, entrenador personal en Autopilot`}
+                    alt={`${trainer.trainer_name}, fundador de Autopilot`}
                     loading="eager"
                     width={36}
                     height={36}
@@ -245,23 +273,27 @@ const Index = () => {
         {/* AI SCAN */}
         <AIScanSection />
 
-        {/* PILLARS */}
+        {/* POST-SCAN FLOW */}
+        <PostScanFlow />
+
+        {/* WHY IT WORKS */}
         <section className="py-24 px-4">
           <div className="container mx-auto max-w-5xl">
             <ScrollReveal>
-              <div className="text-center mb-14">
+              <div className="text-center mb-14 max-w-xl mx-auto">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Por qué funciona</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight max-w-xl mx-auto">
-                  Tres cosas que ninguna app te va a dar
+                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
+                  No es una app.{" "}
+                  <span className="text-gradient">Es seguimiento real.</span>
                 </h2>
               </div>
             </ScrollReveal>
             <div className="grid md:grid-cols-3 gap-5">
-              {pillars.map((p, i) => (
+              {whyWorks.map((p, i) => (
                 <ScrollReveal key={p.title} delay={i * 0.08}>
                   <div className="bg-card/50 border border-border rounded-2xl p-6 h-full hover:border-primary/30 transition-colors">
-                    <div className="w-9 h-9 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center mb-4 text-primary font-bold text-sm">
-                      0{i + 1}
+                    <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
+                      <p.icon className="w-5 h-5 text-primary" />
                     </div>
                     <h3 className="font-display font-semibold text-base mb-2">{p.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
@@ -272,53 +304,53 @@ const Index = () => {
           </div>
         </section>
 
-        {/* CÓMO FUNCIONA */}
-        <section className="py-28 px-4 bg-card/30 border-y border-border">
-          <div className="container mx-auto max-w-3xl">
+        {/* PRICING */}
+        <section id="pricing" className="py-24 px-4 bg-card/30 border-y border-border scroll-mt-20">
+          <div className="container mx-auto">
             <ScrollReveal>
-              <div className="text-center mb-16">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">El proceso</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display">
-                  De cero a entrenando, en 24 horas
+              <div className="text-center mb-12 max-w-xl mx-auto">
+                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">
+                  Planes
+                </p>
+                <h2 className="text-3xl sm:text-4xl font-bold font-display mb-3 leading-tight">
+                  Elige cómo quieres empezar
                 </h2>
-              </div>
-            </ScrollReveal>
-            <div className="space-y-12">
-              {howItWorks.map((item, i) => (
-                <ScrollReveal key={item.step} delay={i * 0.06}>
-                  <div className="flex gap-6 sm:gap-10 items-start">
-                    <span className="text-3xl sm:text-4xl font-bold font-display text-gradient leading-none shrink-0 w-14">
-                      {item.step}
-                    </span>
-                    <div className="pt-1 border-l border-border/40 pl-5">
-                      <h3 className="text-lg font-semibold font-display mb-2">{item.title}</h3>
-                      <p className="text-muted-foreground text-base max-w-md leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CHAT DEMO */}
-        <section className="py-24 px-4">
-          <div className="container mx-auto max-w-3xl">
-            <ScrollReveal>
-              <div className="text-center mb-12">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">El día a día</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4 leading-tight">
-                  Hablas conmigo.{" "}
-                  <span className="text-gradient">Yo respondo.</span>
-                </h2>
-                <p className="text-muted-foreground max-w-md mx-auto text-sm">
-                  Sin bots. Sin tickets. Sin esperar 5 días por una respuesta automática.
+                <p className="text-sm text-muted-foreground">
+                  Después del diagnóstico, te recomendaremos el plan que mejor encaja contigo.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={0.1}>
-              <div className="bg-card rounded-2xl border border-border premium-shadow flex flex-col h-[400px] overflow-hidden max-w-xl mx-auto">
+              <PricingTiers onSelect={selectPlan} recommended="full" />
+            </ScrollReveal>
+          </div>
+        </section>
+
+        {/* PREMIUM TRANSFORMATION */}
+        <PremiumTransformation contactEmail={contactEmail} />
+
+        {/* COMPARISON */}
+        <ComparisonTable />
+
+        {/* CHAT DEMO */}
+        <section className="py-24 px-4 bg-card/30 border-y border-border">
+          <div className="container mx-auto max-w-3xl">
+            <ScrollReveal>
+              <div className="text-center mb-12">
+                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">El día a día</p>
+                <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4 leading-tight">
+                  Hablas con una persona.{" "}
+                  <span className="text-gradient">No con un bot.</span>
+                </h2>
+                <p className="text-muted-foreground max-w-md mx-auto text-sm">
+                  Sin tickets. Sin respuestas automáticas. Mensajes reales que ajustan tu plan.
+                </p>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={0.1}>
+              <div className="bg-card rounded-2xl border border-border premium-shadow flex flex-col h-[440px] overflow-hidden max-w-xl mx-auto">
                 <div className="flex items-center gap-2 p-3 border-b border-border">
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary/10 text-primary">
                     <MessageCircle className="w-4 h-4" /> Chat con tu entrenador
@@ -330,22 +362,22 @@ const Index = () => {
                 <div className="flex-1 overflow-hidden p-4 space-y-3 bg-background/20">
                   <div className="flex justify-end">
                     <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 text-sm">
-                      Hoy me dolía el hombro al hacer press banca
+                      Esta semana solo puedo entrenar lunes, miércoles y viernes.
                     </div>
                   </div>
                   <div className="flex justify-start">
                     <div className="max-w-[80%] bg-secondary text-foreground rounded-2xl rounded-bl-md px-4 py-2 text-sm">
-                      Te cambio por press inclinado con mancuernas y bajamos a 3 series. ¿Cómo va el resto?
+                      Perfecto. Te reorganizo el volumen en 3 días para que no pierdas progreso.
                     </div>
                   </div>
                   <div className="flex justify-end">
                     <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 text-sm">
-                      Esta semana solo puedo L, M y V
+                      Me molesta el hombro en press banca.
                     </div>
                   </div>
                   <div className="flex justify-start">
                     <div className="max-w-[80%] bg-secondary text-foreground rounded-2xl rounded-bl-md px-4 py-2 text-sm">
-                      Hecho. Reorganizado en 3 días sin perder volumen. Te llega al calendario en 2 min.
+                      Cambiamos a press inclinado con mancuernas y bajamos carga esta semana. Luego revisamos sensaciones.
                     </div>
                   </div>
                 </div>
@@ -432,36 +464,8 @@ const Index = () => {
           </div>
         </section>
 
-        {/* PRICING */}
-        <section className="py-24 px-4">
-          <div className="container mx-auto max-w-5xl">
-            <ScrollReveal>
-              <div className="text-center mb-12">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Precio</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display mb-3">
-                  Menos que un café al día
-                </h2>
-                <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                  Un entrenador personal presencial cuesta entre 200 y 500€/mes. Aquí pagas lo que vale el resultado, no la sala.
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.1}>
-              <PricingTiers onSelect={() => navigate("/signup")} />
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.2}>
-              <p className="text-center text-sm text-muted-foreground mt-12 flex items-center justify-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-success" />
-                Garantía 30 días · Sin permanencia · Cancelas cuando quieras
-              </p>
-            </ScrollReveal>
-          </div>
-        </section>
-
         {/* FAQ */}
-        <section className="py-28 px-4 bg-card/30 border-y border-border">
+        <section className="py-28 px-4">
           <div className="container mx-auto max-w-2xl">
             <ScrollReveal>
               <div className="text-center mb-14">
@@ -474,11 +478,7 @@ const Index = () => {
             <ScrollReveal delay={0.1}>
               <Accordion type="single" collapsible className="space-y-1">
                 {faqs.map((faq, i) => (
-                  <AccordionItem
-                    key={i}
-                    value={`faq-${i}`}
-                    className="border-b border-border last:border-b-0"
-                  >
+                  <AccordionItem key={i} value={`faq-${i}`} className="border-b border-border last:border-b-0">
                     <AccordionTrigger className="text-base font-medium hover:no-underline py-5 text-left">
                       {faq.q}
                     </AccordionTrigger>
@@ -493,31 +493,33 @@ const Index = () => {
         </section>
 
         {/* CTA FINAL */}
-        <section className="relative py-32 px-4 overflow-hidden">
+        <section className="relative py-28 px-4 overflow-hidden bg-card/30 border-t border-border">
           <div className="absolute inset-0 -z-10 pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.08] blur-[160px]" />
           </div>
           <div className="container mx-auto max-w-2xl text-center">
             <ScrollReveal>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display mb-6 leading-[1.05] tracking-tight">
-                Deja de improvisar.{" "}
-                <span className="text-gradient">Empieza con dirección.</span>
+                Empieza por entender{" "}
+                <span className="text-gradient">qué te falta.</span>
               </h2>
               <p className="text-base text-muted-foreground mb-10 max-w-md mx-auto">
-                7 días gratis. Si no es para ti, te vas. Si lo es, ya tienes el plan que llevas años buscando.
+                Diagnóstico físico gratis con IA. Después decides si quieres que un entrenador real lo convierta en plan.
               </p>
               <Button
                 variant="hero"
                 size="xl"
-                onClick={() => navigate("/signup")}
-                className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8"
+                onClick={() => navigate("/scan")}
+                className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
               >
-                Empezar mis 7 días gratis
+                <ScanLine className="w-4 h-4" />
+                Hacer mi diagnóstico gratis
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 7 días gratis</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Gratis</span>
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Sin tarjeta</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Cancela cuando quieras</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 60 segundos</span>
               </div>
             </ScrollReveal>
           </div>
@@ -539,8 +541,8 @@ const Index = () => {
 
       {/* Floating CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/signup")}>
-          Empezar 7 días gratis
+        <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/scan")}>
+          <ScanLine className="w-4 h-4" /> Diagnóstico gratis
         </Button>
       </div>
     </div>
