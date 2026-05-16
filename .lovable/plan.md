@@ -1,84 +1,97 @@
-# Plan: Rol de Entrenadores
+# Rediseño Landing Autopilot + Nuevo Modelo de Precios
 
-Añadir un rol `trainer` para que entrenadores puedan gestionar usuarios asignados, con sección pública en la landing y chat con el admin.
+Cambio grande: pasamos de **1 plan a 19€** → **3 productos** (Entrenamiento 29€, Completo 49€, Transformación 299€), con el AI Scan como lead magnet principal, y gestión de price IDs de Stripe desde el panel admin.
 
-## 1. Base de datos
+## 1. Modelo de productos
 
-**Nuevo valor en enum `app_role`:** añadir `'trainer'`.
+Sustituir `src/config/tiers.ts` por:
 
-**Nueva tabla `trainer_assignments`:**
-- `trainer_id uuid` (entrenador)
-- `user_id uuid` (cliente asignado)
-- `assigned_at`, `assigned_by`
-- Unique (trainer_id, user_id), un user solo puede tener 1 trainer activo (unique parcial sobre user_id).
+```ts
+export const TIERS = {
+  training:  { key:"training",  name:"Entrenamiento", price:29,  interval:"month", trial_days:7,  features:[...] },
+  full:      { key:"full",      name:"Completo",      price:49,  interval:"month", trial_days:7,  features:[...], recommended:true },
+  transform: { key:"transform", name:"Transformación 12 semanas", price:299, interval:"one_time", trial_days:0, features:[...] },
+}
+```
 
-**Nueva tabla `trainer_profiles`** (perfil público para la landing):
-- `user_id uuid` (FK al auth user que es trainer)
-- `display_name`, `headline`, `bio`, `photo_url`, `specialty`, `sort_order`, `visible`
+- `price_id` y `product_id` **dejan de estar hardcodeados**: se leen de tabla `settings` (3 columnas nuevas, ver §4).
+- Mantengo `TIER` (singular) como alias de `TIERS.full` para no romper imports antiguos durante la migración.
 
-**Nueva función SQL `is_trainer_of(_trainer uuid, _user uuid)`** SECURITY DEFINER → bool.
+## 2. Landing nueva (`src/pages/Index.tsx` + componentes)
 
-**RLS — actualizar políticas existentes** para permitir que un trainer vea/edite los datos de SUS usuarios asignados en:
-`profiles`, `onboarding`, `training_plan`, `nutrition_plan`, `workout_logs`, `day_completions`, `weight_logs`, `personal_records`, `progress_photos`, `external_activities`, `user_schedule`, `training_schedule_overrides`, `notifications`, `chat_messages`.
+Reescribir secciones en este orden:
 
-Patrón: añadir policy `Trainers can view/manage assigned users data` con `is_trainer_of(auth.uid(), user_id)`.
+1. **Hero** — H1 “El cuerpo que quieres. Sin seguir improvisando.” + subtítulo nuevo + CTA primario **“Hacer mi diagnóstico gratis”** (→ `/scan`) + CTA secundario **“Ver planes”** (scroll a pricing) + badges (Gratis / Sin tarjeta / 60s / 100% privado). Quito el CTA “7 días gratis” como principal.
+2. **AI Scan** (`AIScanSection`) — Reescribo copy a “Primero entendemos tu físico”, mantengo el mock card con 6.8 / 8.5 y prioridades.
+3. **Post-scan → plan** (sección nueva) — 4 pasos: IA detecta → entrenador revisa → plan adaptado → ajustes semanales. CTA: “Empezar con mi diagnóstico gratis”.
+4. **Por qué funciona** — 3 bloques (Diagnóstico claro / Plan humano / Ajustes continuos).
+5. **Pricing principal** (`PricingTiers` reescrito) — 2 tarjetas lado a lado: Entrenamiento y Completo. Completo destacado (borde primario, badge “Más recomendado” + “Primera semana gratis”). Bajo las tarjetas: nota legal “Después de la primera semana, sigues por 29€/49€…”.
+6. **Transformación 12 semanas** (sección premium aparte, distinta visualmente) — tarjeta única con bullets, precio 299€, CTA **“Hablar con un asesor”** (abre mailto o WhatsApp configurable). Texto “Diagnóstico + llamada gratis. Plazas limitadas.”
+7. **Comparación** — tabla simple Apps / Entrenador presencial / Autopilot.
+8. **Chat humano** — mantengo la demo actual con los 2 ejemplos pedidos (hombro / días disponibles).
+9. **FAQ** — sustituyo por las 10 preguntas pedidas con respuestas claras.
+10. **Footer** sin cambios estructurales.
 
-**Chat admin↔trainer:** ampliar `chat_messages.conversation_user_id` para representar también conversaciones admin↔trainer (el `conversation_user_id` será el user_id del trainer cuando hable con admin). RLS ya cubre admin; añadir policy para que el trainer vea su propia conversación con admin.
+Tono: directo, premium, español de España. Sin “7 días gratis” como CTA principal en ninguna sección antes de pricing.
 
-## 2. Edge functions
+## 3. Flujo de selección de plan
 
-- `admin-delete-user`: sin cambios mayores, sigue siendo solo admin.
-- Nuevo endpoint **no necesario** — gestión de roles trainer y asignaciones via tabla con RLS de admin.
+- En pricing, botón → `/signup?plan=training|full`.
+- Transformación → CTA “Hablar con un asesor” (no checkout). Por ahora abre `mailto:` al email de contacto guardado en `settings.contact_email` (fallback hardcode).
+- En `Signup` se almacena `plan` en `user_metadata`; tras login se llama a `create-checkout` con el `priceId` correspondiente leído desde `settings` (ya existe el patrón).
+- Edge function `create-checkout` recibe `plan: "training"|"full"` y resuelve el price desde la tabla `settings` (no más price_id fijo en código).
 
-## 3. Frontend — Admin Dashboard
+## 4. Admin — gestión Stripe
 
-**`AdminSidebar`:** añadir item "Entrenadores".
+Nueva pestaña en admin: **“Productos & Precios”** (`src/components/admin/StripeProducts.tsx`):
 
-**`Admin.tsx`:** nueva sección `trainers`:
-- Lista de entrenadores con email, nº usuarios asignados, perfil público completado o no.
-- Botón "Promover a entrenador" desde detalle de usuario → inserta rol trainer.
-- Detalle de entrenador: editar perfil público, lista de usuarios asignados, asignar/desasignar usuarios, abrir chat con el entrenador.
+Campos editables (guardados en `settings`):
+- `stripe_price_training_monthly`
+- `stripe_price_full_monthly`
+- `stripe_price_transform_onetime`
+- (Mantengo `stripe_price_id` existente como legacy si hace falta)
+- `contact_email` (para CTA del plan premium)
 
-**`UserList`:** mostrar trainer asignado en cada card, separar visualmente:
-- Sección "Usuarios" (clientes finales)
-- Sección "Entrenadores"
-- Sección "Administradores"
+Migración SQL: añadir columnas TEXT nullable a `public.settings`. RLS ya existe.
 
-**`UserDetail`:** selector "Asignar entrenador" + badge mostrando trainer actual.
+`create-checkout` y cualquier referencia a `TIER.price_id` se actualizan para leer dinámicamente.
 
-**Nuevo `AdminChatWithTrainers`** (similar a Chat existente) en sección entrenadores.
+## 5. Post-scan recommendation
 
-## 4. Frontend — Trainer Dashboard
+En `src/pages/Scan.tsx`, al terminar el análisis, añadir bloque “Tu plan recomendado: Completo” con CTA principal **“Probar mi plan completo gratis”** y secundario **“Solo quiero entrenamiento — 29€/mes”**. Si el gap potencial−actual ≥ 2, mostrar también banner Transformación con “Hablar con un asesor”.
 
-Nueva ruta `/trainer` protegida (solo rol trainer):
-- Lista de usuarios asignados (mismo card style que admin).
-- Al seleccionar un usuario: reutilizar `UserDetail` (o versión recortada sin acciones destructivas: sin borrar cuenta, sin tocar pagos, sin dar rol).
-- Tab "Chat con admin".
+## 6. SEO
 
-**Routing:** redirigir tras login según rol → admin → `/admin`, trainer → `/trainer`, user → `/dashboard`.
+- Actualizar `<title>` y meta description a la nueva propuesta de valor (scan + coaching).
+- JSON-LD `Offer` → quitar precio 19, dejar 3 ofertas (29/49/299).
 
-## 5. Landing — Sección Entrenadores
+## 7. Restricciones respetadas
 
-Nuevo componente `<TrainersSection />` en `pages/Index.tsx`:
-- Grid de tarjetas con foto, nombre, especialidad, bio corta.
-- Lee de `trainer_profiles` donde `visible = true` ordenado por `sort_order`.
-- Estética minimalista premium acorde al resto de la landing.
+- No prometer resultados garantizados.
+- No decir que IA sustituye al entrenador.
+- Nutrición sólo en Completo y Transformación.
+- CTA de asesor sólo en Transformación.
+- Nada de “7 días gratis” como hook principal.
 
-**Editor en admin "Landing"** (`SiteContentEditor`): añadir tab para gestionar visibilidad/orden de los perfiles públicos.
+## Archivos tocados
 
-## Detalles técnicos
+- `src/config/tiers.ts` (rewrite)
+- `src/components/PricingTiers.tsx` (rewrite: 2 cards)
+- `src/components/PremiumTransformation.tsx` (nuevo)
+- `src/components/AIScanSection.tsx` (copy update)
+- `src/components/PostScanFlow.tsx` (nuevo)
+- `src/components/ComparisonTable.tsx` (nuevo)
+- `src/pages/Index.tsx` (reestructura + copys + FAQ nueva)
+- `src/pages/Scan.tsx` (recomendación post-scan)
+- `src/pages/Signup.tsx` (lee `?plan=`)
+- `src/components/admin/StripeProducts.tsx` (nuevo)
+- `src/pages/Admin.tsx` (añadir tab/route)
+- `supabase/functions/create-checkout/index.ts` (resolver price desde settings + parámetro plan)
+- Migración SQL: 4 columnas TEXT en `settings`.
 
-- Todas las nuevas RLS usan `is_trainer_of()` security-definer para evitar recursión.
-- Idempotente: upsert por `(trainer_id, user_id)`.
-- `chat_messages` admin↔trainer: cuando admin escribe a trainer, `conversation_user_id = trainer.user_id`, `sender_id = admin.user_id`. El trainer accede via nueva policy: `auth.uid() = conversation_user_id AND has_role(auth.uid(), 'trainer')`.
-- Migración no destructiva, no toca datos existentes.
-- UI 100% en español, estilo existente.
+## Confirmaciones que necesito antes de implementar
 
-## Orden de implementación
-
-1. Migración (enum + tablas + función + policies).
-2. Routing + ProtectedRoute para rol trainer.
-3. Admin: sección Entrenadores + asignaciones + promover.
-4. Trainer Dashboard.
-5. Landing: TrainersSection + editor admin.
-6. Chat admin↔trainer.
+1. ¿Confirmas precios definitivos **29 / 49 / 299 €**?
+2. ¿El CTA “Hablar con un asesor” abre **mailto** (a qué email?) o **WhatsApp** (qué número)?
+3. ¿Quieres que **mantenga** el plan antiguo de 19€ activo para los usuarios ya suscritos (sólo dejar de venderlo)? Asumo que sí.
+4. La Transformación 12 semanas: ¿es **pago único de 299€** vía Stripe Checkout también, o **sólo lead** (no se cobra en la web)? Asumo lead → asesor cierra fuera.

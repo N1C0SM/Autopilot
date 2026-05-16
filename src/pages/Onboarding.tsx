@@ -349,7 +349,7 @@ const Onboarding = () => {
     setLoading(false);
   };
 
-  const goToCheckout = async (plan: "monthly" | "yearly") => {
+  const goToCheckout = async (plan: "training" | "full") => {
     setLoading(true);
     const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
       "create-checkout",
@@ -401,7 +401,7 @@ const Onboarding = () => {
               Empieza con 7 días gratis · Cancela cuando quieras
             </p>
           </div>
-          <PricingTiers onSelect={goToCheckout} yearlyPrice={yearlyPrice} />
+          <PricingTiers onSelect={goToCheckout} recommended="full" />
           {loading && (
             <p className="text-center text-sm text-muted-foreground mt-6">
               Preparando tu pago...

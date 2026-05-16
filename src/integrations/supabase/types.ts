@@ -690,6 +690,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          contact_email: string | null
           created_at: string
           id: string
           payment_link_live: string | null
@@ -697,8 +698,14 @@ export type Database = {
           payment_link_yearly_live: string | null
           payment_link_yearly_test: string | null
           payment_mode: string
+          price_id_full_live: string | null
+          price_id_full_test: string | null
           price_id_live: string | null
           price_id_test: string | null
+          price_id_training_live: string | null
+          price_id_training_test: string | null
+          price_id_transform_live: string | null
+          price_id_transform_test: string | null
           price_id_yearly_live: string | null
           price_id_yearly_test: string | null
           referral_coupon_id: string | null
@@ -711,6 +718,7 @@ export type Database = {
           yearly_price_eur: number | null
         }
         Insert: {
+          contact_email?: string | null
           created_at?: string
           id?: string
           payment_link_live?: string | null
@@ -718,8 +726,14 @@ export type Database = {
           payment_link_yearly_live?: string | null
           payment_link_yearly_test?: string | null
           payment_mode?: string
+          price_id_full_live?: string | null
+          price_id_full_test?: string | null
           price_id_live?: string | null
           price_id_test?: string | null
+          price_id_training_live?: string | null
+          price_id_training_test?: string | null
+          price_id_transform_live?: string | null
+          price_id_transform_test?: string | null
           price_id_yearly_live?: string | null
           price_id_yearly_test?: string | null
           referral_coupon_id?: string | null
@@ -732,6 +746,7 @@ export type Database = {
           yearly_price_eur?: number | null
         }
         Update: {
+          contact_email?: string | null
           created_at?: string
           id?: string
           payment_link_live?: string | null
@@ -739,8 +754,14 @@ export type Database = {
           payment_link_yearly_live?: string | null
           payment_link_yearly_test?: string | null
           payment_mode?: string
+          price_id_full_live?: string | null
+          price_id_full_test?: string | null
           price_id_live?: string | null
           price_id_test?: string | null
+          price_id_training_live?: string | null
+          price_id_training_test?: string | null
+          price_id_transform_live?: string | null
+          price_id_transform_test?: string | null
           price_id_yearly_live?: string | null
           price_id_yearly_test?: string | null
           referral_coupon_id?: string | null
