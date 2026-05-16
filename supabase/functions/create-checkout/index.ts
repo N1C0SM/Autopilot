@@ -34,18 +34,26 @@ serve(async (req) => {
     log("User authenticated", { email: user.email });
 
     let referralCode = "";
-    let plan: "monthly" | "yearly" = "monthly";
+    // Planes soportados:
+    //  - "training" | "full"          → suscripción mensual con trial 7 días
+    //  - "yearly"                     → legacy anual (mantener compat)
+    //  - "monthly" (legacy)           → mapeado a "full"
+    let plan: "training" | "full" | "yearly" = "full";
     try {
       const body = await req.json();
       referralCode = body.referral_code || "";
-      if (body.plan === "yearly") plan = "yearly";
+      const p = String(body.plan || "").toLowerCase();
+      if (p === "training") plan = "training";
+      else if (p === "full") plan = "full";
+      else if (p === "yearly") plan = "yearly";
+      else if (p === "monthly") plan = "full";
     } catch { /* no body */ }
     log("Request params", { referralCode, plan });
 
     // Read all settings from DB
     const { data: settings } = await supabaseClient
       .from("settings")
-      .select("payment_mode, price_id_test, price_id_live, payment_link_test, payment_link_live, price_id_yearly_test, price_id_yearly_live, payment_link_yearly_test, payment_link_yearly_live, referral_coupon_id")
+      .select("*")
       .limit(1)
       .single();
 
@@ -58,12 +66,23 @@ serve(async (req) => {
     if (!stripeKey) throw new Error(`Stripe ${paymentMode} secret key not configured`);
 
     const isLive = paymentMode === "live";
-    const PRICE_ID = plan === "yearly"
-      ? (isLive ? (settings?.price_id_yearly_live || "") : (settings?.price_id_yearly_test || ""))
-      : (isLive ? (settings?.price_id_live || "") : (settings?.price_id_test || ""));
+    const s: any = settings || {};
+    const pickPrice = () => {
+      if (plan === "training") {
+        return isLive ? (s.price_id_training_live || "") : (s.price_id_training_test || "");
+      }
+      if (plan === "yearly") {
+        return isLive ? (s.price_id_yearly_live || "") : (s.price_id_yearly_test || "");
+      }
+      // full → preferir price_id_full_*, fallback a price_id_* legacy (compat)
+      const fullId = isLive ? (s.price_id_full_live || "") : (s.price_id_full_test || "");
+      if (fullId) return fullId;
+      return isLive ? (s.price_id_live || "") : (s.price_id_test || "");
+    };
+    const PRICE_ID = pickPrice();
     const PAYMENT_LINK = plan === "yearly"
-      ? (isLive ? (settings?.payment_link_yearly_live || "") : (settings?.payment_link_yearly_test || ""))
-      : (isLive ? (settings?.payment_link_live || "") : (settings?.payment_link_test || ""));
+      ? (isLive ? (s.payment_link_yearly_live || "") : (s.payment_link_yearly_test || ""))
+      : (isLive ? (s.payment_link_live || "") : (s.payment_link_test || ""));
     log("Price config", {
       plan,
       priceId: PRICE_ID || "missing",
@@ -146,10 +165,10 @@ serve(async (req) => {
       mode: "subscription",
       success_url: `${origin}/payment-success`,
       cancel_url: `${origin}/signup`,
-      metadata: { user_id: user.id, tier: "personal", plan },
+      metadata: { user_id: user.id, tier: plan, plan },
       subscription_data: {
         trial_period_days: plan === "yearly" ? 0 : 7,
-        metadata: { user_id: user.id, tier: "personal", plan },
+        metadata: { user_id: user.id, tier: plan, plan },
       },
     };
 
