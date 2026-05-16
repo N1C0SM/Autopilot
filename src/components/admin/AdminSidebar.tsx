@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Dumbbell, Settings, LogOut, SlidersHorizontal, Mail, Globe, UserCog } from "lucide-react";
+import { LayoutDashboard, Users, Dumbbell, Settings, LogOut, SlidersHorizontal, Mail, Globe, UserCog, CreditCard } from "lucide-react";
 import type { AdminSection } from "@/pages/Admin";
 
 interface Props {
@@ -28,6 +28,7 @@ const NAV_ITEMS: { title: string; section: AdminSection; icon: typeof LayoutDash
   { title: "Ejercicios", section: "exercises", icon: Dumbbell },
   { title: "Reglas", section: "rules", icon: SlidersHorizontal },
   { title: "Landing", section: "landing", icon: Globe },
+  { title: "Productos & Precios", section: "products", icon: CreditCard },
   { title: "Configuración", section: "settings", icon: Settings },
 ];
 

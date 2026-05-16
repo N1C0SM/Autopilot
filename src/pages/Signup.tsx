@@ -25,6 +25,9 @@ const Signup = () => {
   const isFree = searchParams.get("free") === "true";
   const fromQuiz = searchParams.get("from") === "quiz";
   const fromScan = searchParams.get("from") === "scan";
+  const planParam = (searchParams.get("plan") || "").toLowerCase();
+  const selectedPlan: "training" | "full" | null =
+    planParam === "training" ? "training" : planParam === "full" ? "full" : null;
   const [scanCtx, setScanCtx] = useState<any>(null);
   const { signUp } = useAuth();
 
@@ -92,6 +95,7 @@ const Signup = () => {
       display_name: name.trim(),
       referral_code: referralCode,
       is_free: isFree ? "true" : "false",
+      selected_plan: selectedPlan || "",
     });
     if (error) {
       toast.error(error.message);
