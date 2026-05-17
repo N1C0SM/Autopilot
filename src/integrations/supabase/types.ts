@@ -688,6 +688,42 @@ export type Database = {
         }
         Relationships: []
       }
+      scan_leads: {
+        Row: {
+          consent: boolean
+          created_at: string
+          email: string | null
+          goal: string
+          id: string
+          name: string
+          result: Json | null
+          user_id: string | null
+          whatsapp: string
+        }
+        Insert: {
+          consent?: boolean
+          created_at?: string
+          email?: string | null
+          goal: string
+          id?: string
+          name: string
+          result?: Json | null
+          user_id?: string | null
+          whatsapp: string
+        }
+        Update: {
+          consent?: boolean
+          created_at?: string
+          email?: string | null
+          goal?: string
+          id?: string
+          name?: string
+          result?: Json | null
+          user_id?: string | null
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           contact_email: string | null
