@@ -23,11 +23,38 @@ import {
   Eye,
   Share2,
   Download,
+  Phone,
+  Mail,
+  Shield,
+  Dumbbell,
+  Flame,
+  RefreshCw,
+  Activity,
+  Sprout,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+
+type Phase = "upload" | "goal" | "analyzing" | "lead";
+
+const GOALS = [
+  { id: "lose_fat", label: "Perder grasa", icon: Flame, desc: "Definirme y bajar % graso" },
+  { id: "gain_muscle", label: "Ganar músculo", icon: Dumbbell, desc: "Más volumen y fuerza" },
+  { id: "recomp", label: "Recomposición", icon: RefreshCw, desc: "Bajar grasa y ganar músculo a la vez" },
+  { id: "posture", label: "Mejorar postura", icon: Activity, desc: "Espalda, hombros y core" },
+  { id: "from_zero", label: "Empezar desde cero", icon: Sprout, desc: "Llevo tiempo parado o nunca entrené" },
+] as const;
+
+const LOADING_MESSAGES = [
+  "Analizando postura…",
+  "Detectando prioridades físicas…",
+  "Calculando margen de mejora…",
+  "Evaluando proporciones y simetría…",
+  "Comparando con miles de físicos…",
+  "Generando tu diagnóstico personalizado…",
+];
 
 type Result = {
   attractiveness: number;
@@ -161,6 +188,17 @@ const Scan = () => {
   const shareRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
   const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "success" | "error">("idle");
+
+  // Funnel state
+  const [phase, setPhase] = useState<Phase>("upload");
+  const [goal, setGoal] = useState<string | null>(null);
+  const [pendingResult, setPendingResult] = useState<Result | null>(null);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const [leadName, setLeadName] = useState("");
+  const [leadWhatsapp, setLeadWhatsapp] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadConsent, setLeadConsent] = useState(false);
+  const [submittingLead, setSubmittingLead] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -341,18 +379,89 @@ const Scan = () => {
           })
         );
       } catch {}
-      setTimeout(() => setResult(r), 400);
-
-      // Auto-aplicar al plan si el usuario está pagado y logueado
-      if (user && isPaid && (r.inferred_goal || r.inferred_focus || r.inferred_specific_goals?.length)) {
-        applyScanToPlan(r);
+      setPendingResult(r);
+      // Si el usuario ya está pagado y logueado, saltamos el formulario de lead
+      if (user && isPaid) {
+        setTimeout(() => {
+          setResult(r);
+          if (r.inferred_goal || r.inferred_focus || r.inferred_specific_goals?.length) {
+            applyScanToPlan(r);
+          }
+        }, 400);
       }
+      // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message ?? "Error analizando la imagen");
+      setPhase("upload");
     } finally {
       clearInterval(interval);
       setLoading(false);
+    }
+  };
+
+  // Rotate loading messages while analyzing
+  useEffect(() => {
+    if (phase !== "analyzing") return;
+    setLoadingMsgIdx(0);
+    const id = setInterval(() => {
+      setLoadingMsgIdx((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, 1600);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Kick off analysis when entering "analyzing" phase
+  useEffect(() => {
+    if (phase === "analyzing" && !loading && !pendingResult && currentImg && backImg) {
+      handleAnalyze();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // Transition analyzing -> lead once analysis is ready (min 3s for UX)
+  useEffect(() => {
+    if (phase !== "analyzing" || !pendingResult) return;
+    if (user && isPaid) return; // ya fue al result directamente
+    const t = setTimeout(() => setPhase("lead"), 1200);
+    return () => clearTimeout(t);
+  }, [phase, pendingResult, user, isPaid]);
+
+  const submitLead = async () => {
+    if (!leadName.trim() || leadName.trim().length < 2) {
+      toast.error("Introduce tu nombre");
+      return;
+    }
+    const cleanWa = leadWhatsapp.replace(/\s+/g, "");
+    if (!/^\+?[0-9]{6,16}$/.test(cleanWa)) {
+      toast.error("Introduce un WhatsApp válido");
+      return;
+    }
+    if (leadEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail)) {
+      toast.error("Email no válido");
+      return;
+    }
+    if (!leadConsent) {
+      toast.error("Necesitamos tu consentimiento para continuar");
+      return;
+    }
+    setSubmittingLead(true);
+    try {
+      const { error } = await (supabase as any).from("scan_leads").insert({
+        user_id: user?.id ?? null,
+        name: leadName.trim().slice(0, 100),
+        whatsapp: cleanWa.slice(0, 20),
+        email: leadEmail.trim().slice(0, 255) || null,
+        goal: goal ?? "unspecified",
+        consent: leadConsent,
+        result: pendingResult as any,
+      });
+      if (error) throw error;
+      if (pendingResult) setResult(pendingResult);
+    } catch (e: any) {
+      console.error("submitLead", e);
+      toast.error("No se pudo enviar. Inténtalo de nuevo.");
+    } finally {
+      setSubmittingLead(false);
     }
   };
 
@@ -415,6 +524,13 @@ const Scan = () => {
     setBackImg(null);
     setObjectiveImg(null);
     setScanProgress(0);
+    setPhase("upload");
+    setGoal(null);
+    setPendingResult(null);
+    setLeadName("");
+    setLeadWhatsapp("");
+    setLeadEmail("");
+    setLeadConsent(false);
   };
 
   return (
