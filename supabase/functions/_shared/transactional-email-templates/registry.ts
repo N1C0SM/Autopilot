@@ -11,8 +11,10 @@ export interface TemplateEntry {
 
 import { template as paymentReminder } from './payment-reminder.tsx'
 import { template as miniPlan } from './mini-plan.tsx'
+import { template as scanDiagnosis } from './scan-diagnosis.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'payment-reminder': paymentReminder,
   'mini-plan': miniPlan,
+  'scan-diagnosis': scanDiagnosis,
 }
