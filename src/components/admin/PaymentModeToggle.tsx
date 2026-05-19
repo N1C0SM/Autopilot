@@ -4,280 +4,199 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Settings, Loader2, Save, Shield, CreditCard, Tag, Key, Link } from "lucide-react";
+import { Settings, Loader2, Save, Shield, Link as LinkIcon } from "lucide-react";
+
+type Mode = "test" | "live";
 
 interface SettingsData {
   id: string;
-  payment_mode: string;
-  payment_link_test: string;
-  payment_link_live: string;
+  payment_mode: Mode;
+  payment_link_training_test: string;
+  payment_link_training_live: string;
+  payment_link_full_test: string;
+  payment_link_full_live: string;
+  payment_link_transform_test: string;
+  payment_link_transform_live: string;
   webhook_secret_test: string;
   webhook_secret_live: string;
-  price_id_test: string;
-  price_id_live: string;
-  referral_coupon_id: string;
-  price_id_yearly_test: string;
-  price_id_yearly_live: string;
-  payment_link_yearly_test: string;
-  payment_link_yearly_live: string;
 }
 
+const FIELDS: Array<keyof Omit<SettingsData, "id" | "payment_mode">> = [
+  "payment_link_training_test",
+  "payment_link_training_live",
+  "payment_link_full_test",
+  "payment_link_full_live",
+  "payment_link_transform_test",
+  "payment_link_transform_live",
+  "webhook_secret_test",
+  "webhook_secret_live",
+];
+
+const PLANS = [
+  { key: "training", label: "Entrenamiento", price: "29€/mes" },
+  { key: "full", label: "Completo", price: "49€/mes" },
+  { key: "transform", label: "Transformación 12 semanas", price: "299€ pago único" },
+] as const;
+
 const PaymentModeToggle = () => {
-  const [settings, setSettings] = useState<SettingsData | null>(null);
+  const [s, setS] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingSection, setSavingSection] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchSettings = async () => {
+    (async () => {
       const { data } = await supabase.from("settings").select("*").limit(1).single();
       if (data) {
-        setSettings({
-          id: data.id,
-          payment_mode: data.payment_mode,
-          payment_link_test: (data as any).payment_link_test || "",
-          payment_link_live: (data as any).payment_link_live || "",
-          webhook_secret_test: (data as any).webhook_secret_test || "",
-          webhook_secret_live: (data as any).webhook_secret_live || "",
-          price_id_test: (data as any).price_id_test || "",
-          price_id_live: (data as any).price_id_live || "",
-          referral_coupon_id: (data as any).referral_coupon_id || "",
-          price_id_yearly_test: (data as any).price_id_yearly_test || "",
-          price_id_yearly_live: (data as any).price_id_yearly_live || "",
-          payment_link_yearly_test: (data as any).payment_link_yearly_test || "",
-          payment_link_yearly_live: (data as any).payment_link_yearly_live || "",
-        });
+        const d = data as any;
+        const next: SettingsData = {
+          id: d.id,
+          payment_mode: (d.payment_mode || "test") as Mode,
+          payment_link_training_test: d.payment_link_training_test || "",
+          payment_link_training_live: d.payment_link_training_live || "",
+          payment_link_full_test: d.payment_link_full_test || "",
+          payment_link_full_live: d.payment_link_full_live || "",
+          payment_link_transform_test: d.payment_link_transform_test || "",
+          payment_link_transform_live: d.payment_link_transform_live || "",
+          webhook_secret_test: d.webhook_secret_test || "",
+          webhook_secret_live: d.webhook_secret_live || "",
+        };
+        setS(next);
       }
       setLoading(false);
-    };
-    fetchSettings();
+    })();
   }, []);
 
-  const updateField = (field: keyof SettingsData, value: string) => {
-    if (!settings) return;
-    setSettings({ ...settings, [field]: value });
-  };
+  const setField = (k: keyof SettingsData, v: string) => s && setS({ ...s, [k]: v });
 
   const toggleMode = async () => {
-    if (!settings) return;
-    const newMode = settings.payment_mode === "test" ? "live" : "test";
+    if (!s) return;
+    const newMode: Mode = s.payment_mode === "test" ? "live" : "test";
     setSaving(true);
-    const { error } = await supabase.from("settings").update({ payment_mode: newMode } as any).eq("id", settings.id);
-    if (error) {
-      toast.error("Error al cambiar modo");
-    } else {
-      setSettings({ ...settings, payment_mode: newMode });
-      toast.success(`Modo cambiado a ${newMode.toUpperCase()}`);
-    }
+    const { error } = await supabase.from("settings").update({ payment_mode: newMode } as any).eq("id", s.id);
     setSaving(false);
+    if (error) return toast.error("Error al cambiar modo");
+    setS({ ...s, payment_mode: newMode });
+    toast.success(`Modo cambiado a ${newMode.toUpperCase()}`);
   };
 
-  const saveSection = async (section: string, fields: Partial<SettingsData>) => {
-    if (!settings) return;
-    setSavingSection(section);
-    const { error } = await supabase.from("settings").update(fields as any).eq("id", settings.id);
-    if (error) {
-      toast.error(`Error al guardar ${section}`);
-    } else {
-      toast.success(`${section} actualizados`);
-    }
-    setSavingSection(null);
+  const saveAll = async () => {
+    if (!s) return;
+    setSaving(true);
+    const payload: any = {};
+    FIELDS.forEach((f) => (payload[f] = s[f]));
+    const { error } = await supabase.from("settings").update(payload).eq("id", s.id);
+    setSaving(false);
+    if (error) return toast.error("Error al guardar");
+    toast.success("Configuración guardada");
   };
 
-  const saveSecrets = async (section: string, secrets: Record<string, string>) => {
-    setSavingSection(section);
-    try {
-      const response = await supabase.functions.invoke("update-secrets", {
-        body: secrets,
-      });
-      if (response.error) {
-        toast.error(`Error al guardar ${section}`);
-      } else {
-        toast.success(`${section} actualizados. Se aplicarán en la próxima ejecución.`);
-      }
-    } catch {
-      toast.error(`Error al guardar ${section}`);
-    }
-    setSavingSection(null);
-  };
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />;
+  if (!s) return <div className="text-sm text-muted-foreground">No se encontró configuración</div>;
 
-  if (loading) return null;
-  if (!settings) return <div className="text-sm text-muted-foreground">No se encontró configuración</div>;
-
-  const isSaving = (section: string) => savingSection === section;
-
-  const sections = [
-    {
-      icon: CreditCard,
-      title: "Price IDs de Stripe",
-      description: "IDs de precio MENSUAL (price_...)",
-      fields: [
-        { key: "price_id_test" as keyof SettingsData, label: "Price ID Test", placeholder: "price_..." },
-        { key: "price_id_live" as keyof SettingsData, label: "Price ID Live", placeholder: "price_..." },
-      ],
-      saveKey: "Price IDs",
-      saveFields: () => ({ price_id_test: settings.price_id_test, price_id_live: settings.price_id_live }),
-    },
-    {
-      icon: CreditCard,
-      title: "Plan Anual — Price IDs",
-      description: "IDs de precio ANUAL (190€/año). Crea un Price recurring=year en Stripe.",
-      fields: [
-        { key: "price_id_yearly_test" as keyof SettingsData, label: "Price ID Anual Test", placeholder: "price_..." },
-        { key: "price_id_yearly_live" as keyof SettingsData, label: "Price ID Anual Live", placeholder: "price_..." },
-      ],
-      saveKey: "Price IDs Anual",
-      saveFields: () => ({ price_id_yearly_test: settings.price_id_yearly_test, price_id_yearly_live: settings.price_id_yearly_live }),
-    },
-    {
-      icon: Link,
-      title: "Plan Anual — Payment Links",
-      description: "Payment Links anuales (fallback si falla el checkout dinámico)",
-      fields: [
-        { key: "payment_link_yearly_test" as keyof SettingsData, label: "Payment Link Anual Test", placeholder: "https://buy.stripe.com/test_..." },
-        { key: "payment_link_yearly_live" as keyof SettingsData, label: "Payment Link Anual Live", placeholder: "https://buy.stripe.com/..." },
-      ],
-      saveKey: "Payment Links Anual",
-      saveFields: () => ({ payment_link_yearly_test: settings.payment_link_yearly_test, payment_link_yearly_live: settings.payment_link_yearly_live }),
-    },
-    {
-      icon: Link,
-      title: "Payment Links",
-      description: "Links de pago de Stripe (fallback si falla el checkout session)",
-      fields: [
-        { key: "payment_link_test" as keyof SettingsData, label: "Payment Link Test", placeholder: "https://buy.stripe.com/test_..." },
-        { key: "payment_link_live" as keyof SettingsData, label: "Payment Link Live", placeholder: "https://buy.stripe.com/..." },
-      ],
-      saveKey: "Payment Links",
-      saveFields: () => ({ payment_link_test: settings.payment_link_test, payment_link_live: settings.payment_link_live }),
-    },
-    {
-      icon: Shield,
-      title: "Webhook Secrets",
-      description: "Secrets para verificar firmas de Stripe (whsec_...)",
-      fields: [
-        { key: "webhook_secret_test" as keyof SettingsData, label: "Webhook Secret Test", placeholder: "whsec_..." },
-        { key: "webhook_secret_live" as keyof SettingsData, label: "Webhook Secret Live", placeholder: "whsec_..." },
-      ],
-      saveKey: "Webhook Secrets",
-      saveFields: () => ({ webhook_secret_test: settings.webhook_secret_test, webhook_secret_live: settings.webhook_secret_live }),
-    },
-    {
-      icon: Tag,
-      title: "Cupón de Referidos",
-      description: "ID del cupón de Stripe para descuento por referido",
-      fields: [
-        { key: "referral_coupon_id" as keyof SettingsData, label: "Coupon ID", placeholder: "coupon_id" },
-      ],
-      saveKey: "Cupón",
-      saveFields: () => ({ referral_coupon_id: settings.referral_coupon_id }),
-    },
-  ];
+  const mode = s.payment_mode;
+  const webhookUrl = `https://enebrcdrdnfkyduzyrzm.supabase.co/functions/v1/stripe-webhook`;
 
   return (
     <div className="space-y-4">
-      {/* Resumen rápido */}
-      <div className="bg-card rounded-xl p-4 border border-border">
-        <div className="text-xs font-medium text-muted-foreground mb-2">Resumen de configuración</div>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${settings.price_id_test ? "bg-green-500" : "bg-destructive"}`} />
-            <span>Price ID Test</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${settings.price_id_live ? "bg-green-500" : "bg-destructive"}`} />
-            <span>Price ID Live</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${settings.webhook_secret_test ? "bg-green-500" : "bg-destructive"}`} />
-            <span>Webhook Test</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${settings.webhook_secret_live ? "bg-green-500" : "bg-destructive"}`} />
-            <span>Webhook Live</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${settings.payment_link_test ? "bg-green-500" : "bg-yellow-500"}`} />
-            <span>Link Test</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-2 h-2 rounded-full ${settings.payment_link_live ? "bg-green-500" : "bg-yellow-500"}`} />
-            <span>Link Live</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment mode toggle */}
+      {/* Mode toggle */}
       <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Settings className="w-5 h-5 text-muted-foreground" />
           <div>
             <div className="font-medium text-sm">Modo de Pago</div>
             <div className="text-xs text-muted-foreground">
-              Usando claves <span className={`font-bold ${settings.payment_mode === "live" ? "text-destructive" : "text-primary"}`}>{settings.payment_mode.toUpperCase()}</span>
+              Activo:{" "}
+              <span className={`font-bold ${mode === "live" ? "text-destructive" : "text-primary"}`}>
+                {mode.toUpperCase()}
+              </span>
             </div>
           </div>
         </div>
-        <Button
-          variant={settings.payment_mode === "live" ? "destructive" : "outline"}
-          size="sm"
-          onClick={toggleMode}
-          disabled={saving}
-        >
-          {saving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-          Cambiar a {settings.payment_mode === "test" ? "LIVE" : "TEST"}
+        <Button variant={mode === "live" ? "destructive" : "outline"} size="sm" onClick={toggleMode} disabled={saving}>
+          {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+          Cambiar a {mode === "test" ? "LIVE" : "TEST"}
         </Button>
       </div>
 
-      {/* Dynamic sections */}
-      {sections.map((section) => {
-        const Icon = section.icon;
-        return (
-          <div key={section.saveKey} className="bg-card rounded-xl p-5 border border-border space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Icon className="w-5 h-5 text-muted-foreground" />
-              <div>
-                <div className="font-medium text-sm">{section.title}</div>
-                <div className="text-xs text-muted-foreground">{section.description}</div>
-              </div>
+      {/* Payment Links per plan */}
+      <div className="bg-card rounded-xl p-5 border border-border space-y-5">
+        <div className="flex items-center gap-3">
+          <LinkIcon className="w-5 h-5 text-muted-foreground" />
+          <div>
+            <div className="font-medium text-sm">Payment Links de Stripe</div>
+            <div className="text-xs text-muted-foreground">
+              Pega el Payment Link de Stripe para cada plan (Test y Live). Se usará el del modo activo.
             </div>
-            <div className="space-y-3">
-              {section.fields!.map((field) => (
-                <div key={field.key}>
-                  <Label className="text-xs text-muted-foreground">{field.label}</Label>
-                  <Input
-                    value={settings[field.key]}
-                    onChange={(e) => updateField(field.key, e.target.value)}
-                    placeholder={field.placeholder}
-                    className="mt-1 text-sm font-mono"
-                    type="text"
-                  />
-                </div>
-              ))}
-            </div>
-            <Button
-              size="sm"
-              onClick={() => saveSection(section.saveKey!, section.saveFields!())}
-              disabled={isSaving(section.saveKey!)}
-              className="w-full"
-            >
-              {isSaving(section.saveKey!) ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
-              Guardar {section.saveKey}
-            </Button>
           </div>
-        );
-      })}
-
-      {/* Info box */}
-      <div className="bg-muted/50 rounded-xl p-4 border border-border">
-        <div className="text-xs font-medium mb-2 flex items-center gap-1.5">
-          <Key className="w-3.5 h-3.5" />
-          API Keys (sk_test / sk_live)
         </div>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Las Secret Keys de Stripe (sk_test_... / sk_live_...) se configuran como secretos del servidor y no se muestran aquí por seguridad. Para actualizarlas, pídelo en el chat.
-        </p>
+
+        {PLANS.map((p) => (
+          <div key={p.key} className="space-y-2 pt-2 border-t border-border first:border-t-0 first:pt-0">
+            <div className="flex items-baseline justify-between">
+              <div className="font-medium text-sm">{p.label}</div>
+              <div className="text-xs text-muted-foreground">{p.price}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Test</Label>
+              <Input
+                value={(s as any)[`payment_link_${p.key}_test`]}
+                onChange={(e) => setField(`payment_link_${p.key}_test` as any, e.target.value)}
+                placeholder="https://buy.stripe.com/test_..."
+                className="mt-1 text-sm font-mono"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Live</Label>
+              <Input
+                value={(s as any)[`payment_link_${p.key}_live`]}
+                onChange={(e) => setField(`payment_link_${p.key}_live` as any, e.target.value)}
+                placeholder="https://buy.stripe.com/..."
+                className="mt-1 text-sm font-mono"
+              />
+            </div>
+          </div>
+        ))}
       </div>
+
+      {/* Webhook secrets */}
+      <div className="bg-card rounded-xl p-5 border border-border space-y-4">
+        <div className="flex items-center gap-3">
+          <Shield className="w-5 h-5 text-muted-foreground" />
+          <div>
+            <div className="font-medium text-sm">Webhook de Stripe</div>
+            <div className="text-xs text-muted-foreground">
+              Configura este endpoint en Stripe y pega el signing secret (whsec_...).
+            </div>
+          </div>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">URL del Webhook</Label>
+          <Input value={webhookUrl} readOnly className="mt-1 text-sm font-mono bg-muted/50" />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Webhook Secret Test</Label>
+          <Input
+            value={s.webhook_secret_test}
+            onChange={(e) => setField("webhook_secret_test", e.target.value)}
+            placeholder="whsec_..."
+            className="mt-1 text-sm font-mono"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Webhook Secret Live</Label>
+          <Input
+            value={s.webhook_secret_live}
+            onChange={(e) => setField("webhook_secret_live", e.target.value)}
+            placeholder="whsec_..."
+            className="mt-1 text-sm font-mono"
+          />
+        </div>
+      </div>
+
+      <Button onClick={saveAll} disabled={saving} className="w-full" size="lg">
+        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+        Guardar configuración
+      </Button>
     </div>
   );
 };

@@ -729,8 +729,14 @@ export type Database = {
           contact_email: string | null
           created_at: string
           id: string
+          payment_link_full_live: string | null
+          payment_link_full_test: string | null
           payment_link_live: string | null
           payment_link_test: string | null
+          payment_link_training_live: string | null
+          payment_link_training_test: string | null
+          payment_link_transform_live: string | null
+          payment_link_transform_test: string | null
           payment_link_yearly_live: string | null
           payment_link_yearly_test: string | null
           payment_mode: string
@@ -757,8 +763,14 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          payment_link_full_live?: string | null
+          payment_link_full_test?: string | null
           payment_link_live?: string | null
           payment_link_test?: string | null
+          payment_link_training_live?: string | null
+          payment_link_training_test?: string | null
+          payment_link_transform_live?: string | null
+          payment_link_transform_test?: string | null
           payment_link_yearly_live?: string | null
           payment_link_yearly_test?: string | null
           payment_mode?: string
@@ -785,8 +797,14 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           id?: string
+          payment_link_full_live?: string | null
+          payment_link_full_test?: string | null
           payment_link_live?: string | null
           payment_link_test?: string | null
+          payment_link_training_live?: string | null
+          payment_link_training_test?: string | null
+          payment_link_transform_live?: string | null
+          payment_link_transform_test?: string | null
           payment_link_yearly_live?: string | null
           payment_link_yearly_test?: string | null
           payment_mode?: string
