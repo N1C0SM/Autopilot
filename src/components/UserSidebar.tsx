@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export type UserSection = "home" | "training" | "nutrition" | "chat" | "settings";
@@ -21,6 +21,7 @@ interface Props {
   onSignOut: () => void;
   profileName?: string;
   profileAvatar?: string;
+  lockedSections?: UserSection[];
 }
 
 const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = [
@@ -31,7 +32,7 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
   { title: "Ajustes", section: "settings", icon: Settings },
 ];
 
-const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvatar }: Props) => {
+const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvatar, lockedSections = [] }: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
@@ -54,6 +55,7 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
             <SidebarMenu>
               {NAV_ITEMS.map((item) => {
                 const isActive = section === item.section;
+                const isLocked = lockedSections.includes(item.section);
                 return (
                   <SidebarMenuItem key={item.section}>
                     <SidebarMenuButton
@@ -61,7 +63,12 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                       className={`cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && (
+                        <span className="flex-1 flex items-center justify-between">
+                          <span className={isLocked ? "text-muted-foreground" : ""}>{item.title}</span>
+                          {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                        </span>
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

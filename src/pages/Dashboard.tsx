@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle } from "lucide-react";
+import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle, Lock, Video } from "lucide-react";
 import { Download, Calendar as CalendarIcon } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import { toast } from "sonner";
@@ -53,6 +53,7 @@ const Dashboard = () => {
   const [profileAvatar, setProfileAvatar] = useState("");
   const [planStatus, setPlanStatus] = useState<string>("onboarding");
   const [paymentStatus, setPaymentStatus] = useState<string>("unpaid");
+  const [subscriptionTier, setSubscriptionTier] = useState<string>("full");
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState<Macros | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
@@ -74,13 +75,14 @@ const Dashboard = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("plan_status, payment_status, name, avatar_url, created_at")
+        .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier")
         .eq("user_id", user.id)
         .single();
 
       if (profile) {
         setPlanStatus(profile.plan_status);
         setPaymentStatus(profile.payment_status);
+        setSubscriptionTier(((profile as any).subscription_tier as string) || "full");
         setProfileName((profile as any).name || "");
         setProfileAvatar((profile as any).avatar_url || "");
         setProfileCreatedAt((profile as any).created_at || "");
@@ -178,6 +180,8 @@ const Dashboard = () => {
   }
 
   const hasPlan = paymentStatus === "paid" && planStatus === "plan_ready";
+  const isTrainingOnly = subscriptionTier === "training";
+  const isTransform = subscriptionTier === "transform";
 
   const SECTION_LABELS: Record<UserSection, string> = {
     home: "Inicio",
@@ -196,6 +200,7 @@ const Dashboard = () => {
           onSignOut={handleSignOut}
           profileName={profileName}
           profileAvatar={profileAvatar}
+          lockedSections={isTrainingOnly ? ["nutrition"] : []}
         />
 
         <div className="flex-1 flex flex-col min-w-0">
@@ -342,7 +347,26 @@ const Dashboard = () => {
             )}
 
             {/* Nutrition section */}
-            {hasPlan && section === "nutrition" && (
+            {hasPlan && section === "nutrition" && isTrainingOnly && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-card rounded-2xl p-10 border border-border card-shadow text-center max-w-2xl mx-auto"
+              >
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Lock className="w-8 h-8 text-primary" />
+                </div>
+                <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
+                <p className="text-muted-foreground mb-6">
+                  Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.
+                </p>
+                <Button variant="hero" size="lg" onClick={handleManageSubscription}>
+                  Mejorar a Completo — 49€/mes
+                </Button>
+              </motion.div>
+            )}
+
+            {hasPlan && section === "nutrition" && !isTrainingOnly && (
               <div className="max-w-4xl space-y-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Apple className="w-5 h-5 text-primary" />
@@ -385,6 +409,22 @@ const Dashboard = () => {
             {/* Chat section */}
             {hasPlan && section === "chat" && (
               <div className="max-w-3xl">
+                {isTransform && (
+                  <div className="mb-4 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-5 flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                      <Video className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display font-bold text-base mb-1">Videollamada con tu asesor</h3>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Tu plan Transformación 12 semanas incluye llamada inicial y check-ins semanales. Coordina la próxima por aquí.
+                      </p>
+                      <Button size="sm" variant="hero" onClick={() => setSection("chat")}>
+                        Pedir videollamada
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {user && <Chat conversationUserId={user.id} />}
               </div>
             )}
