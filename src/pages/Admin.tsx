@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminStats from "@/components/admin/AdminStats";
+import AdminMetrics from "@/components/admin/AdminMetrics";
 import UserList from "@/components/admin/UserList";
 import UserDetail from "@/components/admin/UserDetail";
 import PaymentModeToggle from "@/components/admin/PaymentModeToggle";
@@ -26,7 +27,7 @@ export interface Profile {
   subscription_tier?: string | null;
 }
 
-export type AdminSection = "dashboard" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "payments";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "payments";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -118,6 +119,7 @@ const Admin = () => {
               {section === "rules" && "Reglas de generación"}
               {section === "landing" && "Contenido de la landing"}
               {section === "payments" && "Pagos · Stripe"}
+              {section === "metrics" && "Métricas"}
             </h1>
           </header>
 
@@ -244,6 +246,12 @@ const Admin = () => {
             {section === "payments" && (
               <div className="max-w-2xl space-y-6">
                 <PaymentModeToggle />
+              </div>
+            )}
+
+            {section === "metrics" && (
+              <div className="max-w-7xl">
+                <AdminMetrics />
               </div>
             )}
           </main>
