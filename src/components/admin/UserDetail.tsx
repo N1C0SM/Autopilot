@@ -240,6 +240,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }:
     general_health: "❤️ Salud general",
   };
 
+  const trainingOnly = (profile as any).subscription_tier === "training";
+
   return (
     <div>
       {/* Header */}
@@ -299,7 +301,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }:
         </div>
       )}
       <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className={`grid w-full bg-secondary/50 ${profile.payment_status === "paid" ? "grid-cols-7" : "grid-cols-1"}`}>
+        <TabsList className={`grid w-full bg-secondary/50 ${profile.payment_status === "paid" ? (trainingOnly ? "grid-cols-6" : "grid-cols-7") : "grid-cols-1"}`}>
           <TabsTrigger value="info" className="text-xs gap-1.5">
             <User2 className="w-3.5 h-3.5" /> Info
           </TabsTrigger>
@@ -317,9 +319,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }:
               <TabsTrigger value="calendar" className="text-xs gap-1.5">
                 <Calendar className="w-3.5 h-3.5" /> Calendario
               </TabsTrigger>
-              <TabsTrigger value="nutrition" className="text-xs gap-1.5">
-                <Apple className="w-3.5 h-3.5" /> Nutrición
-              </TabsTrigger>
+              {!trainingOnly && (
+                <TabsTrigger value="nutrition" className="text-xs gap-1.5">
+                  <Apple className="w-3.5 h-3.5" /> Nutrición
+                </TabsTrigger>
+              )}
               <TabsTrigger value="chat" className="text-xs gap-1.5">
                 <MessageCircle className="w-3.5 h-3.5" /> Chat
               </TabsTrigger>

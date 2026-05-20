@@ -8,12 +8,12 @@ interface PricingTiersProps {
   recommended?: PlanKey;
 }
 
-const ORDER: PlanKey[] = ["training", "full"];
+const ORDER: PlanKey[] = ["training", "full", "transform"];
 
 const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => {
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="grid md:grid-cols-2 gap-5 md:gap-6 items-stretch">
+    <div className="max-w-6xl mx-auto">
+      <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-stretch">
         {ORDER.map((key) => {
           const t = TIERS[key];
           const isRec = key === recommended;
@@ -52,11 +52,19 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                 >
                   €{t.price}
                 </span>
-                <span className="text-muted-foreground text-sm">/mes</span>
+                <span className="text-muted-foreground text-sm">
+                  {t.interval === "one_time" ? "/12 sem" : "/mes"}
+                </span>
               </div>
-              <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
-                <Sparkles className="w-3 h-3" /> Primera semana gratis
-              </div>
+              {t.trial_days > 0 ? (
+                <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
+                  <Sparkles className="w-3 h-3" /> Primera semana gratis
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
+                  <Sparkles className="w-3 h-3" /> Plan 12 semanas · acompañamiento 1:1
+                </div>
+              )}
 
               <ul className="space-y-2.5 mb-7 flex-1">
                 {t.features.map((f) => (
