@@ -23,6 +23,7 @@ export interface Profile {
   created_at: string;
   travel_mode_until?: string | null;
   travel_equipment?: string | null;
+  subscription_tier?: string | null;
 }
 
 export type AdminSection = "dashboard" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "payments";
