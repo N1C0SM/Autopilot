@@ -92,8 +92,9 @@ const SettingsPanel = () => {
       setLoading(false);
 
       // Fetch current plan (monthly/yearly) from check-subscription + yearly price
-      supabase.from("settings").select("yearly_price_eur").limit(1).single().then(({ data }) => {
-        if (data?.yearly_price_eur) setYearlyPriceEur(data.yearly_price_eur);
+      (supabase.rpc as any)("get_public_settings").then(({ data }: any) => {
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row?.yearly_price_eur) setYearlyPriceEur(row.yearly_price_eur);
       });
       supabase.functions.invoke("check-subscription").then(({ data }) => {
         if (data?.plan === "monthly" || data?.plan === "yearly") setCurrentPlan(data.plan);

@@ -1232,6 +1232,16 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_public_settings: {
+        Args: never
+        Returns: {
+          contact_email: string
+          trainer_bio: string
+          trainer_name: string
+          trainer_photo_url: string
+          yearly_price_eur: number
+        }[]
+      }
       get_public_stats: {
         Args: never
         Returns: {
