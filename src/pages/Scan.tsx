@@ -434,7 +434,11 @@ const Scan = () => {
           if (r.inferred_goal || r.inferred_focus || r.inferred_specific_goals?.length) {
             applyScanToPlan(r);
           }
+          saveAndEmailScan(r, { silent: false });
         }, 400);
+      } else if (user) {
+        // Logged-in but not paid: still save history + email (no plan apply)
+        saveAndEmailScan(r, { silent: true });
       }
       // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
     } catch (e: any) {
