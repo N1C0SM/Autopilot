@@ -334,11 +334,8 @@ const Onboarding = () => {
         toast.success("¡Tu plan se está preparando! 🎉");
         navigate("/dashboard");
       } else {
-        const { data: settings } = await supabase
-          .from("settings")
-          .select("yearly_price_eur")
-          .limit(1)
-          .single();
+        const { data: settingsData } = await (supabase.rpc as any)("get_public_settings");
+        const settings = Array.isArray(settingsData) ? settingsData[0] : settingsData;
         if (settings?.yearly_price_eur) setYearlyPrice(settings.yearly_price_eur);
         toast.success("¡Cuestionario completado! Elige tu plan.");
         setShowPaywall(true);
