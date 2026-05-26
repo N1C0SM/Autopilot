@@ -65,11 +65,12 @@ const Index = () => {
 
   useEffect(() => {
     (async () => {
-      const [{ data: t }, { data: s }, statsRes] = await Promise.all([
+      const [{ data: t }, settingsRes, statsRes] = await Promise.all([
         supabase.from("site_testimonials").select("name, result, text, photo_url").eq("visible", true).order("sort_order"),
-        supabase.from("settings").select("trainer_name, trainer_photo_url, trainer_bio, contact_email").limit(1).maybeSingle(),
+        (supabase.rpc as any)("get_public_settings"),
         (supabase.rpc as any)("get_public_stats"),
       ]);
+      const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
       if (t && t.length > 0) setTestimonials(t as any);
       if (s) {
         setTrainer({
