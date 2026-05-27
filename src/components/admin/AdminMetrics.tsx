@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { Loader2, Sparkles, Users, CreditCard, Camera, Mail, TrendingUp, Target, CheckCircle2, AlertCircle, Activity, Dumbbell } from "lucide-react";
+import { Loader2, Sparkles, Users, CreditCard, Camera, Mail, TrendingUp, Target, CheckCircle2, AlertCircle, Activity, Dumbbell, RefreshCw, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, CartesianGrid } from "recharts";
 
 interface Stat {
@@ -32,9 +34,10 @@ const TIER_LABELS: Record<string, string> = {
 const AdminMetrics = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+  const [resetting, setResetting] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
+  const load = async () => {
+      setLoading(true);
       const now = new Date();
       const d30 = new Date(now.getTime() - 30 * 86400000).toISOString();
       const d7 = new Date(now.getTime() - 7 * 86400000).toISOString();
@@ -168,8 +171,26 @@ const AdminMetrics = () => {
       });
       setLoading(false);
     };
-    load();
-  }, []);
+
+  useEffect(() => { load(); }, []);
+
+  const resetMetrics = async () => {
+    if (!confirm("¿Resetear métricas? Se borrarán TODOS los scans anónimos, leads de mini-plan y log de emails. Los usuarios registrados y sus datos NO se tocan. Esta acción es irreversible.")) return;
+    setResetting(true);
+    try {
+      await Promise.all([
+        supabase.from("scan_leads").delete().not("id", "is", null),
+        supabase.from("leads").delete().not("id", "is", null),
+        supabase.from("email_send_log").delete().not("id", "is", null),
+      ]);
+      toast.success("Métricas reseteadas");
+      await load();
+    } catch (e: any) {
+      toast.error("Error al resetear: " + e.message);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   if (loading || !data) {
     return (
@@ -190,6 +211,16 @@ const AdminMetrics = () => {
 
   return (
     <div className="space-y-8">
+      {/* Toolbar */}
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Actualizar
+        </Button>
+        <Button variant="destructive" size="sm" onClick={resetMetrics} disabled={resetting}>
+          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> {resetting ? "Reseteando..." : "Resetear métricas"}
+        </Button>
+      </div>
+
       {/* Top KPI grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {topStats.map((s, i) => (

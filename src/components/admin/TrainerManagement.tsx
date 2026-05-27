@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, UserPlus, Loader2, Save, X, MessageCircle, User2, Users as UsersIcon } from "lucide-react";
+import { ArrowLeft, UserPlus, Loader2, Save, X, MessageCircle, User2, Users as UsersIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
 import type { Profile } from "@/pages/Admin";
@@ -107,6 +107,17 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
     toast.success("Perfil guardado");
   };
 
+  const uploadPhoto = async (file: File) => {
+    if (!profile) return;
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `trainers/${profile.user_id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
+    if (error) { toast.error("Error subiendo foto: " + error.message); return; }
+    const url = supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
+    setProfile({ ...profile, photo_url: url });
+    toast.success("Foto subida");
+  };
+
   const assignUser = async (userId: string) => {
     if (!selectedTrainer) return;
     // If user already assigned to another trainer, replace
@@ -200,19 +211,35 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
                     <Label>Bio</Label>
                     <Textarea className="mt-1.5" rows={4} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} placeholder="Cuenta brevemente quién eres y a quién ayudas..." />
                   </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label>URL de la foto</Label>
-                      <Input className="mt-1.5" value={profile.photo_url} onChange={(e) => setProfile({ ...profile, photo_url: e.target.value })} placeholder="https://..." />
-                    </div>
-                    <div>
-                      <Label>Orden</Label>
-                      <Input className="mt-1.5" type="number" value={profile.sort_order} onChange={(e) => setProfile({ ...profile, sort_order: parseInt(e.target.value) || 0 })} />
+                  <div>
+                    <Label>Foto de perfil</Label>
+                    <div className="mt-1.5 flex items-center gap-4">
+                      {profile.photo_url ? (
+                        <img src={profile.photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
+                          <User2 className="w-8 h-8" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2">
+                        <label className="cursor-pointer">
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); }} />
+                          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
+                            <Upload className="w-3.5 h-3.5" /> Subir foto
+                          </span>
+                        </label>
+                        {profile.photo_url && (
+                          <button type="button" onClick={() => setProfile({ ...profile, photo_url: "" })} className="text-[11px] text-muted-foreground hover:text-destructive text-left">
+                            Quitar foto
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  {profile.photo_url && (
-                    <img src={profile.photo_url} alt="" className="w-24 h-24 rounded-full object-cover border border-border" />
-                  )}
+                  <div>
+                    <Label>Orden</Label>
+                    <Input className="mt-1.5 max-w-[120px]" type="number" value={profile.sort_order} onChange={(e) => setProfile({ ...profile, sort_order: parseInt(e.target.value) || 0 })} />
+                  </div>
                   <Button variant="hero" onClick={saveProfile} disabled={saving}>
                     <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar perfil"}
                   </Button>

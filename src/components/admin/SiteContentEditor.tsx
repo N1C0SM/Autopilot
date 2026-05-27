@@ -111,7 +111,7 @@ const SiteContentEditor = () => {
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <User className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Sobre el entrenador</h2>
+          <h2 className="font-display font-bold">Sobre el fundador</h2>
         </div>
         <div className="flex items-center gap-4">
           {trainer.trainer_photo_url ? (
