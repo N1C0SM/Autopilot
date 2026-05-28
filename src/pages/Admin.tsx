@@ -199,6 +199,8 @@ const Admin = () => {
                     profile={selectedUser}
                     onBack={() => setSelectedUser(null)}
                     onUpdate={updateUserInList}
+                    isTargetTrainer={trainerIds.has(selectedUser.user_id)}
+                    isTargetAdmin={adminIds.has(selectedUser.user_id)}
                     onDelete={(userId) => {
                       setUsers((u) => u.filter((p) => p.user_id !== userId));
                       setSelectedUser(null);

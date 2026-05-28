@@ -70,9 +70,11 @@ interface Props {
   onUpdate: (userId: string, updates: Partial<Profile>) => void;
   onDelete?: (userId: string) => void;
   restricted?: boolean;
+  isTargetTrainer?: boolean;
+  isTargetAdmin?: boolean;
 }
 
-const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }: Props) => {
+const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, isTargetTrainer = false, isTargetAdmin = false }: Props) => {
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState({ protein: "", carbs: "", fats: "" });
