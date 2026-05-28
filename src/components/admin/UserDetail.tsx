@@ -70,9 +70,11 @@ interface Props {
   onUpdate: (userId: string, updates: Partial<Profile>) => void;
   onDelete?: (userId: string) => void;
   restricted?: boolean;
+  isTargetTrainer?: boolean;
+  isTargetAdmin?: boolean;
 }
 
-const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }: Props) => {
+const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, isTargetTrainer = false, isTargetAdmin = false }: Props) => {
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState({ protein: "", carbs: "", fats: "" });
@@ -241,6 +243,21 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }:
   };
 
   const trainingOnly = (profile as any).subscription_tier === "training";
+
+  // ─── Reduced view for trainers / admins ───
+  if (isTargetTrainer || isTargetAdmin) {
+    return (
+      <StaffDetail
+        profile={profile}
+        onBack={onBack}
+        onDelete={onDelete}
+        kind={isTargetAdmin ? "admin" : "trainer"}
+        restricted={restricted}
+        deleting={deleting}
+        setDeleting={setDeleting}
+      />
+    );
+  }
 
   return (
     <div>
@@ -556,6 +573,197 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false }:
 };
 
 export default UserDetail;
+
+// ─── Staff Detail (trainer / admin) ──────────────────────────────────────────
+interface StaffDetailProps {
+  profile: Profile;
+  onBack: () => void;
+  onDelete?: (userId: string) => void;
+  kind: "trainer" | "admin";
+  restricted: boolean;
+  deleting: boolean;
+  setDeleting: (v: boolean) => void;
+}
+
+function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, setDeleting }: StaffDetailProps) {
+  const [trainerProfile, setTrainerProfile] = useState<any>(null);
+  const [assigned, setAssigned] = useState<{ user_id: string; email: string; plan_status: string; payment_status: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      let results: any[] = [];
+      if (kind === "trainer") {
+        results = await Promise.all([
+          supabase.from("trainer_profiles").select("*").eq("user_id", profile.user_id).maybeSingle() as any,
+          supabase.from("trainer_assignments").select("user_id").eq("trainer_id", profile.user_id) as any,
+        ]);
+      }
+      if (kind === "trainer") {
+        const tp = results[0]?.data;
+        const assignments = results[1]?.data || [];
+        setTrainerProfile(tp);
+        const ids = assignments.map((a: any) => a.user_id);
+        if (ids.length > 0) {
+          const { data: profs } = await supabase
+            .from("profiles")
+            .select("user_id, email, plan_status, payment_status")
+            .in("user_id", ids);
+          setAssigned((profs as any) || []);
+        }
+      }
+      setLoading(false);
+    })();
+  }, [profile.user_id, kind]);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+      body: { target_user_id: profile.user_id },
+    });
+    if (error || !data?.success) {
+      toast.error("Error al eliminar: " + (error?.message || data?.error || "desconocido"));
+      setDeleting(false);
+      return;
+    }
+    toast.success(`${kind === "admin" ? "Administrador" : "Entrenador"} eliminado`);
+    onDelete?.(profile.user_id);
+    onBack();
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold font-display truncate">{profile.email}</h1>
+          <span className={`inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${kind === "admin" ? "bg-amber-500/20 text-amber-400" : "bg-primary/20 text-primary"}`}>
+            {kind === "admin" ? "👑 Administrador" : "🏋️ Entrenador"}
+          </span>
+        </div>
+        {!restricted && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting}>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar {kind === "admin" ? "administrador" : "entrenador"}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se borrarán permanentemente todos los datos de <strong>{profile.email}</strong>. Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  {deleting ? "Eliminando..." : "Eliminar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        </div>
+      ) : (
+        <Tabs defaultValue={kind === "trainer" ? "info" : "chat"} className="space-y-6">
+          <TabsList className={`grid w-full bg-secondary/50 ${kind === "trainer" ? "grid-cols-3" : "grid-cols-1"}`}>
+            {kind === "trainer" && (
+              <>
+                <TabsTrigger value="info" className="text-xs gap-1.5">
+                  <User2 className="w-3.5 h-3.5" /> Info
+                </TabsTrigger>
+                <TabsTrigger value="assigned" className="text-xs gap-1.5">
+                  <Dumbbell className="w-3.5 h-3.5" /> Asignados ({assigned.length})
+                </TabsTrigger>
+              </>
+            )}
+            <TabsTrigger value="chat" className="text-xs gap-1.5">
+              <MessageCircle className="w-3.5 h-3.5" /> Chat
+            </TabsTrigger>
+          </TabsList>
+
+          {kind === "trainer" && (
+            <TabsContent value="info">
+              <div className="bg-card rounded-2xl border border-border p-6">
+                <div className="flex items-start gap-5">
+                  {trainerProfile?.photo_url ? (
+                    <img
+                      src={trainerProfile.photo_url}
+                      alt={trainerProfile.display_name || profile.email}
+                      className="w-24 h-24 rounded-2xl object-cover ring-1 ring-border"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-2xl bg-secondary flex items-center justify-center">
+                      <User2 className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="font-display font-bold text-lg">{trainerProfile?.display_name || "Sin nombre"}</div>
+                    {trainerProfile?.specialty && (
+                      <div className="inline-block text-[10px] uppercase tracking-widest text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10">
+                        {trainerProfile.specialty}
+                      </div>
+                    )}
+                    {trainerProfile?.headline && (
+                      <p className="text-sm italic text-muted-foreground">"{trainerProfile.headline}"</p>
+                    )}
+                    {trainerProfile?.bio && (
+                      <p className="text-sm text-foreground/80 leading-relaxed">{trainerProfile.bio}</p>
+                    )}
+                    {!trainerProfile && (
+                      <p className="text-xs text-muted-foreground">Este entrenador aún no ha configurado su perfil público.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          )}
+
+          {kind === "trainer" && (
+            <TabsContent value="assigned">
+              {assigned.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
+                  <p className="text-sm text-muted-foreground">Sin usuarios asignados.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {assigned.map((u) => (
+                    <div key={u.user_id} className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold">{u.email.charAt(0).toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{u.email}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "🆕 Onboarding"}
+                          {" · "}
+                          {u.payment_status === "paid" ? "Pagado" : "Sin pagar"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          )}
+
+          <TabsContent value="chat">
+            <Chat conversationUserId={profile.user_id} isAdmin />
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+}
 
 // ─── Admin Calendar Tab ──────────────────────────────────────────────────────
 // Envuelve el CalendarView con un panel superior de "Conflictos detectados"
