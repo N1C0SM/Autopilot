@@ -587,6 +587,8 @@ interface StaffDetailProps {
 
 function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, setDeleting }: StaffDetailProps) {
   const [trainerProfile, setTrainerProfile] = useState<any>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [assigned, setAssigned] = useState<{ user_id: string; email: string; plan_status: string; payment_status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -601,7 +603,16 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
         ]);
       }
       if (kind === "trainer") {
-        const tp = results[0]?.data;
+        const tp = results[0]?.data || {
+          user_id: profile.user_id,
+          display_name: "",
+          headline: "",
+          bio: "",
+          photo_url: "",
+          specialty: "",
+          sort_order: 0,
+          visible: true,
+        };
         const assignments = results[1]?.data || [];
         setTrainerProfile(tp);
         const ids = assignments.map((a: any) => a.user_id);
@@ -616,6 +627,33 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
       setLoading(false);
     })();
   }, [profile.user_id, kind]);
+
+  const uploadTrainerPhoto = async (file: File) => {
+    if (!trainerProfile) return;
+    setUploadingPhoto(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `trainers/${profile.user_id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Error subiendo foto: " + error.message);
+      setUploadingPhoto(false);
+      return;
+    }
+    const url = supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
+    setTrainerProfile({ ...trainerProfile, photo_url: url });
+    setUploadingPhoto(false);
+    toast.success("Foto actualizada");
+  };
+
+  const saveTrainerProfile = async () => {
+    if (!trainerProfile) return;
+    setSavingProfile(true);
+    const payload = { ...trainerProfile, user_id: profile.user_id };
+    const { error } = await supabase.from("trainer_profiles").upsert(payload, { onConflict: "user_id" });
+    setSavingProfile(false);
+    if (error) { toast.error("Error al guardar: " + error.message); return; }
+    toast.success("Perfil del entrenador guardado");
+  };
 
   const handleDelete = async () => {
     setDeleting(true);
