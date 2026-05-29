@@ -587,6 +587,8 @@ interface StaffDetailProps {
 
 function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, setDeleting }: StaffDetailProps) {
   const [trainerProfile, setTrainerProfile] = useState<any>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [assigned, setAssigned] = useState<{ user_id: string; email: string; plan_status: string; payment_status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -601,7 +603,16 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
         ]);
       }
       if (kind === "trainer") {
-        const tp = results[0]?.data;
+        const tp = results[0]?.data || {
+          user_id: profile.user_id,
+          display_name: "",
+          headline: "",
+          bio: "",
+          photo_url: "",
+          specialty: "",
+          sort_order: 0,
+          visible: true,
+        };
         const assignments = results[1]?.data || [];
         setTrainerProfile(tp);
         const ids = assignments.map((a: any) => a.user_id);
@@ -616,6 +627,33 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
       setLoading(false);
     })();
   }, [profile.user_id, kind]);
+
+  const uploadTrainerPhoto = async (file: File) => {
+    if (!trainerProfile) return;
+    setUploadingPhoto(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `trainers/${profile.user_id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
+    if (error) {
+      toast.error("Error subiendo foto: " + error.message);
+      setUploadingPhoto(false);
+      return;
+    }
+    const url = supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
+    setTrainerProfile({ ...trainerProfile, photo_url: url });
+    setUploadingPhoto(false);
+    toast.success("Foto actualizada");
+  };
+
+  const saveTrainerProfile = async () => {
+    if (!trainerProfile) return;
+    setSavingProfile(true);
+    const payload = { ...trainerProfile, user_id: profile.user_id };
+    const { error } = await supabase.from("trainer_profiles").upsert(payload, { onConflict: "user_id" });
+    setSavingProfile(false);
+    if (error) { toast.error("Error al guardar: " + error.message); return; }
+    toast.success("Perfil del entrenador guardado");
+  };
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -693,38 +731,114 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
 
           {kind === "trainer" && (
             <TabsContent value="info">
-              <div className="bg-card rounded-2xl border border-border p-6">
-                <div className="flex items-start gap-5">
-                  {trainerProfile?.photo_url ? (
-                    <img
-                      src={trainerProfile.photo_url}
-                      alt={trainerProfile.display_name || profile.email}
-                      className="w-24 h-24 rounded-2xl object-cover ring-1 ring-border"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-2xl bg-secondary flex items-center justify-center">
-                      <User2 className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="font-display font-bold text-lg">{trainerProfile?.display_name || "Sin nombre"}</div>
-                    {trainerProfile?.specialty && (
-                      <div className="inline-block text-[10px] uppercase tracking-widest text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10">
-                        {trainerProfile.specialty}
+              {trainerProfile && (
+                <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
+                  {/* Foto */}
+                  <div className="flex items-start gap-5">
+                    {trainerProfile.photo_url ? (
+                      <img
+                        src={trainerProfile.photo_url}
+                        alt={trainerProfile.display_name || profile.email}
+                        className="w-24 h-24 rounded-2xl object-cover ring-1 ring-border"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-2xl bg-secondary flex items-center justify-center">
+                        <User2 className="w-10 h-10 text-muted-foreground" />
                       </div>
                     )}
-                    {trainerProfile?.headline && (
-                      <p className="text-sm italic text-muted-foreground">"{trainerProfile.headline}"</p>
-                    )}
-                    {trainerProfile?.bio && (
-                      <p className="text-sm text-foreground/80 leading-relaxed">{trainerProfile.bio}</p>
-                    )}
-                    {!trainerProfile && (
-                      <p className="text-xs text-muted-foreground">Este entrenador aún no ha configurado su perfil público.</p>
-                    )}
+                    <div className="flex flex-col gap-2">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingPhoto}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadTrainerPhoto(f); }}
+                        />
+                        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
+                          {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <User2 className="w-3.5 h-3.5" />}
+                          {uploadingPhoto ? "Subiendo..." : "Subir foto"}
+                        </span>
+                      </label>
+                      {trainerProfile.photo_url && (
+                        <button
+                          type="button"
+                          onClick={() => setTrainerProfile({ ...trainerProfile, photo_url: "" })}
+                          className="text-[11px] text-muted-foreground hover:text-destructive text-left"
+                        >
+                          Quitar foto
+                        </button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Visible toggle */}
+                  <div className="flex items-center justify-between border-t border-border pt-4">
+                    <div>
+                      <Label className="text-sm font-medium">Visible en la landing</Label>
+                      <p className="text-xs text-muted-foreground">Aparecerá en la sección "Entrenadores"</p>
+                    </div>
+                    <Switch
+                      checked={!!trainerProfile.visible}
+                      onCheckedChange={(v) => setTrainerProfile({ ...trainerProfile, visible: v })}
+                    />
+                  </div>
+
+                  {/* Campos */}
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Nombre público</Label>
+                      <Input
+                        className="mt-1.5"
+                        value={trainerProfile.display_name || ""}
+                        onChange={(e) => setTrainerProfile({ ...trainerProfile, display_name: e.target.value })}
+                        placeholder="Carlos Méndez"
+                      />
+                    </div>
+                    <div>
+                      <Label>Especialidad</Label>
+                      <Input
+                        className="mt-1.5"
+                        value={trainerProfile.specialty || ""}
+                        onChange={(e) => setTrainerProfile({ ...trainerProfile, specialty: e.target.value })}
+                        placeholder="Hipertrofia · Calistenia"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Titular corto</Label>
+                    <Input
+                      className="mt-1.5"
+                      value={trainerProfile.headline || ""}
+                      onChange={(e) => setTrainerProfile({ ...trainerProfile, headline: e.target.value })}
+                      placeholder="Entrenador certificado · 5 años"
+                    />
+                  </div>
+                  <div>
+                    <Label>Descripción / Bio</Label>
+                    <Textarea
+                      className="mt-1.5"
+                      rows={4}
+                      value={trainerProfile.bio || ""}
+                      onChange={(e) => setTrainerProfile({ ...trainerProfile, bio: e.target.value })}
+                      placeholder="Cuenta brevemente quién es y a quién ayuda..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Orden</Label>
+                    <Input
+                      className="mt-1.5 max-w-[120px]"
+                      type="number"
+                      value={trainerProfile.sort_order ?? 0}
+                      onChange={(e) => setTrainerProfile({ ...trainerProfile, sort_order: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <Button variant="hero" onClick={saveTrainerProfile} disabled={savingProfile}>
+                    <Save className="w-4 h-4 mr-1.5" /> {savingProfile ? "Guardando..." : "Guardar perfil"}
+                  </Button>
                 </div>
-              </div>
+              )}
             </TabsContent>
           )}
 

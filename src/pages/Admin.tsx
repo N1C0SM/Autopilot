@@ -34,7 +34,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<Profile[]>([]);
+  const [allUsers, setAllUsers] = useState<Profile[]>([]);
   const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
@@ -53,7 +53,7 @@ const Admin = () => {
         supabase.from("profiles").select("*"),
         supabase.from("user_roles").select("user_id, role"),
       ]);
-      if (profiles) setUsers(profiles as unknown as Profile[]);
+      if (profiles) setAllUsers(profiles as unknown as Profile[]);
       if (roles) {
         setAdminIds(new Set(roles.filter((r: any) => r.role === "admin").map((r: any) => r.user_id)));
         setTrainerIds(new Set(roles.filter((r: any) => r.role === "trainer").map((r: any) => r.user_id)));
@@ -72,7 +72,7 @@ const Admin = () => {
   };
 
   const updateUserInList = (userId: string, updates: Partial<Profile>) => {
-    setUsers((u) => u.map((p) => p.user_id === userId ? { ...p, ...updates } : p));
+    setAllUsers((u) => u.map((p) => p.user_id === userId ? { ...p, ...updates } : p));
     setSelectedUser((p) => p?.user_id === userId ? { ...p, ...updates } : p);
   };
 
@@ -95,6 +95,9 @@ const Admin = () => {
   }
 
   if (!isAdmin) return null;
+
+  // Hide the currently-logged-in admin from every list
+  const users = allUsers.filter((u) => u.user_id !== user?.id);
 
   return (
     <SidebarProvider>
@@ -202,7 +205,7 @@ const Admin = () => {
                     isTargetTrainer={trainerIds.has(selectedUser.user_id)}
                     isTargetAdmin={adminIds.has(selectedUser.user_id)}
                     onDelete={(userId) => {
-                      setUsers((u) => u.filter((p) => p.user_id !== userId));
+                      setAllUsers((u) => u.filter((p) => p.user_id !== userId));
                       setSelectedUser(null);
                     }}
                   />
