@@ -205,7 +205,7 @@ const Admin = () => {
                     isTargetTrainer={trainerIds.has(selectedUser.user_id)}
                     isTargetAdmin={adminIds.has(selectedUser.user_id)}
                     onDelete={(userId) => {
-                      setUsers((u) => u.filter((p) => p.user_id !== userId));
+                      setAllUsers((u) => u.filter((p) => p.user_id !== userId));
                       setSelectedUser(null);
                     }}
                   />
