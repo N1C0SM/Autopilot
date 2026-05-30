@@ -261,11 +261,8 @@ const Scan = () => {
     if (!shareRef.current) return;
     setSharing(true);
     try {
-      const dataUrl = await toPng(shareRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#0a0a0a",
-      });
+      const dataUrl = await renderScanCardDataUrl();
+      if (!dataUrl) throw new Error("no card");
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], "autopilot-scan.png", { type: "image/png" });
 
@@ -293,6 +290,44 @@ const Scan = () => {
       toast.error("No se pudo generar la tarjeta");
     } finally {
       setSharing(false);
+    }
+  };
+
+  // Render the share card (offscreen) to a PNG data URL. Returns null if not mounted.
+  const renderScanCardDataUrl = async (): Promise<string | null> => {
+    // Give React a tick to mount the offscreen card if result was just set
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    if (!shareRef.current) return null;
+    try {
+      return await toPng(shareRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#0a0a0a",
+      });
+    } catch (e) {
+      console.warn("renderScanCardDataUrl failed", e);
+      return null;
+    }
+  };
+
+  // Upload the card PNG via edge function and return its public URL (or null on failure).
+  const uploadScanCard = async (): Promise<string | null> => {
+    try {
+      const dataUrl = await renderScanCardDataUrl();
+      if (!dataUrl) return null;
+      const pngBase64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+      const { data, error } = await supabase.functions.invoke("upload-scan-card", {
+        body: { pngBase64 },
+      });
+      if (error) {
+        console.warn("upload-scan-card error", error);
+        return null;
+      }
+      return (data as any)?.publicUrl ?? null;
+    } catch (e) {
+      console.warn("uploadScanCard failed", e);
+      return null;
     }
   };
 
@@ -515,6 +550,7 @@ const Scan = () => {
         const r = pendingResult;
         if (r) {
           const recipient = leadEmail.trim();
+          const cardImageUrl = await uploadScanCard();
           await supabase.functions.invoke("send-transactional-email", {
             body: {
               templateName: "scan-diagnosis",
@@ -536,6 +572,7 @@ const Scan = () => {
                 summary: r.summary ?? undefined,
                 priorities: (r.improvements ?? []).slice(0, 5),
                 reportUrl: "https://autopilotplan.com/scan",
+                cardImageUrl: cardImageUrl ?? undefined,
               },
             },
           });
@@ -651,6 +688,7 @@ const Scan = () => {
       if (insErr) console.warn("scan_history insert", insErr);
 
       const firstName = (userName || user.email?.split("@")[0] || "atleta").split(" ")[0];
+      const cardImageUrl = await uploadScanCard();
       await supabase.functions.invoke("send-transactional-email", {
         body: {
           templateName: "scan-diagnosis",
@@ -674,6 +712,7 @@ const Scan = () => {
             lockedInsights: (r.locked_insights ?? []).slice(0, 3),
             photoUrl: frontUrl ?? undefined,
             reportUrl: "https://autopilotplan.com/dashboard",
+            cardImageUrl: cardImageUrl ?? undefined,
           },
         },
       });
