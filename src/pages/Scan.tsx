@@ -878,12 +878,12 @@ const Scan = () => {
                 <Button
                   variant="hero"
                   size="xl"
-                  onClick={() => setPhase("goal")}
+                  onClick={() => setPhase("analyzing")}
                   disabled={!currentImg || !backImg}
                   className="hover-scale group min-w-[280px]"
                 >
                   <ScanLine className="w-5 h-5 mr-1" />
-                  Continuar
+                  Analizar mi físico
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
