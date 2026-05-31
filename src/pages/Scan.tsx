@@ -818,6 +818,7 @@ const Scan = () => {
                   image={currentImg}
                   onFile={async (f) => setCurrentImg(await fileToDataUrl(f))}
                   onClear={() => setCurrentImg(null)}
+                  placeholder={poseFrontImg}
                 />
                 <Dropzone
                   label="Foto de atrás"
@@ -825,6 +826,7 @@ const Scan = () => {
                   image={backImg}
                   onFile={async (f) => setBackImg(await fileToDataUrl(f))}
                   onClear={() => setBackImg(null)}
+                  placeholder={poseBackImg}
                 />
                 <Dropzone
                   label="Tu físico objetivo"
