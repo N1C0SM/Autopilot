@@ -58,7 +58,6 @@ const ScanDiagnosisEmail = ({
   photoUrl,
 }: ScanDiagnosisProps) => {
   const fmt = (n?: number, d = 0) => (typeof n === 'number' ? n.toFixed(d) : '—')
-  const shortSummary = summary && summary.length > 220 ? summary.slice(0, 217) + '…' : summary
   const imageSrc = cardImageUrl || photoUrl
   return (
     <Html lang="es" dir="ltr">
@@ -66,15 +65,13 @@ const ScanDiagnosisEmail = ({
       <Preview>{headline}</Preview>
       <Body style={main}>
         <Container style={container}>
-          {/* HERO */}
-          <Section style={hero}>
-            <Text style={kicker}>✦ AI PHYSIQUE SCAN ✦</Text>
-            <Heading style={h1}>Hola {name},<br/>tu diagnóstico está listo</Heading>
-          </Section>
+          {/* Saludo mínimo */}
+          <Text style={greeting}>Hola {name},</Text>
+          <Text style={subGreeting}>este es tu AI Physique Scan completo:</Text>
 
-          {/* TARJETA DEL SCAN como hero visual */}
-          {imageSrc && (
-            <Section style={{ textAlign: 'center', margin: '0 0 18px' }}>
+          {/* TARJETA DEL SCAN = el email es literalmente el análisis */}
+          {imageSrc ? (
+            <Section style={{ textAlign: 'center', margin: '0 0 24px' }}>
               <Img
                 src={imageSrc}
                 alt="Tu AI Physique Scan"
@@ -82,19 +79,16 @@ const ScanDiagnosisEmail = ({
                 style={cardImg}
               />
             </Section>
-          )}
-
-          {/* Resumen corto */}
-          {(headline || shortSummary) && (
-            <Section style={card}>
-              {headline && <Text style={cardHeadline}>{headline}</Text>}
-              {shortSummary && <Text style={cardBody}>{shortSummary}</Text>}
+          ) : (
+            <Section style={fallback}>
+              <Text style={fallbackText}>{headline}</Text>
             </Section>
           )}
 
+          {/* CTA gold/black brand */}
           <Section style={ctaSection}>
             <Text style={ctaTitle}>¿Listo para acelerarlo a {fmt(monthsWithPlan, 0)} meses?</Text>
-            <Text style={ctaSub}>Tu plan personalizado de entrenamiento + nutrición, entregado directo a tu Google Calendar.</Text>
+            <Text style={ctaSub}>Plan de entrenamiento + nutrición, directo a tu Google Calendar.</Text>
             <Button href={reportUrl} style={button}>
               Empezar mi plan →
             </Button>
@@ -122,19 +116,17 @@ export const template = {
   },
 } satisfies TemplateEntry
 
-const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', padding: '20px 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', padding: '24px 0' }
 const container = { padding: '0 20px', maxWidth: '600px', margin: '0 auto' }
-const hero = { background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)', borderRadius: '20px', padding: '28px 24px', margin: '0 0 14px', textAlign: 'center' as const }
-const kicker = { fontSize: '11px', letterSpacing: '0.28em', color: '#a5b4fc', margin: '0 0 14px', fontWeight: 700 }
-const h1 = { fontSize: '26px', fontWeight: 800, color: '#ffffff', margin: '0', lineHeight: '1.2', letterSpacing: '-0.01em' }
-const cardImg = { borderRadius: '18px', border: '1px solid #e5e7eb', maxWidth: '100%', height: 'auto' as const, display: 'block', margin: '0 auto' }
-const card = { background: '#ffffff', border: '1px solid #e5e7eb', borderRadius: '14px', padding: '18px 20px', margin: '0 0 16px' }
-const cardHeadline = { fontSize: '16px', fontWeight: 700, color: '#0a0a0a', margin: '0 0 8px', lineHeight: '1.4' }
-const cardBody = { fontSize: '14px', color: '#374151', lineHeight: '1.6', margin: 0 }
-const ctaSection = { background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)', borderRadius: '16px', padding: '24px 20px', margin: '20px 0 8px', textAlign: 'center' as const }
-const ctaTitle = { fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: '0 0 6px', lineHeight: '1.3' }
-const ctaSub = { fontSize: '13px', color: '#e0e7ff', margin: '0 0 16px', lineHeight: '1.5' }
-const button = { backgroundColor: '#ffffff', color: '#4f46e5', borderRadius: '12px', padding: '14px 28px', fontSize: '15px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }
-const hr = { border: 'none', borderTop: '1px solid #e5e7eb', margin: '24px 0 12px' }
+const greeting = { fontSize: '18px', fontWeight: 700, color: '#0a0a0a', margin: '0 0 4px', textAlign: 'center' as const }
+const subGreeting = { fontSize: '13px', color: '#6b7280', margin: '0 0 18px', textAlign: 'center' as const }
+const cardImg = { borderRadius: '20px', border: '1px solid #1a1a1a', maxWidth: '100%', height: 'auto' as const, display: 'block', margin: '0 auto', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }
+const fallback = { background: '#0a0a0a', borderRadius: '20px', padding: '32px 24px', margin: '0 0 24px', textAlign: 'center' as const }
+const fallbackText = { fontSize: '18px', fontWeight: 700, color: '#facc15', margin: 0, lineHeight: '1.4' }
+const ctaSection = { background: '#0a0a0a', borderRadius: '20px', padding: '28px 24px', margin: '8px 0 8px', textAlign: 'center' as const, border: '1px solid #facc15' }
+const ctaTitle = { fontSize: '20px', fontWeight: 800, color: '#facc15', margin: '0 0 8px', lineHeight: '1.3', letterSpacing: '-0.01em' }
+const ctaSub = { fontSize: '13px', color: '#e5e7eb', margin: '0 0 18px', lineHeight: '1.5' }
+const button = { backgroundColor: '#facc15', color: '#0a0a0a', borderRadius: '12px', padding: '14px 28px', fontSize: '15px', fontWeight: 800, textDecoration: 'none', display: 'inline-block' }
+const hr = { border: 'none', borderTop: '1px solid #e5e7eb', margin: '28px 0 12px' }
 const footer = { fontSize: '12px', color: '#6b7280', margin: '0', textAlign: 'center' as const, fontWeight: 600 }
 const footerSub = { fontSize: '11px', color: '#9ca3af', margin: '4px 0 0', textAlign: 'center' as const }

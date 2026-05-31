@@ -308,10 +308,14 @@ const Scan = () => {
 
   // Render the share card (offscreen) to a PNG data URL. Returns null if not mounted.
   const renderScanCardDataUrl = async (): Promise<string | null> => {
-    // Give React a tick to mount the offscreen card if result was just set
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    // Esperar a que React monte la tarjeta offscreen (puede tardar varios ticks tras setResult)
+    for (let i = 0; i < 30; i++) {
+      if (shareRef.current) break;
+      await new Promise<void>((r) => setTimeout(r, 100));
+    }
     if (!shareRef.current) return null;
+    // Extra tick para que fuentes/layout se asienten
+    await new Promise<void>((r) => setTimeout(r, 150));
     try {
       return await toPng(shareRef.current, {
         cacheBust: true,
