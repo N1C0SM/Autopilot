@@ -36,6 +36,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import poseFrontImg from "@/assets/pose-front.png";
+import poseBackImg from "@/assets/pose-back.png";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
