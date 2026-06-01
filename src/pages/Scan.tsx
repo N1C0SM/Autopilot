@@ -316,7 +316,29 @@ const Scan = () => {
     if (!shareRef.current) return null;
     // Extra tick para que fuentes/layout se asienten
     await new Promise<void>((r) => setTimeout(r, 150));
+    // Asegurar que TODAS las <img> internas (foto del usuario, etc.) están decodificadas
+    // antes de capturar — si no, html-to-image las pinta vacías.
     try {
+      const imgs = Array.from(shareRef.current.querySelectorAll("img"));
+      await Promise.all(
+        imgs.map((img) => {
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          return new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          });
+        })
+      );
+      // Algunos navegadores necesitan un decode explícito
+      await Promise.all(
+        imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()))
+      );
+    } catch {}
+    try {
+      // Llamamos dos veces: la primera "calienta" caches de fuentes/imágenes y la
+      // segunda devuelve la imagen final ya con todo embebido correctamente.
+      // Es un workaround conocido de html-to-image cuando hay <img> con data URLs.
+      await toPng(shareRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#0a0a0a" });
       return await toPng(shareRef.current, {
         cacheBust: true,
         pixelRatio: 2,
