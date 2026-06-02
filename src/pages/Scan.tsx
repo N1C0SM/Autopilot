@@ -556,13 +556,6 @@ const Scan = () => {
       toast.error("Introduce tu nombre");
       return;
     }
-    const country = COUNTRIES.find((c) => c.code === leadCountry) ?? COUNTRIES[0];
-    const localDigits = leadWhatsapp.replace(/\D+/g, "");
-    if (localDigits && !/^[0-9]{6,15}$/.test(localDigits)) {
-      toast.error("WhatsApp no válido (déjalo en blanco si no lo usas)");
-      return;
-    }
-    const fullWa = localDigits ? `${country.dial}${localDigits}` : "";
     if (!leadEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadEmail.trim())) {
       toast.error("Introduce un email válido");
       return;
@@ -576,7 +569,7 @@ const Scan = () => {
       const { error } = await (supabase as any).from("scan_leads").insert({
         user_id: user?.id ?? null,
         name: leadName.trim().slice(0, 100),
-        whatsapp: fullWa.slice(0, 20) || null,
+        whatsapp: null,
         email: leadEmail.trim().slice(0, 255),
         goal: goal ?? "unspecified",
         consent: leadConsent,
