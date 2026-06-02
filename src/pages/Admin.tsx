@@ -255,6 +255,12 @@ const Admin = () => {
               </div>
             )}
 
+            {section === "emails" && (
+              <div className="max-w-4xl">
+                <EmailTemplatesEditor />
+              </div>
+            )}
+
             {section === "metrics" && (
               <div className="max-w-7xl">
                 <AdminMetrics />
