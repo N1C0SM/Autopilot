@@ -282,20 +282,44 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 4. Render React Email template to HTML and plain text
-  const html = await renderAsync(
-    React.createElement(template.component, templateData)
-  )
-  const plainText = await renderAsync(
-    React.createElement(template.component, templateData),
-    { plainText: true }
-  )
+  // 4. Check for admin override for this template
+  const { data: override } = await supabase
+    .from('email_template_overrides')
+    .select('subject, html, enabled')
+    .eq('template_name', templateName)
+    .maybeSingle()
 
-  // Resolve subject — supports static string or dynamic function
-  const resolvedSubject =
-    typeof template.subject === 'function'
-      ? template.subject(templateData)
-      : template.subject
+  let html: string
+  let plainText: string
+  let resolvedSubject: string
+
+  if (override && override.enabled && override.html && override.subject) {
+    // Use admin-customized template — substitute {{var}} placeholders from templateData
+    const interpolate = (str: string) =>
+      str.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
+        const val = key.split('.').reduce((acc: any, k: string) => acc?.[k], templateData)
+        return val == null ? '' : String(val)
+      })
+    html = interpolate(override.html)
+    resolvedSubject = interpolate(override.subject)
+    // Plain text fallback: strip tags
+    plainText = html.replace(/<style[\s\S]*?<\/style>/gi, '')
+                    .replace(/<script[\s\S]*?<\/script>/gi, '')
+                    .replace(/<[^>]+>/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+  } else {
+    // Render default React Email template
+    html = await renderAsync(React.createElement(template.component, templateData))
+    plainText = await renderAsync(
+      React.createElement(template.component, templateData),
+      { plainText: true }
+    )
+    resolvedSubject =
+      typeof template.subject === 'function'
+        ? template.subject(templateData)
+        : template.subject
+  }
 
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
   // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
