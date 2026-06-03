@@ -788,7 +788,7 @@ export type Database = {
           name: string
           result: Json | null
           user_id: string | null
-          whatsapp: string
+          whatsapp: string | null
         }
         Insert: {
           consent?: boolean
@@ -799,7 +799,7 @@ export type Database = {
           name: string
           result?: Json | null
           user_id?: string | null
-          whatsapp: string
+          whatsapp?: string | null
         }
         Update: {
           consent?: boolean
@@ -810,7 +810,7 @@ export type Database = {
           name?: string
           result?: Json | null
           user_id?: string | null
-          whatsapp?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }
