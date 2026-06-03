@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
@@ -1313,11 +1313,11 @@ const Scan = () => {
                         A tu objetivo
                       </div>
                       <div className="text-4xl font-bold font-display text-gradient">
-                        {result.months_with_plan}m
+                        {Math.max(1, result.months_with_plan)}m
                       </div>
                       {result.months_without_plan !== undefined && (
                         <div className="text-[11px] text-muted-foreground mt-1">
-                          vs <span className="line-through">{result.months_without_plan}m</span> sin plan
+                          vs <span className="line-through">{Math.max(2, result.months_without_plan)}m</span> sin plan
                         </div>
                       )}
                     </motion.div>
@@ -1664,80 +1664,59 @@ const Scan = () => {
                     </div>
                   </div>
 
-                  {currentImg && (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>
-                      {objectiveImg ? (
-                        <>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                            <img
-                              src={currentImg}
-                              style={{
-                                width: 380,
-                                height: 500,
-                                borderRadius: 24,
-                                objectFit: "cover",
-                                border: "2px solid #facc15",
-                                boxShadow: "0 0 60px rgba(250,204,21,0.25)",
-                              }}
-                            />
-                            <div style={{ fontSize: 16, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
-                              Ahora
+                  {currentImg && (() => {
+                    const photos: { src: string; label: string }[] = [
+                      { src: currentImg, label: "Frente" },
+                    ];
+                    if (backImg) photos.push({ src: backImg, label: "Espalda" });
+                    if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo" });
+                    const count = photos.length;
+                    const w = count === 1 ? 460 : count === 2 ? 420 : 300;
+                    const h = count === 1 ? 580 : count === 2 ? 540 : 400;
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: count === 3 ? 18 : 24 }}>
+                        {photos.map((p, i) => (
+                          <React.Fragment key={p.label}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                              <img
+                                src={p.src}
+                                style={{
+                                  width: w,
+                                  height: h,
+                                  borderRadius: 24,
+                                  objectFit: "cover",
+                                  border: p.label === "Objetivo" ? "2px solid #facc15" : "2px solid rgba(250,204,21,0.7)",
+                                  boxShadow: "0 0 60px rgba(250,204,21,0.22)",
+                                }}
+                              />
+                              <div style={{ fontSize: 15, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
+                                {p.label}
+                              </div>
                             </div>
-                          </div>
-                          <div
-                            style={{
-                              width: 60,
-                              height: 60,
-                              borderRadius: 999,
-                              background: "rgba(250,204,21,0.15)",
-                              border: "1px solid rgba(250,204,21,0.5)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 28,
-                              color: "#facc15",
-                              flexShrink: 0,
-                            }}
-                          >
-                            →
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                            <img
-                              src={objectiveImg}
-                              style={{
-                                width: 380,
-                                height: 500,
-                                borderRadius: 24,
-                                objectFit: "cover",
-                                border: "2px solid #facc15",
-                                boxShadow: "0 0 60px rgba(250,204,21,0.25)",
-                              }}
-                            />
-                            <div style={{ fontSize: 16, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
-                              Objetivo
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-                          <img
-                            src={currentImg}
-                            style={{
-                              width: 460,
-                              height: 580,
-                              borderRadius: 28,
-                              objectFit: "cover",
-                              border: "2px solid #facc15",
-                              boxShadow: "0 0 80px rgba(250,204,21,0.3)",
-                            }}
-                          />
-                          <div style={{ fontSize: 18, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
-                            Mi físico
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            {count === 3 && i === 1 && (
+                              <div
+                                style={{
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 999,
+                                  background: "rgba(250,204,21,0.15)",
+                                  border: "1px solid rgba(250,204,21,0.5)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 24,
+                                  color: "#facc15",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                →
+                              </div>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   <div>
                     <div style={{ fontSize: 22, color: "#a1a1aa", marginBottom: 18, textTransform: "uppercase", letterSpacing: 3 }}>
@@ -1755,13 +1734,13 @@ const Scan = () => {
                     {result.aesthetic_age !== undefined && (
                       <StatBox label="Edad estética" value={`${result.aesthetic_age}`} sub="años percibidos" />
                     )}
-                    {result.months_with_plan !== undefined && (
+                    {result.months_with_plan !== undefined && result.months_with_plan > 0 && (
                       <StatBox
                         label="A mi objetivo"
-                        value={`${result.months_with_plan}m`}
+                        value={`${Math.max(1, result.months_with_plan)}m`}
                         sub={
                           result.months_without_plan !== undefined
-                            ? `vs ${result.months_without_plan}m sin plan`
+                            ? `vs ${Math.max(2, result.months_without_plan)}m sin plan`
                             : "con plan"
                         }
                       />
