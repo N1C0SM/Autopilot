@@ -88,6 +88,18 @@ Deno.serve(async (req) => {
 
     const parsed = AnalysisSchema.parse(extractJson(text));
 
+    // Clamp meses to sensible minimums: nadie "ya está" en 0 meses.
+    if (typeof parsed.months_with_plan === "number") {
+      parsed.months_with_plan = Math.max(1, Math.round(parsed.months_with_plan));
+    }
+    if (typeof parsed.months_without_plan === "number") {
+      parsed.months_without_plan = Math.max(
+        (parsed.months_with_plan ?? 1) + 1,
+        Math.round(parsed.months_without_plan),
+      );
+    }
+    parsed.estimated_months = Math.max(1, Math.round(parsed.estimated_months));
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
