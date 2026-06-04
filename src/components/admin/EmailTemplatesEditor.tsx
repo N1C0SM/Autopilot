@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,8 +131,43 @@ export default function EmailTemplatesEditor() {
   const [saving, setSaving] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [hasOverride, setHasOverride] = useState(false);
+  const bcRef = useRef<BroadcastChannel | null>(null);
+  const previewWinRef = useRef<Window | null>(null);
 
   const current = TEMPLATES.find(t => t.name === selected)!;
+
+  // Maintain a BroadcastChannel tied to the current template so the open
+  // preview tab receives live updates.
+  useEffect(() => {
+    const name = `email-preview-${selected}`;
+    try {
+      bcRef.current?.close();
+      const bc = new BroadcastChannel(name);
+      // When the preview tab announces itself, immediately push current state.
+      bc.onmessage = (ev) => {
+        if (ev.data?.type === "ready") pushLive();
+      };
+      bcRef.current = bc;
+    } catch {
+      bcRef.current = null;
+    }
+    return () => { bcRef.current?.close(); bcRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
+
+  const pushLive = () => {
+    const customHtml = mode === "visual" ? wrapVisualHtml(visualHtml, subject) : html;
+    const payload = { customHtml, subject, templateData: {} };
+    try { bcRef.current?.postMessage({ type: "update", payload }); } catch {}
+    try { localStorage.setItem(`email-preview-${selected}`, JSON.stringify(payload)); } catch {}
+  };
+
+  // Debounced live-push whenever editable fields change
+  useEffect(() => {
+    const t = setTimeout(() => { pushLive(); }, 200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visualHtml, html, subject, mode, selected]);
 
   const load = async () => {
     setLoading(true);
@@ -211,16 +246,13 @@ export default function EmailTemplatesEditor() {
   };
 
   const preview = async () => {
-    try {
-      const customHtml = mode === "visual" ? wrapVisualHtml(visualHtml, subject) : html;
-      const { data, error } = await supabase.functions.invoke("render-email-template", {
-        body: { templateName: selected, customHtml },
-      });
-      if (error) throw error;
-      setPreviewHtml(data.html);
-    } catch (e: any) {
-      toast.error("No se pudo previsualizar: " + (e?.message ?? ""));
+    // Push latest state first, then open (or focus) the live preview tab.
+    pushLive();
+    const url = `/admin/email-preview/${encodeURIComponent(selected)}`;
+    if (previewWinRef.current && !previewWinRef.current.closed) {
+      try { previewWinRef.current.focus(); return; } catch {}
     }
+    previewWinRef.current = window.open(url, `email-preview-${selected}`);
   };
 
   // Live preview HTML for the side-by-side iframe (always reflects current edits).

@@ -21,6 +21,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import Legal from "./pages/Legal";
 import Scan from "./pages/Scan";
 import Trainer from "./pages/Trainer";
+import EmailPreview from "./pages/EmailPreview";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/admin/email-preview/:templateKey" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/trainer" element={<ProtectedRoute><Trainer /></ProtectedRoute>} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/legal/:slug" element={<Legal />} />
