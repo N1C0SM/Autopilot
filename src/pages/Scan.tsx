@@ -605,6 +605,7 @@ const Scan = () => {
                 priorities: (r.improvements ?? []).slice(0, 5),
                 reportUrl: "https://autopilotplan.com/scan",
                 cardImageUrl: cardImageUrl ?? undefined,
+                SCAN_IMAGE_URL: cardImageUrl ?? undefined,
               },
             },
           });
@@ -745,6 +746,7 @@ const Scan = () => {
             photoUrl: frontUrl ?? undefined,
             reportUrl: "https://autopilotplan.com/dashboard",
             cardImageUrl: cardImageUrl ?? undefined,
+            SCAN_IMAGE_URL: cardImageUrl ?? undefined,
           },
         },
       });

@@ -13,7 +13,7 @@ import LinkExt from "@tiptap/extension-link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const TEMPLATES = [
-  { name: "scan-diagnosis", label: "Scan Diagnosis (resultado del AI scan)", placeholders: ["name", "headline", "summary", "monthsWithPlan", "monthsWithoutPlan", "cardImageUrl", "photoUrl", "reportUrl"] },
+  { name: "scan-diagnosis", label: "Scan Diagnosis (resultado del AI scan)", placeholders: ["name", "headline", "summary", "monthsWithPlan", "monthsWithoutPlan", "SCAN_IMAGE_URL", "cardImageUrl", "photoUrl", "reportUrl"] },
   { name: "mini-plan", label: "Mini Plan (plan gratis post-onboarding)", placeholders: ["name", "planUrl"] },
   { name: "payment-reminder", label: "Payment Reminder (recordatorio de pago)", placeholders: ["name", "amount", "paymentUrl"] },
 ];
