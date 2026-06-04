@@ -12,10 +12,53 @@ import StarterKit from "@tiptap/starter-kit";
 import LinkExt from "@tiptap/extension-link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-const TEMPLATES = [
-  { name: "scan-diagnosis", label: "Scan Diagnosis (resultado del AI scan)", placeholders: ["name", "headline", "summary", "monthsWithPlan", "monthsWithoutPlan", "SCAN_IMAGE_URL", "cardImageUrl", "photoUrl", "reportUrl"] },
-  { name: "mini-plan", label: "Mini Plan (plan gratis post-onboarding)", placeholders: ["name", "planUrl"] },
-  { name: "payment-reminder", label: "Payment Reminder (recordatorio de pago)", placeholders: ["name", "amount", "paymentUrl"] },
+type TemplateDef = {
+  name: string;
+  label: string;
+  placeholders: string[];
+  sampleData: Record<string, any>;
+};
+
+// Sample values used to render `{{variables}}` in the live preview so the
+// admin sees a realistic email even before any user is selected.
+const TEMPLATES: TemplateDef[] = [
+  {
+    name: "scan-diagnosis",
+    label: "Scan Diagnosis (resultado del AI scan)",
+    placeholders: ["name", "headline", "summary", "monthsWithPlan", "monthsWithoutPlan", "SCAN_IMAGE_URL", "cardImageUrl", "photoUrl", "reportUrl"],
+    sampleData: {
+      name: "Nico",
+      headline: "Tu mayor margen está en espalda y hombros.",
+      summary: "Buen pecho frontal pero cadena posterior infradesarrollada. Postura ligeramente cifótica.",
+      monthsWithPlan: 6,
+      monthsWithoutPlan: 18,
+      SCAN_IMAGE_URL: "https://placehold.co/1080x1350/0a0a0a/facc15?text=AI+Scan",
+      cardImageUrl: "https://placehold.co/1080x1350/0a0a0a/facc15?text=AI+Scan",
+      photoUrl: "https://placehold.co/600x800/0a0a0a/facc15?text=Foto",
+      reportUrl: "https://autopilotplan.com/scan",
+    },
+  },
+  {
+    name: "mini-plan",
+    label: "Mini Plan (plan gratis post-onboarding)",
+    placeholders: ["insight", "mistake", "action", "ctaUrl"],
+    sampleData: {
+      insight: "Tu mayor bloqueo es la constancia, no el plan.",
+      mistake: "Estás haciendo demasiado cardio para tu objetivo.",
+      action: "Sube proteína a 1.6 g/kg y mide solo eso esta semana.",
+      ctaUrl: "https://autopilotplan.com/quiz",
+    },
+  },
+  {
+    name: "payment-reminder",
+    label: "Payment Reminder (recordatorio de pago)",
+    placeholders: ["name", "customMessage", "checkoutUrl"],
+    sampleData: {
+      name: "Nico",
+      customMessage: "Tu plan personalizado ya está listo, solo falta activar la suscripción.",
+      checkoutUrl: "https://autopilotplan.com/dashboard",
+    },
+  },
 ];
 
 // Wrap simple HTML produced by the visual editor in an email-friendly shell so
@@ -157,7 +200,7 @@ export default function EmailTemplatesEditor() {
 
   const pushLive = () => {
     const customHtml = mode === "visual" ? wrapVisualHtml(visualHtml, subject) : html;
-    const payload = { customHtml, subject, templateData: {} };
+    const payload = { customHtml, subject, templateData: current.sampleData };
     try { bcRef.current?.postMessage({ type: "update", payload }); } catch {}
     try { localStorage.setItem(`email-preview-${selected}`, JSON.stringify(payload)); } catch {}
   };
@@ -255,10 +298,19 @@ export default function EmailTemplatesEditor() {
     previewWinRef.current = window.open(url, `email-preview-${selected}`);
   };
 
+  // Interpolate {{vars}} with sample data so the in-page preview doesn't show
+  // raw placeholders. Same shape as the edge-function interpolator.
+  const interpolate = (str: string) =>
+    str.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
+      const val = key.split(".").reduce((acc: any, k: string) => acc?.[k], current.sampleData);
+      return val == null ? "" : String(val);
+    });
+
   // Live preview HTML for the side-by-side iframe (always reflects current edits).
-  const livePreviewHtml = mode === "visual"
+  const rawLive = mode === "visual"
     ? wrapVisualHtml(visualHtml || "<p style='color:#999'>Empieza a escribir…</p>", subject)
     : html;
+  const livePreviewHtml = interpolate(rawLive);
 
   const loadDefault = async () => {
     if (!confirm("¿Cargar el HTML por defecto en el editor? Se sobrescribirá lo que tengas escrito (no se guardará hasta que pulses Guardar).")) return;
