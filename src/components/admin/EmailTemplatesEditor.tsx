@@ -252,7 +252,7 @@ export default function EmailTemplatesEditor() {
     if (previewWinRef.current && !previewWinRef.current.closed) {
       try { previewWinRef.current.focus(); return; } catch {}
     }
-    previewWinRef.current = window.open(url, `email-preview-${selected}`, "noopener=no");
+    previewWinRef.current = window.open(url, `email-preview-${selected}`);
   };
 
   // Live preview HTML for the side-by-side iframe (always reflects current edits).
