@@ -15,6 +15,7 @@ import PaymentReminders from "@/components/admin/PaymentReminders";
 import SiteContentEditor from "@/components/admin/SiteContentEditor";
 import TrainerManagement from "@/components/admin/TrainerManagement";
 import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
+import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export interface Profile {
@@ -28,7 +29,7 @@ export interface Profile {
   subscription_tier?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "payments" | "emails";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "physiques" | "payments" | "emails";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -122,6 +123,7 @@ const Admin = () => {
               {section === "exercises" && "Biblioteca de ejercicios"}
               {section === "rules" && "Reglas de generación"}
               {section === "landing" && "Contenido de la landing"}
+              {section === "physiques" && "Físicos objetivo · AI Scan"}
               {section === "payments" && "Pagos · Stripe"}
               {section === "metrics" && "Métricas"}
             </h1>
@@ -246,6 +248,12 @@ const Admin = () => {
             {section === "landing" && (
               <div className="max-w-3xl">
                 <SiteContentEditor />
+              </div>
+            )}
+
+            {section === "physiques" && (
+              <div className="max-w-5xl">
+                <GoalPhysiquesEditor />
               </div>
             )}
 
