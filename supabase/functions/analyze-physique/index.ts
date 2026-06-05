@@ -9,7 +9,7 @@ const AnalysisSchema = z.object({
   physique: z.number().min(0).max(10),
   style: z.number().min(0).max(10),
   similarity: z.number().min(0).max(100),
-  estimated_months: z.number().min(0).max(120),
+  estimated_months: z.number().min(0).max(120).optional(),
   improvements: z.array(z.object({
     label: z.string(),
     priority: z.string(),
@@ -68,8 +68,8 @@ Deno.serve(async (req) => {
       {
         type: "text",
         text: objectiveImage
-          ? "Analiza la PRIMERA imagen (físico del usuario de FRENTE) y la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico, y compáralo con la TERCERA imagen (físico objetivo / referencia). Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. Devuelve un análisis honesto pero motivador en español."
-          : "Analiza la PRIMERA imagen (físico del usuario de FRENTE) junto con la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico. Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. Devuelve un análisis honesto pero motivador en español.",
+          ? "Analiza la PRIMERA imagen (físico del usuario de FRENTE) y la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico, y compáralo con la TERCERA imagen (físico OBJETIVO / referencia). Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. DEBES rellenar months_without_plan, months_with_plan y estimated_months porque hay objetivo. Devuelve un análisis honesto pero motivador en español."
+          : "Analiza la PRIMERA imagen (físico del usuario de FRENTE) junto con la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico. Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. NO hay físico objetivo, por lo que NO incluyas months_without_plan, months_with_plan ni estimated_months en el JSON (omítelos por completo). Devuelve un análisis honesto pero motivador en español.",
       },
       { type: "image", image: currentImage },
       { type: "image", image: backImage },
@@ -82,23 +82,35 @@ Deno.serve(async (req) => {
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
       system:
-        'Eres un coach experto en estética y composición corporal. Analizas fotos como si fueras un scanner profesional con base de datos de miles de físicos reales. SIEMPRE recibes 2 fotos del mismo usuario: la PRIMERA es la vista FRONTAL (pecho, hombros frontales, brazos, abdomen, cuádriceps, simetría frontal) y la SEGUNDA es la vista TRASERA (espalda alta y baja, dorsales, trapecios, glúteos, isquios, gemelos, postura). Opcionalmente puede haber una TERCERA foto que es el físico OBJETIVO de referencia. DEBES evaluar AMBAS vistas con el mismo peso (no ignores la espalda) y combinarlas en un único diagnóstico global. Sé honesto, directo y motivador. Devuelve SOLO JSON válido, sin markdown ni texto extra, con esta forma: {"attractiveness":0,"potential":0,"physique":0,"style":0,"similarity":0,"estimated_months":0,"percentile":0,"aesthetic_age":0,"months_without_plan":0,"months_with_plan":0,"headline_diagnosis":"","bottleneck":"","improvements":[{"label":"","priority":"Alta"}],"summary":"","inferred_goal":"","inferred_focus":"","inferred_intensity":7,"inferred_specific_goals":[],"locked_insights":[{"label":"","teaser":""}]}. Todo en español. SCORES (todos honestos, no inflados, basados en LAS DOS vistas): attractiveness/potential/physique/style 0-10. similarity 0-100. percentile: en qué percentil del 1-99 está su físico vs población general de su sexo/edad estimados (sé realista: 50 = media, 70 = mejor que la mayoría, 90+ = top). aesthetic_age: edad estética percibida en años (puede ser ±5 vs edad real). months_without_plan: cuántos meses tardará en llegar al objetivo SIN plan estructurado (entre 18 y 60, sé pesimista). months_with_plan: cuántos meses con plan personalizado + nutrición (entre 3 y 18, mucho más rápido). estimated_months = months_with_plan. headline_diagnosis: UNA frase contundente que mencione tanto cadena anterior como posterior si aplica (ej: "Buen pecho frontal pero espalda y glúteos infradesarrollados, falta volumen total"). bottleneck: el ÚNICO factor que más le frena, indicando si viene de la vista frontal o de espalda (ej: "Espalda muy estrecha vs hombros", "Glúteos planos por falta de bisagra de cadera", "Postura cifótica visible de espalda"). improvements: 3-5 puntos prioritarios con priority Alta/Media/Baja, INCLUYENDO al menos un punto específico de la vista trasera (espalda/glúteos/postura/isquios) si hay margen ahí. summary: 2-3 frases honestas que mencionen explícitamente lo que ves de frente y lo que ves de espalda. inferred_goal: "lose_weight"|"gain_muscle"|"recomp"|"improve_endurance"|"general_health". inferred_focus: "gimnasio"|"calistenia"|"mixto". inferred_intensity 1-10. inferred_specific_goals: 2-3 metas concretas. locked_insights: 3 insights premium con label corto y teaser intrigante que SOLO se desbloquean con el plan (ej: label "Tu déficit calórico exacto", teaser "Calculado para tu masa magra y actividad"). NO reveles valores en locked_insights.',
+        'Eres un coach experto en estética y composición corporal. Analizas fotos como si fueras un scanner profesional con base de datos de miles de físicos reales. SIEMPRE recibes 2 fotos del mismo usuario: la PRIMERA es la vista FRONTAL (pecho, hombros frontales, brazos, abdomen, cuádriceps, simetría frontal) y la SEGUNDA es la vista TRASERA (espalda alta y baja, dorsales, trapecios, glúteos, isquios, gemelos, postura). Opcionalmente puede haber una TERCERA foto que es el físico OBJETIVO de referencia. DEBES evaluar AMBAS vistas con el mismo peso (no ignores la espalda) y combinarlas en un único diagnóstico global. Sé honesto, directo y motivador. Devuelve SOLO JSON válido, sin markdown ni texto extra. Todo en español. SCORES (todos honestos, no inflados, basados en LAS DOS vistas): attractiveness/potential/physique/style 0-10. similarity 0-100 (si NO hay objetivo, pon 0). percentile: en qué percentil del 1-99 está su físico vs población general de su sexo/edad estimados (sé realista: 50 = media, 70 = mejor que la mayoría, 90+ = top). aesthetic_age: edad estética percibida en años (puede ser ±5 vs edad real). REGLA CRÍTICA DE MESES: SOLO incluye months_without_plan, months_with_plan y estimated_months EN EL JSON si hay físico OBJETIVO (tercera foto). Si NO hay objetivo, OMITE ESAS TRES CLAVES por completo (no las pongas, ni a 0). Cuando SÍ hay objetivo: months_without_plan = meses para llegar al objetivo SIN plan estructurado (entre 18 y 60, sé pesimista); months_with_plan = meses con plan personalizado + nutrición (entre 3 y 18, mucho más rápido); estimated_months = months_with_plan. headline_diagnosis: UNA frase contundente que mencione tanto cadena anterior como posterior si aplica. bottleneck: el ÚNICO factor que más le frena, indicando si viene de la vista frontal o de espalda. improvements: 3-5 puntos prioritarios con priority Alta/Media/Baja, INCLUYENDO al menos un punto específico de la vista trasera (espalda/glúteos/postura/isquios) si hay margen ahí. summary: 2-3 frases honestas que mencionen explícitamente lo que ves de frente y lo que ves de espalda. inferred_goal: "lose_weight"|"gain_muscle"|"recomp"|"improve_endurance"|"general_health". inferred_focus: "gimnasio"|"calistenia"|"mixto". inferred_intensity 1-10. inferred_specific_goals: 2-3 metas concretas. locked_insights: 3 insights premium con label corto y teaser intrigante que SOLO se desbloquean con el plan. NO reveles valores en locked_insights.',
       messages: [{ role: "user", content: userContent }],
     });
 
     const parsed = AnalysisSchema.parse(extractJson(text));
 
-    // Clamp meses to sensible minimums: nadie "ya está" en 0 meses.
-    if (typeof parsed.months_with_plan === "number") {
-      parsed.months_with_plan = Math.max(1, Math.round(parsed.months_with_plan));
+    if (objectiveImage) {
+      // Hay objetivo: aseguramos mínimos coherentes.
+      if (typeof parsed.months_with_plan === "number") {
+        parsed.months_with_plan = Math.max(1, Math.round(parsed.months_with_plan));
+      }
+      if (typeof parsed.months_without_plan === "number") {
+        parsed.months_without_plan = Math.max(
+          (parsed.months_with_plan ?? 1) + 1,
+          Math.round(parsed.months_without_plan),
+        );
+      }
+      if (typeof parsed.estimated_months === "number") {
+        parsed.estimated_months = Math.max(1, Math.round(parsed.estimated_months));
+      } else if (typeof parsed.months_with_plan === "number") {
+        parsed.estimated_months = parsed.months_with_plan;
+      }
+    } else {
+      // Sin objetivo: no tiene sentido hablar de meses al objetivo. Los borramos.
+      delete (parsed as any).months_with_plan;
+      delete (parsed as any).months_without_plan;
+      delete (parsed as any).estimated_months;
+      parsed.similarity = 0;
     }
-    if (typeof parsed.months_without_plan === "number") {
-      parsed.months_without_plan = Math.max(
-        (parsed.months_with_plan ?? 1) + 1,
-        Math.round(parsed.months_without_plan),
-      );
-    }
-    parsed.estimated_months = Math.max(1, Math.round(parsed.estimated_months));
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
