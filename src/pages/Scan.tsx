@@ -1673,11 +1673,22 @@ const Scan = () => {
                       </span>
                     </div>
                     <h3 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-4">
-                      Llega ahí en{" "}
-                      <span className="text-gradient">
-                        {result.months_with_plan ?? result.estimated_months} meses
-                      </span>
-                      , no en {result.months_without_plan ?? Math.max((result.months_with_plan ?? result.estimated_months) * 3, 24)}
+                      {(result.months_with_plan ?? result.estimated_months) ? (
+                        <>
+                          Llega ahí en{" "}
+                          <span className="text-gradient">
+                            {result.months_with_plan ?? result.estimated_months} meses
+                          </span>
+                          {result.months_without_plan !== undefined && (
+                            <>, no en {result.months_without_plan}</>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          Convierte el diagnóstico en{" "}
+                          <span className="text-gradient">resultados reales</span>
+                        </>
+                      )}
                     </h3>
                     <p className="text-muted-foreground max-w-xl mx-auto mb-8">
                       La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
