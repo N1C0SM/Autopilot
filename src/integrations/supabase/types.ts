@@ -337,6 +337,39 @@ export type Database = {
         }
         Relationships: []
       }
+      goal_physiques: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          name: string
+          sort_order: number
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string

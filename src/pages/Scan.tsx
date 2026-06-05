@@ -101,7 +101,7 @@ type Result = {
   physique: number;
   style: number;
   similarity: number;
-  estimated_months: number;
+  estimated_months?: number;
   improvements: { label: string; priority: "Alta" | "Media" | "Baja" }[];
   summary: string;
   percentile?: number;
@@ -115,6 +115,13 @@ type Result = {
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
   locked_insights?: { label: string; teaser: string }[];
+};
+
+type GoalPhysique = {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
 };
 
 const fileToDataUrl = (file: File): Promise<string> =>
@@ -243,6 +250,8 @@ const Scan = () => {
   const [emailSending, setEmailSending] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [goalPresets, setGoalPresets] = useState<GoalPhysique[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
 
   // Funnel state
   const [phase, setPhase] = useState<Phase>("upload");
@@ -269,6 +278,16 @@ const Scan = () => {
         setUserName(data?.name ?? null);
       });
   }, [user]);
+
+  // Cargar físicos objetivo definidos por el admin
+  useEffect(() => {
+    supabase
+      .from("goal_physiques")
+      .select("id, name, description, image_url")
+      .eq("visible", true)
+      .order("sort_order", { ascending: true })
+      .then(({ data }) => setGoalPresets((data as GoalPhysique[]) ?? []));
+  }, []);
 
   const handleShare = async () => {
     if (!shareRef.current) return;
@@ -377,7 +396,7 @@ const Scan = () => {
       const { data, error } = await supabase.functions.invoke("generate-future-self", {
         body: {
           currentImage: currentImg,
-          months: result.months_with_plan ?? result.estimated_months,
+          months: result.months_with_plan ?? result.estimated_months ?? 6,
           goal: result.inferred_goal,
         },
       });
@@ -832,7 +851,7 @@ const Scan = () => {
                 </p>
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-5 max-w-4xl mx-auto mb-8">
+              <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-6">
                 <Dropzone
                   label="Foto de delante"
                   hint="Cuerpo completo · obligatoria"
@@ -849,13 +868,118 @@ const Scan = () => {
                   onClear={() => setBackImg(null)}
                   placeholder={poseBackImg}
                 />
-                <Dropzone
-                  label="Tu físico objetivo"
-                  hint="Referencia (opcional)"
-                  image={objectiveImg}
-                  onFile={async (f) => setObjectiveImg(await fileToDataUrl(f))}
-                  onClear={() => setObjectiveImg(null)}
-                />
+              </div>
+
+              {/* Físico objetivo: presets del admin + opción de subir foto propia */}
+              <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-primary" />
+                      <h2 className="font-display font-bold text-base">Tu físico objetivo <span className="text-muted-foreground font-normal text-xs uppercase tracking-widest ml-1">opcional</span></h2>
+                    </div>
+                    <p className="text-[12px] text-muted-foreground mt-1">
+                      Elige una referencia o sube tu propia foto. Solo si pones objetivo te calculamos cuántos meses tardarás en llegar.
+                    </p>
+                  </div>
+                  {objectiveImg && (
+                    <button
+                      type="button"
+                      onClick={() => { setObjectiveImg(null); setSelectedPresetId(null); }}
+                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" /> Quitar
+                    </button>
+                  )}
+                </div>
+
+                {goalPresets.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
+                    {goalPresets.map((p) => {
+                      const isSel = selectedPresetId === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setObjectiveImg(p.image_url);
+                            setSelectedPresetId(p.id);
+                          }}
+                          className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition group ${
+                            isSel
+                              ? "border-primary glow-shadow"
+                              : "border-border hover:border-primary/50"
+                          }`}
+                        >
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt={p.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-secondary" />
+                          )}
+                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent p-2">
+                            <div className="text-[11px] font-semibold leading-tight line-clamp-2">
+                              {p.name}
+                            </div>
+                          </div>
+                          {isSel && (
+                            <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-background" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="grid sm:grid-cols-[180px,1fr] gap-4 items-center">
+                  <div>
+                    <label className="block">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setObjectiveImg(await fileToDataUrl(f));
+                          setSelectedPresetId(null);
+                        }}
+                      />
+                      <div className={`cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition ${
+                        objectiveImg && !selectedPresetId
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/60"
+                      }`}>
+                        {objectiveImg && !selectedPresetId ? (
+                          <img src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                        ) : (
+                          <>
+                            <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" />
+                            <div className="text-xs font-semibold">O sube tu propia foto</div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">JPG / PNG</div>
+                          </>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                  <div className="text-[12px] text-muted-foreground leading-relaxed">
+                    {objectiveImg ? (
+                      <span>
+                        ✓ Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan.
+                      </span>
+                    ) : (
+                      <span>
+                        Sin objetivo el análisis se centra en tu físico actual, fortalezas y mejoras prioritarias — sin estimación de tiempo.
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Guía para tomar las fotos */}
@@ -1383,7 +1507,7 @@ const Scan = () => {
                       <div className="mt-3 text-[11px] text-muted-foreground">
                         Tiempo estimado:{" "}
                         <span className="text-foreground font-semibold">
-                          ~{result.estimated_months} meses
+                          ~{result.estimated_months ?? result.months_with_plan ?? "—"} meses
                         </span>{" "}
                         con plan personalizado y constancia.
                       </div>
@@ -1437,7 +1561,9 @@ const Scan = () => {
                   <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-4 relative overflow-hidden">
                     <div className="text-[10px] uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
                       {isPaid ? <Sparkles className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                      Tu yo en {result.months_with_plan ?? result.estimated_months} meses
+                      {result.months_with_plan ?? result.estimated_months
+                        ? <>Tu yo en {result.months_with_plan ?? result.estimated_months} meses</>
+                        : <>Tu yo transformado</>}
                     </div>
                     <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-secondary">
                       {futureImg ? (
@@ -1547,11 +1673,22 @@ const Scan = () => {
                       </span>
                     </div>
                     <h3 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-4">
-                      Llega ahí en{" "}
-                      <span className="text-gradient">
-                        {result.months_with_plan ?? result.estimated_months} meses
-                      </span>
-                      , no en {result.months_without_plan ?? Math.max((result.months_with_plan ?? result.estimated_months) * 3, 24)}
+                      {(result.months_with_plan ?? result.estimated_months) ? (
+                        <>
+                          Llega ahí en{" "}
+                          <span className="text-gradient">
+                            {result.months_with_plan ?? result.estimated_months} meses
+                          </span>
+                          {result.months_without_plan !== undefined && (
+                            <>, no en {result.months_without_plan}</>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          Convierte el diagnóstico en{" "}
+                          <span className="text-gradient">resultados reales</span>
+                        </>
+                      )}
                     </h3>
                     <p className="text-muted-foreground max-w-xl mx-auto mb-8">
                       La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
