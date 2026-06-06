@@ -25,6 +25,7 @@ import TrainersSection from "@/components/TrainersSection";
 import PostScanFlow from "@/components/PostScanFlow";
 import PremiumTransformation from "@/components/PremiumTransformation";
 import ComparisonTable from "@/components/ComparisonTable";
+import { Award, Dumbbell, Calendar, MessageSquare, Target } from "lucide-react";
 import type { PlanKey } from "@/config/tiers";
 import {
   Accordion,
@@ -178,8 +179,8 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight"
             >
-              El cuerpo que quieres.{" "}
-              <span className="text-gradient">Sin seguir improvisando.</span>
+              De cero a un físico visible.{" "}
+              <span className="text-gradient">Sin perderte entre apps.</span>
             </motion.h1>
 
             <motion.p
@@ -188,7 +189,7 @@ const Index = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
             >
-              Empieza con un diagnóstico físico gratuito. La IA detecta tus prioridades y un entrenador real convierte ese diagnóstico en un plan de entrenamiento y nutrición adaptado a ti.
+              Para hombres de 25 a 40 años que quieren ganar músculo de verdad. Un entrenador real diseña tu entrenamiento y nutrición, y los ajusta cada semana contigo por chat.
             </motion.p>
 
             <motion.div
@@ -277,6 +278,61 @@ const Index = () => {
         {/* POST-SCAN FLOW */}
         <PostScanFlow />
 
+        {/* QUIÉN HAY DETRÁS */}
+        <section className="py-24 px-4 border-t border-border">
+          <div className="container mx-auto max-w-5xl">
+            <ScrollReveal>
+              <div className="grid md:grid-cols-[280px_1fr] gap-10 items-center">
+                <div className="flex justify-center md:justify-start">
+                  {trainer.trainer_photo_url ? (
+                    <img
+                      src={trainer.trainer_photo_url}
+                      alt={`${trainer.trainer_name}, fundador y entrenador de Autopilot`}
+                      loading="lazy"
+                      className="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl object-cover ring-2 ring-primary/30 premium-shadow"
+                    />
+                  ) : (
+                    <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl bg-primary/15 flex items-center justify-center ring-2 ring-primary/30">
+                      <User className="w-20 h-20 text-primary" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Quién hay detrás</p>
+                  <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-5">
+                    Una persona real diseña{" "}
+                    <span className="text-gradient">cada plan.</span>
+                  </h2>
+                  {trainer.trainer_bio ? (
+                    <p className="text-base text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
+                      {trainer.trainer_bio}
+                    </p>
+                  ) : (
+                    <p className="text-base text-muted-foreground leading-relaxed mb-6">
+                      Soy {trainer.trainer_name}. Llevo años entrenando a hombres que quieren empezar a ganar músculo en serio sin volverse adictos a una app o a un canal de YouTube. Aquí no hay rutinas genéricas: hay un método, hay seguimiento y hay alguien que responde cuando algo no encaja.
+                    </p>
+                  )}
+                  <ul className="grid sm:grid-cols-2 gap-3 text-sm">
+                    {[
+                      { icon: Award, label: "Entrenador titulado, no influencer" },
+                      { icon: Dumbbell, label: "Método claro para ganar músculo" },
+                      { icon: MessageSquare, label: "Te responde la misma persona" },
+                      { icon: Target, label: "Nicho: hombres 25–40 que empiezan" },
+                    ].map((it) => (
+                      <li key={it.label} className="flex items-center gap-3 text-foreground/90">
+                        <span className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
+                          <it.icon className="w-4 h-4 text-primary" />
+                        </span>
+                        {it.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
+
         {/* WHY IT WORKS */}
         <section className="py-24 px-4">
           <div className="container mx-auto max-w-5xl">
@@ -324,6 +380,40 @@ const Index = () => {
 
             <ScrollReveal delay={0.1}>
               <PricingTiers onSelect={selectPlan} recommended="full" />
+            </ScrollReveal>
+
+            {/* 7 DÍAS GRATIS — SISTEMA */}
+            <ScrollReveal delay={0.15}>
+              <div className="mt-16 max-w-4xl mx-auto">
+                <div className="text-center mb-8">
+                  <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Tus 7 días gratis</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight">
+                    No es una prueba olvidada.{" "}
+                    <span className="text-gradient">Es una semana acompañada.</span>
+                  </h3>
+                </div>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    { day: "Día 1", title: "Tu plan en marcha", desc: "Recibes el primer plan adaptado a tu nivel, equipamiento y horario real. Te explicamos por dónde empezar." },
+                    { day: "Día 4", title: "Primer ajuste", desc: "Te escribimos para ver cómo van las primeras sesiones. Ajustamos cargas, ejercicios o nutrición si hace falta." },
+                    { day: "Día 7", title: "Decides con datos", desc: "Revisamos juntos lo que funcionó y lo que no. Sigues solo si lo ves claro, sin renovaciones sorpresa." },
+                  ].map((s, i) => (
+                    <div key={s.day} className="bg-card border border-border rounded-2xl p-5 relative">
+                      <div className="absolute -top-3 left-5 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold tracking-wider">
+                        {s.day.toUpperCase()}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2 mb-2">
+                        <Calendar className="w-4 h-4 text-primary" />
+                        <h4 className="font-display font-semibold text-base">{s.title}</h4>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center text-xs text-muted-foreground mt-6">
+                  Sin permanencia. Cancelas en un clic antes del día 7 y no se cobra nada.
+                </p>
+              </div>
             </ScrollReveal>
           </div>
         </section>
