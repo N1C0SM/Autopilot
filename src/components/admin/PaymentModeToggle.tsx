@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Settings, Loader2, Save, Shield, Link as LinkIcon } from "lucide-react";
+import { Settings, Loader2, Save, Link as LinkIcon } from "lucide-react";
 
 type Mode = "test" | "live";
 
@@ -17,8 +17,6 @@ interface SettingsData {
   payment_link_full_live: string;
   payment_link_transform_test: string;
   payment_link_transform_live: string;
-  webhook_secret_test: string;
-  webhook_secret_live: string;
 }
 
 const FIELDS: Array<keyof Omit<SettingsData, "id" | "payment_mode">> = [
@@ -28,8 +26,6 @@ const FIELDS: Array<keyof Omit<SettingsData, "id" | "payment_mode">> = [
   "payment_link_full_live",
   "payment_link_transform_test",
   "payment_link_transform_live",
-  "webhook_secret_test",
-  "webhook_secret_live",
 ];
 
 const PLANS = [
@@ -57,8 +53,6 @@ const PaymentModeToggle = () => {
           payment_link_full_live: d.payment_link_full_live || "",
           payment_link_transform_test: d.payment_link_transform_test || "",
           payment_link_transform_live: d.payment_link_transform_live || "",
-          webhook_secret_test: d.webhook_secret_test || "",
-          webhook_secret_live: d.webhook_secret_live || "",
         };
         setS(next);
       }
@@ -94,7 +88,6 @@ const PaymentModeToggle = () => {
   if (!s) return <div className="text-sm text-muted-foreground">No se encontró configuración</div>;
 
   const mode = s.payment_mode;
-  const webhookUrl = `https://enebrcdrdnfkyduzyrzm.supabase.co/functions/v1/stripe-webhook`;
 
   return (
     <div className="space-y-4">
@@ -158,39 +151,10 @@ const PaymentModeToggle = () => {
         ))}
       </div>
 
-      {/* Webhook secrets */}
-      <div className="bg-card rounded-xl p-5 border border-border space-y-4">
-        <div className="flex items-center gap-3">
-          <Shield className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <div className="font-medium text-sm">Webhook de Stripe</div>
-            <div className="text-xs text-muted-foreground">
-              Configura este endpoint en Stripe y pega el signing secret (whsec_...).
-            </div>
-          </div>
-        </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">URL del Webhook</Label>
-          <Input value={webhookUrl} readOnly className="mt-1 text-sm font-mono bg-muted/50" />
-        </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">Webhook Secret Test</Label>
-          <Input
-            value={s.webhook_secret_test}
-            onChange={(e) => setField("webhook_secret_test", e.target.value)}
-            placeholder="whsec_..."
-            className="mt-1 text-sm font-mono"
-          />
-        </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">Webhook Secret Live</Label>
-          <Input
-            value={s.webhook_secret_live}
-            onChange={(e) => setField("webhook_secret_live", e.target.value)}
-            placeholder="whsec_..."
-            className="mt-1 text-sm font-mono"
-          />
-        </div>
+      <div className="bg-muted/30 rounded-xl p-4 border border-border text-xs text-muted-foreground">
+        Los <span className="font-medium text-foreground">webhook secrets</span> de Stripe se gestionan de forma segura
+        como secretos del servidor (no en la base de datos). Si necesitas rotarlos, hazlo desde la configuración de
+        secretos del backend.
       </div>
 
       <Button onClick={saveAll} disabled={saving} className="w-full" size="lg">

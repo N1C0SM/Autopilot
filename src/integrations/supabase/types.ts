@@ -878,8 +878,6 @@ export type Database = {
           trainer_name: string | null
           trainer_photo_url: string | null
           updated_at: string
-          webhook_secret_live: string | null
-          webhook_secret_test: string | null
           yearly_price_eur: number | null
         }
         Insert: {
@@ -912,8 +910,6 @@ export type Database = {
           trainer_name?: string | null
           trainer_photo_url?: string | null
           updated_at?: string
-          webhook_secret_live?: string | null
-          webhook_secret_test?: string | null
           yearly_price_eur?: number | null
         }
         Update: {
@@ -946,8 +942,6 @@ export type Database = {
           trainer_name?: string | null
           trainer_photo_url?: string | null
           updated_at?: string
-          webhook_secret_live?: string | null
-          webhook_secret_test?: string | null
           yearly_price_eur?: number | null
         }
         Relationships: []
