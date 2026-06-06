@@ -10,10 +10,26 @@ const AnalysisSchema = z.object({
   style: z.number().min(0).max(10),
   similarity: z.number().min(0).max(100),
   estimated_months: z.number().min(0).max(120).optional(),
-  improvements: z.array(z.object({
-    label: z.string(),
-    priority: z.string(),
-  })).min(1).max(6),
+  improvements: z.preprocess(
+    (val) => {
+      if (!Array.isArray(val)) return val;
+      return val
+        .map((item: any) => {
+          if (typeof item === "string") return { label: item, priority: "Media" };
+          if (!item || typeof item !== "object") return null;
+          const label =
+            item.label ?? item.point ?? item.area ?? item.title ?? item.name ?? item.text ?? item.description;
+          const priority = item.priority ?? item.level ?? item.importance ?? "Media";
+          if (!label || typeof label !== "string") return null;
+          return { label: String(label), priority: String(priority) };
+        })
+        .filter(Boolean);
+    },
+    z.array(z.object({
+      label: z.string(),
+      priority: z.string(),
+    })).min(1).max(6),
+  ),
   summary: z.string(),
   percentile: z.number().min(1).max(99).optional(),
   aesthetic_age: z.number().min(14).max(80).optional(),
