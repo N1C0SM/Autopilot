@@ -51,6 +51,9 @@ const faqs = [
   { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis, pero incluye diagnóstico + llamada gratis con un asesor antes de empezar." },
   { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y se construye sobre eso. Calistenia, mancuernas en casa o cero material." },
   { q: "¿Y si nunca he entrenado?", a: "Mejor. El plan se construye desde tu nivel real y vamos paso a paso, sin saltar fases." },
+  { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto, YouTube te da una rutina genérica. Aquí hay una persona real que conoce tu nivel, tu equipamiento y tu semana, y ajusta el plan contigo cada vez que algo cambia." },
+  { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Lo avisas por chat y reorganizamos. El plan se adapta a viajes, lesiones o semanas malas sin que pierdas progreso." },
+  { q: "¿Y si veo que no es para mí?", a: "Cancelas antes del día 7 desde tu cuenta y no se cobra nada. Sin llamadas, sin formularios, sin preguntas." },
 ];
 
 const Index = () => {
@@ -423,6 +426,51 @@ const Index = () => {
 
         {/* COMPARISON */}
         <ComparisonTable />
+
+        {/* GARANTÍA / MID CTA */}
+        <section className="py-20 px-4">
+          <div className="container mx-auto max-w-4xl">
+            <ScrollReveal>
+              <div className="relative rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] via-card/60 to-card/60 p-8 sm:p-12 overflow-hidden">
+                <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+                <div className="grid md:grid-cols-[1fr_auto] gap-8 items-center relative">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/[0.08] mb-4">
+                      <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+                        Garantía sin letra pequeña
+                      </span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-bold font-display leading-tight mb-4">
+                      Si en 7 días no ves que el plan encaja con tu vida,{" "}
+                      <span className="text-gradient">no pagas nada.</span>
+                    </h2>
+                    <ul className="space-y-2 text-sm text-foreground/90">
+                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-success shrink-0" /> Cancelas en 1 clic desde tu cuenta</li>
+                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-success shrink-0" /> Sin permanencia, sin renovaciones sorpresa</li>
+                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-success shrink-0" /> Pago seguro con Stripe</li>
+                    </ul>
+                  </div>
+                  <div className="flex md:flex-col gap-3">
+                    <Button
+                      variant="hero"
+                      size="xl"
+                      onClick={() => navigate("/scan")}
+                      className="hover-scale group whitespace-nowrap"
+                    >
+                      <ScanLine className="w-4 h-4" />
+                      Empezar gratis
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                    <Button variant="outline" size="xl" onClick={goToPricing} className="whitespace-nowrap">
+                      Ver planes
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </section>
 
         {/* CHAT DEMO */}
         <section className="py-24 px-4 bg-card/30 border-y border-border">
