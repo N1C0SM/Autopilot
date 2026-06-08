@@ -870,9 +870,13 @@ const Scan = () => {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Helmet>
-        <title>AI Body Scan · Autopilot</title>
+        <title>{routeUserId ? "Mi progreso · AI Scan" : "AI Body Scan · Autopilot"}</title>
         <meta name="description" content="Sube una foto y recibe un análisis IA de tu físico con recomendaciones personalizadas." />
-        <link rel="canonical" href="https://autopilotplan.com/scan" />
+        {routeUserId ? (
+          <meta name="robots" content="noindex,nofollow" />
+        ) : (
+          <link rel="canonical" href="https://autopilotplan.com/scan" />
+        )}
         <meta property="og:title" content="AI Body Scan · Autopilot" />
         <meta property="og:description" content="Análisis IA gratuito de tu físico con recomendaciones personalizadas." />
         <meta property="og:url" content="https://autopilotplan.com/scan" />
