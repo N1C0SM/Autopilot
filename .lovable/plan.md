@@ -1,28 +1,24 @@
 ## Objetivo
 
-Para usuarios logueados que ya tienen un físico objetivo guardado (`onboarding.goal_photo_url`), no mostrar la galería + uploader en `/scan`. Mostrar tarjeta compacta con el objetivo actual y un botón **"Cambiar objetivo"** que reabre el selector si quieren modificarlo.
+`/scan` (general) no debe hablar de "plan" ni de "dashboard" porque ahí no hay contexto de usuario/plan. Solo `/scan/user/:id` (espacio personal) puede aplicar el scan al plan y enlazar al dashboard.
 
 ## Cambios en `src/pages/Scan.tsx`
 
-1. **Cargar objetivo guardado**: en el efecto que ya lee `userEmail`/`userName`, añadir lectura de `onboarding.goal_photo_url`. Estado nuevo `savedObjectiveUrl: string | null`.
+1. **No auto-aplicar al plan desde `/scan` general**
+   - En el bloque que dispara `applyScanToPlan(r)` tras el análisis (`if (user && isPaid)`), añadir condición `routeUserId`. Sin `routeUserId` no se llama a `applyScanToPlan` ni se hace el upsert `plan_status: "plan_pending"`.
 
-2. **Auto-precargar**: si `savedObjectiveUrl` existe y `objectiveImg` está vacío → `setObjectiveImg(savedObjectiveUrl)`. Así el análisis ya lo incluye sin tocar nada.
+2. **Ocultar la tarjeta de estado del plan en `/scan` general**
+   - El bloque `{planApplyState !== "idle" && (...)}` (mensajes "Aplicando…", "Plan actualizado correctamente ✓", botón "Ver mi plan", error) solo se renderiza si hay `routeUserId`.
 
-3. **Estado UI**: `editingObjective: boolean` (default `false`).
+3. **CTAs finales coherentes según contexto**
+   Reemplazar el bloque actual `Volver al dashboard / Aplicar a mi plan / Hacer otro scan` por una versión condicional:
+   - `/scan/user/:id` (logueado, en su espacio): `Aplicar a mi plan` (si idle/error) + `Ver mi plan` (→ /dashboard) + `Hacer otro scan`.
+   - `/scan` general logueado: solo `Hacer otro scan` + enlace secundario `Ir a mi progreso` (→ /scan/user/:id). Sin "Volver al dashboard" ni "Aplicar a mi plan".
+   - `/scan` general anónimo: `Empezar mi plan` (→ /signup?from=scan) + `Hacer otro scan` (sin dashboard).
 
-4. **Render condicional** del bloque "Físico objetivo" (líneas 919–1029):
-   - Si `user && savedObjectiveUrl && !editingObjective` → tarjeta compacta:
-     - Thumbnail del objetivo (80×100)
-     - Texto: "Tu objetivo actual · la IA lo usará para estimar meses"
-     - Botón `Cambiar objetivo` → `editingObjective = true`
-     - Botón secundario `Quitar para este scan` → limpia `objectiveImg` y abre selector
-   - Resto de casos (anónimo, usuario sin objetivo, o `editingObjective === true`) → selector completo actual sin cambios.
+4. **StickyConversionBar / ExitIntentModal**
+   - Mantener su CTA actual a `/dashboard` solo si el user está logueado **y** estamos en `/scan/user/:id`; en `/scan` general logueado, llevar a `/scan/user/${user.id}` (ver progreso); anónimo sigue a `/signup?from=scan`.
 
-## Fix paralelo (silencioso) en `supabase/functions/analyze-physique/index.ts`
+## Resultado
 
-El edge function está fallando con 500 porque el modelo devuelve `null` en `body_composition.lean_mass_kg` y `weight_kg`. Ajustar el schema: envolver cada campo numérico de `body_composition` con `z.preprocess((v) => (v == null ? undefined : Number(v)), z.number()...optional())` para que `null` se trate como ausente en vez de error.
-
-## Fuera de alcance
-
-- No se persiste el nuevo objetivo elegido en `onboarding.goal_photo_url` (sigue siendo flujo de onboarding/settings).
-- No se toca el modo visitante anónimo.
+En `/scan` desaparecen todos los textos de "plan actualizado", "aplicando a tu plan" y "volver al dashboard". Toda esa lógica vive exclusivamente en `/scan/user/:id`, que es donde sí hay usuario y plan asociados.
