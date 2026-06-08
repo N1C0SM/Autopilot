@@ -106,7 +106,7 @@ const SettingsPanel = () => {
         .select("last_sync_at")
         .eq("user_id", user.id)
         .maybeSingle()
-        .then(({ data }) => {
+        .then(({ data }: any) => {
           setGcalConnected(!!data);
           setGcalLastSync(data?.last_sync_at || null);
         });

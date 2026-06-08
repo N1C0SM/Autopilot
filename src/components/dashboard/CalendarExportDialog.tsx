@@ -57,7 +57,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
         setDuration(data.duration_min);
         setReminder(data.reminder_min);
       }
-      const { data: gcal } = await supabase
+      const { data: gcal } = await (supabase as any)
         .from("google_calendar_connections" as any)
         .select("last_sync_at")
         .eq("user_id", user.id)
