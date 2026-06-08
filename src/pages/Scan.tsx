@@ -340,6 +340,8 @@ const Scan = () => {
         setIsPaid(data?.payment_status === "paid");
         setUserEmail(data?.email ?? user.email ?? null);
         setUserName(data?.name ?? null);
+        setLeadEmail((prev) => prev || data?.email || user.email || "");
+        setLeadName((prev) => prev || data?.name || "");
       });
     (supabase as any)
       .from("onboarding")
