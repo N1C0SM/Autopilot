@@ -878,6 +878,14 @@ const Scan = () => {
     setLeadConsent(false);
   };
 
+  if (isUnauthorized || isAwaitingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
+        {isUnauthorized ? "Solo puedes ver tu propio progreso. Redirigiendo…" : "Verificando acceso…"}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <Helmet>
