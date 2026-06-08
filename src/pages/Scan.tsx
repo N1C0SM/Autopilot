@@ -292,6 +292,7 @@ const Scan = () => {
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [savedObjectiveUrl, setSavedObjectiveUrl] = useState<string | null>(null);
   const [editingObjective, setEditingObjective] = useState(false);
+  const [hasObjectiveChoice, setHasObjectiveChoice] = useState<"unset" | "yes" | "no">("unset");
 
   // Funnel state
   const [phase, setPhase] = useState<Phase>("upload");
@@ -968,6 +969,41 @@ const Scan = () => {
                       Quitar para este scan
                     </button>
                   </div>
+                </div>
+              ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
+                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-4 h-4 text-primary" />
+                    <h2 className="font-display font-bold text-base">¿Tienes un físico objetivo?</h2>
+                  </div>
+                  <p className="text-[12px] text-muted-foreground mb-4">
+                    Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => { setHasObjectiveChoice("yes"); setEditingObjective(true); }}
+                    >
+                      Sí, elegir uno
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHasObjectiveChoice("no")}
+                    >
+                      No, sin objetivo
+                    </Button>
+                  </div>
+                </div>
+              ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "no" ? (
+                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-border bg-card/30 backdrop-blur p-4 sm:p-5 flex items-center justify-between gap-3">
+                  <p className="text-[12px] text-muted-foreground">
+                    Sin objetivo · análisis centrado en tu físico actual.
+                  </p>
+                  <Button variant="ghost" size="sm" onClick={() => { setHasObjectiveChoice("yes"); setEditingObjective(true); }}>
+                    Añadir objetivo
+                  </Button>
                 </div>
               ) : (
               <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
