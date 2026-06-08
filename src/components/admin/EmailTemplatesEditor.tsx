@@ -7,6 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader2, Save, RotateCcw, FileCode, Eye } from "lucide-react";
 import { toast } from "sonner";
+import scanPreviewAsset from "@/assets/scan-preview.jpg.asset.json";
+
+const SCAN_PREVIEW_URL = `${window.location.origin}${scanPreviewAsset.url}`;
 
 type TemplateDef = {
   name: string;
@@ -28,9 +31,9 @@ const TEMPLATES: TemplateDef[] = [
       summary: "Buen pecho frontal pero cadena posterior infradesarrollada. Postura ligeramente cifótica.",
       monthsWithPlan: 6,
       monthsWithoutPlan: 18,
-      SCAN_IMAGE_URL: "https://placehold.co/1080x1350/0a0a0a/facc15?text=AI+Scan",
-      cardImageUrl: "https://placehold.co/1080x1350/0a0a0a/facc15?text=AI+Scan",
-      photoUrl: "https://placehold.co/600x800/0a0a0a/facc15?text=Foto",
+      SCAN_IMAGE_URL: SCAN_PREVIEW_URL,
+      cardImageUrl: SCAN_PREVIEW_URL,
+      photoUrl: SCAN_PREVIEW_URL,
       reportUrl: "https://autopilotplan.com/scan",
     },
   },
@@ -217,9 +220,23 @@ export default function EmailTemplatesEditor() {
           >
             {TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
           </select>
-          <p className="text-[11px] text-muted-foreground mt-2">
-            Variables disponibles: {current.placeholders.map(p => <code key={p} className="mx-0.5 bg-muted px-1.5 py-0.5 rounded">{`{{${p}}}`}</code>)}
-          </p>
+          <div className="mt-3 space-y-1.5">
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Variables disponibles (con datos reales de previsualización)</div>
+            <div className="flex flex-wrap gap-1.5">
+              {current.placeholders.map(p => {
+                const raw = current.sampleData?.[p];
+                const val = raw === undefined || raw === null ? "—" : String(raw);
+                const isUrl = /^https?:\/\//i.test(val);
+                const display = isUrl ? val.replace(/^https?:\/\//, "").slice(0, 32) + (val.length > 40 ? "…" : "") : (val.length > 40 ? val.slice(0, 40) + "…" : val);
+                return (
+                  <span key={p} className="inline-flex items-center gap-1 text-[11px] bg-muted/60 border border-border rounded-md overflow-hidden">
+                    <code className="px-1.5 py-0.5 bg-muted text-foreground">{`{{${p}}}`}</code>
+                    <span className="px-1.5 py-0.5 text-muted-foreground" title={val}>{display}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {loading ? (
