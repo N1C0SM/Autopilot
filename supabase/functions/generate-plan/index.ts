@@ -862,7 +862,10 @@ serve(async (req) => {
 
     const { data: allExercises } = await supabase
       .from("exercises")
-      .select("id, name, muscle_group, image_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order");
+      .select("id, name, muscle_group, image_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order, is_stable, is_progressable, high_tension")
+      .eq("is_stable", true)
+      .eq("is_progressable", true)
+      .eq("high_tension", true);
 
     const exerciseLib: Record<string, ExerciseRow[]> = {};
     for (const ex of (allExercises || []) as ExerciseRow[]) {
