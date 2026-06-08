@@ -96,6 +96,7 @@ const ExerciseFormDialog = ({
         name: "", muscle_group: "", exercise_type: "", movement_pattern: "",
         level: 1, priority: 2, stimulus_type: "", load_level: "", fatigue_level: "", recommended_order: 2,
         alternative_id: null, skill_tag: null, progression_order: null, video_url: "",
+        is_stable: true, is_progressable: true, high_tension: true,
       });
       setAltSearch("");
     }
@@ -331,7 +332,7 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
 
   const fetchExercises = async () => {
     const { data } = await supabase.from("exercises")
-      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order")
+      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension")
       .order("muscle_group").order("recommended_order").order("name");
     if (data) setExercises(data as Exercise[]);
   };
@@ -375,6 +376,9 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
       skill_tag: form.skill_tag || null,
       progression_order: form.progression_order ?? null,
       video_url: form.video_url?.trim() || null,
+      is_stable: form.is_stable ?? true,
+      is_progressable: form.is_progressable ?? true,
+      high_tension: form.high_tension ?? true,
     };
 
     if (editingExercise) {

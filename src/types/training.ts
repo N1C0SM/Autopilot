@@ -15,6 +15,9 @@ export interface Exercise {
   alternative_id?: string | null;
   skill_tag?: string | null;
   progression_order?: number | null;
+  is_stable?: boolean;
+  is_progressable?: boolean;
+  high_tension?: boolean;
 }
 
 export interface GymExerciseEntry {
