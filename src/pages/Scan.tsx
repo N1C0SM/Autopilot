@@ -931,6 +931,44 @@ const Scan = () => {
               </div>
 
               {/* Físico objetivo: presets del admin + opción de subir foto propia */}
+              {user && savedObjectiveUrl && !editingObjective ? (
+                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur p-4 sm:p-5 flex items-center gap-4">
+                  <img
+                    src={savedObjectiveUrl}
+                    alt="Tu objetivo"
+                    className="w-20 h-24 object-cover rounded-lg border border-border flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Target className="w-4 h-4 text-primary" />
+                      <h2 className="font-display font-bold text-base">Tu objetivo actual</h2>
+                    </div>
+                    <p className="text-[12px] text-muted-foreground">
+                      La IA lo usará para estimar cuántos meses te faltan.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingObjective(true)}
+                    >
+                      Cambiar objetivo
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setObjectiveImg(null);
+                        setSelectedPresetId(null);
+                        setEditingObjective(true);
+                      }}
+                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      Quitar para este scan
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
