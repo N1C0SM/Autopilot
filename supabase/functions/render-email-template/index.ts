@@ -42,9 +42,34 @@ Deno.serve(async (req) => {
     if (customHtml) {
       html = interpolate(customHtml)
     } else {
-      html = await renderAsync(React.createElement(tpl.component, data))
+      // Match send-transactional-email behavior: prefer the admin override
+      // (email_template_overrides) when enabled so the preview is literally
+      // what gets sent. Fall back to rendering the React component.
+      const { data: override } = await supabase
+        .from('email_template_overrides')
+        .select('subject, html, enabled')
+        .eq('template_name', templateName)
+        .maybeSingle()
+      if (override && override.enabled && override.html) {
+        html = interpolate(override.html)
+      } else {
+        html = await renderAsync(React.createElement(tpl.component, data))
+      }
     }
-    const subject = typeof tpl.subject === 'function' ? tpl.subject(data) : tpl.subject
+    // Subject: also prefer override when available
+    let subject: string
+    {
+      const { data: ov } = await supabase
+        .from('email_template_overrides')
+        .select('subject, enabled')
+        .eq('template_name', templateName)
+        .maybeSingle()
+      if (ov && ov.enabled && ov.subject && !customHtml) {
+        subject = interpolate(ov.subject)
+      } else {
+        subject = typeof tpl.subject === 'function' ? tpl.subject(data) : tpl.subject
+      }
+    }
 
     return new Response(JSON.stringify({ html, subject, previewData: tpl.previewData ?? {}, displayName: tpl.displayName ?? templateName }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
