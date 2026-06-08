@@ -49,12 +49,12 @@ const AnalysisSchema = z.object({
 
   // ===== Capa clínica nueva — diferencia clara vs ChatGPT =====
   body_composition: z.object({
-    body_fat_pct: z.number().min(3).max(50).optional(),
-    lean_mass_kg: z.number().min(20).max(120).optional(),
-    weight_kg: z.number().min(35).max(180).optional(),
-    somatotype: z.string().optional(),      // ej. "ecto-mesomorfo"
-    frame_size: z.string().optional(),      // "pequeño" | "medio" | "grande"
-    fat_distribution: z.string().optional(),// "abdominal" | "uniforme" | "tren inferior"…
+    body_fat_pct: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(3).max(50).optional()),
+    lean_mass_kg: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(20).max(120).optional()),
+    weight_kg: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(35).max(180).optional()),
+    somatotype: z.string().nullish().transform((v) => v ?? undefined),
+    frame_size: z.string().nullish().transform((v) => v ?? undefined),
+    fat_distribution: z.string().nullish().transform((v) => v ?? undefined),
   }).partial().optional(),
 
   muscle_breakdown: z.preprocess(
