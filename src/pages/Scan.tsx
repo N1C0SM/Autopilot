@@ -1070,11 +1070,6 @@ const Scan = () => {
               </div>
 
               {/* Físico objetivo: presets del admin + opción de subir foto propia */}
-              {(() => {
-                const matched = goalPresets.find((p) => p.image_url === (savedObjectiveUrl || objectiveImg));
-                const goalLabel = matched?.name || savedGoalText || null;
-                return null;
-              })()}
               {user && savedObjectiveUrl && !editingObjective ? (
                 <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur p-4 sm:p-5 flex items-center gap-4">
                   <img
