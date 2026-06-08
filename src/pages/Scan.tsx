@@ -31,6 +31,10 @@ import {
   RefreshCw,
   Activity,
   Sprout,
+  Ruler,
+  Dna,
+  ClipboardList,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -115,6 +119,34 @@ type Result = {
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
   locked_insights?: { label: string; teaser: string }[];
+  body_composition?: {
+    body_fat_pct?: number;
+    lean_mass_kg?: number;
+    weight_kg?: number;
+    somatotype?: string;
+    frame_size?: string;
+    fat_distribution?: string;
+  };
+  muscle_breakdown?: { group: string; score: number; verdict: string }[];
+  posture?: { issues?: string[]; severity?: string; note?: string };
+  proportions?: {
+    shoulder_to_waist_ratio?: number;
+    v_taper_score?: number;
+    symmetry_score?: number;
+    upper_lower_balance?: string;
+    weakest_link?: string;
+  };
+  genetic_markers?: string[];
+  protocol?: {
+    training_days_per_week?: number;
+    weekly_sets_priority?: number;
+    weekly_sets_maintenance?: number;
+    calorie_adjustment_kcal?: number;
+    protein_g_per_kg?: number;
+    cardio_minutes_per_week?: number;
+    key_lifts?: string[];
+    avoid?: string[];
+  };
 };
 
 type GoalPhysique = {
@@ -1653,6 +1685,281 @@ const Scan = () => {
                   )}
                 </div>
               </div>
+
+              {/* === CAPA CLÍNICA — lo que ChatGPT no te da === */}
+              {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
+                <div className="max-w-5xl mx-auto mt-10 space-y-4">
+                  <div className="text-center mb-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
+                      <Gauge className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                        Diagnóstico clínico
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable. Esto es lo que un chat genérico no puede darte.
+                    </p>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Composición corporal */}
+                    {result.body_composition && (
+                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                          <Activity className="w-3 h-3" /> Composición corporal estimada
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          {result.body_composition.body_fat_pct !== undefined && (
+                            <div>
+                              <div className="text-2xl font-bold font-display text-gradient">{result.body_composition.body_fat_pct}%</div>
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Grasa</div>
+                            </div>
+                          )}
+                          {result.body_composition.lean_mass_kg !== undefined && (
+                            <div>
+                              <div className="text-2xl font-bold font-display text-gradient">{result.body_composition.lean_mass_kg}kg</div>
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Masa magra</div>
+                            </div>
+                          )}
+                          {result.body_composition.weight_kg !== undefined && (
+                            <div>
+                              <div className="text-2xl font-bold font-display">{result.body_composition.weight_kg}kg</div>
+                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Peso est.</div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                          {result.body_composition.somatotype && (
+                            <div className="bg-secondary/60 rounded-lg px-3 py-2">
+                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Somatotipo</div>
+                              <div className="font-medium capitalize">{result.body_composition.somatotype}</div>
+                            </div>
+                          )}
+                          {result.body_composition.frame_size && (
+                            <div className="bg-secondary/60 rounded-lg px-3 py-2">
+                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Estructura</div>
+                              <div className="font-medium capitalize">{result.body_composition.frame_size}</div>
+                            </div>
+                          )}
+                          {result.body_composition.fat_distribution && (
+                            <div className="bg-secondary/60 rounded-lg px-3 py-2 col-span-2">
+                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Distribución de grasa</div>
+                              <div className="font-medium capitalize">{result.body_composition.fat_distribution}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Proporciones */}
+                    {result.proportions && (
+                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                          <Ruler className="w-3 h-3" /> Proporciones y simetría
+                        </div>
+                        <div className="space-y-3 text-sm">
+                          {result.proportions.shoulder_to_waist_ratio !== undefined && (
+                            <div>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">Ratio hombro/cintura</span>
+                                <span className="font-semibold">{result.proportions.shoulder_to_waist_ratio.toFixed(2)} <span className="text-muted-foreground font-normal">/ ideal ~1.60</span></span>
+                              </div>
+                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: `${Math.min(100, (result.proportions.shoulder_to_waist_ratio / 1.8) * 100)}%` }} />
+                              </div>
+                            </div>
+                          )}
+                          {result.proportions.v_taper_score !== undefined && (
+                            <div>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">V-taper</span>
+                                <span className="font-semibold">{result.proportions.v_taper_score}/10</span>
+                              </div>
+                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: `${result.proportions.v_taper_score * 10}%` }} />
+                              </div>
+                            </div>
+                          )}
+                          {result.proportions.symmetry_score !== undefined && (
+                            <div>
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">Simetría</span>
+                                <span className="font-semibold">{result.proportions.symmetry_score}/10</span>
+                              </div>
+                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: `${result.proportions.symmetry_score * 10}%` }} />
+                              </div>
+                            </div>
+                          )}
+                          {result.proportions.upper_lower_balance && (
+                            <div className="text-xs bg-secondary/60 rounded-lg px-3 py-2">
+                              <span className="text-muted-foreground">Balance: </span>
+                              <span className="font-medium">{result.proportions.upper_lower_balance}</span>
+                            </div>
+                          )}
+                          {result.proportions.weakest_link && (
+                            <div className="text-xs text-primary border border-primary/30 bg-primary/5 rounded-lg px-3 py-2">
+                              Eslabón más débil: <span className="font-semibold">{result.proportions.weakest_link}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Breakdown por grupo muscular */}
+                  {result.muscle_breakdown && result.muscle_breakdown.length > 0 && (
+                    <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-1.5">
+                        <Dumbbell className="w-3 h-3" /> Lectura por grupo muscular
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-x-6 gap-y-3">
+                        {result.muscle_breakdown.map((m, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.04 }}
+                            className="border-b border-border/50 pb-2 last:border-0"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">{m.group}</span>
+                              <span className={`text-xs font-bold tabular-nums ${m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}`}>
+                                {m.score.toFixed(1)}<span className="text-muted-foreground font-normal">/10</span>
+                              </span>
+                            </div>
+                            <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${m.score * 10}%` }}
+                                transition={{ duration: 0.8, delay: i * 0.04 }}
+                                className={`h-full ${m.score >= 7 ? "bg-primary" : "bg-primary/50"}`}
+                              />
+                            </div>
+                            <div className="text-[11px] text-muted-foreground leading-snug">{m.verdict}</div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {/* Postura */}
+                    {result.posture && (result.posture.issues?.length || result.posture.note) && (
+                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> Postura</span>
+                          {result.posture.severity && (
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                              result.posture.severity === "severa" ? "bg-destructive/15 text-destructive" :
+                              result.posture.severity === "moderada" ? "bg-primary/15 text-primary" :
+                              "bg-secondary text-muted-foreground"
+                            }`}>{result.posture.severity}</span>
+                          )}
+                        </div>
+                        {result.posture.issues && result.posture.issues.length > 0 && (
+                          <ul className="space-y-1.5 mb-3">
+                            {result.posture.issues.map((iss, i) => (
+                              <li key={i} className="text-sm flex items-start gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                                <span>{iss}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {result.posture.note && (
+                          <div className="text-[11px] text-muted-foreground italic">{result.posture.note}</div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Marcadores genéticos */}
+                    {result.genetic_markers && result.genetic_markers.length > 0 && (
+                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                          <Dna className="w-3 h-3" /> Lo que te da (y te quita) tu genética
+                        </div>
+                        <ul className="space-y-2">
+                          {result.genetic_markers.map((g, i) => (
+                            <li key={i} className="text-sm flex items-start gap-2">
+                              <span className="text-primary text-xs mt-0.5">◆</span>
+                              <span className="leading-snug">{g}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Protocolo accionable */}
+                  {result.protocol && (
+                    <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 glow-shadow">
+                      <div className="text-[10px] uppercase tracking-widest text-primary mb-4 flex items-center gap-1.5">
+                        <ClipboardList className="w-3 h-3" /> Protocolo recomendado por la IA
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                        {result.protocol.training_days_per_week !== undefined && (
+                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
+                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.training_days_per_week}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Días/sem</div>
+                          </div>
+                        )}
+                        {result.protocol.weekly_sets_priority !== undefined && (
+                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
+                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.weekly_sets_priority}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Sets prioridad</div>
+                          </div>
+                        )}
+                        {result.protocol.protein_g_per_kg !== undefined && (
+                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
+                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.protein_g_per_kg}g</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Proteína/kg</div>
+                          </div>
+                        )}
+                        {result.protocol.calorie_adjustment_kcal !== undefined && (
+                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
+                            <div className="text-xl font-bold font-display text-gradient">
+                              {result.protocol.calorie_adjustment_kcal > 0 ? "+" : ""}{result.protocol.calorie_adjustment_kcal}
+                            </div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">kcal vs mant.</div>
+                          </div>
+                        )}
+                        {result.protocol.cardio_minutes_per_week !== undefined && (
+                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
+                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.cardio_minutes_per_week}</div>
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">min cardio/sem</div>
+                          </div>
+                        )}
+                      </div>
+                      {result.protocol.key_lifts && result.protocol.key_lifts.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Ejercicios clave</div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {result.protocol.key_lifts.map((l, i) => (
+                              <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                                {l}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {result.protocol.avoid && result.protocol.avoid.length > 0 && (
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Evita</div>
+                          <ul className="space-y-1">
+                            {result.protocol.avoid.map((a, i) => (
+                              <li key={i} className="text-xs flex items-start gap-2 text-muted-foreground">
+                                <X className="w-3 h-3 text-destructive mt-0.5 flex-shrink-0" />
+                                <span>{a}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* FUNNEL CTA */}
               {!isPaid ? (
