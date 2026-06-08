@@ -85,6 +85,23 @@ export default function EmailTemplatesEditor() {
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
 
+  // Removes zero-width / invisible chars that React Email injects inside the
+  // <Preview> block as padding for inbox preview. They are invisible in real
+  // email clients but clutter the code editor. We also strip the entire hidden
+  // preview <div> (display:none; max-height:0) which only contains padding.
+  const sanitizeEditableHtml = (raw: string): string => {
+    if (!raw) return raw;
+    let s = raw;
+    // Strip the hidden React Email preview padding div entirely
+    s = s.replace(
+      /<div[^>]*display:\s*none[^>]*>[\s\S]*?<\/div>/gi,
+      (block) => (/max-height:\s*0/i.test(block) ? "" : block),
+    );
+    // Strip remaining zero-width and bidi-control chars
+    s = s.replace(/[\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060\uFEFF]/g, "");
+    return s;
+  };
+
   const current = TEMPLATES.find(t => t.name === selected)!;
 
   const handleEditorMount: OnMount = (editor, monaco) => {
@@ -163,7 +180,7 @@ export default function EmailTemplatesEditor() {
         bracketSameLine: false,
         singleAttributePerLine: false,
       });
-      setHtml(formatted);
+      setHtml(sanitizeEditableHtml(formatted));
       toast.success("HTML formateado con Prettier");
     } catch (e: any) {
       toast.error("Prettier falló: " + (e?.message ?? "error"));
@@ -214,7 +231,7 @@ export default function EmailTemplatesEditor() {
 
       if (override) {
         setSubject((override as any).subject);
-        setHtml((override as any).html);
+        setHtml(sanitizeEditableHtml((override as any).html));
         setEnabled((override as any).enabled);
         setHasOverride(true);
       } else {
@@ -224,7 +241,7 @@ export default function EmailTemplatesEditor() {
         });
         if (error) throw error;
         setSubject(data.subject ?? "");
-        setHtml(data.html ?? "");
+        setHtml(sanitizeEditableHtml(data.html ?? ""));
         setEnabled(true);
         setHasOverride(false);
       }
@@ -244,13 +261,15 @@ export default function EmailTemplatesEditor() {
     }
     setSaving(true);
     try {
+      const cleanHtml = sanitizeEditableHtml(html);
       const { error } = await supabase.from("email_template_overrides" as any).upsert({
         template_name: selected,
         subject: subject.trim(),
-        html: html,
+        html: cleanHtml,
         enabled,
       }, { onConflict: "template_name" });
       if (error) throw error;
+      if (cleanHtml !== html) setHtml(cleanHtml);
       toast.success("Plantilla guardada");
       setHasOverride(true);
     } catch (e: any) {
