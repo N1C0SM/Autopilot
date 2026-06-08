@@ -1563,6 +1563,22 @@ const Scan = () => {
                     )}
                     Compartir mi resultado
                   </Button>
+                  {user && routeUserId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetProgress}
+                      disabled={resettingProgress}
+                      className="hover-scale ml-2 text-destructive hover:text-destructive"
+                    >
+                      {resettingProgress ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                      )}
+                      Resetear progreso
+                    </Button>
+                  )}
                 </div>
               </div>
 
