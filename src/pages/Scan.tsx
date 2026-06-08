@@ -42,6 +42,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
 import poseBackImg from "@/assets/pose-back.png";
+import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
+import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
+import StickyConversionBar from "@/components/scan/StickyConversionBar";
+import ExitIntentModal from "@/components/scan/ExitIntentModal";
+import SocialProofStrip from "@/components/scan/SocialProofStrip";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
