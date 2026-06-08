@@ -257,7 +257,7 @@ export default function EmailTemplatesEditor() {
             {TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
           </select>
           <div className="mt-3 space-y-1.5">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Variables disponibles (con datos reales de previsualización)</div>
+            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Variables disponibles — haz clic para insertarlas en el editor</div>
             <div className="flex flex-wrap gap-1.5">
               {current.placeholders.map(p => {
                 const raw = current.sampleData?.[p];
@@ -265,10 +265,16 @@ export default function EmailTemplatesEditor() {
                 const isUrl = /^https?:\/\//i.test(val);
                 const display = isUrl ? val.replace(/^https?:\/\//, "").slice(0, 32) + (val.length > 40 ? "…" : "") : (val.length > 40 ? val.slice(0, 40) + "…" : val);
                 return (
-                  <span key={p} className="inline-flex items-center gap-1 text-[11px] bg-muted/60 border border-border rounded-md overflow-hidden">
-                    <code className="px-1.5 py-0.5 bg-muted text-foreground">{`{{${p}}}`}</code>
-                    <span className="px-1.5 py-0.5 text-muted-foreground" title={val}>{display}</span>
-                  </span>
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => insertVariable(p)}
+                    title={`Insertar {{${p}}} — valor actual: ${val}`}
+                    className="group inline-flex items-center gap-1 text-[11px] bg-muted/60 border border-border rounded-md overflow-hidden hover:border-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                  >
+                    <code className="px-1.5 py-0.5 bg-muted text-foreground group-hover:bg-primary group-hover:text-primary-foreground">{`{{${p}}}`}</code>
+                    <span className="px-1.5 py-0.5 text-muted-foreground">{display}</span>
+                  </button>
                 );
               })}
             </div>
