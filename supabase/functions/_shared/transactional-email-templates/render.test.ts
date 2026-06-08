@@ -1,4 +1,3 @@
-/// <reference types="npm:@types/react@18.3.1" />
 import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
 import { TEMPLATES, renderTemplate, interpolate } from './render.ts'
 
