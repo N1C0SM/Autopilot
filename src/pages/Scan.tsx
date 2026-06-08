@@ -602,7 +602,7 @@ const Scan = () => {
         );
       } catch {}
       setPendingResult(r);
-      // Solo en /scan/user/:id saltamos el formulario y aplicamos al plan automáticamente
+      // Si está logueado saltamos el formulario de lead (ya tenemos su email)
       if (user && isPaid && routeUserId) {
         setTimeout(() => {
           setResult(r);
@@ -611,10 +611,18 @@ const Scan = () => {
           }
           saveAndEmailScan(r, { silent: false });
         }, 400);
+      } else if (user && isPaid) {
+        // Logueado y pagado en /scan general: muestra resultado sin tocar el plan
+        setTimeout(() => {
+          setResult(r);
+          saveAndEmailScan(r, { silent: true });
+        }, 400);
       } else if (user) {
-        // Logueado en /scan general: guarda histórico/email en segundo plano,
-        // pero NO saltamos el formulario — el usuario sigue confirmando email/nombre.
-        saveAndEmailScan(r, { silent: true });
+        // Logueado no pagado: muestra resultado y envía email a la cuenta
+        setTimeout(() => {
+          setResult(r);
+          saveAndEmailScan(r, { silent: true });
+        }, 400);
       }
       // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
     } catch (e: any) {
@@ -648,10 +656,10 @@ const Scan = () => {
   // Transition analyzing -> lead once analysis is ready (min 3s for UX)
   useEffect(() => {
     if (phase !== "analyzing" || !pendingResult) return;
-    if (user && isPaid && routeUserId) return; // /scan/user: ya fue al result directamente
+    if (user) return; // logueados van directos al resultado, sin formulario de lead
     const t = setTimeout(() => setPhase("lead"), 1200);
     return () => clearTimeout(t);
-  }, [phase, pendingResult, user, isPaid, routeUserId]);
+  }, [phase, pendingResult, user]);
 
   const submitLead = async () => {
     if (!leadName.trim() || leadName.trim().length < 2) {
