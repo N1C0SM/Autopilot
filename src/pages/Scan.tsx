@@ -848,7 +848,7 @@ const Scan = () => {
         <meta property="og:description" content="Análisis IA gratuito de tu físico con recomendaciones personalizadas." />
         <meta property="og:url" content="https://autopilotplan.com/scan" />
       </Helmet>
-      {phase === "result" && !isPaid && (
+      {result && !isPaid && (
         <>
           <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
           <ExitIntentModal onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
