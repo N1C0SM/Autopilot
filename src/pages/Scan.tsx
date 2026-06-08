@@ -2045,12 +2045,11 @@ const Scan = () => {
               </motion.div>
               ) : (
                 <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
-                  {user && planApplyState !== "success" && planApplyState !== "applying" && (
+                  {user && (planApplyState === "idle" || planApplyState === "error") && (
                     <Button
                       variant="hero"
                       size="xl"
                       onClick={() => applyScanToPlan(result)}
-                      disabled={planApplyState === "applying"}
                     >
                       Aplicar a mi plan
                       <ArrowRight className="w-4 h-4" />
