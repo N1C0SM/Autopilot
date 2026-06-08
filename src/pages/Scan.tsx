@@ -1244,7 +1244,7 @@ const Scan = () => {
                           const dataUrl = await fileToDataUrl(f);
                           setObjectiveImg(dataUrl);
                           setSelectedPresetId(null);
-                          if (user) await saveCustomGoalPreset(dataUrl);
+                          if (user && routeUserId) await saveCustomGoalPreset(dataUrl);
                         }}
                       />
                       <div className={`cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition ${
