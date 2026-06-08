@@ -124,7 +124,7 @@ const MySchedule = () => {
 
       // Run plan regeneration + (optional) calendar sync in parallel
       const { data: gcalTok } = await supabase
-        .from("google_calendar_tokens")
+        .from("google_calendar_connections" as any)
         .select("user_id")
         .eq("user_id", user.id)
         .maybeSingle();

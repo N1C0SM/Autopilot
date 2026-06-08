@@ -203,7 +203,7 @@ const Onboarding = () => {
   useEffect(() => {
     if (!user) return;
     supabase
-      .from("google_calendar_tokens")
+      .from("google_calendar_connections" as any)
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle()

@@ -102,7 +102,7 @@ const SettingsPanel = () => {
 
       // Fetch Google Calendar connection status
       supabase
-        .from("google_calendar_tokens")
+        .from("google_calendar_connections" as any)
         .select("last_sync_at")
         .eq("user_id", user.id)
         .maybeSingle()
