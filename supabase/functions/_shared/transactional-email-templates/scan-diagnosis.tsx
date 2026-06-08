@@ -109,10 +109,17 @@ export const template = {
   displayName: 'Scan diagnosis',
   previewData: {
     name: 'Nico',
-    monthsWithPlan: 6,
-    headline: 'Tu mayor margen está en espalda y hombros.',
-    summary: 'Buen pecho frontal pero cadena posterior infradesarrollada. Postura ligeramente cifótica.',
-    cardImageUrl: 'https://placehold.co/1080x1350/0a0a0a/facc15?text=AI+Scan',
+    monthsWithPlan: 4,
+    monthsWithoutPlan: 18,
+    headline: 'Físico lean (~12% BF) con clara asimetría entre tren superior y tren inferior.',
+    summary:
+      'Composición ~12-13% de grasa corporal, ~70-72 kg, somatotipo ecto-mesomorfo. ' +
+      'Fuertes: abdominales visibles, pecho con buena inserción y serrato presente. ' +
+      'Débiles: deltoides medio/posterior, espalda alta y pierna (cuádriceps planos). ' +
+      'Postura: ligera cifosis y anteposición de hombros. ' +
+      'Plan: 12 semanas priorizando hombro lateral, espalda alta y pierna 2x/sem, 1.8 g/kg proteína en déficit ligero.',
+    cardImageUrl: 'https://autopilotplan.com/__l5e/assets-v1/fa09bf52-3962-4e3f-9c3b-eeef3b241746/scan-example-user.jpg',
+    photoUrl: 'https://autopilotplan.com/__l5e/assets-v1/fa09bf52-3962-4e3f-9c3b-eeef3b241746/scan-example-user.jpg',
   },
 } satisfies TemplateEntry
 
