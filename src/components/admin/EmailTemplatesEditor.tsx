@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Save, RotateCcw, FileCode, Eye, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import scanPreviewAsset from "@/assets/scan-preview.jpg.asset.json";
+import prettier from "prettier/standalone";
+import prettierPluginHtml from "prettier/plugins/html";
 
 const SCAN_PREVIEW_URL = `${window.location.origin}${scanPreviewAsset.url}`;
 
@@ -78,17 +80,51 @@ export default function EmailTemplatesEditor() {
   const handleEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    // VSCode-like dark theme that matches the app
-    monaco.editor.defineTheme("autopilot-dark", {
+    // "Shades of Purple"-inspired dark theme
+    monaco.editor.defineTheme("shades-of-purple", {
       base: "vs-dark",
       inherit: true,
-      rules: [],
+      rules: [
+        { token: "", foreground: "FFFFFF", background: "1E1E3F" },
+        { token: "tag", foreground: "FF9D00" },
+        { token: "tag.html", foreground: "FF9D00" },
+        { token: "metatag", foreground: "FF9D00" },
+        { token: "metatag.content.html", foreground: "A5FF90" },
+        { token: "metatag.html", foreground: "FF9D00" },
+        { token: "delimiter", foreground: "B362FF" },
+        { token: "delimiter.html", foreground: "B362FF" },
+        { token: "attribute.name", foreground: "FAD000" },
+        { token: "attribute.name.html", foreground: "FAD000" },
+        { token: "attribute.value", foreground: "A5FF90" },
+        { token: "attribute.value.html", foreground: "A5FF90" },
+        { token: "string", foreground: "A5FF90" },
+        { token: "string.html", foreground: "A5FF90" },
+        { token: "comment", foreground: "B362FF", fontStyle: "italic" },
+        { token: "comment.html", foreground: "B362FF", fontStyle: "italic" },
+        { token: "number", foreground: "FF628C" },
+        { token: "keyword", foreground: "FF9D00" },
+      ],
       colors: {
-        "editor.background": "#0a0a0a",
-        "editor.lineHighlightBackground": "#1a1a1a",
+        "editor.background": "#1E1E3F",
+        "editor.foreground": "#FFFFFF",
+        "editor.lineHighlightBackground": "#2D2B55",
+        "editor.lineHighlightBorder": "#2D2B55",
+        "editorLineNumber.foreground": "#A599E9",
+        "editorLineNumber.activeForeground": "#FAD000",
+        "editorCursor.foreground": "#FAD000",
+        "editor.selectionBackground": "#B362FF55",
+        "editor.inactiveSelectionBackground": "#B362FF33",
+        "editorBracketMatch.background": "#FAD00033",
+        "editorBracketMatch.border": "#FAD000",
+        "editorIndentGuide.background": "#3B3974",
+        "editorIndentGuide.activeBackground": "#FAD000",
+        "editorWhitespace.foreground": "#3B3974",
+        "scrollbarSlider.background": "#B362FF55",
+        "scrollbarSlider.hoverBackground": "#B362FF88",
+        "scrollbarSlider.activeBackground": "#B362FFAA",
       },
     });
-    monaco.editor.setTheme("autopilot-dark");
+    monaco.editor.setTheme("shades-of-purple");
   };
 
   const insertVariable = (placeholder: string) => {
@@ -105,8 +141,23 @@ export default function EmailTemplatesEditor() {
     editor.focus();
   };
 
-  const formatDocument = () => {
-    editorRef.current?.getAction("editor.action.formatDocument")?.run();
+  const formatDocument = async () => {
+    try {
+      const formatted = await prettier.format(html, {
+        parser: "html",
+        plugins: [prettierPluginHtml],
+        htmlWhitespaceSensitivity: "ignore", // each tag on its own line
+        printWidth: 100,
+        tabWidth: 2,
+        useTabs: false,
+        bracketSameLine: false,
+        singleAttributePerLine: false,
+      });
+      setHtml(formatted);
+      toast.success("HTML formateado con Prettier");
+    } catch (e: any) {
+      toast.error("Prettier falló: " + (e?.message ?? "error"));
+    }
   };
 
   // Maintain a BroadcastChannel tied to the current template so the open
@@ -310,7 +361,7 @@ export default function EmailTemplatesEditor() {
                   </Button>
                 </div>
               </div>
-              <div className="rounded-lg overflow-hidden border border-border bg-[#0a0a0a]">
+              <div className="rounded-lg overflow-hidden border border-border bg-[#1E1E3F]">
                 <Editor
                   height="520px"
                   defaultLanguage="html"
@@ -318,7 +369,7 @@ export default function EmailTemplatesEditor() {
                   value={html}
                   onChange={(value) => setHtml(value ?? "")}
                   onMount={handleEditorMount}
-                  theme="autopilot-dark"
+                  theme="shades-of-purple"
                   options={{
                     fontSize: 13,
                     fontFamily: "JetBrains Mono, Menlo, Monaco, monospace",
