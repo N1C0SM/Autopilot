@@ -44,7 +44,8 @@ const AnalysisSchema = z.object({
   locked_insights: z.array(z.object({
     label: z.string(),
     teaser: z.string(),
-  })).max(3).optional(),
+    category: z.string().optional(),
+  })).max(10).optional(),
 
   // ===== Capa clínica nueva — diferencia clara vs ChatGPT =====
   body_composition: z.object({
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
           'SCORES honestos (no infles): attractiveness/potential/physique/style 0-10. similarity 0-100 (0 si no hay objetivo). percentile 1-99 vs población general de su sexo/edad estimados (50=media, 75=mejor que 3 de cada 4, 90+=top atlético). aesthetic_age en años.',
           'REGLA DE MESES: incluye months_without_plan / months_with_plan / estimated_months SOLO si hay foto objetivo. Sin objetivo, omite las tres claves. Con objetivo: months_without_plan 18-60 (pesimista), months_with_plan 3-18 (rápido), estimated_months = months_with_plan.',
           'headline_diagnosis: UNA frase contundente que mencione cadena anterior y posterior cuando aplique. bottleneck: el ÚNICO factor que más le frena, indicando si viene de la vista frontal o de espalda. improvements: 3-5 puntos priorizados (Alta/Media/Baja), incluyendo al menos uno de la vista trasera si hay margen. summary: 2-3 frases que mencionen explícitamente lo de frente y lo de espalda.',
-          'inferred_goal: "lose_weight"|"gain_muscle"|"recomp"|"improve_endurance"|"general_health". inferred_focus: "gimnasio"|"calistenia"|"mixto". inferred_intensity 1-10. inferred_specific_goals: 2-3 metas concretas. locked_insights: 3 insights premium con label corto y teaser intrigante (NO reveles los valores).',
+          'inferred_goal: "lose_weight"|"gain_muscle"|"recomp"|"improve_endurance"|"general_health". inferred_focus: "gimnasio"|"calistenia"|"mixto". inferred_intensity 1-10. inferred_specific_goals: 2-3 metas concretas. locked_insights: GENERA EXACTAMENTE 8 insights premium SIEMPRE, con label corto (3-5 palabras) y teaser intrigante de 1 frase que abra un loop de curiosidad SIN revelar el valor. Cubre estas 8 categorías obligatoriamente: 1) Ratio calórico exacto, 2) Volumen prioritario semanal, 3) Frecuencia óptima del músculo más débil, 4) Orden de ejercicios, 5) % grasa objetivo realista, 6) Semanas hasta primer hito visible, 7) Predicción de plateau, 8) Cardio mínimo efectivo. Cada item incluye category con uno de: "calorias"|"volumen"|"frecuencia"|"orden"|"grasa"|"hito"|"plateau"|"cardio".',
           '— CAPA CLÍNICA OBLIGATORIA (esto es lo que nos diferencia de ChatGPT, RELLÉNALA SIEMPRE): ',
           'body_composition: { body_fat_pct (rango realista 6-30 hombres, 14-38 mujeres), lean_mass_kg, weight_kg, somatotype ("ectomorfo"/"meso"/"endo" o híbridos), frame_size ("pequeño"/"medio"/"grande" según muñeca/clavícula), fat_distribution ("abdominal","uniforme","tren inferior","cara/cuello"…) }. Estima por proporción visual y sombras musculares; no digas que no puedes estimar.',
           'muscle_breakdown: 6-8 grupos OBLIGATORIOS — "Pecho", "Deltoides", "Espalda alta", "Brazos", "Core/abdomen", "Cuádriceps", "Cadena posterior (glúteo+isquio)", "Gemelos". Cada uno con score 0-10 y verdict de 1 frase específica ("Deltoide medio plano, falta de redondeo lateral evidente desde la frontal").',

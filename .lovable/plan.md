@@ -1,76 +1,73 @@
 ## Objetivo
 
-Hacer el editor de emails (`/admin` → Emails) mucho más legible:
-
-1. Separar **HTML** y **CSS** en dos editores (nada de `style="..."` inline en el editor).
-2. **Formatear automáticamente** la plantilla al abrirla (sin pulsar "Formatear").
-3. **Colapsar todo** automáticamente al abrirla (fold all).
-4. Los corchetes `<` y `>` se quedan en la **misma línea** que la etiqueta (no se rompen).
+El Scan es gratis y genera el "aha moment", pero la conversión a plan de pago (19€/mes) depende de un solo CTA al final. Voy a meter **5 palancas de conversión psicológica** dentro de `/scan` para multiplicar el % de upgrade, sin tocar el motor de análisis ni el modelo de negocio.
 
 ---
 
-## Cambios
+## Palancas a implementar
 
-### 1. Dos editores: HTML y CSS
+### 1. Proyección visual "Tú con plan vs. sin plan" (anchor emocional)
+Justo después del bloque de Diagnóstico Clínico, una tarjeta gráfica con dos timelines paralelos:
+- **Sin plan (6 meses):** Score actual repetido → barra plana, color apagado, texto "Mismo físico, misma frustración"
+- **Con plan (X meses):** Score proyectado (actual + delta IA) → barra creciente con gradient primary, hitos mensuales ("Mes 1: pérdida grasa visible", "Mes 3: V-taper definido", etc.)
 
-- Nuevo estado `css` además de `html`.
-- Al cargar la plantilla, **extraer todo el CSS inline** (`style="..."` de cada elemento) → generar clases auto (`.s1`, `.s2`, …, reutilizando cuando el style sea idéntico) → meter las reglas en el editor CSS y reemplazar el atributo `style` por `class` en el HTML.
-- También extraer cualquier bloque `<style>…</style>` existente al editor CSS.
-- UI: dos pestañas dentro del bloque "HTML del email" → **HTML** | **CSS**, cada una con su Monaco propio (lenguajes `html` y `css`).
-- Al **guardar**: re-inline el CSS de vuelta a `style="..."` (usando un mini-inliner: resolver cada `class` por sus reglas y volcarlas como inline styles) para que el email siga llegando 100 % compatible con Gmail/Outlook, que ignoran `<style>`. El admin edita limpio, el destinatario recibe inline.
-- En la preview (BroadcastChannel) se envía el HTML ya re-inlinado en tiempo real para que coincida con lo que se enviará.
+Los hitos se generan dinámicamente desde `result.priorities` + `result.body_composition`. Hace el coste de oportunidad **palpable**.
 
-### 2. Auto-formato al cargar
+### 2. Bloque de insights bloqueados expandido (curiosity gap)
+Hoy `locked_insights` se muestra como lista corta. Voy a:
+- Pedir al edge function `analyze-physique` que devuelva **6-8 locked insights** específicos (en vez de los actuales 2-3), con título + 1 frase teaser desenfocada (blur CSS sobre el detalle).
+- Mostrarlos en grid 2x3/2x4 con candado encima de cada uno, hover muestra "Desbloquea con tu plan".
+- Categorías: ratio calórico exacto, ventana anabólica, descansos óptimos por grupo, orden de ejercicios, frecuencia semanal por músculo débil, % grasa objetivo realista, semanas hasta primer hito visible, predicción de plateau.
 
-- Tras `setHtml(...)` en `load()` y en `loadDefault()`, llamar a Prettier automáticamente sobre HTML y CSS antes de pintarlo.
-- Quitar el botón "Formatear" o dejarlo como acción manual opcional.
+### 3. CTA sticky inteligente + exit-intent
+- **Sticky bar** en mobile/desktop que aparece cuando el usuario hace scroll más allá del 40% de los resultados: "Tu plan personalizado · 7 días gratis · 19€/mes" + botón "Empezar".
+- **Exit-intent modal** (solo desktop, primera vez): cuando el cursor sale por arriba, muestra "Espera — guardamos tu análisis. Empieza tu plan en 60s" con CTA directo.
+- Ambos se ocultan si `isPaid`.
 
-### 3. Collapse all al cargar
+### 4. Prueba social contextual
+Hoy no hay testimonios en `/scan`. Voy a leer 2-3 `site_testimonials` (random, los que tengan foto + resultado numérico) y mostrarlos en una tira horizontal **justo antes del CTA final**, con formato: foto + "−8kg en 4 meses" + frase corta. Anclaje: "Otros con tu mismo perfil ya lo hicieron".
 
-- En `handleEditorMount` y cada vez que cambia `value` por carga (no por tecleo del user), ejecutar:
-  ```
-  editor.getAction('editor.foldAll').run()
-  ```
-- Se hace en ambos editores (HTML y CSS).
+### 5. CTA principal con pricing visible + reducción de fricción
+El CTA actual dice "Empezar mi plan" sin precio. Voy a:
+- Mostrar precio con anchor: ~~Coach 1:1 200€/mes~~ → **19€/mes · 7 días gratis**
+- Cambiar copy: "Empezar mi plan por 0€ hoy" (anclar gratis primero, no el precio)
+- Añadir microcopy: "Cancela en 1 clic · Sin permanencia · Garantía 30 días"
+- En `/signup?from=scan`, prerellenar el flow para que llegue al checkout **en 2 clics** (ya existe el flow, solo verifico que `from=scan` salta pasos opcionales del onboarding y va directo a paywall).
 
-### 4. Brackets en la misma línea
+---
 
-Configurar Prettier con:
-- `bracketSameLine: true` (el `>` se queda pegado a la última atributo, no salta de línea).
-- `singleAttributePerLine: false` (atributos no se rompen uno por línea).
-- `htmlWhitespaceSensitivity: "ignore"`.
+## Cambios técnicos
 
-Resultado típico:
-```html
-<div class="s1">
-  <p class="s2">Hola {{name}}</p>
-</div>
+```text
+src/pages/Scan.tsx
+├── + <ProjectionTimeline />        (palanca 1, después del Diagnóstico Clínico)
+├── ~ <LockedInsightsGrid />        (palanca 2, expandido con blur + grid)
+├── + <StickyConversionBar />       (palanca 3, scroll > 40%)
+├── + <ExitIntentModal />           (palanca 3, solo desktop)
+├── + <SocialProofStrip />          (palanca 4, antes del FUNNEL CTA)
+└── ~ FUNNEL CTA                    (palanca 5, copy + pricing + microcopy)
+
+supabase/functions/analyze-physique/index.ts
+└── ~ schema.locked_insights        (mínimo 6 items, con teaser + categoría)
+
+src/components/scan/                (carpeta nueva, componentes aislados)
+├── ProjectionTimeline.tsx
+├── LockedInsightsGrid.tsx
+├── StickyConversionBar.tsx
+├── ExitIntentModal.tsx
+└── SocialProofStrip.tsx
 ```
-en vez de
-```html
-<div
-  class="s1"
->
-```
+
+Sin migraciones de BD. Sin cambios en pricing/Stripe. Sin nuevas dependencias.
 
 ---
 
-## Archivos a tocar
+## Métrica de éxito
 
-- `src/components/admin/EmailTemplatesEditor.tsx` — refactor a dos editores + extracción/re-inline de CSS + auto-format + foldAll.
-- Pequeño módulo auxiliar nuevo: `src/components/admin/email-style-utils.ts` con dos funciones puras:
-  - `extractInlineStyles(html) → { html, css }` (atributos `style` → clases auto, dedupe).
-  - `reinlineStyles(html, css) → html` (clases → `style="..."` para envío real).
+Conversion rate `scan completado → checkout iniciado`. Se puede medir mirando `scan_leads` insertados (denominador) vs eventos de click en CTA — opcionalmente añado un `analytics.track("scan_cta_clicked", { variant })` para A/B futuro.
 
 ---
 
-## Notas técnicas
+## Confirmación
 
-- **No tocamos los templates `.tsx` de React Email** ni el send-path. La extracción/re-inline ocurre solo en el override del admin, así el HTML que se persiste en `email_template_overrides` sigue siendo 100 % inline (compatible con todos los clientes).
-- La parity-test ya existente seguirá pasando porque compara HTML normalizado renderizado, no el formato de edición.
-
----
-
-## Confirmación rápida
-
-¿Te vale que el HTML guardado en BD siga siendo inline (para compatibilidad Gmail/Outlook) y el split HTML/CSS sea **solo en la vista del editor**? Si quisieras guardar también con `<style>` separado el riesgo es que Gmail descarte estilos y el email se vea roto.
+¿Sigo con las **5 palancas** o prefieres que arranque solo con **1-2** (las de mayor impacto: proyección visual + locked insights expandido) y dejamos las otras para iteración?

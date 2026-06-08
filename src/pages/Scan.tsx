@@ -42,6 +42,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
 import poseBackImg from "@/assets/pose-back.png";
+import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
+import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
+import StickyConversionBar from "@/components/scan/StickyConversionBar";
+import ExitIntentModal from "@/components/scan/ExitIntentModal";
+import SocialProofStrip from "@/components/scan/SocialProofStrip";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -118,7 +123,7 @@ type Result = {
   inferred_focus?: string;
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
-  locked_insights?: { label: string; teaser: string }[];
+  locked_insights?: { label: string; teaser: string; category?: string }[];
   body_composition?: {
     body_fat_pct?: number;
     lean_mass_kg?: number;
@@ -843,6 +848,12 @@ const Scan = () => {
         <meta property="og:description" content="Análisis IA gratuito de tu físico con recomendaciones personalizadas." />
         <meta property="og:url" content="https://autopilotplan.com/scan" />
       </Helmet>
+      {result && !isPaid && (
+        <>
+          <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
+          <ExitIntentModal onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
+        </>
+      )}
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[160px]" />
@@ -1654,34 +1665,11 @@ const Scan = () => {
                     </div>
                   </div>
 
-                  {!isPaid && result.locked_insights && result.locked_insights.length > 0 && (
-                    <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-4">
-                      <div className="text-[10px] uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
-                        <Lock className="w-3 h-3" /> Bloqueado · Plan completo
-                      </div>
-                      <ul className="space-y-2">
-                        {result.locked_insights.map((li, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center justify-between text-sm bg-background/40 rounded-lg px-3 py-2 border border-border"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Lock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                              <div className="min-w-0">
-                                <div className="font-medium truncate">{li.label}</div>
-                                <div className="text-[11px] text-muted-foreground truncate">{li.teaser}</div>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
-                              className="text-[10px] uppercase tracking-wider text-primary hover:underline flex-shrink-0 ml-2"
-                            >
-                              Desbloquear →
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  {!isPaid && (
+                    <LockedInsightsGrid
+                      insights={result.locked_insights}
+                      onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
+                    />
                   )}
                 </div>
               </div>
@@ -1961,6 +1949,19 @@ const Scan = () => {
                 </div>
               )}
 
+              {/* Proyección + prueba social — antes del CTA final */}
+              {!isPaid && (
+                <ProjectionTimeline
+                  currentScore={result.physique}
+                  monthsWithPlan={result.months_with_plan ?? result.estimated_months}
+                  monthsWithoutPlan={result.months_without_plan}
+                  priorities={(result.improvements || []).slice(0, 3).map((i) => i.label)}
+                  bottleneck={result.bottleneck}
+                  onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
+                />
+              )}
+              {!isPaid && <SocialProofStrip />}
+
               {/* FUNNEL CTA */}
               {!isPaid ? (
               <motion.div
@@ -2002,6 +2003,11 @@ const Scan = () => {
                       Te montamos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin él, dentro de 6 meses
                       estarás haciéndote el mismo scan con el mismo resultado.
                     </p>
+                    <div className="flex items-baseline justify-center gap-3 mb-5">
+                      <span className="text-sm text-muted-foreground line-through">Coach 1:1 desde 200€/mes</span>
+                      <span className="text-3xl font-bold font-display text-gradient">19€/mes</span>
+                      <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">7 días gratis</span>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <Button
                         variant="hero"
@@ -2009,7 +2015,7 @@ const Scan = () => {
                         onClick={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
                         className="hover-scale group"
                       >
-                        {user ? "Volver a mi cuenta" : "Empezar mi plan"}
+                        {user ? "Volver a mi cuenta" : "Empezar mi plan por 0€ hoy"}
                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </Button>
                       <Button variant="outline" size="xl" onClick={reset}>
@@ -2019,11 +2025,11 @@ const Scan = () => {
                     <div className="flex items-center gap-4 mt-6 justify-center text-xs text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                        7 días gratis
+                        Cancela en 1 clic
                       </div>
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                        Cancelas cuando quieras
+                        Sin permanencia
                       </div>
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
