@@ -44,7 +44,8 @@ const AnalysisSchema = z.object({
   locked_insights: z.array(z.object({
     label: z.string(),
     teaser: z.string(),
-  })).max(3).optional(),
+    category: z.string().optional(),
+  })).max(10).optional(),
 
   // ===== Capa clínica nueva — diferencia clara vs ChatGPT =====
   body_composition: z.object({
