@@ -23,6 +23,13 @@ const PaymentSuccess = () => {
     const maxAttempts = 10;
 
     const checkPayment = async () => {
+      // Proactively sync with Stripe (in case webhook hasn't arrived yet)
+      try {
+        await supabase.functions.invoke("check-subscription");
+      } catch {
+        // ignore — fall through to DB read
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("payment_status")
@@ -39,7 +46,8 @@ const PaymentSuccess = () => {
       if (attempts < maxAttempts) {
         setTimeout(checkPayment, 2000);
       } else {
-        setPaid(true);
+        // Stop polling but do not falsely mark as paid
+        setPaid(false);
         setChecking(false);
       }
     };
