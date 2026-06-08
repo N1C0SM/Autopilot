@@ -969,7 +969,27 @@ const Scan = () => {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4 }}
             >
-              {user && routeUserId && <ScanProgressPanel userId={user.id} />}
+              {user && routeUserId && (
+                <>
+                  <ScanProgressPanel userId={user.id} />
+                  <div className="max-w-3xl mx-auto -mt-2 mb-8 flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetProgress}
+                      disabled={resettingProgress}
+                      className="hover-scale text-destructive hover:text-destructive"
+                    >
+                      {resettingProgress ? (
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                      )}
+                      Resetear progreso
+                    </Button>
+                  </div>
+                </>
+              )}
               <div className="text-center max-w-3xl mx-auto mb-12">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-4">
                   Analiza tu físico con{" "}
