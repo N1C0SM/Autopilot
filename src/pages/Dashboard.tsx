@@ -310,39 +310,16 @@ const Dashboard = () => {
 
             {/* Home section */}
             {hasPlan && section === "home" && (
-              <div className="space-y-6 max-w-7xl mx-auto">
-                <Greeting name={profileName} createdAt={profileCreatedAt} completedDays={completedDays} />
-
-                {/* WEEKLY PROGRESS full-width */}
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                  {user && <WeeklyProgress userId={user.id} dayPlans={dayPlans} />}
-                </motion.div>
-
-                {/* MAIN GRID — overview left, side panel right */}
-                <div className="grid lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 space-y-6">
-                    <HomeOverview
-                      dayPlans={dayPlans}
-                      macros={macros}
-                      meals={meals}
-                      onNavigate={setSection}
-                      weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0}
-                      completedDays={completedDays}
-                    />
-                    {user && <PRsList userId={user.id} />}
-                  </div>
-                  <aside className="space-y-6">
-                    {user && <TravelModeCard userId={user.id} />}
-                    <ReferralShare />
-                    <div className="bg-card rounded-xl p-4 border border-border space-y-2">
-                      <p className="text-sm font-semibold">¿Prefieres papel?</p>
-                      <p className="text-xs text-muted-foreground">Descarga tu plan completo en PDF.</p>
-                      <Button variant="outline" size="sm" onClick={handleExportPDF} className="w-full">
-                        <Download className="w-3.5 h-3.5 mr-1.5" /> Descargar PDF
-                      </Button>
-                    </div>
-                  </aside>
-                </div>
+              <div className="max-w-4xl mx-auto space-y-6">
+                <HomeOverview
+                  dayPlans={dayPlans}
+                  macros={macros}
+                  meals={meals}
+                  onNavigate={setSection}
+                  weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0}
+                  completedDays={completedDays}
+                />
+                {user && <TravelModeCard userId={user.id} />}
               </div>
             )}
 
