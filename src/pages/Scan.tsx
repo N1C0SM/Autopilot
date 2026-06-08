@@ -47,6 +47,7 @@ import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ExitIntentModal from "@/components/scan/ExitIntentModal";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
+import ScanHistoryStrip from "@/components/scan/ScanHistoryStrip";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -849,6 +850,8 @@ const Scan = () => {
         <meta property="og:url" content="https://autopilotplan.com/scan" />
       </Helmet>
       {result && !isPaid && (
+        // Sólo embudo para visitantes anónimos: usuarios logueados ven modo cuenta.
+        !user &&
         <>
           <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
           <ExitIntentModal onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
@@ -869,7 +872,7 @@ const Scan = () => {
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
           <Sparkles className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-            AI Scan · Gratis
+            {user ? "AI Scan · Tu progreso" : "AI Scan · Gratis"}
           </span>
         </div>
       </header>
@@ -1332,6 +1335,7 @@ const Scan = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
+              {user && <ScanHistoryStrip userId={user.id} />}
               <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success" />
@@ -1665,7 +1669,7 @@ const Scan = () => {
                     </div>
                   </div>
 
-                  {!isPaid && (
+                  {!isPaid && !user && (
                     <LockedInsightsGrid
                       insights={result.locked_insights}
                       onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
@@ -1950,7 +1954,7 @@ const Scan = () => {
               )}
 
               {/* Proyección + prueba social — antes del CTA final */}
-              {!isPaid && (
+              {!isPaid && !user && (
                 <ProjectionTimeline
                   currentScore={result.physique}
                   monthsWithPlan={result.months_with_plan ?? result.estimated_months}
@@ -1960,10 +1964,10 @@ const Scan = () => {
                   onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
                 />
               )}
-              {!isPaid && <SocialProofStrip />}
+              {!isPaid && !user && <SocialProofStrip />}
 
               {/* FUNNEL CTA */}
-              {!isPaid ? (
+              {!isPaid && !user ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -2041,6 +2045,16 @@ const Scan = () => {
               </motion.div>
               ) : (
                 <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
+                  {user && (planApplyState === "idle" || planApplyState === "error") && (
+                    <Button
+                      variant="hero"
+                      size="xl"
+                      onClick={() => applyScanToPlan(result)}
+                    >
+                      Aplicar a mi plan
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  )}
                   <Button variant="hero" size="xl" onClick={() => navigate("/dashboard")}>
                     Volver al dashboard
                     <ArrowRight className="w-4 h-4" />
