@@ -123,7 +123,7 @@ type Result = {
   inferred_focus?: string;
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
-  locked_insights?: { label: string; teaser: string }[];
+  locked_insights?: { label: string; teaser: string; category?: string }[];
   body_composition?: {
     body_fat_pct?: number;
     lean_mass_kg?: number;
