@@ -161,6 +161,7 @@ type GoalPhysique = {
   name: string;
   description: string;
   image_url: string;
+  user_id?: string | null;
 };
 
 const fileToDataUrl = (file: File): Promise<string> =>
