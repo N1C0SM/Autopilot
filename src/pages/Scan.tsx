@@ -1079,6 +1079,7 @@ const Scan = () => {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Guía para tomar las fotos */}
               <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
