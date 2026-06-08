@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Save, RotateCcw, FileCode, Eye } from "lucide-react";
+import { Loader2, Save, RotateCcw, FileCode, Eye, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import scanPreviewAsset from "@/assets/scan-preview.jpg.asset.json";
 
@@ -70,8 +70,44 @@ export default function EmailTemplatesEditor() {
   const [hasOverride, setHasOverride] = useState(false);
   const bcRef = useRef<BroadcastChannel | null>(null);
   const previewWinRef = useRef<Window | null>(null);
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
 
   const current = TEMPLATES.find(t => t.name === selected)!;
+
+  const handleEditorMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    // VSCode-like dark theme that matches the app
+    monaco.editor.defineTheme("autopilot-dark", {
+      base: "vs-dark",
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#0a0a0a",
+        "editor.lineHighlightBackground": "#1a1a1a",
+      },
+    });
+    monaco.editor.setTheme("autopilot-dark");
+  };
+
+  const insertVariable = (placeholder: string) => {
+    const editor = editorRef.current;
+    const text = `{{${placeholder}}}`;
+    if (!editor) {
+      setHtml(prev => prev + text);
+      return;
+    }
+    const selection = editor.getSelection();
+    const id = { major: 1, minor: 1 };
+    const op = { identifier: id, range: selection, text, forceMoveMarkers: true };
+    editor.executeEdits("insert-var", [op]);
+    editor.focus();
+  };
+
+  const formatDocument = () => {
+    editorRef.current?.getAction("editor.action.formatDocument")?.run();
+  };
 
   // Maintain a BroadcastChannel tied to the current template so the open
   // preview tab receives live updates.
@@ -259,18 +295,50 @@ export default function EmailTemplatesEditor() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">HTML del email</Label>
-                <Button variant="ghost" size="sm" onClick={loadDefault} className="h-7 text-xs gap-1">
-                  <FileCode className="w-3 h-3" /> Cargar por defecto
-                </Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={formatDocument} className="h-7 text-xs gap-1">
+                    <Wand2 className="w-3 h-3" /> Formatear
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={loadDefault} className="h-7 text-xs gap-1">
+                    <FileCode className="w-3 h-3" /> Cargar por defecto
+                  </Button>
+                </div>
               </div>
-              <Textarea
-                value={html}
-                onChange={(e) => setHtml(e.target.value)}
-                className="font-mono text-xs min-h-[400px]"
-                placeholder="<html>...</html>"
-              />
+              <div className="rounded-lg overflow-hidden border border-border bg-[#0a0a0a]">
+                <Editor
+                  height="520px"
+                  defaultLanguage="html"
+                  language="html"
+                  value={html}
+                  onChange={(value) => setHtml(value ?? "")}
+                  onMount={handleEditorMount}
+                  theme="autopilot-dark"
+                  options={{
+                    fontSize: 13,
+                    fontFamily: "JetBrains Mono, Menlo, Monaco, monospace",
+                    minimap: { enabled: false },
+                    wordWrap: "on",
+                    tabSize: 2,
+                    insertSpaces: true,
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    autoClosingBrackets: "always",
+                    autoClosingQuotes: "always",
+                    autoClosingOvertype: "always",
+                    autoIndent: "full",
+                    bracketPairColorization: { enabled: true },
+                    guides: { bracketPairs: true, indentation: true },
+                    suggestOnTriggerCharacters: true,
+                    quickSuggestions: { other: true, comments: false, strings: true },
+                    scrollBeyondLastLine: false,
+                    renderWhitespace: "selection",
+                    smoothScrolling: true,
+                    padding: { top: 12, bottom: 12 },
+                  }}
+                />
+              </div>
               <p className="text-[11px] text-muted-foreground mt-1.5">
-                Pulsa <span className="text-foreground font-medium">Previsualizar</span> para abrir una pantalla aparte con el email renderizado en vivo.
+                Editor estilo VSCode: autocompletado de etiquetas, cierre automático y formato. Pulsa <span className="text-foreground font-medium">Previsualizar</span> para abrir el render en vivo.
               </p>
             </div>
 
