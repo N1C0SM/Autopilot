@@ -357,15 +357,17 @@ const Scan = () => {
       });
   }, [user]);
 
-  // Cargar físicos objetivo definidos por el admin
-  useEffect(() => {
-    supabase
+  // Cargar físicos objetivo: los públicos del admin + los del propio usuario
+  const loadGoalPresets = async () => {
+    const { data } = await (supabase as any)
       .from("goal_physiques")
-      .select("id, name, description, image_url")
-      .eq("visible", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => setGoalPresets((data as GoalPhysique[]) ?? []));
-  }, []);
+      .select("id, name, description, image_url, user_id")
+      .order("sort_order", { ascending: true });
+    setGoalPresets(((data as GoalPhysique[]) ?? []));
+  };
+  useEffect(() => {
+    loadGoalPresets();
+  }, [user?.id]);
 
   const handleShare = async () => {
     if (!shareRef.current) return;
