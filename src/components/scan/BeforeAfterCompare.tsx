@@ -33,9 +33,14 @@ export default function BeforeAfterCompare({
         .select("id, taken_at, current_photo_url, physique, attractiveness, potential")
         .eq("user_id", userId)
         .order("taken_at", { ascending: false })
-        .limit(1);
+        .limit(2);
       if (!active) return;
-      const row = (data && data[0]) || null;
+      const list = (data as Prev[]) || [];
+      // Si el más reciente es de hace <2 min, asumimos que es el scan actual que se acaba de guardar.
+      const recentIsCurrent =
+        list.length > 0 &&
+        Date.now() - new Date(list[0].taken_at).getTime() < 120_000;
+      const row = recentIsCurrent ? list[1] ?? null : list[0] ?? null;
       setPrev(row);
       setLoading(false);
     })();
