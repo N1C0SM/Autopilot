@@ -343,9 +343,25 @@ const ExerciseFormDialog = ({
             )}
           </div>
 
-          <Button className="w-full" onClick={() => onSave(form)} disabled={loading || !form.name?.trim()}>
-            {initial ? "Guardar cambios" : "Añadir ejercicio"}
-          </Button>
+          {(() => {
+            const allCriteria = (form.is_stable ?? true) && (form.is_progressable ?? true) && (form.high_tension ?? true);
+            return (
+              <>
+                {!allCriteria && (
+                  <p className="text-[11px] text-destructive text-center">
+                    Debe cumplir los 3 criterios obligatorios para añadirse a la biblioteca.
+                  </p>
+                )}
+                <Button
+                  className="w-full"
+                  onClick={() => onSave(form)}
+                  disabled={loading || !form.name?.trim() || !allCriteria}
+                >
+                  {initial ? "Guardar cambios" : "Añadir ejercicio"}
+                </Button>
+              </>
+            );
+          })()}
         </div>
       </DialogContent>
     </Dialog>
@@ -396,6 +412,10 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
   }, [exercises]);
 
   const handleSave = async (form: Partial<Exercise>) => {
+    if (!(form.is_stable ?? true) || !(form.is_progressable ?? true) || !(form.high_tension ?? true)) {
+      toast.error("El ejercicio debe ser estable, progresable y de alta tensión para añadirse a la biblioteca.");
+      return;
+    }
     setLoading(true);
     const payload = {
       name: form.name?.trim(),
