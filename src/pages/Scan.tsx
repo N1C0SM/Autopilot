@@ -290,6 +290,8 @@ const Scan = () => {
   const [userName, setUserName] = useState<string | null>(null);
   const [goalPresets, setGoalPresets] = useState<GoalPhysique[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [savedObjectiveUrl, setSavedObjectiveUrl] = useState<string | null>(null);
+  const [editingObjective, setEditingObjective] = useState(false);
 
   // Funnel state
   const [phase, setPhase] = useState<Phase>("upload");
@@ -314,6 +316,18 @@ const Scan = () => {
         setIsPaid(data?.payment_status === "paid");
         setUserEmail(data?.email ?? user.email ?? null);
         setUserName(data?.name ?? null);
+      });
+    (supabase as any)
+      .from("onboarding")
+      .select("goal_photo_url")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        const url = data?.goal_photo_url ?? null;
+        if (url) {
+          setSavedObjectiveUrl(url);
+          setObjectiveImg((prev) => prev ?? url);
+        }
       });
   }, [user]);
 
