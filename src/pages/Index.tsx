@@ -12,12 +12,14 @@ import {
   Wrench,
   Repeat,
 } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
 import PricingTiers from "@/components/PricingTiers";
 import AIScanSection from "@/components/AIScanSection";
@@ -66,6 +68,7 @@ const Index = () => {
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -142,8 +145,10 @@ const Index = () => {
       <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <span className="font-display text-xl font-bold text-gradient">Autopilot</span>
-          <div className="flex gap-2 sm:gap-3 items-center">
-            <button onClick={goToPricing} className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+
+          {/* Desktop nav */}
+          <div className="hidden sm:flex gap-3 items-center">
+            <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
@@ -152,6 +157,46 @@ const Index = () => {
             <Button variant="default" size="sm" onClick={() => navigate("/scan")}>
               Diagnóstico gratis
             </Button>
+          </div>
+
+          {/* Mobile nav */}
+          <div className="flex sm:hidden items-center gap-2">
+            <Button variant="default" size="sm" onClick={() => navigate("/scan")} className="text-xs px-3">
+              Diagnóstico
+            </Button>
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <button
+                  aria-label="Abrir menú"
+                  className="w-10 h-10 inline-flex items-center justify-center rounded-md border border-border bg-card/50 hover:bg-card transition-colors"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[78vw] max-w-xs p-6 flex flex-col gap-2">
+                <span className="font-display text-xl font-bold text-gradient mb-6">Autopilot</span>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); setTimeout(goToPricing, 50); }}
+                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                >
+                  Planes
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
+                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                >
+                  Iniciar sesión
+                </button>
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="mt-4 w-full"
+                  onClick={() => { setMobileMenuOpen(false); navigate("/scan"); }}
+                >
+                  Diagnóstico gratis
+                </Button>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </nav>
