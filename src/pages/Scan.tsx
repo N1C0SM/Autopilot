@@ -47,7 +47,7 @@ import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ExitIntentModal from "@/components/scan/ExitIntentModal";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
-import ScanHistoryStrip from "@/components/scan/ScanHistoryStrip";
+import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -901,6 +901,7 @@ const Scan = () => {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4 }}
             >
+              {user && <ScanProgressPanel userId={user.id} />}
               <div className="text-center max-w-3xl mx-auto mb-12">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-4">
                   Analiza tu físico con{" "}
@@ -1388,7 +1389,7 @@ const Scan = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              {user && <ScanHistoryStrip userId={user.id} />}
+              {user && <ScanProgressPanel userId={user.id} compact />}
               <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success" />
