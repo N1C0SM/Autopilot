@@ -275,7 +275,6 @@ const Scan = () => {
   const { userId: routeUserId } = useParams<{ userId?: string }>();
   const location = useLocation();
 
-  // Redirige usuarios logueados desde /scan al espacio personal /scan/user/:id.
   useEffect(() => {
     if (!user) {
       // Si intenta acceder al espacio personal sin sesión, mándalo a login.
@@ -284,9 +283,7 @@ const Scan = () => {
       }
       return;
     }
-    if (!routeUserId && location.pathname === "/scan") {
-      navigate(`/scan/user/${user.id}`, { replace: true });
-    } else if (routeUserId && routeUserId !== user.id) {
+    if (routeUserId && routeUserId !== user.id) {
       // Autorización: solo puedes ver tu propio progreso.
       navigate(`/scan/user/${user.id}`, { replace: true });
     }
