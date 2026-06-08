@@ -935,7 +935,7 @@ const Scan = () => {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4 }}
             >
-              {user && <ScanProgressPanel userId={user.id} />}
+              {user && routeUserId && <ScanProgressPanel userId={user.id} />}
               <div className="text-center max-w-3xl mx-auto mb-12">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-4">
                   Analiza tu físico con{" "}
@@ -1458,8 +1458,8 @@ const Scan = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              {user && <ScanProgressPanel userId={user.id} compact />}
-              {user && (
+              {user && routeUserId && <ScanProgressPanel userId={user.id} compact />}
+              {user && routeUserId && (
                 <BeforeAfterCompare
                   userId={user.id}
                   currentPhoto={currentImg}
