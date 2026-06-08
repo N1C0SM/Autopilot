@@ -848,6 +848,12 @@ const Scan = () => {
         <meta property="og:description" content="Análisis IA gratuito de tu físico con recomendaciones personalizadas." />
         <meta property="og:url" content="https://autopilotplan.com/scan" />
       </Helmet>
+      {phase === "result" && !isPaid && (
+        <>
+          <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
+          <ExitIntentModal onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
+        </>
+      )}
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[160px]" />
