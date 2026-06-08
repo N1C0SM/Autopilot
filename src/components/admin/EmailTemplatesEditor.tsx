@@ -361,7 +361,7 @@ export default function EmailTemplatesEditor() {
                   </Button>
                 </div>
               </div>
-              <div className="rounded-lg overflow-hidden border border-border bg-[#0a0a0a]">
+              <div className="rounded-lg overflow-hidden border border-border bg-[#1E1E3F]">
                 <Editor
                   height="520px"
                   defaultLanguage="html"
