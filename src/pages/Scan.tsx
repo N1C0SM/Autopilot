@@ -598,7 +598,7 @@ const Scan = () => {
       } catch {}
       setPendingResult(r);
       // Si el usuario ya está pagado y logueado, saltamos el formulario de lead
-      if (user && isPaid) {
+      if (user && isPaid && routeUserId) {
         setTimeout(() => {
           setResult(r);
           if (r.inferred_goal || r.inferred_focus || r.inferred_specific_goals?.length) {
