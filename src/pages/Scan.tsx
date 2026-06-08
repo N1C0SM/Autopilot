@@ -48,6 +48,7 @@ import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ExitIntentModal from "@/components/scan/ExitIntentModal";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
+import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -1426,6 +1427,17 @@ const Scan = () => {
               transition={{ duration: 0.5 }}
             >
               {user && <ScanProgressPanel userId={user.id} compact />}
+              {user && (
+                <BeforeAfterCompare
+                  userId={user.id}
+                  currentPhoto={currentImg}
+                  currentScores={{
+                    physique: result.physique,
+                    attractiveness: result.attractiveness,
+                    potential: result.potential,
+                  }}
+                />
+              )}
               <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success" />
