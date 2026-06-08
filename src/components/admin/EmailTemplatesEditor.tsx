@@ -309,7 +309,7 @@ export default function EmailTemplatesEditor() {
         body: { templateName: selected },
       });
       if (error) throw error;
-      setHtml(data.html ?? "");
+      setHtml(sanitizeEditableHtml(data.html ?? ""));
       setSubject(data.subject ?? "");
       toast.success("HTML por defecto cargado");
     } catch (e: any) {
