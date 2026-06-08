@@ -795,6 +795,53 @@ const Scan = () => {
     } catch { return null; }
   };
 
+  // Sube una foto subida por el usuario y la registra como objetivo personalizado
+  const [savingCustomGoal, setSavingCustomGoal] = useState(false);
+  const saveCustomGoalPreset = async (dataUrl: string) => {
+    if (!user) {
+      toast.error("Inicia sesión para guardar tus objetivos");
+      return;
+    }
+    const rawName = window.prompt(
+      "¿Cómo quieres llamar a este objetivo? (lo guardaremos en tus objetivos personalizados)",
+      ""
+    );
+    if (rawName === null) return; // cancelled
+    const name = rawName.trim().slice(0, 60);
+    if (!name) {
+      toast.error("Pon un nombre para guardarlo");
+      return;
+    }
+    setSavingCustomGoal(true);
+    try {
+      const publicUrl = await uploadDataUrl(dataUrl, "goal");
+      if (!publicUrl) throw new Error("upload failed");
+      const { data, error } = await (supabase as any)
+        .from("goal_physiques")
+        .insert({
+          user_id: user.id,
+          name,
+          description: "",
+          image_url: publicUrl,
+          visible: false,
+          sort_order: 999,
+        })
+        .select("id, name, description, image_url, user_id")
+        .single();
+      if (error) throw error;
+      const preset = data as GoalPhysique;
+      setGoalPresets((prev) => [...prev, preset]);
+      setObjectiveImg(preset.image_url);
+      setSelectedPresetId(preset.id);
+      toast.success(`"${preset.name}" guardado en tus objetivos`);
+    } catch (e) {
+      console.warn("save custom goal failed", e);
+      toast.error("No se pudo guardar tu objetivo");
+    } finally {
+      setSavingCustomGoal(false);
+    }
+  };
+
   // For logged-in users: save scan to history + auto-email diagnosis to account email
   const saveAndEmailScan = async (r: Result, opts: { silent?: boolean } = {}) => {
     if (!user || !userEmail) return;
