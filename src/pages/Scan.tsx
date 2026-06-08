@@ -340,6 +340,8 @@ const Scan = () => {
         setIsPaid(data?.payment_status === "paid");
         setUserEmail(data?.email ?? user.email ?? null);
         setUserName(data?.name ?? null);
+        setLeadEmail((prev) => prev || data?.email || user.email || "");
+        setLeadName((prev) => prev || data?.name || "");
       });
     (supabase as any)
       .from("onboarding")
@@ -600,7 +602,7 @@ const Scan = () => {
         );
       } catch {}
       setPendingResult(r);
-      // Si el usuario ya está pagado y logueado, saltamos el formulario de lead
+      // Solo en /scan/user/:id saltamos el formulario y aplicamos al plan automáticamente
       if (user && isPaid && routeUserId) {
         setTimeout(() => {
           setResult(r);
@@ -609,14 +611,9 @@ const Scan = () => {
           }
           saveAndEmailScan(r, { silent: false });
         }, 400);
-      } else if (user && isPaid) {
-        // Logueado y pagado pero en /scan general: muestra resultado sin tocar el plan
-        setTimeout(() => {
-          setResult(r);
-          saveAndEmailScan(r, { silent: true });
-        }, 400);
       } else if (user) {
-        // Logueado pero no pagado: guarda histórico/email, no aplica plan
+        // Logueado en /scan general: guarda histórico/email en segundo plano,
+        // pero NO saltamos el formulario — el usuario sigue confirmando email/nombre.
         saveAndEmailScan(r, { silent: true });
       }
       // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
@@ -651,10 +648,10 @@ const Scan = () => {
   // Transition analyzing -> lead once analysis is ready (min 3s for UX)
   useEffect(() => {
     if (phase !== "analyzing" || !pendingResult) return;
-    if (user && isPaid) return; // ya fue al result directamente
+    if (user && isPaid && routeUserId) return; // /scan/user: ya fue al result directamente
     const t = setTimeout(() => setPhase("lead"), 1200);
     return () => clearTimeout(t);
-  }, [phase, pendingResult, user, isPaid]);
+  }, [phase, pendingResult, user, isPaid, routeUserId]);
 
   const submitLead = async () => {
     if (!leadName.trim() || leadName.trim().length < 2) {
