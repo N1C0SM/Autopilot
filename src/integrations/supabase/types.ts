@@ -227,8 +227,11 @@ export type Database = {
           created_at: string
           exercise_type: string | null
           fatigue_level: string | null
+          high_tension: boolean
           id: string
           image_url: string | null
+          is_progressable: boolean
+          is_stable: boolean
           level: number | null
           load_level: string | null
           movement_pattern: string | null
@@ -246,8 +249,11 @@ export type Database = {
           created_at?: string
           exercise_type?: string | null
           fatigue_level?: string | null
+          high_tension?: boolean
           id?: string
           image_url?: string | null
+          is_progressable?: boolean
+          is_stable?: boolean
           level?: number | null
           load_level?: string | null
           movement_pattern?: string | null
@@ -265,8 +271,11 @@ export type Database = {
           created_at?: string
           exercise_type?: string | null
           fatigue_level?: string | null
+          high_tension?: boolean
           id?: string
           image_url?: string | null
+          is_progressable?: boolean
+          is_stable?: boolean
           level?: number | null
           load_level?: string | null
           movement_pattern?: string | null
