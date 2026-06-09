@@ -98,6 +98,11 @@ const Login = () => {
             ¿No tienes cuenta? <Link to="/signup" className="text-primary hover:underline">Regístrate</Link>
           </p>
         </form>
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          <Link to="/legal/terminos" className="hover:text-foreground">Términos</Link>
+          {" · "}
+          <Link to="/legal/privacidad" className="hover:text-foreground">Privacidad</Link>
+        </p>
       </div>
     </div>
   );
