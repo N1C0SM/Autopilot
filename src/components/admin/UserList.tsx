@@ -1,7 +1,12 @@
 import { useState } from "react";
-import { Users, Search, Shield, UserCog } from "lucide-react";
+import { Users, Search, Shield, UserCog, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 import type { Profile } from "@/pages/Admin";
 
 interface Props {
@@ -24,6 +29,7 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
   const trainerSet = trainerIds ?? new Set<string>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const matchesFilters = (u: Profile) => {
     const normalize = (s: string) =>
@@ -39,13 +45,24 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
     const haystack = normalize(`${u.name || ""} ${u.email} ${dateParts}`);
     const tokens = normalize(search).split(/\s+/).filter(Boolean);
     const matchesSearch = tokens.every((t) => haystack.includes(t));
-    if (filter === "all") return matchesSearch;
-    if (filter === "paid") return matchesSearch && u.payment_status === "paid";
-    if (filter === "unpaid") return matchesSearch && u.payment_status === "unpaid";
-    if (filter === "traveling") {
-      return matchesSearch && !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
+
+    // Date range filter on registration date
+    let inRange = true;
+    if (dateRange?.from) {
+      const from = new Date(dateRange.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(dateRange.to ?? dateRange.from);
+      to.setHours(23, 59, 59, 999);
+      inRange = d >= from && d <= to;
     }
-    return matchesSearch && u.plan_status === filter;
+
+    if (filter === "all") return matchesSearch && inRange;
+    if (filter === "paid") return matchesSearch && inRange && u.payment_status === "paid";
+    if (filter === "unpaid") return matchesSearch && inRange && u.payment_status === "unpaid";
+    if (filter === "traveling") {
+      return matchesSearch && inRange && !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
+    }
+    return matchesSearch && inRange && u.plan_status === filter;
   };
 
   const isTraveling = (u: Profile) => !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
@@ -136,6 +153,50 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
             className="pl-9"
           />
         </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "justify-start text-left font-normal min-w-[220px]",
+                !dateRange?.from && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  <>
+                    {dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} –{" "}
+                    {dateRange.to.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                  </>
+                ) : (
+                  dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+                )
+              ) : (
+                <span>Fecha de registro</span>
+              )}
+              {dateRange?.from && (
+                <X
+                  className="w-3.5 h-3.5 ml-auto opacity-60 hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDateRange(undefined);
+                  }}
+                />
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
         <div className="flex gap-2 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button
