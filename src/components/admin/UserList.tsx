@@ -153,6 +153,50 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
             className="pl-9"
           />
         </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "justify-start text-left font-normal min-w-[220px]",
+                !dateRange?.from && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  <>
+                    {dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} –{" "}
+                    {dateRange.to.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                  </>
+                ) : (
+                  dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+                )
+              ) : (
+                <span>Fecha de registro</span>
+              )}
+              {dateRange?.from && (
+                <X
+                  className="w-3.5 h-3.5 ml-auto opacity-60 hover:opacity-100"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDateRange(undefined);
+                  }}
+                />
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
         <div className="flex gap-2 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button
