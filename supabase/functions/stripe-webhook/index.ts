@@ -117,7 +117,7 @@ serve(async (req) => {
       if (customerEmail) {
         const { data: existingProfile } = await supabaseAdmin
           .from("profiles")
-          .select("plan_status")
+          .select("plan_status, name")
           .eq("email", customerEmail)
           .single();
 
@@ -139,6 +139,23 @@ serve(async (req) => {
 
         await supabaseAdmin.from("profiles").update(updates).eq("email", customerEmail);
         console.log(`Checkout completed for ${customerEmail}, mode: ${session.mode}`);
+
+        // Send welcome email (idempotent per Stripe session)
+        try {
+          await supabaseAdmin.functions.invoke("send-transactional-email", {
+            body: {
+              templateName: "welcome-paid",
+              recipientEmail: customerEmail,
+              idempotencyKey: `welcome-paid-${session.id}`,
+              templateData: {
+                name: existingProfile?.name || "",
+                dashboardUrl: "https://autopilotplan.com/dashboard",
+              },
+            },
+          });
+        } catch (e) {
+          console.error("Failed to send welcome-paid email", e);
+        }
       }
     }
 
