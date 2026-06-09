@@ -28,7 +28,15 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
   const matchesFilters = (u: Profile) => {
     const normalize = (s: string) =>
       s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const haystack = normalize(`${u.name || ""} ${u.email}`);
+    const d = new Date(u.created_at);
+    const dateParts = [
+      d.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }),
+      d.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }),
+      d.toLocaleDateString("es-ES"),
+      d.toISOString().slice(0, 10),
+      String(d.getFullYear()),
+    ].join(" ");
+    const haystack = normalize(`${u.name || ""} ${u.email} ${dateParts}`);
     const tokens = normalize(search).split(/\s+/).filter(Boolean);
     const matchesSearch = tokens.every((t) => haystack.includes(t));
     if (filter === "all") return matchesSearch;
