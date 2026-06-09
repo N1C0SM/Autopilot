@@ -143,60 +143,59 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
       </div>
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre, email o fecha de registro..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "justify-start text-left font-normal min-w-[220px]",
-                !dateRange?.from && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="w-4 h-4 mr-2" />
-              {dateRange?.from ? (
-                dateRange.to ? (
-                  <>
-                    {dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} –{" "}
-                    {dateRange.to.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-                  </>
-                ) : (
-                  dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
-                )
-              ) : (
-                <span>Fecha de registro</span>
-              )}
-              {dateRange?.from && (
-                <X
-                  className="w-3.5 h-3.5 ml-auto opacity-60 hover:opacity-100"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDateRange(undefined);
-                  }}
-                />
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-              initialFocus
-              className={cn("p-3 pointer-events-auto")}
+      <div className="space-y-3 mb-6">
+        {/* Row 1: search + date picker */}
+        <div className="flex flex-col md:flex-row gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre o email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
             />
-          </PopoverContent>
-        </Popover>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "justify-start text-left font-normal md:w-[240px] shrink-0",
+                  !dateRange?.from && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="w-4 h-4 mr-2 shrink-0" />
+                <span className="truncate">
+                  {dateRange?.from
+                    ? dateRange.to
+                      ? `${dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`
+                      : dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+                    : "Fecha de registro"}
+                </span>
+                {dateRange?.from && (
+                  <X
+                    className="w-3.5 h-3.5 ml-auto opacity-60 hover:opacity-100 shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDateRange(undefined);
+                    }}
+                  />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        {/* Row 2: status pills */}
         <div className="flex gap-2 flex-wrap">
           {STATUS_FILTERS.map((f) => (
             <button
