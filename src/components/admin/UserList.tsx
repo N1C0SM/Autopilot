@@ -26,7 +26,10 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
   const [filter, setFilter] = useState<string>("all");
 
   const matchesFilters = (u: Profile) => {
-    const matchesSearch = u.email.toLowerCase().includes(search.toLowerCase());
+    const q = search.toLowerCase();
+    const matchesSearch =
+      u.email.toLowerCase().includes(q) ||
+      (u.name || "").toLowerCase().includes(q);
     if (filter === "all") return matchesSearch;
     if (filter === "paid") return matchesSearch && u.payment_status === "paid";
     if (filter === "unpaid") return matchesSearch && u.payment_status === "unpaid";
@@ -55,14 +58,17 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
           <UserCog className="w-4 h-4 text-amber-400" />
         ) : (
           <span className="text-sm font-bold text-muted-foreground">
-            {u.email.charAt(0).toUpperCase()}
+            {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
           </span>
         )}
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">{u.email}</div>
-        <div className="text-xs text-muted-foreground">
+        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+          {u.name?.trim() || u.email}
+        </div>
+        <div className="text-xs text-muted-foreground truncate">
+          {u.name?.trim() ? u.email + " · " : ""}
           Registrado {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
         </div>
       </div>
@@ -115,7 +121,7 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por email..."
+            placeholder="Buscar por nombre o email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"

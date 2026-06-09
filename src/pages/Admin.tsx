@@ -21,6 +21,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 export interface Profile {
   user_id: string;
   email: string;
+  name?: string | null;
   plan_status: string;
   payment_status: string;
   created_at: string;
