@@ -26,10 +26,11 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
   const [filter, setFilter] = useState<string>("all");
 
   const matchesFilters = (u: Profile) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      u.email.toLowerCase().includes(q) ||
-      (u.name || "").toLowerCase().includes(q);
+    const normalize = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const haystack = normalize(`${u.name || ""} ${u.email}`);
+    const tokens = normalize(search).split(/\s+/).filter(Boolean);
+    const matchesSearch = tokens.every((t) => haystack.includes(t));
     if (filter === "all") return matchesSearch;
     if (filter === "paid") return matchesSearch && u.payment_status === "paid";
     if (filter === "unpaid") return matchesSearch && u.payment_status === "unpaid";
