@@ -398,7 +398,10 @@ const Onboarding = () => {
 
   if (showPaywall) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div
+        className="min-h-screen bg-background flex items-center justify-center px-4 py-8 md:py-12"
+        style={{ paddingTop: "max(2rem, var(--safe-top, 0px))", paddingBottom: "max(2rem, var(--safe-bottom, 0px))" }}
+      >
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
             <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
@@ -426,7 +429,10 @@ const Onboarding = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div
+      className="min-h-screen bg-background flex items-start md:items-center justify-center px-4 py-6 md:py-12"
+      style={{ paddingTop: "max(1.5rem, var(--safe-top, 0px))", paddingBottom: "max(1.5rem, var(--safe-bottom, 0px))" }}
+    >
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
