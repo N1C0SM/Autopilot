@@ -25,6 +25,10 @@ import SettingsPanel from "@/components/SettingsPanel";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import ReferralShare from "@/components/ReferralShare";
 import { exportPlanPDF } from "@/lib/exportPlanPDF";
+import MobileAppShell from "@/components/mobile/MobileAppShell";
+import type { MobileTab } from "@/components/mobile/MobileTabBar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
 
 export interface Profile {
   user_id: string;
@@ -49,6 +53,7 @@ interface Meal {
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [profileName, setProfileName] = useState("");
   const [profileAvatar, setProfileAvatar] = useState("");
   const [planStatus, setPlanStatus] = useState<string>("onboarding");
@@ -58,7 +63,7 @@ const Dashboard = () => {
   const [macros, setMacros] = useState<Macros | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState<UserSection>("home");
+  const [section, setSection] = useState<MobileTab>("home");
   const [profileCreatedAt, setProfileCreatedAt] = useState<string>("");
   const [completedDays, setCompletedDays] = useState(0);
 
@@ -199,12 +204,13 @@ const Dashboard = () => {
     toast.success("Solicitud enviada. Tu entrenador te enviará un enlace de Google Meet por el chat.");
   };
 
-  const SECTION_LABELS: Record<UserSection, string> = {
+  const SECTION_LABELS: Record<MobileTab, string> = {
     home: "Inicio",
     training: "Entrenamiento",
     nutrition: "Nutrición",
     chat: "Chat",
     settings: "Ajustes",
+    progress: "Progreso",
   };
 
   return (
