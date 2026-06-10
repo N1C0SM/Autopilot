@@ -4,6 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Native app polish (Capacitor / mobile web) */
+html, body, #root {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+@supports (padding: env(safe-area-inset-top)) {
+  :root {
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+}
+:root {
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+}
+
 /* FullCalendar dark theme tweaks */
 .fc-themed .fc {
   --fc-border-color: hsl(var(--border));
