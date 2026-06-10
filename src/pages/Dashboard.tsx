@@ -327,8 +327,7 @@ const Dashboard = () => {
               AI Scan
             </Button>
           </div>
-          <WeeklyProgress />
-
+          <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
           <ProgressPhotos userId={user.id} />
         </div>
       )}
