@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Signup from "./pages/Signup";
+import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -25,6 +26,9 @@ import EmailPreview from "./pages/EmailPreview";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { isNativeApp } from "@/lib/platform";
+
+const RootRoute = () => (isNativeApp() ? <Welcome /> : <Index />);
 
 const DashboardRedirect = () => {
   const { user, loading } = useAuth();
@@ -49,7 +53,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<RootRoute />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/scan" element={<Scan />} />
