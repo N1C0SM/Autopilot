@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: "autopilotv2",
   webDir: "dist",
   server: {
-    url: "https://aa0029da-0015-4c05-a2b5-03e61df0f87c.lovableproject.com?forceHideBadge=true",
+    url: "https://aa0029da-0015-4c05-a2b5-03e61df0f87c.lovableproject.com/?forceHideBadge=true&native=1",
     cleartext: true,
   },
   plugins: {
