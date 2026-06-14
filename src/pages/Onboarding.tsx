@@ -100,6 +100,8 @@ const focusToEquipment = (focus: string) => {
   return "Mixto";
 };
 
+const QUIZ_STORAGE_KEY = "autopilot_quiz";
+
 const Onboarding = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -140,6 +142,27 @@ const Onboarding = () => {
       window.history.replaceState({}, "", "/onboarding");
     }
   }, []);
+
+  // Hidratar el cuestionario si el usuario lo rellenó antes de registrarse.
+  // Tras verificar email vuelve aquí y le mostramos directamente el resumen.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(QUIZ_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Date.now() - (parsed.createdAt || 0) > 24 * 60 * 60 * 1000) {
+        sessionStorage.removeItem(QUIZ_STORAGE_KEY);
+        return;
+      }
+      if (parsed.data) {
+        setData((d) => ({ ...d, ...parsed.data }));
+        setTimeout(() => setStep(99), 0);
+        if (user) {
+          toast.success("Bienvenido, confirma tu plan para crearlo");
+        }
+      }
+    } catch {}
+  }, [user]);
 
   // Pre-rellenar desde el AI Scan si existe en sessionStorage
   const [scanPrefill, setScanPrefill] = useState<{
@@ -272,7 +295,20 @@ const Onboarding = () => {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
+    // Si el usuario aún no está registrado: guardamos el cuestionario
+    // y mandamos a signup. Tras verificar email vuelve aquí hidratado.
+    if (!user) {
+      try {
+        sessionStorage.setItem(
+          QUIZ_STORAGE_KEY,
+          JSON.stringify({ data, createdAt: Date.now() })
+        );
+      } catch {}
+      track("onboarding_complete", { paid: false, anonymous: true });
+      toast.success("Crea tu cuenta para guardar tu plan");
+      navigate("/signup?from=quiz");
+      return;
+    }
     setLoading(true);
 
     const busyEveningDays = new Set<number>();
@@ -323,6 +359,8 @@ const Onboarding = () => {
     );
 
     if (!error) {
+      // Limpiamos el cuestionario anónimo si venía del flujo pre-signup.
+      try { sessionStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
       const { data: profile } = await supabase
