@@ -361,6 +361,8 @@ const Onboarding = () => {
     );
 
     if (!error) {
+      // Limpiamos el cuestionario anónimo si venía del flujo pre-signup.
+      try { sessionStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
       const { data: profile } = await supabase
