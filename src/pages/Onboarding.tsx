@@ -145,7 +145,6 @@ const Onboarding = () => {
 
   // Hidratar el cuestionario si el usuario lo rellenó antes de registrarse.
   // Tras verificar email vuelve aquí y le mostramos directamente el resumen.
-  const [hydratedFromQuiz, setHydratedFromQuiz] = useState(false);
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(QUIZ_STORAGE_KEY);
@@ -157,7 +156,6 @@ const Onboarding = () => {
       }
       if (parsed.data) {
         setData((d) => ({ ...d, ...parsed.data }));
-        setHydratedFromQuiz(true);
         setTimeout(() => setStep(99), 0);
         if (user) {
           toast.success("Bienvenido, confirma tu plan para crearlo");
