@@ -66,6 +66,7 @@ const Index = () => {
     { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null },
   ]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
+  const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -86,6 +87,10 @@ const Index = () => {
           trainer_bio: s.trainer_bio || "",
         });
         if ((s as any).contact_email) setContactEmail((s as any).contact_email);
+        setHeroVideo({
+          url: (s as any).hero_video_url || "",
+          poster: (s as any).hero_video_poster_url || "",
+        });
       }
       const row = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
       const paid = Number(row?.paid_count ?? 0);
