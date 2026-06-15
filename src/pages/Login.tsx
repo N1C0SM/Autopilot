@@ -7,7 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { lovable } from "@/integrations/lovable";
+import { Loader2, Apple } from "lucide-react";
 
 const Login = () => {
   const [identifier, setIdentifier] = useState("");
@@ -17,6 +18,15 @@ const Login = () => {
   const navigate = useNavigate();
 
   const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+  const handleApple = async () => {
+    const result = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: `${window.location.origin}/dashboard`,
+    });
+    if (result.error) {
+      toast.error("No se pudo iniciar sesión con Apple");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,6 +103,13 @@ const Login = () => {
           </div>
           <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
             {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Iniciando sesión...</> : "Iniciar Sesión"}
+          </Button>
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
+          </div>
+          <Button type="button" variant="outline" size="lg" className="w-full" onClick={handleApple}>
+            <Apple className="w-4 h-4 mr-2" /> Continuar con Apple
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta? <Link to="/signup" className="text-primary hover:underline">Regístrate</Link>
