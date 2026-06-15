@@ -31,8 +31,8 @@ export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
               <Zap className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold truncate">Tu plan personalizado · 7 días gratis</div>
-              <div className="text-[10px] text-muted-foreground truncate">19€/mes · cancela cuando quieras</div>
+              <div className="text-xs font-semibold truncate">Tu plan personalizado · 1ª semana gratis</div>
+              <div className="text-[10px] text-muted-foreground truncate">Desde 29€/mes · garantía 30 días · cancela cuando quieras</div>
             </div>
             <button
               onClick={onCta}

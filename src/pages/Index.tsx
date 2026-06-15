@@ -272,6 +272,10 @@ const Index = () => {
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 60 segundos</span>
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 100% privado</span>
               </div>
+              <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <ShieldCheck className="w-3.5 h-3.5 text-success" />
+                <span>Garantía 30 días · sin permanencia · cancelas en 1 clic</span>
+              </div>
             </motion.div>
 
             {/* Trust strip */}
