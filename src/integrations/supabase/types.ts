@@ -863,6 +863,8 @@ export type Database = {
         Row: {
           contact_email: string | null
           created_at: string
+          hero_video_poster_url: string | null
+          hero_video_url: string | null
           id: string
           payment_link_full_live: string | null
           payment_link_full_test: string | null
@@ -895,6 +897,8 @@ export type Database = {
         Insert: {
           contact_email?: string | null
           created_at?: string
+          hero_video_poster_url?: string | null
+          hero_video_url?: string | null
           id?: string
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
@@ -927,6 +931,8 @@ export type Database = {
         Update: {
           contact_email?: string | null
           created_at?: string
+          hero_video_poster_url?: string | null
+          hero_video_url?: string | null
           id?: string
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
@@ -1397,6 +1403,8 @@ export type Database = {
         Args: never
         Returns: {
           contact_email: string
+          hero_video_poster_url: string
+          hero_video_url: string
           trainer_bio: string
           trainer_name: string
           trainer_photo_url: string
