@@ -68,7 +68,7 @@ const SiteContentEditor = () => {
 
   const saveHero = async () => {
     setSaving(true);
-    const { error } = await supabase.from("settings").update(hero).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update(hero as any).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Vídeo del hero actualizado");
     setSaving(false);
   };
@@ -92,7 +92,7 @@ const SiteContentEditor = () => {
       const url = supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
       const next = { ...hero, hero_video_url: url };
       setHero(next);
-      await supabase.from("settings").update(next).eq("id", settingsId);
+      await supabase.from("settings").update(next as any).eq("id", settingsId);
       toast.success("Vídeo subido y publicado");
     } catch (err: any) {
       toast.error(err.message || "Error subiendo vídeo");
@@ -109,7 +109,7 @@ const SiteContentEditor = () => {
       const url = await uploadImage(file, "hero");
       const next = { ...hero, hero_video_poster_url: url };
       setHero(next);
-      await supabase.from("settings").update(next).eq("id", settingsId);
+      await supabase.from("settings").update(next as any).eq("id", settingsId);
       toast.success("Miniatura actualizada");
     } catch (err: any) {
       toast.error(err.message);
@@ -122,7 +122,7 @@ const SiteContentEditor = () => {
     if (!confirm("¿Quitar el vídeo del hero?")) return;
     const next = { hero_video_url: "", hero_video_poster_url: "" };
     setHero(next);
-    await supabase.from("settings").update(next).eq("id", settingsId);
+    await supabase.from("settings").update(next as any).eq("id", settingsId);
     toast.success("Vídeo eliminado del hero");
   };
 
