@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, Mail } from "lucide-react";
+import { Loader2, CheckCircle, Mail, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
+import { lovable } from "@/integrations/lovable";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -234,6 +235,24 @@ const Signup = () => {
             ) : (
               "Crear cuenta"
             )}
+          </Button>
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={async () => {
+              const result = await lovable.auth.signInWithOAuth("apple", {
+                redirect_uri: `${window.location.origin}/dashboard`,
+              });
+              if (result.error) toast.error("No se pudo continuar con Apple");
+            }}
+          >
+            <Apple className="w-4 h-4 mr-2" /> Continuar con Apple
           </Button>
           <p className="text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta? <Link to="/login" className="text-primary hover:underline">Inicia sesión</Link>
