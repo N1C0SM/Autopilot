@@ -66,6 +66,7 @@ const Index = () => {
     { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null },
   ]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
+  const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -86,6 +87,10 @@ const Index = () => {
           trainer_bio: s.trainer_bio || "",
         });
         if ((s as any).contact_email) setContactEmail((s as any).contact_email);
+        setHeroVideo({
+          url: (s as any).hero_video_url || "",
+          poster: (s as any).hero_video_poster_url || "",
+        });
       }
       const row = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
       const paid = Number(row?.paid_count ?? 0);
@@ -277,6 +282,31 @@ const Index = () => {
                 <span>Garantía 30 días · sin permanencia · cancelas en 1 clic</span>
               </div>
             </motion.div>
+
+            {/* Hero video (admin-managed) */}
+            {heroVideo.url && (
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="mt-12 mx-auto max-w-2xl"
+              >
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-black premium-shadow ring-1 ring-primary/20">
+                  <video
+                    key={heroVideo.url}
+                    src={heroVideo.url}
+                    poster={heroVideo.poster || undefined}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls
+                    preload="metadata"
+                    className="w-full aspect-video object-cover bg-black"
+                  />
+                </div>
+              </motion.div>
+            )}
 
             {/* Trust strip */}
             <motion.div

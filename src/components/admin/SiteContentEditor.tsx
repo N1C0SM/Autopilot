@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, User, Star, Film, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Testimonial {
@@ -30,13 +30,16 @@ const SiteContentEditor = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "" });
+  const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [posterUploading, setPosterUploading] = useState(false);
   const [settingsId, setSettingsId] = useState<string>("");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -45,6 +48,10 @@ const SiteContentEditor = () => {
         trainer_name: s.trainer_name || "Nicolás",
         trainer_photo_url: s.trainer_photo_url || "",
         trainer_bio: s.trainer_bio || "",
+      });
+      setHero({
+        hero_video_url: (s as any).hero_video_url || "",
+        hero_video_poster_url: (s as any).hero_video_poster_url || "",
       });
     }
     if (t) setTestimonials(t as Testimonial[]);
@@ -57,6 +64,66 @@ const SiteContentEditor = () => {
     const { error } = await supabase.from("settings").update(trainer).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Entrenador actualizado");
     setSaving(false);
+  };
+
+  const saveHero = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("settings").update(hero as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Vídeo del hero actualizado");
+    setSaving(false);
+  };
+
+  const onHeroVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("El vídeo debe pesar menos de 100 MB");
+      return;
+    }
+    setVideoUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "mp4";
+      const path = `hero/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("site-assets").upload(path, file, {
+        upsert: false,
+        contentType: file.type || "video/mp4",
+      });
+      if (error) throw error;
+      const url = supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
+      const next = { ...hero, hero_video_url: url };
+      setHero(next);
+      await supabase.from("settings").update(next as any).eq("id", settingsId);
+      toast.success("Vídeo subido y publicado");
+    } catch (err: any) {
+      toast.error(err.message || "Error subiendo vídeo");
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const onHeroPoster = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPosterUploading(true);
+    try {
+      const url = await uploadImage(file, "hero");
+      const next = { ...hero, hero_video_poster_url: url };
+      setHero(next);
+      await supabase.from("settings").update(next as any).eq("id", settingsId);
+      toast.success("Miniatura actualizada");
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setPosterUploading(false);
+    }
+  };
+
+  const removeHeroVideo = async () => {
+    if (!confirm("¿Quitar el vídeo del hero?")) return;
+    const next = { hero_video_url: "", hero_video_poster_url: "" };
+    setHero(next);
+    await supabase.from("settings").update(next as any).eq("id", settingsId);
+    toast.success("Vídeo eliminado del hero");
   };
 
   const onTrainerPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,6 +174,77 @@ const SiteContentEditor = () => {
 
   return (
     <div className="space-y-8">
+      {/* Vídeo del Hero */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Film className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Vídeo del Hero (landing)</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Sube un vídeo corto (15–45s, MP4/WebM, máx 100MB) que se reproducirá en silencio en la portada. Mejora notablemente la conversión.
+        </p>
+
+        {hero.hero_video_url ? (
+          <div className="rounded-xl overflow-hidden border border-border bg-black">
+            <video
+              key={hero.hero_video_url}
+              src={hero.hero_video_url}
+              poster={hero.hero_video_poster_url || undefined}
+              controls
+              playsInline
+              className="w-full max-h-72 object-contain bg-black"
+            />
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
+            Aún no hay vídeo. Sin vídeo, en el hero se mostrará un fondo limpio sin reproductor.
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <label className={`cursor-pointer ${videoUploading ? "opacity-60 pointer-events-none" : ""}`}>
+            <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onHeroVideo} />
+            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90">
+              {videoUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {videoUploading ? "Subiendo..." : hero.hero_video_url ? "Reemplazar vídeo" : "Subir vídeo"}
+            </span>
+          </label>
+          <label className={`cursor-pointer ${posterUploading ? "opacity-60 pointer-events-none" : ""}`}>
+            <input type="file" accept="image/*" className="hidden" onChange={onHeroPoster} />
+            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary">
+              {posterUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+              {posterUploading ? "Subiendo..." : "Subir miniatura (poster)"}
+            </span>
+          </label>
+          {hero.hero_video_url && (
+            <button
+              onClick={removeHeroVideo}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary text-destructive"
+            >
+              <X className="w-3.5 h-3.5" /> Quitar vídeo
+            </button>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">O pega una URL de vídeo (MP4 directo)</Label>
+          <Input
+            placeholder="https://..."
+            value={hero.hero_video_url}
+            onChange={(e) => setHero((h) => ({ ...h, hero_video_url: e.target.value }))}
+          />
+          <Label className="text-xs">URL de miniatura (opcional)</Label>
+          <Input
+            placeholder="https://..."
+            value={hero.hero_video_poster_url}
+            onChange={(e) => setHero((h) => ({ ...h, hero_video_poster_url: e.target.value }))}
+          />
+          <Button size="sm" onClick={saveHero} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar URLs"}
+          </Button>
+        </div>
+      </div>
+
       {/* Entrenador */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
