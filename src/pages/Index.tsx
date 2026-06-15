@@ -283,6 +283,31 @@ const Index = () => {
               </div>
             </motion.div>
 
+            {/* Hero video (admin-managed) */}
+            {heroVideo.url && (
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                className="mt-12 mx-auto max-w-2xl"
+              >
+                <div className="relative rounded-2xl overflow-hidden border border-border bg-black premium-shadow ring-1 ring-primary/20">
+                  <video
+                    key={heroVideo.url}
+                    src={heroVideo.url}
+                    poster={heroVideo.poster || undefined}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls
+                    preload="metadata"
+                    className="w-full aspect-video object-cover bg-black"
+                  />
+                </div>
+              </motion.div>
+            )}
+
             {/* Trust strip */}
             <motion.div
               initial={{ opacity: 0 }}
