@@ -61,9 +61,9 @@ const faqs = [
 const Index = () => {
   const navigate = useNavigate();
   const [testimonials, setTestimonials] = useState([
-    { name: "María G.", result: "−7 kg en 4 meses", text: "Lo que más valoro no es el plan, es saber que puedo escribir cuando algo no encaja y al día siguiente está ajustado.", photo_url: null as string | null },
-    { name: "Carlos R.", result: "+6 kg de músculo", text: "Antes empezaba algo nuevo cada mes. Ahora sigo el mismo camino y lo afinamos juntos.", photo_url: null },
-    { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null },
+    { name: "María G.", result: "−7 kg en 4 meses", text: "Lo que más valoro no es el plan, es saber que puedo escribir cuando algo no encaja y al día siguiente está ajustado.", photo_url: null as string | null, photo_before_url: null as string | null, photo_after_url: null as string | null },
+    { name: "Carlos R.", result: "+6 kg de músculo", text: "Antes empezaba algo nuevo cada mes. Ahora sigo el mismo camino y lo afinamos juntos.", photo_url: null, photo_before_url: null, photo_after_url: null },
+    { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null, photo_before_url: null, photo_after_url: null },
   ]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
@@ -74,7 +74,7 @@ const Index = () => {
   useEffect(() => {
     (async () => {
       const [{ data: t }, settingsRes, statsRes] = await Promise.all([
-        supabase.from("site_testimonials").select("name, result, text, photo_url").eq("visible", true).order("sort_order"),
+        supabase.from("site_testimonials").select("name, result, text, photo_url, photo_before_url, photo_after_url").eq("visible", true).order("sort_order"),
         (supabase.rpc as any)("get_public_settings"),
         (supabase.rpc as any)("get_public_stats"),
       ]);
