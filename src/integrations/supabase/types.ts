@@ -1418,6 +1418,24 @@ export type Database = {
           paid_count: number
         }[]
       }
+      get_trainer_assigned_profiles: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          payment_status: string
+          plan_status: string
+          referral_code: string
+          referred_by: string
+          travel_equipment: string
+          travel_mode_until: string
+          updated_at: string
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
