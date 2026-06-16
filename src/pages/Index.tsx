@@ -642,6 +642,19 @@ const Index = () => {
                     <Star key={j} className="w-4 h-4 fill-primary text-primary" />
                   ))}
                 </div>
+                {featured.photo_before_url && featured.photo_after_url && (
+                  <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center max-w-md mx-auto mb-8">
+                    <div className="text-center">
+                      <img src={featured.photo_before_url} alt={`${featured.name} antes`} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-xl border border-border" />
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1.5">Antes</div>
+                    </div>
+                    <div className="text-[11px] uppercase tracking-widest text-primary font-semibold">→</div>
+                    <div className="text-center">
+                      <img src={featured.photo_after_url} alt={`${featured.name} después`} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-xl border border-primary/40 glow-shadow" />
+                      <div className="text-[10px] uppercase tracking-wider text-primary mt-1.5">Después</div>
+                    </div>
+                  </div>
+                )}
                 <p className="text-2xl sm:text-3xl font-display font-medium leading-snug mb-8">
                   "{featured.text}"
                 </p>
@@ -665,6 +678,18 @@ const Index = () => {
               {rest.map((t, i) => (
                 <ScrollReveal key={t.name + i} delay={i * 0.1}>
                   <div className="bg-card border border-border rounded-2xl p-5 h-full">
+                    {t.photo_before_url && t.photo_after_url && (
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div>
+                          <img src={t.photo_before_url} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1 text-center">Antes</div>
+                        </div>
+                        <div>
+                          <img src={t.photo_after_url} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg border border-primary/40" />
+                          <div className="text-[9px] uppercase tracking-wider text-primary mt-1 text-center">Después</div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-0.5 mb-3">
                       {Array.from({ length: 5 }).map((_, j) => (
                         <Star key={j} className="w-3.5 h-3.5 fill-primary text-primary" />
