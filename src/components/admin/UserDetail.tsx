@@ -443,6 +443,42 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} />
           </div>}
 
+          {/* Trainer assignment */}
+          {!restricted && (
+            <div className="bg-card rounded-xl p-5 border border-border">
+              <div className="flex items-center gap-3 mb-3">
+                <User2 className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium text-sm">Entrenador asignado</div>
+                  <div className="text-xs text-muted-foreground">
+                    {trainers.length === 0
+                      ? "Aún no hay entrenadores. Crea uno desde la sección Entrenadores."
+                      : "Asigna o cambia al entrenador responsable de este usuario."}
+                  </div>
+                </div>
+              </div>
+              {trainers.length > 0 && (
+                <Select
+                  value={assignedTrainerId || "__none__"}
+                  onValueChange={assignTrainer}
+                  disabled={trainerSaving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin entrenador —</SelectItem>
+                    {trainers.map((t) => (
+                      <SelectItem key={t.user_id} value={t.user_id}>
+                        {t.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
           {onboarding ? (
             <div className="bg-card rounded-xl p-6 border border-border">
               <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground">Datos del Onboarding</h2>
