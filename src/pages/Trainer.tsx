@@ -124,7 +124,7 @@ const TrainerPage = () => {
         .eq("trainer_id", user.id);
       const ids = (assignments || []).map((a: any) => a.user_id);
       if (ids.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("*").in("user_id", ids);
+        const { data: profiles } = await (supabase.rpc as any)("get_trainer_assigned_profiles");
         if (profiles) setUsers(profiles as unknown as Profile[]);
       }
       setLoading(false);
