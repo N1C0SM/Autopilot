@@ -14,6 +14,8 @@ interface Testimonial {
   result: string;
   text: string;
   photo_url: string | null;
+  photo_before_url: string | null;
+  photo_after_url: string | null;
   sort_order: number;
   visible: boolean;
 }
@@ -150,8 +152,12 @@ const SiteContentEditor = () => {
 
   const saveTestimonial = async (t: Testimonial) => {
     const { error } = await supabase.from("site_testimonials").update({
-      name: t.name, result: t.result, text: t.text, photo_url: t.photo_url, sort_order: t.sort_order, visible: t.visible,
-    }).eq("id", t.id);
+      name: t.name, result: t.result, text: t.text,
+      photo_url: t.photo_url,
+      photo_before_url: t.photo_before_url,
+      photo_after_url: t.photo_after_url,
+      sort_order: t.sort_order, visible: t.visible,
+    } as any).eq("id", t.id);
     if (error) toast.error("Error al guardar"); else toast.success("Guardado");
   };
 
@@ -167,6 +173,19 @@ const SiteContentEditor = () => {
     try {
       const url = await uploadImage(file, "testimonials");
       updateTestimonial(id, { photo_url: url });
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const onTestBeforeAfter = async (
+    id: string,
+    field: "photo_before_url" | "photo_after_url",
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadImage(file, "testimonials");
+      updateTestimonial(id, { [field]: url } as Partial<Testimonial>);
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -306,6 +325,39 @@ const SiteContentEditor = () => {
                 <Input placeholder="Resultado (-8kg en 3 meses)" value={t.result} onChange={(e) => updateTestimonial(t.id, { result: e.target.value })} />
               </div>
               <Textarea rows={3} placeholder="Texto del testimonio" value={t.text} onChange={(e) => updateTestimonial(t.id, { text: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+                <div className="space-y-2">
+                  <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Antes</Label>
+                  {t.photo_before_url ? (
+                    <img src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-md" />
+                  ) : (
+                    <div className="w-full aspect-[3/4] rounded-md bg-secondary/50 flex items-center justify-center text-[11px] text-muted-foreground">Sin foto</div>
+                  )}
+                  <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 w-full justify-center">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_before_url", e)} />
+                    <Upload className="w-3 h-3" /> {t.photo_before_url ? "Cambiar" : "Subir"}
+                  </label>
+                  {t.photo_before_url && (
+                    <button onClick={() => updateTestimonial(t.id, { photo_before_url: "" })} className="text-[10px] text-muted-foreground hover:text-destructive">Quitar</button>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[11px] uppercase tracking-wider text-primary">Después</Label>
+                  {t.photo_after_url ? (
+                    <img src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-md" />
+                  ) : (
+                    <div className="w-full aspect-[3/4] rounded-md bg-secondary/50 flex items-center justify-center text-[11px] text-muted-foreground">Sin foto</div>
+                  )}
+                  <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 w-full justify-center">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_after_url", e)} />
+                    <Upload className="w-3 h-3" /> {t.photo_after_url ? "Cambiar" : "Subir"}
+                  </label>
+                  {t.photo_after_url && (
+                    <button onClick={() => updateTestimonial(t.id, { photo_after_url: "" })} className="text-[10px] text-muted-foreground hover:text-destructive">Quitar</button>
+                  )}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground">Si subes Antes y Después, en la landing se mostrarán como par comparativo.</p>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => saveTestimonial(t)}>Guardar</Button>
                 <Button size="sm" variant="ghost" onClick={() => deleteTestimonial(t.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
 import CalendarView from "@/components/dashboard/CalendarView";
@@ -85,6 +86,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [roleLoading, setRoleLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [trainers, setTrainers] = useState<{ user_id: string; email: string }[]>([]);
+  const [assignedTrainerId, setAssignedTrainerId] = useState<string>("");
+  const [trainerSaving, setTrainerSaving] = useState(false);
 
 
 
@@ -119,6 +123,48 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     };
     fetchData();
   }, [profile.user_id]);
+
+  // Load trainers + current assignment for this user (admin only)
+  useEffect(() => {
+    if (restricted) return;
+    (async () => {
+      const [{ data: roles }, { data: assignment }] = await Promise.all([
+        supabase.from("user_roles").select("user_id").eq("role", "trainer" as any),
+        supabase.from("trainer_assignments").select("trainer_id").eq("user_id", profile.user_id).maybeSingle(),
+      ]);
+      const trainerIds = (roles || []).map((r: any) => r.user_id);
+      if (trainerIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("user_id, email")
+          .in("user_id", trainerIds);
+        setTrainers(((profs || []) as any).map((p: any) => ({ user_id: p.user_id, email: p.email })));
+      }
+      setAssignedTrainerId((assignment as any)?.trainer_id || "");
+    })();
+  }, [profile.user_id, restricted]);
+
+  const assignTrainer = async (trainerId: string) => {
+    setTrainerSaving(true);
+    // Replace existing assignment for this user
+    await supabase.from("trainer_assignments").delete().eq("user_id", profile.user_id);
+    if (trainerId && trainerId !== "__none__") {
+      const { error } = await supabase
+        .from("trainer_assignments")
+        .insert({ trainer_id: trainerId, user_id: profile.user_id });
+      if (error) {
+        toast.error("Error: " + error.message);
+        setTrainerSaving(false);
+        return;
+      }
+      setAssignedTrainerId(trainerId);
+      toast.success("Entrenador asignado");
+    } else {
+      setAssignedTrainerId("");
+      toast.success("Entrenador desasignado");
+    }
+    setTrainerSaving(false);
+  };
 
   const toggleAdminRole = async () => {
     setRoleLoading(true);
@@ -396,6 +442,42 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
             <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} />
           </div>}
+
+          {/* Trainer assignment */}
+          {!restricted && (
+            <div className="bg-card rounded-xl p-5 border border-border">
+              <div className="flex items-center gap-3 mb-3">
+                <User2 className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium text-sm">Entrenador asignado</div>
+                  <div className="text-xs text-muted-foreground">
+                    {trainers.length === 0
+                      ? "Aún no hay entrenadores. Crea uno desde la sección Entrenadores."
+                      : "Asigna o cambia al entrenador responsable de este usuario."}
+                  </div>
+                </div>
+              </div>
+              {trainers.length > 0 && (
+                <Select
+                  value={assignedTrainerId || "__none__"}
+                  onValueChange={assignTrainer}
+                  disabled={trainerSaving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin asignar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— Sin entrenador —</SelectItem>
+                    {trainers.map((t) => (
+                      <SelectItem key={t.user_id} value={t.user_id}>
+                        {t.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
 
           {onboarding ? (
             <div className="bg-card rounded-xl p-6 border border-border">

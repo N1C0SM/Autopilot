@@ -643,6 +643,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          lifecycle_emails_sent: string[]
           name: string | null
           payment_status: string
           plan_status: string
@@ -663,6 +664,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          lifecycle_emails_sent?: string[]
           name?: string | null
           payment_status?: string
           plan_status?: string
@@ -683,6 +685,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          lifecycle_emails_sent?: string[]
           name?: string | null
           payment_status?: string
           plan_status?: string
@@ -969,6 +972,8 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          photo_after_url: string | null
+          photo_before_url: string | null
           photo_url: string | null
           result: string
           sort_order: number
@@ -980,6 +985,8 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          photo_after_url?: string | null
+          photo_before_url?: string | null
           photo_url?: string | null
           result?: string
           sort_order?: number
@@ -991,6 +998,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          photo_after_url?: string | null
+          photo_before_url?: string | null
           photo_url?: string | null
           result?: string
           sort_order?: number

@@ -61,9 +61,9 @@ const faqs = [
 const Index = () => {
   const navigate = useNavigate();
   const [testimonials, setTestimonials] = useState([
-    { name: "María G.", result: "−7 kg en 4 meses", text: "Lo que más valoro no es el plan, es saber que puedo escribir cuando algo no encaja y al día siguiente está ajustado.", photo_url: null as string | null },
-    { name: "Carlos R.", result: "+6 kg de músculo", text: "Antes empezaba algo nuevo cada mes. Ahora sigo el mismo camino y lo afinamos juntos.", photo_url: null },
-    { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null },
+    { name: "María G.", result: "−7 kg en 4 meses", text: "Lo que más valoro no es el plan, es saber que puedo escribir cuando algo no encaja y al día siguiente está ajustado.", photo_url: null as string | null, photo_before_url: null as string | null, photo_after_url: null as string | null },
+    { name: "Carlos R.", result: "+6 kg de músculo", text: "Antes empezaba algo nuevo cada mes. Ahora sigo el mismo camino y lo afinamos juntos.", photo_url: null, photo_before_url: null, photo_after_url: null },
+    { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null, photo_before_url: null, photo_after_url: null },
   ]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
@@ -74,7 +74,7 @@ const Index = () => {
   useEffect(() => {
     (async () => {
       const [{ data: t }, settingsRes, statsRes] = await Promise.all([
-        supabase.from("site_testimonials").select("name, result, text, photo_url").eq("visible", true).order("sort_order"),
+        supabase.from("site_testimonials").select("name, result, text, photo_url, photo_before_url, photo_after_url").eq("visible", true).order("sort_order"),
         (supabase.rpc as any)("get_public_settings"),
         (supabase.rpc as any)("get_public_stats"),
       ]);
@@ -642,6 +642,19 @@ const Index = () => {
                     <Star key={j} className="w-4 h-4 fill-primary text-primary" />
                   ))}
                 </div>
+                {featured.photo_before_url && featured.photo_after_url && (
+                  <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center max-w-md mx-auto mb-8">
+                    <div className="text-center">
+                      <img src={featured.photo_before_url} alt={`${featured.name} antes`} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-xl border border-border" />
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1.5">Antes</div>
+                    </div>
+                    <div className="text-[11px] uppercase tracking-widest text-primary font-semibold">→</div>
+                    <div className="text-center">
+                      <img src={featured.photo_after_url} alt={`${featured.name} después`} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-xl border border-primary/40 glow-shadow" />
+                      <div className="text-[10px] uppercase tracking-wider text-primary mt-1.5">Después</div>
+                    </div>
+                  </div>
+                )}
                 <p className="text-2xl sm:text-3xl font-display font-medium leading-snug mb-8">
                   "{featured.text}"
                 </p>
@@ -665,6 +678,18 @@ const Index = () => {
               {rest.map((t, i) => (
                 <ScrollReveal key={t.name + i} delay={i * 0.1}>
                   <div className="bg-card border border-border rounded-2xl p-5 h-full">
+                    {t.photo_before_url && t.photo_after_url && (
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div>
+                          <img src={t.photo_before_url} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1 text-center">Antes</div>
+                        </div>
+                        <div>
+                          <img src={t.photo_after_url} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg border border-primary/40" />
+                          <div className="text-[9px] uppercase tracking-wider text-primary mt-1 text-center">Después</div>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-0.5 mb-3">
                       {Array.from({ length: 5 }).map((_, j) => (
                         <Star key={j} className="w-3.5 h-3.5 fill-primary text-primary" />
