@@ -16,6 +16,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://autopilotplan.com/onboarding</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://autopilotplan.com/login</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
