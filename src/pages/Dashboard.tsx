@@ -28,6 +28,7 @@ import { exportPlanPDF } from "@/lib/exportPlanPDF";
 import MobileAppShell from "@/components/mobile/MobileAppShell";
 import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PageHead from "@/components/PageHead";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
 
 export interface Profile {
