@@ -1408,6 +1408,16 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_my_trainer: {
+        Args: never
+        Returns: {
+          email: string
+          headline: string
+          name: string
+          photo_url: string
+          trainer_id: string
+        }[]
+      }
       get_public_settings: {
         Args: never
         Returns: {
@@ -1473,6 +1483,11 @@ export type Database = {
           read_ct: number
         }[]
       }
+      trainer_assign_user_by_email: {
+        Args: { _email: string }
+        Returns: string
+      }
+      trainer_unassign_user: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "user" | "trainer"
