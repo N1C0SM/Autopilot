@@ -18,6 +18,7 @@ import CalendarView from "@/components/dashboard/CalendarView";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import PRsList from "@/components/dashboard/PRsList";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
+import MyTrainerCard from "@/components/dashboard/MyTrainerCard";
 import MealsList from "@/components/dashboard/MealsList";
 import UserSidebar from "@/components/UserSidebar";
 import type { UserSection } from "@/components/UserSidebar";
@@ -252,6 +253,7 @@ const Dashboard = () => {
 
       {hasPlan && section === "home" && (
         <div className="max-w-4xl mx-auto space-y-6">
+          <MyTrainerCard />
           <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} />
           {user && <TravelModeCard userId={user.id} />}
         </div>
