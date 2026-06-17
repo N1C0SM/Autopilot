@@ -11,6 +11,7 @@ import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loade
 import PricingTiers from "@/components/PricingTiers";
 import PlanPreview from "@/components/PlanPreview";
 import { track } from "@/lib/analytics";
+import PageHead from "@/components/PageHead";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -471,6 +472,12 @@ const Onboarding = () => {
       className="min-h-screen bg-background flex items-start md:items-center justify-center px-4 py-6 md:py-12"
       style={{ paddingTop: "max(1.5rem, var(--safe-top, 0px))", paddingBottom: "max(1.5rem, var(--safe-bottom, 0px))" }}
     >
+      <PageHead
+        title="Configura tu plan · Autopilot"
+        description="Cuestionario rápido para crear tu plan personalizado de entrenamiento y nutrición."
+        path="/onboarding"
+        noindex
+      />
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
