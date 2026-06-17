@@ -342,6 +342,13 @@ const Dashboard = () => {
   // Mobile: app shell con barra inferior tipo nativa
   if (isMobile) {
     return (
+      <>
+      <PageHead
+        title="Mi panel · Autopilot"
+        description="Tu plan diario de entrenamiento y nutrición."
+        path="/dashboard"
+        noindex
+      />
       <MobileAppShell
         title={SECTION_LABELS[section]}
         active={section}
@@ -354,11 +361,18 @@ const Dashboard = () => {
       >
         {pageContent}
       </MobileAppShell>
+      </>
     );
   }
 
   return (
     <SidebarProvider>
+      <PageHead
+        title="Mi panel · Autopilot"
+        description="Tu plan diario de entrenamiento y nutrición."
+        path="/dashboard"
+        noindex
+      />
       <div className="min-h-screen flex w-full">
         <UserSidebar
           section={(section === "progress" ? "home" : section) as UserSection}
