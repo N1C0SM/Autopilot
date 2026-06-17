@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
+import PageHead from "@/components/PageHead";
 
 const PaymentSuccess = () => {
   const { user, loading } = useAuth();
