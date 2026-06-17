@@ -71,6 +71,7 @@ const PaymentSuccess = () => {
   if (loading || checking) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <PageHead title="Confirmando pago · Autopilot" description="Estamos confirmando tu pago." path="/payment-success" noindex />
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
         <p className="text-muted-foreground text-sm">Verificando tu pago...</p>
       </div>
@@ -80,6 +81,7 @@ const PaymentSuccess = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <PageHead title="Pago recibido · Autopilot" description="Tu pago se ha procesado correctamente." path="/payment-success" noindex />
         <div className="text-center max-w-md">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-primary" />
@@ -99,6 +101,7 @@ const PaymentSuccess = () => {
   if (!paid) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <PageHead title="Pago en proceso · Autopilot" description="Estamos confirmando tu pago con Stripe." path="/payment-success" noindex />
         <div className="text-center max-w-md">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -117,6 +120,7 @@ const PaymentSuccess = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <PageHead title="¡Pago exitoso! · Autopilot" description="Tu plan personalizado se está preparando." path="/payment-success" noindex />
       <div className="text-center max-w-md">
         <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle2 className="w-10 h-10 text-primary" />
