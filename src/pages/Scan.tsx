@@ -205,6 +205,7 @@ const Dropzone = ({
           <img src={image} alt={label} className="w-full h-full object-cover" />
           <button
             onClick={onClear}
+            aria-label="Quitar foto"
             className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background transition"
           >
             <X className="w-4 h-4" />
