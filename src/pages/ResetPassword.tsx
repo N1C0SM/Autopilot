@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, CheckCircle } from "lucide-react";
+import PageHead from "@/components/PageHead";
 
 const ResetPassword = () => {
   const [password, setPassword] = useState("");
@@ -37,6 +38,12 @@ const ResetPassword = () => {
   if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <PageHead
+          title="Contraseña actualizada · Autopilot"
+          description="Tu contraseña se ha actualizado correctamente."
+          path="/reset-password"
+          noindex
+        />
         <div className="w-full max-w-md text-center space-y-4">
           <CheckCircle className="w-12 h-12 text-primary mx-auto" />
           <h1 className="text-2xl font-bold font-display">¡Contraseña actualizada!</h1>
@@ -50,6 +57,12 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <PageHead
+        title="Nueva contraseña · Autopilot"
+        description="Establece una nueva contraseña para tu cuenta de Autopilot."
+        path="/reset-password"
+        noindex
+      />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>
