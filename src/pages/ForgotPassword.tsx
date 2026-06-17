@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
+import PageHead from "@/components/PageHead";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -29,6 +30,11 @@ const ForgotPassword = () => {
   if (sent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <PageHead
+          title="Recuperar contraseña · Autopilot"
+          description="Te enviamos un enlace para restablecer tu contraseña de Autopilot."
+          path="/forgot-password"
+        />
         <div className="w-full max-w-md text-center space-y-4">
           <Mail className="w-12 h-12 text-primary mx-auto" />
           <h1 className="text-2xl font-bold font-display">Revisa tu correo</h1>
@@ -41,6 +47,11 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <PageHead
+        title="Recuperar contraseña · Autopilot"
+        description="Introduce tu correo y te enviaremos un enlace para restablecer la contraseña."
+        path="/forgot-password"
+      />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>

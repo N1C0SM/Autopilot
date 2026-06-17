@@ -28,6 +28,7 @@ import { exportPlanPDF } from "@/lib/exportPlanPDF";
 import MobileAppShell from "@/components/mobile/MobileAppShell";
 import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PageHead from "@/components/PageHead";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
 
 export interface Profile {
@@ -341,6 +342,13 @@ const Dashboard = () => {
   // Mobile: app shell con barra inferior tipo nativa
   if (isMobile) {
     return (
+      <>
+      <PageHead
+        title="Mi panel · Autopilot"
+        description="Tu plan diario de entrenamiento y nutrición."
+        path="/dashboard"
+        noindex
+      />
       <MobileAppShell
         title={SECTION_LABELS[section]}
         active={section}
@@ -353,11 +361,18 @@ const Dashboard = () => {
       >
         {pageContent}
       </MobileAppShell>
+      </>
     );
   }
 
   return (
     <SidebarProvider>
+      <PageHead
+        title="Mi panel · Autopilot"
+        description="Tu plan diario de entrenamiento y nutrición."
+        path="/dashboard"
+        noindex
+      />
       <div className="min-h-screen flex w-full">
         <UserSidebar
           section={(section === "progress" ? "home" : section) as UserSection}

@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Save, Plus, Trash2, Dumbbell, UtensilsCrossed, Briefcase, Bell } from "lucide-react";
 import { toast } from "sonner";
+import PageHead from "@/components/PageHead";
 
 const DAYS = [
   { id: 1, label: "Lunes" },
@@ -162,6 +163,12 @@ const MySchedule = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title="Mi semana · Autopilot"
+        description="Configura tus horarios reales de entrenamiento y disponibilidad."
+        path="/my-schedule"
+        noindex
+      />
       <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 flex items-center px-4 gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
           <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver

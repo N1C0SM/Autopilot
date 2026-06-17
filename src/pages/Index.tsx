@@ -117,8 +117,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <Helmet>
-        <title>Autopilot — Diagnóstico físico gratis + coaching real online</title>
-        <meta name="description" content="Haz tu diagnóstico físico con IA en 60 segundos. Un entrenador real lo convierte en un plan de entrenamiento y nutrición a tu medida. Sin tarjeta. Primera semana gratis." />
+        <title>Autopilot — Diagnóstico físico + coaching real</title>
+        <meta name="description" content="Diagnóstico físico con IA en 60s. Un entrenador real lo convierte en tu plan de entrenamiento y nutrición. Primera semana gratis." />
         <link rel="canonical" href="https://autopilotplan.com/" />
         <meta property="og:title" content="Autopilot — Diagnóstico físico gratis + coaching real online" />
         <meta property="og:description" content="Diagnóstico con IA en 60s y un entrenador humano que lo convierte en plan. Primera semana gratis en planes mensuales." />
