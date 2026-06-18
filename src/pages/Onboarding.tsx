@@ -506,7 +506,10 @@ const Onboarding = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs">Edad</Label>
-                  <Input type="number" value={data.age} onChange={(e) => update("age", e.target.value)} placeholder="25" className="mt-1.5" />
+                  <Input type="number" min={16} max={100} value={data.age} onChange={(e) => update("age", e.target.value)} placeholder="25" className="mt-1.5" />
+                  {data.age && (parseInt(data.age) < 16 || parseInt(data.age) > 100) && (
+                    <p className="text-[10px] text-destructive mt-1">Debes tener entre 16 y 100 años.</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Altura (cm)</Label>
