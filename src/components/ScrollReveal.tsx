@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState, ReactNode } from "react";
-import { motion, useAnimation, Variant } from "framer-motion";
 
 interface Props {
   children: ReactNode;
@@ -8,35 +7,46 @@ interface Props {
   direction?: "up" | "left" | "right";
 }
 
+/**
+ * CSS-only reveal-on-scroll. Sin framer-motion para que la landing no arrastre
+ * el bundle de animaciones en la carga inicial.
+ */
 const ScrollReveal = ({ children, className = "", delay = 0, direction = "up" }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
-  const controls = useAnimation();
-  const [hasAnimated, setHasAnimated] = useState(false);
-
-  const initial: Record<string, number> = { opacity: 0 };
-  if (direction === "up") initial.y = 40;
-  if (direction === "left") initial.x = -40;
-  if (direction === "right") initial.x = 40;
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    if (!ref.current) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const io = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !hasAnimated) {
-          controls.start({ opacity: 1, y: 0, x: 0, transition: { duration: 0.6, delay, ease: "easeOut" } });
-          setHasAnimated(true);
+        if (entry.isIntersecting) {
+          setVisible(true);
+          io.disconnect();
         }
       },
       { threshold: 0.15 }
     );
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
 
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [controls, delay, hasAnimated]);
+  const hiddenTransform =
+    direction === "left" ? "-translate-x-6" : direction === "right" ? "translate-x-6" : "translate-y-6";
 
   return (
-    <motion.div ref={ref} initial={initial} animate={controls} className={className}>
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}s` }}
+      className={`transition-all duration-700 ease-out will-change-transform ${
+        visible ? "opacity-100 translate-x-0 translate-y-0" : `opacity-0 ${hiddenTransform}`
+      } ${className}`}
+    >
       {children}
-    </motion.div>
+    </div>
   );
 };
 
