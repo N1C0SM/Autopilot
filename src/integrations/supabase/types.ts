@@ -1400,6 +1400,24 @@ export type Database = {
       }
     }
     Functions: {
+      admin_assign_user_to_trainer: {
+        Args: { _email: string; _trainer_id: string }
+        Returns: string
+      }
+      admin_list_trainer_users: {
+        Args: { _trainer_id: string }
+        Returns: {
+          assigned_at: string
+          avatar_url: string
+          email: string
+          name: string
+          user_id: string
+        }[]
+      }
+      admin_unassign_user_from_trainer: {
+        Args: { _trainer_id: string; _user_id: string }
+        Returns: undefined
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

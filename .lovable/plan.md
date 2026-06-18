@@ -1,71 +1,83 @@
-# Plan: dejar la app nativa lista para subir a App Store y Play Store
+# Plan
 
-Cuando tengas las cuentas de Apple/Google solo tendrás que ejecutar los comandos finales y subir el binario. Todo lo demás queda preparado ahora.
+## 1. Admin asigna usuarios a un entrenador desde su ficha
 
-## 1. Identidad visual de la app (icono + splash)
+Hoy un entrenador puede auto-asignarse usuarios desde `/trainer`. Falta que el **admin**, entrando en la ficha de un usuario que tenga rol `trainer` (en `/admin` → Usuarios → ficha), pueda gestionar a qué usuarios entrena.
 
-Generaré dos imágenes maestras con la estética actual de Autopilot (negro premium + acento dorado/primary, wordmark minimalista):
+### Backend (migración)
 
-- `resources/icon.png` — 1024×1024, fondo sólido (sin transparencia, requisito de Apple), logotipo centrado con margen de seguridad.
-- `resources/splash.png` — 2732×2732, logotipo centrado sobre fondo `#090909` (mismo color que ya usa `SplashScreen.backgroundColor` en `capacitor.config.ts`).
+Nuevas funciones `SECURITY DEFINER`:
 
-Estas dos imágenes son la "fuente única". A partir de ellas se generan automáticamente todos los tamaños que piden iOS y Android.
+- `admin_assign_user_to_trainer(_trainer_id uuid, _email text) → uuid`
+  - Solo admin (`has_role(auth.uid(), 'admin')`).
+  - Valida que `_trainer_id` tenga rol `trainer` (si no, lo añade automáticamente al rol).
+  - Busca user por email en `profiles`, borra cualquier asignación previa de ese usuario y crea `trainer_assignments(trainer_id=_trainer_id, user_id=found)`.
+- `admin_unassign_user_from_trainer(_trainer_id uuid, _user_id uuid) → void`
+  - Solo admin. `DELETE FROM trainer_assignments WHERE trainer_id=_trainer_id AND user_id=_user_id`.
+- `admin_list_trainer_users(_trainer_id uuid) → TABLE(user_id, email, name, avatar_url, created_at)`
+  - Solo admin. JOIN `trainer_assignments` con `profiles`.
 
-## 2. Generación automática de todos los tamaños
+### Frontend
 
-Añadiré `@capacitor/assets` como devDependency y un script en `package.json`:
+`src/components/admin/UserDetail.tsx`:
 
-```json
-"scripts": {
-  "assets:generate": "capacitor-assets generate --iconBackgroundColor #090909 --splashBackgroundColor #090909"
-}
+- Detectar si el usuario abierto tiene rol `trainer` (query a `user_roles`).
+- Si lo tiene, mostrar nueva sección **"Usuarios asignados a este entrenador"**:
+  - Input email + botón **Asignar** → `admin_assign_user_to_trainer`.
+  - Lista de usuarios asignados (avatar, nombre, email) con botón papelera → `admin_unassign_user_from_trainer`.
+  - Refetch tras cada acción, toasts de éxito/error.
+
+## 2. Carga rápida: prerender + optimización SPA
+
+> Aviso: **Next.js no es compatible con Lovable** (stack fijo: React + Vite). La forma más cercana a "HTML directo" sin salir del stack es prerenderizar las rutas públicas en build y reducir el JS inicial. Es lo que hace que el navegador pinte al instante sin esperar a React.
+
+### 2a. Prerender estático de rutas públicas
+
+- Añadir `vite-plugin-prerender-spa` (o `react-snap` como alternativa) en `vite.config.ts`.
+- Rutas a prerenderizar: `/`, `/legal`, `/login`, `/signup`, `/welcome`.
+- El plugin lanza un Chromium headless en build, renderiza cada ruta y escribe `dist/<ruta>/index.html` con el HTML ya pintado (hero, copys, precios, testimonios, footer). React hidrata encima al cargar.
+- Resultado: FCP/LCP casi inmediatos en landing, mejora SEO (crawlers ven HTML real sin ejecutar JS).
+- Las rutas privadas (`/dashboard`, `/admin`, etc.) siguen como SPA — no tiene sentido prerenderizarlas.
+
+### 2b. Code-splitting + lazy load
+
+`src/App.tsx`:
+
+- Convertir rutas pesadas a `React.lazy()` + `<Suspense>`:
+  - `Dashboard`, `Admin`, `Trainer`, `Onboarding`, `Scan`, `EmailPreview`, `Settings`, `MySchedule`, `PaymentSuccess`.
+- Mantener `Index` (landing) eager para que el prerender funcione sin parpadeo.
+
+`src/pages/Index.tsx`:
+
+- Lazy-import de secciones below-the-fold con `React.lazy`: `TrainersSection`, `PremiumTransformation`, `ComparisonTable`, `PricingTiers`, `AIScanSection`, testimonios.
+- Mantener hero eager.
+
+### 2c. Recursos críticos
+
+`index.html`:
+
+- `<link rel="preload" as="image" href="<hero/poster>" fetchpriority="high">` para el LCP.
+- `<link rel="preconnect">` a `enebrcdrdnfkyduzyrzm.supabase.co` y dominio de Stripe.
+- Verificar que el `<video>` del hero use `preload="metadata"` y `poster`.
+
+### 2d. Bundle hygiene
+
+`vite.config.ts`: `build.rollupOptions.output.manualChunks` separando `react`, `framer-motion`, `@supabase/supabase-js`, `recharts` para que la landing no descargue chunks que solo usa el dashboard.
+
+## Archivos afectados
+
+```
+supabase/migrations/<timestamp>_admin_trainer_assignments.sql   (nuevo)
+src/components/admin/UserDetail.tsx                             (sección nueva)
+src/integrations/supabase/types.ts                              (regen tras migración)
+vite.config.ts                                                  (prerender + manualChunks)
+src/App.tsx                                                     (React.lazy + Suspense)
+src/pages/Index.tsx                                             (lazy de secciones)
+index.html                                                      (preload/preconnect)
+package.json                                                    (vite-plugin-prerender-spa)
 ```
 
-Con un único `npm run assets:generate` se crean todos los iconos y splash screens para iOS y Android desde `resources/icon.png` y `resources/splash.png`.
+## Notas técnicas
 
-## 3. Configuración de producción de Capacitor
-
-Hoy `capacitor.config.ts` apunta a la preview de Lovable (hot-reload). Para build de stores eso no puede ir. Reescribiré el archivo para que:
-
-- Por defecto (producción) **no** incluya `server.url` → la app carga el bundle local `dist/`.
-- Si defines `CAP_DEV=1` al sincronizar, vuelve a activar el hot-reload contra la URL de Lovable (útil mientras seguimos iterando).
-
-Así no hay que tocar el archivo a mano cada vez que quieras compilar para stores.
-
-## 4. Pantalla de Welcome en build de producción
-
-Hoy la Welcome nativa se activa con `?native=1` en la URL. En el build de producción no hay query string, así que dependerá solo de `Capacitor.isNativePlatform()`, que ya funciona. Verificaré que `src/lib/platform.ts` y la ruta `/` en `src/App.tsx` no requieran el query param para que la app empaquetada arranque correctamente en Welcome.
-
-## 5. Política de privacidad (obligatoria en ambas stores)
-
-Ya tienes `/legal`. Añadiré un enlace claro a la política de privacidad pública (URL `https://autopilotplan.com/legal`) que podrás pegar tal cual en App Store Connect y Play Console.
-
-## 6. Documento `MOBILE_RELEASE.md`
-
-Crearé una guía corta en la raíz del repo con los pasos exactos que tendrás que ejecutar **una vez tengas las licencias**:
-
-1. `git pull`
-2. `npm install`
-3. `npm run build`
-4. `npm run assets:generate`
-5. `npx cap sync`
-6. iOS → abrir `ios/App/App.xcworkspace` en Xcode, configurar Team, Archive, subir a App Store Connect.
-7. Android → `cd android && ./gradlew bundleRelease`, firmar el `.aab` con tu keystore, subir a Play Console.
-
-Incluye también: bundle id (`app.lovable.aa0029da00154c05a2b503e61df0f87c`), nombre (`autopilotv2`), checklist de capturas y enlaces a la política de privacidad.
-
-## Detalles técnicos
-
-- **No** se tocan: edge functions, base de datos, lógica de Stripe, onboarding, dashboard.
-- Cambios sólo en: `capacitor.config.ts`, `package.json` (script + devDependency), nuevo directorio `resources/`, nuevo `MOBILE_RELEASE.md`.
-- El icono debe ser PNG opaco 1024×1024 (Apple rechaza transparencias/canal alfa en el icono de la store).
-- `@capacitor/assets` se ejecuta en local, no en el bundle final → cero impacto en tamaño de app.
-
-## Lo que sigue necesitando tu acción (no se puede automatizar)
-
-- Crear cuentas Apple Developer (99 USD/año) y Google Play Console (25 USD único).
-- Generar el keystore de Android (`keytool`) — comando incluido en `MOBILE_RELEASE.md`.
-- Tomar capturas de pantalla en simulador/emulador.
-- Rellenar fichas de las stores (descripción, categoría, edad, etc.).
-
-¿Procedo con esto?
+- El prerender corre en build de Lovable; si el plugin falla por entorno headless, fallback a `react-snap` (más maduro). Si ninguno funciona en el sandbox de Lovable, queda solo 2b+2c+2d (sigue siendo una mejora muy notable, pero la primera pintada depende de JS).
+- La detección de rol `trainer` en `UserDetail` se hace con `select role from user_roles where user_id=? and role='trainer'`; ya está cubierto por las policies actuales de lectura.
