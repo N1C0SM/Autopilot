@@ -57,6 +57,25 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Require an authenticated user before accepting uploads to the public bucket
+  const authHeader = req.headers.get('Authorization') || ''
+  const token = authHeader.replace('Bearer ', '')
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+  const authClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+  )
+  const { data: { user } } = await authClient.auth.getUser(token)
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   let pngBase64: string | undefined
   try {
     const body = await req.json()
