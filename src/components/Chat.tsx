@@ -7,6 +7,7 @@ import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2 } from "l
 import { toast } from "sonner";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatMediaGallery from "@/components/chat/ChatMediaGallery";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 interface Message {
   id: string;
@@ -183,6 +184,11 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
         </div>
 
         {/* Content */}
+        {!isAdmin && activeTab === "chat" && (
+          <div className="px-3 pt-2">
+            <AIDisclaimer variant="compact" />
+          </div>
+        )}
         {activeTab === "chat" ? (
           <ChatMessages messages={messages} onViewMedia={setViewMedia} />
         ) : (
