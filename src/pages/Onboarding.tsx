@@ -12,6 +12,10 @@ import PricingTiers from "@/components/PricingTiers";
 import PlanPreview from "@/components/PlanPreview";
 import { track } from "@/lib/analytics";
 import PageHead from "@/components/PageHead";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Link } from "react-router-dom";
+import { logConsent } from "@/lib/consents";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -130,6 +134,8 @@ const Onboarding = () => {
     nutrition_preferences: "",
     allergies: "",
     goal_photo_url: "",
+    accept_terms: false,
+    accept_health: false,
   });
 
   const update = (field: string, value: any) => setData((d) => ({ ...d, [field]: value }));
@@ -362,6 +368,14 @@ const Onboarding = () => {
     if (!error) {
       // Limpiamos el cuestionario anónimo si venía del flujo pre-signup.
       try { sessionStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
+      // Registramos los consentimientos obligatorios (RGPD).
+      try {
+        await Promise.all([
+          logConsent("terms", true, { source: "onboarding_summary" }),
+          logConsent("privacy", true, { source: "onboarding_summary" }),
+          logConsent("health_data", true, { source: "onboarding_summary" }),
+        ]);
+      } catch {}
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
       const { data: profile } = await supabase
@@ -427,6 +441,8 @@ const Onboarding = () => {
     if (currentKey === "about") {
       if (!(data.age && data.height && data.weight && data.sex && data.occupation)) return false;
       if (data.occupation === "otro" && !data.occupation_detail.trim()) return false;
+      const ageNum = parseInt(data.age);
+      if (!Number.isFinite(ageNum) || ageNum < 16 || ageNum > 100) return false;
       return true;
     }
     if (currentKey === "focus_goal") return !!data.primary_focus && !!data.goal;
@@ -498,7 +514,10 @@ const Onboarding = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <Label className="text-xs">Edad</Label>
-                  <Input type="number" value={data.age} onChange={(e) => update("age", e.target.value)} placeholder="25" className="mt-1.5" />
+                  <Input type="number" min={16} max={100} value={data.age} onChange={(e) => update("age", e.target.value)} placeholder="25" className="mt-1.5" />
+                  {data.age && (parseInt(data.age) < 16 || parseInt(data.age) > 100) && (
+                    <p className="text-[10px] text-destructive mt-1">Debes tener entre 16 y 100 años.</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">Altura (cm)</Label>
@@ -1041,6 +1060,47 @@ const Onboarding = () => {
                   </label>
                 )}
               </div>
+
+              {/* Disclaimer IA */}
+              <div className="border-t border-border pt-5">
+                <AIDisclaimer />
+              </div>
+
+              {/* Consentimientos obligatorios (RGPD / LSSI) */}
+              <div className="border-t border-border pt-5 space-y-3">
+                <p className="text-xs font-semibold text-foreground">Antes de continuar</p>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={data.accept_terms}
+                    onCheckedChange={(v) => update("accept_terms", v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground leading-snug">
+                    He leído y acepto los{" "}
+                    <Link to="/legal/terminos" target="_blank" className="underline text-foreground">Términos</Link>,
+                    la{" "}
+                    <Link to="/legal/privacidad" target="_blank" className="underline text-foreground">Política de Privacidad</Link>
+                    {" "}y la{" "}
+                    <Link to="/legal/cookies" target="_blank" className="underline text-foreground">Política de Cookies</Link>.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={data.accept_health}
+                    onCheckedChange={(v) => update("accept_health", v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground leading-snug">
+                    Consiento el tratamiento de mis <strong className="text-foreground">datos de salud</strong>{" "}
+                    (peso, lesiones, hábitos) con la única finalidad de generar y ajustar mi plan personalizado de
+                    entrenamiento y nutrición. Entiendo que puedo retirar este consentimiento en cualquier momento
+                    desde Ajustes. Más info en el{" "}
+                    <Link to="/legal/disclaimer-medico" target="_blank" className="underline text-foreground">aviso médico</Link>.
+                  </span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -1053,7 +1113,11 @@ const Onboarding = () => {
                 Siguiente <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             ) : (
-              <Button variant="hero" onClick={handleSubmit} disabled={loading}>
+              <Button
+                variant="hero"
+                onClick={handleSubmit}
+                disabled={loading || !data.accept_terms || !data.accept_health}
+              >
                 <Sparkles className="w-4 h-4 mr-1" /> {loading ? "Enviando..." : "Crear mi plan"}
               </Button>
             )}
