@@ -487,6 +487,53 @@ const SettingsPanel = () => {
         </div>
       )}
 
+      {/* Privacy & Data (RGPD) */}
+      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+        <div className="flex items-center gap-2 mb-2">
+          <ShieldCheck className="w-5 h-5 text-primary" />
+          <h2 className="font-bold font-display text-lg">Privacidad y mis datos</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">
+          Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.
+        </p>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Button
+            variant="outline"
+            className="justify-start h-auto py-3"
+            onClick={exportMyData}
+            disabled={exporting}
+          >
+            <Download className="w-4 h-4 mr-2 shrink-0" />
+            <span className="text-left">
+              <span className="block font-medium text-sm">{exporting ? "Generando..." : "Exportar mis datos"}</span>
+              <span className="block text-[11px] text-muted-foreground">Descarga un JSON con todo lo que tenemos sobre ti.</span>
+            </span>
+          </Button>
+
+          <Button
+            variant="outline"
+            className="justify-start h-auto py-3"
+            asChild
+          >
+            <Link to="/legal/privacidad">
+              <FileText className="w-4 h-4 mr-2 shrink-0" />
+              <span className="text-left">
+                <span className="block font-medium text-sm">Ver Política de Privacidad</span>
+                <span className="block text-[11px] text-muted-foreground">Qué datos tratamos y con qué base legal.</span>
+              </span>
+            </Link>
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-[11px] text-muted-foreground">
+          <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
+          <Link to="/legal/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
+          <Link to="/legal/disclaimer-medico" className="hover:text-foreground transition-colors">Disclaimer médico</Link>
+          <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
+        </div>
+      </div>
+
       {/* Danger zone */}
       <div className="bg-card rounded-2xl p-6 border border-destructive/30 card-shadow">
         <h2 className="font-bold font-display text-lg text-destructive mb-4">Zona peligrosa</h2>
