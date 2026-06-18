@@ -12,6 +12,10 @@ import PricingTiers from "@/components/PricingTiers";
 import PlanPreview from "@/components/PlanPreview";
 import { track } from "@/lib/analytics";
 import PageHead from "@/components/PageHead";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Link } from "react-router-dom";
+import { logConsent } from "@/lib/consents";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -130,6 +134,8 @@ const Onboarding = () => {
     nutrition_preferences: "",
     allergies: "",
     goal_photo_url: "",
+    accept_terms: false,
+    accept_health: false,
   });
 
   const update = (field: string, value: any) => setData((d) => ({ ...d, [field]: value }));
@@ -427,6 +433,8 @@ const Onboarding = () => {
     if (currentKey === "about") {
       if (!(data.age && data.height && data.weight && data.sex && data.occupation)) return false;
       if (data.occupation === "otro" && !data.occupation_detail.trim()) return false;
+      const ageNum = parseInt(data.age);
+      if (!Number.isFinite(ageNum) || ageNum < 16 || ageNum > 100) return false;
       return true;
     }
     if (currentKey === "focus_goal") return !!data.primary_focus && !!data.goal;
