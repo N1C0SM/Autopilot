@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import CalendarExportDialog from "./CalendarExportDialog";
+import AIDisclaimer from "@/components/AIDisclaimer";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -85,6 +86,8 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
           />
         </div>
       </div>
+
+      <AIDisclaimer />
 
       {/* Days */}
       {DAYS_ORDER.map((day) => {
