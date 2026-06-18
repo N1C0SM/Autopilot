@@ -13,6 +13,7 @@ import ExerciseLibrary from "@/components/admin/ExerciseLibrary";
 import TrainingRulesEditor from "@/components/admin/TrainingRulesEditor";
 import PaymentReminders from "@/components/admin/PaymentReminders";
 import SiteContentEditor from "@/components/admin/SiteContentEditor";
+import BlogPostsEditor from "@/components/admin/BlogPostsEditor";
 import TrainerManagement from "@/components/admin/TrainerManagement";
 import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
 import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
@@ -30,7 +31,7 @@ export interface Profile {
   subscription_tier?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "physiques" | "payments" | "emails";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -124,6 +125,7 @@ const Admin = () => {
               {section === "exercises" && "Biblioteca de ejercicios"}
               {section === "rules" && "Reglas de generación"}
               {section === "landing" && "Contenido de la landing"}
+              {section === "blog" && "Blog · Artículos SEO"}
               {section === "physiques" && "Físicos objetivo · AI Scan"}
               {section === "payments" && "Pagos · Stripe"}
               {section === "metrics" && "Métricas"}
@@ -249,6 +251,12 @@ const Admin = () => {
             {section === "landing" && (
               <div className="max-w-3xl">
                 <SiteContentEditor />
+              </div>
+            )}
+
+            {section === "blog" && (
+              <div className="max-w-4xl">
+                <BlogPostsEditor />
               </div>
             )}
 

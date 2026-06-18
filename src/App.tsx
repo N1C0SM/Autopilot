@@ -24,6 +24,8 @@ const Legal = lazy(() => import("./pages/Legal"));
 const Scan = lazy(() => import("./pages/Scan"));
 const Trainer = lazy(() => import("./pages/Trainer"));
 const EmailPreview = lazy(() => import("./pages/EmailPreview"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -79,6 +81,8 @@ const App = () => (
             <Route path="/trainer" element={<ProtectedRoute><Trainer /></ProtectedRoute>} />
             <Route path="/unsubscribe" element={<Unsubscribe />} />
             <Route path="/legal/:slug" element={<Legal />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
