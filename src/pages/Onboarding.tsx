@@ -368,6 +368,14 @@ const Onboarding = () => {
     if (!error) {
       // Limpiamos el cuestionario anónimo si venía del flujo pre-signup.
       try { sessionStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
+      // Registramos los consentimientos obligatorios (RGPD).
+      try {
+        await Promise.all([
+          logConsent("terms", true, { source: "onboarding_summary" }),
+          logConsent("privacy", true, { source: "onboarding_summary" }),
+          logConsent("health_data", true, { source: "onboarding_summary" }),
+        ]);
+      } catch {}
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
       const { data: profile } = await supabase
