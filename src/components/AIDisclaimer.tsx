@@ -18,7 +18,7 @@ const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
         <Sparkles className="w-3 h-3 text-primary shrink-0" />
         <span>
           Generado por IA + supervisión humana ·{" "}
-          <Link to="/legal/aviso-medico" className="underline hover:text-foreground">
+          <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
             no sustituye consejo médico
           </Link>
         </span>
@@ -36,7 +36,7 @@ const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
         Este contenido se genera con <strong className="text-foreground">IA</strong> y se revisa por un{" "}
         <strong className="text-foreground">entrenador humano</strong>. No sustituye el consejo de un médico
         ni de un profesional sanitario.{" "}
-        <Link to="/legal/aviso-medico" className="underline hover:text-foreground">
+        <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
           Leer aviso completo
         </Link>
         .
