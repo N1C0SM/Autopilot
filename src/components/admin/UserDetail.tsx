@@ -333,6 +333,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </Button>
           </>
         )}
+        {!restricted && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => impersonateUser(profile.user_id, "/dashboard")}
+            title="Abrir la app en una pestaña nueva como si fueras este usuario"
+          >
+            <Eye className="w-4 h-4 mr-1.5" /> Ver como
+          </Button>
+        )}
         {!restricted && <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting}>
