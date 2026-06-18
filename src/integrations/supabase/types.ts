@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      blog_posts: {
+        Row: {
+          author_name: string | null
+          body_markdown: string
+          cover_url: string | null
+          created_at: string
+          excerpt: string | null
+          id: string
+          published: boolean
+          published_at: string | null
+          reading_minutes: number | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_name?: string | null
+          body_markdown?: string
+          cover_url?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          published?: boolean
+          published_at?: string | null
+          reading_minutes?: number | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string | null
+          body_markdown?: string
+          cover_url?: string | null
+          created_at?: string
+          excerpt?: string | null
+          id?: string
+          published?: boolean
+          published_at?: string | null
+          reading_minutes?: number | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       calendar_tokens: {
         Row: {
           created_at: string
@@ -971,6 +1022,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_12w_transformation: boolean
           name: string
           photo_after_url: string | null
           photo_before_url: string | null
@@ -984,6 +1036,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_12w_transformation?: boolean
           name: string
           photo_after_url?: string | null
           photo_before_url?: string | null
@@ -997,6 +1050,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_12w_transformation?: boolean
           name?: string
           photo_after_url?: string | null
           photo_before_url?: string | null
