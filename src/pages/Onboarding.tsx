@@ -1052,6 +1052,47 @@ const Onboarding = () => {
                   </label>
                 )}
               </div>
+
+              {/* Disclaimer IA */}
+              <div className="border-t border-border pt-5">
+                <AIDisclaimer />
+              </div>
+
+              {/* Consentimientos obligatorios (RGPD / LSSI) */}
+              <div className="border-t border-border pt-5 space-y-3">
+                <p className="text-xs font-semibold text-foreground">Antes de continuar</p>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={data.accept_terms}
+                    onCheckedChange={(v) => update("accept_terms", v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground leading-snug">
+                    He leído y acepto los{" "}
+                    <Link to="/legal/terminos" target="_blank" className="underline text-foreground">Términos</Link>,
+                    la{" "}
+                    <Link to="/legal/privacidad" target="_blank" className="underline text-foreground">Política de Privacidad</Link>
+                    {" "}y la{" "}
+                    <Link to="/legal/cookies" target="_blank" className="underline text-foreground">Política de Cookies</Link>.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={data.accept_health}
+                    onCheckedChange={(v) => update("accept_health", v === true)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-xs text-muted-foreground leading-snug">
+                    Consiento el tratamiento de mis <strong className="text-foreground">datos de salud</strong>{" "}
+                    (peso, lesiones, hábitos) con la única finalidad de generar y ajustar mi plan personalizado de
+                    entrenamiento y nutrición. Entiendo que puedo retirar este consentimiento en cualquier momento
+                    desde Ajustes. Más info en el{" "}
+                    <Link to="/legal/disclaimer-medico" target="_blank" className="underline text-foreground">aviso médico</Link>.
+                  </span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -1064,7 +1105,11 @@ const Onboarding = () => {
                 Siguiente <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             ) : (
-              <Button variant="hero" onClick={handleSubmit} disabled={loading}>
+              <Button
+                variant="hero"
+                onClick={handleSubmit}
+                disabled={loading || !data.accept_terms || !data.accept_health}
+              >
                 <Sparkles className="w-4 h-4 mr-1" /> {loading ? "Enviando..." : "Crear mi plan"}
               </Button>
             )}
