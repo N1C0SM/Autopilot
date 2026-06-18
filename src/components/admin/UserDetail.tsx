@@ -818,6 +818,17 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
             {kind === "admin" ? "👑 Administrador" : "🏋️ Entrenador"}
           </span>
         </div>
+        {!restricted && kind === "trainer" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => impersonateUser(profile.user_id, "/trainer")}
+            title="Abrir el panel del entrenador como esta persona"
+          >
+            <Eye className="w-4 h-4 mr-1.5" /> Ver como
+          </Button>
+        )}
         {!restricted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
