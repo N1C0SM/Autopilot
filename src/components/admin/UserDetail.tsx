@@ -672,7 +672,49 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [assigned, setAssigned] = useState<{ user_id: string; email: string; plan_status: string; payment_status: string }[]>([]);
+  const [assignEmail, setAssignEmail] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const reloadAssigned = async () => {
+    const { data: assignments } = await supabase
+      .from("trainer_assignments")
+      .select("user_id")
+      .eq("trainer_id", profile.user_id);
+    const ids = (assignments || []).map((a: any) => a.user_id);
+    if (ids.length === 0) { setAssigned([]); return; }
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("user_id, email, plan_status, payment_status")
+      .in("user_id", ids);
+    setAssigned((profs as any) || []);
+  };
+
+  const handleAssign = async () => {
+    const email = assignEmail.trim();
+    if (!email) return;
+    setAssigning(true);
+    const { error } = await (supabase.rpc as any)("admin_assign_user_to_trainer", {
+      _trainer_id: profile.user_id,
+      _email: email,
+    });
+    setAssigning(false);
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success("Usuario asignado");
+    setAssignEmail("");
+    await reloadAssigned();
+  };
+
+  const handleUnassign = async (userId: string) => {
+    if (!confirm("¿Quitar este usuario del entrenador?")) return;
+    const { error } = await (supabase.rpc as any)("admin_unassign_user_from_trainer", {
+      _trainer_id: profile.user_id,
+      _user_id: userId,
+    });
+    if (error) { toast.error("Error: " + error.message); return; }
+    toast.success("Asignación eliminada");
+    await reloadAssigned();
+  };
 
   useEffect(() => {
     (async () => {
@@ -926,6 +968,22 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
 
           {kind === "trainer" && (
             <TabsContent value="assigned">
+              {!restricted && (
+                <div className="mb-4 bg-card rounded-xl p-4 border border-border flex flex-col sm:flex-row gap-2">
+                  <Input
+                    type="email"
+                    placeholder="email@usuario.com"
+                    value={assignEmail}
+                    onChange={(e) => setAssignEmail(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAssign(); }}
+                    className="flex-1"
+                  />
+                  <Button onClick={handleAssign} disabled={assigning || !assignEmail.trim()}>
+                    {assigning ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
+                    Asignar usuario
+                  </Button>
+                </div>
+              )}
               {assigned.length === 0 ? (
                 <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
                   <p className="text-sm text-muted-foreground">Sin usuarios asignados.</p>
@@ -945,6 +1003,11 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                           {u.payment_status === "paid" ? "Pagado" : "Sin pagar"}
                         </div>
                       </div>
+                      {!restricted && (
+                        <Button variant="ghost" size="icon" onClick={() => handleUnassign(u.user_id)} aria-label="Quitar asignación">
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
