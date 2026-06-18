@@ -15,19 +15,22 @@ import {
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
-import PricingTiers from "@/components/PricingTiers";
-import AIScanSection from "@/components/AIScanSection";
-import TrainersSection from "@/components/TrainersSection";
-import PostScanFlow from "@/components/PostScanFlow";
-import PremiumTransformation from "@/components/PremiumTransformation";
-import ComparisonTable from "@/components/ComparisonTable";
 import { Award, Dumbbell, Calendar, MessageSquare, Target } from "lucide-react";
+
+// Bajo el fold → lazy. No bloquea el render inicial de la landing.
+const AIScanSection = lazy(() => import("@/components/AIScanSection"));
+const PostScanFlow = lazy(() => import("@/components/PostScanFlow"));
+const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
+const PricingTiers = lazy(() => import("@/components/PricingTiers"));
+const PremiumTransformation = lazy(() => import("@/components/PremiumTransformation"));
+const TrainersSection = lazy(() => import("@/components/TrainersSection"));
+
+const SectionFallback = () => <div className="min-h-[200px]" aria-hidden />;
 import type { PlanKey } from "@/config/tiers";
 import {
   Accordion,
@@ -72,7 +75,7 @@ const Index = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    const run = async () => {
       const [{ data: t }, settingsRes, statsRes] = await Promise.all([
         supabase.from("site_testimonials").select("name, result, text, photo_url, photo_before_url, photo_after_url").eq("visible", true).order("sort_order"),
         (supabase.rpc as any)("get_public_settings"),
@@ -99,7 +102,15 @@ const Index = () => {
         paid,
         activePct: paid > 0 ? Math.round((active / paid) * 100) : null,
       });
-    })();
+    };
+    // Deferimos a idle: no compite con el primer paint.
+    const w = window as any;
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(() => { run(); }, { timeout: 2000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(run, 300);
+    return () => window.clearTimeout(id);
   }, []);
 
   const goToPricing = () => {
@@ -214,42 +225,31 @@ const Index = () => {
           </div>
 
           <div className="container mx-auto max-w-3xl text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/[0.08] mb-7"
-            >
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/[0.08] mb-7 animate-fade-in">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
                 Diagnóstico con IA + Entrenador real
               </span>
-            </motion.div>
+            </div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight"
+            <h1
+              style={{ animationDelay: "0.1s" }}
+              className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight animate-fade-in"
             >
               De cero a un físico visible.{" "}
               <span className="text-gradient">Sin perderte entre apps.</span>
-            </motion.h1>
+            </h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed"
+            <p
+              style={{ animationDelay: "0.2s" }}
+              className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed animate-fade-in"
             >
               Para hombres de 25 a 40 años que quieren ganar músculo de verdad. Un entrenador real diseña tu entrenamiento y nutrición, y los ajusta cada semana contigo por chat.
-            </motion.p>
+            </p>
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col items-center"
+            <div
+              style={{ animationDelay: "0.3s" }}
+              className="flex flex-col items-center animate-fade-in"
             >
               <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Button
@@ -281,15 +281,13 @@ const Index = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-success" />
                 <span>Garantía 30 días · sin permanencia · cancelas en 1 clic</span>
               </div>
-            </motion.div>
+            </div>
 
             {/* Hero video (admin-managed) */}
             {heroVideo.url && (
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="mt-12 mx-auto max-w-2xl"
+              <div
+                style={{ animationDelay: "0.4s" }}
+                className="mt-12 mx-auto max-w-2xl animate-fade-in"
               >
                 <div className="relative rounded-2xl overflow-hidden border border-border bg-black premium-shadow ring-1 ring-primary/20">
                   <video
@@ -305,15 +303,13 @@ const Index = () => {
                     className="w-full aspect-video object-cover bg-black"
                   />
                 </div>
-              </motion.div>
+              </div>
             )}
 
             {/* Trust strip */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              className="mt-16 flex flex-col items-center gap-5"
+            <div
+              style={{ animationDelay: "0.5s" }}
+              className="mt-16 flex flex-col items-center gap-5 animate-fade-in"
             >
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 {trainer.trainer_photo_url ? (
@@ -350,15 +346,19 @@ const Index = () => {
                   )}
                 </div>
               )}
-            </motion.div>
+            </div>
           </div>
         </section>
 
         {/* AI SCAN */}
-        <AIScanSection />
+        <Suspense fallback={<SectionFallback />}>
+          <AIScanSection />
+        </Suspense>
 
         {/* POST-SCAN FLOW */}
-        <PostScanFlow />
+        <Suspense fallback={<SectionFallback />}>
+          <PostScanFlow />
+        </Suspense>
 
         {/* QUIÉN HAY DETRÁS */}
         <section className="py-24 px-4 border-t border-border">
@@ -444,7 +444,9 @@ const Index = () => {
         </section>
 
         {/* COMPARISON — antes de precios para contextualizar el valor */}
-        <ComparisonTable />
+        <Suspense fallback={<SectionFallback />}>
+          <ComparisonTable />
+        </Suspense>
 
         {/* PRICING */}
         <section id="pricing" className="py-24 px-4 bg-card/30 border-y border-border scroll-mt-20">
@@ -464,7 +466,9 @@ const Index = () => {
             </ScrollReveal>
 
             <ScrollReveal delay={0.1}>
-              <PricingTiers onSelect={selectPlan} recommended="full" />
+              <Suspense fallback={<SectionFallback />}>
+                <PricingTiers onSelect={selectPlan} recommended="full" />
+              </Suspense>
             </ScrollReveal>
 
             {/* 7 DÍAS GRATIS — SISTEMA */}
@@ -504,7 +508,9 @@ const Index = () => {
         </section>
 
         {/* PREMIUM TRANSFORMATION */}
-        <PremiumTransformation contactEmail={contactEmail} />
+        <Suspense fallback={<SectionFallback />}>
+          <PremiumTransformation contactEmail={contactEmail} />
+        </Suspense>
 
         {/* GARANTÍA / MID CTA */}
         <section className="py-20 px-4">
@@ -618,7 +624,9 @@ const Index = () => {
         </section>
 
         {/* ENTRENADORES */}
-        <TrainersSection />
+        <Suspense fallback={<SectionFallback />}>
+          <TrainersSection />
+        </Suspense>
 
         {/* TESTIMONIOS */}
         <section className="py-28 px-4 bg-card/30 border-y border-border">
