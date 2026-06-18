@@ -5,6 +5,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function bytesToB64url(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function signState(payload: object): Promise<string> {
+  const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const json = JSON.stringify(payload);
+  const payloadB64 = bytesToB64url(new TextEncoder().encode(json));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64));
+  return `${payloadB64}.${bytesToB64url(new Uint8Array(sig))}`;
+}
+
+function sanitizeReturnTo(raw: string): string {
+  if (!raw) return "/dashboard";
+  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  try {
+    const parsed = new URL(raw);
+    const allowed = ["autopilotplan.com", "lovable.app", "lovable.dev"];
+    if (allowed.some((h) => parsed.hostname === h || parsed.hostname.endsWith("." + h))) {
+      return parsed.toString();
+    }
+  } catch {}
+  return "/dashboard";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -23,8 +57,8 @@ Deno.serve(async (req) => {
     const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")!;
     const redirectUri = `${Deno.env.get("SUPABASE_URL")}/functions/v1/gcal-oauth-callback`;
     const url = new URL(req.url);
-    const returnTo = url.searchParams.get("return_to") || "";
-    const state = btoa(JSON.stringify({ uid: user.id, return_to: returnTo }));
+    const returnTo = sanitizeReturnTo(url.searchParams.get("return_to") || "");
+    const state = await signState({ uid: user.id, return_to: returnTo, iat: Date.now() });
 
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.searchParams.set("client_id", clientId);
