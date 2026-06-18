@@ -15,19 +15,22 @@ import {
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
-import PricingTiers from "@/components/PricingTiers";
-import AIScanSection from "@/components/AIScanSection";
-import TrainersSection from "@/components/TrainersSection";
-import PostScanFlow from "@/components/PostScanFlow";
-import PremiumTransformation from "@/components/PremiumTransformation";
-import ComparisonTable from "@/components/ComparisonTable";
 import { Award, Dumbbell, Calendar, MessageSquare, Target } from "lucide-react";
+
+// Bajo el fold → lazy. No bloquea el render inicial de la landing.
+const AIScanSection = lazy(() => import("@/components/AIScanSection"));
+const PostScanFlow = lazy(() => import("@/components/PostScanFlow"));
+const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
+const PricingTiers = lazy(() => import("@/components/PricingTiers"));
+const PremiumTransformation = lazy(() => import("@/components/PremiumTransformation"));
+const TrainersSection = lazy(() => import("@/components/TrainersSection"));
+
+const SectionFallback = () => <div className="min-h-[200px]" aria-hidden />;
 import type { PlanKey } from "@/config/tiers";
 import {
   Accordion,
