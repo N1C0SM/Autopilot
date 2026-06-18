@@ -1488,6 +1488,39 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_profiles_public: {
+        Row: {
+          bio: string | null
+          display_name: string | null
+          headline: string | null
+          id: string | null
+          photo_url: string | null
+          sort_order: number | null
+          specialty: string | null
+          visible: boolean | null
+        }
+        Insert: {
+          bio?: string | null
+          display_name?: string | null
+          headline?: string | null
+          id?: string | null
+          photo_url?: string | null
+          sort_order?: number | null
+          specialty?: string | null
+          visible?: boolean | null
+        }
+        Update: {
+          bio?: string | null
+          display_name?: string | null
+          headline?: string | null
+          id?: string | null
+          photo_url?: string | null
+          sort_order?: number | null
+          specialty?: string | null
+          visible?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       admin_assign_user_to_trainer: {
