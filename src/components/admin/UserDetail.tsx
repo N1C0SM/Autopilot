@@ -827,6 +827,28 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           </span>
         </div>
         {!restricted && (
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/dashboard/user/${profile.user_id}`, "_blank")}
+              title="Abre el dashboard tal como lo ve esta persona"
+            >
+              <Eye className="w-4 h-4 mr-1.5" /> Ver como usuario
+            </Button>
+            {kind === "trainer" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(`/trainer`, "_blank")}
+                title="Abre el panel del entrenador"
+              >
+                <Eye className="w-4 h-4 mr-1.5" /> Ver como entrenador
+              </Button>
+            )}
+          </div>
+        )}
+        {!restricted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting}>
