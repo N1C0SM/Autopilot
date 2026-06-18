@@ -28,6 +28,7 @@ import type { Profile } from "@/pages/Admin";
 import type { Json } from "@/integrations/supabase/types";
 import type { DayPlan } from "@/types/training";
 import TrainingPlanForm from "./TrainingPlanForm";
+import { impersonateUser } from "@/lib/impersonate";
 
 interface OnboardingData {
   age: number | null;
