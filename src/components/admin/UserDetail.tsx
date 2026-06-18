@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
@@ -323,26 +323,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </span>
           </div>
         </div>
-        {!restricted && (
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(`/dashboard/user/${profile.user_id}`, "_blank")}
-              title="Abre el dashboard tal como lo ve este usuario"
-            >
-              <Eye className="w-4 h-4 mr-1.5" /> Ver como usuario
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(`/trainer`, "_blank")}
-              title="Abre el panel del entrenador"
-            >
-              <Eye className="w-4 h-4 mr-1.5" /> Ver como entrenador
-            </Button>
-          </div>
-        )}
         {profile.payment_status === "paid" && (
           <>
             <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="shrink-0">
@@ -826,28 +806,6 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
             {kind === "admin" ? "👑 Administrador" : "🏋️ Entrenador"}
           </span>
         </div>
-        {!restricted && (
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.open(`/dashboard/user/${profile.user_id}`, "_blank")}
-              title="Abre el dashboard tal como lo ve esta persona"
-            >
-              <Eye className="w-4 h-4 mr-1.5" /> Ver como usuario
-            </Button>
-            {kind === "trainer" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.open(`/trainer`, "_blank")}
-                title="Abre el panel del entrenador"
-              >
-                <Eye className="w-4 h-4 mr-1.5" /> Ver como entrenador
-              </Button>
-            )}
-          </div>
-        )}
         {!restricted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
