@@ -40,15 +40,29 @@ serve(async (req) => {
       ? Deno.env.get("STRIPE_LIVE_WEBHOOK_SECRET")
       : Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
 
-    let event: Stripe.Event;
+    if (!webhookSecret) {
+      console.error("Stripe webhook secret not configured");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!signature) {
+      return new Response(JSON.stringify({ error: "Missing stripe-signature header" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    if (webhookSecret && signature) {
+    let event: Stripe.Event;
+    try {
       event = await stripe.webhooks.constructEventAsync(
         body, signature, webhookSecret, undefined,
         Stripe.createSubtleCryptoProvider()
       );
-    } else {
-      event = JSON.parse(body) as Stripe.Event;
+    } catch (err) {
+      console.error("Invalid Stripe signature", (err as Error).message);
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`Received Stripe event: ${event.type}`);

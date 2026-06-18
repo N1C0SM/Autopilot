@@ -764,7 +764,20 @@ serve(async (req) => {
     if (!user) throw new Error("Not authenticated");
 
     let targetUserId = user.id;
-    try { const body = await req.json(); if (body.user_id) targetUserId = body.user_id; } catch { /* no body */ }
+    try {
+      const body = await req.json();
+      if (body.user_id && body.user_id !== user.id) {
+        const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
+          supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
+          supabase.rpc("is_trainer_of", { _trainer_id: user.id, _user_id: body.user_id }),
+        ]);
+        if (!isAdmin && !isTrainer) throw new Error("Forbidden: cannot generate a plan for another user");
+        targetUserId = body.user_id;
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith("Forbidden")) throw e;
+      /* no body */
+    }
 
     // Fetch rules, onboarding and user_schedule in parallel
     const [onbResult, rulesResult, scheduleResult] = await Promise.all([

@@ -1,8 +1,15 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+    if (!token) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const { data: { user } } = await sb.auth.getUser(token);
+    if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
     const { lastUserMessage, history, context } = await req.json();
     if (!lastUserMessage || typeof lastUserMessage !== "string") {
       return new Response(JSON.stringify({ error: "lastUserMessage required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
