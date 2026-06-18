@@ -75,7 +75,7 @@ const Index = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    (async () => {
+    const run = async () => {
       const [{ data: t }, settingsRes, statsRes] = await Promise.all([
         supabase.from("site_testimonials").select("name, result, text, photo_url, photo_before_url, photo_after_url").eq("visible", true).order("sort_order"),
         (supabase.rpc as any)("get_public_settings"),
@@ -102,7 +102,15 @@ const Index = () => {
         paid,
         activePct: paid > 0 ? Math.round((active / paid) * 100) : null,
       });
-    })();
+    };
+    // Deferimos a idle: no compite con el primer paint.
+    const w = window as any;
+    if (typeof w.requestIdleCallback === "function") {
+      const id = w.requestIdleCallback(() => { run(); }, { timeout: 2000 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(run, 300);
+    return () => window.clearTimeout(id);
   }, []);
 
   const goToPricing = () => {
