@@ -20,14 +20,16 @@ export async function logConsent(
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("user_consents").insert({
-      user_id: user.id,
-      consent_type: type,
-      granted,
-      document_version: LEGAL_VERSION,
-      user_agent: typeof navigator !== "undefined" ? navigator.userAgent : null,
-      metadata: extra ?? null,
-    });
+    await supabase.from("user_consents").insert([
+      {
+        user_id: user.id,
+        consent_type: type,
+        granted,
+        document_version: LEGAL_VERSION,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
+        metadata: (extra ?? null) as any,
+      },
+    ]);
   } catch (e) {
     // No bloqueamos la UX si falla el log.
     console.warn("[consents] no se pudo registrar consentimiento", e);
