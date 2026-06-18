@@ -11,7 +11,7 @@ import { lovable } from "@/integrations/lovable";
 import { Loader2, Apple } from "lucide-react";
 
 const Login = () => {
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
@@ -32,23 +32,14 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
 
-    let email = identifier.trim();
-
-    if (!isEmail(email)) {
-      // Lookup email by username via edge function
-      const { data, error: fnError } = await supabase.functions.invoke("check-availability", {
-        body: { name: email, lookup: true },
-      });
-
-      if (fnError || !data?.email) {
-        setLoading(false);
-        toast.error("No se encontró ningún usuario con ese nombre");
-        return;
-      }
-      email = data.email;
+    const cleaned = email.trim();
+    if (!isEmail(cleaned)) {
+      setLoading(false);
+      toast.error("Introduce un correo electrónico válido");
+      return;
     }
 
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(cleaned, password);
     setLoading(false);
     if (error) {
       if (error.message.includes("Email not confirmed")) {
@@ -91,8 +82,8 @@ const Login = () => {
         </div>
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-8 border border-border card-shadow space-y-5">
           <div>
-            <Label htmlFor="identifier">Nombre o correo electrónico</Label>
-            <Input id="identifier" type="text" value={identifier} onChange={(e) => setIdentifier(e.target.value)} required className="mt-1.5" placeholder="tu nombre o tu@ejemplo.com" />
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1.5" placeholder="tu@ejemplo.com" />
           </div>
           <div>
             <div className="flex items-center justify-between">
