@@ -12,7 +12,9 @@ import { toast } from "sonner";
 import {
   Save, Camera, Trash2, Loader2, User, Lock, ClipboardList,
   CreditCard, ExternalLink, Calendar, Crown, CalendarClock, Check, Zap, Unplug, RefreshCw,
+  ShieldCheck, Download, FileText,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -26,6 +28,7 @@ const SettingsPanel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Profile
   const [name, setName] = useState("");
@@ -243,6 +246,33 @@ const SettingsPanel = () => {
     await signOut();
     navigate("/");
     toast.success("Cuenta eliminada permanentemente");
+  };
+
+  const exportMyData = async () => {
+    setExporting(true);
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const token = sessionRes?.session?.access_token;
+      if (!token) throw new Error("No autenticado");
+      const url = `https://enebrcdrdnfkyduzyrzm.supabase.co/functions/v1/export-user-data`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Error al exportar");
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `autopilot-mis-datos-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Tus datos se han descargado");
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudieron exportar tus datos");
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) {
