@@ -443,6 +443,9 @@ const Index = () => {
           </div>
         </section>
 
+        {/* COMPARISON — antes de precios para contextualizar el valor */}
+        <ComparisonTable />
+
         {/* PRICING */}
         <section id="pricing" className="py-24 px-4 bg-card/30 border-y border-border scroll-mt-20">
           <div className="container mx-auto">
@@ -502,9 +505,6 @@ const Index = () => {
 
         {/* PREMIUM TRANSFORMATION */}
         <PremiumTransformation contactEmail={contactEmail} />
-
-        {/* COMPARISON */}
-        <ComparisonTable />
 
         {/* GARANTÍA / MID CTA */}
         <section className="py-20 px-4">

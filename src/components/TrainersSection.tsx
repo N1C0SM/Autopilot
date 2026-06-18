@@ -58,6 +58,11 @@ const TrainersSection = () => {
             <p className="text-muted-foreground mt-5 max-w-lg mx-auto text-base sm:text-lg leading-relaxed">
               Personas reales que diseñan, ajustan y responden tu plan cada semana. Sin bots, sin plantillas.
             </p>
+            <p className="text-sm text-foreground/80 mt-4 max-w-xl mx-auto leading-relaxed">
+              <span className="text-primary font-semibold">Nicolás</span> asigna y supervisa cada caso.{" "}
+              <span className="text-primary font-semibold">Iván</span> se especializa en hipertrofia en gimnasio.{" "}
+              Siempre sabrás con quién trabajas.
+            </p>
           </div>
         </ScrollReveal>
 
