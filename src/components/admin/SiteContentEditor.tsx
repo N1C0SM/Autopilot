@@ -18,6 +18,7 @@ interface Testimonial {
   photo_after_url: string | null;
   sort_order: number;
   visible: boolean;
+  is_12w_transformation?: boolean;
 }
 
 const uploadImage = async (file: File, folder: string) => {
@@ -157,6 +158,7 @@ const SiteContentEditor = () => {
       photo_before_url: t.photo_before_url,
       photo_after_url: t.photo_after_url,
       sort_order: t.sort_order, visible: t.visible,
+      is_12w_transformation: !!t.is_12w_transformation,
     } as any).eq("id", t.id);
     if (error) toast.error("Error al guardar"); else toast.success("Guardado");
   };
@@ -358,6 +360,16 @@ const SiteContentEditor = () => {
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground">Si subes Antes y Después, en la landing se mostrarán como par comparativo.</p>
+              <div className="flex items-center justify-between border-t border-border pt-3">
+                <div>
+                  <Label className="text-xs font-medium">Transformación 12 semanas</Label>
+                  <p className="text-[10px] text-muted-foreground">Si lo activas, este testimonio se destacará en la sección premium.</p>
+                </div>
+                <Switch
+                  checked={!!t.is_12w_transformation}
+                  onCheckedChange={(v) => updateTestimonial(t.id, { is_12w_transformation: v })}
+                />
+              </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => saveTestimonial(t)}>Guardar</Button>
                 <Button size="sm" variant="ghost" onClick={() => deleteTestimonial(t.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
