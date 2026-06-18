@@ -9,6 +9,14 @@
     <meta name="author" content="Autopilot" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
     <meta name="google-site-verification" content="ZWtPMOVG0JxmeZL3Qgs6eEt6T1gInizLGl3I2JL_aHU" />
+    <script>
+      // Activa modo impersonación (sesión aislada por pestaña) ANTES de cargar el bundle.
+      try {
+        if (window.location.pathname.indexOf('/impersonate/callback') === 0) {
+          sessionStorage.setItem('lovable-impersonating', '1');
+        }
+      } catch (_) {}
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

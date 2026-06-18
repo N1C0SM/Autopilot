@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
@@ -28,6 +28,7 @@ import type { Profile } from "@/pages/Admin";
 import type { Json } from "@/integrations/supabase/types";
 import type { DayPlan } from "@/types/training";
 import TrainingPlanForm from "./TrainingPlanForm";
+import { impersonateUser } from "@/lib/impersonate";
 
 interface OnboardingData {
   age: number | null;
@@ -332,6 +333,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar"}
             </Button>
           </>
+        )}
+        {!restricted && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => impersonateUser(profile.user_id, "/dashboard")}
+            title="Abrir la app en una pestaña nueva como si fueras este usuario"
+          >
+            <Eye className="w-4 h-4 mr-1.5" /> Ver como
+          </Button>
         )}
         {!restricted && <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -806,6 +818,17 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
             {kind === "admin" ? "👑 Administrador" : "🏋️ Entrenador"}
           </span>
         </div>
+        {!restricted && kind === "trainer" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => impersonateUser(profile.user_id, "/trainer")}
+            title="Abrir el panel del entrenador como esta persona"
+          >
+            <Eye className="w-4 h-4 mr-1.5" /> Ver como
+          </Button>
+        )}
         {!restricted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>

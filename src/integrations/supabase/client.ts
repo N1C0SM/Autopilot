@@ -8,9 +8,21 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Storage que enruta a sessionStorage cuando estamos en una pestaña de impersonación.
+// El flag `lovable-impersonating` se setea en index.html antes de cargar el bundle.
+const isImpersonating = () => {
+  try { return typeof sessionStorage !== 'undefined' && sessionStorage.getItem('lovable-impersonating') === '1'; }
+  catch { return false; }
+};
+const impersonationAwareStorage = {
+  getItem: (k: string) => isImpersonating() ? sessionStorage.getItem(`imp:${k}`) : localStorage.getItem(k),
+  setItem: (k: string, v: string) => isImpersonating() ? sessionStorage.setItem(`imp:${k}`, v) : localStorage.setItem(k, v),
+  removeItem: (k: string) => isImpersonating() ? sessionStorage.removeItem(`imp:${k}`) : localStorage.removeItem(k),
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: impersonationAwareStorage,
     persistSession: true,
     autoRefreshToken: true,
   }
