@@ -26,6 +26,8 @@ const Trainer = lazy(() => import("./pages/Trainer"));
 const EmailPreview = lazy(() => import("./pages/EmailPreview"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
+const ImpersonateCallback = lazy(() => import("./pages/ImpersonateCallback"));
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -61,6 +63,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ImpersonationBanner />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<RootRoute />} />
@@ -83,6 +86,7 @@ const App = () => (
             <Route path="/legal/:slug" element={<Legal />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/impersonate/callback" element={<ImpersonateCallback />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
