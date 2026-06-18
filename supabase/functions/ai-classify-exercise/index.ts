@@ -2,6 +2,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 const MUSCLE_GROUPS = ["Pecho","Espalda","Hombros","Bíceps","Tríceps","Piernas","Glúteos","Core","Cardio","Cuerpo completo","Isquiotibiales","Gemelos","Antebrazos","Trapecios","Romboides","Lumbares","Serrato","Aductores","Abductores","Cuello"];
 const EXERCISE_TYPES = ["Calistenia","Gimnasio","Mixto"];
@@ -14,6 +15,14 @@ const SKILL_TAGS = ["handstand","muscle_up","planche","front_lever","back_lever"
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+    if (!token) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const { data: { user } } = await sb.auth.getUser(token);
+    if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
+    if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
     const { name } = await req.json();
     if (!name || typeof name !== "string") {
       return new Response(JSON.stringify({ error: "name required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
