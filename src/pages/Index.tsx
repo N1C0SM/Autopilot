@@ -343,10 +343,14 @@ const Index = () => {
         </section>
 
         {/* AI SCAN */}
-        <AIScanSection />
+        <Suspense fallback={<SectionFallback />}>
+          <AIScanSection />
+        </Suspense>
 
         {/* POST-SCAN FLOW */}
-        <PostScanFlow />
+        <Suspense fallback={<SectionFallback />}>
+          <PostScanFlow />
+        </Suspense>
 
         {/* QUIÉN HAY DETRÁS */}
         <section className="py-24 px-4 border-t border-border">
@@ -432,7 +436,9 @@ const Index = () => {
         </section>
 
         {/* COMPARISON — antes de precios para contextualizar el valor */}
-        <ComparisonTable />
+        <Suspense fallback={<SectionFallback />}>
+          <ComparisonTable />
+        </Suspense>
 
         {/* PRICING */}
         <section id="pricing" className="py-24 px-4 bg-card/30 border-y border-border scroll-mt-20">
@@ -452,7 +458,9 @@ const Index = () => {
             </ScrollReveal>
 
             <ScrollReveal delay={0.1}>
-              <PricingTiers onSelect={selectPlan} recommended="full" />
+              <Suspense fallback={<SectionFallback />}>
+                <PricingTiers onSelect={selectPlan} recommended="full" />
+              </Suspense>
             </ScrollReveal>
 
             {/* 7 DÍAS GRATIS — SISTEMA */}
@@ -492,7 +500,9 @@ const Index = () => {
         </section>
 
         {/* PREMIUM TRANSFORMATION */}
-        <PremiumTransformation contactEmail={contactEmail} />
+        <Suspense fallback={<SectionFallback />}>
+          <PremiumTransformation contactEmail={contactEmail} />
+        </Suspense>
 
         {/* GARANTÍA / MID CTA */}
         <section className="py-20 px-4">
@@ -606,7 +616,9 @@ const Index = () => {
         </section>
 
         {/* ENTRENADORES */}
-        <TrainersSection />
+        <Suspense fallback={<SectionFallback />}>
+          <TrainersSection />
+        </Suspense>
 
         {/* TESTIMONIOS */}
         <section className="py-28 px-4 bg-card/30 border-y border-border">
