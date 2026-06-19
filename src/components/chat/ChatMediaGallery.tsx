@@ -1,4 +1,6 @@
 import { Play, Image as ImageIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { signedUrlsFor } from "@/lib/storageSign";
 
 interface Message {
   id: string;
@@ -16,6 +18,19 @@ interface Props {
 
 const ChatMediaGallery = ({ messages, onViewMedia }: Props) => {
   const mediaMessages = messages.filter(m => m.media_url);
+  const [signed, setSigned] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    const urls = mediaMessages.map((m) => m.media_url!).filter(Boolean);
+    if (!urls.length) return;
+    let cancelled = false;
+    signedUrlsFor("progress-photos", urls).then((m) => {
+      if (!cancelled) setSigned((prev) => new Map([...prev, ...m]));
+    });
+    return () => { cancelled = true; };
+  }, [messages]);
+
+  const resolve = (u?: string | null) => (u ? signed.get(u) || "" : "");
 
   if (mediaMessages.length === 0) {
     return (
@@ -35,18 +50,18 @@ const ChatMediaGallery = ({ messages, onViewMedia }: Props) => {
         {mediaMessages.map((msg) => (
           <button
             key={msg.id}
-            onClick={() => onViewMedia({ url: msg.media_url!, type: msg.media_type || "image" })}
+            onClick={() => onViewMedia({ url: resolve(msg.media_url), type: msg.media_type || "image" })}
             className="relative aspect-square rounded-lg overflow-hidden border border-border hover:opacity-90 transition-opacity group"
           >
             {msg.media_type === "video" ? (
               <>
-                <video src={msg.media_url!} className="w-full h-full object-cover" />
+                <video src={resolve(msg.media_url)} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
                   <Play className="w-6 h-6 text-white" />
                 </div>
               </>
             ) : (
-              <img src={msg.media_url!} alt="" className="w-full h-full object-cover" />
+              <img src={resolve(msg.media_url)} alt="" className="w-full h-full object-cover" />
             )}
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
               <span className="text-[9px] text-white">
