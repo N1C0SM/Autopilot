@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Play, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { signedUrlsFor } from "@/lib/storageSign";
 
 interface Message {
   id: string;
@@ -19,10 +20,25 @@ interface Props {
 const ChatMessages = ({ messages, onViewMedia }: Props) => {
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [signed, setSigned] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const urls = messages.map((m) => m.media_url).filter(Boolean) as string[];
+    if (urls.length === 0) return;
+    let cancelled = false;
+    signedUrlsFor("progress-photos", urls).then((m) => {
+      if (!cancelled) setSigned((prev) => new Map([...prev, ...m]));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [messages]);
+
+  const resolve = (u?: string | null) => (u ? signed.get(u) || "" : "");
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -44,18 +60,18 @@ const ChatMessages = ({ messages, onViewMedia }: Props) => {
             >
               {msg.media_url && msg.media_type === "image" && (
                 <button
-                  onClick={() => onViewMedia({ url: msg.media_url!, type: "image" })}
+                  onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "image" })}
                   className="block mb-2 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
                 >
-                  <img src={msg.media_url} alt="Foto" className="max-w-full max-h-48 rounded-lg object-cover" />
+                  <img src={resolve(msg.media_url)} alt="Foto" className="max-w-full max-h-48 rounded-lg object-cover" />
                 </button>
               )}
               {msg.media_url && msg.media_type === "video" && (
                 <button
-                  onClick={() => onViewMedia({ url: msg.media_url!, type: "video" })}
+                  onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "video" })}
                   className="block mb-2 rounded-lg overflow-hidden relative group"
                 >
-                  <video src={msg.media_url} className="max-w-full max-h-48 rounded-lg object-cover" />
+                  <video src={resolve(msg.media_url)} className="max-w-full max-h-48 rounded-lg object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
                     <Play className="w-10 h-10 text-white" />
                   </div>
