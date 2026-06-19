@@ -170,7 +170,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           </div>
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {goalUrl ? (
-              <img src={goalUrl} alt="Físico objetivo" className="w-full h-full object-contain" />
+              <img src={signed.get(goalUrl) || ""} alt="Físico objetivo" className="w-full h-full object-contain" />
             ) : (
               <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-center p-6">
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
@@ -200,7 +200,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           </div>
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {latestPhoto ? (
-              <img src={latestPhoto.photo_url} alt="Estado actual" className="w-full h-full object-contain" />
+              <img src={signed.get(latestPhoto.photo_url) || ""} alt="Estado actual" className="w-full h-full object-contain" />
             ) : (
               <div className="text-center p-6">
                 <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -278,7 +278,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           <div className="grid grid-cols-5 gap-2">
             {allPhotos.map((p) => (
               <div key={p.id} className="aspect-[3/4] rounded-lg overflow-hidden border border-border relative">
-                <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+                <img src={signed.get(p.photo_url) || ""} alt="" className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1">
                   <span className="text-[9px] text-white font-medium">
                     {new Date(p.taken_at + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
