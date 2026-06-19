@@ -234,6 +234,16 @@ const Onboarding = () => {
     })();
   }, [user, scanPrefill, data.goal_photo_url]);
 
+  // Refrescar URL firmada cuando cambia la foto objetivo
+  useEffect(() => {
+    let cancelled = false;
+    if (!data.goal_photo_url) { setGoalPreviewUrl(null); return; }
+    signedUrlFor("progress-photos", data.goal_photo_url).then((u) => {
+      if (!cancelled) setGoalPreviewUrl(u);
+    });
+    return () => { cancelled = true; };
+  }, [data.goal_photo_url]);
+
   useEffect(() => {
     if (!user) return;
     supabase
