@@ -1012,7 +1012,7 @@ const Onboarding = () => {
                 </div>
                 {data.goal_photo_url ? (
                   <div className="relative rounded-xl overflow-hidden border border-border">
-                    <img src={data.goal_photo_url} alt="Físico objetivo" className="w-full max-h-60 object-contain bg-secondary" />
+                    <img src={goalPreviewUrl || ""} alt="Físico objetivo" className="w-full max-h-60 object-contain bg-secondary" />
                     <button
                       type="button"
                       onClick={() => update("goal_photo_url", "")}
