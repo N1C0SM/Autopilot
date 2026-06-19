@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
 import { logConsent } from "@/lib/consents";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import { signedUrlFor } from "@/lib/storageSign";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -116,6 +117,7 @@ const Onboarding = () => {
   const [yearlyPrice, setYearlyPrice] = useState(190);
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(false);
+  const [goalPreviewUrl, setGoalPreviewUrl] = useState<string | null>(null);
   const [data, setData] = useState({
     age: "",
     height: "",
