@@ -5,6 +5,7 @@ import { Target, Sparkles, Trash2, Upload, Loader2, Trophy, ImageOff } from "luc
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { signedUrlsFor } from "@/lib/storageSign";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -34,6 +35,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
   const [goalUrl, setGoalUrl] = useState<string | null>(null);
   const [latestPhoto, setLatestPhoto] = useState<PhotoRow | null>(null);
   const [allPhotos, setAllPhotos] = useState<PhotoRow[]>([]);
+  const [signed, setSigned] = useState<Map<string, string>>(new Map());
   const [comparing, setComparing] = useState(false);
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -52,6 +54,10 @@ const UserGoalPanel = ({ userId, email }: Props) => {
       const list = (photos as PhotoRow[]) || [];
       setAllPhotos(list);
       setLatestPhoto(list[0] || null);
+      const urls: string[] = list.map((p) => p.photo_url);
+      if (onb?.goal_photo_url) urls.push(onb.goal_photo_url as string);
+      const map = await signedUrlsFor("progress-photos", urls);
+      setSigned(map);
       setLoading(false);
     };
     load();
