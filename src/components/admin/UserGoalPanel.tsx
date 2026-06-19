@@ -5,7 +5,7 @@ import { Target, Sparkles, Trash2, Upload, Loader2, Trophy, ImageOff } from "luc
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { signedUrlsFor } from "@/lib/storageSign";
+import { signedUrlsFor, signedUrlFor } from "@/lib/storageSign";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -71,8 +71,13 @@ const UserGoalPanel = ({ userId, email }: Props) => {
     setComparing(true);
     setComparison(null);
     try {
+      const [signedGoal, signedCurrent] = await Promise.all([
+        signedUrlFor("progress-photos", goalUrl),
+        signedUrlFor("progress-photos", latestPhoto.photo_url),
+      ]);
+      if (!signedGoal || !signedCurrent) throw new Error("No se pudieron firmar las imágenes");
       const { data, error } = await supabase.functions.invoke("compare-goal-photo", {
-        body: { goal_url: goalUrl, current_url: latestPhoto.photo_url },
+        body: { goal_url: signedGoal, current_url: signedCurrent },
       });
       if (error || !data || data.error) throw new Error(error?.message || data?.error || "Error IA");
       setComparison(data as Comparison);
