@@ -42,7 +42,7 @@ const NotificationsBell = ({ userId }: Props) => {
     fetchNotifications();
 
     const channel = supabase
-      .channel("notifications")
+      .channel(`notifications-${userId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },

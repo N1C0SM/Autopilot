@@ -352,8 +352,14 @@ const Scan = () => {
       .then(({ data }: any) => {
         const url = data?.goal_photo_url ?? null;
         if (url) {
-          setSavedObjectiveUrl(url);
-          setObjectiveImg((prev) => prev ?? url);
+          // Bucket es privado: firmar la URL para visualización y para enviar al análisis IA.
+          import("@/lib/storageSign").then(({ signedUrlFor }) =>
+            signedUrlFor("progress-photos", url).then((signed) => {
+              const finalUrl = signed || url;
+              setSavedObjectiveUrl(finalUrl);
+              setObjectiveImg((prev) => prev ?? finalUrl);
+            })
+          );
         }
         const txt = (data?.specific_goal || data?.goal || "").toString().trim();
         if (txt) setSavedGoalText(txt);

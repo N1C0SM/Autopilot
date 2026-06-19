@@ -5,6 +5,7 @@ import { Target, Sparkles, Trash2, Upload, Loader2, Trophy, ImageOff } from "luc
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { signedUrlsFor, signedUrlFor } from "@/lib/storageSign";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -34,6 +35,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
   const [goalUrl, setGoalUrl] = useState<string | null>(null);
   const [latestPhoto, setLatestPhoto] = useState<PhotoRow | null>(null);
   const [allPhotos, setAllPhotos] = useState<PhotoRow[]>([]);
+  const [signed, setSigned] = useState<Map<string, string>>(new Map());
   const [comparing, setComparing] = useState(false);
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -52,6 +54,10 @@ const UserGoalPanel = ({ userId, email }: Props) => {
       const list = (photos as PhotoRow[]) || [];
       setAllPhotos(list);
       setLatestPhoto(list[0] || null);
+      const urls: string[] = list.map((p) => p.photo_url);
+      if (onb?.goal_photo_url) urls.push(onb.goal_photo_url as string);
+      const map = await signedUrlsFor("progress-photos", urls);
+      setSigned(map);
       setLoading(false);
     };
     load();
@@ -65,8 +71,13 @@ const UserGoalPanel = ({ userId, email }: Props) => {
     setComparing(true);
     setComparison(null);
     try {
+      const [signedGoal, signedCurrent] = await Promise.all([
+        signedUrlFor("progress-photos", goalUrl),
+        signedUrlFor("progress-photos", latestPhoto.photo_url),
+      ]);
+      if (!signedGoal || !signedCurrent) throw new Error("No se pudieron firmar las imágenes");
       const { data, error } = await supabase.functions.invoke("compare-goal-photo", {
-        body: { goal_url: goalUrl, current_url: latestPhoto.photo_url },
+        body: { goal_url: signedGoal, current_url: signedCurrent },
       });
       if (error || !data || data.error) throw new Error(error?.message || data?.error || "Error IA");
       setComparison(data as Comparison);
@@ -164,7 +175,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           </div>
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {goalUrl ? (
-              <img src={goalUrl} alt="Físico objetivo" className="w-full h-full object-contain" />
+              <img src={signed.get(goalUrl) || ""} alt="Físico objetivo" className="w-full h-full object-contain" />
             ) : (
               <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-center p-6">
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
@@ -194,7 +205,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           </div>
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {latestPhoto ? (
-              <img src={latestPhoto.photo_url} alt="Estado actual" className="w-full h-full object-contain" />
+              <img src={signed.get(latestPhoto.photo_url) || ""} alt="Estado actual" className="w-full h-full object-contain" />
             ) : (
               <div className="text-center p-6">
                 <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -272,7 +283,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           <div className="grid grid-cols-5 gap-2">
             {allPhotos.map((p) => (
               <div key={p.id} className="aspect-[3/4] rounded-lg overflow-hidden border border-border relative">
-                <img src={p.photo_url} alt="" className="w-full h-full object-cover" />
+                <img src={signed.get(p.photo_url) || ""} alt="" className="w-full h-full object-cover" />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1">
                   <span className="text-[9px] text-white font-medium">
                     {new Date(p.taken_at + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" })}

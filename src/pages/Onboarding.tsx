@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
 import { logConsent } from "@/lib/consents";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import { signedUrlFor } from "@/lib/storageSign";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -116,6 +117,7 @@ const Onboarding = () => {
   const [yearlyPrice, setYearlyPrice] = useState(190);
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(false);
+  const [goalPreviewUrl, setGoalPreviewUrl] = useState<string | null>(null);
   const [data, setData] = useState({
     age: "",
     height: "",
@@ -231,6 +233,16 @@ const Onboarding = () => {
       } catch {}
     })();
   }, [user, scanPrefill, data.goal_photo_url]);
+
+  // Refrescar URL firmada cuando cambia la foto objetivo
+  useEffect(() => {
+    let cancelled = false;
+    if (!data.goal_photo_url) { setGoalPreviewUrl(null); return; }
+    signedUrlFor("progress-photos", data.goal_photo_url).then((u) => {
+      if (!cancelled) setGoalPreviewUrl(u);
+    });
+    return () => { cancelled = true; };
+  }, [data.goal_photo_url]);
 
   useEffect(() => {
     if (!user) return;
@@ -1012,7 +1024,7 @@ const Onboarding = () => {
                 </div>
                 {data.goal_photo_url ? (
                   <div className="relative rounded-xl overflow-hidden border border-border">
-                    <img src={data.goal_photo_url} alt="Físico objetivo" className="w-full max-h-60 object-contain bg-secondary" />
+                    <img src={goalPreviewUrl || ""} alt="Físico objetivo" className="w-full max-h-60 object-contain bg-secondary" />
                     <button
                       type="button"
                       onClick={() => update("goal_photo_url", "")}

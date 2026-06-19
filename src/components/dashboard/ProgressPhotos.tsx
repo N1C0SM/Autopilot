@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { signedUrlsFor } from "@/lib/storageSign";
 
 interface Photo {
   id: string;
@@ -19,6 +20,7 @@ interface Props {
 
 const ProgressPhotos = ({ userId }: Props) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [signed, setSigned] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
@@ -34,7 +36,10 @@ const ProgressPhotos = ({ userId }: Props) => {
       .select("*")
       .eq("user_id", userId)
       .order("taken_at", { ascending: false });
-    setPhotos((data as Photo[]) || []);
+    const list = (data as Photo[]) || [];
+    setPhotos(list);
+    const map = await signedUrlsFor("progress-photos", list.map((p) => p.photo_url));
+    setSigned(map);
     setLoading(false);
   };
 
@@ -167,7 +172,7 @@ const ProgressPhotos = ({ userId }: Props) => {
                 className="aspect-[3/4] rounded-xl overflow-hidden border border-border hover:border-primary/40 transition-all group relative"
               >
                 <img
-                  src={photo.photo_url}
+                  src={signed.get(photo.photo_url) || ""}
                   alt={`Progreso ${formatDate(photo.taken_at)}`}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -232,7 +237,7 @@ const ProgressPhotos = ({ userId }: Props) => {
 
             <div className="max-w-lg max-h-[85vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
               <img
-                src={photos[viewingPhoto].photo_url}
+                src={signed.get(photos[viewingPhoto].photo_url) || ""}
                 alt=""
                 className="max-h-[75vh] rounded-xl object-contain"
               />
