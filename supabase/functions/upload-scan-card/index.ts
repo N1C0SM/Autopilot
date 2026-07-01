@@ -8,20 +8,20 @@ const corsHeaders = {
 
 const MAX_BYTES = 4 * 1024 * 1024 // ~4MB
 
-// naive in-memory rate limit per IP (per instance)
-const hits = new Map<string, { count: number; reset: number }>()
-const LIMIT = 20
-const WINDOW_MS = 60_000
+const RL_LIMIT = 20
+const RL_WINDOW_SECONDS = 60
 
-function rateLimited(ip: string): boolean {
-  const now = Date.now()
-  const bucket = hits.get(ip)
-  if (!bucket || bucket.reset < now) {
-    hits.set(ip, { count: 1, reset: now + WINDOW_MS })
-    return false
-  }
-  bucket.count += 1
-  return bucket.count > LIMIT
+async function rateLimited(supabase: ReturnType<typeof createClient>, ip: string): Promise<boolean> {
+  const key = `upload-scan-card:${ip}`
+  const sinceIso = new Date(Date.now() - RL_WINDOW_SECONDS * 1000).toISOString()
+  const { count } = await supabase
+    .from('rate_limits')
+    .select('id', { count: 'exact', head: true })
+    .eq('key', key)
+    .gte('created_at', sinceIso)
+  if ((count ?? 0) >= RL_LIMIT) return true
+  await supabase.from('rate_limits').insert({ key })
+  return false
 }
 
 function base64ToBytes(b64: string): Uint8Array {
@@ -50,7 +50,11 @@ Deno.serve(async (req) => {
   }
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
-  if (rateLimited(ip)) {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  )
+  if (await rateLimited(supabase, ip)) {
     return new Response(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -98,11 +102,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  )
 
   const id = crypto.randomUUID()
   const path = `scan-cards/${id}.png`

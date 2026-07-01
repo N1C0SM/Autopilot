@@ -1,9 +1,35 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const ip =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const key = `generate-future-self:${ip}`;
+    const windowSec = 3600;
+    const limit = 8;
+    const sinceIso = new Date(Date.now() - windowSec * 1000).toISOString();
+    const { count } = await sb
+      .from("rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("key", key)
+      .gte("created_at", sinceIso);
+    if ((count ?? 0) >= limit) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    await sb.from("rate_limits").insert({ key });
+
     const { currentImage, months, goal } = await req.json();
     if (!currentImage) {
       return new Response(JSON.stringify({ error: "Falta la imagen" }), {
