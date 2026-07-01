@@ -26,7 +26,7 @@ const TrainersSection = () => {
 
   useEffect(() => {
     supabase
-      .from("trainer_profiles")
+      .from("trainer_profiles_public")
       .select("id, display_name, headline, bio, photo_url, specialty")
       .eq("visible", true)
       .order("sort_order", { ascending: true })
