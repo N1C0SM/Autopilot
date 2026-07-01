@@ -1,4 +1,5 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { z } from "npm:zod";
@@ -132,6 +133,32 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    // Per-IP rate limit to prevent AI credit exhaustion.
+    const ip =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
+    const sb = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const key = `analyze-physique:${ip}`;
+    const windowSec = 3600;
+    const limit = 8;
+    const sinceIso = new Date(Date.now() - windowSec * 1000).toISOString();
+    const { count } = await sb
+      .from("rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("key", key)
+      .gte("created_at", sinceIso);
+    if ((count ?? 0) >= limit) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    await sb.from("rate_limits").insert({ key });
+
     const { currentImage, backImage, objectiveImage } = await req.json();
     if (!currentImage || !backImage) {
       return new Response(JSON.stringify({ error: "Faltan las fotos de delante y/o atrás" }), {
