@@ -16,6 +16,45 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Per-IP rate limit to prevent email/username enumeration.
+    const ip =
+      req.headers.get("cf-connecting-ip") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown";
+    const rlKey = `check-availability:${ip}`;
+    const WINDOW_SECONDS = 60;
+    const LIMIT = 10;
+    const sinceIso = new Date(Date.now() - WINDOW_SECONDS * 1000).toISOString();
+    const { count } = await supabase
+      .from("rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("key", rlKey)
+      .gte("created_at", sinceIso);
+    if ((count ?? 0) >= LIMIT) {
+      // Fixed-time generic response to avoid signaling.
+      await new Promise((r) => setTimeout(r, 400));
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    await supabase.from("rate_limits").insert({ key: rlKey });
+
+    // Basic input validation.
+    if (email && (typeof email !== "string" || email.length > 320 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim()))) {
+      return new Response(JSON.stringify({ error: "Invalid email" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (name && (typeof name !== "string" || name.length > 60)) {
+      return new Response(JSON.stringify({ error: "Invalid name" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // NOTE: the previous `lookup` mode that returned an email from a username
     // has been removed because it enabled unauthenticated PII enumeration.
     // Login now requires the email address directly.
