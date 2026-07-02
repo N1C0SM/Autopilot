@@ -21,6 +21,7 @@ import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
 import { Award, Dumbbell, Calendar, MessageSquare, Target } from "lucide-react";
+import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
 const AIScanSection = lazy(() => import("@/components/AIScanSection"));
@@ -779,7 +780,9 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="py-10 px-4 border-t border-border">
-        <div className="container mx-auto max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4 text-muted-foreground text-sm">
+        <div className="container mx-auto max-w-4xl flex flex-col gap-8 text-muted-foreground text-sm">
+          <AppStoreBadges />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <span><span className="font-display font-bold text-gradient">Autopilot</span> &copy; {new Date().getFullYear()}</span>
           <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center">
             <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
@@ -789,6 +792,7 @@ const Index = () => {
             <Link to="/legal/privacidad" className="hover:text-foreground transition-colors">Privacidad</Link>
             <Link to="/legal/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
             <Link to="/legal/disclaimer-medico" className="hover:text-foreground transition-colors">Disclaimer médico</Link>
+          </div>
           </div>
         </div>
       </footer>
