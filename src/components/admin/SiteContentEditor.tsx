@@ -292,6 +292,34 @@ const SiteContentEditor = () => {
         </div>
       </div>
 
+      {/* Enlaces a las tiendas de la app */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Smartphone className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Enlaces a la app (App Store / Google Play)</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado).
+        </p>
+        <div className="space-y-2">
+          <Label className="text-xs">URL App Store (iOS)</Label>
+          <Input
+            placeholder="https://apps.apple.com/app/id0000000000"
+            value={stores.app_store_url}
+            onChange={(e) => setStores((s) => ({ ...s, app_store_url: e.target.value }))}
+          />
+          <Label className="text-xs">URL Google Play (Android)</Label>
+          <Input
+            placeholder="https://play.google.com/store/apps/details?id=..."
+            value={stores.play_store_url}
+            onChange={(e) => setStores((s) => ({ ...s, play_store_url: e.target.value }))}
+          />
+          <Button size="sm" onClick={saveStores} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar enlaces"}
+          </Button>
+        </div>
+      </div>
+
       {/* Entrenador */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
