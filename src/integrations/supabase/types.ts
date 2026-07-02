@@ -933,6 +933,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          app_store_url: string
           contact_email: string | null
           created_at: string
           hero_video_poster_url: string | null
@@ -949,6 +950,7 @@ export type Database = {
           payment_link_yearly_live: string | null
           payment_link_yearly_test: string | null
           payment_mode: string
+          play_store_url: string
           price_id_full_live: string | null
           price_id_full_test: string | null
           price_id_live: string | null
@@ -967,6 +969,7 @@ export type Database = {
           yearly_price_eur: number | null
         }
         Insert: {
+          app_store_url?: string
           contact_email?: string | null
           created_at?: string
           hero_video_poster_url?: string | null
@@ -983,6 +986,7 @@ export type Database = {
           payment_link_yearly_live?: string | null
           payment_link_yearly_test?: string | null
           payment_mode?: string
+          play_store_url?: string
           price_id_full_live?: string | null
           price_id_full_test?: string | null
           price_id_live?: string | null
@@ -1001,6 +1005,7 @@ export type Database = {
           yearly_price_eur?: number | null
         }
         Update: {
+          app_store_url?: string
           contact_email?: string | null
           created_at?: string
           hero_video_poster_url?: string | null
@@ -1017,6 +1022,7 @@ export type Database = {
           payment_link_yearly_live?: string | null
           payment_link_yearly_test?: string | null
           payment_mode?: string
+          play_store_url?: string
           price_id_full_live?: string | null
           price_id_full_test?: string | null
           price_id_live?: string | null
@@ -1581,9 +1587,11 @@ export type Database = {
       get_public_settings: {
         Args: never
         Returns: {
+          app_store_url: string
           contact_email: string
           hero_video_poster_url: string
           hero_video_url: string
+          play_store_url: string
           trainer_bio: string
           trainer_name: string
           trainer_photo_url: string

@@ -1,5 +1,6 @@
 import { Apple, Play } from "lucide-react";
-import { APP_STORE_URL, PLAY_STORE_URL, hasAnyStoreLink } from "@/config/appStores";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   className?: string;
@@ -13,7 +14,25 @@ interface Props {
  * el bloque entero. Si sólo una está configurada, sólo se muestra esa.
  */
 const AppStoreBadges = ({ className = "", align = "center", label = "Descarga la app" }: Props) => {
-  if (!hasAnyStoreLink()) return null;
+  const [appStoreUrl, setAppStoreUrl] = useState("");
+  const [playStoreUrl, setPlayStoreUrl] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+    supabase.rpc("get_public_settings").then(({ data }) => {
+      if (!alive) return;
+      const row = Array.isArray(data) ? data[0] : data;
+      if (row) {
+        setAppStoreUrl(((row as any).app_store_url || "").trim());
+        setPlayStoreUrl(((row as any).play_store_url || "").trim());
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!appStoreUrl && !playStoreUrl) return null;
 
   const wrap =
     align === "center"
@@ -28,9 +47,9 @@ const AppStoreBadges = ({ className = "", align = "center", label = "Descarga la
         </span>
       )}
       <div className="flex flex-wrap gap-3 justify-center">
-        {APP_STORE_URL && (
+        {appStoreUrl && (
           <a
-            href={APP_STORE_URL}
+            href={appStoreUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Descargar en la App Store"
@@ -43,9 +62,9 @@ const AppStoreBadges = ({ className = "", align = "center", label = "Descarga la
             </span>
           </a>
         )}
-        {PLAY_STORE_URL && (
+        {playStoreUrl && (
           <a
-            href={PLAY_STORE_URL}
+            href={playStoreUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Disponible en Google Play"

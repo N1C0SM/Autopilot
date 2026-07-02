@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star, Film, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 interface Testimonial {
@@ -34,6 +34,7 @@ const SiteContentEditor = () => {
   const [saving, setSaving] = useState(false);
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
+  const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
   const [videoUploading, setVideoUploading] = useState(false);
   const [posterUploading, setPosterUploading] = useState(false);
   const [settingsId, setSettingsId] = useState<string>("");
@@ -42,7 +43,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -55,6 +56,10 @@ const SiteContentEditor = () => {
       setHero({
         hero_video_url: (s as any).hero_video_url || "",
         hero_video_poster_url: (s as any).hero_video_poster_url || "",
+      });
+      setStores({
+        app_store_url: (s as any).app_store_url || "",
+        play_store_url: (s as any).play_store_url || "",
       });
     }
     if (t) setTestimonials(t as Testimonial[]);
@@ -73,6 +78,27 @@ const SiteContentEditor = () => {
     setSaving(true);
     const { error } = await supabase.from("settings").update(hero as any).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Vídeo del hero actualizado");
+    setSaving(false);
+  };
+
+  const saveStores = async () => {
+    setSaving(true);
+    const clean = {
+      app_store_url: stores.app_store_url.trim(),
+      play_store_url: stores.play_store_url.trim(),
+    };
+    const isValid = (u: string) => !u || /^https?:\/\//i.test(u);
+    if (!isValid(clean.app_store_url) || !isValid(clean.play_store_url)) {
+      toast.error("Las URLs deben empezar por http(s)://");
+      setSaving(false);
+      return;
+    }
+    const { error } = await supabase.from("settings").update(clean as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar");
+    else {
+      setStores(clean);
+      toast.success("Enlaces de la app actualizados");
+    }
     setSaving(false);
   };
 
@@ -262,6 +288,34 @@ const SiteContentEditor = () => {
           />
           <Button size="sm" onClick={saveHero} disabled={saving}>
             {saving ? "Guardando..." : "Guardar URLs"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Enlaces a las tiendas de la app */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Smartphone className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Enlaces a la app (App Store / Google Play)</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado).
+        </p>
+        <div className="space-y-2">
+          <Label className="text-xs">URL App Store (iOS)</Label>
+          <Input
+            placeholder="https://apps.apple.com/app/id0000000000"
+            value={stores.app_store_url}
+            onChange={(e) => setStores((s) => ({ ...s, app_store_url: e.target.value }))}
+          />
+          <Label className="text-xs">URL Google Play (Android)</Label>
+          <Input
+            placeholder="https://play.google.com/store/apps/details?id=..."
+            value={stores.play_store_url}
+            onChange={(e) => setStores((s) => ({ ...s, play_store_url: e.target.value }))}
+          />
+          <Button size="sm" onClick={saveStores} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar enlaces"}
           </Button>
         </div>
       </div>
