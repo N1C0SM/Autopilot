@@ -11,7 +11,6 @@ export default defineTool({
     note: z.string().describe("Nota opcional sobre el registro.").optional(),
   },
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-  needsApproval: true,
   handler: async ({ weight_kg, note }, ctx: ToolContext) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "No autenticado" }], isError: true };
