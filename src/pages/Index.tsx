@@ -282,6 +282,12 @@ const Index = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-success" />
                 <span>Garantía 30 días · sin permanencia · cancelas en 1 clic</span>
               </div>
+
+              <AppStoreBadges
+                size="compact"
+                label="También en tu móvil"
+                className="mt-6 animate-fade-in"
+              />
             </div>
 
             {/* Hero video (admin-managed) */}
