@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -16,12 +17,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get("next") || "";
+  const nextPath = /^\/[^/]/.test(rawNext) && !rawNext.startsWith("//") ? rawNext : "";
 
   const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleApple = async () => {
     const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: `${window.location.origin}/dashboard`,
+      redirect_uri: `${window.location.origin}${nextPath || "/dashboard"}`,
     });
     if (result.error) {
       toast.error("No se pudo iniciar sesión con Apple");
@@ -48,6 +52,10 @@ const Login = () => {
         toast.error("Credenciales incorrectas");
       }
     } else {
+      if (nextPath) {
+        navigate(nextPath);
+        return;
+      }
       // Resolve destination based on role
       const { data: { user: authedUser } } = await supabase.auth.getUser();
       if (authedUser) {
