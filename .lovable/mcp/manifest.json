@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://enebrcdrdnfkyduzyrzm.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "autopilot-mcp",
+      "version": "0.1.0",
+      "title": "Autopilot"
+    },
+    "tools": [
+      {
+        "name": "get_profile",
+        "title": "Obtener perfil del usuario",
+        "description": "Devuelve el perfil del usuario autenticado en Autopilot (nombre, objetivo, datos básicos).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_training_plan",
+        "title": "Obtener plan de entrenamiento",
+        "description": "Devuelve el plan de entrenamiento actual del usuario autenticado en Autopilot.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_nutrition_plan",
+        "title": "Obtener plan de nutrición",
+        "description": "Devuelve el plan de nutrición actual (macros y comidas) del usuario autenticado en Autopilot.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_weight_logs",
+        "title": "Listar registros de peso",
+        "description": "Devuelve los últimos registros de peso corporal del usuario autenticado, más recientes primero.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991,
+              "description": "Número máximo de registros a devolver (1-100)."
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_weight",
+        "title": "Registrar peso",
+        "description": "Guarda un nuevo registro de peso corporal (en kilogramos) para el usuario autenticado.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "weight_kg": {
+              "type": "number",
+              "description": "Peso corporal en kilogramos (por ejemplo 78.5)."
+            },
+            "note": {
+              "type": "string",
+              "description": "Nota opcional sobre el registro."
+            }
+          },
+          "required": [
+            "weight_kg"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
