@@ -282,6 +282,12 @@ const Index = () => {
                 <ShieldCheck className="w-3.5 h-3.5 text-success" />
                 <span>Garantía 30 días · sin permanencia · cancelas en 1 clic</span>
               </div>
+
+              <AppStoreBadges
+                size="compact"
+                label="También en tu móvil"
+                className="mt-6 animate-fade-in"
+              />
             </div>
 
             {/* Hero video (admin-managed) */}
@@ -781,7 +787,6 @@ const Index = () => {
       {/* Footer */}
       <footer className="py-10 px-4 border-t border-border">
         <div className="container mx-auto max-w-4xl flex flex-col gap-8 text-muted-foreground text-sm">
-          <AppStoreBadges />
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <span><span className="font-display font-bold text-gradient">Autopilot</span> &copy; {new Date().getFullYear()}</span>
           <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center">
