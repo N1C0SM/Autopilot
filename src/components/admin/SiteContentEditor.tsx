@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Testimonial {
@@ -20,6 +20,26 @@ interface Testimonial {
   visible: boolean;
   is_12w_transformation?: boolean;
 }
+
+interface Ebook {
+  id: string;
+  title: string;
+  description: string;
+  cover_url: string;
+  url: string;
+  price: string;
+}
+
+interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  url: string;
+  badge: string;
+}
+
+const uid = () => Math.random().toString(36).slice(2, 10);
 
 const uploadImage = async (file: File, folder: string) => {
   const ext = file.name.split(".").pop() || "jpg";
@@ -39,11 +59,14 @@ const SiteContentEditor = () => {
   const [posterUploading, setPosterUploading] = useState(false);
   const [settingsId, setSettingsId] = useState<string>("");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [ebooks, setEbooks] = useState<Ebook[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -61,11 +84,72 @@ const SiteContentEditor = () => {
         app_store_url: (s as any).app_store_url || "",
         play_store_url: (s as any).play_store_url || "",
       });
+      setSections({
+        show_blog: (s as any).show_blog ?? true,
+        show_ebooks: (s as any).show_ebooks ?? false,
+        show_recommendations: (s as any).show_recommendations ?? false,
+      });
+      const rawEbooks = Array.isArray((s as any).ebooks) ? (s as any).ebooks : [];
+      setEbooks(rawEbooks.map((e: any) => ({
+        id: e.id || uid(),
+        title: e.title || "",
+        description: e.description || "",
+        cover_url: e.cover_url || "",
+        url: e.url || "",
+        price: e.price || "",
+      })));
+      const rawRecs = Array.isArray((s as any).recommendations) ? (s as any).recommendations : [];
+      setRecommendations(rawRecs.map((r: any) => ({
+        id: r.id || uid(),
+        title: r.title || "",
+        description: r.description || "",
+        image_url: r.image_url || "",
+        url: r.url || "",
+        badge: r.badge || "",
+      })));
     }
     if (t) setTestimonials(t as Testimonial[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const saveSectionsToggles = async (next: typeof sections) => {
+    setSections(next);
+    const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Secciones actualizadas");
+  };
+
+  const saveEbooks = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("settings").update({ ebooks: ebooks as any } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Ebooks guardados");
+    setSaving(false);
+  };
+
+  const saveRecommendations = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("settings").update({ recommendations: recommendations as any } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Recomendaciones guardadas");
+    setSaving(false);
+  };
+
+  const onEbookCover = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadImage(file, "ebooks");
+      setEbooks((arr) => arr.map((x) => x.id === id ? { ...x, cover_url: url } : x));
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const onRecImage = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadImage(file, "recommendations");
+      setRecommendations((arr) => arr.map((x) => x.id === id ? { ...x, image_url: url } : x));
+    } catch (err: any) { toast.error(err.message); }
+  };
 
   const saveTrainer = async () => {
     setSaving(true);
