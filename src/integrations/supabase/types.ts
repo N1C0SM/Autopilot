@@ -936,6 +936,7 @@ export type Database = {
           app_store_url: string
           contact_email: string | null
           created_at: string
+          ebooks: Json
           hero_video_poster_url: string | null
           hero_video_url: string | null
           id: string
@@ -961,7 +962,11 @@ export type Database = {
           price_id_transform_test: string | null
           price_id_yearly_live: string | null
           price_id_yearly_test: string | null
+          recommendations: Json
           referral_coupon_id: string | null
+          show_blog: boolean
+          show_ebooks: boolean
+          show_recommendations: boolean
           trainer_bio: string | null
           trainer_name: string | null
           trainer_photo_url: string | null
@@ -972,6 +977,7 @@ export type Database = {
           app_store_url?: string
           contact_email?: string | null
           created_at?: string
+          ebooks?: Json
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
           id?: string
@@ -997,7 +1003,11 @@ export type Database = {
           price_id_transform_test?: string | null
           price_id_yearly_live?: string | null
           price_id_yearly_test?: string | null
+          recommendations?: Json
           referral_coupon_id?: string | null
+          show_blog?: boolean
+          show_ebooks?: boolean
+          show_recommendations?: boolean
           trainer_bio?: string | null
           trainer_name?: string | null
           trainer_photo_url?: string | null
@@ -1008,6 +1018,7 @@ export type Database = {
           app_store_url?: string
           contact_email?: string | null
           created_at?: string
+          ebooks?: Json
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
           id?: string
@@ -1033,7 +1044,11 @@ export type Database = {
           price_id_transform_test?: string | null
           price_id_yearly_live?: string | null
           price_id_yearly_test?: string | null
+          recommendations?: Json
           referral_coupon_id?: string | null
+          show_blog?: boolean
+          show_ebooks?: boolean
+          show_recommendations?: boolean
           trainer_bio?: string | null
           trainer_name?: string | null
           trainer_photo_url?: string | null
@@ -1589,9 +1604,14 @@ export type Database = {
         Returns: {
           app_store_url: string
           contact_email: string
+          ebooks: Json
           hero_video_poster_url: string
           hero_video_url: string
           play_store_url: string
+          recommendations: Json
+          show_blog: boolean
+          show_ebooks: boolean
+          show_recommendations: boolean
           trainer_bio: string
           trainer_name: string
           trainer_photo_url: string
