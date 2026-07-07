@@ -121,8 +121,11 @@ serve(async (req) => {
 
       logStep("Active subscription found", { endDate: subscriptionEnd, tier, status: sub.status, plan });
 
+      // Treat "cancelled but still within paid period" as active for access control.
+      const effectiveStatus =
+        sub.status === "active" || sub.status === "trialing" ? sub.status : "active";
       const updateData: Record<string, string> = {
-        subscription_status: sub.status,
+        subscription_status: effectiveStatus,
         payment_status: "paid",
         subscription_tier: tier,
       };
