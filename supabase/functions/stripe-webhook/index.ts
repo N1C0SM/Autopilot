@@ -189,15 +189,25 @@ serve(async (req) => {
 
       const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
       if (customer.email) {
+        const periodEnd = (subscription as any).current_period_end
+          ?? subscription.items?.data?.[0]?.current_period_end
+          ?? null;
+        const periodEndIso = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
+        const nowSec = Math.floor(Date.now() / 1000);
+
+        // Consider the user still paid while inside the paid period, even if they cancelled.
+        // Only revoke access when Stripe actually deletes the subscription OR the period has passed.
+        const stillWithinPaidPeriod = periodEnd ? periodEnd > nowSec : false;
         const isActive = subscription.status === "active" || subscription.status === "trialing";
+        const keepPaid = isActive || (event.type !== "customer.subscription.deleted" && stillWithinPaidPeriod);
 
         await supabaseAdmin.from("profiles").update({
-          subscription_status: isActive ? "active" : "inactive",
-          subscription_end: isActive ? new Date(subscription.current_period_end * 1000).toISOString() : null,
-          payment_status: isActive ? "paid" : "unpaid",
+          subscription_status: keepPaid ? "active" : "inactive",
+          subscription_end: periodEndIso,
+          payment_status: keepPaid ? "paid" : "unpaid",
         }).eq("email", customer.email);
 
-        console.log(`Subscription ${subscription.status} for ${customer.email}`);
+        console.log(`Subscription ${subscription.status} for ${customer.email} — keepPaid=${keepPaid}, periodEnd=${periodEndIso}`);
       }
     }
 

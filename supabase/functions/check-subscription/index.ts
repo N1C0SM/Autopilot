@@ -87,22 +87,27 @@ serve(async (req) => {
       stripe_customer_id: customerId,
     }).eq("user_id", user.id);
 
-    const [activeSubs, trialSubs] = await Promise.all([
-      stripe.subscriptions.list({ customer: customerId, status: "active", limit: 1 }),
-      stripe.subscriptions.list({ customer: customerId, status: "trialing", limit: 1 }),
-    ]);
+    // Fetch all recent subs so we can honor "cancelled but still within paid period"
+    const allSubs = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 5 });
+    const nowSec = Math.floor(Date.now() / 1000);
+    const getPeriodEnd = (s: Stripe.Subscription) =>
+      (s as any).current_period_end ?? s.items?.data?.[0]?.current_period_end ?? 0;
 
-    const sub = activeSubs.data[0] || trialSubs.data[0];
+    // Priority: active/trialing → cancelled but still within paid period → nothing
+    const activeOrTrial = allSubs.data.find(
+      (s) => s.status === "active" || s.status === "trialing"
+    );
+    const cancelledStillValid = allSubs.data.find(
+      (s) => (s.status === "canceled" || s.cancel_at_period_end) && getPeriodEnd(s) > nowSec
+    );
+    const sub = activeOrTrial || cancelledStillValid;
     const hasActiveSub = !!sub;
     let subscriptionEnd = null;
     let tier = "personal";
     let plan: "monthly" | "yearly" | null = null;
 
     if (hasActiveSub) {
-      const periodEnd =
-        (sub as any).current_period_end ??
-        sub.items?.data?.[0]?.current_period_end ??
-        null;
+      const periodEnd = getPeriodEnd(sub!) || null;
       subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
       tier = sub.metadata?.tier || "personal";
 
@@ -116,8 +121,11 @@ serve(async (req) => {
 
       logStep("Active subscription found", { endDate: subscriptionEnd, tier, status: sub.status, plan });
 
+      // Treat "cancelled but still within paid period" as active for access control.
+      const effectiveStatus =
+        sub.status === "active" || sub.status === "trialing" ? sub.status : "active";
       const updateData: Record<string, string> = {
-        subscription_status: sub.status,
+        subscription_status: effectiveStatus,
         payment_status: "paid",
         subscription_tier: tier,
       };
