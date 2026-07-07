@@ -188,6 +188,11 @@ const Index = () => {
             <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
+            {sections.show_blog && (
+              <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+                Blog
+              </Link>
+            )}
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
@@ -218,6 +223,15 @@ const Index = () => {
                 >
                   Planes
                 </button>
+                {sections.show_blog && (
+                  <Link
+                    to="/blog"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                  >
+                    Blog
+                  </Link>
+                )}
                 <button
                   onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
