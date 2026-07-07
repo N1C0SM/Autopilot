@@ -978,6 +978,7 @@ const Index = () => {
           <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center">
             <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
+            {sections.show_blog && <Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link>}
             <Link to="/connect" className="hover:text-foreground transition-colors">Conectar con IA</Link>
             <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
             <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
