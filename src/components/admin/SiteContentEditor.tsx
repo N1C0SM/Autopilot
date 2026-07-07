@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface Testimonial {
@@ -20,6 +20,26 @@ interface Testimonial {
   visible: boolean;
   is_12w_transformation?: boolean;
 }
+
+interface Ebook {
+  id: string;
+  title: string;
+  description: string;
+  cover_url: string;
+  url: string;
+  price: string;
+}
+
+interface Recommendation {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  url: string;
+  badge: string;
+}
+
+const uid = () => Math.random().toString(36).slice(2, 10);
 
 const uploadImage = async (file: File, folder: string) => {
   const ext = file.name.split(".").pop() || "jpg";
@@ -39,11 +59,14 @@ const SiteContentEditor = () => {
   const [posterUploading, setPosterUploading] = useState(false);
   const [settingsId, setSettingsId] = useState<string>("");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [ebooks, setEbooks] = useState<Ebook[]>([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -61,11 +84,72 @@ const SiteContentEditor = () => {
         app_store_url: (s as any).app_store_url || "",
         play_store_url: (s as any).play_store_url || "",
       });
+      setSections({
+        show_blog: (s as any).show_blog ?? true,
+        show_ebooks: (s as any).show_ebooks ?? false,
+        show_recommendations: (s as any).show_recommendations ?? false,
+      });
+      const rawEbooks = Array.isArray((s as any).ebooks) ? (s as any).ebooks : [];
+      setEbooks(rawEbooks.map((e: any) => ({
+        id: e.id || uid(),
+        title: e.title || "",
+        description: e.description || "",
+        cover_url: e.cover_url || "",
+        url: e.url || "",
+        price: e.price || "",
+      })));
+      const rawRecs = Array.isArray((s as any).recommendations) ? (s as any).recommendations : [];
+      setRecommendations(rawRecs.map((r: any) => ({
+        id: r.id || uid(),
+        title: r.title || "",
+        description: r.description || "",
+        image_url: r.image_url || "",
+        url: r.url || "",
+        badge: r.badge || "",
+      })));
     }
     if (t) setTestimonials(t as Testimonial[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const saveSectionsToggles = async (next: typeof sections) => {
+    setSections(next);
+    const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Secciones actualizadas");
+  };
+
+  const saveEbooks = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("settings").update({ ebooks: ebooks as any } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Ebooks guardados");
+    setSaving(false);
+  };
+
+  const saveRecommendations = async () => {
+    setSaving(true);
+    const { error } = await supabase.from("settings").update({ recommendations: recommendations as any } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Recomendaciones guardadas");
+    setSaving(false);
+  };
+
+  const onEbookCover = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadImage(file, "ebooks");
+      setEbooks((arr) => arr.map((x) => x.id === id ? { ...x, cover_url: url } : x));
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const onRecImage = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const url = await uploadImage(file, "recommendations");
+      setRecommendations((arr) => arr.map((x) => x.id === id ? { ...x, image_url: url } : x));
+    } catch (err: any) { toast.error(err.message); }
+  };
 
   const saveTrainer = async () => {
     setSaving(true);
@@ -221,6 +305,113 @@ const SiteContentEditor = () => {
 
   return (
     <div className="space-y-8">
+      {/* Secciones de la landing */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <LayoutGrid className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Secciones visibles en la landing</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">Activa o desactiva bloques enteros de la home pública.</p>
+        <div className="space-y-3">
+          {[
+            { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
+            { key: "show_ebooks", label: "Ebooks", desc: "Sección de ebooks/guías descargables." },
+            { key: "show_recommendations", label: "Recomendaciones", desc: "Suplementos y productos recomendados (creatina, proteína…)." },
+          ].map((s) => (
+            <div key={s.key} className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{s.label}</p>
+                <p className="text-[11px] text-muted-foreground">{s.desc}</p>
+              </div>
+              <Switch
+                checked={(sections as any)[s.key]}
+                onCheckedChange={(v) => saveSectionsToggles({ ...sections, [s.key]: v })}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Ebooks */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-bold">Ebooks / Guías</h2>
+          </div>
+          <Button size="sm" onClick={() => setEbooks((a) => [...a, { id: uid(), title: "", description: "", cover_url: "", url: "", price: "" }])}>
+            <Plus className="w-4 h-4 mr-1" /> Añadir
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Se muestran si tienes "Ebooks" activado arriba.</p>
+        {ebooks.length === 0 && <p className="text-sm text-muted-foreground">Sin ebooks todavía.</p>}
+        <div className="space-y-3">
+          {ebooks.map((e) => (
+            <div key={e.id} className="border border-border rounded-xl p-4 space-y-2">
+              <div className="flex items-start gap-3">
+                {e.cover_url ? (
+                  <img src={e.cover_url} alt="" className="w-16 h-20 rounded object-cover shrink-0" />
+                ) : (
+                  <div className="w-16 h-20 rounded bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
+                )}
+                <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 self-start">
+                  <input type="file" accept="image/*" className="hidden" onChange={(ev) => onEbookCover(e.id, ev)} />
+                  <Upload className="w-3 h-3" /> Portada
+                </label>
+                <button className="ml-auto text-destructive" onClick={() => setEbooks((a) => a.filter((x) => x.id !== e.id))} aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
+              </div>
+              <Input placeholder="Título" value={e.title} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, title: ev.target.value } : x))} />
+              <Textarea rows={2} placeholder="Descripción corta" value={e.description} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, description: ev.target.value } : x))} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Precio (Gratis, 9€…)" value={e.price} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, price: ev.target.value } : x))} />
+                <Input placeholder="URL de descarga o pago" value={e.url} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, url: ev.target.value } : x))} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <Button onClick={saveEbooks} disabled={saving}>{saving ? "Guardando..." : "Guardar ebooks"}</Button>
+      </div>
+
+      {/* Recomendaciones */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-bold">Recomendaciones (suplementos y productos)</h2>
+          </div>
+          <Button size="sm" onClick={() => setRecommendations((a) => [...a, { id: uid(), title: "", description: "", image_url: "", url: "", badge: "" }])}>
+            <Plus className="w-4 h-4 mr-1" /> Añadir
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Creatina, proteína, material… con enlace de afiliado si quieres.</p>
+        {recommendations.length === 0 && <p className="text-sm text-muted-foreground">Sin recomendaciones todavía.</p>}
+        <div className="space-y-3">
+          {recommendations.map((r) => (
+            <div key={r.id} className="border border-border rounded-xl p-4 space-y-2">
+              <div className="flex items-start gap-3">
+                {r.image_url ? (
+                  <img src={r.image_url} alt="" className="w-16 h-16 rounded object-cover shrink-0" />
+                ) : (
+                  <div className="w-16 h-16 rounded bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
+                )}
+                <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 self-start">
+                  <input type="file" accept="image/*" className="hidden" onChange={(ev) => onRecImage(r.id, ev)} />
+                  <Upload className="w-3 h-3" /> Imagen
+                </label>
+                <button className="ml-auto text-destructive" onClick={() => setRecommendations((a) => a.filter((x) => x.id !== r.id))} aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
+              </div>
+              <Input placeholder="Título (Creatina Monohidratada)" value={r.title} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, title: ev.target.value } : x))} />
+              <Textarea rows={2} placeholder="Por qué la recomiendas" value={r.description} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, description: ev.target.value } : x))} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Etiqueta (Top, Recomendado…)" value={r.badge} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, badge: ev.target.value } : x))} />
+                <Input placeholder="URL (afiliado o web)" value={r.url} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, url: ev.target.value } : x))} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <Button onClick={saveRecommendations} disabled={saving}>{saving ? "Guardando..." : "Guardar recomendaciones"}</Button>
+      </div>
+
       {/* Vídeo del Hero */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">

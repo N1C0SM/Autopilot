@@ -12,7 +12,7 @@ import {
   Wrench,
   Repeat,
 } from "lucide-react";
-import { Menu } from "lucide-react";
+import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -74,6 +74,10 @@ const Index = () => {
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
+  const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
+  const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
 
   useEffect(() => {
     const run = async () => {
@@ -95,6 +99,22 @@ const Index = () => {
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",
         });
+        setSections({
+          show_blog: (s as any).show_blog ?? true,
+          show_ebooks: (s as any).show_ebooks ?? false,
+          show_recommendations: (s as any).show_recommendations ?? false,
+        });
+        setEbooks(Array.isArray((s as any).ebooks) ? (s as any).ebooks : []);
+        setRecommendations(Array.isArray((s as any).recommendations) ? (s as any).recommendations : []);
+        if ((s as any).show_blog ?? true) {
+          supabase
+            .from("blog_posts")
+            .select("slug, title, excerpt, cover_url, published_at")
+            .eq("published", true)
+            .order("published_at", { ascending: false })
+            .limit(3)
+            .then(({ data }) => { if (data) setLatestPosts(data as any); });
+        }
       }
       const row = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
       const paid = Number(row?.paid_count ?? 0);
@@ -168,6 +188,11 @@ const Index = () => {
             <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
+            {sections.show_blog && (
+              <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+                Blog
+              </Link>
+            )}
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
@@ -198,6 +223,15 @@ const Index = () => {
                 >
                   Planes
                 </button>
+                {sections.show_blog && (
+                  <Link
+                    to="/blog"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                  >
+                    Blog
+                  </Link>
+                )}
                 <button
                   onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
@@ -724,6 +758,158 @@ const Index = () => {
 
         {/* FAQ */}
         <section className="py-28 px-4">
+          {sections.show_recommendations && recommendations.length > 0 && (
+            <div className="mb-24">
+              <div className="container mx-auto max-w-5xl">
+                <ScrollReveal>
+                  <div className="text-center mb-12">
+                    <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3 flex items-center justify-center gap-1.5">
+                      <Sparkles className="w-3 h-3" /> Recomendaciones
+                    </p>
+                    <h2 className="text-3xl sm:text-4xl font-bold font-display">
+                      Lo que <span className="text-gradient">sí funciona</span>
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
+                      Suplementos y productos que realmente usamos y recomendamos.
+                    </p>
+                  </div>
+                </ScrollReveal>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {recommendations.map((r, i) => (
+                    <ScrollReveal key={r.id || i} delay={i * 0.05}>
+                      <a
+                        href={r.url || "#"}
+                        target={r.url ? "_blank" : undefined}
+                        rel={r.url ? "noreferrer sponsored" : undefined}
+                        className="group block bg-card border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors h-full"
+                      >
+                        <div className="flex items-start gap-4">
+                          {r.image_url ? (
+                            <img src={r.image_url} alt={r.title} loading="lazy" className="w-20 h-20 rounded-xl object-cover shrink-0" />
+                          ) : (
+                            <div className="w-20 h-20 rounded-xl bg-secondary shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            {r.badge && (
+                              <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1.5">
+                                {r.badge}
+                              </span>
+                            )}
+                            <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{r.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3">{r.description}</p>
+                          </div>
+                        </div>
+                      </a>
+                    </ScrollReveal>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {sections.show_ebooks && ebooks.length > 0 && (
+            <div className="mb-24">
+              <div className="container mx-auto max-w-5xl">
+                <ScrollReveal>
+                  <div className="text-center mb-12">
+                    <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3 flex items-center justify-center gap-1.5">
+                      <BookOpen className="w-3 h-3" /> Ebooks
+                    </p>
+                    <h2 className="text-3xl sm:text-4xl font-bold font-display">
+                      Guías <span className="text-gradient">descargables</span>
+                    </h2>
+                  </div>
+                </ScrollReveal>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {ebooks.map((e, i) => (
+                    <ScrollReveal key={e.id || i} delay={i * 0.05}>
+                      <a
+                        href={e.url || "#"}
+                        target={e.url ? "_blank" : undefined}
+                        rel={e.url ? "noreferrer" : undefined}
+                        className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors h-full flex flex-col"
+                      >
+                        {e.cover_url ? (
+                          <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                            <img src={e.cover_url} alt={e.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                          </div>
+                        ) : (
+                          <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-secondary flex items-center justify-center">
+                            <BookOpen className="w-10 h-10 text-primary/60" />
+                          </div>
+                        )}
+                        <div className="p-5 flex-1 flex flex-col">
+                          <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors">{e.title}</h3>
+                          <p className="text-xs text-muted-foreground mt-2 leading-relaxed flex-1">{e.description}</p>
+                          <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                            <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
+                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 group-hover:text-primary transition-colors">
+                              Ver <ExternalLink className="w-3 h-3" />
+                            </span>
+                          </div>
+                        </div>
+                      </a>
+                    </ScrollReveal>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {sections.show_blog && latestPosts.length > 0 && (
+            <div className="mb-24">
+              <div className="container mx-auto max-w-5xl">
+                <ScrollReveal>
+                  <div className="flex items-end justify-between mb-10 gap-4">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3 flex items-center gap-1.5">
+                        <Newspaper className="w-3 h-3" /> Blog
+                      </p>
+                      <h2 className="text-3xl sm:text-4xl font-bold font-display">
+                        Últimos <span className="text-gradient">artículos</span>
+                      </h2>
+                    </div>
+                    <Link to="/blog" className="text-sm text-primary font-semibold hover:underline shrink-0 hidden sm:inline-flex items-center gap-1">
+                      Ver todos <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </ScrollReveal>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {latestPosts.map((p, i) => (
+                    <ScrollReveal key={p.slug} delay={i * 0.05}>
+                      <Link
+                        to={`/blog/${p.slug}`}
+                        className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors h-full flex flex-col"
+                      >
+                        {p.cover_url ? (
+                          <div className="aspect-video bg-secondary overflow-hidden">
+                            <img src={p.cover_url} alt={p.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-gradient-to-br from-primary/10 to-secondary" />
+                        )}
+                        <div className="p-5 flex-1 flex flex-col">
+                          <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors line-clamp-2">{p.title}</h3>
+                          {p.excerpt && (
+                            <p className="text-xs text-muted-foreground mt-2 leading-relaxed flex-1 line-clamp-3">{p.excerpt}</p>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold mt-4">
+                            Leer <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+                          </span>
+                        </div>
+                      </Link>
+                    </ScrollReveal>
+                  ))}
+                </div>
+                <div className="sm:hidden text-center mt-6">
+                  <Link to="/blog" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1">
+                    Ver todos <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="container mx-auto max-w-2xl">
             <ScrollReveal>
               <div className="text-center mb-14">
@@ -792,6 +978,7 @@ const Index = () => {
           <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center">
             <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
+            {sections.show_blog && <Link to="/blog" className="hover:text-foreground transition-colors">Blog</Link>}
             <Link to="/connect" className="hover:text-foreground transition-colors">Conectar con IA</Link>
             <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
             <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
