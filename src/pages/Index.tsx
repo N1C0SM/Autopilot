@@ -758,6 +758,158 @@ const Index = () => {
 
         {/* FAQ */}
         <section className="py-28 px-4">
+          {sections.show_recommendations && recommendations.length > 0 && (
+            <div className="mb-24">
+              <div className="container mx-auto max-w-5xl">
+                <ScrollReveal>
+                  <div className="text-center mb-12">
+                    <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3 flex items-center justify-center gap-1.5">
+                      <Sparkles className="w-3 h-3" /> Recomendaciones
+                    </p>
+                    <h2 className="text-3xl sm:text-4xl font-bold font-display">
+                      Lo que <span className="text-gradient">sí funciona</span>
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-3 max-w-md mx-auto">
+                      Suplementos y productos que realmente usamos y recomendamos.
+                    </p>
+                  </div>
+                </ScrollReveal>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {recommendations.map((r, i) => (
+                    <ScrollReveal key={r.id || i} delay={i * 0.05}>
+                      <a
+                        href={r.url || "#"}
+                        target={r.url ? "_blank" : undefined}
+                        rel={r.url ? "noreferrer sponsored" : undefined}
+                        className="group block bg-card border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors h-full"
+                      >
+                        <div className="flex items-start gap-4">
+                          {r.image_url ? (
+                            <img src={r.image_url} alt={r.title} loading="lazy" className="w-20 h-20 rounded-xl object-cover shrink-0" />
+                          ) : (
+                            <div className="w-20 h-20 rounded-xl bg-secondary shrink-0" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            {r.badge && (
+                              <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1.5">
+                                {r.badge}
+                              </span>
+                            )}
+                            <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{r.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3">{r.description}</p>
+                          </div>
+                        </div>
+                      </a>
+                    </ScrollReveal>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {sections.show_ebooks && ebooks.length > 0 && (
+            <div className="mb-24">
+              <div className="container mx-auto max-w-5xl">
+                <ScrollReveal>
+                  <div className="text-center mb-12">
+                    <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3 flex items-center justify-center gap-1.5">
+                      <BookOpen className="w-3 h-3" /> Ebooks
+                    </p>
+                    <h2 className="text-3xl sm:text-4xl font-bold font-display">
+                      Guías <span className="text-gradient">descargables</span>
+                    </h2>
+                  </div>
+                </ScrollReveal>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {ebooks.map((e, i) => (
+                    <ScrollReveal key={e.id || i} delay={i * 0.05}>
+                      <a
+                        href={e.url || "#"}
+                        target={e.url ? "_blank" : undefined}
+                        rel={e.url ? "noreferrer" : undefined}
+                        className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors h-full flex flex-col"
+                      >
+                        {e.cover_url ? (
+                          <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                            <img src={e.cover_url} alt={e.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                          </div>
+                        ) : (
+                          <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-secondary flex items-center justify-center">
+                            <BookOpen className="w-10 h-10 text-primary/60" />
+                          </div>
+                        )}
+                        <div className="p-5 flex-1 flex flex-col">
+                          <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors">{e.title}</h3>
+                          <p className="text-xs text-muted-foreground mt-2 leading-relaxed flex-1">{e.description}</p>
+                          <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                            <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
+                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 group-hover:text-primary transition-colors">
+                              Ver <ExternalLink className="w-3 h-3" />
+                            </span>
+                          </div>
+                        </div>
+                      </a>
+                    </ScrollReveal>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {sections.show_blog && latestPosts.length > 0 && (
+            <div className="mb-24">
+              <div className="container mx-auto max-w-5xl">
+                <ScrollReveal>
+                  <div className="flex items-end justify-between mb-10 gap-4">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3 flex items-center gap-1.5">
+                        <Newspaper className="w-3 h-3" /> Blog
+                      </p>
+                      <h2 className="text-3xl sm:text-4xl font-bold font-display">
+                        Últimos <span className="text-gradient">artículos</span>
+                      </h2>
+                    </div>
+                    <Link to="/blog" className="text-sm text-primary font-semibold hover:underline shrink-0 hidden sm:inline-flex items-center gap-1">
+                      Ver todos <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </ScrollReveal>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {latestPosts.map((p, i) => (
+                    <ScrollReveal key={p.slug} delay={i * 0.05}>
+                      <Link
+                        to={`/blog/${p.slug}`}
+                        className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors h-full flex flex-col"
+                      >
+                        {p.cover_url ? (
+                          <div className="aspect-video bg-secondary overflow-hidden">
+                            <img src={p.cover_url} alt={p.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-gradient-to-br from-primary/10 to-secondary" />
+                        )}
+                        <div className="p-5 flex-1 flex flex-col">
+                          <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors line-clamp-2">{p.title}</h3>
+                          {p.excerpt && (
+                            <p className="text-xs text-muted-foreground mt-2 leading-relaxed flex-1 line-clamp-3">{p.excerpt}</p>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold mt-4">
+                            Leer <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+                          </span>
+                        </div>
+                      </Link>
+                    </ScrollReveal>
+                  ))}
+                </div>
+                <div className="sm:hidden text-center mt-6">
+                  <Link to="/blog" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1">
+                    Ver todos <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="container mx-auto max-w-2xl">
             <ScrollReveal>
               <div className="text-center mb-14">
