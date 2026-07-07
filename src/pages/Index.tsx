@@ -12,7 +12,7 @@ import {
   Wrench,
   Repeat,
 } from "lucide-react";
-import { Menu } from "lucide-react";
+import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -74,6 +74,10 @@ const Index = () => {
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
+  const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
+  const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
 
   useEffect(() => {
     const run = async () => {
@@ -95,6 +99,22 @@ const Index = () => {
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",
         });
+        setSections({
+          show_blog: (s as any).show_blog ?? true,
+          show_ebooks: (s as any).show_ebooks ?? false,
+          show_recommendations: (s as any).show_recommendations ?? false,
+        });
+        setEbooks(Array.isArray((s as any).ebooks) ? (s as any).ebooks : []);
+        setRecommendations(Array.isArray((s as any).recommendations) ? (s as any).recommendations : []);
+        if ((s as any).show_blog ?? true) {
+          supabase
+            .from("blog_posts")
+            .select("slug, title, excerpt, cover_url, published_at")
+            .eq("published", true)
+            .order("published_at", { ascending: false })
+            .limit(3)
+            .then(({ data }) => { if (data) setLatestPosts(data as any); });
+        }
       }
       const row = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
       const paid = Number(row?.paid_count ?? 0);
