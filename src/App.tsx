@@ -29,6 +29,7 @@ const BlogPost = lazy(() => import("./pages/BlogPost"));
 const ImpersonateCallback = lazy(() => import("./pages/ImpersonateCallback"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const Connect = lazy(() => import("./pages/Connect"));
+const Recursos = lazy(() => import("./pages/Recursos"));
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -91,6 +92,7 @@ const App = () => (
             <Route path="/impersonate/callback" element={<ImpersonateCallback />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/connect" element={<Connect />} />
+            <Route path="/recursos" element={<Recursos />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
