@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -90,6 +90,15 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                 >
                   <Sparkles className="mr-2 h-4 w-4" />
                   {!collapsed && <span>Mi progreso · AI Scan</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/recursos")}
+                  className="cursor-pointer hover:bg-sidebar-accent/50"
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  {!collapsed && <span>Recursos</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
