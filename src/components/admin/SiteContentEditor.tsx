@@ -62,11 +62,12 @@ const SiteContentEditor = () => {
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [guideEbookUrl, setGuideEbookUrl] = useState<string>("");
 
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -107,6 +108,7 @@ const SiteContentEditor = () => {
         url: r.url || "",
         badge: r.badge || "",
       })));
+      setGuideEbookUrl(((s as any).guide_ebook_url as string) || "");
     }
     if (t) setTestimonials(t as Testimonial[]);
     setLoading(false);
@@ -130,6 +132,19 @@ const SiteContentEditor = () => {
     setSaving(true);
     const { error } = await supabase.from("settings").update({ recommendations: recommendations as any } as any).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Recomendaciones guardadas");
+    setSaving(false);
+  };
+
+  const saveGuideEbookUrl = async () => {
+    setSaving(true);
+    const clean = guideEbookUrl.trim();
+    if (clean && !/^https?:\/\//i.test(clean)) {
+      toast.error("La URL debe empezar por http(s)://");
+      setSaving(false);
+      return;
+    }
+    const { error } = await supabase.from("settings").update({ guide_ebook_url: clean } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Link de la guía actualizado");
     setSaving(false);
   };
 
