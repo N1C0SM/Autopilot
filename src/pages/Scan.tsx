@@ -1809,6 +1809,37 @@ const Scan = () => {
                       <div className="text-sm font-medium">{result.bottleneck}</div>
                     </div>
                   </div>
+                  {(() => {
+                    const bt = (result.bottleneck || "").toLowerCase();
+                    const anchor =
+                      /(gl[uú]te|cadera)/.test(bt) ? "gluteos" :
+                      /(pierna|cu[aá]driceps|femoral|gemelo)/.test(bt) ? "piernas" :
+                      /(espalda|postura|dorsal|lumbar|escapular)/.test(bt) ? "espalda" :
+                      /(hombro|deltoide)/.test(bt) ? "hombros" :
+                      /(cardio|grasa|resistencia)/.test(bt) ? "cardio" :
+                      "core";
+                    return (
+                      <Link
+                        to={`/guia-entrenamiento-casa#${anchor}`}
+                        className="mt-3 group block rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] via-card/60 to-card/60 px-5 py-4 hover:border-primary/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-0.5">
+                              Recomendación
+                            </div>
+                            <p className="text-sm leading-snug">
+                              Detectamos que tu punto débil es <span className="font-semibold">{result.bottleneck}</span> — en la <span className="font-semibold">Guía de Entrenamiento en Casa</span> tienes el módulo dedicado a esto.
+                            </p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-primary shrink-0 transition-transform group-hover:translate-x-1" />
+                        </div>
+                      </Link>
+                    );
+                  })()}
                 </div>
               )}
 
