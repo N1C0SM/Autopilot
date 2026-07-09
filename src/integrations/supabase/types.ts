@@ -937,6 +937,7 @@ export type Database = {
           contact_email: string | null
           created_at: string
           ebooks: Json
+          guide_ebook_url: string | null
           hero_video_poster_url: string | null
           hero_video_url: string | null
           id: string
@@ -978,6 +979,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           ebooks?: Json
+          guide_ebook_url?: string | null
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
           id?: string
@@ -1019,6 +1021,7 @@ export type Database = {
           contact_email?: string | null
           created_at?: string
           ebooks?: Json
+          guide_ebook_url?: string | null
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
           id?: string
@@ -1605,6 +1608,7 @@ export type Database = {
           app_store_url: string
           contact_email: string
           ebooks: Json
+          guide_ebook_url: string
           hero_video_poster_url: string
           hero_video_url: string
           play_store_url: string
