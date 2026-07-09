@@ -347,6 +347,23 @@ const SiteContentEditor = () => {
         </div>
       </div>
 
+      {/* Guía en casa (ebook) */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Guía de Entrenamiento en Casa · link de pago</h2>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          URL a la que se envía al usuario al pulsar “Comprar guía” en <code>/guia-entrenamiento-casa</code> (Gumroad, Stripe Payment Link, etc.).
+        </p>
+        <Input
+          placeholder="https://…"
+          value={guideEbookUrl}
+          onChange={(e) => setGuideEbookUrl(e.target.value)}
+        />
+        <Button onClick={saveGuideEbookUrl} disabled={saving}>{saving ? "Guardando..." : "Guardar link"}</Button>
+      </div>
+
       {/* Ebooks */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between">
