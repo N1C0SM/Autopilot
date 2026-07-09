@@ -10,7 +10,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen, ShoppingBag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -99,6 +99,24 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                 >
                   <BookOpen className="mr-2 h-4 w-4" />
                   {!collapsed && <span>Recursos</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/guia-entrenamiento-casa")}
+                  className="cursor-pointer hover:bg-sidebar-accent/50"
+                >
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  {!collapsed && <span>Guía en casa</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/recomendaciones")}
+                  className="cursor-pointer hover:bg-sidebar-accent/50"
+                >
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  {!collapsed && <span>Recomendaciones</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

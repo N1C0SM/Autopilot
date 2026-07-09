@@ -12,7 +12,7 @@ import {
   Wrench,
   Repeat,
 } from "lucide-react";
-import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink } from "lucide-react";
+import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -188,6 +188,12 @@ const Index = () => {
             <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
+            <Link to="/guia-entrenamiento-casa" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              Guía en casa
+            </Link>
+            <Link to="/recomendaciones" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              Recomendaciones
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
@@ -217,6 +223,18 @@ const Index = () => {
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
                 >
                   Planes
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); navigate("/guia-entrenamiento-casa"); }}
+                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                >
+                  Guía en casa
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); navigate("/recomendaciones"); }}
+                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                >
+                  Recomendaciones
                 </button>
                 <button
                   onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
@@ -742,6 +760,60 @@ const Index = () => {
           </div>
         </section>
 
+        {/* RECURSOS */}
+        <section className="py-24 px-4 border-t border-border">
+          <div className="container mx-auto max-w-5xl">
+            <ScrollReveal>
+              <div className="text-center mb-12 max-w-xl mx-auto">
+                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Recursos</p>
+                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
+                  Complementa tu plan <span className="text-gradient">con lo que sí funciona.</span>
+                </h2>
+              </div>
+            </ScrollReveal>
+            <div className="grid gap-5 md:grid-cols-2">
+              <ScrollReveal>
+                <Link
+                  to="/guia-entrenamiento-casa"
+                  className="group block bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors h-full"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
+                    <BookOpen className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-display font-bold text-xl mb-1.5 group-hover:text-primary transition-colors">
+                    Guía de Entrenamiento en Casa
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    Ebook con 6 módulos por zona corporal y progresión de 4 semanas. Sin material.
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                    Ver guía <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </ScrollReveal>
+              <ScrollReveal delay={0.08}>
+                <Link
+                  to="/recomendaciones"
+                  className="group block bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors h-full"
+                >
+                  <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
+                    <ShoppingBag className="w-5 h-5 text-primary" />
+                  </div>
+                  <h3 className="font-display font-bold text-xl mb-1.5 group-hover:text-primary transition-colors">
+                    Recomendaciones
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+                    Material, suplementos, seguimiento y ropa técnica. Selección honesta, sin humo.
+                  </p>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
+                    Ver recomendaciones <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Link>
+              </ScrollReveal>
+            </div>
+          </div>
+        </section>
+
         {/* FAQ */}
         <section className="py-28 px-4">
           <div className="container mx-auto max-w-2xl">
@@ -813,6 +885,8 @@ const Index = () => {
             <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
             <Link to="/connect" className="hover:text-foreground transition-colors">Conectar con IA</Link>
+            <Link to="/guia-entrenamiento-casa" className="hover:text-foreground transition-colors">Guía en casa</Link>
+            <Link to="/recomendaciones" className="hover:text-foreground transition-colors">Recomendaciones</Link>
             <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
             <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
             <Link to="/legal/privacidad" className="hover:text-foreground transition-colors">Privacidad</Link>

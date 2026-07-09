@@ -62,11 +62,12 @@ const SiteContentEditor = () => {
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [guideEbookUrl, setGuideEbookUrl] = useState<string>("");
 
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -107,6 +108,7 @@ const SiteContentEditor = () => {
         url: r.url || "",
         badge: r.badge || "",
       })));
+      setGuideEbookUrl(((s as any).guide_ebook_url as string) || "");
     }
     if (t) setTestimonials(t as Testimonial[]);
     setLoading(false);
@@ -130,6 +132,19 @@ const SiteContentEditor = () => {
     setSaving(true);
     const { error } = await supabase.from("settings").update({ recommendations: recommendations as any } as any).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Recomendaciones guardadas");
+    setSaving(false);
+  };
+
+  const saveGuideEbookUrl = async () => {
+    setSaving(true);
+    const clean = guideEbookUrl.trim();
+    if (clean && !/^https?:\/\//i.test(clean)) {
+      toast.error("La URL debe empezar por http(s)://");
+      setSaving(false);
+      return;
+    }
+    const { error } = await supabase.from("settings").update({ guide_ebook_url: clean } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Link de la guía actualizado");
     setSaving(false);
   };
 
@@ -330,6 +345,23 @@ const SiteContentEditor = () => {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Guía en casa (ebook) */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Guía de Entrenamiento en Casa · link de pago</h2>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          URL a la que se envía al usuario al pulsar “Comprar guía” en <code>/guia-entrenamiento-casa</code> (Gumroad, Stripe Payment Link, etc.).
+        </p>
+        <Input
+          placeholder="https://…"
+          value={guideEbookUrl}
+          onChange={(e) => setGuideEbookUrl(e.target.value)}
+        />
+        <Button onClick={saveGuideEbookUrl} disabled={saving}>{saving ? "Guardando..." : "Guardar link"}</Button>
       </div>
 
       {/* Ebooks */}
