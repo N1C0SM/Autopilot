@@ -12,7 +12,7 @@ import {
   Wrench,
   Repeat,
 } from "lucide-react";
-import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink } from "lucide-react";
+import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -188,6 +188,12 @@ const Index = () => {
             <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
+            <Link to="/guia-entrenamiento-casa" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              Guía en casa
+            </Link>
+            <Link to="/recomendaciones" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              Recomendaciones
+            </Link>
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
@@ -217,6 +223,18 @@ const Index = () => {
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
                 >
                   Planes
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); navigate("/guia-entrenamiento-casa"); }}
+                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                >
+                  Guía en casa
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); navigate("/recomendaciones"); }}
+                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
+                >
+                  Recomendaciones
                 </button>
                 <button
                   onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
