@@ -220,12 +220,12 @@ const Dashboard = () => {
       {/* Unpaid state — shown on all sections EXCEPT settings */}
       {paymentStatus === "unpaid" && section !== "settings" && (() => {
         const paywallContent: Record<MobileTab, { icon: React.ReactNode; title: string; description: string; cta: string }> = {
-          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti. Chat con tu entrenador incluido.", cta: "Empezar 7 días gratis — €19/mes" },
+          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti. Chat con tu entrenador incluido.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
           training: { icon: <Dumbbell className="w-8 h-8 text-primary" />, title: "Tu rutina te está esperando", description: "Ejercicios, series y descansos diseñados para tus objetivos. Actualizado cada semana por tu entrenador.", cta: "Desbloquear mi entrenamiento" },
           nutrition: { icon: <UtensilsCrossed className="w-8 h-8 text-primary" />, title: "Come según tu objetivo", description: "Plan de comidas con macros calculados para ti. Sin recetas genéricas, todo personalizado.", cta: "Desbloquear mi nutrición" },
           chat: { icon: <MessageCircle className="w-8 h-8 text-primary" />, title: "Habla con tu entrenador", description: "Resuelve dudas, ajusta tu plan y recibe feedback directo. Siempre disponible.", cta: "Activar chat con entrenador" },
-          progress: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Sigue tu progreso", description: "Sube fotos, ve tu evolución y desbloquea AI Scan.", cta: "Empezar 7 días gratis — €19/mes" },
-          settings: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti.", cta: "Empezar 7 días gratis — €19/mes" },
+          progress: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Sigue tu progreso", description: "Sube fotos, ve tu evolución y desbloquea AI Scan.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
+          settings: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
         };
         const content = paywallContent[section] || paywallContent.home;
         return (
@@ -235,9 +235,9 @@ const Dashboard = () => {
             <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
             <Button variant="hero" size="lg" onClick={() => handleCompletePayment("monthly")} className="w-full md:w-auto">{content.cta}</Button>
             <button onClick={() => handleCompletePayment("yearly")} className="block mx-auto mt-4 text-xs text-primary hover:underline font-semibold flex items-center gap-1.5">
-              <CalendarIcon className="w-3 h-3" /> O paga anual: 190€/año (ahorras 38€)
+              <CalendarIcon className="w-3 h-3" /> O paga anual: {DEFAULT_YEARLY_PRICE_EUR}€/año (ahorras {yearlySavings()}€)
             </button>
-            <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía 30 días</p>
+            <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía {GUARANTEE_DAYS} días</p>
           </motion.div>
         );
       })()}
