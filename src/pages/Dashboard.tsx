@@ -31,6 +31,7 @@ import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
+import { TRIAL_DAYS, GUARANTEE_DAYS, DEFAULT_YEARLY_PRICE_EUR, monthlyLabel, yearlySavings } from "@/config/pricing";
 
 export interface Profile {
   user_id: string;
