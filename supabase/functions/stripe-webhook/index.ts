@@ -98,13 +98,13 @@ serve(async (req) => {
         }
 
         if (referrerCustomerId) {
-          // 19€ credit (1 month) on next invoice
+          // Un mes de crédito en la próxima factura
           await stripe.customers.createBalanceTransaction(referrerCustomerId, {
             amount: -1900, // negative = credit (cents)
             currency: "eur",
             description: `Recompensa por referido: ${referredEmail}`,
           });
-          console.log(`Applied 19€ credit to referrer ${referrerProfile.email}`);
+          console.log(`Applied referral credit to referrer ${referrerProfile.email}`);
         }
 
         await supabaseAdmin
@@ -116,7 +116,7 @@ serve(async (req) => {
         await supabaseAdmin.from("notifications").insert({
           user_id: referral.referrer_user_id,
           title: "🎁 ¡Mes gratis ganado!",
-          message: `Tu amigo se ha suscrito. Hemos aplicado 19€ de crédito a tu próxima factura.`,
+          message: `Tu amigo se ha suscrito. Hemos aplicado 1 mes de crédito a tu próxima factura.`,
           type: "success",
         });
       } catch (e) {
