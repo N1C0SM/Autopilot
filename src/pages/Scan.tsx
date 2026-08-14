@@ -49,6 +49,7 @@ import ExitIntentModal from "@/components/scan/ExitIntentModal";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
+import { MONTHLY_PRICE_EUR, TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -2340,8 +2341,8 @@ const Scan = () => {
                     </p>
                     <div className="flex items-baseline justify-center gap-3 mb-5">
                       <span className="text-sm text-muted-foreground line-through">Coach 1:1 desde 200€/mes</span>
-                      <span className="text-3xl font-bold font-display text-gradient">19€/mes</span>
-                      <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">7 días gratis</span>
+                      <span className="text-3xl font-bold font-display text-gradient">{MONTHLY_PRICE_EUR}€/mes</span>
+                      <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días gratis</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <Button
@@ -2368,7 +2369,7 @@ const Scan = () => {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                        Garantía 30 días
+                        Garantía {GUARANTEE_DAYS} días
                       </div>
                     </div>
                   </div>
