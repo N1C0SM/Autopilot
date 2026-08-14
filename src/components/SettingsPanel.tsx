@@ -19,6 +19,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
 
 const SettingsPanel = () => {
   const { user, signOut } = useAuth();
@@ -43,7 +44,7 @@ const SettingsPanel = () => {
   const [paymentStatus, setPaymentStatus] = useState("");
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<"monthly" | "yearly" | null>(null);
-  const [yearlyPriceEur, setYearlyPriceEur] = useState<number>(190);
+  const [yearlyPriceEur, setYearlyPriceEur] = useState<number>(DEFAULT_YEARLY_PRICE_EUR);
 
   // Password
   const [newPassword, setNewPassword] = useState("");
@@ -354,12 +355,12 @@ const SettingsPanel = () => {
                   <p>
                     Plan actual:{" "}
                     <span className="font-semibold text-foreground">
-                      {currentPlan === "monthly" ? "Mensual (19€/mes)" : `Anual (${yearlyPriceEur}€/año)`}
+                      {currentPlan === "monthly" ? `Mensual (${MONTHLY_PRICE_EUR}€/mes)` : `Anual (${yearlyPriceEur}€/año)`}
                     </span>
                   </p>
                   {currentPlan === "monthly" ? (
                     <p className="text-xs text-muted-foreground">
-                      💡 Cambia a Anual y ahorra {19 * 12 - yearlyPriceEur}€/año desde el portal de gestión.
+                      💡 Cambia a Anual y ahorra {MONTHLY_PRICE_EUR * 12 - yearlyPriceEur}€/año desde el portal de gestión.
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">
