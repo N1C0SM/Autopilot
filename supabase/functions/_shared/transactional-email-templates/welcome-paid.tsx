@@ -55,7 +55,7 @@ const WelcomePaidEmail = ({
         </Text>
         <Hr style={hr} />
         <Text style={small}>
-          Tu suscripción es de 19€/mes con 7 días de prueba gratuita. Puedes cancelar
+          Tu suscripción es de 29€/mes (plan Entrenamiento) con 7 días de prueba gratuita. Puedes cancelar
           en cualquier momento desde Configuración → Suscripción.
         </Text>
         <Text style={footer}>— El equipo de {SITE_NAME}</Text>
