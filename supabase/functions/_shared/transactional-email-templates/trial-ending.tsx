@@ -34,7 +34,7 @@ const TrialEndingEmail = ({
   return (
     <Html lang="es" dir="ltr">
       <Head />
-      <Preview>{headline} · Sigue con Autopilot por 19€/mes</Preview>
+      <Preview>{headline} · Sigue con Autopilot desde 29€/mes</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>
@@ -42,7 +42,7 @@ const TrialEndingEmail = ({
           </Heading>
           <Text style={text}>
             {headline}. A partir de ese día se activará tu suscripción de{' '}
-            <strong>19€/mes</strong> y seguirás recibiendo tu plan adaptado cada semana.
+            <strong>29€/mes</strong> y seguirás recibiendo tu plan adaptado cada semana.
           </Text>
           <Text style={text}>
             Si quieres seguir, no tienes que hacer nada: la renovación es automática.
