@@ -216,6 +216,15 @@ const Dashboard = () => {
     progress: "Progreso",
   };
 
+  const SECTION_HINTS: Record<MobileTab, string> = {
+    home: "Resumen de hoy: tu entrenamiento, tus comidas y tu racha",
+    training: "Tu rutina de la semana. Marca las series al terminarlas",
+    nutrition: "Tus macros y comidas del día",
+    chat: "Habla con tu entrenador y envía fotos o vídeos",
+    progress: "Fotos, peso y evolución semanal",
+    settings: "Perfil, suscripción y notificaciones",
+  };
+
   const pageContent = (
     <>
       {/* Unpaid state — shown on all sections EXCEPT settings */}
