@@ -14,7 +14,7 @@ import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock,
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type UserSection = "home" | "training" | "nutrition" | "chat" | "settings";
+export type UserSection = "home" | "training" | "nutrition" | "chat" | "progress" | "settings";
 
 interface Props {
   section: UserSection;
@@ -29,6 +29,7 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
   { title: "Inicio", section: "home", icon: Home },
   { title: "Entrenamiento", section: "training", icon: Dumbbell },
   { title: "Nutrición", section: "nutrition", icon: Apple },
+  { title: "Progreso", section: "progress", icon: Sparkles },
   { title: "Chat", section: "chat", icon: MessageCircle },
   { title: "Ajustes", section: "settings", icon: Settings },
 ];
