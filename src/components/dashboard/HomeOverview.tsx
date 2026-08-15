@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Dumbbell, Apple, MessageCircle, ArrowRight, Flame, Clock, Calendar } from "lucide-react";
 import type { DayPlan } from "@/types/training";
 import type { UserSection } from "@/components/UserSidebar";
+import InfoHint from "@/components/InfoHint";
 
 interface Macros {
   protein: number;
@@ -32,6 +33,38 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Primeros pasos — solo hasta que complete su primer día */}
+      {(completedDays ?? 0) === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sm:col-span-2 lg:col-span-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-5"
+        >
+          <h3 className="font-display font-bold text-sm mb-1">Primeros pasos</h3>
+          <p className="text-xs text-muted-foreground mb-3">Haz esto hoy y ya estás dentro. Te lleva 3 minutos.</p>
+          <ol className="space-y-2">
+            {[
+              { n: 1, text: "Abre tu entrenamiento de hoy y marca las series al terminarlas", to: "training" as UserSection, cta: "Ver entrenamiento" },
+              { n: 2, text: "Revisa tus macros y comidas del día", to: "nutrition" as UserSection, cta: "Ver nutrición" },
+              { n: 3, text: "Saluda a tu entrenador y cuéntale tu objetivo", to: "chat" as UserSection, cta: "Abrir chat" },
+            ].map((s) => (
+              <li key={s.n} className="flex items-center gap-3">
+                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[11px] font-bold flex items-center justify-center shrink-0">
+                  {s.n}
+                </span>
+                <span className="text-xs text-foreground/90 flex-1">{s.text}</span>
+                <button
+                  onClick={() => onNavigate(s.to)}
+                  className="text-xs font-medium text-primary hover:underline shrink-0"
+                >
+                  {s.cta}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </motion.div>
+      )}
+
       {/* Today's Training — Full width featured card */}
       <motion.button
         initial={{ opacity: 0, y: 12 }}
@@ -127,6 +160,7 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{macros.protein}g P</span>
             <span className="bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">{macros.carbs}g C</span>
             <span className="bg-secondary px-2 py-0.5 rounded-full text-muted-foreground">{macros.fats}g G</span>
+            <InfoHint text="P = proteína, C = carbohidratos, G = grasas. Son los gramos objetivo de todo el día." />
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">Sin plan aún</p>
@@ -143,6 +177,7 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-4 h-4 text-primary" />
           <h3 className="font-display font-bold text-sm">Tu semana</h3>
+          <InfoHint text="🏋️ día de gimnasio · 🏃 actividad · — descanso. Toca un día para ver sus ejercicios." />
         </div>
         <div className="grid grid-cols-7 gap-1.5">
           {DAYS_ORDER.map((day) => {
@@ -178,7 +213,10 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
           transition={{ delay: 0.5 }}
           className="bg-card rounded-2xl p-5 border border-border"
         >
-          <h3 className="font-display font-bold text-sm mb-3">Tu progreso</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="font-display font-bold text-sm">Tu progreso</h3>
+            <InfoHint text="Un día cuenta como completado cuando marcas todos sus ejercicios en Entrenamiento." />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold font-display text-primary">{weeksActive ?? 0}</div>
