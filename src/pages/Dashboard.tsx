@@ -378,7 +378,7 @@ const Dashboard = () => {
       />
       <div className="min-h-screen flex w-full">
         <UserSidebar
-          section={(section === "progress" ? "home" : section) as UserSection}
+          section={section as UserSection}
           onNavigate={(s) => setSection(s as MobileTab)}
           onSignOut={handleSignOut}
           profileName={profileName}
@@ -390,9 +390,14 @@ const Dashboard = () => {
           {/* Top bar */}
           <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 flex items-center px-4 gap-3">
             <SidebarTrigger />
-            <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground flex-1">
-              {SECTION_LABELS[section]}
-            </h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="font-display font-bold text-sm uppercase tracking-wider text-foreground truncate">
+                {SECTION_LABELS[section]}
+              </h1>
+              <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
+                {SECTION_HINTS[section]}
+              </p>
+            </div>
             {user && <NotificationsBell userId={user.id} />}
           </header>
 
