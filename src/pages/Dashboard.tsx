@@ -30,6 +30,7 @@ import MobileAppShell from "@/components/mobile/MobileAppShell";
 import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
+import InfoHint from "@/components/InfoHint";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
 import { TRIAL_DAYS, GUARANTEE_DAYS, DEFAULT_YEARLY_PRICE_EUR, monthlyLabel, yearlySavings } from "@/config/pricing";
 
@@ -271,10 +272,13 @@ const Dashboard = () => {
 
       {hasPlan && section === "training" && user && (
         <Tabs defaultValue="list" className="max-w-5xl">
-          <TabsList className="mb-4">
-            <TabsTrigger value="list">Lista</TabsTrigger>
-            <TabsTrigger value="calendar">Calendario</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2 mb-4">
+            <TabsList>
+              <TabsTrigger value="list">Lista</TabsTrigger>
+              <TabsTrigger value="calendar">Calendario</TabsTrigger>
+            </TabsList>
+            <InfoHint text="«Lista» para entrenar hoy y marcar series. «Calendario» para ver toda tu semana de un vistazo." />
+          </div>
           <TabsContent value="list"><TrainingPlanView dayPlans={dayPlans} /></TabsContent>
           <TabsContent value="calendar"><CalendarView dayPlans={dayPlans} /></TabsContent>
         </Tabs>
@@ -291,7 +295,11 @@ const Dashboard = () => {
 
       {hasPlan && section === "nutrition" && !isTrainingOnly && (
         <div className="max-w-4xl space-y-6">
-          <div className="flex items-center gap-2 mb-2"><Apple className="w-5 h-5 text-primary" /><h2 className="text-xl font-bold font-display">Plan de Nutrición</h2></div>
+          <div className="flex items-center gap-2 mb-2">
+            <Apple className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
+            <InfoHint text="Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante." />
+          </div>
           {macros && (
             <div className="grid grid-cols-3 gap-3 md:gap-4">
               {[{ label: "Proteína", value: `${macros.protein}g` }, { label: "Carbos", value: `${macros.carbs}g` }, { label: "Grasas", value: `${macros.fats}g` }].map((m) => (
@@ -335,6 +343,7 @@ const Dashboard = () => {
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <h2 className="text-xl font-bold font-display">Tu progreso</h2>
+              <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
             </div>
             <Button size="sm" variant="outline" onClick={() => navigate(`/scan/user/${user.id}`)}>
               AI Scan

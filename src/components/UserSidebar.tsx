@@ -13,6 +13,16 @@ import {
 import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen, ShoppingBag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+const TOOLTIPS: Partial<Record<UserSection, string>> = {
+  home: "Resumen de hoy: entrenamiento, comidas y racha",
+  training: "Tu rutina de la semana y registro de series",
+  nutrition: "Macros y comidas del día",
+  chat: "Habla con tu entrenador, envía fotos o vídeos",
+  progress: "Fotos, peso y evolución semanal",
+  settings: "Perfil, suscripción y notificaciones",
+};
 
 export type UserSection = "home" | "training" | "nutrition" | "chat" | "progress" | "settings";
 
@@ -61,18 +71,27 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                 const isLocked = lockedSections.includes(item.section);
                 return (
                   <SidebarMenuItem key={item.section}>
-                    <SidebarMenuButton
-                      onClick={() => onNavigate(item.section)}
-                      className={`cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && (
-                        <span className="flex-1 flex items-center justify-between">
-                          <span className={isLocked ? "text-muted-foreground" : ""}>{item.title}</span>
-                          {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
-                        </span>
-                      )}
-                    </SidebarMenuButton>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <SidebarMenuButton
+                          onClick={() => onNavigate(item.section)}
+                          className={`cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                        >
+                          <item.icon className="mr-2 h-4 w-4" />
+                          {!collapsed && (
+                            <span className="flex-1 flex items-center justify-between">
+                              <span className={isLocked ? "text-muted-foreground" : ""}>{item.title}</span>
+                              {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                            </span>
+                          )}
+                        </SidebarMenuButton>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="text-xs max-w-[220px]">
+                        {isLocked
+                          ? `${item.title} — no incluido en tu plan actual`
+                          : TOOLTIPS[item.section] || item.title}
+                      </TooltipContent>
+                    </Tooltip>
                   </SidebarMenuItem>
                 );
               })}
@@ -85,13 +104,20 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => navigate(user ? `/scan/user/${user.id}` : "/scan")}
-                  className="cursor-pointer text-primary hover:bg-sidebar-accent/50"
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>Mi progreso · AI Scan</span>}
-                </SidebarMenuButton>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuButton
+                      onClick={() => navigate(user ? `/scan/user/${user.id}` : "/scan")}
+                      className="cursor-pointer text-primary hover:bg-sidebar-accent/50"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>Mi progreso · AI Scan</span>}
+                    </SidebarMenuButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs max-w-[220px]">
+                    Análisis con IA de tus fotos: puntos fuertes, cuello de botella y proyección
+                  </TooltipContent>
+                </Tooltip>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
