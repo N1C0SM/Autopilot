@@ -112,6 +112,7 @@ const TrainerPage = () => {
   const [section, setSection] = useState<TrainerSection>("users");
   const [assignEmail, setAssignEmail] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [query, setQuery] = useState("");
 
   const loadUsers = async () => {
     const { data: profiles } = await (supabase.rpc as any)("get_trainer_assigned_profiles");
@@ -219,12 +220,25 @@ const TrainerPage = () => {
                     {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserPlus className="w-4 h-4 mr-1.5" /> Asignar</>}
                   </Button>
                 </form>
+                {users.length > 3 && (
+                  <Input
+                    type="search"
+                    placeholder="Buscar por email…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="mb-3"
+                    aria-label="Buscar usuario asignado"
+                  />
+                )}
                 {users.length === 0 ? (
                   <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
                     <p className="text-sm text-muted-foreground">Aún no tienes usuarios asignados.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Escribe arriba el email de un usuario y pulsa «Asignar» para empezar a seguirlo.</p>
                   </div>
                 ) : (
-                  users.map((u) => (
+                  users
+                    .filter((u) => u.email.toLowerCase().includes(query.trim().toLowerCase()))
+                    .map((u) => (
                     <div
                       key={u.user_id}
                       className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all group"
