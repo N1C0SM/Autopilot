@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { UserPlus, Trash2 } from "lucide-react";
 import Chat from "@/components/Chat";
+import InfoHint from "@/components/InfoHint";
 import UserDetail from "@/components/admin/UserDetail";
 import type { Profile } from "@/pages/Admin";
 import {
@@ -206,7 +207,11 @@ const TrainerPage = () => {
               </div>
             ) : section === "users" ? (
               <div className="space-y-2">
-                <h1 className="text-xl font-bold font-display mb-4">Usuarios asignados ({users.length})</h1>
+                <h1 className="text-xl font-bold font-display mb-1 flex items-center gap-2">
+                  Usuarios asignados ({users.length})
+                  <InfoHint text="Solo ves los usuarios que tú mismo has asignado. Pulsa en cualquiera para revisar su plan, su progreso y hablar con él." />
+                </h1>
+                <p className="text-xs text-muted-foreground mb-4">Asigna usuarios por email para poder seguir su progreso y ajustar su plan.</p>
                 <form onSubmit={handleAssign} className="flex gap-2 mb-4">
                   <Input
                     type="email"
@@ -219,6 +224,7 @@ const TrainerPage = () => {
                   <Button type="submit" disabled={assigning} variant="hero">
                     {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserPlus className="w-4 h-4 mr-1.5" /> Asignar</>}
                   </Button>
+                  <InfoHint className="self-center" text="El usuario debe existir ya en Autopilot con ese email. Asignarlo no le envía ningún aviso." />
                 </form>
                 {users.length > 3 && (
                   <Input
@@ -268,6 +274,10 @@ const TrainerPage = () => {
             ) : (
               user && (
                 <div>
+                  <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+                    <span>Chat interno con el equipo</span>
+                    <InfoHint text="Canal privado con el administrador para dudas, incidencias o cambios en los planes de tus usuarios. Tus usuarios no ven esta conversación." />
+                  </div>
                   <Chat conversationUserId={user.id} />
                   <p className="text-[11px] text-muted-foreground mt-2 text-center">Conversación privada con el administrador.</p>
                 </div>
