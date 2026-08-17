@@ -29,9 +29,24 @@ function generateToken(): string {
     .join('')
 }
 
-// Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
+// Auth note: verify_jwt = true only proves the caller holds *some* valid JWT
+// (the publishable/anon key qualifies), so we additionally authorize in-function:
+//  - service_role  -> may send any template to any recipient (internal callers)
+//  - admin user    -> may send any template (admin panel: payment reminders)
+//  - end user      -> only self-service templates, and only to their own email
+//  - anon          -> only the public funnel template (scan diagnosis)
+const SELF_SERVICE_TEMPLATES = new Set(['scan-diagnosis', 'mini-plan'])
+const PUBLIC_TEMPLATES = new Set(['scan-diagnosis', 'mini-plan'])
+
+function parseJwtClaims(token: string): Record<string, any> | null {
+  try {
+    const payload = token.split('.')[1]
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    return JSON.parse(json)
+  } catch {
+    return null
+  }
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -123,6 +138,58 @@ Deno.serve(async (req) => {
 
   // Create Supabase client with service role (bypasses RLS)
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+  // 1b. Authorization: restrict who may send what, to whom.
+  {
+    const authHeader = req.headers.get('Authorization') || ''
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length).trim()
+      : ''
+    const claims = token ? parseJwtClaims(token) : null
+    const role = claims?.role
+    const userId = claims?.sub && role === 'authenticated' ? String(claims.sub) : null
+
+    let allowed = false
+
+    if (role === 'service_role') {
+      allowed = true
+    } else if (userId) {
+      const { data: isAdmin } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin',
+      })
+      if (isAdmin === true) {
+        allowed = true
+      } else if (SELF_SERVICE_TEMPLATES.has(templateName)) {
+        // Users may only email themselves
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('user_id', userId)
+          .maybeSingle()
+        allowed =
+          !!profile?.email &&
+          profile.email.toLowerCase() === effectiveRecipient.toLowerCase()
+      }
+    } else {
+      // Anonymous (publishable key) callers: public funnel templates only.
+      allowed = PUBLIC_TEMPLATES.has(templateName)
+    }
+
+    if (!allowed) {
+      console.warn('send-transactional-email: unauthorized send attempt', {
+        templateName,
+        role: role ?? 'none',
+      })
+      return new Response(
+        JSON.stringify({ error: 'Forbidden' }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      )
+    }
+  }
 
   // 2. Check suppression list (fail-closed: if we can't verify, don't send)
   const { data: suppressed, error: suppressionError } = await supabase
