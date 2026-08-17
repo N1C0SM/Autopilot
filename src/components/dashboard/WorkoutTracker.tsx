@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
 import VideoEmbed from "@/components/VideoEmbed";
+import InfoHint from "@/components/InfoHint";
 
 interface SetLog {
   reps: number;
@@ -285,6 +286,11 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Ayuda general */}
+      <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+        <span>Elige el día y registra tus series</span>
+        <InfoHint text="🏋️ = día de gimnasio · 🏃 = actividad · sin icono = descanso. El día de hoy aparece resaltado. Puedes registrar cualquier día de la semana." />
+      </div>
       {/* Day selector pills */}
       <div className="flex gap-1.5 mb-5 overflow-x-auto pb-2 scrollbar-hide">
         {DAYS_ORDER.map((day) => {
@@ -361,9 +367,12 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                 )}
               </div>
               <div className="text-right">
-                <span className="text-2xl font-bold font-display text-gradient">
-                  {completedSets}/{totalSets}
-                </span>
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-2xl font-bold font-display text-gradient">
+                    {completedSets}/{totalSets}
+                  </span>
+                  <InfoHint text="Series marcadas como completadas hoy sobre el total previsto. Al llegar al 100% podrás cerrar el día indicando tu RPE." />
+                </div>
                 <p className="text-[10px] text-muted-foreground">series</p>
               </div>
             </div>
@@ -388,6 +397,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                 <div className="flex items-center gap-2">
                   <Timer className="w-4 h-4 text-primary animate-pulse" />
                   <span className="text-sm font-medium">Descanso</span>
+                  <InfoHint text={`Cuenta atrás automática al marcar una serie (${restTarget}s según tu plan). Puedes reiniciarla o saltarla con el icono de la derecha.`} />
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xl font-bold font-mono text-primary">
@@ -509,15 +519,25 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-2 px-1">
                             <TrendingUp className="w-3 h-3" />
                             <span>Última sesión: {prevSets.map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
+                            <InfoHint text="Peso × repeticiones de la última vez que hiciste este ejercicio. Intenta igualar o superar al menos una serie para progresar." />
                           </div>
                         )}
 
                         {/* Column headers */}
                         <div className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-1 pb-1">
                           <span>Serie</span>
-                          <span>Peso (kg)</span>
-                          <span>Reps</span>
-                          <span className="text-center">✓</span>
+                          <span className="flex items-center gap-1">
+                            Peso (kg)
+                            <InfoHint text="Peso total levantado en esa serie. En ejercicios con tu propio peso corporal déjalo vacío o pon el lastre añadido." />
+                          </span>
+                          <span className="flex items-center gap-1">
+                            Reps
+                            <InfoHint text="Repeticiones que realmente completaste, aunque sean menos o más de las previstas." />
+                          </span>
+                          <span className="text-center flex items-center justify-center gap-1">
+                            ✓
+                            <InfoHint text="Marca la serie al terminarla: se inicia el temporizador de descanso y cuenta para tu progreso del día." />
+                          </span>
                         </div>
 
                         {sets.map((set, si) => (
@@ -581,6 +601,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
           {/* Save button */}
           <div className="pt-3 pb-4">
+            <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+              <span>Guarda cuando quieras, aunque no acabes</span>
+              <InfoHint text="Si guardas a medias no pierdes nada: el día se cierra solo cuando marcas todas las series y confirmas el RPE. Ahí se detectan tus récords personales." />
+            </div>
             <Button
               onClick={saveWorkout}
               disabled={saving || completedSets === 0}
