@@ -906,6 +906,25 @@ const Index = () => {
           <ScanLine className="w-4 h-4" /> Diagnóstico gratis
         </Button>
       </div>
+
+      {/* Sticky CTA desktop — aparece al pasar el hero */}
+      <div
+        className={`hidden md:block fixed bottom-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+          showStickyCta ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+        }`}
+      >
+        <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl px-5 py-3 premium-shadow">
+          <div className="text-left">
+            <div className="text-sm font-semibold">Diagnóstico físico gratis en 60s</div>
+            <div className="text-[11px] text-muted-foreground">Sin tarjeta · sin registro previo · 100% privado</div>
+          </div>
+          <Button variant="hero" size="lg" onClick={() => navigate("/scan")} className="group whitespace-nowrap">
+            <ScanLine className="w-4 h-4" />
+            Empezar gratis
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
