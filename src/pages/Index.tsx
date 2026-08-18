@@ -78,6 +78,15 @@ const Index = () => {
   const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
   const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
+  const [showAllFaqs, setShowAllFaqs] = useState(false);
+  const [showStickyCta, setShowStickyCta] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowStickyCta(window.scrollY > 700);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -814,7 +823,7 @@ const Index = () => {
             </ScrollReveal>
             <ScrollReveal delay={0.1}>
               <Accordion type="single" collapsible className="space-y-1">
-                {faqs.map((faq, i) => (
+                {(showAllFaqs ? faqs : faqs.slice(0, 7)).map((faq, i) => (
                   <AccordionItem key={i} value={`faq-${i}`} className="border-b border-border last:border-b-0">
                     <AccordionTrigger className="text-base font-medium hover:no-underline py-5 text-left">
                       {faq.q}
@@ -825,6 +834,13 @@ const Index = () => {
                   </AccordionItem>
                 ))}
               </Accordion>
+              {!showAllFaqs && (
+                <div className="text-center mt-6">
+                  <Button variant="outline" size="sm" onClick={() => setShowAllFaqs(true)}>
+                    Ver todas las preguntas ({faqs.length})
+                  </Button>
+                </div>
+              )}
             </ScrollReveal>
           </div>
         </section>
