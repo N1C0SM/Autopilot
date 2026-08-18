@@ -78,6 +78,15 @@ const Index = () => {
   const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
   const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
+  const [showAllFaqs, setShowAllFaqs] = useState(false);
+  const [showStickyCta, setShowStickyCta] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setShowStickyCta(window.scrollY > 700);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     const run = async () => {
@@ -258,7 +267,7 @@ const Index = () => {
 
       <main>
         {/* HERO */}
-        <section className="relative pt-36 sm:pt-44 pb-24 sm:pb-32 px-4 overflow-hidden">
+        <section className="relative pt-28 sm:pt-32 pb-14 sm:pb-16 px-4 overflow-hidden">
           <div className="absolute inset-0 -z-10 pointer-events-none">
             <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/[0.07] blur-[160px]" />
           </div>
@@ -281,7 +290,7 @@ const Index = () => {
 
             <p
               style={{ animationDelay: "0.2s" }}
-              className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed animate-fade-in"
+              className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed animate-fade-in"
             >
               Para hombres de 25 a 40 años que quieren ganar músculo de verdad. Un entrenador real diseña tu entrenamiento y nutrición, y los ajusta cada semana contigo por chat.
             </p>
@@ -354,7 +363,7 @@ const Index = () => {
             {/* Trust strip */}
             <div
               style={{ animationDelay: "0.5s" }}
-              className="mt-16 flex flex-col items-center gap-5 animate-fade-in"
+              className="mt-10 flex flex-col items-center gap-5 animate-fade-in"
             >
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 {trainer.trainer_photo_url ? (
@@ -406,7 +415,7 @@ const Index = () => {
         </Suspense>
 
         {/* QUIÉN HAY DETRÁS */}
-        <section className="py-24 px-4 border-t border-border">
+        <section className="py-14 px-4 border-t border-border">
           <div className="container mx-auto max-w-5xl">
             <ScrollReveal>
               <div className="grid md:grid-cols-[280px_1fr] gap-10 items-center">
@@ -457,30 +466,17 @@ const Index = () => {
                 </div>
               </div>
             </ScrollReveal>
-          </div>
-        </section>
 
-        {/* WHY IT WORKS */}
-        <section className="py-24 px-4">
-          <div className="container mx-auto max-w-5xl">
-            <ScrollReveal>
-              <div className="text-center mb-14 max-w-xl mx-auto">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Por qué funciona</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-                  No es una app.{" "}
-                  <span className="text-gradient">Es seguimiento real.</span>
-                </h2>
-              </div>
-            </ScrollReveal>
-            <div className="grid md:grid-cols-3 gap-5">
+            {/* Por qué funciona — integrado para evitar una sección redundante */}
+            <div className="mt-12 grid md:grid-cols-3 gap-4">
               {whyWorks.map((p, i) => (
-                <ScrollReveal key={p.title} delay={i * 0.08}>
-                  <div className="bg-card/50 border border-border rounded-2xl p-6 h-full hover:border-primary/30 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
-                      <p.icon className="w-5 h-5 text-primary" />
+                <ScrollReveal key={p.title} delay={i * 0.06}>
+                  <div className="bg-card/50 border border-border rounded-2xl p-5 h-full hover:border-primary/30 transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-3">
+                      <p.icon className="w-4 h-4 text-primary" />
                     </div>
-                    <h3 className="font-display font-semibold text-base mb-2">{p.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+                    <h3 className="font-display font-semibold text-sm mb-1.5">{p.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{p.desc}</p>
                   </div>
                 </ScrollReveal>
               ))}
@@ -494,7 +490,7 @@ const Index = () => {
         </Suspense>
 
         {/* PRICING */}
-        <section id="pricing" className="py-24 px-4 bg-card/30 border-y border-border scroll-mt-20">
+        <section id="pricing" className="py-16 px-4 bg-card/30 border-y border-border scroll-mt-20">
           <div className="container mx-auto">
             <ScrollReveal>
               <div className="text-center mb-12 max-w-xl mx-auto">
@@ -518,7 +514,7 @@ const Index = () => {
 
             {/* 7 DÍAS GRATIS — SISTEMA */}
             <ScrollReveal delay={0.15}>
-              <div className="mt-16 max-w-4xl mx-auto">
+              <div className="mt-12 max-w-4xl mx-auto">
                 <div className="text-center mb-8">
                   <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Tus 7 días gratis</p>
                   <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight">
@@ -558,7 +554,7 @@ const Index = () => {
         </Suspense>
 
         {/* GARANTÍA / MID CTA */}
-        <section className="py-20 px-4">
+        <section className="py-14 px-4">
           <div className="container mx-auto max-w-4xl">
             <ScrollReveal>
               <div className="relative rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] via-card/60 to-card/60 p-8 sm:p-12 overflow-hidden">
@@ -603,7 +599,7 @@ const Index = () => {
         </section>
 
         {/* CHAT DEMO */}
-        <section className="py-24 px-4 bg-card/30 border-y border-border">
+        <section className="py-16 px-4 bg-card/30 border-y border-border">
           <div className="container mx-auto max-w-3xl">
             <ScrollReveal>
               <div className="text-center mb-12">
@@ -674,10 +670,10 @@ const Index = () => {
         </Suspense>
 
         {/* TESTIMONIOS */}
-        <section className="py-28 px-4 bg-card/30 border-y border-border">
+        <section className="py-16 px-4 bg-card/30 border-y border-border">
           <div className="container mx-auto max-w-3xl">
             <ScrollReveal>
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">
                   Resultados reales
                 </p>
@@ -761,7 +757,7 @@ const Index = () => {
         </section>
 
         {/* RECURSOS */}
-        <section className="py-24 px-4 border-t border-border">
+        <section className="py-14 px-4 border-t border-border">
           <div className="container mx-auto max-w-5xl">
             <ScrollReveal>
               <div className="text-center mb-12 max-w-xl mx-auto">
@@ -815,10 +811,10 @@ const Index = () => {
         </section>
 
         {/* FAQ */}
-        <section className="py-28 px-4">
+        <section className="py-16 px-4">
           <div className="container mx-auto max-w-2xl">
             <ScrollReveal>
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Antes de empezar</p>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display">
                   Lo que la gente nos pregunta
@@ -827,7 +823,7 @@ const Index = () => {
             </ScrollReveal>
             <ScrollReveal delay={0.1}>
               <Accordion type="single" collapsible className="space-y-1">
-                {faqs.map((faq, i) => (
+                {(showAllFaqs ? faqs : faqs.slice(0, 7)).map((faq, i) => (
                   <AccordionItem key={i} value={`faq-${i}`} className="border-b border-border last:border-b-0">
                     <AccordionTrigger className="text-base font-medium hover:no-underline py-5 text-left">
                       {faq.q}
@@ -838,12 +834,19 @@ const Index = () => {
                   </AccordionItem>
                 ))}
               </Accordion>
+              {!showAllFaqs && (
+                <div className="text-center mt-6">
+                  <Button variant="outline" size="sm" onClick={() => setShowAllFaqs(true)}>
+                    Ver todas las preguntas ({faqs.length})
+                  </Button>
+                </div>
+              )}
             </ScrollReveal>
           </div>
         </section>
 
         {/* CTA FINAL */}
-        <section className="relative py-28 px-4 overflow-hidden bg-card/30 border-t border-border">
+        <section className="relative py-20 px-4 overflow-hidden bg-card/30 border-t border-border">
           <div className="absolute inset-0 -z-10 pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.08] blur-[160px]" />
           </div>
@@ -902,6 +905,25 @@ const Index = () => {
         <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/scan")}>
           <ScanLine className="w-4 h-4" /> Diagnóstico gratis
         </Button>
+      </div>
+
+      {/* Sticky CTA desktop — aparece al pasar el hero */}
+      <div
+        className={`hidden md:block fixed bottom-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+          showStickyCta ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6 pointer-events-none"
+        }`}
+      >
+        <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl px-5 py-3 premium-shadow">
+          <div className="text-left">
+            <div className="text-sm font-semibold">Diagnóstico físico gratis en 60s</div>
+            <div className="text-[11px] text-muted-foreground">Sin tarjeta · sin registro previo · 100% privado</div>
+          </div>
+          <Button variant="hero" size="lg" onClick={() => navigate("/scan")} className="group whitespace-nowrap">
+            <ScanLine className="w-4 h-4" />
+            Empezar gratis
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </Button>
+        </div>
       </div>
     </div>
   );
