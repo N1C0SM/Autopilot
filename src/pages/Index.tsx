@@ -457,30 +457,17 @@ const Index = () => {
                 </div>
               </div>
             </ScrollReveal>
-          </div>
-        </section>
 
-        {/* WHY IT WORKS */}
-        <section className="py-14 px-4">
-          <div className="container mx-auto max-w-5xl">
-            <ScrollReveal>
-              <div className="text-center mb-10 max-w-xl mx-auto">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Por qué funciona</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-                  No es una app.{" "}
-                  <span className="text-gradient">Es seguimiento real.</span>
-                </h2>
-              </div>
-            </ScrollReveal>
-            <div className="grid md:grid-cols-3 gap-5">
+            {/* Por qué funciona — integrado para evitar una sección redundante */}
+            <div className="mt-12 grid md:grid-cols-3 gap-4">
               {whyWorks.map((p, i) => (
-                <ScrollReveal key={p.title} delay={i * 0.08}>
-                  <div className="bg-card/50 border border-border rounded-2xl p-6 h-full hover:border-primary/30 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
-                      <p.icon className="w-5 h-5 text-primary" />
+                <ScrollReveal key={p.title} delay={i * 0.06}>
+                  <div className="bg-card/50 border border-border rounded-2xl p-5 h-full hover:border-primary/30 transition-colors">
+                    <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-3">
+                      <p.icon className="w-4 h-4 text-primary" />
                     </div>
-                    <h3 className="font-display font-semibold text-base mb-2">{p.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+                    <h3 className="font-display font-semibold text-sm mb-1.5">{p.title}</h3>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{p.desc}</p>
                   </div>
                 </ScrollReveal>
               ))}
