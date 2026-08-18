@@ -258,7 +258,7 @@ const Index = () => {
 
       <main>
         {/* HERO */}
-        <section className="relative pt-36 sm:pt-44 pb-24 sm:pb-32 px-4 overflow-hidden">
+        <section className="relative pt-28 sm:pt-32 pb-14 sm:pb-16 px-4 overflow-hidden">
           <div className="absolute inset-0 -z-10 pointer-events-none">
             <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/[0.07] blur-[160px]" />
           </div>
@@ -281,7 +281,7 @@ const Index = () => {
 
             <p
               style={{ animationDelay: "0.2s" }}
-              className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed animate-fade-in"
+              className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed animate-fade-in"
             >
               Para hombres de 25 a 40 años que quieren ganar músculo de verdad. Un entrenador real diseña tu entrenamiento y nutrición, y los ajusta cada semana contigo por chat.
             </p>
@@ -354,7 +354,7 @@ const Index = () => {
             {/* Trust strip */}
             <div
               style={{ animationDelay: "0.5s" }}
-              className="mt-16 flex flex-col items-center gap-5 animate-fade-in"
+              className="mt-10 flex flex-col items-center gap-5 animate-fade-in"
             >
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 {trainer.trainer_photo_url ? (
@@ -406,7 +406,7 @@ const Index = () => {
         </Suspense>
 
         {/* QUIÉN HAY DETRÁS */}
-        <section className="py-24 px-4 border-t border-border">
+        <section className="py-14 px-4 border-t border-border">
           <div className="container mx-auto max-w-5xl">
             <ScrollReveal>
               <div className="grid md:grid-cols-[280px_1fr] gap-10 items-center">
@@ -461,10 +461,10 @@ const Index = () => {
         </section>
 
         {/* WHY IT WORKS */}
-        <section className="py-24 px-4">
+        <section className="py-14 px-4">
           <div className="container mx-auto max-w-5xl">
             <ScrollReveal>
-              <div className="text-center mb-14 max-w-xl mx-auto">
+              <div className="text-center mb-10 max-w-xl mx-auto">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Por qué funciona</p>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
                   No es una app.{" "}
@@ -494,7 +494,7 @@ const Index = () => {
         </Suspense>
 
         {/* PRICING */}
-        <section id="pricing" className="py-24 px-4 bg-card/30 border-y border-border scroll-mt-20">
+        <section id="pricing" className="py-16 px-4 bg-card/30 border-y border-border scroll-mt-20">
           <div className="container mx-auto">
             <ScrollReveal>
               <div className="text-center mb-12 max-w-xl mx-auto">
@@ -518,7 +518,7 @@ const Index = () => {
 
             {/* 7 DÍAS GRATIS — SISTEMA */}
             <ScrollReveal delay={0.15}>
-              <div className="mt-16 max-w-4xl mx-auto">
+              <div className="mt-12 max-w-4xl mx-auto">
                 <div className="text-center mb-8">
                   <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Tus 7 días gratis</p>
                   <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight">
@@ -558,7 +558,7 @@ const Index = () => {
         </Suspense>
 
         {/* GARANTÍA / MID CTA */}
-        <section className="py-20 px-4">
+        <section className="py-14 px-4">
           <div className="container mx-auto max-w-4xl">
             <ScrollReveal>
               <div className="relative rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] via-card/60 to-card/60 p-8 sm:p-12 overflow-hidden">
@@ -603,7 +603,7 @@ const Index = () => {
         </section>
 
         {/* CHAT DEMO */}
-        <section className="py-24 px-4 bg-card/30 border-y border-border">
+        <section className="py-16 px-4 bg-card/30 border-y border-border">
           <div className="container mx-auto max-w-3xl">
             <ScrollReveal>
               <div className="text-center mb-12">
@@ -674,10 +674,10 @@ const Index = () => {
         </Suspense>
 
         {/* TESTIMONIOS */}
-        <section className="py-28 px-4 bg-card/30 border-y border-border">
+        <section className="py-16 px-4 bg-card/30 border-y border-border">
           <div className="container mx-auto max-w-3xl">
             <ScrollReveal>
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">
                   Resultados reales
                 </p>
@@ -761,7 +761,7 @@ const Index = () => {
         </section>
 
         {/* RECURSOS */}
-        <section className="py-24 px-4 border-t border-border">
+        <section className="py-14 px-4 border-t border-border">
           <div className="container mx-auto max-w-5xl">
             <ScrollReveal>
               <div className="text-center mb-12 max-w-xl mx-auto">
@@ -815,10 +815,10 @@ const Index = () => {
         </section>
 
         {/* FAQ */}
-        <section className="py-28 px-4">
+        <section className="py-16 px-4">
           <div className="container mx-auto max-w-2xl">
             <ScrollReveal>
-              <div className="text-center mb-14">
+              <div className="text-center mb-10">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Antes de empezar</p>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display">
                   Lo que la gente nos pregunta
@@ -843,7 +843,7 @@ const Index = () => {
         </section>
 
         {/* CTA FINAL */}
-        <section className="relative py-28 px-4 overflow-hidden bg-card/30 border-t border-border">
+        <section className="relative py-20 px-4 overflow-hidden bg-card/30 border-t border-border">
           <div className="absolute inset-0 -z-10 pointer-events-none">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/[0.08] blur-[160px]" />
           </div>
