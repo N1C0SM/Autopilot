@@ -20,7 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
-import { Award, Dumbbell, Calendar, MessageSquare, Target } from "lucide-react";
+import { Award, Dumbbell, MessageSquare, Target } from "lucide-react";
 import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
@@ -144,11 +144,13 @@ const Index = () => {
   }, []);
 
   const goToPricing = () => {
+    track("pricing_view", { source: "nav" });
     const el = document.getElementById("pricing");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const selectPlan = (plan: PlanKey) => {
+    track("plan_select", { plan, source: "landing_pricing" });
     navigate(`/signup?plan=${plan}`);
   };
 
