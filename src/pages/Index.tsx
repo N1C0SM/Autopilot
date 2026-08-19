@@ -218,14 +218,14 @@ const Index = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
-            <Button variant="default" size="sm" onClick={() => goScan("landing")}>
+            <Button variant="default" size="sm" onClick={() => goScan("header")}>
               Diagnóstico gratis
             </Button>
           </div>
 
           {/* Mobile nav */}
           <div className="flex sm:hidden items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => goScan("landing")} className="text-xs px-3">
+            <Button variant="default" size="sm" onClick={() => goScan("header_mobile")} className="text-xs px-3">
               Diagnóstico
             </Button>
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -267,7 +267,7 @@ const Index = () => {
                   variant="default"
                   size="lg"
                   className="mt-4 w-full"
-                  onClick={() => { setMobileMenuOpen(false); goScan("landing"); }}
+                  onClick={() => { setMobileMenuOpen(false); goScan("menu"); }}
                 >
                   Diagnóstico gratis
                 </Button>
@@ -315,7 +315,7 @@ const Index = () => {
                 <Button
                   variant="hero"
                   size="xl"
-                  onClick={() => goScan("landing")}
+                  onClick={() => goScan("hero")}
                   className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
                 >
                   <ScanLine className="w-4 h-4" />
@@ -804,7 +804,7 @@ const Index = () => {
               <Button
                 variant="hero"
                 size="xl"
-                onClick={() => goScan("landing")}
+                onClick={() => goScan("cta_final")}
                 className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
               >
                 <ScanLine className="w-4 h-4" />
@@ -844,7 +844,7 @@ const Index = () => {
 
       {/* Floating CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("landing")}>
+        <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("sticky_mobile")}>
           <ScanLine className="w-4 h-4" /> Diagnóstico gratis
         </Button>
       </div>
@@ -860,7 +860,7 @@ const Index = () => {
             <div className="text-sm font-semibold">Diagnóstico físico gratis en 60s</div>
             <div className="text-[11px] text-muted-foreground">Sin tarjeta · sin registro previo · 100% privado</div>
           </div>
-          <Button variant="hero" size="lg" onClick={() => goScan("landing")} className="group whitespace-nowrap">
+          <Button variant="hero" size="lg" onClick={() => goScan("sticky_desktop")} className="group whitespace-nowrap">
             <ScanLine className="w-4 h-4" />
             Empezar gratis
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
