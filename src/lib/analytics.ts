@@ -14,7 +14,10 @@ type EventName =
   | "checkout_start"
   | "checkout_success"
   | "checkout_abandoned"
-  | "plan_ready";
+  | "plan_ready"
+  | "landing_view"
+  | "cta_click"
+  | "pricing_view";
 
 export function track(event: EventName, params: Record<string, any> = {}) {
   try {

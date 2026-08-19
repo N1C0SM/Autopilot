@@ -20,7 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
-import { Award, Dumbbell, Calendar, MessageSquare, Target } from "lucide-react";
+import { Award, Dumbbell, MessageSquare, Target } from "lucide-react";
+import { track } from "@/lib/analytics";
 import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
@@ -143,12 +144,23 @@ const Index = () => {
     return () => window.clearTimeout(id);
   }, []);
 
+  useEffect(() => {
+    track("landing_view");
+  }, []);
+
+  const goScan = (source: string) => {
+    track("cta_click", { cta: "scan", source });
+    navigate("/scan");
+  };
+
   const goToPricing = () => {
+    track("pricing_view", { source: "nav" });
     const el = document.getElementById("pricing");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const selectPlan = (plan: PlanKey) => {
+    track("plan_select", { plan, source: "landing_pricing" });
     navigate(`/signup?plan=${plan}`);
   };
 
@@ -206,14 +218,14 @@ const Index = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
-            <Button variant="default" size="sm" onClick={() => navigate("/scan")}>
+            <Button variant="default" size="sm" onClick={() => goScan("header")}>
               Diagnóstico gratis
             </Button>
           </div>
 
           {/* Mobile nav */}
           <div className="flex sm:hidden items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => navigate("/scan")} className="text-xs px-3">
+            <Button variant="default" size="sm" onClick={() => goScan("header_mobile")} className="text-xs px-3">
               Diagnóstico
             </Button>
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -255,7 +267,7 @@ const Index = () => {
                   variant="default"
                   size="lg"
                   className="mt-4 w-full"
-                  onClick={() => { setMobileMenuOpen(false); navigate("/scan"); }}
+                  onClick={() => { setMobileMenuOpen(false); goScan("menu"); }}
                 >
                   Diagnóstico gratis
                 </Button>
@@ -303,7 +315,7 @@ const Index = () => {
                 <Button
                   variant="hero"
                   size="xl"
-                  onClick={() => navigate("/scan")}
+                  onClick={() => goScan("hero")}
                   className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
                 >
                   <ScanLine className="w-4 h-4" />
@@ -512,37 +524,12 @@ const Index = () => {
               </Suspense>
             </ScrollReveal>
 
-            {/* 7 DÍAS GRATIS — SISTEMA */}
+            {/* GARANTÍA — línea única (antes 3 tarjetas de "7 días gratis") */}
             <ScrollReveal delay={0.15}>
-              <div className="mt-12 max-w-4xl mx-auto">
-                <div className="text-center mb-8">
-                  <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Tus 7 días gratis</p>
-                  <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight">
-                    No es una prueba olvidada.{" "}
-                    <span className="text-gradient">Es una semana acompañada.</span>
-                  </h3>
-                </div>
-                <div className="grid md:grid-cols-3 gap-4">
-                  {[
-                    { day: "Día 1", title: "Tu plan en marcha", desc: "Recibes el primer plan adaptado a tu nivel, equipamiento y horario real. Te explicamos por dónde empezar." },
-                    { day: "Día 4", title: "Primer ajuste", desc: "Te escribimos para ver cómo van las primeras sesiones. Ajustamos cargas, ejercicios o nutrición si hace falta." },
-                    { day: "Día 7", title: "Decides con datos", desc: "Revisamos juntos lo que funcionó y lo que no. Sigues solo si lo ves claro, sin renovaciones sorpresa." },
-                  ].map((s, i) => (
-                    <div key={s.day} className="bg-card border border-border rounded-2xl p-5 relative">
-                      <div className="absolute -top-3 left-5 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold tracking-wider">
-                        {s.day.toUpperCase()}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 mb-2">
-                        <Calendar className="w-4 h-4 text-primary" />
-                        <h4 className="font-display font-semibold text-base">{s.title}</h4>
-                      </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-center text-xs text-muted-foreground mt-6">
-                  Sin permanencia. Cancelas en un clic antes del día 7 y no se cobra nada.
-                </p>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-success" /> Cancelas en 1 clic antes del día 7</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-success" /> Sin permanencia ni renovaciones sorpresa</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-success" /> Pago seguro con Stripe</span>
               </div>
             </ScrollReveal>
           </div>
@@ -553,69 +540,24 @@ const Index = () => {
           <PremiumTransformation contactEmail={contactEmail} />
         </Suspense>
 
-        {/* GARANTÍA / MID CTA */}
-        <section className="py-14 px-4">
-          <div className="container mx-auto max-w-4xl">
-            <ScrollReveal>
-              <div className="relative rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] via-card/60 to-card/60 p-8 sm:p-12 overflow-hidden">
-                <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-                <div className="grid md:grid-cols-[1fr_auto] gap-8 items-center relative">
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/[0.08] mb-4">
-                      <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                        Garantía sin letra pequeña
-                      </span>
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl font-bold font-display leading-tight mb-4">
-                      Si en 7 días no ves que el plan encaja con tu vida,{" "}
-                      <span className="text-gradient">no pagas nada.</span>
-                    </h2>
-                    <ul className="space-y-2 text-sm text-foreground/90">
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-success shrink-0" /> Cancelas en 1 clic desde tu cuenta</li>
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-success shrink-0" /> Sin permanencia, sin renovaciones sorpresa</li>
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-success shrink-0" /> Pago seguro con Stripe</li>
-                    </ul>
-                  </div>
-                  <div className="flex md:flex-col gap-3">
-                    <Button
-                      variant="hero"
-                      size="xl"
-                      onClick={() => navigate("/scan")}
-                      className="hover-scale group whitespace-nowrap"
-                    >
-                      <ScanLine className="w-4 h-4" />
-                      Empezar gratis
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                    </Button>
-                    <Button variant="outline" size="xl" onClick={goToPricing} className="whitespace-nowrap">
-                      Ver planes
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
-
         {/* CHAT DEMO */}
-        <section className="py-16 px-4 bg-card/30 border-y border-border">
+        <section className="py-12 px-4 bg-card/30 border-y border-border">
           <div className="container mx-auto max-w-3xl">
             <ScrollReveal>
-              <div className="text-center mb-12">
+              <div className="text-center mb-7">
                 <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">El día a día</p>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4 leading-tight">
                   Hablas con una persona.{" "}
-                  <span className="text-gradient">No con un bot.</span>
+                  <span className="text-gradient">No con un ticket.</span>
                 </h2>
                 <p className="text-muted-foreground max-w-md mx-auto text-sm">
-                  Sin tickets. Sin respuestas automáticas. Mensajes reales que ajustan tu plan.
+                  La IA prepara el plan; tu entrenador lo revisa y te responde. Mensajes reales que ajustan tu semana.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={0.1}>
-              <div className="bg-card rounded-2xl border border-border premium-shadow flex flex-col h-[440px] overflow-hidden max-w-xl mx-auto">
+              <div className="bg-card rounded-2xl border border-border premium-shadow flex flex-col overflow-hidden max-w-xl mx-auto">
                 <div className="flex items-center gap-2 p-3 border-b border-border">
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary/10 text-primary">
                     <MessageCircle className="w-4 h-4" /> Chat con tu entrenador
@@ -862,7 +804,7 @@ const Index = () => {
               <Button
                 variant="hero"
                 size="xl"
-                onClick={() => navigate("/scan")}
+                onClick={() => goScan("cta_final")}
                 className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
               >
                 <ScanLine className="w-4 h-4" />
@@ -902,7 +844,7 @@ const Index = () => {
 
       {/* Floating CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/scan")}>
+        <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("sticky_mobile")}>
           <ScanLine className="w-4 h-4" /> Diagnóstico gratis
         </Button>
       </div>
@@ -918,7 +860,7 @@ const Index = () => {
             <div className="text-sm font-semibold">Diagnóstico físico gratis en 60s</div>
             <div className="text-[11px] text-muted-foreground">Sin tarjeta · sin registro previo · 100% privado</div>
           </div>
-          <Button variant="hero" size="lg" onClick={() => navigate("/scan")} className="group whitespace-nowrap">
+          <Button variant="hero" size="lg" onClick={() => goScan("sticky_desktop")} className="group whitespace-nowrap">
             <ScanLine className="w-4 h-4" />
             Empezar gratis
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
