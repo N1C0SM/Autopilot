@@ -150,7 +150,7 @@ const Index = () => {
 
   const goScan = (source: string) => {
     track("cta_click", { cta: "scan", source });
-    goScan("landing");
+    navigate("/scan");
   };
 
   const goToPricing = () => {
