@@ -21,6 +21,7 @@ import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
 import { Award, Dumbbell, MessageSquare, Target } from "lucide-react";
+import { track } from "@/lib/analytics";
 import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
