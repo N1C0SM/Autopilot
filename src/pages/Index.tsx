@@ -26,6 +26,7 @@ import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
 const AIScanSection = lazy(() => import("@/components/AIScanSection"));
+const HeroTestimonial = lazy(() => import("@/components/HeroTestimonial"));
 const PostScanFlow = lazy(() => import("@/components/PostScanFlow"));
 const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
 const PricingTiers = lazy(() => import("@/components/PricingTiers"));
@@ -322,14 +323,12 @@ const Index = () => {
                   Hacer mi diagnóstico gratis
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="xl"
+                <button
                   onClick={() => navigate("/onboarding")}
-                  className="text-base px-8"
+                  className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
                 >
-                  Crear mi plan en 60s
-                </Button>
+                  o crear mi plan directamente
+                </button>
               </div>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Gratis</span>
