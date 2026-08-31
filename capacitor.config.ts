@@ -8,7 +8,7 @@ const isDev = process.env.CAP_DEV === "1";
 
 const config: CapacitorConfig = {
   appId: "app.lovable.aa0029da00154c05a2b503e61df0f87c",
-  appName: "autopilotv2",
+  appName: "Autopilot",
   webDir: "dist",
   ...(isDev
     ? {

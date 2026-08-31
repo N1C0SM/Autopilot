@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Autopilot</string>
+    <string name="title_activity_main">Autopilot</string>
+    <string name="package_name">app.lovable.aa0029da00154c05a2b503e61df0f87c</string>
+    <string name="custom_url_scheme">app.lovable.aa0029da00154c05a2b503e61df0f87c</string>
+</resources>

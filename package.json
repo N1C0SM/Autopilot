@@ -1,7 +1,7 @@
 {
   "name": "vite_react_shadcn_ts",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,8 +10,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "mobile:sync": "npm run build && cap sync",
+    "android:aab": "npm run mobile:sync && cd android && ./gradlew bundleRelease",
     "test:watch": "vitest",
-    "assets:generate": "capacitor-assets generate --iconBackgroundColor #090909 --iconBackgroundColorDark #090909 --splashBackgroundColor #090909 --splashBackgroundColorDark #090909"
+    "assets:generate": "capacitor-assets generate --iconBackgroundColor '#090909' --iconBackgroundColorDark '#090909' --splashBackgroundColor '#090909' --splashBackgroundColorDark '#090909'"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

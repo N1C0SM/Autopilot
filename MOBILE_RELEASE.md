@@ -7,7 +7,7 @@ ejecutar los comandos en tu máquina cuando tengas las cuentas listas.
 ## Datos de la app
 
 - **Nombre:** Autopilot
-- **Bundle ID / Application ID:** `app.lovable.aa0029da00154c05a2b503e61df0f87c`
+- **Bundle ID / Application ID actual:** `app.lovable.aa0029da00154c05a2b503e61df0f87c`
 - **Política de privacidad (URL pública obligatoria):** https://autopilotplan.com/legal
 - **Web oficial:** https://autopilotplan.com
 
@@ -19,21 +19,29 @@ ejecutar los comandos en tu máquina cuando tengas las cuentas listas.
 - **Android Studio** para compilar Android.
 - Node 20+ y `npm` instalados.
 
+> **Confirma el identificador antes de crear las fichas en las tiendas.** El
+> identificador actual funciona, pero conserva el nombre técnico generado por
+> Lovable. Una vez publicada la app no se puede cambiar sin crear una app nueva.
+> Si prefieres uno propio (por ejemplo, `com.autopilotplan.app`), cámbialo antes
+> de registrar la app en Apple o Google y actualiza también las URL de retorno
+> de autenticación en Lovable/Supabase.
+
 ## 1. Preparar el proyecto en local
 
 ```bash
 git pull
 npm install
-npx cap add ios       # solo la primera vez
-npx cap add android   # solo la primera vez
 ```
+
+Los proyectos `ios/` y `android/` ya están incluidos en el repositorio; no
+vuelvas a ejecutar `cap add`.
 
 ## 2. Build de producción + sync nativo
 
 ```bash
-npm run build              # genera /dist
+npm run mobile:sync        # build web + copia a iOS y Android
 npm run assets:generate    # genera iconos y splash para iOS/Android desde resources/
-npx cap sync               # copia /dist y plugins a los proyectos nativos
+npx cap sync               # repite el sync después de cambiar iconos/splash
 ```
 
 > Importante: `capacitor.config.ts` ya está preparado para producción.
@@ -64,7 +72,7 @@ Luego, en https://appstoreconnect.apple.com crea la ficha, sube capturas
 ### Generar keystore (una sola vez, guárdalo a salvo)
 
 ```bash
-keytool -genkey -v -keystore autopilot-release.keystore \
+keytool -genkeypair -v -keystore android/autopilot-release.jks \
   -alias autopilot -keyalg RSA -keysize 2048 -validity 10000
 ```
 
@@ -73,46 +81,30 @@ podrás volver a publicar actualizaciones).
 
 ### Configurar la firma en `android/`
 
-Crea `android/keystore.properties` (NO lo subas a git):
+Copia `android/keystore.properties.example` como
+`android/keystore.properties` y rellena las contraseñas (NO lo subas a git):
 
 ```
-storeFile=../../autopilot-release.keystore
+storeFile=autopilot-release.jks
 storePassword=TU_PASSWORD
 keyAlias=autopilot
 keyPassword=TU_PASSWORD
 ```
 
-Y en `android/app/build.gradle` añade dentro de `android { ... }`:
-
-```gradle
-signingConfigs {
-    release {
-        def props = new Properties()
-        props.load(new FileInputStream(rootProject.file("keystore.properties")))
-        storeFile file(props['storeFile'])
-        storePassword props['storePassword']
-        keyAlias props['keyAlias']
-        keyPassword props['keyPassword']
-    }
-}
-buildTypes {
-    release {
-        signingConfig signingConfigs.release
-        minifyEnabled true
-        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-    }
-}
-```
+Guarda el archivo `autopilot-release.jks` dentro de `android/`. Ambos archivos
+están excluidos de Git. Conserva además una copia segura fuera del ordenador.
 
 ### Generar el AAB
 
 ```bash
-cd android
-./gradlew bundleRelease
+npm run android:aab
 ```
 
 El bundle queda en `android/app/build/outputs/bundle/release/app-release.aab`.
 Súbelo en https://play.google.com/console.
+
+Si no existe `keystore.properties`, Gradle puede generar un AAB de prueba sin
+firma, pero Google Play no lo aceptará.
 
 ## 5. Material que pedirán las tiendas
 
@@ -125,6 +117,9 @@ Súbelo en https://play.google.com/console.
 - **Categoría:** Salud y forma física / Health & Fitness.
 - **Clasificación por edades:** completar cuestionario en cada consola.
 - **Política de privacidad:** https://autopilotplan.com/legal
+- **Autenticación:** añade las URL/esquemas de retorno nativos permitidos en
+  Lovable/Supabase y prueba registro, recuperación de contraseña y “Continuar
+  con Apple” en un dispositivo real antes de enviar a revisión.
 
 ## 6. Actualizar la app más adelante
 
