@@ -1547,7 +1547,7 @@ const Scan = () => {
                   />
                   <span className="text-xs text-muted-foreground leading-relaxed">
                     Acepto que Autopilot use mi foto solo para generar mi diagnóstico físico y acepto la{" "}
-                    <Link to="/legal" className="text-primary hover:underline">
+                    <Link to="/legal/privacidad" className="text-primary hover:underline">
                       política de privacidad
                     </Link>
                     .
