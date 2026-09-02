@@ -33,6 +33,9 @@ const Recursos = lazy(() => import("./pages/Recursos"));
 const GuiaEntrenamientoCasa = lazy(() => import("./pages/GuiaEntrenamientoCasa"));
 const Recomendaciones = lazy(() => import("./pages/Recomendaciones"));
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import OfflineBanner from "@/components/OfflineBanner";
+import { Helmet } from "react-helmet-async";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
@@ -53,7 +56,21 @@ const DashboardRedirect = () => {
   return <Navigate to={`/dashboard/user/${user.id}`} replace />;
 };
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 30_000, refetchOnWindowFocus: false },
+  },
+});
+
+/** Marca rutas privadas como no indexables. */
+const NoIndex = ({ children }: { children: JSX.Element }) => (
+  <>
+    <Helmet>
+      <meta name="robots" content="noindex,nofollow" />
+    </Helmet>
+    {children}
+  </>
+);
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -62,6 +79,7 @@ const RouteFallback = () => (
 );
 
 const App = () => (
+  <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
@@ -69,6 +87,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <ImpersonationBanner />
+          <OfflineBanner />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<RootRoute />} />
@@ -82,12 +101,13 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/dashboard/user/:userId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><NoIndex><Settings /></NoIndex></ProtectedRoute>} />
             <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><NoIndex><Admin /></NoIndex></ProtectedRoute>} />
             <Route path="/admin/email-preview/:templateKey" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
-            <Route path="/trainer" element={<ProtectedRoute><Trainer /></ProtectedRoute>} />
-            <Route path="/unsubscribe" element={<Unsubscribe />} />
+            <Route path="/trainer" element={<ProtectedRoute><NoIndex><Trainer /></NoIndex></ProtectedRoute>} />
+            <Route path="/unsubscribe" element={<NoIndex><Unsubscribe /></NoIndex>} />
+            <Route path="/legal" element={<Navigate to="/legal/terminos" replace />} />
             <Route path="/legal/:slug" element={<Legal />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:slug" element={<BlogPost />} />
@@ -104,6 +124,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
