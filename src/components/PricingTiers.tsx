@@ -1,5 +1,5 @@
-import { TIERS, transformacionPlazasDisponibles, type PlanKey } from "@/config/tiers";
-import { CheckCircle2, X, Sparkles, ShieldCheck, Clock } from "lucide-react";
+import { TIERS, type PlanKey } from "@/config/tiers";
+import { CheckCircle2, X, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
@@ -8,12 +8,12 @@ interface PricingTiersProps {
   recommended?: PlanKey;
 }
 
-const ORDER: PlanKey[] = ["training", "full", "transform"];
+const ORDER: PlanKey[] = ["training", "full"];
 
 const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => {
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-stretch">
+      <div className="grid md:grid-cols-2 gap-5 md:gap-6 items-stretch max-w-4xl mx-auto">
         {ORDER.map((key) => {
           const t = TIERS[key];
           const isRec = key === recommended;
@@ -56,23 +56,9 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                   {t.interval === "one_time" ? "/12 sem" : "/mes"}
                 </span>
               </div>
-              {t.trial_days > 0 ? (
-                <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
-                  <Sparkles className="w-3 h-3" /> Primera semana gratis
-                </div>
-              ) : (
-                <div className="mb-6 space-y-2">
-                  <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold">
-                    <Sparkles className="w-3 h-3" /> Plan 12 semanas · acompañamiento 1:1
-                  </div>
-                  <div className="flex">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-primary">
-                      <Clock className="w-3 h-3" />
-                      Plan 12 semanas · Quedan {transformacionPlazasDisponibles} plazas este mes
-                    </span>
-                  </div>
-                </div>
-              )}
+               <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
+                 <Sparkles className="w-3 h-3" /> Primera semana gratis
+               </div>
 
               <ul className="space-y-2.5 mb-7 flex-1">
                 {t.features.map((f) => (

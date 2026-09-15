@@ -75,6 +75,7 @@ const Index = () => {
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [contactEmail, setContactEmail] = useState("hola@autopilotplan.com");
+  const [transformationSlots, setTransformationSlots] = useState(10);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
   const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
@@ -106,6 +107,7 @@ const Index = () => {
           trainer_bio: s.trainer_bio || "",
         });
         if ((s as any).contact_email) setContactEmail((s as any).contact_email);
+        setTransformationSlots(Math.max(0, Number((s as any).transformation_slots ?? 10)));
         setHeroVideo({
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",
@@ -527,7 +529,7 @@ const Index = () => {
 
         {/* PREMIUM TRANSFORMATION */}
         <Suspense fallback={<SectionFallback />}>
-          <PremiumTransformation contactEmail={contactEmail} />
+          <PremiumTransformation onSelect={selectPlan} availableSlots={transformationSlots} />
         </Suspense>
 
         {/* CHAT DEMO */}

@@ -72,9 +72,6 @@ export const TIERS = {
 export const TIER = TIERS.full;
 export type TierKey = "personal";
 
-// Plazas restantes del plan Transformación (editar aquí cada mes).
-export const transformacionPlazasDisponibles = 10;
-
 export const REFERRAL_COUPON_ID = "veaugRi2";
 
 export function getTierByProductId(_productId: string): TierKey | null {

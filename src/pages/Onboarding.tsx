@@ -418,7 +418,7 @@ const Onboarding = () => {
     setLoading(false);
   };
 
-  const goToCheckout = async (plan: "training" | "full") => {
+  const goToCheckout = async (plan: "training" | "full" | "transform") => {
     setLoading(true);
     track("plan_select", { plan });
     track("checkout_start", { plan });
