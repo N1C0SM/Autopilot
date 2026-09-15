@@ -37,6 +37,14 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
   const [activeTab, setActiveTab] = useState<"chat" | "media">("chat");
   const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<{ label: string; text: string }[]>([]);
+  const call = useVideoCall(conversationUserId);
+
+  useEffect(() => {
+    if (call.error) {
+      toast.error(call.error);
+      call.clearError();
+    }
+  }, [call.error]);
 
   useEffect(() => {
     const load = async () => {
