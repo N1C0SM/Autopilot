@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PLAN_LABEL } from "@/config/tiers";
 import { Users, Search, Shield, UserCog, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +115,9 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
               ✈️ Viaje
             </Badge>
           )}
+          <Badge variant="outline" className="text-[10px]">
+            {PLAN_LABEL[((u as any).subscription_tier as string) || ""] || "Sin plan"}
+          </Badge>
           <Badge variant={u.payment_status === "paid" ? "default" : "destructive"} className="text-[10px]">
             {u.payment_status === "paid" ? "💳 Pagado" : "⏳ Sin pagar"}
           </Badge>

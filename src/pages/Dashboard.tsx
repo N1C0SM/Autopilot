@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle, Lock, Video, Sparkles } from "lucide-react";
-import { Download, Calendar as CalendarIcon } from "lucide-react";
+import { Download } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -33,7 +33,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
-import { TRIAL_DAYS, GUARANTEE_DAYS, DEFAULT_YEARLY_PRICE_EUR, monthlyLabel, yearlySavings } from "@/config/pricing";
+import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
+import { TIERS } from "@/config/tiers";
 
 export interface Profile {
   user_id: string;
@@ -141,7 +142,7 @@ const Dashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
 
-  const handleCompletePayment = async (plan: "monthly" | "yearly" = "monthly") => {
+  const handleCompletePayment = async (plan: "training" | "full" | "transform" = "full") => {
     try {
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
         body: { referral_code: "", plan },
@@ -163,6 +164,16 @@ const Dashboard = () => {
     } catch (e) {
       toast.error("No se pudo generar el PDF");
     }
+  };
+
+  // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
+  const handleUpgradeToFull = async () => {
+    const { data, error } = await supabase.functions.invoke("customer-portal");
+    if (!error && data?.url) {
+      window.open(data.url, "_blank");
+      return;
+    }
+    await handleCompletePayment("full");
   };
 
   const handleManageSubscription = async () => {
@@ -236,12 +247,12 @@ const Dashboard = () => {
       {/* Unpaid state — shown on all sections EXCEPT settings */}
       {paymentStatus === "unpaid" && section !== "settings" && section !== "chat" && (() => {
         const paywallContent: Record<MobileTab, { icon: React.ReactNode; title: string; description: string; cta: string }> = {
-          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Un entrenador prepara tu plan", description: "Un entrenador real revisa tus datos y te prepara el entrenamiento y la nutrición. Tú no tienes que montar nada.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
+          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Un entrenador prepara tu plan", description: "Un entrenador real revisa tus datos y te prepara el entrenamiento y la nutrición. Tú no tienes que montar nada.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
           training: { icon: <Dumbbell className="w-8 h-8 text-primary" />, title: "Tu rutina te está esperando", description: "Ejercicios, series y descansos diseñados para tus objetivos. Actualizado cada semana por tu entrenador.", cta: "Desbloquear mi entrenamiento" },
           nutrition: { icon: <UtensilsCrossed className="w-8 h-8 text-primary" />, title: "Come según tu objetivo", description: "Plan de comidas con macros calculados para ti. Sin recetas genéricas, todo personalizado.", cta: "Desbloquear mi nutrición" },
           chat: { icon: <MessageCircle className="w-8 h-8 text-primary" />, title: "Habla con tu entrenador", description: "Resuelve dudas, ajusta tu plan y recibe feedback directo. Siempre disponible.", cta: "Activar chat con entrenador" },
-          progress: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Sigue tu progreso", description: "Sube fotos, ve tu evolución y desbloquea AI Scan.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
-          settings: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
+          progress: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Sigue tu progreso", description: "Sube fotos, ve tu evolución y desbloquea AI Scan.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
+          settings: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
         };
         const content = paywallContent[section] || paywallContent.home;
         return (
@@ -249,9 +260,9 @@ const Dashboard = () => {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">{content.icon}</div>
             <h2 className="text-xl font-bold font-display mb-2">{content.title}</h2>
             <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
-            <Button variant="hero" size="lg" onClick={() => handleCompletePayment("monthly")} className="w-full md:w-auto">{content.cta}</Button>
-            <button onClick={() => handleCompletePayment("yearly")} className="block mx-auto mt-4 text-xs text-primary hover:underline font-semibold flex items-center gap-1.5">
-              <CalendarIcon className="w-3 h-3" /> O paga anual: {DEFAULT_YEARLY_PRICE_EUR}€/año (ahorras {yearlySavings()}€)
+            <Button variant="hero" size="lg" onClick={() => handleCompletePayment("full")} className="w-full md:w-auto">{content.cta}</Button>
+            <button onClick={() => handleCompletePayment("training")} className="mx-auto mt-4 text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1.5">
+              <Dumbbell className="w-3 h-3" /> Solo entrenamiento — {TIERS.training.price}€/mes
             </button>
             <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía {GUARANTEE_DAYS} días</p>
             <button onClick={() => setSection("chat")} className="mx-auto mt-4 text-xs text-muted-foreground hover:text-primary underline inline-flex items-center gap-1.5">
@@ -298,7 +309,7 @@ const Dashboard = () => {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
           <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
-          <Button variant="hero" size="lg" onClick={handleManageSubscription} className="w-full md:w-auto">Mejorar a Completo — 49€/mes</Button>
+          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Mejorar a Completo — {TIERS.full.price}€/mes</Button>
         </motion.div>
       )}
 

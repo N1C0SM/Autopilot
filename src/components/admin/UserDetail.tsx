@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { PLAN_LABEL } from "@/config/tiers";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
 import TransformCyclePanel from "./TransformCyclePanel";
@@ -241,12 +243,22 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   };
 
   const autoGeneratePlan = async () => {
+    // Sin datos de onboarding el generador no puede calcular nada: avisamos en claro.
+    if (!onboarding || !onboarding.age || !onboarding.weight || !onboarding.height) {
+      toast.error("Este cliente no tiene el cuestionario completo. Rellena edad, altura, peso y objetivo en «Datos del cliente» y vuelve a intentarlo.");
+      return;
+    }
     setGenerating(true);
     const { data, error } = await supabase.functions.invoke("generate-plan", {
       body: { user_id: profile.user_id },
     });
+    const failMsg = String(error?.message || data?.error || "");
     if (error || !data?.success) {
-      toast.error("Error al generar plan automático: " + (error?.message || data?.error || "Error desconocido"));
+      toast.error(
+        /onboarding/i.test(failMsg)
+          ? "Faltan datos del cuestionario de este cliente. Complétalos en «Datos del cliente» y vuelve a generar."
+          : "No se pudo generar el plan. " + (failMsg || "Inténtalo de nuevo en unos segundos."),
+      );
       setGenerating(false);
       return;
     }
@@ -383,7 +395,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       {profile.payment_status !== "paid" && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 text-center">
           <p className="text-sm font-medium text-amber-400">⚠️ Este usuario aún no ha pagado.</p>
-          <p className="text-xs text-muted-foreground mt-1">Solo puedes ver su info. Para asignar planes, el usuario debe completar el pago primero.</p>
+          <p className="text-xs text-muted-foreground mt-1">Puedes darle acceso gratis tú mismo desde «Plan del cliente» (elige el plan y pulsa «Dar acceso gratis»).</p>
         </div>
       )}
       <Tabs defaultValue="info" className="space-y-6">
@@ -469,11 +481,27 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <div className="font-medium text-sm">Plan del cliente</div>
                   <div className="text-xs text-muted-foreground">
                     {hasAccess
-                      ? "El cliente ya tiene acceso activo. Cambia su plan con el selector o retírale el acceso."
-                      : "Asigna cualquier plan y actívalo gratis (sin pasar por Stripe)."}
+                      ? "Tiene acceso activo. Usa el selector para cambiarle de plan."
+                      : "No tiene acceso todavía. Elige un plan y dáselo gratis, sin pasar por Stripe."}
                   </div>
                 </div>
               </div>
+
+              {/* Estado actual, sin ambigüedades */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">{hasAccess ? "Plan actual:" : "Plan elegido:"}</span>
+                <Badge variant="outline">
+                  {PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan"}
+                </Badge>
+                <Badge variant={hasAccess ? "default" : "destructive"}>
+                  {hasAccess ? "Acceso activo" : "Sin acceso"}
+                </Badge>
+              </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                  {hasAccess ? "Cambiar plan" : "Elegir plan"}
+                </div>
               <Select
                 value={((profile as any).subscription_tier as string) || "__none__"}
                 onValueChange={async (v) => {
@@ -483,7 +511,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   setTierSaving(false);
                   if (error) return toast.error("No se pudo cambiar el plan");
                   onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
-                  toast.success(tier ? "Plan actualizado" : "Plan quitado");
+                  toast.success(tier ? `Plan cambiado a ${PLAN_LABEL[tier] || tier}` : "Plan quitado");
                 }}
                 disabled={tierSaving}
               >
@@ -497,6 +525,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {!hasAccess && (
                   <Button
@@ -516,11 +545,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       setTierSaving(false);
                       if (error) return toast.error("No se pudo activar el acceso");
                       onUpdate(profile.user_id, updates);
-                      toast.success("Acceso gratis activado");
+                      toast.success(`Acceso gratis activado · ${PLAN_LABEL[tier] || tier}`);
                     }}
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Activar acceso gratis
+                    Dar acceso gratis a {PLAN_LABEL[((profile as any).subscription_tier as string) || "full"]?.split(" ·")[0] || "Completo"}
                   </Button>
                 )}
                 {hasAccess && (

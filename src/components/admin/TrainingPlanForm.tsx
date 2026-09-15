@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,7 +247,7 @@ const SKILL_TEMPLATES: Record<string, SkillTemplate> = {
   },
 };
 
-const TrainingPlanForm = ({ dayPlans, onChange, userSports, equipmentType = "Mixto", specificGoal, intensityLevel = 5, userGoal, userInjuries, userAge, userAvailability }: Props) => {
+const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange, userSports, equipmentType = "Mixto", specificGoal, intensityLevel = 5, userGoal, userInjuries, userAge, userAvailability }, ref) => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const injuredMuscles = getInjuredMuscles(userInjuries);
   const recommendedStructure = getRecommendedStructure(userAvailability);
@@ -475,7 +475,7 @@ const TrainingPlanForm = ({ dayPlans, onChange, userSports, equipmentType = "Mix
   const tierLabel = intensityLevel <= 3 ? "Principiante" : intensityLevel <= 6 ? "Intermedio" : "Avanzado";
 
   return (
-    <div className="bg-card rounded-xl p-6 border border-border">
+    <div ref={ref} className="bg-card rounded-xl p-6 border border-border">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-bold font-display flex items-center gap-2">
           <Dumbbell className="w-5 h-5 text-primary" />
@@ -737,6 +737,7 @@ const TrainingPlanForm = ({ dayPlans, onChange, userSports, equipmentType = "Mix
       </div>
     </div>
   );
-};
+});
+TrainingPlanForm.displayName = "TrainingPlanForm";
 
 export default TrainingPlanForm;
