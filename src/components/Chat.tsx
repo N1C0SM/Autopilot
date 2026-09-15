@@ -296,6 +296,19 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
           </div>
         </div>
       )}
+      <CallOverlay
+        state={call.state}
+        localStream={call.localStream}
+        remoteStream={call.remoteStream}
+        micOn={call.micOn}
+        camOn={call.camOn}
+        peerName={isAdmin ? "Tu cliente" : "Tu entrenador"}
+        onAccept={call.accept}
+        onDecline={call.decline}
+        onHangup={call.hangup}
+        onToggleMic={call.toggleMic}
+        onToggleCam={call.toggleCam}
+      />
     </>
   );
 };
