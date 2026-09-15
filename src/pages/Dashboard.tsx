@@ -344,7 +344,7 @@ const Dashboard = () => {
                   ? "Cuéntale tu objetivo por aquí y hablad sin compromiso antes de suscribirte. Él prepara tu plan después."
                   : isTransform
                     ? "Tu plan Transformación 12 semanas incluye llamada inicial y check-ins semanales."
-                    : "Pide una llamada y tu entrenador te envía el enlace por este mismo chat."}
+                    : "Pídela y tu entrenador te llamará aquí dentro de Autopilot, sin apps ni enlaces externos."}
               </p>
               <Button size="sm" variant="hero" onClick={requestVideoCall}>
                 <Video className="w-3.5 h-3.5 mr-1.5" /> {paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Pedir videollamada"}

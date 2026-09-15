@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Phone } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import type { CallState } from "@/hooks/useVideoCall";
 
 interface Props {
@@ -75,7 +75,7 @@ const CallOverlay = ({
             {(!remoteStream || state !== "connected") && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
                 <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-                  <Phone className="w-8 h-8 text-primary" />
+                  <Video className="w-8 h-8 text-primary" />
                 </div>
                 <p className="text-xl font-semibold text-foreground">{peerName}</p>
                 <p className="text-sm text-muted-foreground">{statusText}</p>
@@ -108,7 +108,7 @@ const CallOverlay = ({
                   aria-label="Responder llamada"
                   className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
                 >
-                  <Phone className="w-6 h-6" />
+                  <Video className="w-6 h-6" />
                 </button>
               </>
             ) : (
