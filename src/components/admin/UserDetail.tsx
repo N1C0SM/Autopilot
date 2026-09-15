@@ -497,14 +497,34 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </div>
               </div>
 
-              {/* Plan actual: si aparece un plan, está activo; si no, inactivo */}
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-muted-foreground">Plan actual:</span>
-                <Badge variant={hasAccess ? "default" : "outline"}>
-                  {hasAccess
-                    ? (PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan")
-                    : "Inactivo"}
-                </Badge>
+              {/* Plan actual: si aparece un plan, está activo; si no, inactivo. Quitar acceso actúa sobre este plan */}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground">Plan actual:</span>
+                  <Badge variant={hasAccess ? "default" : "outline"}>
+                    {hasAccess
+                      ? (PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan")
+                      : "Inactivo"}
+                  </Badge>
+                </div>
+                {hasAccess && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={tierSaving}
+                    onClick={async () => {
+                      const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
+                      setTierSaving(true);
+                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                      setTierSaving(false);
+                      if (error) return toast.error("No se pudo quitar el acceso");
+                      onUpdate(profile.user_id, updates);
+                      toast.success(`Acceso retirado · ${PLAN_LABEL[currentTier || ""] || currentTier}`);
+                    }}
+                  >
+                    Quitar acceso{currentTier ? ` (${(PLAN_LABEL[currentTier] || currentTier).split(" ·")[0]})` : ""}
+                  </Button>
+                )}
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
@@ -576,24 +596,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                     Dar acceso gratis{effectiveTier ? ` a ${(PLAN_LABEL[effectiveTier] || effectiveTier).split(" ·")[0]}` : ""}
-                  </Button>
-                )}
-                {hasAccess && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={tierSaving}
-                    onClick={async () => {
-                      const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
-                      setTierSaving(true);
-                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                      setTierSaving(false);
-                      if (error) return toast.error("No se pudo quitar el acceso");
-                      onUpdate(profile.user_id, updates);
-                      toast.success(`Acceso retirado · ${PLAN_LABEL[currentTier || ""] || currentTier}`);
-                    }}
-                  >
-                    Quitar acceso{currentTier ? ` (${(PLAN_LABEL[currentTier] || currentTier).split(" ·")[0]})` : ""}
                   </Button>
                 )}
               </div>
