@@ -61,18 +61,18 @@ export default function ExitIntentModal({ onCta }: { onCta: () => void }) {
               <span className="text-gradient">¿y no el plan que lo arregla?</span>
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
-              Guardamos tu análisis. Activa tu plan en 60 segundos — 7 días gratis, sin compromiso, cancelas en 1 clic.
+              Guardamos tu análisis. Elige el plan que encaja contigo y pruébalo 7 días antes del primer cobro.
             </p>
             <button
               onClick={cta}
               className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3.5 rounded-xl transition-colors"
             >
-              Empezar mi plan por 0€ hoy
+              Elegir mi plan
               <ArrowRight className="w-4 h-4" />
             </button>
             <div className="flex items-center justify-center gap-2 mt-4 text-[11px] text-muted-foreground">
               <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-              Garantía 30 días · Sin permanencia
+              Requiere tarjeta · No se cobra hasta el día 8
             </div>
           </motion.div>
         </motion.div>

@@ -482,9 +482,13 @@ const Onboarding = () => {
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
             <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
-            <h1 className="text-3xl font-bold font-display mt-6 mb-2">Elige tu plan</h1>
+            <h1 className="text-3xl font-bold font-display mt-6 mb-2">
+              {selectedPlan === "transform" ? "Confirma tu Transformación" : "Elige tu plan"}
+            </h1>
             <p className="text-muted-foreground text-sm">
-              Empieza con 7 días gratis · Cancela cuando quieras
+              {selectedPlan === "transform"
+                ? "12 semanas · 299 € en un único pago"
+                : "7 días gratis · Requiere tarjeta · No se cobra hasta el día 8"}
             </p>
           </div>
           <PlanPreview
