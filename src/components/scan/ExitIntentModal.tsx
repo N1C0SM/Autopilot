@@ -58,7 +58,7 @@ export default function ExitIntentModal({ onCta }: { onCta: () => void }) {
             <div className="text-[10px] uppercase tracking-widest text-primary mb-2">Espera</div>
             <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight mb-3">
               Ya tienes el análisis inicial,<br />
-              <span className="text-gradient">ahora elige a tu entrenador.</span>
+              <span className="text-gradient">ahora elige un plan con entrenador.</span>
             </h3>
             <p className="text-sm text-muted-foreground mb-5">
               Elige el plan que encaja contigo para que un entrenador real prepare y lleve tu entrenamiento. Pruébalo 7 días antes del primer cobro.

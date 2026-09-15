@@ -58,7 +58,7 @@ const PostScanFlow = () => {
             onClick={() => navigate("/scan")}
             className="hover-scale group"
           >
-            Empezar con mi diagnóstico gratis
+             Hacer mi análisis inicial gratis
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <p className="text-[11px] text-muted-foreground mt-3">

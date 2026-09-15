@@ -229,7 +229,7 @@ const AIScanSection = () => {
               className="hover-scale group w-full sm:w-auto"
             >
               <ScanLine className="w-4 h-4 mr-1" />
-              Hacer mi diagnóstico gratis
+              Hacer mi análisis inicial gratis
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </Button>
             <p className="text-[11px] text-muted-foreground">

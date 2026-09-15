@@ -49,14 +49,14 @@ const whyWorks = [
 ];
 
 const faqs = [
-  { q: "¿El diagnóstico es gratis?", a: "Sí. El AI Physique Scan es 100% gratis, sin tarjeta y sin necesidad de crear cuenta primero." },
-  { q: "¿Necesito tarjeta para hacer el scan?", a: "No. Solo necesitas una foto. El resultado lo recibes en 60 segundos." },
+  { q: "¿El análisis inicial es gratis?", a: "Sí. El AI Physique Scan es un análisis inicial 100% gratis, sin tarjeta y sin necesidad de crear una cuenta." },
+  { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. Recibes el resultado inicial en 60 segundos; el plan y el seguimiento empiezan cuando eliges un plan con entrenador." },
   { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo y Transformación." },
   { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
   { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
   { q: "¿Quién prepara y ajusta mi plan?", a: "Un entrenador real. La IA solo sirve como herramienta de apoyo para el análisis inicial; no diseña tu plan, no lo reorganiza y no responde a tus mensajes." },
   { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Sin permanencia. Cancelas en un clic desde tu cuenta cuando quieras." },
-  { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis, pero incluye diagnóstico + llamada gratis con un asesor antes de empezar." },
+  { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis. Incluye análisis inicial y llamada con tu entrenador dentro de Autopilot antes de empezar." },
   { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y tu entrenador prepara el plan sobre esa base: calistenia, mancuernas en casa o cero material." },
   { q: "¿Y si nunca he entrenado?", a: "Tu entrenador parte de tu nivel real y te guía paso a paso, sin saltar fases." },
   { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto, YouTube te da una rutina genérica. Aquí hay una persona real que conoce tu nivel, tu equipamiento y tu semana, y ajusta el plan contigo cada vez que algo cambia." },
@@ -280,23 +280,23 @@ const Index = () => {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/[0.08] mb-7 animate-fade-in">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                 Entrenador real · seguimiento personal
+                Entrenador real · seguimiento personal
               </span>
             </div>
 
             <h1
               style={{ animationDelay: "0.1s" }}
               className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight animate-fade-in"
-            >
-               Tu entrenamiento, en manos{" "}
-               <span className="text-gradient">de un entrenador real.</span>
+              >
+              Tu entrenamiento, en manos{" "}
+              <span className="text-gradient">de un entrenador real.</span>
             </h1>
 
             <p
               style={{ animationDelay: "0.2s" }}
               className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed animate-fade-in"
             >
-               Tu entrenador prepara tu plan, habla contigo por chat y lo ajusta según tus avances, horarios y sensaciones. Nutrición personalizada según el plan elegido.
+              Tu entrenador prepara tu plan, habla contigo por chat y lo ajusta según tus avances, horarios y sensaciones. Nutrición personalizada según el plan elegido.
             </p>
 
             <div
@@ -311,14 +311,14 @@ const Index = () => {
                   className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
                 >
                   <ScanLine className="w-4 h-4" />
-                  Hacer mi diagnóstico gratis
+                  Hacer mi análisis inicial gratis
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
                 <button
                   onClick={() => navigate("/onboarding")}
                   className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
                 >
-                   o elegir un plan con entrenador
+                  o elegir un plan con entrenador
                 </button>
               </div>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
@@ -438,8 +438,8 @@ const Index = () => {
                 <div>
                   <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Quién hay detrás</p>
                   <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-5">
-                     Tu entrenador lleva{" "}
-                     <span className="text-gradient">tu plan de principio a fin.</span>
+                    Tu entrenador lleva{" "}
+                    <span className="text-gradient">tu plan de principio a fin.</span>
                   </h2>
                   {trainer.trainer_bio ? (
                     <p className="text-base text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
@@ -503,7 +503,7 @@ const Index = () => {
                   Elige cómo quieres empezar
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                   Elige el nivel de seguimiento y tu entrenador preparará el plan contigo.
+                  Elige el nivel de seguimiento y tu entrenador preparará el plan contigo.
                 </p>
               </div>
             </ScrollReveal>
@@ -541,7 +541,7 @@ const Index = () => {
                   <span className="text-gradient">No con un ticket.</span>
                 </h2>
                 <p className="text-muted-foreground max-w-md mx-auto text-sm">
-                   Tu entrenador prepara el plan, te responde y reorganiza tu semana cuando lo necesitas. La IA no interviene en esta atención.
+                  Tu entrenador prepara el plan, te responde y reorganiza tu semana cuando lo necesitas. La IA no interviene en esta atención.
                 </p>
               </div>
             </ScrollReveal>
@@ -849,11 +849,11 @@ const Index = () => {
           <div className="container mx-auto max-w-2xl text-center">
             <ScrollReveal>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display mb-6 leading-[1.05] tracking-tight">
-                 Pon tu entrenamiento{" "}
-                 <span className="text-gradient">en manos de un entrenador real.</span>
+                Pon tu entrenamiento{" "}
+                <span className="text-gradient">en manos de un entrenador real.</span>
               </h2>
               <p className="text-base text-muted-foreground mb-10 max-w-md mx-auto">
-                 Empieza con un análisis inicial gratis asistido por IA. Para recibir el plan y seguimiento de un entrenador, elige el plan que mejor encaje contigo.
+                Empieza con un análisis inicial gratis asistido por IA. Para recibir el plan y seguimiento de un entrenador, elige el plan que mejor encaje contigo.
               </p>
               <Button
                 variant="hero"
@@ -862,7 +862,7 @@ const Index = () => {
                 className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
               >
                 <ScanLine className="w-4 h-4" />
-                Hacer mi diagnóstico gratis
+                Hacer mi análisis inicial gratis
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
@@ -898,7 +898,7 @@ const Index = () => {
       {/* Floating CTA mobile */}
       <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("sticky_mobile")}>
-          <ScanLine className="w-4 h-4" /> Diagnóstico gratis
+          <ScanLine className="w-4 h-4" /> Análisis inicial gratis
         </Button>
       </div>
 
@@ -910,12 +910,12 @@ const Index = () => {
       >
         <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl px-5 py-3 premium-shadow">
           <div className="text-left">
-             <div className="text-sm font-semibold">Análisis inicial gratis en 60s</div>
-             <div className="text-[11px] text-muted-foreground">La IA analiza; tu entrenador prepara y ajusta el plan</div>
+            <div className="text-sm font-semibold">Análisis inicial gratis en 60s</div>
+            <div className="text-[11px] text-muted-foreground">La IA analiza; tu entrenador prepara y ajusta el plan</div>
           </div>
           <Button variant="hero" size="lg" onClick={() => goScan("sticky_desktop")} className="group whitespace-nowrap">
             <ScanLine className="w-4 h-4" />
-            Empezar gratis
+            Hacer análisis gratis
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Button>
         </div>
