@@ -672,8 +672,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               })()}
             </div>
           ) : (
-            <div className="bg-card rounded-xl p-8 border border-border text-center">
+            <div className="bg-card rounded-xl p-8 border border-border text-center space-y-3">
               <p className="text-sm text-muted-foreground">El usuario aún no ha completado el onboarding.</p>
+              {!restricted && (
+                <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Rellenarlo yo</Button>
+              )}
             </div>
           )}
         </TabsContent>
