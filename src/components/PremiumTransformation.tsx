@@ -126,14 +126,15 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
                 variant="hero"
                 size="lg"
                 className="w-full hover-scale group"
-                 onClick={() => onSelect("transform")}
+                onClick={() => onSelect("transform")}
+                disabled={availableSlots <= 0}
               >
-                 {availableSlots > 0 ? "Solicitar mi plaza" : "Apuntarme a la lista"}
+                {availableSlots > 0 ? "Solicitar mi plaza" : "Sin plazas disponibles"}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">
-                 Diagnóstico y llamada inicial dentro de Autopilot.<br />
-                 Sin permanencia después de las 12 semanas.
+                Diagnóstico y llamada inicial dentro de Autopilot.<br />
+                Sin permanencia después de las 12 semanas.
               </p>
             </div>
           </div>

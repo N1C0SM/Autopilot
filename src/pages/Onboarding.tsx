@@ -520,9 +520,9 @@ const Onboarding = () => {
                    Confirmar Transformación
                  </Button>
                </div>
-               <button type="button" onClick={() => { try { sessionStorage.removeItem("autopilot_selected_plan"); } catch {}; window.location.reload(); }} className="mt-5 text-xs text-muted-foreground hover:text-primary underline">
+               <Button type="button" variant="link" size="sm" onClick={() => { try { sessionStorage.removeItem("autopilot_selected_plan"); } catch {}; window.location.reload(); }} className="mt-3 px-0 text-xs text-muted-foreground">
                  Ver los planes mensuales
-               </button>
+               </Button>
              </div>
            ) : (
              <PricingTiers onSelect={goToCheckout} recommended={selectedPlan || "full"} />
