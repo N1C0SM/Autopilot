@@ -331,7 +331,7 @@ const SiteContentEditor = () => {
           {[
             { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
             { key: "show_ebooks", label: "Guías / Ebooks", desc: "Sección de guías descargables (visible en /recursos y en la landing)." },
-            { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recomendaciones y en la landing)." },
+            { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recursos y en la landing)." },
           ].map((s) => (
             <div key={s.key} className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
               <div className="min-w-0">

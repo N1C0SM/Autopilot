@@ -128,15 +128,6 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                   {!collapsed && <span>Recursos</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => navigate("/recomendaciones")}
-                  className="cursor-pointer hover:bg-sidebar-accent/50"
-                >
-                  <ShoppingBag className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>Recomendaciones</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

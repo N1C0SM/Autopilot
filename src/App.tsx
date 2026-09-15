@@ -30,7 +30,6 @@ const ImpersonateCallback = lazy(() => import("./pages/ImpersonateCallback"));
 const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 const Connect = lazy(() => import("./pages/Connect"));
 const Recursos = lazy(() => import("./pages/Recursos"));
-const Recomendaciones = lazy(() => import("./pages/Recomendaciones"));
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import OfflineBanner from "@/components/OfflineBanner";
@@ -114,7 +113,7 @@ const App = () => (
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/connect" element={<Connect />} />
             <Route path="/recursos" element={<Recursos />} />
-            <Route path="/recomendaciones" element={<Recomendaciones />} />
+            <Route path="/recomendaciones" element={<Navigate to="/recursos" replace />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
