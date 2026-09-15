@@ -11,7 +11,6 @@ Planes: Entrenamiento 29€/mes · Completo (entrenamiento + nutrición) 49€/m
 - [Inicio](/): Cómo funciona, precios, testimonios y FAQ.
 - [AI Body Scan](/scan): Análisis IA gratuito de tu físico a partir de una foto.
 - [Recursos](/recursos): Guías, ebooks, recomendaciones y artículos del equipo.
-- [Recomendaciones](/recomendaciones): Material, suplementos y ropa técnica recomendados.
 - [Crear cuenta](/signup): Registro con 7 días gratis.
 - [Iniciar sesión](/login): Acceso a tu plan.
 

@@ -213,9 +213,6 @@ const Index = () => {
             <Link to="/recursos" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Recursos
             </Link>
-            <Link to="/recomendaciones" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
-              Recomendaciones
-            </Link>
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
@@ -250,13 +247,7 @@ const Index = () => {
                   onClick={() => { setMobileMenuOpen(false); navigate("/recursos"); }}
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
                 >
-                  Guías
-                </button>
-                <button
-                  onClick={() => { setMobileMenuOpen(false); navigate("/recomendaciones"); }}
-                  className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
-                >
-                  Recomendaciones
+                  Recursos
                 </button>
                 <button
                   onClick={() => { setMobileMenuOpen(false); navigate("/login"); }}
@@ -768,7 +759,7 @@ const Index = () => {
                     <h3 className="font-display font-bold text-xl flex items-center gap-2">
                       <ShoppingBag className="w-4 h-4 text-primary" /> Recomendaciones
                     </h3>
-                    <Link to="/recomendaciones" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1 shrink-0">
+                    <Link to="/recursos" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1 shrink-0">
                       Ver todas <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
@@ -776,7 +767,7 @@ const Index = () => {
                     {recommendations.slice(0, 6).map((r, i) => (
                       <ScrollReveal key={r.id || i} delay={i * 0.05}>
                         <a
-                          href={r.url || "/recomendaciones"}
+                          href={r.url || "/recursos"}
                           target={r.url ? "_blank" : undefined}
                           rel={r.url ? "noreferrer sponsored" : undefined}
                           className="group flex items-start gap-3 h-full bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
@@ -893,8 +884,7 @@ const Index = () => {
             <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
             <Link to="/connect" className="hover:text-foreground transition-colors">Conectar con IA</Link>
-            <Link to="/recursos" className="hover:text-foreground transition-colors">Guías y recursos</Link>
-            <Link to="/recomendaciones" className="hover:text-foreground transition-colors">Recomendaciones</Link>
+            <Link to="/recursos" className="hover:text-foreground transition-colors">Recursos</Link>
             <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
             <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
             <Link to="/legal/privacidad" className="hover:text-foreground transition-colors">Privacidad</Link>
