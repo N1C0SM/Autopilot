@@ -144,7 +144,7 @@ const PremiumTransformation = ({ contactEmail }: Props) => {
                 className="w-full hover-scale group"
                 onClick={handleContact}
               >
-                Hablar con un asesor
+                {bookingUrl ? "Reservar llamada gratis" : "Hablar con un asesor"}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">
