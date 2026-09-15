@@ -265,7 +265,8 @@ const Index = () => {
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row animate-fade-in">
                 <Button variant="hero" size="xl" onClick={() => goScan("hero")} className="group w-full sm:w-auto">
                   <ScanLine className="h-4 w-4" />
-                  Ver mi punto de partida gratis
+                  <span className="sm:hidden">Análisis inicial gratis</span>
+                  <span className="hidden sm:inline">Ver mi punto de partida gratis</span>
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
                 <Button variant="outline" size="xl" onClick={goToPricing} className="w-full sm:w-auto">

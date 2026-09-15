@@ -172,7 +172,8 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
         <div className="mt-8 flex flex-col items-center gap-4 text-center">
           <Button variant="hero" size="lg" onClick={onScan} className="group">
             <ScanLine className="h-4 w-4" />
-            Ver mi punto de partida gratis
+            <span className="sm:hidden">Análisis inicial gratis</span>
+            <span className="hidden sm:inline">Ver mi punto de partida gratis</span>
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
