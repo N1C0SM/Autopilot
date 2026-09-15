@@ -466,7 +466,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 <div>
                   <div className="font-medium text-sm">Plan del cliente</div>
                   <div className="text-xs text-muted-foreground">
-                    Asigna cualquier plan y actívalo gratis (sin pasar por Stripe).
+                    {hasAccess
+                      ? "El cliente ya tiene acceso activo. Cambia su plan con el selector o retírale el acceso."
+                      : "Asigna cualquier plan y actívalo gratis (sin pasar por Stripe)."}
                   </div>
                 </div>
               </div>
