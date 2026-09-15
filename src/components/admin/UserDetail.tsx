@@ -345,8 +345,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         <div className="flex-1 min-w-0">
           <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.email}</h1>
           <div className="flex flex-wrap gap-2 mt-1">
-            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.payment_status === "paid" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}`}>
-              {profile.payment_status === "paid" ? "Pagado" : "Sin pagar"}
+            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.payment_status === "paid" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+              {profile.payment_status === "paid" ? (PLAN_LABEL[(profile as any).subscription_tier as string] || "Activo") : "Inactivo"}
             </span>
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.plan_status === "plan_ready" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
               {profile.plan_status === "plan_ready" ? "Plan listo" : profile.plan_status === "plan_pending" ? "Pendiente" : "Onboarding"}
