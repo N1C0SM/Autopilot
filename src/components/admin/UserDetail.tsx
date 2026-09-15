@@ -385,7 +385,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         </div>
       )}
       <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className={`grid w-full bg-secondary/50 ${profile.payment_status === "paid" ? (trainingOnly ? "grid-cols-6" : "grid-cols-7") : "grid-cols-1"}`}>
+        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? "md:grid-cols-6" : "md:grid-cols-7") : "md:grid-cols-1"}`}>
           <TabsTrigger value="info" className="text-xs gap-1.5">
             <User2 className="w-3.5 h-3.5" /> Info
           </TabsTrigger>
