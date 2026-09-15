@@ -92,6 +92,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [trainers, setTrainers] = useState<{ user_id: string; email: string }[]>([]);
   const [assignedTrainerId, setAssignedTrainerId] = useState<string>("");
   const [trainerSaving, setTrainerSaving] = useState(false);
+  const [editingOnboarding, setEditingOnboarding] = useState(false);
+  const [tierSaving, setTierSaving] = useState(false);
 
 
 
