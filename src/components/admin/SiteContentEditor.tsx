@@ -86,6 +86,7 @@ const SiteContentEditor = () => {
         app_store_url: (s as any).app_store_url || "",
         play_store_url: (s as any).play_store_url || "",
       });
+      setBookingUrl((s as any).booking_url || "");
       setSections({
         show_blog: (s as any).show_blog ?? true,
         show_ebooks: (s as any).show_ebooks ?? false,
