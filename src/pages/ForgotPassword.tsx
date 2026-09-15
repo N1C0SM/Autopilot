@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Loader2, Mail } from "lucide-react";
 import PageHead from "@/components/PageHead";
+import { authRedirect } from "@/lib/authRedirect";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -17,7 +18,7 @@ const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: authRedirect("/reset-password"),
     });
     setLoading(false);
     if (error) {

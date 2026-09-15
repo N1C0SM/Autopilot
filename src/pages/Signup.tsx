@@ -10,7 +10,7 @@ import { Loader2, CheckCircle, Mail, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
-import { lovable } from "@/integrations/lovable";
+import { signInWithApple } from "@/lib/nativeAuth";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -246,9 +246,7 @@ const Signup = () => {
             size="lg"
             className="w-full"
             onClick={async () => {
-              const result = await lovable.auth.signInWithOAuth("apple", {
-                redirect_uri: `${window.location.origin}/dashboard`,
-              });
+              const result = await signInWithApple("/onboarding");
               if (result.error) toast.error("No se pudo continuar con Apple");
             }}
           >
