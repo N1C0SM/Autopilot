@@ -508,15 +508,15 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                  {hasAccess ? "Cambiar plan" : "Elegir plan"}
+                  {hasAccess ? "Cambiar a otro plan (opcional)" : "Elegir plan"}
                 </div>
                 <Select
-                  value={selectedTier ?? (((profile as any).subscription_tier as string) || undefined)}
+                  value={selectedTier}
                   onValueChange={(v) => setSelectedTier(v)}
                   disabled={tierSaving}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Elige un plan" />
+                    <SelectValue placeholder={hasAccess ? "Cambiar a…" : "Elige un plan"} />
                   </SelectTrigger>
                   <SelectContent>
                     {TIER_OPTIONS.filter((t) => t.value !== currentTier).map((t) => (
@@ -590,10 +590,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       setTierSaving(false);
                       if (error) return toast.error("No se pudo quitar el acceso");
                       onUpdate(profile.user_id, updates);
-                      toast.success("Acceso retirado");
+                      toast.success(`Acceso retirado · ${PLAN_LABEL[currentTier || ""] || currentTier}`);
                     }}
                   >
-                    Quitar acceso
+                    Quitar acceso{currentTier ? ` (${(PLAN_LABEL[currentTier] || currentTier).split(" ·")[0]})` : ""}
                   </Button>
                 )}
               </div>
