@@ -585,7 +585,9 @@ const Index = () => {
       </footer>
 
       {/* Floating CTA mobile */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className={`fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-all duration-300 ${
+        showStickyCta ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+      }`}>
         <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("sticky_mobile")}>
           <ScanLine className="w-4 h-4" /> Análisis inicial gratis
         </Button>
