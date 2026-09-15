@@ -210,8 +210,8 @@ const Index = () => {
             <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
-            <Link to="/guia-entrenamiento-casa" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
-              Guía en casa
+            <Link to="/recursos" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              Guías
             </Link>
             <Link to="/recomendaciones" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Recomendaciones
@@ -247,10 +247,10 @@ const Index = () => {
                   Planes
                 </button>
                 <button
-                  onClick={() => { setMobileMenuOpen(false); navigate("/guia-entrenamiento-casa"); }}
+                  onClick={() => { setMobileMenuOpen(false); navigate("/recursos"); }}
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
                 >
-                  Guía en casa
+                  Guías
                 </button>
                 <button
                   onClick={() => { setMobileMenuOpen(false); navigate("/recomendaciones"); }}
@@ -829,7 +829,7 @@ const Index = () => {
             <Link to="/login" className="hover:text-foreground transition-colors">Iniciar sesión</Link>
             <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
             <Link to="/connect" className="hover:text-foreground transition-colors">Conectar con IA</Link>
-            <Link to="/guia-entrenamiento-casa" className="hover:text-foreground transition-colors">Guía en casa</Link>
+            <Link to="/recursos" className="hover:text-foreground transition-colors">Guías y recursos</Link>
             <Link to="/recomendaciones" className="hover:text-foreground transition-colors">Recomendaciones</Link>
             <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
             <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
