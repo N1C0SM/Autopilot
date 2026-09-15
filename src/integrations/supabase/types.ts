@@ -934,6 +934,7 @@ export type Database = {
       settings: {
         Row: {
           app_store_url: string
+          booking_url: string
           contact_email: string | null
           created_at: string
           ebooks: Json
@@ -976,6 +977,7 @@ export type Database = {
         }
         Insert: {
           app_store_url?: string
+          booking_url?: string
           contact_email?: string | null
           created_at?: string
           ebooks?: Json
@@ -1018,6 +1020,7 @@ export type Database = {
         }
         Update: {
           app_store_url?: string
+          booking_url?: string
           contact_email?: string | null
           created_at?: string
           ebooks?: Json
