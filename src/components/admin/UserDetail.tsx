@@ -30,6 +30,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type { DayPlan } from "@/types/training";
 import TrainingPlanForm from "./TrainingPlanForm";
 import { impersonateUser } from "@/lib/impersonate";
+import OnboardingEditor from "./OnboardingEditor";
 
 interface OnboardingData {
   age: number | null;
