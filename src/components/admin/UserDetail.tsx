@@ -491,28 +491,21 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <div className="font-medium text-sm">Plan del cliente</div>
                   <div className="text-xs text-muted-foreground">
                     {hasAccess
-                      ? "Tiene acceso activo. Usa el selector para cambiarle de plan."
-                      : "No tiene acceso todavía. Elige un plan y dáselo gratis, sin pasar por Stripe."}
+                      ? "Usa el selector para cambiarle de plan."
+                      : "Elige un plan y dáselo gratis, sin pasar por Stripe."}
                   </div>
                 </div>
               </div>
 
-              {/* Estado actual, sin ambigüedades */}
+              {/* Plan actual: si aparece un plan, está activo; si no, inactivo */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-muted-foreground">{hasAccess ? "Plan actual:" : "Plan elegido:"}</span>
-                <Badge variant="outline">
-                  {PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan"}
-                </Badge>
-                <Badge variant={hasAccess ? "default" : "destructive"}>
-                  {hasAccess ? "Acceso activo" : "Sin acceso"}
+                <span className="text-muted-foreground">Plan actual:</span>
+                <Badge variant={hasAccess ? "default" : "outline"}>
+                  {hasAccess
+                    ? (PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan")
+                    : "Inactivo"}
                 </Badge>
               </div>
-
-              {hasAccess && currentTier ? (
-                <div className="text-xs text-muted-foreground">
-                  Solo puede cambiar a un plan distinto del que ya tiene ({PLAN_LABEL[currentTier]?.split(" ·")[0] || currentTier}).
-                </div>
-              ) : null}
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                   {hasAccess ? "Cambiar plan" : "Elegir plan"}
