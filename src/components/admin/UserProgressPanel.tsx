@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Activity, ClipboardCheck, Plane } from "lucide-react";
+import { Loader2, Trophy, Activity, ClipboardCheck, Plane, Dumbbell, ChevronDown, ChevronUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   userId: string;
@@ -25,6 +26,15 @@ interface RPEPoint {
   label: string;
 }
 
+interface WorkoutLog {
+  id: string;
+  day_label: string;
+  exercise_name: string;
+  logged_at: string;
+  rpe: number | null;
+  sets_completed: Array<{ reps: number; weight: string; done: boolean }>;
+}
+
 interface InitialTests {
   pullups?: number;
   pushups?: number;
@@ -44,11 +54,13 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   const [tests, setTests] = useState<InitialTests | null>(null);
   const [prs, setPRs] = useState<PR[]>([]);
   const [rpeData, setRpeData] = useState<RPEPoint[]>([]);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
-      const [{ data: onb }, { data: prData }, { data: dayData }] = await Promise.all([
+      const [{ data: onb }, { data: prData }, { data: dayData }, { data: logData }] = await Promise.all([
         supabase.from("onboarding").select("initial_tests").eq("user_id", userId).maybeSingle(),
         supabase.from("personal_records").select("*").eq("user_id", userId).order("estimated_1rm", { ascending: false }).limit(20),
         supabase
@@ -58,6 +70,12 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           .not("rpe", "is", null)
           .order("completed_at", { ascending: true })
           .limit(60),
+        supabase
+          .from("workout_logs")
+          .select("id, day_label, exercise_name, logged_at, rpe, sets_completed")
+          .eq("user_id", userId)
+          .order("logged_at", { ascending: false })
+          .limit(100),
       ]);
 
       if (onb?.initial_tests) setTests(onb.initial_tests as InitialTests);
@@ -71,6 +89,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           })),
         );
       }
+      if (logData) setWorkoutLogs(logData as unknown as WorkoutLog[]);
       setLoading(false);
     };
     fetchAll();
@@ -86,6 +105,13 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
 
   const avgRPE = rpeData.length ? (rpeData.reduce((s, p) => s + p.rpe, 0) / rpeData.length).toFixed(1) : "—";
   const isTraveling = travelModeUntil && new Date(travelModeUntil) >= new Date();
+  const sessions = Object.entries(
+    workoutLogs.reduce<Record<string, WorkoutLog[]>>((acc, log) => {
+      const key = `${log.logged_at}|${log.day_label}`;
+      (acc[key] ||= []).push(log);
+      return acc;
+    }, {}),
+  );
 
   return (
     <div className="space-y-6">
@@ -158,6 +184,55 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">Sin registros de RPE todavía.</p>
+        )}
+      </div>
+
+      {/* Sesiones ejecutadas: lo que el cliente hizo realmente, serie a serie */}
+      <div className="bg-card rounded-xl p-4 sm:p-6 border border-border">
+        <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <Dumbbell className="w-4 h-4 text-primary" />
+          Últimas sesiones ({sessions.length})
+        </h2>
+        {sessions.length > 0 ? (
+          <div className="space-y-2">
+            {sessions.slice(0, 12).map(([key, logs]) => {
+              const [date, dayLabel] = key.split("|");
+              const open = expandedSession === key;
+              const done = logs.reduce((sum, log) => sum + log.sets_completed.filter((set) => set.done).length, 0);
+              const total = logs.reduce((sum, log) => sum + log.sets_completed.length, 0);
+              const rpe = logs.find((log) => log.rpe != null)?.rpe;
+              return (
+                <div key={key} className="border border-border rounded-lg overflow-hidden">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setExpandedSession(open ? null : key)}
+                    className="w-full h-auto px-3 py-3 justify-between rounded-none"
+                  >
+                    <span className="text-left min-w-0">
+                      <span className="block text-sm font-semibold">{dayLabel} · {new Date(`${date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+                      <span className="block text-xs text-muted-foreground">{done}/{total} series{rpe ? ` · RPE ${rpe}` : " · Sin cerrar"}</span>
+                    </span>
+                    {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </Button>
+                  {open && (
+                    <div className="border-t border-border px-3 py-2 space-y-2">
+                      {logs.map((log) => (
+                        <div key={log.id} className="flex items-start justify-between gap-3 text-xs">
+                          <span className="font-medium min-w-0">{log.exercise_name}</span>
+                          <span className="text-muted-foreground text-right shrink-0">
+                            {log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || "Sin series completadas"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Todavía no ha registrado ninguna sesión.</p>
         )}
       </div>
 
