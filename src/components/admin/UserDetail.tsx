@@ -453,6 +453,86 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             />
           </div>}
 
+          {/* Plan asignado + acceso gratis */}
+          {!restricted && (
+            <div className="bg-card rounded-xl p-5 border border-border space-y-3">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium text-sm">Plan del cliente</div>
+                  <div className="text-xs text-muted-foreground">
+                    Asigna cualquier plan y actívalo gratis (sin pasar por Stripe).
+                  </div>
+                </div>
+              </div>
+              <Select
+                value={((profile as any).subscription_tier as string) || "__none__"}
+                onValueChange={async (v) => {
+                  const tier = v === "__none__" ? null : v;
+                  setTierSaving(true);
+                  const { error } = await supabase.from("profiles").update({ subscription_tier: tier }).eq("user_id", profile.user_id);
+                  setTierSaving(false);
+                  if (error) return toast.error("No se pudo cambiar el plan");
+                  onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
+                  toast.success(tier ? "Plan actualizado" : "Plan quitado");
+                }}
+                disabled={tierSaving}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sin plan —</SelectItem>
+                  <SelectItem value="training">Entrenamiento (29€/mes)</SelectItem>
+                  <SelectItem value="full">Completo (49€/mes)</SelectItem>
+                  <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled={tierSaving}
+                  onClick={async () => {
+                    const tier = ((profile as any).subscription_tier as string) || "full";
+                    const updates: any = {
+                      subscription_tier: tier,
+                      payment_status: "paid",
+                      subscription_status: "active",
+                      plan_status: profile.plan_status === "onboarding" ? "plan_pending" : profile.plan_status,
+                    };
+                    setTierSaving(true);
+                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                    setTierSaving(false);
+                    if (error) return toast.error("No se pudo activar el acceso");
+                    onUpdate(profile.user_id, updates);
+                    toast.success("Acceso gratis activado");
+                  }}
+                >
+                  {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  Activar acceso gratis
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={tierSaving}
+                  onClick={async () => {
+                    const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
+                    setTierSaving(true);
+                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                    setTierSaving(false);
+                    if (error) return toast.error("No se pudo quitar el acceso");
+                    onUpdate(profile.user_id, updates);
+                    toast.success("Acceso retirado");
+                  }}
+                >
+                  Quitar acceso
+                </Button>
+              </div>
+            </div>
+          )}
+
+
           {/* Admin role toggle */}
           {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
