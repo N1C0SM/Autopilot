@@ -545,6 +545,28 @@ const SiteContentEditor = () => {
         </div>
       </div>
 
+      {/* Enlace de reserva de llamada */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Smartphone className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Enlace para reservar la llamada (Transformación 12 semanas)</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Pega tu enlace de Calendly, Cal.com o Google Calendar. El botón de la landing abrirá esa página y la videollamada se organiza ahí, fuera de Autopilot. Si lo dejas vacío, el botón abrirá un email a tu dirección de contacto.
+        </p>
+        <div className="space-y-2">
+          <Label className="text-xs">URL de reserva</Label>
+          <Input
+            placeholder="https://calendly.com/tu-usuario/llamada-30min"
+            value={bookingUrl}
+            onChange={(e) => setBookingUrl(e.target.value)}
+          />
+          <Button size="sm" onClick={saveBooking} disabled={saving}>
+            {saving ? "Guardando..." : "Guardar enlace"}
+          </Button>
+        </div>
+      </div>
+
       {/* Entrenador */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
