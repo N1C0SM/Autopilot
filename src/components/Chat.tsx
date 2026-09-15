@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2 } from "lucide-react";
+import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2, Phone } from "lucide-react";
 import { toast } from "sonner";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatMediaGallery from "@/components/chat/ChatMediaGallery";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import CallOverlay from "@/components/call/CallOverlay";
+import { useVideoCall } from "@/hooks/useVideoCall";
 
 interface Message {
   id: string;
