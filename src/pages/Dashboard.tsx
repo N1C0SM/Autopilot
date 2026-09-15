@@ -33,7 +33,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
-import { TRIAL_DAYS, GUARANTEE_DAYS, DEFAULT_YEARLY_PRICE_EUR, monthlyLabel, yearlySavings } from "@/config/pricing";
+import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
+import { TIERS } from "@/config/tiers";
 
 export interface Profile {
   user_id: string;
