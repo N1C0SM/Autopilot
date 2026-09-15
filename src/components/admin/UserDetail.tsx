@@ -479,11 +479,27 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <div className="font-medium text-sm">Plan del cliente</div>
                   <div className="text-xs text-muted-foreground">
                     {hasAccess
-                      ? "El cliente ya tiene acceso activo. Cambia su plan con el selector o retírale el acceso."
-                      : "Asigna cualquier plan y actívalo gratis (sin pasar por Stripe)."}
+                      ? "Tiene acceso activo. Usa el selector para cambiarle de plan."
+                      : "No tiene acceso todavía. Elige un plan y dáselo gratis, sin pasar por Stripe."}
                   </div>
                 </div>
               </div>
+
+              {/* Estado actual, sin ambigüedades */}
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Plan actual:</span>
+                <Badge variant="outline">
+                  {PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan"}
+                </Badge>
+                <Badge variant={hasAccess ? "default" : "destructive"}>
+                  {hasAccess ? "Acceso activo" : "Sin acceso"}
+                </Badge>
+              </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
+                  {hasAccess ? "Cambiar plan" : "Elegir plan"}
+                </div>
               <Select
                 value={((profile as any).subscription_tier as string) || "__none__"}
                 onValueChange={async (v) => {
@@ -493,7 +509,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   setTierSaving(false);
                   if (error) return toast.error("No se pudo cambiar el plan");
                   onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
-                  toast.success(tier ? "Plan actualizado" : "Plan quitado");
+                  toast.success(tier ? `Plan cambiado a ${PLAN_LABEL[tier] || tier}` : "Plan quitado");
                 }}
                 disabled={tierSaving}
               >
@@ -507,6 +523,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
                 </SelectContent>
               </Select>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {!hasAccess && (
                   <Button
@@ -526,11 +543,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       setTierSaving(false);
                       if (error) return toast.error("No se pudo activar el acceso");
                       onUpdate(profile.user_id, updates);
-                      toast.success("Acceso gratis activado");
+                      toast.success(`Acceso gratis activado · ${PLAN_LABEL[tier] || tier}`);
                     }}
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Activar acceso gratis
+                    Dar acceso gratis a {PLAN_LABEL[((profile as any).subscription_tier as string) || "full"]?.split(" ·")[0] || "Completo"}
                   </Button>
                 )}
                 {hasAccess && (
