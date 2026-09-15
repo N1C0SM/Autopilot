@@ -697,59 +697,123 @@ const Index = () => {
           </div>
         </section>
 
-        {/* RECURSOS */}
-        <section className="py-14 px-4 border-t border-border">
-          <div className="container mx-auto max-w-5xl">
-            <ScrollReveal>
-              <div className="text-center mb-12 max-w-xl mx-auto">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Recursos</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-                  Complementa tu plan <span className="text-gradient">con lo que sí funciona.</span>
-                </h2>
-              </div>
-            </ScrollReveal>
-            <div className="grid gap-5 md:grid-cols-2">
+        {/* RECURSOS — guías y recomendaciones reales del administrador */}
+        {((sections.show_ebooks && ebooks.length > 0) || (sections.show_recommendations && recommendations.length > 0)) && (
+          <section className="py-14 px-4 border-t border-border">
+            <div className="container mx-auto max-w-5xl">
               <ScrollReveal>
-                <Link
-                  to="/guia-entrenamiento-casa"
-                  className="group block bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors h-full"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
-                    <BookOpen className="w-5 h-5 text-primary" />
-                  </div>
-                  <h3 className="font-display font-bold text-xl mb-1.5 group-hover:text-primary transition-colors">
-                    Guía de Entrenamiento en Casa
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                    Ebook con 6 módulos por zona corporal y progresión de 4 semanas. Sin material.
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                    Ver guía <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </Link>
+                <div className="text-center mb-10 max-w-xl mx-auto">
+                  <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Recursos</p>
+                  <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
+                    Complementa tu plan <span className="text-gradient">con lo que sí funciona.</span>
+                  </h2>
+                </div>
               </ScrollReveal>
-              <ScrollReveal delay={0.08}>
-                <Link
-                  to="/recomendaciones"
-                  className="group block bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors h-full"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
-                    <ShoppingBag className="w-5 h-5 text-primary" />
+
+              {sections.show_ebooks && ebooks.length > 0 && (
+                <div className="mb-12">
+                  <div className="flex items-end justify-between gap-4 mb-5">
+                    <h3 className="font-display font-bold text-xl flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-primary" /> Guías
+                    </h3>
+                    <Link to="/recursos" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1 shrink-0">
+                      Ver todas <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
-                  <h3 className="font-display font-bold text-xl mb-1.5 group-hover:text-primary transition-colors">
-                    Recomendaciones
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-                    Material, suplementos, seguimiento y ropa técnica. Selección honesta, sin humo.
-                  </p>
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-                    Ver recomendaciones <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </Link>
-              </ScrollReveal>
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {ebooks.slice(0, 6).map((e, i) => (
+                      <ScrollReveal key={e.id || i} delay={i * 0.05}>
+                        <a
+                          href={e.url || "/recursos"}
+                          target={e.url ? "_blank" : undefined}
+                          rel={e.url ? "noreferrer" : undefined}
+                          className="group flex flex-col h-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
+                        >
+                          {e.cover_url ? (
+                            <div className="aspect-[4/3] bg-secondary overflow-hidden">
+                              <img
+                                src={e.cover_url}
+                                alt={e.title || "Guía de Autopilot"}
+                                loading="lazy"
+                                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-secondary flex items-center justify-center">
+                              <BookOpen className="w-8 h-8 text-primary/60" />
+                            </div>
+                          )}
+                          <div className="p-5 flex-1 flex flex-col">
+                            <h4 className="font-display font-bold leading-snug group-hover:text-primary transition-colors">{e.title}</h4>
+                            {e.description && (
+                              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed flex-1">{e.description}</p>
+                            )}
+                            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
+                              <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
+                              <span className="text-xs text-muted-foreground inline-flex items-center gap-1 group-hover:text-primary transition-colors">
+                                Ver guía <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
+                              </span>
+                            </div>
+                          </div>
+                        </a>
+                      </ScrollReveal>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sections.show_recommendations && recommendations.length > 0 && (
+                <div>
+                  <div className="flex items-end justify-between gap-4 mb-5">
+                    <h3 className="font-display font-bold text-xl flex items-center gap-2">
+                      <ShoppingBag className="w-4 h-4 text-primary" /> Recomendaciones
+                    </h3>
+                    <Link to="/recomendaciones" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1 shrink-0">
+                      Ver todas <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {recommendations.slice(0, 6).map((r, i) => (
+                      <ScrollReveal key={r.id || i} delay={i * 0.05}>
+                        <a
+                          href={r.url || "/recomendaciones"}
+                          target={r.url ? "_blank" : undefined}
+                          rel={r.url ? "noreferrer sponsored" : undefined}
+                          className="group flex items-start gap-3 h-full bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
+                        >
+                          {r.image_url ? (
+                            <img
+                              src={r.image_url}
+                              alt={r.title || "Producto recomendado"}
+                              loading="lazy"
+                              className="w-16 h-16 rounded-xl object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-xl bg-secondary shrink-0 flex items-center justify-center">
+                              <ShoppingBag className="w-5 h-5 text-primary/60" />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            {r.badge && (
+                              <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1">
+                                {r.badge}
+                              </span>
+                            )}
+                            <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">{r.title}</h4>
+                            {r.description && (
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3">{r.description}</p>
+                            )}
+                          </div>
+                        </a>
+                      </ScrollReveal>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+
 
         {/* FAQ */}
         <section className="py-16 px-4">
