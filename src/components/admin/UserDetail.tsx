@@ -503,36 +503,54 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                   {hasAccess ? "Cambiar plan" : "Elegir plan"}
                 </div>
-              <Select
-                value={((profile as any).subscription_tier as string) || undefined}
-                onValueChange={async (tier) => {
-                  setTierSaving(true);
-                  const { error } = await supabase.from("profiles").update({ subscription_tier: tier }).eq("user_id", profile.user_id);
-                  setTierSaving(false);
-                  if (error) return toast.error("No se pudo cambiar el plan");
-                  onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
-                  toast.success(`Plan cambiado a ${PLAN_LABEL[tier] || tier}`);
-                }}
-                disabled={tierSaving}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Elige un plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="training">Entrenamiento (29€/mes)</SelectItem>
-                  <SelectItem value="full">Completo (49€/mes)</SelectItem>
-                  <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select
+                  value={selectedTier ?? (((profile as any).subscription_tier as string) || undefined)}
+                  onValueChange={(v) => setSelectedTier(v)}
+                  disabled={tierSaving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Elige un plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="training">Entrenamiento (29€/mes)</SelectItem>
+                    <SelectItem value="full">Completo (49€/mes)</SelectItem>
+                    <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {pendingTierChange && (
+                  <div className="text-[11px] text-amber-400 mt-1">
+                    Sin guardar: pulsa el botón para aplicar el cambio.
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
+                {hasAccess && (
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    disabled={tierSaving || !pendingTierChange}
+                    onClick={async () => {
+                      const tier = selectedTier!;
+                      setTierSaving(true);
+                      const { error } = await supabase.from("profiles").update({ subscription_tier: tier }).eq("user_id", profile.user_id);
+                      setTierSaving(false);
+                      if (error) return toast.error("No se pudo cambiar el plan");
+                      onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
+                      setSelectedTier(undefined);
+                      toast.success(`Plan cambiado a ${PLAN_LABEL[tier] || tier}`);
+                    }}
+                  >
+                    {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Cambiar plan
+                  </Button>
+                )}
                 {!hasAccess && (
                   <Button
                     size="sm"
                     className="gap-2"
-                    disabled={tierSaving}
+                    disabled={tierSaving || !effectiveTier}
                     onClick={async () => {
-                      const tier = ((profile as any).subscription_tier as string) || "full";
+                      const tier = effectiveTier!;
                       const updates: any = {
                         subscription_tier: tier,
                         payment_status: "paid",
@@ -544,11 +562,12 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       setTierSaving(false);
                       if (error) return toast.error("No se pudo activar el acceso");
                       onUpdate(profile.user_id, updates);
+                      setSelectedTier(undefined);
                       toast.success(`Acceso gratis activado · ${PLAN_LABEL[tier] || tier}`);
                     }}
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Dar acceso gratis a {PLAN_LABEL[((profile as any).subscription_tier as string) || "full"]?.split(" ·")[0] || "Completo"}
+                    Dar acceso gratis{effectiveTier ? ` a ${(PLAN_LABEL[effectiveTier] || effectiveTier).split(" ·")[0]}` : ""}
                   </Button>
                 )}
                 {hasAccess && (
