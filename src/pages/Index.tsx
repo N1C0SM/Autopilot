@@ -211,7 +211,7 @@ const Index = () => {
               Planes
             </button>
             <Link to="/recursos" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
-              Guías
+              Recursos
             </Link>
             <Link to="/recomendaciones" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Recomendaciones
