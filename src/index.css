@@ -202,3 +202,7 @@ body.keyboard-open main {
   }
 
 }
+
+/* Tabs deslizables en móvil sin barra de scroll visible */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
