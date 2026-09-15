@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import { UserCircle2 } from "lucide-react";
+import { UserCircle2, MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Trainer {
   trainer_id: string;
@@ -11,7 +12,7 @@ interface Trainer {
   headline: string | null;
 }
 
-const MyTrainerCard = () => {
+const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -29,7 +30,7 @@ const MyTrainerCard = () => {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card rounded-2xl p-4 border border-border flex items-center gap-4"
+      className="bg-card rounded-2xl p-4 border border-border flex items-center gap-4 flex-wrap"
     >
       {trainer.photo_url ? (
         <img src={trainer.photo_url} alt={trainer.name} className="w-12 h-12 rounded-full object-cover" />
@@ -38,13 +39,18 @@ const MyTrainerCard = () => {
           <UserCircle2 className="w-7 h-7 text-primary" />
         </div>
       )}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-[10rem]">
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Tu entrenador</p>
         <p className="font-display font-bold text-base truncate">{trainer.name}</p>
-        {trainer.headline && (
-          <p className="text-xs text-muted-foreground truncate">{trainer.headline}</p>
-        )}
+        <p className="text-xs text-muted-foreground">
+          {trainer.headline || "Es quien prepara y ajusta tu entrenamiento y tu nutrición."}
+        </p>
       </div>
+      {onOpenChat && (
+        <Button size="sm" variant="outline" onClick={onOpenChat} className="shrink-0">
+          <MessageCircle className="w-3.5 h-3.5 mr-1.5" /> Escribirle
+        </Button>
+      )}
     </motion.div>
   );
 };

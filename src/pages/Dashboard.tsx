@@ -166,8 +166,12 @@ const Dashboard = () => {
 
   const handleManageSubscription = async () => {
     const { data, error } = await supabase.functions.invoke("customer-portal");
+    if (data?.no_customer) {
+      toast.info("Tu acceso lo gestiona tu entrenador manualmente. Escríbele por el chat para cambiar o cancelar tu plan.");
+      return;
+    }
     if (error || !data?.url) {
-      toast.error("Error al abrir el portal de suscripción.");
+      toast.error("No se pudo abrir la gestión de tu suscripción. Escríbele a tu entrenador por el chat y lo resuelve.");
       return;
     }
     window.open(data.url, "_blank");
@@ -229,9 +233,9 @@ const Dashboard = () => {
   const pageContent = (
     <>
       {/* Unpaid state — shown on all sections EXCEPT settings */}
-      {paymentStatus === "unpaid" && section !== "settings" && (() => {
+      {paymentStatus === "unpaid" && section !== "settings" && section !== "chat" && (() => {
         const paywallContent: Record<MobileTab, { icon: React.ReactNode; title: string; description: string; cta: string }> = {
-          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti. Chat con tu entrenador incluido.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
+          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Un entrenador prepara tu plan", description: "Un entrenador real revisa tus datos y te prepara el entrenamiento y la nutrición. Tú no tienes que montar nada.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
           training: { icon: <Dumbbell className="w-8 h-8 text-primary" />, title: "Tu rutina te está esperando", description: "Ejercicios, series y descansos diseñados para tus objetivos. Actualizado cada semana por tu entrenador.", cta: "Desbloquear mi entrenamiento" },
           nutrition: { icon: <UtensilsCrossed className="w-8 h-8 text-primary" />, title: "Come según tu objetivo", description: "Plan de comidas con macros calculados para ti. Sin recetas genéricas, todo personalizado.", cta: "Desbloquear mi nutrición" },
           chat: { icon: <MessageCircle className="w-8 h-8 text-primary" />, title: "Habla con tu entrenador", description: "Resuelve dudas, ajusta tu plan y recibe feedback directo. Siempre disponible.", cta: "Activar chat con entrenador" },
@@ -249,6 +253,9 @@ const Dashboard = () => {
               <CalendarIcon className="w-3 h-3" /> O paga anual: {DEFAULT_YEARLY_PRICE_EUR}€/año (ahorras {yearlySavings()}€)
             </button>
             <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía {GUARANTEE_DAYS} días</p>
+            <button onClick={() => setSection("chat")} className="mx-auto mt-4 text-xs text-muted-foreground hover:text-primary underline inline-flex items-center gap-1.5">
+              <MessageCircle className="w-3 h-3" /> Prefiero hablar antes con un entrenador (gratis)
+            </button>
           </motion.div>
         );
       })()}
@@ -257,14 +264,14 @@ const Dashboard = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Clock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Tu plan se está creando 🔥</h2>
-          <p className="text-muted-foreground mb-2">Nuestro equipo está trabajando en tu plan personalizado.</p>
+          <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento y tu nutrición con los datos que nos has dado.</p>
           <p className="text-sm text-primary font-medium">Recibirás una notificación en menos de 48h.</p>
         </motion.div>
       )}
 
       {hasPlan && section === "home" && (
         <div className="max-w-4xl mx-auto space-y-6">
-          <MyTrainerCard />
+          <MyTrainerCard onOpenChat={() => setSection("chat")} />
           <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} />
           {user && <TravelModeCard userId={user.id} />}
         </div>
@@ -321,18 +328,27 @@ const Dashboard = () => {
         </div>
       )}
 
-      {hasPlan && section === "chat" && (
-        <div className="max-w-3xl">
-          {canRequestVideoCall && (
-            <div className="mb-4 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/15 flex items-center justify-center shrink-0"><Video className="w-5 h-5 text-primary" /></div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-display font-bold text-sm md:text-base mb-1">Videollamada por Google Meet</h3>
-                <p className="text-xs text-muted-foreground mb-3">{isTransform ? "Tu plan Transformación 12 semanas incluye llamada inicial y check-ins semanales." : "Tu plan Completo incluye videollamadas con tu entrenador. Solicita una y te enviará el enlace de Google Meet por aquí."}</p>
-                <Button size="sm" variant="hero" onClick={requestVideoCall}><Video className="w-3.5 h-3.5 mr-1.5" /> Pedir videollamada</Button>
-              </div>
+      {section === "chat" && (
+        <div className="max-w-3xl space-y-4">
+          <MyTrainerCard onOpenChat={undefined} />
+          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/15 flex items-center justify-center shrink-0"><Video className="w-5 h-5 text-primary" /></div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display font-bold text-sm md:text-base mb-1">
+                {paymentStatus === "unpaid" ? "Primera llamada gratis con tu entrenador" : "Videollamada con tu entrenador"}
+              </h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                {paymentStatus === "unpaid"
+                  ? "Cuéntale tu objetivo por aquí y hablad sin compromiso antes de suscribirte. Él prepara tu plan después."
+                  : isTransform
+                    ? "Tu plan Transformación 12 semanas incluye llamada inicial y check-ins semanales."
+                    : "Pide una llamada y tu entrenador te envía el enlace por este mismo chat."}
+              </p>
+              <Button size="sm" variant="hero" onClick={requestVideoCall}>
+                <Video className="w-3.5 h-3.5 mr-1.5" /> {paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Pedir videollamada"}
+              </Button>
             </div>
-          )}
+          </div>
           {user && <Chat conversationUserId={user.id} />}
         </div>
       )}
