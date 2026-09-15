@@ -114,6 +114,9 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
               ✈️ Viaje
             </Badge>
           )}
+          <Badge variant="outline" className="text-[10px]">
+            {PLAN_LABEL[((u as any).subscription_tier as string) || ""] || "Sin plan"}
+          </Badge>
           <Badge variant={u.payment_status === "paid" ? "default" : "destructive"} className="text-[10px]">
             {u.payment_status === "paid" ? "💳 Pagado" : "⏳ Sin pagar"}
           </Badge>
