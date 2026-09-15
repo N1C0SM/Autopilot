@@ -1008,6 +1008,7 @@ export type Database = {
           trainer_bio: string | null
           trainer_name: string | null
           trainer_photo_url: string | null
+          transformation_slots: number
           updated_at: string
           yearly_price_eur: number | null
         }
@@ -1051,6 +1052,7 @@ export type Database = {
           trainer_bio?: string | null
           trainer_name?: string | null
           trainer_photo_url?: string | null
+          transformation_slots?: number
           updated_at?: string
           yearly_price_eur?: number | null
         }
@@ -1094,6 +1096,7 @@ export type Database = {
           trainer_bio?: string | null
           trainer_name?: string | null
           trainer_photo_url?: string | null
+          transformation_slots?: number
           updated_at?: string
           yearly_price_eur?: number | null
         }
@@ -1645,6 +1648,7 @@ export type Database = {
         Args: never
         Returns: {
           app_store_url: string
+          booking_url: string
           contact_email: string
           ebooks: Json
           guide_ebook_url: string
@@ -1658,6 +1662,7 @@ export type Database = {
           trainer_bio: string
           trainer_name: string
           trainer_photo_url: string
+          transformation_slots: number
           yearly_price_eur: number
         }[]
       }
