@@ -330,8 +330,8 @@ const SiteContentEditor = () => {
         <div className="space-y-3">
           {[
             { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
-            { key: "show_ebooks", label: "Ebooks", desc: "Sección de ebooks/guías descargables." },
-            { key: "show_recommendations", label: "Recomendaciones", desc: "Suplementos y productos recomendados (creatina, proteína…)." },
+            { key: "show_ebooks", label: "Guías / Ebooks", desc: "Sección de guías descargables (visible en /recursos y en la landing)." },
+            { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recomendaciones y en la landing)." },
           ].map((s) => (
             <div key={s.key} className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
               <div className="min-w-0">
@@ -347,22 +347,6 @@ const SiteContentEditor = () => {
         </div>
       </div>
 
-      {/* Guía en casa (ebook) */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Guía de Entrenamiento en Casa · link de pago</h2>
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          URL a la que se envía al usuario al pulsar “Comprar guía” en <code>/guia-entrenamiento-casa</code> (Gumroad, Stripe Payment Link, etc.).
-        </p>
-        <Input
-          placeholder="https://…"
-          value={guideEbookUrl}
-          onChange={(e) => setGuideEbookUrl(e.target.value)}
-        />
-        <Button onClick={saveGuideEbookUrl} disabled={saving}>{saving ? "Guardando..." : "Guardar link"}</Button>
-      </div>
 
       {/* Ebooks */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
