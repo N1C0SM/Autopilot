@@ -26,21 +26,27 @@ const endDateOf = (cycleStart: string): Date =>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  const providedSecret = req.headers.get("x-cron-secret");
-  const bearer = (req.headers.get("Authorization") || "").replace("Bearer ", "");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const isAuthorized =
-    (cronSecret && providedSecret && providedSecret === cronSecret) ||
-    (bearer && serviceKey && bearer === serviceKey);
+  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceKey);
+
+  // Authorized either with the service role key or with the internal cron token.
+  const bearer = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+  const providedSecret = req.headers.get("x-cron-secret") || "";
+  let isAuthorized = Boolean(bearer && serviceKey && bearer === serviceKey);
+  if (!isAuthorized && providedSecret) {
+    const { data: tokenRow } = await supabase
+      .from("cron_tokens")
+      .select("token")
+      .eq("name", "renewal-cycle-check")
+      .maybeSingle();
+    isAuthorized = Boolean(tokenRow?.token && tokenRow.token === providedSecret);
+  }
   if (!isAuthorized) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceKey);
 
   try {
     const now = Date.now();
