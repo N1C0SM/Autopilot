@@ -449,55 +449,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               disabled={restricted}
             />
           )}
-          {/* Payment status toggle */}
-          {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <CreditCard className="w-5 h-5 text-primary" />
-              <div>
-                <div className="font-medium text-sm">Estado de pago</div>
-                <div className="text-xs text-muted-foreground">
-                  {profile.payment_status === "paid" ? "✅ Pagado" : "❌ Sin pagar"}
-                </div>
-                {profile.payment_status !== "paid" && !currentTier && !selectedTier && (
-                  <div className="text-[11px] text-amber-400 mt-1">
-                    Elige primero un plan en «Plan del cliente».
-                  </div>
-                )}
-              </div>
-            </div>
-            <Switch
-              checked={profile.payment_status === "paid"}
-              disabled={profile.payment_status !== "paid" && !currentTier && !selectedTier}
-              onCheckedChange={async (checked) => {
-                const newStatus = checked ? "paid" : "unpaid";
-                const updates: any = { payment_status: newStatus };
-                if (checked) {
-                  const tier = currentTier || selectedTier;
-                  if (!tier) {
-                    toast.error("Selecciona un plan antes de marcar como pagado");
-                    return;
-                  }
-                  updates.subscription_tier = tier;
-                  updates.subscription_status = "active";
-                }
-                if (checked && profile.plan_status === "onboarding") {
-                  updates.plan_status = "plan_pending";
-                }
-                if (!checked) {
-                  updates.plan_status = "onboarding";
-                  updates.subscription_status = "inactive";
-                }
-                const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                if (!error) {
-                  onUpdate(profile.user_id, updates);
-                  if (checked) setSelectedTier(undefined);
-                  toast.success(checked ? "Usuario marcado como pagado" : "Usuario marcado como sin pagar");
-                } else {
-                  toast.error("Error al actualizar estado de pago");
-                }
-              }}
-            />
-          </div>}
 
 
           {/* Plan asignado + acceso gratis */}
