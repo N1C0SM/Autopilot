@@ -141,7 +141,7 @@ const Dashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, navigate]);
 
-  const handleCompletePayment = async (plan: "monthly" | "yearly" = "monthly") => {
+  const handleCompletePayment = async (plan: "training" | "full" | "transform" = "full") => {
     try {
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
         body: { referral_code: "", plan },
@@ -249,9 +249,9 @@ const Dashboard = () => {
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">{content.icon}</div>
             <h2 className="text-xl font-bold font-display mb-2">{content.title}</h2>
             <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
-            <Button variant="hero" size="lg" onClick={() => handleCompletePayment("monthly")} className="w-full md:w-auto">{content.cta}</Button>
-            <button onClick={() => handleCompletePayment("yearly")} className="block mx-auto mt-4 text-xs text-primary hover:underline font-semibold flex items-center gap-1.5">
-              <CalendarIcon className="w-3 h-3" /> O paga anual: {DEFAULT_YEARLY_PRICE_EUR}€/año (ahorras {yearlySavings()}€)
+            <Button variant="hero" size="lg" onClick={() => handleCompletePayment("full")} className="w-full md:w-auto">{content.cta}</Button>
+            <button onClick={() => handleCompletePayment("training")} className="mx-auto mt-4 text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1.5">
+              <Dumbbell className="w-3 h-3" /> Solo entrenamiento — {TIERS.training.price}€/mes
             </button>
             <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía {GUARANTEE_DAYS} días</p>
             <button onClick={() => setSection("chat")} className="mx-auto mt-4 text-xs text-muted-foreground hover:text-primary underline inline-flex items-center gap-1.5">
