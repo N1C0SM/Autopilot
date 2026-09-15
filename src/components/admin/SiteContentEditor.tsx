@@ -68,7 +68,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, booking_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
