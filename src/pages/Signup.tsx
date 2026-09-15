@@ -28,10 +28,15 @@ const Signup = () => {
   const fromQuiz = searchParams.get("from") === "quiz";
   const fromScan = searchParams.get("from") === "scan";
   const planParam = (searchParams.get("plan") || "").toLowerCase();
-  const selectedPlan: "training" | "full" | null =
-    planParam === "training" ? "training" : planParam === "full" ? "full" : null;
+  const selectedPlan: "training" | "full" | "transform" | null =
+    planParam === "training" ? "training" : planParam === "full" ? "full" : planParam === "transform" ? "transform" : null;
   const [scanCtx, setScanCtx] = useState<any>(null);
   const { signUp } = useAuth();
+
+  useEffect(() => {
+    if (!selectedPlan) return;
+    try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch {}
+  }, [selectedPlan]);
 
   useEffect(() => {
     if (!fromScan) return;
@@ -148,7 +153,9 @@ const Signup = () => {
               ? "Último paso para desbloquear tu plan"
               : fromScan
               ? "Último paso para desbloquear tu AI Report y plan completo"
-              : "Empieza tu transformación hoy"}
+               : selectedPlan === "transform"
+               ? "Completa tus datos para solicitar tu plaza"
+               : "Empieza tu transformación hoy"}
           </p>
         </div>
 
@@ -246,6 +253,9 @@ const Signup = () => {
             size="lg"
             className="w-full"
             onClick={async () => {
+               if (selectedPlan) {
+                 try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch {}
+               }
               const result = await signInWithApple("/onboarding");
               if (result.error) toast.error("No se pudo continuar con Apple");
             }}

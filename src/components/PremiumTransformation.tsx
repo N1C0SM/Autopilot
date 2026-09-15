@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Crown, Check, ArrowRight, Quote, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TIERS } from "@/config/tiers";
+import { TIERS, type PlanKey } from "@/config/tiers";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
-  contactEmail: string;
+  onSelect: (plan: PlanKey) => void;
+  availableSlots: number;
 }
 
 const TIMELINE = [
@@ -41,40 +42,23 @@ interface Tw {
   photo_after_url: string | null;
 }
 
-const PremiumTransformation = ({ contactEmail }: Props) => {
+const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
   const t = TIERS.transform;
   const [tw, setTw] = useState<Tw | null>(null);
-  const [bookingUrl, setBookingUrl] = useState("");
 
   useEffect(() => {
     (async () => {
-      const [{ data }, { data: s }] = await Promise.all([
-        supabase
-          .from("site_testimonials")
-          .select("name, result, text, photo_url, photo_before_url, photo_after_url")
-          .eq("visible", true)
-          .eq("is_12w_transformation", true)
-          .order("sort_order")
-          .limit(1)
-          .maybeSingle(),
-        supabase.from("settings").select("booking_url").limit(1).maybeSingle(),
-      ]);
+      const { data } = await supabase
+        .from("site_testimonials")
+        .select("name, result, text, photo_url, photo_before_url, photo_after_url")
+        .eq("visible", true)
+        .eq("is_12w_transformation", true)
+        .order("sort_order")
+        .limit(1)
+        .maybeSingle();
       if (data) setTw(data as Tw);
-      if (s) setBookingUrl((((s as any).booking_url as string) || "").trim());
     })();
   }, []);
-
-  const handleContact = () => {
-    if (bookingUrl) {
-      window.open(bookingUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-    const subject = encodeURIComponent("Transformación 12 semanas — solicitud de llamada");
-    const body = encodeURIComponent(
-      "Hola Nicolás,\n\nMe interesa la Transformación 12 semanas. Me gustaría reservar una llamada y diagnóstico gratis.\n\nGracias."
-    );
-    window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
-  };
 
   return (
     <section className="py-24 px-4 relative overflow-hidden">
@@ -107,7 +91,7 @@ const PremiumTransformation = ({ contactEmail }: Props) => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 border border-primary/30 mb-5">
                 <Crown className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                  Plazas limitadas
+                  {availableSlots > 0 ? `Quedan ${availableSlots} plazas este mes` : "Sin plazas este mes"}
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold font-display mb-3">
@@ -142,14 +126,15 @@ const PremiumTransformation = ({ contactEmail }: Props) => {
                 variant="hero"
                 size="lg"
                 className="w-full hover-scale group"
-                onClick={handleContact}
+                onClick={() => onSelect("transform")}
+                disabled={availableSlots <= 0}
               >
-                {bookingUrl ? "Reservar llamada gratis" : "Hablar con un asesor"}
+                {availableSlots > 0 ? "Solicitar mi plaza" : "Sin plazas disponibles"}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">
-                {bookingUrl ? "Eliges hora y recibes el enlace de videollamada por email." : "Diagnóstico + llamada gratis."}<br />
-                Plazas limitadas cada mes.
+                Diagnóstico y llamada inicial dentro de Autopilot.<br />
+                Sin permanencia después de las 12 semanas.
               </p>
             </div>
           </div>

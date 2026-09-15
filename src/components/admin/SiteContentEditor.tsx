@@ -55,7 +55,7 @@ const SiteContentEditor = () => {
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
   const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
-  const [bookingUrl, setBookingUrl] = useState("");
+  const [transformationSlots, setTransformationSlots] = useState(10);
   const [videoUploading, setVideoUploading] = useState(false);
   const [posterUploading, setPosterUploading] = useState(false);
   const [settingsId, setSettingsId] = useState<string>("");
@@ -68,7 +68,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, booking_url, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -86,7 +86,7 @@ const SiteContentEditor = () => {
         app_store_url: (s as any).app_store_url || "",
         play_store_url: (s as any).play_store_url || "",
       });
-      setBookingUrl((s as any).booking_url || "");
+      setTransformationSlots(Math.max(0, Number((s as any).transformation_slots ?? 10)));
       setSections({
         show_blog: (s as any).show_blog ?? true,
         show_ebooks: (s as any).show_ebooks ?? false,
@@ -203,18 +203,14 @@ const SiteContentEditor = () => {
     setSaving(false);
   };
 
-  const saveBooking = async () => {
-    const clean = bookingUrl.trim();
-    if (clean && !/^https?:\/\//i.test(clean)) {
-      toast.error("El enlace debe empezar por http(s)://");
-      return;
-    }
+  const saveTransformationSlots = async () => {
+    const slots = Math.max(0, Math.min(999, Math.round(transformationSlots)));
     setSaving(true);
-    const { error } = await supabase.from("settings").update({ booking_url: clean } as any).eq("id", settingsId);
-    if (error) toast.error("Error al guardar");
+    const { error } = await supabase.from("settings").update({ transformation_slots: slots } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar las plazas");
     else {
-      setBookingUrl(clean);
-      toast.success("Enlace de reserva actualizado");
+      setTransformationSlots(slots);
+      toast.success("Plazas de Transformación actualizadas");
     }
     setSaving(false);
   };
@@ -545,24 +541,29 @@ const SiteContentEditor = () => {
         </div>
       </div>
 
-      {/* Enlace de reserva de llamada */}
+      {/* Plazas de Transformación */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Smartphone className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Enlace para reservar la llamada (Transformación 12 semanas)</h2>
+        <div>
+          <h2 className="font-display font-bold">Plazas de Transformación</h2>
+          <p className="text-xs text-muted-foreground mt-1">
+            Esta cifra aparece en la landing. Usa 0 cuando no queden plazas disponibles.
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Pega tu enlace de Calendly, Cal.com o Google Calendar. El botón de la landing abrirá esa página y la videollamada se organiza ahí, fuera de Autopilot. Si lo dejas vacío, el botón abrirá un email a tu dirección de contacto.
-        </p>
-        <div className="space-y-2">
-          <Label className="text-xs">URL de reserva</Label>
-          <Input
-            placeholder="https://calendly.com/tu-usuario/llamada-30min"
-            value={bookingUrl}
-            onChange={(e) => setBookingUrl(e.target.value)}
-          />
-          <Button size="sm" onClick={saveBooking} disabled={saving}>
-            {saving ? "Guardando..." : "Guardar enlace"}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="space-y-2 sm:max-w-[180px]">
+            <Label className="text-xs" htmlFor="transformation-slots">Plazas disponibles este mes</Label>
+            <Input
+              id="transformation-slots"
+              type="number"
+              min={0}
+              max={999}
+              inputMode="numeric"
+              value={transformationSlots}
+              onChange={(e) => setTransformationSlots(Number(e.target.value))}
+            />
+          </div>
+          <Button size="sm" onClick={saveTransformationSlots} disabled={saving || !Number.isFinite(transformationSlots)}>
+            {saving ? "Guardando..." : "Guardar plazas"}
           </Button>
         </div>
       </div>

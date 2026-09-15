@@ -64,16 +64,13 @@ export const TIERS = {
       "Al finalizar, elige: renovar o pasar a Completo (49€/mes)",
     ],
     notIncluded: [],
-    cta: "Hablar con un asesor",
+    cta: "Solicitar mi plaza",
   },
 } as const;
 
 // Alias legacy (algunos componentes antiguos lo siguen importando)
 export const TIER = TIERS.full;
 export type TierKey = "personal";
-
-// Plazas restantes del plan Transformación (editar aquí cada mes).
-export const transformacionPlazasDisponibles = 10;
 
 export const REFERRAL_COUPON_ID = "veaugRi2";
 

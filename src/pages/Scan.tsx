@@ -2329,7 +2329,7 @@ const Scan = () => {
                     </p>
                     <div className="flex items-baseline justify-center gap-3 mb-5">
                       <span className="text-sm text-muted-foreground line-through">Coach 1:1 desde 200€/mes</span>
-                      <span className="text-3xl font-bold font-display text-gradient">{MONTHLY_PRICE_EUR}€/mes</span>
+                      <span className="text-3xl font-bold font-display text-gradient">Desde {MONTHLY_PRICE_EUR}€/mes</span>
                       <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días gratis</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -2339,13 +2339,18 @@ const Scan = () => {
                         onClick={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
                         className="hover-scale group"
                       >
-                        {user ? "Volver a mi cuenta" : "Empezar mi plan por 0€ hoy"}
+                        {user ? "Volver a mi cuenta" : "Elegir mi plan"}
                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </Button>
                       <Button variant="outline" size="xl" onClick={reset}>
                         Hacer otro scan
                       </Button>
                     </div>
+                    {!user && (
+                      <p className="text-[11px] text-muted-foreground mt-3">
+                        7 días gratis en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
+                      </p>
+                    )}
                     <div className="flex items-center gap-4 mt-6 justify-center text-xs text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
