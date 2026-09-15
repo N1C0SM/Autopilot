@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, CreditCard, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { PLAN_LABEL } from "@/config/tiers";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
 import TransformCyclePanel from "./TransformCyclePanel";
