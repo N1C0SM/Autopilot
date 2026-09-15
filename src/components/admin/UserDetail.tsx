@@ -329,6 +329,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </span>
           </div>
         </div>
+       </div>
+       <div className="flex flex-wrap items-center gap-2">
         {profile.payment_status === "paid" && (
           <>
             <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="shrink-0">
