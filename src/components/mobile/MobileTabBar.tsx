@@ -22,8 +22,12 @@ const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
 const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border"
-      style={{ paddingBottom: "var(--safe-bottom, 0px)" }}
+      className="mobile-tabbar fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border"
+      style={{
+        paddingBottom: "var(--safe-bottom, 0px)",
+        paddingLeft: "var(--safe-left, 0px)",
+        paddingRight: "var(--safe-right, 0px)",
+      }}
     >
       <ul className="flex items-stretch justify-around h-16 px-1">
         {TABS.map((t) => {
