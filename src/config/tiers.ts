@@ -80,3 +80,10 @@ export const REFERRAL_COUPON_ID = "veaugRi2";
 export function getTierByProductId(_productId: string): TierKey | null {
   return "personal";
 }
+
+// Etiquetas cortas del plan para el panel de administración.
+export const PLAN_LABEL: Record<string, string> = {
+  training: "Entrenamiento · 29€/mes",
+  full: "Completo · 49€/mes",
+  transform: "Transformación 12 sem · 299€",
+};
