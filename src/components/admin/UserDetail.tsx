@@ -489,7 +489,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
               {/* Estado actual, sin ambigüedades */}
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-muted-foreground">Plan actual:</span>
+                <span className="text-muted-foreground">{hasAccess ? "Plan actual:" : "Plan elegido:"}</span>
                 <Badge variant="outline">
                   {PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan"}
                 </Badge>
