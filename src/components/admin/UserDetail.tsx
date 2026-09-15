@@ -386,29 +386,29 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       )}
       <Tabs defaultValue="info" className="space-y-6">
         <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? "md:grid-cols-6" : "md:grid-cols-7") : "md:grid-cols-1"}`}>
-          <TabsTrigger value="info" className="text-xs gap-1.5">
+          <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
             <User2 className="w-3.5 h-3.5" /> Info
           </TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="goal" className="text-xs gap-1.5">
+              <TabsTrigger value="goal" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Target className="w-3.5 h-3.5" /> Objetivo
               </TabsTrigger>
-              <TabsTrigger value="progress" className="text-xs gap-1.5">
+              <TabsTrigger value="progress" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <TrendingUp className="w-3.5 h-3.5" /> Progreso
               </TabsTrigger>
-              <TabsTrigger value="training" className="text-xs gap-1.5">
+              <TabsTrigger value="training" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Dumbbell className="w-3.5 h-3.5" /> Entreno
               </TabsTrigger>
-              <TabsTrigger value="calendar" className="text-xs gap-1.5">
+              <TabsTrigger value="calendar" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Calendar className="w-3.5 h-3.5" /> Calendario
               </TabsTrigger>
               {!trainingOnly && (
-                <TabsTrigger value="nutrition" className="text-xs gap-1.5">
+                <TabsTrigger value="nutrition" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                   <Apple className="w-3.5 h-3.5" /> Nutrición
                 </TabsTrigger>
               )}
-              <TabsTrigger value="chat" className="text-xs gap-1.5">
+              <TabsTrigger value="chat" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <MessageCircle className="w-3.5 h-3.5" /> Chat
               </TabsTrigger>
             </>
@@ -975,15 +975,15 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           <TabsList className={`grid w-full bg-secondary/50 ${kind === "trainer" ? "grid-cols-3" : "grid-cols-1"}`}>
             {kind === "trainer" && (
               <>
-                <TabsTrigger value="info" className="text-xs gap-1.5">
+                <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                   <User2 className="w-3.5 h-3.5" /> Info
                 </TabsTrigger>
-                <TabsTrigger value="assigned" className="text-xs gap-1.5">
+                <TabsTrigger value="assigned" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                   <Dumbbell className="w-3.5 h-3.5" /> Asignados ({assigned.length})
                 </TabsTrigger>
               </>
             )}
-            <TabsTrigger value="chat" className="text-xs gap-1.5">
+            <TabsTrigger value="chat" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
               <MessageCircle className="w-3.5 h-3.5" /> Chat
             </TabsTrigger>
           </TabsList>
