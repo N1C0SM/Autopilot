@@ -310,11 +310,13 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     );
   }
 
+  const hasAccess = profile.payment_status === "paid";
+
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 space-y-3">
-       <div className="flex items-start gap-3 min-w-0">
+      <div className="mb-6 space-y-3 sm:space-y-0 sm:flex sm:items-start sm:gap-3">
+       <div className="flex items-start gap-3 min-w-0 sm:flex-1">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -330,7 +332,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           </div>
         </div>
        </div>
-       <div className="flex flex-wrap items-center gap-2">
+       <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
         {profile.payment_status === "paid" && (
           <>
             <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="shrink-0">
@@ -466,7 +468,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 <div>
                   <div className="font-medium text-sm">Plan del cliente</div>
                   <div className="text-xs text-muted-foreground">
-                    Asigna cualquier plan y actívalo gratis (sin pasar por Stripe).
+                    {hasAccess
+                      ? "El cliente ya tiene acceso activo. Cambia su plan con el selector o retírale el acceso."
+                      : "Asigna cualquier plan y actívalo gratis (sin pasar por Stripe)."}
                   </div>
                 </div>
               </div>
@@ -494,45 +498,49 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </SelectContent>
               </Select>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  disabled={tierSaving}
-                  onClick={async () => {
-                    const tier = ((profile as any).subscription_tier as string) || "full";
-                    const updates: any = {
-                      subscription_tier: tier,
-                      payment_status: "paid",
-                      subscription_status: "active",
-                      plan_status: profile.plan_status === "onboarding" ? "plan_pending" : profile.plan_status,
-                    };
-                    setTierSaving(true);
-                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                    setTierSaving(false);
-                    if (error) return toast.error("No se pudo activar el acceso");
-                    onUpdate(profile.user_id, updates);
-                    toast.success("Acceso gratis activado");
-                  }}
-                >
-                  {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  Activar acceso gratis
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={tierSaving}
-                  onClick={async () => {
-                    const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
-                    setTierSaving(true);
-                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                    setTierSaving(false);
-                    if (error) return toast.error("No se pudo quitar el acceso");
-                    onUpdate(profile.user_id, updates);
-                    toast.success("Acceso retirado");
-                  }}
-                >
-                  Quitar acceso
-                </Button>
+                {!hasAccess && (
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    disabled={tierSaving}
+                    onClick={async () => {
+                      const tier = ((profile as any).subscription_tier as string) || "full";
+                      const updates: any = {
+                        subscription_tier: tier,
+                        payment_status: "paid",
+                        subscription_status: "active",
+                        plan_status: profile.plan_status === "onboarding" ? "plan_pending" : profile.plan_status,
+                      };
+                      setTierSaving(true);
+                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                      setTierSaving(false);
+                      if (error) return toast.error("No se pudo activar el acceso");
+                      onUpdate(profile.user_id, updates);
+                      toast.success("Acceso gratis activado");
+                    }}
+                  >
+                    {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    Activar acceso gratis
+                  </Button>
+                )}
+                {hasAccess && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={tierSaving}
+                    onClick={async () => {
+                      const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
+                      setTierSaving(true);
+                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                      setTierSaving(false);
+                      if (error) return toast.error("No se pudo quitar el acceso");
+                      onUpdate(profile.user_id, updates);
+                      toast.success("Acceso retirado");
+                    }}
+                  >
+                    Quitar acceso
+                  </Button>
+                )}
               </div>
             </div>
           )}
