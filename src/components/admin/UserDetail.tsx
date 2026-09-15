@@ -34,6 +34,12 @@ import TrainingPlanForm from "./TrainingPlanForm";
 import { impersonateUser } from "@/lib/impersonate";
 import OnboardingEditor from "./OnboardingEditor";
 
+const TIER_OPTIONS = [
+  { value: "training", label: "Entrenamiento (29€/mes)" },
+  { value: "full", label: "Completo (49€/mes)" },
+  { value: "transform", label: "Transformación 12 semanas (299€)" },
+];
+
 interface OnboardingData {
   age: number | null;
   height: number | null;
@@ -502,6 +508,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </Badge>
               </div>
 
+              {hasAccess && currentTier ? (
+                <div className="text-xs text-muted-foreground">
+                  Solo puede cambiar a un plan distinto del que ya tiene ({PLAN_LABEL[currentTier]?.split(" ·")[0] || currentTier}).
+                </div>
+              ) : null}
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                   {hasAccess ? "Cambiar plan" : "Elegir plan"}
@@ -515,9 +526,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     <SelectValue placeholder="Elige un plan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="training">Entrenamiento (29€/mes)</SelectItem>
-                    <SelectItem value="full">Completo (49€/mes)</SelectItem>
-                    <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
+                    {TIER_OPTIONS.filter((t) => t.value !== currentTier).map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {pendingTierChange && (
