@@ -303,9 +303,9 @@ const Index = () => {
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Quién te acompaña</p>
                   <div className="mt-4 flex items-center gap-3">
                     {trainer.trainer_photo_url ? (
-                      <img src={trainer.trainer_photo_url} alt={`${trainer.trainer_name}, entrenador de Autopilot`} width={52} height={52} className="h-13 w-13 rounded-lg object-cover ring-1 ring-primary/30" />
+                      <img src={trainer.trainer_photo_url} alt={`${trainer.trainer_name}, entrenador de Autopilot`} width={48} height={48} className="h-12 w-12 rounded-lg object-cover ring-1 ring-primary/30" />
                     ) : (
-                      <span className="flex h-13 w-13 items-center justify-center rounded-lg bg-primary/15"><User className="h-5 w-5 text-primary" /></span>
+                      <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15"><User className="h-5 w-5 text-primary" /></span>
                     )}
                     <div>
                       <p className="font-display font-bold">{trainer.trainer_name}</p>
@@ -400,7 +400,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {ebooks.slice(0, 6).map((e, i) => (
+                    {ebooks.slice(0, 3).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
                         <a
                           href={e.url || "/recursos"}
@@ -452,7 +452,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {recommendations.slice(0, 6).map((r, i) => (
+                    {recommendations.slice(0, 3).map((r, i) => (
                       <ScrollReveal key={r.id || i} delay={i * 0.05}>
                         <a
                           href={r.url || "/recursos"}
@@ -507,7 +507,7 @@ const Index = () => {
             </ScrollReveal>
             <ScrollReveal delay={0.1}>
               <Accordion type="single" collapsible className="space-y-1">
-                {(showAllFaqs ? faqs : faqs.slice(0, 7)).map((faq, i) => (
+                {(showAllFaqs ? faqs : faqs.slice(0, 5)).map((faq, i) => (
                   <AccordionItem key={i} value={`faq-${i}`} className="border-b border-border last:border-b-0">
                     <AccordionTrigger className="text-base font-medium hover:no-underline py-5 text-left">
                       {faq.q}
