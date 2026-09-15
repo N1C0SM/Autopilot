@@ -253,6 +253,9 @@ const Dashboard = () => {
               <CalendarIcon className="w-3 h-3" /> O paga anual: {DEFAULT_YEARLY_PRICE_EUR}€/año (ahorras {yearlySavings()}€)
             </button>
             <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía {GUARANTEE_DAYS} días</p>
+            <button onClick={() => setSection("chat")} className="mx-auto mt-4 text-xs text-muted-foreground hover:text-primary underline inline-flex items-center gap-1.5">
+              <MessageCircle className="w-3 h-3" /> Prefiero hablar antes con un entrenador (gratis)
+            </button>
           </motion.div>
         );
       })()}
@@ -261,7 +264,7 @@ const Dashboard = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Clock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Tu plan se está creando 🔥</h2>
-          <p className="text-muted-foreground mb-2">Nuestro equipo está trabajando en tu plan personalizado.</p>
+          <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento y tu nutrición con los datos que nos has dado.</p>
           <p className="text-sm text-primary font-medium">Recibirás una notificación en menos de 48h.</p>
         </motion.div>
       )}
