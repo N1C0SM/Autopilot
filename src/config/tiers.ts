@@ -13,7 +13,7 @@ export const TIERS = {
     trial_days: 7,
     tagline: "Para quien solo quiere entrenar mejor y dejar de improvisar.",
     features: [
-      "Plan de entrenamiento personalizado",
+      "Plan preparado por un entrenador real",
       "Adaptado a gimnasio, casa o material disponible",
       "Revisión cada 2 semanas",
       "Chat con entrenador",
@@ -33,10 +33,10 @@ export const TIERS = {
     tagline:
       "Para quien quiere mejorar físico de verdad combinando entrenamiento, nutrición y seguimiento.",
     features: [
-      "Plan de entrenamiento personalizado",
-      "Plan de nutrición adaptado",
-      "Ajustes de entrenamiento",
-      "Ajustes nutricionales",
+      "Entrenamiento preparado por un entrenador real",
+      "Nutrición personalizada por tu entrenador",
+      "Ajustes de entrenamiento hechos por tu entrenador",
+      "Ajustes nutricionales hechos por tu entrenador",
       "Revisión de progreso",
       "Chat con entrenador",
       "Revisión semanal",
@@ -54,8 +54,8 @@ export const TIERS = {
     tagline:
       "Para quien quiere un acompañamiento más cercano, check-ins semanales y un plan completo de 12 semanas con entrenamiento, nutrición y seguimiento prioritario.",
     features: [
-      "Entrenamiento durante 12 semanas",
-      "Nutrición durante 12 semanas",
+      "Entrenamiento preparado por tu entrenador durante 12 semanas",
+      "Nutrición personalizada durante 12 semanas",
       "Check-in semanal",
       "Revisión de fotos y medidas",
       "Respuesta en menos de 4h",

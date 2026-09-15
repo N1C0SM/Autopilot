@@ -95,6 +95,9 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
         Después de la primera semana, sigues por <span className="text-foreground font-semibold">29€/mes</span> o{" "}
         <span className="text-foreground font-semibold">49€/mes</span> según el plan. Sin permanencia. Cancelas cuando quieras.
       </p>
+      <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
+        En ambos planes, un entrenador real prepara tu entrenamiento y atiende tu seguimiento. La nutrición personalizada está incluida en Completo.
+      </p>
       <p className="text-center text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía 30 días · Sin permanencia
       </p>

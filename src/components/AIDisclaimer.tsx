@@ -8,7 +8,7 @@ interface Props {
 
 /**
  * Aviso visible exigido por el AI Act / RGPD:
- * el contenido es generado por IA y revisado por un entrenador humano.
+ * la IA solo apoya el análisis inicial; el plan y seguimiento son humanos.
  * No sustituye consejo médico.
  */
 const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
@@ -17,7 +17,7 @@ const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
       <p className={`text-[11px] text-muted-foreground flex items-center gap-1 ${className}`}>
         <Sparkles className="w-3 h-3 text-primary shrink-0" />
         <span>
-          Generado por IA + supervisión humana ·{" "}
+          Análisis inicial asistido por IA · el plan lo prepara tu entrenador ·{" "}
           <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
             no sustituye consejo médico
           </Link>
@@ -33,8 +33,8 @@ const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
     >
       <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
       <p className="leading-snug">
-        Este contenido se genera con <strong className="text-foreground">IA</strong> y se revisa por un{" "}
-        <strong className="text-foreground">entrenador humano</strong>. No sustituye el consejo de un médico
+        La <strong className="text-foreground">IA</strong> solo apoya este análisis inicial. Un{" "}
+        <strong className="text-foreground">entrenador humano</strong> prepara y ajusta el plan. No sustituye el consejo de un médico
         ni de un profesional sanitario.{" "}
         <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
           Leer aviso completo

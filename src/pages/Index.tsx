@@ -43,22 +43,22 @@ import {
 } from "@/components/ui/accordion";
 
 const whyWorks = [
-  { icon: Brain, title: "Diagnóstico claro", desc: "La IA te muestra qué deberías mejorar primero, sin generalidades." },
-  { icon: Wrench, title: "Plan humano", desc: "Un entrenador real convierte ese diagnóstico en entrenamiento y nutrición." },
-  { icon: Repeat, title: "Ajustes continuos", desc: "El plan cambia contigo según tus resultados, horarios y sensaciones." },
+  { icon: Brain, title: "Análisis inicial", desc: "La IA sirve de apoyo para detectar prioridades visibles antes de hablar con tu entrenador." },
+  { icon: Wrench, title: "Plan hecho por tu entrenador", desc: "Un entrenador real prepara tu entrenamiento y, según el plan elegido, tu nutrición." },
+  { icon: Repeat, title: "Seguimiento humano", desc: "Tu entrenador ajusta el plan según tus avances, horarios y sensaciones." },
 ];
 
 const faqs = [
   { q: "¿El diagnóstico es gratis?", a: "Sí. El AI Physique Scan es 100% gratis, sin tarjeta y sin necesidad de crear cuenta primero." },
   { q: "¿Necesito tarjeta para hacer el scan?", a: "No. Solo necesitas una foto. El resultado lo recibes en 60 segundos." },
-  { q: "¿Qué pasa después del scan?", a: "Recibes un diagnóstico visual con tus prioridades. Si te interesa, eliges plan (Entrenamiento o Completo) y un entrenador real te construye un plan adaptado." },
+  { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo y Transformación." },
   { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
   { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
-  { q: "¿Es IA o una persona?", a: "Ambas. La IA hace el diagnóstico inicial. Después es un entrenador humano quien diseña tu plan y responde a tus mensajes." },
+  { q: "¿Quién prepara y ajusta mi plan?", a: "Un entrenador real. La IA solo sirve como herramienta de apoyo para el análisis inicial; no diseña tu plan, no lo reorganiza y no responde a tus mensajes." },
   { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Sin permanencia. Cancelas en un clic desde tu cuenta cuando quieras." },
   { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis, pero incluye diagnóstico + llamada gratis con un asesor antes de empezar." },
-  { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y se construye sobre eso. Calistenia, mancuernas en casa o cero material." },
-  { q: "¿Y si nunca he entrenado?", a: "Mejor. El plan se construye desde tu nivel real y vamos paso a paso, sin saltar fases." },
+  { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y tu entrenador prepara el plan sobre esa base: calistenia, mancuernas en casa o cero material." },
+  { q: "¿Y si nunca he entrenado?", a: "Tu entrenador parte de tu nivel real y te guía paso a paso, sin saltar fases." },
   { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto, YouTube te da una rutina genérica. Aquí hay una persona real que conoce tu nivel, tu equipamiento y tu semana, y ajusta el plan contigo cada vez que algo cambia." },
   { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Lo avisas por chat y reorganizamos. El plan se adapta a viajes, lesiones o semanas malas sin que pierdas progreso." },
   { q: "¿Y si veo que no es para mí?", a: "Cancelas antes del día 7 desde tu cuenta y no se cobra nada. Sin llamadas, sin formularios, sin preguntas." },
@@ -171,11 +171,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <Helmet>
-        <title>Autopilot — Diagnóstico físico + coaching real</title>
-        <meta name="description" content="Diagnóstico físico con IA en 60s. Un entrenador real lo convierte en tu plan de entrenamiento y nutrición. Primera semana gratis." />
+        <title>Autopilot — Entrenamiento con entrenador real</title>
+        <meta name="description" content="Un entrenador real prepara y ajusta tu entrenamiento. Chat directo y nutrición personalizada según el plan. Análisis inicial gratis con IA." />
         <link rel="canonical" href="https://autopilotplan.com/" />
-        <meta property="og:title" content="Autopilot — Diagnóstico físico gratis + coaching real online" />
-        <meta property="og:description" content="Diagnóstico con IA en 60s y un entrenador humano que lo convierte en plan. Primera semana gratis en planes mensuales." />
+        <meta property="og:title" content="Autopilot — Tu entrenamiento, en manos de un entrenador real" />
+        <meta property="og:description" content="Tu entrenador prepara y ajusta tu plan contigo. La IA solo apoya el análisis inicial gratuito." />
         <meta property="og:url" content="https://autopilotplan.com/" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
@@ -280,7 +280,7 @@ const Index = () => {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/[0.08] mb-7 animate-fade-in">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                Diagnóstico con IA + Entrenador real
+                 Entrenador real · seguimiento personal
               </span>
             </div>
 
@@ -288,15 +288,15 @@ const Index = () => {
               style={{ animationDelay: "0.1s" }}
               className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight animate-fade-in"
             >
-              De cero a un físico visible.{" "}
-              <span className="text-gradient">Sin perderte entre apps.</span>
+               Tu entrenamiento, en manos{" "}
+               <span className="text-gradient">de un entrenador real.</span>
             </h1>
 
             <p
               style={{ animationDelay: "0.2s" }}
               className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed animate-fade-in"
             >
-              Para hombres de 25 a 40 años que quieren ganar músculo de verdad. Un entrenador real diseña tu entrenamiento y nutrición, y los ajusta cada semana contigo por chat.
+               Tu entrenador prepara tu plan, habla contigo por chat y lo ajusta según tus avances, horarios y sensaciones. Nutrición personalizada según el plan elegido.
             </p>
 
             <div
@@ -318,7 +318,7 @@ const Index = () => {
                   onClick={() => navigate("/onboarding")}
                   className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
                 >
-                  o crear mi plan directamente
+                   o elegir un plan con entrenador
                 </button>
               </div>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
@@ -438,8 +438,8 @@ const Index = () => {
                 <div>
                   <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Quién hay detrás</p>
                   <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-5">
-                    Una persona real diseña{" "}
-                    <span className="text-gradient">cada plan.</span>
+                     Tu entrenador lleva{" "}
+                     <span className="text-gradient">tu plan de principio a fin.</span>
                   </h2>
                   {trainer.trainer_bio ? (
                     <p className="text-base text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
@@ -503,7 +503,7 @@ const Index = () => {
                   Elige cómo quieres empezar
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Después del diagnóstico, te recomendaremos el plan que mejor encaja contigo.
+                   Elige el nivel de seguimiento y tu entrenador preparará el plan contigo.
                 </p>
               </div>
             </ScrollReveal>
@@ -541,7 +541,7 @@ const Index = () => {
                   <span className="text-gradient">No con un ticket.</span>
                 </h2>
                 <p className="text-muted-foreground max-w-md mx-auto text-sm">
-                  La IA prepara el plan; tu entrenador lo revisa y te responde. Mensajes reales que ajustan tu semana.
+                   Tu entrenador prepara el plan, te responde y reorganiza tu semana cuando lo necesitas. La IA no interviene en esta atención.
                 </p>
               </div>
             </ScrollReveal>
@@ -849,11 +849,11 @@ const Index = () => {
           <div className="container mx-auto max-w-2xl text-center">
             <ScrollReveal>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display mb-6 leading-[1.05] tracking-tight">
-                Empieza por entender{" "}
-                <span className="text-gradient">qué te falta.</span>
+                 Pon tu entrenamiento{" "}
+                 <span className="text-gradient">en manos de un entrenador real.</span>
               </h2>
               <p className="text-base text-muted-foreground mb-10 max-w-md mx-auto">
-                Diagnóstico físico gratis con IA. Después decides si quieres que un entrenador real lo convierta en plan.
+                 Empieza con un análisis inicial gratis asistido por IA. Para recibir el plan y seguimiento de un entrenador, elige el plan que mejor encaje contigo.
               </p>
               <Button
                 variant="hero"
@@ -910,8 +910,8 @@ const Index = () => {
       >
         <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl px-5 py-3 premium-shadow">
           <div className="text-left">
-            <div className="text-sm font-semibold">Diagnóstico físico gratis en 60s</div>
-            <div className="text-[11px] text-muted-foreground">Sin tarjeta · sin registro previo · 100% privado</div>
+             <div className="text-sm font-semibold">Análisis inicial gratis en 60s</div>
+             <div className="text-[11px] text-muted-foreground">La IA analiza; tu entrenador prepara y ajusta el plan</div>
           </div>
           <Button variant="hero" size="lg" onClick={() => goScan("sticky_desktop")} className="group whitespace-nowrap">
             <ScanLine className="w-4 h-4" />

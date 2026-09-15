@@ -67,17 +67,17 @@ const AIScanSection = () => {
           >
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-              Paso 0 · Diagnóstico gratis
+              Paso 0 · Análisis inicial gratis
             </span>
           </motion.div>
 
           <h2 className="text-3xl sm:text-4xl font-bold font-display leading-[1.1] mb-4">
-            Un diagnóstico guiado por tu entrenador,{" "}
-            <span className="text-gradient">no por una app suelta</span>
+            La IA ayuda a analizar.{" "}
+            <span className="text-gradient">Tu entrenador toma las decisiones.</span>
           </h2>
 
           <p className="text-base text-muted-foreground leading-relaxed">
-            La IA hace una primera lectura en 60s para ahorrar tiempo. Después soy yo quien revisa el resultado contigo y diseña el plan. La herramienta no sustituye al entrenador, lo prepara.
+            La IA hace una primera lectura en 60 segundos para detectar prioridades visibles. No diseña ni reorganiza tu entrenamiento: tu entrenador revisa el análisis, habla contigo y prepara el plan.
           </p>
         </div>
 
@@ -102,7 +102,7 @@ const AIScanSection = () => {
                     <div className="text-xs font-semibold">AI Physique Scan</div>
                     <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-                      Análisis completo
+                      Análisis inicial
                     </div>
                   </div>
                 </div>
@@ -177,7 +177,7 @@ const AIScanSection = () => {
                   ))}
                 </ul>
                 <div className="mt-3 pt-3 border-t border-border text-[10px] text-muted-foreground text-center">
-                  Análisis completo desbloqueado dentro del coaching
+                  Tu entrenador revisará estas prioridades contigo
                 </div>
               </div>
 
@@ -198,9 +198,9 @@ const AIScanSection = () => {
                   1
                 </div>
                 <div>
-                  <div className="font-display font-semibold text-sm mb-1">Primera lectura con IA</div>
+                  <div className="font-display font-semibold text-sm mb-1">Análisis inicial asistido por IA</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Solo para identificar prioridades visibles y ahorrarnos preguntas obvias. Es la antesala, no el plan.
+                    Solo identifica prioridades visibles. Es una herramienta de apoyo: no prepara ni modifica tu entrenamiento.
                   </p>
                 </div>
               </div>
@@ -214,9 +214,9 @@ const AIScanSection = () => {
                   2
                 </div>
                 <div>
-                  <div className="font-display font-semibold text-sm mb-1">Tu entrenador revisa y construye el plan</div>
+                  <div className="font-display font-semibold text-sm mb-1">Tu entrenador prepara y lleva el plan</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Yo leo tu diagnóstico, hablo contigo y diseño el entrenamiento y la nutrición. Aquí es donde empieza el trabajo real.
+                    Revisa tu caso, habla contigo y diseña el entrenamiento. La nutrición personalizada depende del plan elegido.
                   </p>
                 </div>
               </div>
