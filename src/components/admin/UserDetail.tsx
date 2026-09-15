@@ -395,7 +395,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       {profile.payment_status !== "paid" && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 text-center">
           <p className="text-sm font-medium text-amber-400">⚠️ Este usuario aún no ha pagado.</p>
-          <p className="text-xs text-muted-foreground mt-1">Solo puedes ver su info. Para asignar planes, el usuario debe completar el pago primero.</p>
+          <p className="text-xs text-muted-foreground mt-1">Puedes darle acceso gratis tú mismo desde «Plan del cliente» (elige el plan y pulsa «Dar acceso gratis»).</p>
         </div>
       )}
       <Tabs defaultValue="info" className="space-y-6">
