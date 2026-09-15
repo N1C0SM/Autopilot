@@ -373,7 +373,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>}
+       </div>
       </div>
+
 
       {/* Tabs */}
       {profile.payment_status !== "paid" && (
