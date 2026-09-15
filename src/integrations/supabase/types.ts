@@ -692,6 +692,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          cycle_start_date: string | null
           email: string
           id: string
           lifecycle_emails_sent: string[]
@@ -700,6 +701,10 @@ export type Database = {
           plan_status: string
           referral_code: string | null
           referred_by: string | null
+          renewal_decision: string | null
+          renewal_decision_at: string | null
+          renewal_prompt_shown_at: string | null
+          renewal_reminder_sent_at: string | null
           stripe_customer_id: string | null
           stripe_payment_id: string | null
           subscription_end: string | null
@@ -713,6 +718,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          cycle_start_date?: string | null
           email: string
           id?: string
           lifecycle_emails_sent?: string[]
@@ -721,6 +727,10 @@ export type Database = {
           plan_status?: string
           referral_code?: string | null
           referred_by?: string | null
+          renewal_decision?: string | null
+          renewal_decision_at?: string | null
+          renewal_prompt_shown_at?: string | null
+          renewal_reminder_sent_at?: string | null
           stripe_customer_id?: string | null
           stripe_payment_id?: string | null
           subscription_end?: string | null
@@ -734,6 +744,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          cycle_start_date?: string | null
           email?: string
           id?: string
           lifecycle_emails_sent?: string[]
@@ -742,6 +753,10 @@ export type Database = {
           plan_status?: string
           referral_code?: string | null
           referred_by?: string | null
+          renewal_decision?: string | null
+          renewal_decision_at?: string | null
+          renewal_prompt_shown_at?: string | null
+          renewal_reminder_sent_at?: string | null
           stripe_customer_id?: string | null
           stripe_payment_id?: string | null
           subscription_end?: string | null

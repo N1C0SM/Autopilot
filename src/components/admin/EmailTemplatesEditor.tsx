@@ -72,6 +72,16 @@ const TEMPLATES: TemplateDef[] = [
       checkoutUrl: "https://autopilotplan.com/dashboard",
     },
   },
+  {
+    name: "renewal-no-answer",
+    label: "Renovación sin respuesta (Transformación 12 semanas)",
+    placeholders: ["name", "cycleEndDate", "manageUrl"],
+    sampleData: {
+      name: "Nico",
+      cycleEndDate: "30 de octubre de 2026",
+      manageUrl: "https://autopilotplan.com/dashboard",
+    },
+  },
 ];
 
 export default function EmailTemplatesEditor() {
