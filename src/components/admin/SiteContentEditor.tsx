@@ -203,6 +203,22 @@ const SiteContentEditor = () => {
     setSaving(false);
   };
 
+  const saveBooking = async () => {
+    const clean = bookingUrl.trim();
+    if (clean && !/^https?:\/\//i.test(clean)) {
+      toast.error("El enlace debe empezar por http(s)://");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("settings").update({ booking_url: clean } as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar");
+    else {
+      setBookingUrl(clean);
+      toast.success("Enlace de reserva actualizado");
+    }
+    setSaving(false);
+  };
+
   const onHeroVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
