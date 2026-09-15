@@ -519,11 +519,12 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-muted-foreground">Plan actual:</span>
-                  <Badge variant={hasAccess ? "default" : "outline"}>
+                  <Badge variant={hasAccess ? (currentTier ? "default" : "destructive") : "outline"}>
                     {hasAccess
-                      ? (PLAN_LABEL[((profile as any).subscription_tier as string) || ""] || "Sin plan")
+                      ? (currentTier ? (PLAN_LABEL[currentTier] || currentTier) : "Pagado sin plan · asígnale uno")
                       : "Inactivo"}
                   </Badge>
+
                 </div>
                 {hasAccess && (
                   <Button
