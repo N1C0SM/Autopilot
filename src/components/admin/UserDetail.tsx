@@ -313,8 +313,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   return (
     <div>
       {/* Header */}
-      <div className="mb-6 space-y-3">
-       <div className="flex items-start gap-3 min-w-0">
+      <div className="mb-6 space-y-3 sm:space-y-0 sm:flex sm:items-start sm:gap-3">
+       <div className="flex items-start gap-3 min-w-0 sm:flex-1">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -330,7 +330,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           </div>
         </div>
        </div>
-       <div className="flex flex-wrap items-center gap-2">
+       <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
         {profile.payment_status === "paid" && (
           <>
             <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="shrink-0">
