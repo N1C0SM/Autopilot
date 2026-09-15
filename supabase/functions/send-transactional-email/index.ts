@@ -34,9 +34,8 @@ function generateToken(): string {
 //  - service_role  -> may send any template to any recipient (internal callers)
 //  - admin user    -> may send any template (admin panel: payment reminders)
 //  - end user      -> only self-service templates, and only to their own email
-//  - anon          -> only the public funnel template (scan diagnosis)
+//  - anon          -> denied; public callers must never control recipients
 const SELF_SERVICE_TEMPLATES = new Set(['scan-diagnosis', 'mini-plan'])
-const PUBLIC_TEMPLATES = new Set(['scan-diagnosis', 'mini-plan'])
 
 function parseJwtClaims(token: string): Record<string, any> | null {
   try {
@@ -171,9 +170,6 @@ Deno.serve(async (req) => {
           !!profile?.email &&
           profile.email.toLowerCase() === effectiveRecipient.toLowerCase()
       }
-    } else {
-      // Anonymous (publishable key) callers: public funnel templates only.
-      allowed = PUBLIC_TEMPLATES.has(templateName)
     }
 
     if (!allowed) {
