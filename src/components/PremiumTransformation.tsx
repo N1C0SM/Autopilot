@@ -61,7 +61,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
   }, []);
 
   return (
-    <section className="py-24 px-4 relative overflow-hidden">
+    <section className="py-16 px-4 relative overflow-hidden">
       <div className="absolute inset-0 -z-10 pointer-events-none">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-primary/[0.05] blur-[160px]" />
       </div>
@@ -83,7 +83,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
         viewport={{ once: true }}
         className="container mx-auto max-w-3xl"
       >
-        <div className="relative bg-gradient-to-br from-card via-card to-primary/[0.04] border border-primary/30 rounded-3xl overflow-hidden">
+        <div className="relative bg-gradient-to-br from-card via-card to-primary/[0.04] border border-primary/30 rounded-lg overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
           <div className="grid md:grid-cols-[1.2fr_1fr] gap-0">
             {/* Left */}
@@ -142,7 +142,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
       </motion.div>
 
       {/* Timeline 12 semanas */}
-      <div className="container mx-auto max-w-5xl mt-16">
+      <div className="container mx-auto max-w-5xl mt-12">
         <div className="text-center mb-8">
           <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-2">El recorrido</p>
           <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight">
@@ -157,7 +157,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="relative bg-card border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors"
+              className="relative bg-card border border-border rounded-lg p-5 hover:border-primary/40 transition-colors"
             >
               <div className="absolute -top-3 left-5 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold tracking-wider">
                 {b.weeks.toUpperCase()}
@@ -180,7 +180,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
           viewport={{ once: true }}
           className="container mx-auto max-w-4xl mt-14"
         >
-          <div className="relative bg-gradient-to-br from-card via-card to-primary/[0.04] border border-primary/30 rounded-3xl p-8 sm:p-10 overflow-hidden">
+            <div className="relative bg-gradient-to-br from-card via-card to-primary/[0.04] border border-primary/30 rounded-lg p-8 sm:p-10 overflow-hidden">
             <Quote className="absolute top-6 right-6 w-10 h-10 text-primary/20" />
             <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-4">
               Completó las 12 semanas

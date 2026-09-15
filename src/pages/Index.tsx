@@ -1,18 +1,5 @@
-import {
-  MessageCircle,
-  ShieldCheck,
-  Star,
-  Image as ImageIcon,
-  Send,
-  User,
-  Check,
-  ArrowRight,
-  ScanLine,
-  Brain,
-  Wrench,
-  Repeat,
-} from "lucide-react";
-import { Menu, BookOpen, Sparkles, Newspaper, ExternalLink, ShoppingBag } from "lucide-react";
+import { ShieldCheck, User, Check, ArrowRight, ScanLine } from "lucide-react";
+import { Menu, BookOpen, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
 import { useEffect, useState, lazy, Suspense } from "react";
@@ -20,18 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
-import { Award, Dumbbell, MessageSquare, Target } from "lucide-react";
 import { track } from "@/lib/analytics";
 import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
-const AIScanSection = lazy(() => import("@/components/AIScanSection"));
-const HeroTestimonial = lazy(() => import("@/components/HeroTestimonial"));
-const PostScanFlow = lazy(() => import("@/components/PostScanFlow"));
 const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
 const PricingTiers = lazy(() => import("@/components/PricingTiers"));
 const PremiumTransformation = lazy(() => import("@/components/PremiumTransformation"));
-const TrainersSection = lazy(() => import("@/components/TrainersSection"));
+import LandingConversionBento from "@/components/LandingConversionBento";
 
 const SectionFallback = () => <div className="min-h-[200px]" aria-hidden />;
 import type { PlanKey } from "@/config/tiers";
@@ -41,12 +24,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-const whyWorks = [
-  { icon: Brain, title: "Análisis inicial", desc: "La IA sirve de apoyo para detectar prioridades visibles antes de hablar con tu entrenador." },
-  { icon: Wrench, title: "Plan hecho por tu entrenador", desc: "Un entrenador real prepara tu entrenamiento y, según el plan elegido, tu nutrición." },
-  { icon: Repeat, title: "Seguimiento humano", desc: "Tu entrenador ajusta el plan según tus avances, horarios y sensaciones." },
-];
 
 const faqs = [
   { q: "¿El análisis inicial es gratis?", a: "Sí. El AI Physique Scan es un análisis inicial 100% gratis, sin tarjeta y sin necesidad de crear una cuenta." },
@@ -165,9 +142,6 @@ const Index = () => {
     navigate(`/signup?plan=${plan}`);
   };
 
-  const featured = testimonials[0];
-  const rest = testimonials.slice(1, 3);
-
   return (
     <div className="min-h-screen bg-background relative">
       <Helmet>
@@ -271,220 +245,93 @@ const Index = () => {
 
       <main>
         {/* HERO */}
-        <section className="relative pt-28 sm:pt-32 pb-14 sm:pb-16 px-4 overflow-hidden">
-          <div className="absolute inset-0 -z-10 pointer-events-none">
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-primary/[0.07] blur-[160px]" />
-          </div>
+        <section className="relative px-4 pb-12 pt-28 sm:pb-14 sm:pt-32">
+          <div className="container mx-auto max-w-5xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.08] px-3 py-1.5 animate-fade-in">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
+                  Entrenador real · plan personal · seguimiento directo
+                </span>
+              </div>
 
-          <div className="container mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/[0.08] mb-7 animate-fade-in">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                Entrenador real · seguimiento personal
-              </span>
-            </div>
+              <h1 className="font-display text-[2.5rem] font-bold leading-[1.05] sm:text-5xl lg:text-6xl animate-fade-in">
+                Tu entrenamiento, en manos <span className="text-gradient">de un entrenador real.</span>
+              </h1>
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg animate-fade-in">
+                Tu entrenador prepara el plan, habla contigo por chat y lo ajusta cuando cambia tu semana. Nutrición personalizada en Completo y Transformación.
+              </p>
 
-            <h1
-              style={{ animationDelay: "0.1s" }}
-              className="text-[2.4rem] sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-6 tracking-tight animate-fade-in"
-              >
-              Tu entrenamiento, en manos{" "}
-              <span className="text-gradient">de un entrenador real.</span>
-            </h1>
-
-            <p
-              style={{ animationDelay: "0.2s" }}
-              className="text-base sm:text-lg text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed animate-fade-in"
-            >
-              Tu entrenador prepara tu plan, habla contigo por chat y lo ajusta según tus avances, horarios y sensaciones. Nutrición personalizada según el plan elegido.
-            </p>
-
-            <div
-              style={{ animationDelay: "0.3s" }}
-              className="flex flex-col items-center animate-fade-in"
-            >
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <Button
-                  variant="hero"
-                  size="xl"
-                  onClick={() => goScan("hero")}
-                  className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
-                >
-                  <ScanLine className="w-4 h-4" />
-                  Hacer mi análisis inicial gratis
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row animate-fade-in">
+                <Button variant="hero" size="xl" onClick={() => goScan("hero")} className="group w-full sm:w-auto">
+                  <ScanLine className="h-4 w-4" />
+                  <span className="sm:hidden">Análisis inicial gratis</span>
+                  <span className="hidden sm:inline">Ver mi punto de partida gratis</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
-                <button
-                  onClick={() => navigate("/onboarding")}
-                  className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
-                >
-                  o elegir un plan con entrenador
-                </button>
-              </div>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Gratis</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Sin tarjeta</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 60 segundos</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 100% privado</span>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <ShieldCheck className="w-3.5 h-3.5 text-success" />
-                <span>Garantía 30 días · sin permanencia · cancelas en 1 clic</span>
+                <Button variant="outline" size="xl" onClick={goToPricing} className="w-full sm:w-auto">
+                  Ver planes y precios
+                </Button>
               </div>
 
-              <AppStoreBadges
-                size="compact"
-                label="También en tu móvil"
-                className="mt-6 animate-fade-in"
-              />
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> Gratis y sin tarjeta</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> Resultado inicial en 60 segundos</span>
+                <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-success" /> Datos privados</span>
+              </div>
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                La IA solo apoya este análisis inicial. El plan y el seguimiento empiezan cuando eliges entrenador.
+              </p>
+              <AppStoreBadges size="compact" label="También en tu móvil" className="mt-5" />
             </div>
 
-            {/* Hero video (admin-managed) */}
-            {heroVideo.url && (
-              <div
-                style={{ animationDelay: "0.4s" }}
-                className="mt-12 mx-auto max-w-2xl animate-fade-in"
-              >
-                <div className="relative rounded-2xl overflow-hidden border border-border bg-black premium-shadow ring-1 ring-primary/20">
-                  <video
-                    key={heroVideo.url}
-                    src={heroVideo.url}
-                    poster={heroVideo.poster || undefined}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    controls
-                    preload="metadata"
-                    className="w-full aspect-video object-cover bg-black"
-                  />
+            <div className="mt-10 grid gap-4 md:grid-cols-[1.35fr_0.65fr]">
+              {heroVideo.url ? (
+                <div className="overflow-hidden rounded-lg border border-border bg-card premium-shadow">
+                  <video key={heroVideo.url} src={heroVideo.url} poster={heroVideo.poster || undefined} autoPlay muted loop playsInline controls preload="metadata" className="aspect-video w-full object-cover" />
                 </div>
-              </div>
-            )}
-
-            {/* Trust strip */}
-            <div
-              style={{ animationDelay: "0.5s" }}
-              className="mt-10 flex flex-col items-center gap-5 animate-fade-in"
-            >
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                {trainer.trainer_photo_url ? (
-                  <img
-                    src={trainer.trainer_photo_url}
-                    alt={`${trainer.trainer_name}, fundador de Autopilot`}
-                    loading="eager"
-                    width={36}
-                    height={36}
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-primary/30"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center ring-2 ring-primary/30">
-                    <User className="w-4 h-4 text-primary" />
+              ) : (
+                <div className="grid min-h-[220px] place-items-center rounded-lg border border-border bg-card p-7 text-center">
+                  <div>
+                    <p className="font-display text-2xl font-bold">Entrena con una dirección clara.</p>
+                    <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">Sabrás qué hacer hoy, por qué lo haces y a quién escribir si algo no encaja.</p>
                   </div>
-                )}
-                <div className="text-left">
-                  <div className="font-semibold text-foreground text-xs">{trainer.trainer_name} · Fundador</div>
-                  <div className="text-[11px] text-muted-foreground">Detrás de cada plan y cada mensaje</div>
-                </div>
-              </div>
-
-              {stats.paid >= 20 && (
-                <div className={`grid ${stats.activePct && stats.activePct > 0 ? "grid-cols-2" : "grid-cols-1"} gap-6 sm:gap-12 max-w-sm w-full`}>
-                  <div className="text-center">
-                    <div className="text-xl sm:text-2xl font-bold font-display text-gradient">{stats.paid}</div>
-                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">alumnos de pago</div>
-                  </div>
-                  {stats.activePct !== null && stats.activePct > 0 && (
-                    <div className="text-center">
-                      <div className="text-xl sm:text-2xl font-bold font-display text-gradient">{stats.activePct}%</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">siguen activos</div>
-                    </div>
-                  )}
                 </div>
               )}
-            </div>
-          </div>
-        </section>
 
-        {/* AI SCAN */}
-        <Suspense fallback={<SectionFallback />}>
-          <AIScanSection />
-        </Suspense>
-
-        {/* POST-SCAN FLOW */}
-        <Suspense fallback={<SectionFallback />}>
-          <PostScanFlow />
-        </Suspense>
-
-        {/* QUIÉN HAY DETRÁS */}
-        <section className="py-14 px-4 border-t border-border">
-          <div className="container mx-auto max-w-5xl">
-            <ScrollReveal>
-              <div className="grid md:grid-cols-[280px_1fr] gap-10 items-center">
-                <div className="flex justify-center md:justify-start">
-                  {trainer.trainer_photo_url ? (
-                    <img
-                      src={trainer.trainer_photo_url}
-                      alt={`${trainer.trainer_name}, fundador y entrenador de Autopilot`}
-                      loading="lazy"
-                      className="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl object-cover ring-2 ring-primary/30 premium-shadow"
-                    />
-                  ) : (
-                    <div className="w-56 h-56 sm:w-64 sm:h-64 rounded-3xl bg-primary/15 flex items-center justify-center ring-2 ring-primary/30">
-                      <User className="w-20 h-20 text-primary" />
-                    </div>
-                  )}
-                </div>
+              <aside className="flex flex-col justify-between rounded-lg border border-primary/30 bg-secondary p-6 text-left">
                 <div>
-                  <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Quién hay detrás</p>
-                  <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-5">
-                    Tu entrenador lleva{" "}
-                    <span className="text-gradient">tu plan de principio a fin.</span>
-                  </h2>
-                  {trainer.trainer_bio ? (
-                    <p className="text-base text-muted-foreground leading-relaxed mb-6 whitespace-pre-line">
-                      {trainer.trainer_bio}
-                    </p>
-                  ) : (
-                    <p className="text-base text-muted-foreground leading-relaxed mb-6">
-                      Soy {trainer.trainer_name}. Llevo años entrenando a hombres que quieren empezar a ganar músculo en serio sin volverse adictos a una app o a un canal de YouTube. Aquí no hay rutinas genéricas: hay un método, hay seguimiento y hay alguien que responde cuando algo no encaja.
-                    </p>
-                  )}
-                  <ul className="grid sm:grid-cols-2 gap-3 text-sm">
-                    {[
-                      { icon: Award, label: "Entrenador titulado, no influencer" },
-                      { icon: Dumbbell, label: "Método claro para ganar músculo" },
-                      { icon: MessageSquare, label: "Te responde la misma persona" },
-                      { icon: Target, label: "Nicho: hombres 25–40 que empiezan" },
-                    ].map((it) => (
-                      <li key={it.label} className="flex items-center gap-3 text-foreground/90">
-                        <span className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
-                          <it.icon className="w-4 h-4 text-primary" />
-                        </span>
-                        {it.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </ScrollReveal>
-
-            {/* Por qué funciona — integrado para evitar una sección redundante */}
-            <div className="mt-12 grid md:grid-cols-3 gap-4">
-              {whyWorks.map((p, i) => (
-                <ScrollReveal key={p.title} delay={i * 0.06}>
-                  <div className="bg-card/50 border border-border rounded-2xl p-5 h-full hover:border-primary/30 transition-colors">
-                    <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-3">
-                      <p.icon className="w-4 h-4 text-primary" />
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Quién te acompaña</p>
+                  <div className="mt-4 flex items-center gap-3">
+                    {trainer.trainer_photo_url ? (
+                      <img src={trainer.trainer_photo_url} alt={`${trainer.trainer_name}, entrenador de Autopilot`} width={48} height={48} className="h-12 w-12 rounded-lg object-cover ring-1 ring-primary/30" />
+                    ) : (
+                      <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15"><User className="h-5 w-5 text-primary" /></span>
+                    )}
+                    <div>
+                      <p className="font-display font-bold">{trainer.trainer_name}</p>
+                      <p className="text-xs text-muted-foreground">Entrenador y fundador</p>
                     </div>
-                    <h3 className="font-display font-semibold text-sm mb-1.5">{p.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{p.desc}</p>
                   </div>
-                </ScrollReveal>
-              ))}
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                    Detrás de cada plan, cada ajuste y cada respuesta. No delegamos tu seguimiento en un bot.
+                  </p>
+                </div>
+                {stats.paid >= 20 && (
+                  <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
+                    <strong className="text-foreground">{stats.paid} alumnos</strong>{stats.activePct ? ` · ${stats.activePct}% siguen activos` : ""}
+                  </p>
+                )}
+              </aside>
             </div>
           </div>
         </section>
+
+        <LandingConversionBento
+          trainer={trainer}
+          testimonials={testimonials}
+          onScan={() => goScan("conversion_bento")}
+        />
 
         {/* COMPARISON — antes de precios para contextualizar el valor */}
         <Suspense fallback={<SectionFallback />}>
@@ -530,164 +377,6 @@ const Index = () => {
           <PremiumTransformation onSelect={selectPlan} availableSlots={transformationSlots} />
         </Suspense>
 
-        {/* CHAT DEMO */}
-        <section className="py-12 px-4 bg-card/30 border-y border-border">
-          <div className="container mx-auto max-w-3xl">
-            <ScrollReveal>
-              <div className="text-center mb-7">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">El día a día</p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display mb-4 leading-tight">
-                  Hablas con una persona.{" "}
-                  <span className="text-gradient">No con un ticket.</span>
-                </h2>
-                <p className="text-muted-foreground max-w-md mx-auto text-sm">
-                  Tu entrenador prepara el plan, te responde y reorganiza tu semana cuando lo necesitas. La IA no interviene en esta atención.
-                </p>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.1}>
-              <div className="bg-card rounded-2xl border border-border premium-shadow flex flex-col overflow-hidden max-w-xl mx-auto">
-                <div className="flex items-center gap-2 p-3 border-b border-border">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary/10 text-primary">
-                    <MessageCircle className="w-4 h-4" /> Chat con tu entrenador
-                  </div>
-                  <span className="ml-auto text-[10px] text-muted-foreground flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" /> Respuesta &lt;12h
-                  </span>
-                </div>
-                <div className="flex-1 overflow-hidden p-4 space-y-3 bg-background/20">
-                  <div className="flex justify-end">
-                    <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 text-sm">
-                      Esta semana solo puedo entrenar lunes, miércoles y viernes.
-                    </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="max-w-[80%] bg-secondary text-foreground rounded-2xl rounded-bl-md px-4 py-2 text-sm">
-                      Perfecto. Te reorganizo el volumen en 3 días para que no pierdas progreso.
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="max-w-[80%] bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 text-sm">
-                      Me molesta el hombro en press banca.
-                    </div>
-                  </div>
-                  <div className="flex justify-start">
-                    <div className="max-w-[80%] bg-secondary text-foreground rounded-2xl rounded-bl-md px-4 py-2 text-sm">
-                      Cambiamos a press inclinado con mancuernas y bajamos carga esta semana. Luego revisamos sensaciones.
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 border-t border-border">
-                  <div className="flex gap-2 items-center">
-                    <button type="button" aria-label="Adjuntar imagen" className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-md text-muted-foreground hover:bg-secondary transition-colors">
-                      <ImageIcon className="w-4 h-4" />
-                    </button>
-                    <div className="flex-1 h-9 px-3 flex items-center rounded-md border border-input bg-background text-sm text-muted-foreground">
-                      Escribe un mensaje...
-                    </div>
-                    <button type="button" aria-label="Enviar" className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-md bg-primary text-primary-foreground">
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </section>
-
-        {/* ENTRENADORES */}
-        <Suspense fallback={<SectionFallback />}>
-          <TrainersSection />
-        </Suspense>
-
-        {/* TESTIMONIOS */}
-        <section className="py-16 px-4 bg-card/30 border-y border-border">
-          <div className="container mx-auto max-w-3xl">
-            <ScrollReveal>
-              <div className="text-center mb-10">
-                <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">
-                  Resultados reales
-                </p>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display">
-                  No te vendemos esfuerzo.{" "}
-                  <span className="text-gradient">Vendemos resultado.</span>
-                </h2>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.1}>
-              <blockquote className="text-center max-w-2xl mx-auto mb-16">
-                <div className="flex justify-center gap-0.5 mb-5">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-primary text-primary" />
-                  ))}
-                </div>
-                {featured.photo_before_url && featured.photo_after_url && (
-                  <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center max-w-md mx-auto mb-8">
-                    <div className="text-center">
-                      <img src={featured.photo_before_url} alt={`${featured.name} antes`} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-xl border border-border" />
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1.5">Antes</div>
-                    </div>
-                    <div className="text-[11px] uppercase tracking-widest text-primary font-semibold">→</div>
-                    <div className="text-center">
-                      <img src={featured.photo_after_url} alt={`${featured.name} después`} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-xl border border-primary/40 glow-shadow" />
-                      <div className="text-[10px] uppercase tracking-wider text-primary mt-1.5">Después</div>
-                    </div>
-                  </div>
-                )}
-                <p className="text-2xl sm:text-3xl font-display font-medium leading-snug mb-8">
-                  "{featured.text}"
-                </p>
-                <footer className="flex items-center justify-center gap-3 text-sm">
-                  {featured.photo_url ? (
-                    <img src={featured.photo_url} alt={`${featured.name}, alumna de Autopilot`} loading="lazy" width={40} height={40} className="w-10 h-10 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
-                      {featured.name.split(" ").map((s) => s[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="text-left">
-                    <div className="font-semibold">{featured.name}</div>
-                    <div className="text-xs text-primary">{featured.result}</div>
-                  </div>
-                </footer>
-              </blockquote>
-            </ScrollReveal>
-
-            <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              {rest.map((t, i) => (
-                <ScrollReveal key={t.name + i} delay={i * 0.1}>
-                  <div className="bg-card border border-border rounded-2xl p-5 h-full">
-                    {t.photo_before_url && t.photo_after_url && (
-                      <div className="grid grid-cols-2 gap-2 mb-4">
-                        <div>
-                          <img src={t.photo_before_url} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg" />
-                          <div className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1 text-center">Antes</div>
-                        </div>
-                        <div>
-                          <img src={t.photo_after_url} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg border border-primary/40" />
-                          <div className="text-[9px] uppercase tracking-wider text-primary mt-1 text-center">Después</div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex gap-0.5 mb-3">
-                      {Array.from({ length: 5 }).map((_, j) => (
-                        <Star key={j} className="w-3.5 h-3.5 fill-primary text-primary" />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4 leading-relaxed">"{t.text}"</p>
-                    <div className="text-xs">
-                      <span className="font-semibold">{t.name}</span>
-                      <span className="text-primary"> · {t.result}</span>
-                    </div>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* RECURSOS — guías y recomendaciones reales del administrador */}
         {((sections.show_ebooks && ebooks.length > 0) || (sections.show_recommendations && recommendations.length > 0)) && (
           <section className="py-14 px-4 border-t border-border">
@@ -712,7 +401,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {ebooks.slice(0, 6).map((e, i) => (
+                    {ebooks.slice(0, 3).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
                         <a
                           href={e.url || "/recursos"}
@@ -764,7 +453,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {recommendations.slice(0, 6).map((r, i) => (
+                    {recommendations.slice(0, 3).map((r, i) => (
                       <ScrollReveal key={r.id || i} delay={i * 0.05}>
                         <a
                           href={r.url || "/recursos"}
@@ -819,7 +508,7 @@ const Index = () => {
             </ScrollReveal>
             <ScrollReveal delay={0.1}>
               <Accordion type="single" collapsible className="space-y-1">
-                {(showAllFaqs ? faqs : faqs.slice(0, 7)).map((faq, i) => (
+                {(showAllFaqs ? faqs : faqs.slice(0, 5)).map((faq, i) => (
                   <AccordionItem key={i} value={`faq-${i}`} className="border-b border-border last:border-b-0">
                     <AccordionTrigger className="text-base font-medium hover:no-underline py-5 text-left">
                       {faq.q}
@@ -896,7 +585,9 @@ const Index = () => {
       </footer>
 
       {/* Floating CTA mobile */}
-      <div className="fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className={`fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-all duration-300 ${
+        showStickyCta ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+      }`}>
         <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("sticky_mobile")}>
           <ScanLine className="w-4 h-4" /> Análisis inicial gratis
         </Button>

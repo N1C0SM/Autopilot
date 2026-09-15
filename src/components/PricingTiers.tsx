@@ -25,19 +25,19 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
               viewport={{ once: true }}
               whileHover={{ y: -4 }}
               transition={{ duration: 0.4 }}
-              className={`relative rounded-3xl p-7 sm:p-8 flex flex-col h-full overflow-hidden ${
+              className={`relative rounded-lg p-7 sm:p-8 flex flex-col h-full overflow-hidden ${
                 isRec
-                  ? "bg-card border-2 border-primary card-shadow"
+                  ? "bg-secondary border-2 border-primary premium-shadow"
                   : "bg-card/60 border border-border"
               }`}
             >
               {isRec && (
-                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
                   Más recomendado
                 </div>
               )}
 
-              <div className="mb-1">
+              <div className="mb-1 pr-14">
                 <h3 className="text-xl font-bold font-display">{t.name}</h3>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed min-h-[2.5rem]">
                   {t.tagline}
@@ -53,11 +53,11 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                   €{t.price}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  {t.interval === "one_time" ? "/12 sem" : "/mes"}
+                  {t.interval === "one_time" ? "/12 sem" : " al mes"}
                 </span>
               </div>
-               <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
-                 <Sparkles className="w-3 h-3" /> Primera semana gratis
+                 <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
+                  <Sparkles className="w-3 h-3" /> 7 días para probarlo
                </div>
 
               <ul className="space-y-2.5 mb-7 flex-1">
