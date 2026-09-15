@@ -527,11 +527,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {hasAccess && (
+                {pendingTierChange && (
                   <Button
                     size="sm"
                     className="gap-2"
-                    disabled={tierSaving || !pendingTierChange}
+                    disabled={tierSaving}
                     onClick={async () => {
                       const tier = selectedTier!;
                       setTierSaving(true);
@@ -544,12 +544,13 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     }}
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Cambiar plan
+                    Cambiar plan a {(PLAN_LABEL[selectedTier!] || selectedTier!).split(" ·")[0]}
                   </Button>
                 )}
                 {!hasAccess && (
                   <Button
                     size="sm"
+                    variant={pendingTierChange ? "outline" : "default"}
                     className="gap-2"
                     disabled={tierSaving || !effectiveTier}
                     onClick={async () => {
