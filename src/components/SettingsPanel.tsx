@@ -226,8 +226,13 @@ const SettingsPanel = () => {
   const handleManageSubscription = async () => {
     setLoadingPortal(true);
     const { data, error } = await supabase.functions.invoke("customer-portal");
+    if (data?.no_customer) {
+      toast.info("Tu acceso lo gestiona tu entrenador manualmente. Escríbele por el chat para cambiar o cancelar tu plan.");
+      setLoadingPortal(false);
+      return;
+    }
     if (error || !data?.url) {
-      toast.error("Error al abrir el portal de suscripción.");
+      toast.error("No se pudo abrir la gestión de tu suscripción. Escríbele a tu entrenador por el chat y lo resuelve.");
       setLoadingPortal(false);
       return;
     }
