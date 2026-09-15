@@ -18,6 +18,9 @@ import TrainerManagement from "@/components/admin/TrainerManagement";
 import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
 import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import AdminMobileNav from "@/components/admin/AdminMobileNav";
+import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface Profile {
   user_id: string;
@@ -43,6 +46,7 @@ const Admin = () => {
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [section, setSection] = useState<AdminSection>("dashboard");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!user) return;
@@ -103,42 +107,59 @@ const Admin = () => {
   // Hide the currently-logged-in admin from every list
   const users = allUsers.filter((u) => u.user_id !== user?.id);
 
+  const sectionTitle =
+    section === "dashboard" ? "Panel general" :
+    section === "users" ? (selectedUser ? selectedUser.email : "Usuarios") :
+    section === "trainers" ? "Entrenadores" :
+    section === "reminders" ? "Recordatorios de pago" :
+    section === "exercises" ? "Biblioteca de ejercicios" :
+    section === "rules" ? "Reglas de generación" :
+    section === "landing" ? "Contenido de la landing" :
+    section === "blog" ? "Blog · Artículos SEO" :
+    section === "physiques" ? "Físicos objetivo · AI Scan" :
+    section === "payments" ? "Pagos · Stripe" :
+    section === "metrics" ? "Métricas" : "";
+
+  const handleSignOut = () => { signOut(); navigate("/"); };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AdminSidebar
-          section={section}
-          onNavigate={handleNavigate}
-          userCount={users.length}
-          onSignOut={() => { signOut(); navigate("/"); }}
-        />
+        {!isMobile && (
+          <AdminSidebar
+            section={section}
+            onNavigate={handleNavigate}
+            userCount={users.length}
+            onSignOut={handleSignOut}
+          />
+        )}
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
-          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 flex items-center px-4 gap-3">
+          {/* Cabecera móvil: logo + menú Admin */}
+          <AdminMobileHeader
+            title={sectionTitle}
+            section={section}
+            onNavigate={handleNavigate}
+            onSignOut={handleSignOut}
+          />
+
+          {/* Top bar escritorio / tablet */}
+          <header className="hidden md:flex h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 items-center px-4 gap-3">
             <SidebarTrigger />
-            <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground">
-              {section === "dashboard" && "Panel general"}
-              {section === "users" && (selectedUser ? selectedUser.email : "Usuarios")}
-              {section === "trainers" && "Entrenadores"}
-              {section === "reminders" && "Recordatorios de pago"}
-              {section === "exercises" && "Biblioteca de ejercicios"}
-              {section === "rules" && "Reglas de generación"}
-              {section === "landing" && "Contenido de la landing"}
-              {section === "blog" && "Blog · Artículos SEO"}
-              {section === "physiques" && "Físicos objetivo · AI Scan"}
-              {section === "payments" && "Pagos · Stripe"}
-              {section === "metrics" && "Métricas"}
+            <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground truncate">
+              {sectionTitle}
             </h1>
           </header>
 
-          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+          <main
+            className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[calc(5.5rem+var(--safe-bottom,0px))] md:pb-8"
+          >
             {section === "dashboard" && (
               <div className="max-w-5xl space-y-6">
                 <AdminStats users={users} />
 
                 {/* Quick actions */}
-                <div className="grid sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   <QuickAction
                     label="Planes pendientes"
                     value={users.filter(u => u.plan_status === "plan_pending").length}
@@ -284,6 +305,9 @@ const Admin = () => {
               </div>
             )}
           </main>
+
+          {/* Navegación inferior (móvil / plegable cerrado) */}
+          <AdminMobileNav section={section} onNavigate={handleNavigate} />
         </div>
       </div>
     </SidebarProvider>

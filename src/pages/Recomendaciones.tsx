@@ -160,7 +160,7 @@ const Recomendaciones = () => {
           <span><span className="font-display font-bold text-gradient">Autopilot</span> &copy; {new Date().getFullYear()}</span>
           <div className="flex gap-4">
             <Link to="/" className="hover:text-foreground">Inicio</Link>
-            <Link to="/guia-entrenamiento-casa" className="hover:text-foreground">Guía en casa</Link>
+            <Link to="/recursos" className="hover:text-foreground">Recursos</Link>
             <Link to="/legal/terminos" className="hover:text-foreground">Términos</Link>
           </div>
         </div>
