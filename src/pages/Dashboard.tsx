@@ -166,6 +166,16 @@ const Dashboard = () => {
     }
   };
 
+  // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
+  const handleUpgradeToFull = async () => {
+    const { data, error } = await supabase.functions.invoke("customer-portal");
+    if (!error && data?.url) {
+      window.open(data.url, "_blank");
+      return;
+    }
+    await handleCompletePayment("full");
+  };
+
   const handleManageSubscription = async () => {
     const { data, error } = await supabase.functions.invoke("customer-portal");
     if (data?.no_customer) {
