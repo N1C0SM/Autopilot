@@ -44,22 +44,31 @@ interface Tw {
 const PremiumTransformation = ({ contactEmail }: Props) => {
   const t = TIERS.transform;
   const [tw, setTw] = useState<Tw | null>(null);
+  const [bookingUrl, setBookingUrl] = useState("");
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("site_testimonials")
-        .select("name, result, text, photo_url, photo_before_url, photo_after_url")
-        .eq("visible", true)
-        .eq("is_12w_transformation", true)
-        .order("sort_order")
-        .limit(1)
-        .maybeSingle();
+      const [{ data }, { data: s }] = await Promise.all([
+        supabase
+          .from("site_testimonials")
+          .select("name, result, text, photo_url, photo_before_url, photo_after_url")
+          .eq("visible", true)
+          .eq("is_12w_transformation", true)
+          .order("sort_order")
+          .limit(1)
+          .maybeSingle(),
+        supabase.from("settings").select("booking_url").limit(1).maybeSingle(),
+      ]);
       if (data) setTw(data as Tw);
+      if (s) setBookingUrl((((s as any).booking_url as string) || "").trim());
     })();
   }, []);
 
   const handleContact = () => {
+    if (bookingUrl) {
+      window.open(bookingUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     const subject = encodeURIComponent("Transformación 12 semanas — solicitud de llamada");
     const body = encodeURIComponent(
       "Hola Nicolás,\n\nMe interesa la Transformación 12 semanas. Me gustaría reservar una llamada y diagnóstico gratis.\n\nGracias."
@@ -135,11 +144,11 @@ const PremiumTransformation = ({ contactEmail }: Props) => {
                 className="w-full hover-scale group"
                 onClick={handleContact}
               >
-                Hablar con un asesor
+                {bookingUrl ? "Reservar llamada gratis" : "Hablar con un asesor"}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">
-                Diagnóstico + llamada gratis.<br />
+                {bookingUrl ? "Eliges hora y recibes el enlace de videollamada por email." : "Diagnóstico + llamada gratis."}<br />
                 Plazas limitadas cada mes.
               </p>
             </div>
