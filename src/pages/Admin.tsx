@@ -18,6 +18,9 @@ import TrainerManagement from "@/components/admin/TrainerManagement";
 import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
 import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import AdminMobileNav from "@/components/admin/AdminMobileNav";
+import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface Profile {
   user_id: string;
@@ -43,6 +46,7 @@ const Admin = () => {
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [section, setSection] = useState<AdminSection>("dashboard");
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!user) return;
@@ -148,18 +152,14 @@ const Admin = () => {
           </header>
 
           <main
-            className="flex-1 min-w-0 overflow-x-hidden p-3 sm:p-5 md:p-6 lg:p-8 pb-[calc(5rem+var(--safe-bottom,0px))] md:pb-8"
-            style={{
-              paddingLeft: "max(0.75rem, var(--safe-left, 0px))",
-              paddingRight: "max(0.75rem, var(--safe-right, 0px))",
-            }}
+            className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[calc(5.5rem+var(--safe-bottom,0px))] md:pb-8"
           >
             {section === "dashboard" && (
               <div className="max-w-5xl space-y-6">
                 <AdminStats users={users} />
 
                 {/* Quick actions */}
-                <div className="grid sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   <QuickAction
                     label="Planes pendientes"
                     value={users.filter(u => u.plan_status === "plan_pending").length}
@@ -305,6 +305,9 @@ const Admin = () => {
               </div>
             )}
           </main>
+
+          {/* Navegación inferior (móvil / plegable cerrado) */}
+          <AdminMobileNav section={section} onNavigate={handleNavigate} />
         </div>
       </div>
     </SidebarProvider>
