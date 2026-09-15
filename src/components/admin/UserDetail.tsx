@@ -96,6 +96,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [trainerSaving, setTrainerSaving] = useState(false);
   const [editingOnboarding, setEditingOnboarding] = useState(false);
   const [tierSaving, setTierSaving] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<string | undefined>(undefined);
 
 
 
