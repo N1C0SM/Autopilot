@@ -310,7 +310,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     );
   }
 
-  const hasAccess = profile.payment_status === "paid" && ((profile as any).subscription_status === "active" || profile.payment_status === "paid");
+  const hasAccess = profile.payment_status === "paid";
 
   return (
     <div>
@@ -498,45 +498,49 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </SelectContent>
               </Select>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  disabled={tierSaving}
-                  onClick={async () => {
-                    const tier = ((profile as any).subscription_tier as string) || "full";
-                    const updates: any = {
-                      subscription_tier: tier,
-                      payment_status: "paid",
-                      subscription_status: "active",
-                      plan_status: profile.plan_status === "onboarding" ? "plan_pending" : profile.plan_status,
-                    };
-                    setTierSaving(true);
-                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                    setTierSaving(false);
-                    if (error) return toast.error("No se pudo activar el acceso");
-                    onUpdate(profile.user_id, updates);
-                    toast.success("Acceso gratis activado");
-                  }}
-                >
-                  {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  Activar acceso gratis
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={tierSaving}
-                  onClick={async () => {
-                    const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
-                    setTierSaving(true);
-                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                    setTierSaving(false);
-                    if (error) return toast.error("No se pudo quitar el acceso");
-                    onUpdate(profile.user_id, updates);
-                    toast.success("Acceso retirado");
-                  }}
-                >
-                  Quitar acceso
-                </Button>
+                {!hasAccess && (
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    disabled={tierSaving}
+                    onClick={async () => {
+                      const tier = ((profile as any).subscription_tier as string) || "full";
+                      const updates: any = {
+                        subscription_tier: tier,
+                        payment_status: "paid",
+                        subscription_status: "active",
+                        plan_status: profile.plan_status === "onboarding" ? "plan_pending" : profile.plan_status,
+                      };
+                      setTierSaving(true);
+                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                      setTierSaving(false);
+                      if (error) return toast.error("No se pudo activar el acceso");
+                      onUpdate(profile.user_id, updates);
+                      toast.success("Acceso gratis activado");
+                    }}
+                  >
+                    {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    Activar acceso gratis
+                  </Button>
+                )}
+                {hasAccess && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={tierSaving}
+                    onClick={async () => {
+                      const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
+                      setTierSaving(true);
+                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                      setTierSaving(false);
+                      if (error) return toast.error("No se pudo quitar el acceso");
+                      onUpdate(profile.user_id, updates);
+                      toast.success("Acceso retirado");
+                    }}
+                  >
+                    Quitar acceso
+                  </Button>
+                )}
               </div>
             </div>
           )}
