@@ -201,7 +201,7 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
               disabled={call.state !== "idle"}
               title="Videollamada dentro de Autopilot"
             >
-              <Phone className="w-4 h-4" />
+              <Video className="w-4 h-4" />
               <span className="hidden sm:inline">Videollamada</span>
             </Button>
           )}
