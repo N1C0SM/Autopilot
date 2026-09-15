@@ -11,6 +11,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "mobile:sync": "npm run build && cap sync",
+    "ios:sync": "CAP_DEV=0 npm run build && CAP_DEV=0 cap sync ios",
+    "ios:open": "CAP_DEV=0 cap open ios",
+    "ios:dev": "CAP_DEV=1 cap sync ios",
     "android:aab": "npm run mobile:sync && cd android && ./gradlew bundleRelease",
     "test:watch": "vitest",
     "assets:generate": "capacitor-assets generate --iconBackgroundColor '#090909' --iconBackgroundColorDark '#090909' --splashBackgroundColor '#090909' --splashBackgroundColorDark '#090909'"

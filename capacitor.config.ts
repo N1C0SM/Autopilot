@@ -29,8 +29,11 @@ const config: CapacitorConfig = {
       backgroundColor: "#090909",
     },
     Keyboard: {
-      resize: "body",
+      // "native" redimensiona el WebView: los inputs y la barra inferior
+      // quedan siempre por encima del teclado.
+      resize: "native",
       style: "DARK",
+      resizeOnFullScreen: true,
     },
   },
 };

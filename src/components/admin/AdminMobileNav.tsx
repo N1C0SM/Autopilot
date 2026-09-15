@@ -17,7 +17,7 @@ const TABS: { label: string; section: AdminSection; icon: typeof LayoutDashboard
 /** Barra de navegación inferior del panel admin (solo pantallas estrechas). */
 const AdminMobileNav = ({ section, onNavigate }: Props) => (
   <nav
-    className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border"
+    className="admin-mobile-nav fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border"
     style={{
       paddingBottom: "var(--safe-bottom, 0px)",
       paddingLeft: "var(--safe-left, 0px)",
