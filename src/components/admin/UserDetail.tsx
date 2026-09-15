@@ -313,13 +313,14 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="mb-6 space-y-3">
+       <div className="flex items-start gap-3 min-w-0">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold font-display truncate">{profile.email}</h1>
-          <div className="flex gap-2 mt-1">
+          <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.email}</h1>
+          <div className="flex flex-wrap gap-2 mt-1">
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.payment_status === "paid" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}`}>
               {profile.payment_status === "paid" ? "Pagado" : "Sin pagar"}
             </span>
