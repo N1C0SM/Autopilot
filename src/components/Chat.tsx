@@ -191,7 +191,22 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
               <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-bold">{mediaCount}</span>
             )}
           </button>
+          {isAdmin && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="ml-auto shrink-0 gap-1.5"
+              onClick={call.startCall}
+              disabled={call.state !== "idle"}
+              title="Videollamada dentro de Autopilot"
+            >
+              <Phone className="w-4 h-4" />
+              <span className="hidden sm:inline">Videollamada</span>
+            </Button>
+          )}
         </div>
+
 
         {/* Content */}
         {!isAdmin && activeTab === "chat" && (
