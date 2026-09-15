@@ -309,7 +309,7 @@ const Dashboard = () => {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
           <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
-          <Button variant="hero" size="lg" onClick={handleManageSubscription} className="w-full md:w-auto">Mejorar a Completo — 49€/mes</Button>
+          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Mejorar a Completo — {TIERS.full.price}€/mes</Button>
         </motion.div>
       )}
 

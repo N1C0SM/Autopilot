@@ -241,12 +241,22 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   };
 
   const autoGeneratePlan = async () => {
+    // Sin datos de onboarding el generador no puede calcular nada: avisamos en claro.
+    if (!onboarding || !onboarding.age || !onboarding.weight || !onboarding.height) {
+      toast.error("Este cliente no tiene el cuestionario completo. Rellena edad, altura, peso y objetivo en «Datos del cliente» y vuelve a intentarlo.");
+      return;
+    }
     setGenerating(true);
     const { data, error } = await supabase.functions.invoke("generate-plan", {
       body: { user_id: profile.user_id },
     });
+    const failMsg = String(error?.message || data?.error || "");
     if (error || !data?.success) {
-      toast.error("Error al generar plan automático: " + (error?.message || data?.error || "Error desconocido"));
+      toast.error(
+        /onboarding/i.test(failMsg)
+          ? "Faltan datos del cuestionario de este cliente. Complétalos en «Datos del cliente» y vuelve a generar."
+          : "No se pudo generar el plan. " + (failMsg || "Inténtalo de nuevo en unos segundos."),
+      );
       setGenerating(false);
       return;
     }
