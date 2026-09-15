@@ -148,7 +148,7 @@ const PremiumTransformation = ({ contactEmail }: Props) => {
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">
-                Diagnóstico + llamada gratis.<br />
+                {bookingUrl ? "Eliges hora y recibes el enlace de videollamada por email." : "Diagnóstico + llamada gratis."}<br />
                 Plazas limitadas cada mes.
               </p>
             </div>
