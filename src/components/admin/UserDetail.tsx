@@ -310,6 +310,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     );
   }
 
+  const hasAccess = profile.payment_status === "paid" && ((profile as any).subscription_status === "active" || profile.payment_status === "paid");
+
   return (
     <div>
       {/* Header */}
