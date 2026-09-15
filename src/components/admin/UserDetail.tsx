@@ -583,9 +583,21 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
           )}
 
-          {onboarding ? (
+          {editingOnboarding && !restricted ? (
+            <OnboardingEditor
+              userId={profile.user_id}
+              data={onboarding}
+              onSaved={(next) => { setOnboarding(next as OnboardingData); setEditingOnboarding(false); }}
+              onCancel={() => setEditingOnboarding(false)}
+            />
+          ) : onboarding ? (
             <div className="bg-card rounded-xl p-6 border border-border">
-              <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground">Datos del Onboarding</h2>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">Datos del Onboarding</h2>
+                {!restricted && (
+                  <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Editar</Button>
+                )}
+              </div>
               {(() => {
                 const av = onboarding.availability as any;
                 const sportSchedules: Record<string, { dow: number; start: string; end: string }> = av?.sport_schedules || {};
