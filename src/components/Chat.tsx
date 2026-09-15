@@ -3,11 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2 } from "lucide-react";
+import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2, Phone } from "lucide-react";
 import { toast } from "sonner";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatMediaGallery from "@/components/chat/ChatMediaGallery";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import CallOverlay from "@/components/call/CallOverlay";
+import { useVideoCall } from "@/hooks/useVideoCall";
 
 interface Message {
   id: string;
@@ -35,6 +37,14 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
   const [activeTab, setActiveTab] = useState<"chat" | "media">("chat");
   const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<{ label: string; text: string }[]>([]);
+  const call = useVideoCall(conversationUserId);
+
+  useEffect(() => {
+    if (call.error) {
+      toast.error(call.error);
+      call.clearError();
+    }
+  }, [call.error]);
 
   useEffect(() => {
     const load = async () => {
@@ -181,7 +191,22 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
               <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-bold">{mediaCount}</span>
             )}
           </button>
+          {isAdmin && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="ml-auto shrink-0 gap-1.5"
+              onClick={call.startCall}
+              disabled={call.state !== "idle"}
+              title="Videollamada dentro de Autopilot"
+            >
+              <Phone className="w-4 h-4" />
+              <span className="hidden sm:inline">Videollamada</span>
+            </Button>
+          )}
         </div>
+
 
         {/* Content */}
         {!isAdmin && activeTab === "chat" && (
@@ -271,6 +296,19 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
           </div>
         </div>
       )}
+      <CallOverlay
+        state={call.state}
+        localStream={call.localStream}
+        remoteStream={call.remoteStream}
+        micOn={call.micOn}
+        camOn={call.camOn}
+        peerName={isAdmin ? "Tu cliente" : "Tu entrenador"}
+        onAccept={call.accept}
+        onDecline={call.decline}
+        onHangup={call.hangup}
+        onToggleMic={call.toggleMic}
+        onToggleCam={call.toggleCam}
+      />
     </>
   );
 };
