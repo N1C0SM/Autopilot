@@ -103,36 +103,57 @@ const Admin = () => {
   // Hide the currently-logged-in admin from every list
   const users = allUsers.filter((u) => u.user_id !== user?.id);
 
+  const sectionTitle =
+    section === "dashboard" ? "Panel general" :
+    section === "users" ? (selectedUser ? selectedUser.email : "Usuarios") :
+    section === "trainers" ? "Entrenadores" :
+    section === "reminders" ? "Recordatorios de pago" :
+    section === "exercises" ? "Biblioteca de ejercicios" :
+    section === "rules" ? "Reglas de generación" :
+    section === "landing" ? "Contenido de la landing" :
+    section === "blog" ? "Blog · Artículos SEO" :
+    section === "physiques" ? "Físicos objetivo · AI Scan" :
+    section === "payments" ? "Pagos · Stripe" :
+    section === "metrics" ? "Métricas" : "";
+
+  const handleSignOut = () => { signOut(); navigate("/"); };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AdminSidebar
-          section={section}
-          onNavigate={handleNavigate}
-          userCount={users.length}
-          onSignOut={() => { signOut(); navigate("/"); }}
-        />
+        {!isMobile && (
+          <AdminSidebar
+            section={section}
+            onNavigate={handleNavigate}
+            userCount={users.length}
+            onSignOut={handleSignOut}
+          />
+        )}
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top bar */}
-          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 flex items-center px-4 gap-3">
+          {/* Cabecera móvil: logo + menú Admin */}
+          <AdminMobileHeader
+            title={sectionTitle}
+            section={section}
+            onNavigate={handleNavigate}
+            onSignOut={handleSignOut}
+          />
+
+          {/* Top bar escritorio / tablet */}
+          <header className="hidden md:flex h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 items-center px-4 gap-3">
             <SidebarTrigger />
-            <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground">
-              {section === "dashboard" && "Panel general"}
-              {section === "users" && (selectedUser ? selectedUser.email : "Usuarios")}
-              {section === "trainers" && "Entrenadores"}
-              {section === "reminders" && "Recordatorios de pago"}
-              {section === "exercises" && "Biblioteca de ejercicios"}
-              {section === "rules" && "Reglas de generación"}
-              {section === "landing" && "Contenido de la landing"}
-              {section === "blog" && "Blog · Artículos SEO"}
-              {section === "physiques" && "Físicos objetivo · AI Scan"}
-              {section === "payments" && "Pagos · Stripe"}
-              {section === "metrics" && "Métricas"}
+            <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground truncate">
+              {sectionTitle}
             </h1>
           </header>
 
-          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+          <main
+            className="flex-1 min-w-0 overflow-x-hidden p-3 sm:p-5 md:p-6 lg:p-8 pb-[calc(5rem+var(--safe-bottom,0px))] md:pb-8"
+            style={{
+              paddingLeft: "max(0.75rem, var(--safe-left, 0px))",
+              paddingRight: "max(0.75rem, var(--safe-right, 0px))",
+            }}
+          >
             {section === "dashboard" && (
               <div className="max-w-5xl space-y-6">
                 <AdminStats users={users} />
