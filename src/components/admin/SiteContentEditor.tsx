@@ -546,7 +546,7 @@ const SiteContentEditor = () => {
         <div>
           <h2 className="font-display font-bold">Plazas de Transformación</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Esta cifra aparece en la landing. Usa 0 para mostrar que la lista de espera está abierta.
+            Esta cifra aparece en la landing. Usa 0 cuando no queden plazas disponibles.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">

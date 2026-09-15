@@ -91,7 +91,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 border border-primary/30 mb-5">
                 <Crown className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                  {availableSlots > 0 ? `Quedan ${availableSlots} plazas este mes` : "Lista de espera abierta"}
+                  {availableSlots > 0 ? `Quedan ${availableSlots} plazas este mes` : "Sin plazas este mes"}
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold font-display mb-3">

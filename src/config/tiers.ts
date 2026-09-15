@@ -64,7 +64,7 @@ export const TIERS = {
       "Al finalizar, elige: renovar o pasar a Completo (49€/mes)",
     ],
     notIncluded: [],
-    cta: "Hablar con un asesor",
+    cta: "Solicitar mi plaza",
   },
 } as const;
 
