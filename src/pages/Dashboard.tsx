@@ -33,6 +33,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
 import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
+import WorkoutTracker from "@/components/dashboard/WorkoutTracker";
 import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { TIERS } from "@/config/tiers";
 
@@ -291,14 +292,16 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "training" && user && (
-        <Tabs defaultValue="list" className="max-w-5xl">
+        <Tabs defaultValue="workout" className="max-w-5xl">
           <div className="flex items-center gap-2 mb-4">
             <TabsList>
-              <TabsTrigger value="list">Lista</TabsTrigger>
+              <TabsTrigger value="workout">Entrenar</TabsTrigger>
+              <TabsTrigger value="list">Plan</TabsTrigger>
               <TabsTrigger value="calendar">Calendario</TabsTrigger>
             </TabsList>
-            <InfoHint text="«Lista» para entrenar hoy y marcar series. «Calendario» para ver toda tu semana de un vistazo." />
+            <InfoHint text="«Entrenar» registra pesos, repeticiones y descansos. «Plan» muestra la rutina completa. «Calendario» organiza tu semana." />
           </div>
+          <TabsContent value="workout"><WorkoutTracker userId={user.id} dayPlans={dayPlans} /></TabsContent>
           <TabsContent value="list"><TrainingPlanView dayPlans={dayPlans} /></TabsContent>
           <TabsContent value="calendar"><CalendarView dayPlans={dayPlans} /></TabsContent>
         </Tabs>

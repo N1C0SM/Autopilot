@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock,
-  Timer, TrendingUp, RotateCcw, Video,
+  Timer, TrendingUp, X, Video, Save,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -37,6 +37,8 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const [rpeOpen, setRpeOpen] = useState(false);
   const [videosByName, setVideosByName] = useState<Record<string, string>>({});
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [logsReady, setLogsReady] = useState(false);
 
   // Cargar URLs de vídeo de la biblioteca de ejercicios (mapeado por nombre)
   useEffect(() => {
@@ -55,7 +57,21 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
     })();
   }, []);
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const selectedDate = (() => {
+    const monday = new Date();
+    const day = monday.getDay();
+    monday.setDate(monday.getDate() - (day === 0 ? 6 : day - 1));
+    monday.setHours(12, 0, 0, 0);
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + DAYS_ORDER.indexOf(selectedDay));
+    return formatLocalDate(date);
+  })();
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
 
   // Auto-expand first exercise on day change
@@ -70,13 +86,14 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   // Load existing logs + previous session
   useEffect(() => {
     const loadLogs = async () => {
+      setLogsReady(false);
       // Today's logs
       const { data } = await supabase
         .from("workout_logs")
         .select("exercise_name, sets_completed")
         .eq("user_id", userId)
         .eq("day_label", selectedDay)
-        .eq("logged_at", todayStr);
+        .eq("logged_at", selectedDate);
 
       if (data && data.length > 0) {
         const logs: Record<string, SetLog[]> = {};
@@ -104,7 +121,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
         .select("exercise_name, sets_completed, logged_at")
         .eq("user_id", userId)
         .eq("day_label", selectedDay)
-        .lt("logged_at", todayStr)
+        .lt("logged_at", selectedDate)
         .order("logged_at", { ascending: false })
         .limit(20);
 
@@ -120,9 +137,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
       } else {
         setPreviousLogs({});
       }
+      setLogsReady(true);
     };
     loadLogs();
-  }, [selectedDay, userId, todayStr]);
+  }, [selectedDay, selectedDate, userId, currentPlan]);
 
   // Rest timer countdown
   useEffect(() => {
@@ -160,32 +178,43 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   };
 
   const parseRestSeconds = (rest: string): number => {
-    const match = rest.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 60;
+    const values = rest.match(/\d+/g)?.map(Number) || [];
+    if (values.length === 0) return 60;
+    const value = values.length > 1 ? values[values.length - 1] : values[0];
+    return /min/i.test(rest) ? value * 60 : value;
   };
 
   const persistLogs = async (rpe?: number) => {
-    await supabase
-      .from("workout_logs")
-      .delete()
-      .eq("user_id", userId)
-      .eq("day_label", selectedDay)
-      .eq("logged_at", todayStr);
-
     const rows = Object.entries(exerciseLogs).map(([name, sets]) => ({
       user_id: userId,
       day_label: selectedDay,
       exercise_name: name,
       sets_completed: JSON.parse(JSON.stringify(sets)),
-      logged_at: todayStr,
+      logged_at: selectedDate,
       rpe: rpe ?? null,
     }));
 
     if (rows.length > 0) {
-      const { error } = await supabase.from("workout_logs").insert(rows);
+      const { error } = await supabase.from("workout_logs").upsert(rows, {
+        onConflict: "user_id,day_label,logged_at,exercise_name",
+      });
       if (error) throw error;
     }
   };
+
+  // El gimnasio no siempre tiene buena cobertura: guarda silenciosamente tras cada cambio.
+  useEffect(() => {
+    if (!logsReady || Object.keys(exerciseLogs).length === 0) return;
+    const timeout = window.setTimeout(async () => {
+      try {
+        await persistLogs();
+        setSavedAt(new Date());
+      } catch {
+        // El botón manual sigue disponible si la conexión falla.
+      }
+    }, 800);
+    return () => window.clearTimeout(timeout);
+  }, [exerciseLogs, logsReady, selectedDay, selectedDate]);
 
   const detectAndSavePRs = async () => {
     // For each exercise with weight > 0, find best (weight, reps) and upsert
@@ -230,7 +259,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
           weight: parseFloat(best.weight),
           reps: best.reps,
           estimated_1rm: Math.round(bestE1RM * 10) / 10,
-          achieved_at: todayStr,
+          achieved_at: selectedDate,
         });
       }
     }
@@ -269,7 +298,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
       await supabase.from("day_completions").upsert({
         user_id: userId,
         day_label: selectedDay,
-        completed_at: todayStr,
+        completed_at: selectedDate,
         rpe,
       });
       await detectAndSavePRs();
@@ -286,9 +315,9 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      {/* Ayuda general */}
-      <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 mb-2 text-[11px] text-muted-foreground">
         <span>Elige el día y registra tus series</span>
+        {savedAt && <span className="flex items-center gap-1"><Save className="w-3 h-3" /> Guardado automático</span>}
         <InfoHint text="🏋️ = día de gimnasio · 🏃 = actividad · sin icono = descanso. El día de hoy aparece resaltado. Puedes registrar cualquier día de la semana." />
       </div>
       {/* Day selector pills */}
@@ -407,7 +436,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                     onClick={() => setRestTimer(null)}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </motion.div>
@@ -616,7 +645,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                 ? "Guardando..."
                 : progressPercent === 100
                 ? "✅ Completar entrenamiento"
-                : `Guardar progreso (${completedSets}/${totalSets})`}
+                : `Guardar ahora (${completedSets}/${totalSets})`}
             </Button>
           </div>
         </div>
