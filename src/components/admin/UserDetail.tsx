@@ -503,23 +503,21 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   {hasAccess ? "Cambiar plan" : "Elegir plan"}
                 </div>
               <Select
-                value={((profile as any).subscription_tier as string) || "__none__"}
-                onValueChange={async (v) => {
-                  const tier = v === "__none__" ? null : v;
+                value={((profile as any).subscription_tier as string) || undefined}
+                onValueChange={async (tier) => {
                   setTierSaving(true);
                   const { error } = await supabase.from("profiles").update({ subscription_tier: tier }).eq("user_id", profile.user_id);
                   setTierSaving(false);
                   if (error) return toast.error("No se pudo cambiar el plan");
                   onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
-                  toast.success(tier ? `Plan cambiado a ${PLAN_LABEL[tier] || tier}` : "Plan quitado");
+                  toast.success(`Plan cambiado a ${PLAN_LABEL[tier] || tier}`);
                 }}
                 disabled={tierSaving}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Sin plan" />
+                  <SelectValue placeholder="Elige un plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— Sin plan —</SelectItem>
                   <SelectItem value="training">Entrenamiento (29€/mes)</SelectItem>
                   <SelectItem value="full">Completo (49€/mes)</SelectItem>
                   <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
