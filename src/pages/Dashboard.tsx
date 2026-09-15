@@ -235,7 +235,7 @@ const Dashboard = () => {
       {/* Unpaid state — shown on all sections EXCEPT settings */}
       {paymentStatus === "unpaid" && section !== "settings" && section !== "chat" && (() => {
         const paywallContent: Record<MobileTab, { icon: React.ReactNode; title: string; description: string; cta: string }> = {
-          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti. Chat con tu entrenador incluido.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
+          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Un entrenador prepara tu plan", description: "Un entrenador real revisa tus datos y te prepara el entrenamiento y la nutrición. Tú no tienes que montar nada.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${monthlyLabel()}` },
           training: { icon: <Dumbbell className="w-8 h-8 text-primary" />, title: "Tu rutina te está esperando", description: "Ejercicios, series y descansos diseñados para tus objetivos. Actualizado cada semana por tu entrenador.", cta: "Desbloquear mi entrenamiento" },
           nutrition: { icon: <UtensilsCrossed className="w-8 h-8 text-primary" />, title: "Come según tu objetivo", description: "Plan de comidas con macros calculados para ti. Sin recetas genéricas, todo personalizado.", cta: "Desbloquear mi nutrición" },
           chat: { icon: <MessageCircle className="w-8 h-8 text-primary" />, title: "Habla con tu entrenador", description: "Resuelve dudas, ajusta tu plan y recibe feedback directo. Siempre disponible.", cta: "Activar chat con entrenador" },
