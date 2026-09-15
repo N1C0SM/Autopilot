@@ -56,7 +56,7 @@ const TrainersSection = () => {
               Entrenadores <span className="text-gradient italic font-display">verificados</span>
             </h2>
             <p className="text-muted-foreground mt-5 max-w-lg mx-auto text-base sm:text-lg leading-relaxed">
-              Personas reales que diseñan, ajustan y responden tu plan cada semana. Sin bots, sin plantillas.
+              Personas reales que preparan tu plan, hablan contigo y lo ajustan cada semana. La IA solo apoya el análisis inicial.
             </p>
             <p className="text-sm text-foreground/80 mt-4 max-w-xl mx-auto leading-relaxed">
               <span className="text-primary font-semibold">Nicolás</span> asigna y supervisa cada caso.{" "}

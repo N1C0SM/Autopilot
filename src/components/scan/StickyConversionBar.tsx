@@ -31,14 +31,14 @@ export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
               <Zap className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold truncate">Tu plan personalizado · 1ª semana gratis</div>
+              <div className="text-xs font-semibold truncate">Plan preparado por tu entrenador · 1ª semana gratis</div>
               <div className="text-[10px] text-muted-foreground truncate">Desde 29€/mes · no se cobra hasta el día 8</div>
             </div>
             <button
               onClick={onCta}
               className="flex-shrink-0 inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
             >
-              Empezar
+              Elegir plan
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

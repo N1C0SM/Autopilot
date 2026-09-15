@@ -73,7 +73,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
           ¿Quieres una transformación más seria?
         </h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-4 max-w-xl mx-auto leading-relaxed">
-          12 semanas estructuradas con un entrenador asignado, ajustes semanales y comparativa antes/después. Para quien quiere un cambio visible, no probar.
+          Un entrenador real dirige tus 12 semanas: prepara entrenamiento y nutrición, habla contigo y realiza los ajustes semanales.
         </p>
       </div>
 
@@ -133,7 +133,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">
-                Diagnóstico y llamada inicial dentro de Autopilot.<br />
+                 Análisis inicial y llamada con tu entrenador dentro de Autopilot.<br />
                 Sin permanencia después de las 12 semanas.
               </p>
             </div>

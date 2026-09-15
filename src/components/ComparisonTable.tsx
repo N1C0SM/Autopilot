@@ -6,8 +6,8 @@ type Row = { label: string; apps: boolean | string; coach: boolean | string; aut
 const ROWS: Row[] = [
   { label: "Diagnóstico personalizado", apps: false, coach: true, autopilot: true },
   { label: "Plan adaptado a tu nivel", apps: "Plantillas", coach: true, autopilot: true },
-  { label: "Persona real detrás", apps: false, coach: true, autopilot: true },
-  { label: "Ajustes según tu semana", apps: false, coach: "Limitado", autopilot: true },
+  { label: "Plan preparado por un entrenador real", apps: false, coach: true, autopilot: true },
+  { label: "Ajustes hechos por tu entrenador", apps: false, coach: "Limitado", autopilot: true },
   { label: "Encaje en tus horarios", apps: true, coach: false, autopilot: true },
   { label: "Coste mensual", apps: "10–20€", coach: "200–500€", autopilot: "desde 29€" },
 ];

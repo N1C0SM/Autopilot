@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
 const STEPS = [
-  { icon: Brain, title: "La IA detecta tus prioridades físicas", desc: "Postura, simetría, masa muscular y zonas con mayor margen de mejora." },
-  { icon: UserCheck, title: "Un entrenador revisa tu caso", desc: "Yo leo tu diagnóstico, tu objetivo y tus horarios reales." },
-  { icon: ClipboardList, title: "Recibes un plan adaptado", desc: "Entrenamiento y nutrición a medida de tu nivel, material y disponibilidad." },
-  { icon: Repeat, title: "Cada semana se ajusta", desc: "El plan evoluciona contigo según resultados, sensaciones y agenda." },
+  { icon: Brain, title: "La IA apoya el análisis inicial", desc: "Señala prioridades visibles; no prepara ni reorganiza tu entrenamiento." },
+  { icon: UserCheck, title: "Tu entrenador estudia tu caso", desc: "Revisa el análisis, tu objetivo, tus horarios y habla contigo." },
+  { icon: ClipboardList, title: "Tu entrenador prepara el plan", desc: "Entrenamiento a tu nivel y material; nutrición personalizada según el plan elegido." },
+  { icon: Repeat, title: "Tu entrenador hace los ajustes", desc: "Adapta el plan según tus avances, sensaciones y agenda." },
 ];
 
 const PostScanFlow = () => {
@@ -20,8 +20,8 @@ const PostScanFlow = () => {
             Qué pasa después del scan
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-            Tu diagnóstico se convierte{" "}
-            <span className="text-gradient">en un plan</span>
+            Del análisis inicial{" "}
+            <span className="text-gradient">al seguimiento con tu entrenador</span>
           </h2>
         </div>
 
@@ -58,7 +58,7 @@ const PostScanFlow = () => {
             onClick={() => navigate("/scan")}
             className="hover-scale group"
           >
-            Empezar con mi diagnóstico gratis
+             Hacer mi análisis inicial gratis
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <p className="text-[11px] text-muted-foreground mt-3">
