@@ -48,6 +48,14 @@ export default class ErrorBoundary extends Component<Props, State> {
               Ir al inicio
             </Button>
           </div>
+          <details className="mt-6 text-left">
+            <summary className="text-xs text-muted-foreground cursor-pointer">Detalles técnicos</summary>
+            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-[11px] text-muted-foreground">
+              {this.state.error?.name}: {this.state.error?.message}
+              {"\n"}
+              {this.state.error?.stack}
+            </pre>
+          </details>
         </div>
       </main>
     );
