@@ -324,6 +324,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   }
 
   const hasAccess = profile.payment_status === "paid";
+  const currentTier = ((profile as any).subscription_tier as string) || undefined;
+  const effectiveTier = selectedTier ?? currentTier;
+  const pendingTierChange = !!selectedTier && selectedTier !== currentTier;
 
   return (
     <div>
