@@ -30,6 +30,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type { DayPlan } from "@/types/training";
 import TrainingPlanForm from "./TrainingPlanForm";
 import { impersonateUser } from "@/lib/impersonate";
+import OnboardingEditor from "./OnboardingEditor";
 
 interface OnboardingData {
   age: number | null;
@@ -91,6 +92,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [trainers, setTrainers] = useState<{ user_id: string; email: string }[]>([]);
   const [assignedTrainerId, setAssignedTrainerId] = useState<string>("");
   const [trainerSaving, setTrainerSaving] = useState(false);
+  const [editingOnboarding, setEditingOnboarding] = useState(false);
+  const [tierSaving, setTierSaving] = useState(false);
 
 
 
@@ -310,13 +313,14 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="mb-6 space-y-3">
+       <div className="flex items-start gap-3 min-w-0">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold font-display truncate">{profile.email}</h1>
-          <div className="flex gap-2 mt-1">
+          <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.email}</h1>
+          <div className="flex flex-wrap gap-2 mt-1">
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.payment_status === "paid" ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"}`}>
               {profile.payment_status === "paid" ? "Pagado" : "Sin pagar"}
             </span>
@@ -325,6 +329,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </span>
           </div>
         </div>
+       </div>
+       <div className="flex flex-wrap items-center gap-2">
         {profile.payment_status === "paid" && (
           <>
             <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="shrink-0">
@@ -367,7 +373,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>}
+       </div>
       </div>
+
 
       {/* Tabs */}
       {profile.payment_status !== "paid" && (
@@ -377,30 +385,30 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         </div>
       )}
       <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className={`grid w-full bg-secondary/50 ${profile.payment_status === "paid" ? (trainingOnly ? "grid-cols-6" : "grid-cols-7") : "grid-cols-1"}`}>
-          <TabsTrigger value="info" className="text-xs gap-1.5">
+        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? "md:grid-cols-6" : "md:grid-cols-7") : "md:grid-cols-1"}`}>
+          <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
             <User2 className="w-3.5 h-3.5" /> Info
           </TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="goal" className="text-xs gap-1.5">
+              <TabsTrigger value="goal" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Target className="w-3.5 h-3.5" /> Objetivo
               </TabsTrigger>
-              <TabsTrigger value="progress" className="text-xs gap-1.5">
+              <TabsTrigger value="progress" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <TrendingUp className="w-3.5 h-3.5" /> Progreso
               </TabsTrigger>
-              <TabsTrigger value="training" className="text-xs gap-1.5">
+              <TabsTrigger value="training" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Dumbbell className="w-3.5 h-3.5" /> Entreno
               </TabsTrigger>
-              <TabsTrigger value="calendar" className="text-xs gap-1.5">
+              <TabsTrigger value="calendar" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Calendar className="w-3.5 h-3.5" /> Calendario
               </TabsTrigger>
               {!trainingOnly && (
-                <TabsTrigger value="nutrition" className="text-xs gap-1.5">
+                <TabsTrigger value="nutrition" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                   <Apple className="w-3.5 h-3.5" /> Nutrición
                 </TabsTrigger>
               )}
-              <TabsTrigger value="chat" className="text-xs gap-1.5">
+              <TabsTrigger value="chat" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <MessageCircle className="w-3.5 h-3.5" /> Chat
               </TabsTrigger>
             </>
@@ -449,6 +457,86 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               }}
             />
           </div>}
+
+          {/* Plan asignado + acceso gratis */}
+          {!restricted && (
+            <div className="bg-card rounded-xl p-5 border border-border space-y-3">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <div>
+                  <div className="font-medium text-sm">Plan del cliente</div>
+                  <div className="text-xs text-muted-foreground">
+                    Asigna cualquier plan y actívalo gratis (sin pasar por Stripe).
+                  </div>
+                </div>
+              </div>
+              <Select
+                value={((profile as any).subscription_tier as string) || "__none__"}
+                onValueChange={async (v) => {
+                  const tier = v === "__none__" ? null : v;
+                  setTierSaving(true);
+                  const { error } = await supabase.from("profiles").update({ subscription_tier: tier }).eq("user_id", profile.user_id);
+                  setTierSaving(false);
+                  if (error) return toast.error("No se pudo cambiar el plan");
+                  onUpdate(profile.user_id, { subscription_tier: tier } as Partial<Profile>);
+                  toast.success(tier ? "Plan actualizado" : "Plan quitado");
+                }}
+                disabled={tierSaving}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sin plan —</SelectItem>
+                  <SelectItem value="training">Entrenamiento (29€/mes)</SelectItem>
+                  <SelectItem value="full">Completo (49€/mes)</SelectItem>
+                  <SelectItem value="transform">Transformación 12 semanas (299€)</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  disabled={tierSaving}
+                  onClick={async () => {
+                    const tier = ((profile as any).subscription_tier as string) || "full";
+                    const updates: any = {
+                      subscription_tier: tier,
+                      payment_status: "paid",
+                      subscription_status: "active",
+                      plan_status: profile.plan_status === "onboarding" ? "plan_pending" : profile.plan_status,
+                    };
+                    setTierSaving(true);
+                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                    setTierSaving(false);
+                    if (error) return toast.error("No se pudo activar el acceso");
+                    onUpdate(profile.user_id, updates);
+                    toast.success("Acceso gratis activado");
+                  }}
+                >
+                  {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  Activar acceso gratis
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={tierSaving}
+                  onClick={async () => {
+                    const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
+                    setTierSaving(true);
+                    const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                    setTierSaving(false);
+                    if (error) return toast.error("No se pudo quitar el acceso");
+                    onUpdate(profile.user_id, updates);
+                    toast.success("Acceso retirado");
+                  }}
+                >
+                  Quitar acceso
+                </Button>
+              </div>
+            </div>
+          )}
+
 
           {/* Admin role toggle */}
           {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
@@ -500,9 +588,21 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
           )}
 
-          {onboarding ? (
+          {editingOnboarding && !restricted ? (
+            <OnboardingEditor
+              userId={profile.user_id}
+              data={onboarding}
+              onSaved={(next) => { setOnboarding(next as OnboardingData); setEditingOnboarding(false); }}
+              onCancel={() => setEditingOnboarding(false)}
+            />
+          ) : onboarding ? (
             <div className="bg-card rounded-xl p-6 border border-border">
-              <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground">Datos del Onboarding</h2>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">Datos del Onboarding</h2>
+                {!restricted && (
+                  <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Editar</Button>
+                )}
+              </div>
               {(() => {
                 const av = onboarding.availability as any;
                 const sportSchedules: Record<string, { dow: number; start: string; end: string }> = av?.sport_schedules || {};
@@ -577,8 +677,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               })()}
             </div>
           ) : (
-            <div className="bg-card rounded-xl p-8 border border-border text-center">
+            <div className="bg-card rounded-xl p-8 border border-border text-center space-y-3">
               <p className="text-sm text-muted-foreground">El usuario aún no ha completado el onboarding.</p>
+              {!restricted && (
+                <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Rellenarlo yo</Button>
+              )}
             </div>
           )}
         </TabsContent>
@@ -872,15 +975,15 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           <TabsList className={`grid w-full bg-secondary/50 ${kind === "trainer" ? "grid-cols-3" : "grid-cols-1"}`}>
             {kind === "trainer" && (
               <>
-                <TabsTrigger value="info" className="text-xs gap-1.5">
+                <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                   <User2 className="w-3.5 h-3.5" /> Info
                 </TabsTrigger>
-                <TabsTrigger value="assigned" className="text-xs gap-1.5">
+                <TabsTrigger value="assigned" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                   <Dumbbell className="w-3.5 h-3.5" /> Asignados ({assigned.length})
                 </TabsTrigger>
               </>
             )}
-            <TabsTrigger value="chat" className="text-xs gap-1.5">
+            <TabsTrigger value="chat" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
               <MessageCircle className="w-3.5 h-3.5" /> Chat
             </TabsTrigger>
           </TabsList>
