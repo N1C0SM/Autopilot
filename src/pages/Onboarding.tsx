@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap, Upload, Image as ImageIcon, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap, Upload, Image as ImageIcon, X, Crown } from "lucide-react";
 import PricingTiers from "@/components/PricingTiers";
 import PlanPreview from "@/components/PlanPreview";
 import { track } from "@/lib/analytics";
@@ -17,6 +17,7 @@ import { Link } from "react-router-dom";
 import { logConsent } from "@/lib/consents";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import { signedUrlFor } from "@/lib/storageSign";
+import { TIERS, type PlanKey } from "@/config/tiers";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -118,6 +119,15 @@ const Onboarding = () => {
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(false);
   const [goalPreviewUrl, setGoalPreviewUrl] = useState<string | null>(null);
+  const metadataPlan = user?.user_metadata?.selected_plan;
+  const storedPlan = (() => {
+    try { return sessionStorage.getItem("autopilot_selected_plan"); } catch { return null; }
+  })();
+  const selectedPlan: PlanKey | null = ["training", "full", "transform"].includes(metadataPlan)
+    ? metadataPlan as PlanKey
+    : ["training", "full", "transform"].includes(storedPlan || "")
+      ? storedPlan as PlanKey
+      : null;
   const [data, setData] = useState({
     age: "",
     height: "",
@@ -484,7 +494,35 @@ const Onboarding = () => {
             sex={data.sex}
             days={parseInt(String((data as any).availability?.days || "4")) || 4}
           />
-          <PricingTiers onSelect={goToCheckout} recommended="full" />
+           {selectedPlan === "transform" ? (
+             <div className="bg-card border border-primary/30 rounded-3xl p-7 sm:p-9 card-shadow">
+               <div className="flex items-start gap-4 mb-6">
+                 <div className="w-11 h-11 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
+                   <Crown className="w-5 h-5 text-primary" />
+                 </div>
+                 <div>
+                   <p className="text-xs font-semibold text-primary mb-1">Tu elección</p>
+                   <h2 className="text-2xl font-bold font-display">{TIERS.transform.name}</h2>
+                   <p className="text-sm text-muted-foreground mt-1">Entrenamiento, nutrición y seguimiento prioritario durante 12 semanas.</p>
+                 </div>
+               </div>
+               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pt-6 border-t border-border">
+                 <div>
+                   <span className="text-4xl font-bold font-display text-gradient">€{TIERS.transform.price}</span>
+                   <span className="text-sm text-muted-foreground ml-2">pago único</span>
+                 </div>
+                 <Button variant="hero" size="lg" onClick={() => goToCheckout("transform")} disabled={loading}>
+                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}
+                   Confirmar Transformación
+                 </Button>
+               </div>
+               <button type="button" onClick={() => { try { sessionStorage.removeItem("autopilot_selected_plan"); } catch {}; window.location.reload(); }} className="mt-5 text-xs text-muted-foreground hover:text-primary underline">
+                 Ver los planes mensuales
+               </button>
+             </div>
+           ) : (
+             <PricingTiers onSelect={goToCheckout} recommended={selectedPlan || "full"} />
+           )}
           {loading && (
             <p className="text-center text-sm text-muted-foreground mt-6">
               Preparando tu pago...

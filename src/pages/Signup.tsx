@@ -34,6 +34,11 @@ const Signup = () => {
   const { signUp } = useAuth();
 
   useEffect(() => {
+    if (!selectedPlan) return;
+    try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch {}
+  }, [selectedPlan]);
+
+  useEffect(() => {
     if (!fromScan) return;
     try {
       const raw = sessionStorage.getItem("autopilot_scan");
@@ -248,6 +253,9 @@ const Signup = () => {
             size="lg"
             className="w-full"
             onClick={async () => {
+               if (selectedPlan) {
+                 try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch {}
+               }
               const result = await signInWithApple("/onboarding");
               if (result.error) toast.error("No se pudo continuar con Apple");
             }}

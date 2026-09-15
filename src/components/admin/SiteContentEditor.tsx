@@ -55,7 +55,6 @@ const SiteContentEditor = () => {
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
   const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
-  const [bookingUrl, setBookingUrl] = useState("");
   const [transformationSlots, setTransformationSlots] = useState(10);
   const [videoUploading, setVideoUploading] = useState(false);
   const [posterUploading, setPosterUploading] = useState(false);
@@ -69,7 +68,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, booking_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -87,7 +86,6 @@ const SiteContentEditor = () => {
         app_store_url: (s as any).app_store_url || "",
         play_store_url: (s as any).play_store_url || "",
       });
-      setBookingUrl((s as any).booking_url || "");
       setTransformationSlots(Math.max(0, Number((s as any).transformation_slots ?? 10)));
       setSections({
         show_blog: (s as any).show_blog ?? true,
@@ -201,22 +199,6 @@ const SiteContentEditor = () => {
     else {
       setStores(clean);
       toast.success("Enlaces de la app actualizados");
-    }
-    setSaving(false);
-  };
-
-  const saveBooking = async () => {
-    const clean = bookingUrl.trim();
-    if (clean && !/^https?:\/\//i.test(clean)) {
-      toast.error("El enlace debe empezar por http(s)://");
-      return;
-    }
-    setSaving(true);
-    const { error } = await supabase.from("settings").update({ booking_url: clean } as any).eq("id", settingsId);
-    if (error) toast.error("Error al guardar");
-    else {
-      setBookingUrl(clean);
-      toast.success("Enlace de reserva actualizado");
     }
     setSaving(false);
   };
@@ -555,28 +537,6 @@ const SiteContentEditor = () => {
           />
           <Button size="sm" onClick={saveStores} disabled={saving}>
             {saving ? "Guardando..." : "Guardar enlaces"}
-          </Button>
-        </div>
-      </div>
-
-      {/* Enlace de reserva de llamada */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Smartphone className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Enlace para reservar la llamada (Transformación 12 semanas)</h2>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Pega tu enlace de Calendly, Cal.com o Google Calendar. El botón de la landing abrirá esa página y la videollamada se organiza ahí, fuera de Autopilot. Si lo dejas vacío, el botón abrirá un email a tu dirección de contacto.
-        </p>
-        <div className="space-y-2">
-          <Label className="text-xs">URL de reserva</Label>
-          <Input
-            placeholder="https://calendly.com/tu-usuario/llamada-30min"
-            value={bookingUrl}
-            onChange={(e) => setBookingUrl(e.target.value)}
-          />
-          <Button size="sm" onClick={saveBooking} disabled={saving}>
-            {saving ? "Guardando..." : "Guardar enlace"}
           </Button>
         </div>
       </div>
