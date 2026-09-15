@@ -15,6 +15,17 @@ export async function initNative() {
     const { SplashScreen } = await import("@capacitor/splash-screen");
     await SplashScreen.hide();
   } catch {}
+  // Con el teclado abierto ocultamos la barra inferior para que no tape
+  // el campo de texto (chat, formularios, onboarding).
+  try {
+    const { Keyboard } = await import("@capacitor/keyboard");
+    Keyboard.addListener("keyboardWillShow", () => {
+      document.body.classList.add("keyboard-open");
+    });
+    Keyboard.addListener("keyboardWillHide", () => {
+      document.body.classList.remove("keyboard-open");
+    });
+  } catch {}
 }
 
 export async function hapticTap() {

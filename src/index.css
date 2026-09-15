@@ -25,6 +25,15 @@ html, body, #root {
   }
 }
 
+/* Con el teclado abierto en nativo, la barra inferior no debe tapar el input */
+body.keyboard-open .mobile-tabbar,
+body.keyboard-open .admin-mobile-nav {
+  display: none;
+}
+body.keyboard-open main {
+  padding-bottom: 1rem !important;
+}
+
 /* FullCalendar dark theme tweaks */
 .fc-themed .fc {
   --fc-border-color: hsl(var(--border));
