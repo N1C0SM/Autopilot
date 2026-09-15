@@ -12,6 +12,7 @@ import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Lo
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
+import TransformCyclePanel from "./TransformCyclePanel";
 import CalendarView from "@/components/dashboard/CalendarView";
 import {
   AlertDialog,
@@ -408,6 +409,14 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Info */}
         <TabsContent value="info" className="space-y-6">
+          {(profile as any).subscription_tier === "transform" && (
+            <TransformCyclePanel
+              userId={profile.user_id}
+              cycleStartDate={((profile as any).cycle_start_date as string) || null}
+              renewalDecision={((profile as any).renewal_decision as string) || null}
+              disabled={restricted}
+            />
+          )}
           {/* Payment status toggle */}
           {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
             <div className="flex items-center gap-3">

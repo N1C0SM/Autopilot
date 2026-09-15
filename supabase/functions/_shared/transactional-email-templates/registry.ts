@@ -17,6 +17,7 @@ import { template as trialEnding } from './trial-ending.tsx'
 import { template as lifecycleD1 } from './lifecycle-d1.tsx'
 import { template as lifecycleD3 } from './lifecycle-d3.tsx'
 import { template as lifecycleD5 } from './lifecycle-d5.tsx'
+import { template as renewalNoAnswer } from './renewal-no-answer.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'payment-reminder': paymentReminder,
@@ -27,4 +28,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'lifecycle-d1': lifecycleD1,
   'lifecycle-d3': lifecycleD3,
   'lifecycle-d5': lifecycleD5,
+  'renewal-no-answer': renewalNoAnswer,
 }

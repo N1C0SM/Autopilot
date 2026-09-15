@@ -15,9 +15,9 @@ export const TIERS = {
     features: [
       "Plan de entrenamiento personalizado",
       "Adaptado a gimnasio, casa o material disponible",
-      "Ajustes del plan",
+      "Revisión cada 2 semanas",
       "Chat con entrenador",
-      "Seguimiento básico",
+      "Respuesta en 48h",
       "Revisión de progreso",
     ],
     notIncluded: ["Nutrición personalizada"],
@@ -39,7 +39,8 @@ export const TIERS = {
       "Ajustes nutricionales",
       "Revisión de progreso",
       "Chat con entrenador",
-      "Seguimiento humano",
+      "Revisión semanal",
+      "Respuesta en 24h",
     ],
     notIncluded: [],
     cta: "Probar Completo gratis",
@@ -57,9 +58,10 @@ export const TIERS = {
       "Nutrición durante 12 semanas",
       "Check-in semanal",
       "Revisión de fotos y medidas",
-      "Chat prioritario",
+      "Respuesta en menos de 4h",
       "Llamada inicial",
       "Ajustes semanales",
+      "Al finalizar, elige: renovar o pasar a Completo (49€/mes)",
     ],
     notIncluded: [],
     cta: "Hablar con un asesor",
@@ -69,6 +71,9 @@ export const TIERS = {
 // Alias legacy (algunos componentes antiguos lo siguen importando)
 export const TIER = TIERS.full;
 export type TierKey = "personal";
+
+// Plazas restantes del plan Transformación (editar aquí cada mes).
+export const transformacionPlazasDisponibles = 10;
 
 export const REFERRAL_COUPON_ID = "veaugRi2";
 
