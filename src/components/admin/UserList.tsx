@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PLAN_LABEL } from "@/config/tiers";
 import { Users, Search, Shield, UserCog, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
