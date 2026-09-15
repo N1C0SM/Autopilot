@@ -33,6 +33,7 @@ const Recursos = lazy(() => import("./pages/Recursos"));
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import OfflineBanner from "@/components/OfflineBanner";
+import NativeDeepLinks from "@/components/native/NativeDeepLinks";
 import { Helmet } from "react-helmet-async";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,6 +85,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NativeDeepLinks />
           <ImpersonationBanner />
           <OfflineBanner />
           <Suspense fallback={<RouteFallback />}>

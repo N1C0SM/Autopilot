@@ -32,27 +32,63 @@ serve(async (req) => {
     console.log(`[DELETE-ACCOUNT] Deleting user ${userId}`);
 
     // Delete all user data from all tables
+    const userTables = [
+      "workout_logs",
+      "day_completions",
+      "weight_logs",
+      "notifications",
+      "training_plan",
+      "nutrition_plan",
+      "onboarding",
+      "progress_photos",
+      "scan_history",
+      "personal_records",
+      "user_schedule",
+      "training_schedule_overrides",
+      "external_activities",
+      "user_consents",
+      "payment_reminders",
+      "trainer_assignments",
+      "calendar_tokens",
+      "google_calendar_connections",
+      "google_calendar_tokens",
+    ];
     await Promise.all([
-      supabaseAdmin.from("workout_logs").delete().eq("user_id", userId),
-      supabaseAdmin.from("day_completions").delete().eq("user_id", userId),
-      supabaseAdmin.from("weight_logs").delete().eq("user_id", userId),
+      ...userTables.map((t) => supabaseAdmin.from(t).delete().eq("user_id", userId)),
       supabaseAdmin.from("chat_messages").delete().eq("conversation_user_id", userId),
       supabaseAdmin.from("chat_messages").delete().eq("sender_id", userId),
-      supabaseAdmin.from("notifications").delete().eq("user_id", userId),
       supabaseAdmin.from("referrals").delete().eq("referrer_user_id", userId),
       supabaseAdmin.from("referrals").delete().eq("referred_user_id", userId),
-      supabaseAdmin.from("training_plan").delete().eq("user_id", userId),
-      supabaseAdmin.from("nutrition_plan").delete().eq("user_id", userId),
-      supabaseAdmin.from("onboarding").delete().eq("user_id", userId),
     ]);
 
-    // Delete profile, roles, storage
+    // Borra TODOS los archivos del usuario en storage (fotos de progreso, avatar)
+    const purgeBucket = async (bucket: string, prefix: string) => {
+      try {
+        const { data: files } = await supabaseAdmin.storage.from(bucket).list(prefix, { limit: 1000 });
+        if (!files?.length) return;
+        const paths: string[] = [];
+        for (const f of files) {
+          // Un nivel de subcarpetas (p.ej. progress-photos/<uid>/<scanId>/foto.jpg)
+          if (!f.id) {
+            const { data: nested } = await supabaseAdmin.storage
+              .from(bucket)
+              .list(`${prefix}/${f.name}`, { limit: 1000 });
+            nested?.forEach((n) => paths.push(`${prefix}/${f.name}/${n.name}`));
+          } else {
+            paths.push(`${prefix}/${f.name}`);
+          }
+        }
+        if (paths.length) await supabaseAdmin.storage.from(bucket).remove(paths);
+      } catch (e) {
+        console.error(`[DELETE-ACCOUNT] storage purge ${bucket}:`, (e as Error).message);
+      }
+    };
+    await Promise.all([purgeBucket("progress-photos", userId), purgeBucket("avatars", userId)]);
+
+    // Delete profile + roles
     await Promise.all([
       supabaseAdmin.from("user_roles").delete().eq("user_id", userId),
       supabaseAdmin.from("profiles").delete().eq("user_id", userId),
-      supabaseAdmin.storage.from("avatars").remove([
-        `${userId}/avatar.jpg`, `${userId}/avatar.png`, `${userId}/avatar.webp`,
-      ]),
     ]);
 
     // Delete auth user

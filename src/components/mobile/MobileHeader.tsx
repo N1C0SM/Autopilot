@@ -13,7 +13,11 @@ const MobileHeader = ({ title, profileName, profileAvatar, userId, onSettings }:
   return (
     <header
       className="fixed top-0 left-0 right-0 z-40 md:hidden bg-card/95 backdrop-blur-xl border-b border-border"
-      style={{ paddingTop: "var(--safe-top, 0px)" }}
+      style={{
+        paddingTop: "var(--safe-top, 0px)",
+        paddingLeft: "var(--safe-left, 0px)",
+        paddingRight: "var(--safe-right, 0px)",
+      }}
     >
       <div className="h-14 px-3 flex items-center gap-3">
         <button

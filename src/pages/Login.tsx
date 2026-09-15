@@ -8,7 +8,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import { signInWithApple } from "@/lib/nativeAuth";
 import { Loader2, Apple } from "lucide-react";
 
 const Login = () => {
@@ -24,9 +24,7 @@ const Login = () => {
   const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const handleApple = async () => {
-    const result = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: `${window.location.origin}${nextPath || "/dashboard"}`,
-    });
+    const result = await signInWithApple(nextPath || "/dashboard");
     if (result.error) {
       toast.error("No se pudo iniciar sesión con Apple");
     }
