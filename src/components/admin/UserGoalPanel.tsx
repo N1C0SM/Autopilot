@@ -96,7 +96,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
       const path = `${userId}/goal-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, file, { upsert: false });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("progress-photos").getPublicUrl(path);
+      const { data: signedRes } = await supabase.storage.from("progress-photos").createSignedUrl(path, 60 * 60 * 24 * 7); const pub = { publicUrl: signedRes?.signedUrl };
       const { error: updErr } = await supabase.from("onboarding").update({ goal_photo_url: pub.publicUrl }).eq("user_id", userId);
       if (updErr) throw updErr;
       setGoalUrl(pub.publicUrl);
