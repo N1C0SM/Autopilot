@@ -18,13 +18,59 @@ serve(async (req) => {
   );
 
   try {
-    const { data: settings } = await supabaseAdmin
-      .from("settings")
-      .select("payment_mode")
-      .limit(1)
-      .single();
+    const body = await req.text();
+    const signature = req.headers.get("stripe-signature");
 
-    const paymentMode = settings?.payment_mode || "test";
+    if (!signature) {
+      return new Response(JSON.stringify({ error: "Missing stripe-signature header" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Resolve the Stripe environment from the event itself (which webhook secret
+    // verifies the signature + event.livemode), never from settings.payment_mode.
+    const candidates = [
+      { mode: "live" as const, secret: Deno.env.get("STRIPE_LIVE_WEBHOOK_SECRET"), key: Deno.env.get("STRIPE_LIVE_SECRET_KEY") },
+      { mode: "test" as const, secret: Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET"), key: Deno.env.get("STRIPE_TEST_SECRET_KEY") },
+    ].filter((c) => c.secret);
+
+    if (candidates.length === 0) {
+      console.error("Stripe webhook secret not configured");
+      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const cryptoProvider = Stripe.createSubtleCryptoProvider();
+    let event: Stripe.Event | null = null;
+    let verifiedMode: "live" | "test" | null = null;
+    let lastErr = "";
+
+    for (const c of candidates) {
+      try {
+        const verifier = new Stripe(c.key || "sk_placeholder", { apiVersion: "2025-08-27.basil" });
+        event = await verifier.webhooks.constructEventAsync(
+          body, signature, c.secret!, undefined, cryptoProvider
+        );
+        verifiedMode = c.mode;
+        break;
+      } catch (err) {
+        lastErr = (err as Error).message;
+      }
+    }
+
+    if (!event || !verifiedMode) {
+      console.error("Invalid Stripe signature", lastErr);
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // event.livemode is authoritative for which API key can resolve its object IDs.
+    const paymentMode: "live" | "test" = event.livemode ? "live" : "test";
+    if (paymentMode !== verifiedMode) {
+      console.warn(`Webhook secret mode (${verifiedMode}) differs from event.livemode (${paymentMode}); using event.livemode`);
+    }
 
     const stripeKey = paymentMode === "live"
       ? Deno.env.get("STRIPE_LIVE_SECRET_KEY")
@@ -32,38 +78,6 @@ serve(async (req) => {
     if (!stripeKey) throw new Error(`Stripe ${paymentMode} secret key not configured`);
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-
-    const body = await req.text();
-    const signature = req.headers.get("stripe-signature");
-
-    const webhookSecret = paymentMode === "live"
-      ? Deno.env.get("STRIPE_LIVE_WEBHOOK_SECRET")
-      : Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
-
-    if (!webhookSecret) {
-      console.error("Stripe webhook secret not configured");
-      return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    if (!signature) {
-      return new Response(JSON.stringify({ error: "Missing stripe-signature header" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    let event: Stripe.Event;
-    try {
-      event = await stripe.webhooks.constructEventAsync(
-        body, signature, webhookSecret, undefined,
-        Stripe.createSubtleCryptoProvider()
-      );
-    } catch (err) {
-      console.error("Invalid Stripe signature", (err as Error).message);
-      return new Response(JSON.stringify({ error: "Invalid signature" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     console.log(`Received Stripe event: ${event.type}`);
 
