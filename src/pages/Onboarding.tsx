@@ -237,7 +237,7 @@ const Onboarding = () => {
         const path = `${user.id}/scan-goal-${Date.now()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, blob, { upsert: false });
         if (upErr) return;
-        const { data: pub } = supabase.storage.from("progress-photos").getPublicUrl(path);
+        const { data: signedRes } = await supabase.storage.from("progress-photos").createSignedUrl(path, 60 * 60 * 24 * 7); const pub = { publicUrl: signedRes?.signedUrl };
         update("goal_photo_url", pub.publicUrl);
         setScanPrefill((p) => (p ? { ...p, used: true } : p));
       } catch {}
@@ -1091,7 +1091,7 @@ const Onboarding = () => {
                           const path = `${user.id}/goal-${Date.now()}.${ext}`;
                           const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, file, { upsert: false });
                           if (upErr) throw upErr;
-                          const { data: pub } = supabase.storage.from("progress-photos").getPublicUrl(path);
+                          const { data: signedRes } = await supabase.storage.from("progress-photos").createSignedUrl(path, 60 * 60 * 24 * 7); const pub = { publicUrl: signedRes?.signedUrl };
                           update("goal_photo_url", pub.publicUrl);
                           toast.success("Foto subida");
                         } catch (err: any) {
