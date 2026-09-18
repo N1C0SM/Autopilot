@@ -161,29 +161,42 @@ Deno.serve(async (req) => {
     await sb.from("rate_limits").insert({ key });
 
     const { currentImage, backImage, objectiveImage } = await req.json();
-    if (!currentImage || !backImage) {
-      return new Response(JSON.stringify({ error: "Faltan las fotos de delante y/o atrás" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!currentImage && !backImage) {
+      return new Response(
+        JSON.stringify({ error: "Sube al menos una foto (de delante o de atrás) para poder analizarla" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
+    // Describimos al modelo, en orden, exactamente qué imágenes recibe.
+    const order: string[] = [];
+    if (currentImage) order.push("vista FRONTAL del usuario");
+    if (backImage) order.push("vista TRASERA del usuario");
+    if (objectiveImage) order.push("físico OBJETIVO de referencia (no es el usuario)");
+
+    const viewsText = order.map((d, i) => `imagen ${i + 1}: ${d}`).join("; ");
+    const monthsRule = objectiveImage
+      ? "Hay físico objetivo: incluye months_without_plan, months_with_plan y estimated_months como ESTIMACIONES aproximadas."
+      : "NO hay físico objetivo: omite por completo months_without_plan, months_with_plan y estimated_months, y pon similarity = 0.";
+    const coverageRule =
+      currentImage && backImage
+        ? "Tienes ambas vistas: valora cadena anterior y posterior."
+        : currentImage
+        ? "SOLO tienes la vista frontal: NO evalúes ni puntúes espalda alta, dorsales, deltoides posterior, glúteos ni isquios. Omite esos grupos de muscle_breakdown en lugar de inventarlos, y di en summary que falta la vista de espalda."
+        : "SOLO tienes la vista trasera: NO evalúes ni puntúes pecho, abdomen, bíceps ni cuádriceps desde delante. Omite esos grupos de muscle_breakdown en lugar de inventarlos, y di en summary que falta la vista frontal.";
+
     const userContent: any[] = [
       {
         type: "text",
-        text: objectiveImage
-          ? "Analiza la PRIMERA imagen (físico del usuario de FRENTE) y la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico, y compáralo con la TERCERA imagen (físico OBJETIVO / referencia). Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. DEBES rellenar months_without_plan, months_with_plan y estimated_months porque hay objetivo. Devuelve un análisis honesto pero motivador en español."
-          : "Analiza la PRIMERA imagen (físico del usuario de FRENTE) junto con la SEGUNDA imagen (mismo usuario de ESPALDA) como un solo físico. Evalúa cadena posterior (espalda, glúteos, isquios) además de la frontal. NO hay físico objetivo, por lo que NO incluyas months_without_plan, months_with_plan ni estimated_months en el JSON (omítelos por completo). Devuelve un análisis honesto pero motivador en español.",
+        text: `Recibes ${order.length} imagen(es) — ${viewsText}. ${coverageRule} ${monthsRule} Devuelve una orientación visual honesta y útil en español, sin lenguaje médico.`,
       },
-      { type: "image", image: currentImage },
-      { type: "image", image: backImage },
     ];
-    if (objectiveImage) {
-      userContent.push({ type: "image", image: objectiveImage });
-    }
+    if (currentImage) userContent.push({ type: "image", image: currentImage });
+    if (backImage) userContent.push({ type: "image", image: backImage });
+    if (objectiveImage) userContent.push({ type: "image", image: objectiveImage });
 
     const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
     const { text } = await generateText({
