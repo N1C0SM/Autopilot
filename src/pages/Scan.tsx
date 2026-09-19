@@ -103,7 +103,7 @@ const LOADING_MESSAGES = [
   "Detectando prioridades físicas…",
   "Calculando margen de mejora…",
   "Evaluando proporciones y simetría…",
-  "Comparando con miles de físicos…",
+  "Evaluando tu punto de partida…",
   "Generando tu diagnóstico personalizado…",
 ];
 
@@ -116,8 +116,6 @@ type Result = {
   estimated_months?: number;
   improvements: { label: string; priority: "Alta" | "Media" | "Baja" }[];
   summary: string;
-  percentile?: number;
-  aesthetic_age?: number;
   months_without_plan?: number;
   months_with_plan?: number;
   headline_diagnosis?: string;
@@ -713,8 +711,6 @@ const Scan = () => {
                 potential: r.potential,
                 style: r.style,
                 similarity: r.similarity,
-                percentile: r.percentile,
-                aestheticAge: r.aesthetic_age,
                 monthsWithPlan: r.months_with_plan ?? r.estimated_months,
                 monthsWithoutPlan: r.months_without_plan,
                 headline: r.headline_diagnosis ?? undefined,
@@ -877,8 +873,6 @@ const Scan = () => {
         physique: r.physique,
         style: r.style,
         similarity: r.similarity,
-        percentile: r.percentile ?? null,
-        aesthetic_age: r.aesthetic_age ?? null,
         months_with_plan: r.months_with_plan ?? r.estimated_months ?? null,
         months_without_plan: r.months_without_plan ?? null,
         emailed_to: userEmail,
@@ -899,8 +893,6 @@ const Scan = () => {
             potential: r.potential,
             style: r.style,
             similarity: r.similarity,
-            percentile: r.percentile,
-            aestheticAge: r.aesthetic_age,
             monthsWithPlan: r.months_with_plan ?? r.estimated_months,
             monthsWithoutPlan: r.months_without_plan,
             headline: r.headline_diagnosis ?? undefined,
@@ -1719,85 +1711,39 @@ const Scan = () => {
                 </motion.div>
               )}
 
-              {/* HERO STATS — datos imposibles de ChatGPT */}
+              {/* HERO STATS — tiempo estimado al objetivo (solo si hay físico objetivo) */}
               {(() => {
                 const hasObjective = !!objectiveImg || !!savedObjectiveUrl;
                 const showMonths = hasObjective && result.months_with_plan !== undefined;
-                const visibleCount =
-                  (result.percentile !== undefined ? 1 : 0) +
-                  (result.aesthetic_age !== undefined ? 1 : 0) +
-                  (showMonths ? 1 : 0);
-                if (visibleCount === 0) return null;
-                const colsClass =
-                  visibleCount >= 3
-                    ? "sm:grid-cols-3"
-                    : visibleCount === 2
-                    ? "sm:grid-cols-2 max-w-3xl"
-                    : "sm:grid-cols-1 max-w-sm";
+                if (!showMonths) return null;
                 return (
-                <div className={`mx-auto mb-8 grid ${colsClass} gap-3 max-w-5xl`}>
-                  {result.percentile !== undefined && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 text-center glow-shadow"
-                    >
-                      <Users className="w-4 h-4 text-primary mx-auto mb-2" />
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                        Tu percentil
-                      </div>
-                      <div className="text-4xl font-bold font-display text-gradient">
-                        Top {100 - result.percentile}%
-                      </div>
+                <div className="mx-auto mb-8 grid sm:grid-cols-1 gap-3 max-w-sm">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 text-center glow-shadow"
+                  >
+                    <Clock className="w-4 h-4 text-primary mx-auto mb-2" />
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                      A tu objetivo
+                    </div>
+                    <div className="text-4xl font-bold font-display text-gradient">
+                      {Math.max(1, result.months_with_plan!)}m
+                    </div>
+                    {result.months_without_plan !== undefined && (
                       <div className="text-[11px] text-muted-foreground mt-1">
-                        vs hombres de tu edad
+                        vs <span className="line-through">{Math.max(2, result.months_without_plan)}m</span> sin plan
                       </div>
-                    </motion.div>
-                  )}
-                  {result.aesthetic_age !== undefined && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5 text-center"
-                    >
-                      <Eye className="w-4 h-4 text-primary mx-auto mb-2" />
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                        Edad estética
-                      </div>
-                      <div className="text-4xl font-bold font-display text-gradient">
-                        {result.aesthetic_age}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground mt-1">
-                        años percibidos
-                      </div>
-                    </motion.div>
-                  )}
-                  {showMonths && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.3 }}
-                      className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 text-center glow-shadow"
-                    >
-                      <Clock className="w-4 h-4 text-primary mx-auto mb-2" />
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
-                        A tu objetivo
-                      </div>
-                      <div className="text-4xl font-bold font-display text-gradient">
-                        {Math.max(1, result.months_with_plan)}m
-                      </div>
-                      {result.months_without_plan !== undefined && (
-                        <div className="text-[11px] text-muted-foreground mt-1">
-                          vs <span className="line-through">{Math.max(2, result.months_without_plan)}m</span> sin plan
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
+                    )}
+                  </motion.div>
                 </div>
                 );
               })()}
+
+              <p className="max-w-2xl mx-auto -mt-4 mb-8 text-[11px] text-muted-foreground text-center px-4">
+                Orientación visual aproximada. No sustituye una valoración profesional.
+              </p>
 
               {result.bottleneck && (
                 <div className="max-w-3xl mx-auto mb-10">
@@ -2533,12 +2479,6 @@ const Scan = () => {
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
-                    {result.percentile !== undefined && (
-                      <StatBox label="Percentil" value={`Top ${100 - result.percentile}%`} sub="vs población" />
-                    )}
-                    {result.aesthetic_age !== undefined && (
-                      <StatBox label="Edad estética" value={`${result.aesthetic_age}`} sub="años percibidos" />
-                    )}
                     {result.months_with_plan !== undefined && result.months_with_plan > 0 && (
                       <StatBox
                         label="A mi objetivo"
