@@ -116,6 +116,9 @@ type Result = {
   estimated_months?: number;
   improvements: { label: string; priority: "Alta" | "Media" | "Baja" }[];
   summary: string;
+  confidence?: number;
+  views_detected?: string[];
+  photo_quality_notes?: string[];
   months_without_plan?: number;
   months_with_plan?: number;
   headline_diagnosis?: string;
@@ -1336,13 +1339,17 @@ const Scan = () => {
                   variant="hero"
                   size="xl"
                   onClick={() => setPhase("analyzing")}
-                  disabled={!currentImg || !backImg}
+                  disabled={!currentImg && !backImg}
                   className="hover-scale group min-w-[280px]"
                 >
                   <ScanLine className="w-5 h-5 mr-1" />
                   Analizar mi físico
                   <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </Button>
+                <p className="text-xs text-muted-foreground text-center max-w-md">
+                  Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos
+                  fotos el análisis es más completo.
+                </p>
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
