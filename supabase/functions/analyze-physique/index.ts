@@ -115,9 +115,9 @@ const AnalysisSchema = z.object({
   }).partial().optional(),
 
   proportions: z.object({
-    shoulder_to_waist_ratio: z.number().min(1).max(2).optional(), // ~1.4–1.7 ideal
-    v_taper_score: z.number().min(0).max(10).optional(),
-    symmetry_score: z.number().min(0).max(10).optional(),
+    shoulder_to_waist_ratio: clampNum(1, 2), // ~1.4–1.7 ideal
+    v_taper_score: clampNum(0, 10),
+    symmetry_score: clampNum(0, 10),
     upper_lower_balance: z.string().optional(), // "tren superior dominante"…
     weakest_link: z.string().optional(),
   }).partial().optional(),
