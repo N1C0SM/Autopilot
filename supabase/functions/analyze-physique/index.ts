@@ -65,7 +65,7 @@ const AnalysisSchema = z.object({
   bottleneck: z.string().optional(),
   inferred_goal: z.string().optional(),
   inferred_focus: z.string().optional(),
-  inferred_intensity: z.number().min(1).max(10).optional(),
+  inferred_intensity: clampNum(1, 10),
   inferred_specific_goals: z.array(z.string()).max(5).optional(),
   locked_insights: z.array(z.object({
     label: z.string(),
