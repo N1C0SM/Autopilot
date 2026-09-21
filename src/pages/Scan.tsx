@@ -45,7 +45,8 @@ import poseBackImg from "@/assets/pose-back.png";
 import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
-import ExitIntentModal from "@/components/scan/ExitIntentModal";
+import ScanCoverageCard from "@/components/scan/ScanCoverageCard";
+import ScanRecommendations from "@/components/scan/ScanRecommendations";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
@@ -582,8 +583,8 @@ const Scan = () => {
   }, []);
 
   const handleAnalyze = async () => {
-    if (!currentImg || !backImg) {
-      toast.error("Sube la foto de delante y la de atrás");
+    if (!currentImg && !backImg) {
+      toast.error("Sube al menos una foto: de delante, de atrás o las dos");
       return;
     }
     setLoading(true);
@@ -656,7 +657,7 @@ const Scan = () => {
 
   // Kick off analysis when entering "analyzing" phase
   useEffect(() => {
-    if (phase === "analyzing" && !loading && !pendingResult && currentImg && backImg) {
+    if (phase === "analyzing" && !loading && !pendingResult && (currentImg || backImg)) {
       handleAnalyze();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -992,10 +993,7 @@ const Scan = () => {
       {result && !isPaid && (
         // Sólo embudo para visitantes anónimos: usuarios logueados ven modo cuenta.
         !user &&
-        <>
-          <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
-          <ExitIntentModal onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
-        </>
+        <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
       )}
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
@@ -1763,27 +1761,21 @@ const Scan = () => {
                       <div className="text-sm font-medium">{result.bottleneck}</div>
                     </div>
                   </div>
-                  <Link
-                    to="/recursos"
-                    className="mt-3 group block rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.08] via-card/60 to-card/60 px-5 py-4 hover:border-primary/60 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-0.5">
-                          Recomendación
-                        </div>
-                        <p className="text-sm leading-snug">
-                          Detectamos que tu punto débil es <span className="font-semibold">{result.bottleneck}</span> — en nuestras <span className="font-semibold">guías</span> tienes material dedicado a esto.
-                        </p>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-primary shrink-0 transition-transform group-hover:translate-x-1" />
-                    </div>
-                  </Link>
                 </div>
               )}
+
+              <ScanCoverageCard
+                hasFront={!!currentImg}
+                hasBack={!!backImg}
+                confidence={result.confidence}
+                photoQualityNotes={result.photo_quality_notes}
+              />
+
+              <ScanRecommendations
+                bottleneck={result.bottleneck}
+                improvements={result.improvements}
+                monthsWithPlan={result.months_with_plan}
+              />
 
               <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
                 {/* Photos + similarity */}
