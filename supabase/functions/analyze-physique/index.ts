@@ -4,13 +4,37 @@ import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { z } from "npm:zod";
 
+// El modelo a veces devuelve "12-15%", "~14", "no estimable" o null.
+// Extraemos el primer número válido; si no hay ninguno → undefined.
+const toNum = (v: unknown): number | undefined => {
+  if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+  if (typeof v === "string") {
+    const m = v.replace(",", ".").match(/-?\d+(\.\d+)?/);
+    if (!m) return undefined;
+    const n = Number(m[0]);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+};
+const optNum = (schema: z.ZodTypeAny) => z.preprocess((v) => toNum(v), schema.optional());
+const reqNum = (fallback: number, schema: z.ZodTypeAny) =>
+  z.preprocess((v) => toNum(v) ?? fallback, schema);
+
+// Recorta al rango permitido en vez de fallar si el modelo se sale.
+const clampNum = (min: number, max: number) =>
+  z.preprocess((v) => {
+    const n = toNum(v);
+    if (n == null) return undefined;
+    return Math.min(max, Math.max(min, n));
+  }, z.number().min(min).max(max).optional());
+
 const AnalysisSchema = z.object({
-  attractiveness: z.preprocess((v) => (v == null ? 5 : Number(v)), z.number().min(0).max(10)),
-  potential: z.preprocess((v) => (v == null ? 7 : Number(v)), z.number().min(0).max(10)),
-  physique: z.preprocess((v) => (v == null ? 5 : Number(v)), z.number().min(0).max(10)),
-  style: z.preprocess((v) => (v == null ? 5 : Number(v)), z.number().min(0).max(10)),
-  similarity: z.preprocess((v) => (v == null ? 0 : Number(v)), z.number().min(0).max(100)),
-  estimated_months: z.number().min(0).max(120).optional(),
+  attractiveness: reqNum(5, z.number().min(0).max(10)),
+  potential: reqNum(7, z.number().min(0).max(10)),
+  physique: reqNum(5, z.number().min(0).max(10)),
+  style: reqNum(5, z.number().min(0).max(10)),
+  similarity: reqNum(0, z.number().min(0).max(100)),
+  estimated_months: optNum(z.number().min(0).max(120)),
   improvements: z.preprocess(
     (val) => {
       if (!Array.isArray(val)) return val;
@@ -32,16 +56,16 @@ const AnalysisSchema = z.object({
     })).min(1).max(6),
   ),
   summary: z.string(),
-  confidence: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(0).max(100).optional()),
+  confidence: clampNum(0, 100),
   views_detected: z.array(z.string()).max(3).optional(),
   photo_quality_notes: z.array(z.string()).max(4).optional(),
-  months_without_plan: z.number().min(0).max(120).optional(),
-  months_with_plan: z.number().min(0).max(120).optional(),
+  months_without_plan: optNum(z.number().min(0).max(120)),
+  months_with_plan: optNum(z.number().min(0).max(120)),
   headline_diagnosis: z.string().optional(),
   bottleneck: z.string().optional(),
   inferred_goal: z.string().optional(),
   inferred_focus: z.string().optional(),
-  inferred_intensity: z.number().min(1).max(10).optional(),
+  inferred_intensity: clampNum(1, 10),
   inferred_specific_goals: z.array(z.string()).max(5).optional(),
   locked_insights: z.array(z.object({
     label: z.string(),
@@ -51,9 +75,9 @@ const AnalysisSchema = z.object({
 
   // ===== Capa clínica nueva — diferencia clara vs ChatGPT =====
   body_composition: z.object({
-    body_fat_pct: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(3).max(50).optional()),
-    lean_mass_kg: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(20).max(120).optional()),
-    weight_kg: z.preprocess((v) => (v == null ? undefined : Number(v)), z.number().min(35).max(180).optional()),
+    body_fat_pct: clampNum(3, 50),
+    lean_mass_kg: clampNum(20, 120),
+    weight_kg: clampNum(35, 180),
     somatotype: z.string().nullish().transform((v) => v ?? undefined),
     frame_size: z.string().nullish().transform((v) => v ?? undefined),
     fat_distribution: z.string().nullish().transform((v) => v ?? undefined),
@@ -68,19 +92,19 @@ const AnalysisSchema = z.object({
           if (v && typeof v === "object") {
             return {
               group: (v as any).group ?? group,
-              score: Number((v as any).score ?? 5),
+              score: toNum((v as any).score) ?? 5,
               verdict: String((v as any).verdict ?? (v as any).note ?? ""),
             };
           }
-          return { group, score: Number(v) || 5, verdict: "" };
+          return { group, score: toNum(v) ?? 5, verdict: "" };
         });
       }
       return val;
     },
     z.array(z.object({
       group: z.string(),
-      score: z.number().min(0).max(10),
-      verdict: z.string(),
+      score: reqNum(5, z.number().min(0).max(10)),
+      verdict: z.string().nullish().transform((v) => v ?? ""),
     })).max(12).optional(),
   ),
 
@@ -91,9 +115,9 @@ const AnalysisSchema = z.object({
   }).partial().optional(),
 
   proportions: z.object({
-    shoulder_to_waist_ratio: z.number().min(1).max(2).optional(), // ~1.4–1.7 ideal
-    v_taper_score: z.number().min(0).max(10).optional(),
-    symmetry_score: z.number().min(0).max(10).optional(),
+    shoulder_to_waist_ratio: clampNum(1, 2), // ~1.4–1.7 ideal
+    v_taper_score: clampNum(0, 10),
+    symmetry_score: clampNum(0, 10),
     upper_lower_balance: z.string().optional(), // "tren superior dominante"…
     weakest_link: z.string().optional(),
   }).partial().optional(),
@@ -101,12 +125,12 @@ const AnalysisSchema = z.object({
   genetic_markers: z.array(z.string()).max(5).optional(),
 
   protocol: z.object({
-    training_days_per_week: z.number().min(2).max(7).optional(),
-    weekly_sets_priority: z.number().min(8).max(30).optional(),
-    weekly_sets_maintenance: z.number().min(4).max(20).optional(),
-    calorie_adjustment_kcal: z.number().min(-1000).max(1000).optional(),
-    protein_g_per_kg: z.number().min(1).max(3).optional(),
-    cardio_minutes_per_week: z.number().min(0).max(600).optional(),
+    training_days_per_week: clampNum(2, 7),
+    weekly_sets_priority: clampNum(8, 30),
+    weekly_sets_maintenance: clampNum(4, 20),
+    calorie_adjustment_kcal: clampNum(-1000, 1000),
+    protein_g_per_kg: clampNum(1, 3),
+    cardio_minutes_per_week: clampNum(0, 600),
     key_lifts: z.array(z.string()).max(6).optional(),
     avoid: z.array(z.string()).max(4).optional(),
   }).partial().optional(),
