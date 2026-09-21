@@ -45,7 +45,8 @@ import poseBackImg from "@/assets/pose-back.png";
 import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
-import ExitIntentModal from "@/components/scan/ExitIntentModal";
+import ScanCoverageCard from "@/components/scan/ScanCoverageCard";
+import ScanRecommendations from "@/components/scan/ScanRecommendations";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
@@ -582,8 +583,8 @@ const Scan = () => {
   }, []);
 
   const handleAnalyze = async () => {
-    if (!currentImg || !backImg) {
-      toast.error("Sube la foto de delante y la de atrás");
+    if (!currentImg && !backImg) {
+      toast.error("Sube al menos una foto: de delante, de atrás o las dos");
       return;
     }
     setLoading(true);
@@ -656,7 +657,7 @@ const Scan = () => {
 
   // Kick off analysis when entering "analyzing" phase
   useEffect(() => {
-    if (phase === "analyzing" && !loading && !pendingResult && currentImg && backImg) {
+    if (phase === "analyzing" && !loading && !pendingResult && (currentImg || backImg)) {
       handleAnalyze();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -992,10 +993,7 @@ const Scan = () => {
       {result && !isPaid && (
         // Sólo embudo para visitantes anónimos: usuarios logueados ven modo cuenta.
         !user &&
-        <>
-          <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
-          <ExitIntentModal onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
-        </>
+        <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
       )}
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
