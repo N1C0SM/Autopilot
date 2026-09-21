@@ -103,8 +103,8 @@ const AnalysisSchema = z.object({
     },
     z.array(z.object({
       group: z.string(),
-      score: z.number().min(0).max(10),
-      verdict: z.string(),
+      score: reqNum(5, z.number().min(0).max(10)),
+      verdict: z.string().nullish().transform((v) => v ?? ""),
     })).max(12).optional(),
   ),
 
