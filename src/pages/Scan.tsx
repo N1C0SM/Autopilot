@@ -1058,14 +1058,14 @@ const Scan = () => {
                   <span className="text-gradient">IA. Gratis.</span>
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  Sube una foto de delante y otra de atrás (y opcionalmente un físico de referencia). La IA te dice qué te limita y cuánto te falta para llegar.
+                  Sube una foto de delante, una de atrás o las dos — con una sola ya funciona, con las dos el análisis es más completo. La IA te dice qué te limita y cómo mejorar.
                 </p>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-6">
                 <Dropzone
                   label="Foto de delante"
-                  hint="Cuerpo completo · obligatoria"
+                  hint="Cuerpo completo"
                   image={currentImg}
                   onFile={async (f) => setCurrentImg(await fileToDataUrl(f))}
                   onClear={() => setCurrentImg(null)}
@@ -1073,7 +1073,7 @@ const Scan = () => {
                 />
                 <Dropzone
                   label="Foto de atrás"
-                  hint="Cuerpo completo · obligatoria"
+                  hint="Cuerpo completo · opcional"
                   image={backImg}
                   onFile={async (f) => setBackImg(await fileToDataUrl(f))}
                   onClear={() => setBackImg(null)}
@@ -1793,18 +1793,18 @@ const Scan = () => {
                         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Actual</div>
                       </div>
                     </div>
-                    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-primary/40 glow-shadow">
+                    <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden ${objectiveImg ? "border border-primary/40 glow-shadow" : "border border-dashed border-border"}`}>
                       {objectiveImg ? (
                         <img src={objectiveImg} alt="objetivo" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-card flex items-center justify-center p-4 text-center">
+                        <div className="w-full h-full bg-card/50 flex items-center justify-center p-4 text-center">
                           <div className="text-xs text-muted-foreground">
-                            Sube una foto de referencia para una comparación más precisa
+                            Opcional · sube una foto de referencia para una comparación más precisa
                           </div>
                         </div>
                       )}
                       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                        <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo</div>
+                        <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo{objectiveImg ? "" : " · opcional"}</div>
                       </div>
                     </div>
                   </div>
