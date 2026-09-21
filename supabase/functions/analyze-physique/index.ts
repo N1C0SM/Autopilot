@@ -4,13 +4,37 @@ import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { z } from "npm:zod";
 
+// El modelo a veces devuelve "12-15%", "~14", "no estimable" o null.
+// Extraemos el primer número válido; si no hay ninguno → undefined.
+const toNum = (v: unknown): number | undefined => {
+  if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+  if (typeof v === "string") {
+    const m = v.replace(",", ".").match(/-?\d+(\.\d+)?/);
+    if (!m) return undefined;
+    const n = Number(m[0]);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  return undefined;
+};
+const optNum = (schema: z.ZodTypeAny) => z.preprocess((v) => toNum(v), schema.optional());
+const reqNum = (fallback: number, schema: z.ZodTypeAny) =>
+  z.preprocess((v) => toNum(v) ?? fallback, schema);
+
+// Recorta al rango permitido en vez de fallar si el modelo se sale.
+const clampNum = (min: number, max: number) =>
+  z.preprocess((v) => {
+    const n = toNum(v);
+    if (n == null) return undefined;
+    return Math.min(max, Math.max(min, n));
+  }, z.number().min(min).max(max).optional());
+
 const AnalysisSchema = z.object({
-  attractiveness: z.preprocess((v) => (v == null ? 5 : Number(v)), z.number().min(0).max(10)),
-  potential: z.preprocess((v) => (v == null ? 7 : Number(v)), z.number().min(0).max(10)),
-  physique: z.preprocess((v) => (v == null ? 5 : Number(v)), z.number().min(0).max(10)),
-  style: z.preprocess((v) => (v == null ? 5 : Number(v)), z.number().min(0).max(10)),
-  similarity: z.preprocess((v) => (v == null ? 0 : Number(v)), z.number().min(0).max(100)),
-  estimated_months: z.number().min(0).max(120).optional(),
+  attractiveness: reqNum(5, z.number().min(0).max(10)),
+  potential: reqNum(7, z.number().min(0).max(10)),
+  physique: reqNum(5, z.number().min(0).max(10)),
+  style: reqNum(5, z.number().min(0).max(10)),
+  similarity: reqNum(0, z.number().min(0).max(100)),
+  estimated_months: optNum(z.number().min(0).max(120)),
   improvements: z.preprocess(
     (val) => {
       if (!Array.isArray(val)) return val;
