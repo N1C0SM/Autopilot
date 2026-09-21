@@ -92,11 +92,11 @@ const AnalysisSchema = z.object({
           if (v && typeof v === "object") {
             return {
               group: (v as any).group ?? group,
-              score: Number((v as any).score ?? 5),
+              score: toNum((v as any).score) ?? 5,
               verdict: String((v as any).verdict ?? (v as any).note ?? ""),
             };
           }
-          return { group, score: Number(v) || 5, verdict: "" };
+          return { group, score: toNum(v) ?? 5, verdict: "" };
         });
       }
       return val;
