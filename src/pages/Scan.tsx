@@ -1058,14 +1058,14 @@ const Scan = () => {
                   <span className="text-gradient">IA. Gratis.</span>
                 </h1>
                 <p className="text-lg text-muted-foreground">
-                  Sube una foto de delante y otra de atrás (y opcionalmente un físico de referencia). La IA te dice qué te limita y cuánto te falta para llegar.
+                  Sube una foto de delante, una de atrás o las dos — con una sola ya funciona, con las dos el análisis es más completo. La IA te dice qué te limita y cómo mejorar.
                 </p>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-6">
                 <Dropzone
                   label="Foto de delante"
-                  hint="Cuerpo completo · obligatoria"
+                  hint="Cuerpo completo"
                   image={currentImg}
                   onFile={async (f) => setCurrentImg(await fileToDataUrl(f))}
                   onClear={() => setCurrentImg(null)}
@@ -1073,7 +1073,7 @@ const Scan = () => {
                 />
                 <Dropzone
                   label="Foto de atrás"
-                  hint="Cuerpo completo · obligatoria"
+                  hint="Cuerpo completo · opcional"
                   image={backImg}
                   onFile={async (f) => setBackImg(await fileToDataUrl(f))}
                   onClear={() => setBackImg(null)}
