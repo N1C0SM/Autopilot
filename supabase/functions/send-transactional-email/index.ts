@@ -170,6 +170,16 @@ Deno.serve(async (req) => {
           !!profile?.email &&
           profile.email.toLowerCase() === effectiveRecipient.toLowerCase()
       }
+    } else if (role === 'anon' && templateName === 'scan-diagnosis') {
+      // Visitante del escáner: solo puede recibir su propio diagnóstico y solo si
+      // acaba de dejar su email en el formulario de leads (ventana de 15 minutos).
+      const sinceIso = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+      const { count } = await supabase
+        .from('scan_leads')
+        .select('id', { count: 'exact', head: true })
+        .ilike('email', effectiveRecipient)
+        .gte('created_at', sinceIso)
+      allowed = (count ?? 0) > 0
     }
 
     if (!allowed) {
