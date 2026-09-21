@@ -449,12 +449,18 @@ const Scan = () => {
       // Llamamos dos veces: la primera "calienta" caches de fuentes/imágenes y la
       // segunda devuelve la imagen final ya con todo embebido correctamente.
       // Es un workaround conocido de html-to-image cuando hay <img> con data URLs.
-      await toPng(shareRef.current, { cacheBust: true, pixelRatio: 2, backgroundColor: "#0a0a0a" });
-      return await toPng(shareRef.current, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#0a0a0a",
-      });
+      await toPng(shareRef.current, { cacheBust: true, pixelRatio: 1.5, backgroundColor: "#0a0a0a" });
+      // Bajamos la resolución si el PNG supera el límite de subida (~4MB).
+      for (const ratio of [1.5, 1, 0.75]) {
+        const url = await toPng(shareRef.current, {
+          cacheBust: true,
+          pixelRatio: ratio,
+          backgroundColor: "#0a0a0a",
+        });
+        const approxBytes = (url.length - (url.indexOf(",") + 1)) * 0.75;
+        if (approxBytes < 3.5 * 1024 * 1024 || ratio === 0.75) return url;
+      }
+      return null;
     } catch (e) {
       console.warn("renderScanCardDataUrl failed", e);
       return null;
