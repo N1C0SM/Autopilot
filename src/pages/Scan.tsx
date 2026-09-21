@@ -1793,18 +1793,18 @@ const Scan = () => {
                         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Actual</div>
                       </div>
                     </div>
-                    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-primary/40 glow-shadow">
+                    <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden ${objectiveImg ? "border border-primary/40 glow-shadow" : "border border-dashed border-border"}`}>
                       {objectiveImg ? (
                         <img src={objectiveImg} alt="objetivo" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-card flex items-center justify-center p-4 text-center">
+                        <div className="w-full h-full bg-card/50 flex items-center justify-center p-4 text-center">
                           <div className="text-xs text-muted-foreground">
-                            Sube una foto de referencia para una comparación más precisa
+                            Opcional · sube una foto de referencia para una comparación más precisa
                           </div>
                         </div>
                       )}
                       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                        <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo</div>
+                        <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo{objectiveImg ? "" : " · opcional"}</div>
                       </div>
                     </div>
                   </div>
