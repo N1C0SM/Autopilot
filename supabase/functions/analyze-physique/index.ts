@@ -125,12 +125,12 @@ const AnalysisSchema = z.object({
   genetic_markers: z.array(z.string()).max(5).optional(),
 
   protocol: z.object({
-    training_days_per_week: z.number().min(2).max(7).optional(),
-    weekly_sets_priority: z.number().min(8).max(30).optional(),
-    weekly_sets_maintenance: z.number().min(4).max(20).optional(),
-    calorie_adjustment_kcal: z.number().min(-1000).max(1000).optional(),
-    protein_g_per_kg: z.number().min(1).max(3).optional(),
-    cardio_minutes_per_week: z.number().min(0).max(600).optional(),
+    training_days_per_week: clampNum(2, 7),
+    weekly_sets_priority: clampNum(8, 30),
+    weekly_sets_maintenance: clampNum(4, 20),
+    calorie_adjustment_kcal: clampNum(-1000, 1000),
+    protein_g_per_kg: clampNum(1, 3),
+    cardio_minutes_per_week: clampNum(0, 600),
     key_lifts: z.array(z.string()).max(6).optional(),
     avoid: z.array(z.string()).max(4).optional(),
   }).partial().optional(),
