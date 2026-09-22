@@ -84,11 +84,16 @@ const pick = (text: string, monthsWithPlan?: number): Item => {
   return PLANS.training;
 };
 
-export default function ScanRecommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
+/** Misma lógica que el bloque de recomendación, reutilizable por la página de resultados. */
+export function recommendFor({ bottleneck, improvements, monthsWithPlan }: Props) {
   const priority =
     improvements?.find((i) => /alta/i.test(i.priority))?.label ?? improvements?.[0]?.label ?? bottleneck ?? "";
   const limitation = bottleneck || priority || "tu punto de partida actual";
-  const rec = pick(`${limitation} ${priority}`, monthsWithPlan);
+  return { priority, limitation, rec: pick(`${limitation} ${priority}`, monthsWithPlan) };
+}
+
+export default function ScanRecommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
+  const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan });
 
   return (
     <div className="max-w-3xl mx-auto mb-12">

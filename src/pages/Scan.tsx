@@ -46,7 +46,7 @@ import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/components/scan/ScanCoverageCard";
-import ScanRecommendations from "@/components/scan/ScanRecommendations";
+import ScanRecommendations, { recommendFor } from "@/components/scan/ScanRecommendations";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
@@ -702,6 +702,15 @@ const Scan = () => {
         result: pendingResult as any,
       });
       if (error) throw error;
+      // Guardamos nombre y email para no pedirlos otra vez al crear la cuenta
+      try {
+        const raw = sessionStorage.getItem("autopilot_scan");
+        const prev = raw ? JSON.parse(raw) : { createdAt: Date.now() };
+        sessionStorage.setItem(
+          "autopilot_scan",
+          JSON.stringify({ ...prev, leadName: leadName.trim(), leadEmail: leadEmail.trim() })
+        );
+      } catch {}
       if (pendingResult) setResult(pendingResult);
       // Enviar diagnóstico por email (la API de WhatsApp no está disponible)
       try {
@@ -1503,7 +1512,8 @@ const Scan = () => {
                   Hemos detectado tus <span className="text-gradient">principales prioridades físicas</span>.
                 </h2>
                 <p className="text-muted-foreground">
-                  Para ver tu diagnóstico completo, dinos dónde enviártelo.
+                  Dinos tu nombre y tu email y te lo mostramos ahora mismo. También te lo
+                  enviamos por correo para que lo tengas guardado.
                 </p>
               </div>
 
@@ -1537,7 +1547,7 @@ const Scan = () => {
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-1.5">
-                    Te enviamos el diagnóstico completo aquí al pulsar el botón.
+                    Te enviamos una copia aquí. Sin tarjeta y sin compromiso.
                   </p>
                 </div>
 
@@ -1576,7 +1586,7 @@ const Scan = () => {
                     </>
                   ) : (
                     <>
-                      Ver mi diagnóstico completo
+                      Ver mi diagnóstico ahora
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </>
                   )}
