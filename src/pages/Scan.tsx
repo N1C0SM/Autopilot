@@ -46,7 +46,7 @@ import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/components/scan/ScanCoverageCard";
-import ScanRecommendations from "@/components/scan/ScanRecommendations";
+import ScanRecommendations, { recommendFor } from "@/components/scan/ScanRecommendations";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
@@ -1586,7 +1586,7 @@ const Scan = () => {
                     </>
                   ) : (
                     <>
-                      Ver mi diagnóstico completo
+                      Ver mi diagnóstico ahora
                       <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                     </>
                   )}
