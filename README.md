@@ -1,73 +1,97 @@
-# Welcome to your Lovable project
+# Autopilot
 
-## Project info
+**Entrenamiento, nutrición e inteligencia artificial en una aplicación web y multiplataforma.**
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Proyecto de Nicolás San Marcos que conecta el desarrollo de software con el deporte. Incluye una interfaz para usuarios, herramientas para entrenadores y funciones de backend para análisis y generación de planes.
 
-## How can I edit this code?
+[Visitar la web](https://autopilotplan.com) · [Guía móvil](MOBILE_RELEASE.md) · [Hoja de ruta](roadmap.md)
 
-There are several ways of editing your application.
+## Qué incluye
 
-**Use Lovable**
+- Registro, autenticación y configuración de cuenta.
+- Incorporación del usuario, análisis de fotos y generación de planes con IA.
+- Panel de seguimiento y herramientas para entrenadores y administración.
+- Planificación y conexión con Google Calendar.
+- Integración de pagos y suscripciones con Stripe.
+- Recursos, contenido y comunicaciones por correo.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Los flujos conectados requieren configurar Supabase y los proveedores correspondientes.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Tecnologías
 
-**Use your preferred IDE**
+| Capa | Stack |
+| --- | --- |
+| Frontend | React, TypeScript, Vite |
+| Interfaz | Tailwind CSS, shadcn/ui, Radix UI |
+| Datos y autenticación | Supabase, TanStack Query |
+| Backend | Supabase Edge Functions y migraciones SQL |
+| Móvil | Capacitor, iOS y Android |
+| Comprobaciones | ESLint, Vitest, Testing Library |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Lovable forma parte del flujo de desarrollo del proyecto.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Empezar en local
 
-Follow these steps:
+Necesitas Node.js y npm compatibles con las dependencias del proyecto, y acceso a un entorno Supabase de desarrollo.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+git clone https://github.com/N1C0SM/Autopilot.git
+cd Autopilot
+npm install
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Configura un archivo `.env.local` con los valores de tu proyecto:
 
-# Step 3: Install the necessary dependencies.
-npm i
+```dotenv
+VITE_SUPABASE_URL=https://TU_PROYECTO.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=TU_CLAVE_PUBLICABLE
+```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Las variables `VITE_*` se incluyen en el cliente. Mantén las claves privadas de los proveedores y la clave `service_role` en el backend.
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Abre la URL que muestre Vite. Para ejecutar los flujos completos también debes configurar el esquema de `supabase/migrations/`, las funciones de `supabase/functions/`, sus secretos y los proveedores de autenticación.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Comandos
 
-**Use GitHub Codespaces**
+| Comando | Propósito |
+| --- | --- |
+| `npm run dev` | Desarrollo local |
+| `npm run build` | Compilar la web en `dist/` |
+| `npm run preview` | Previsualizar la compilación |
+| `npm run lint` | Análisis estático |
+| `npm test` | Ejecutar las pruebas |
+| `npm run ios:sync` | Compilar y sincronizar el bundle local con iOS |
+| `npm run ios:open` | Abrir el proyecto iOS |
+| `CAP_DEV=0 npm run mobile:sync` | Compilar y sincronizar los proyectos móviles |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Organización
 
-## What technologies are used for this project?
+```text
+src/pages/                Pantallas de la aplicación
+src/components/           Componentes de interfaz
+src/hooks/                Lógica reutilizable
+src/integrations/         Cliente y tipos de Supabase
+src/test/                 Pruebas y configuración
+supabase/functions/       Funciones de backend e integraciones
+supabase/migrations/      Esquema de datos
+ios/                      Proyecto iOS
+android/                  Proyecto Android
+resources/                Iconos y splash
+store-assets/             Materiales de publicación
+```
 
-This project is built with:
+## Aplicaciones móviles
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Los proyectos iOS y Android ya están incluidos; no hace falta ejecutar `cap init` ni `cap add`. Se necesita el entorno nativo correspondiente.
 
-## How can I deploy this project?
+Con `CAP_DEV=0`, Capacitor utiliza el bundle local de `dist/`. El modo `CAP_DEV=1` apunta al entorno remoto de desarrollo.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Consulta la [guía móvil](MOBILE_RELEASE.md) y los [materiales de publicación](store-assets/README.md). Tener los proyectos nativos no implica que la aplicación esté publicada en tiendas: firma, configuración externa y pruebas en dispositivos son pasos independientes.
 
-## Can I connect a custom domain to my Lovable project?
+## Incidencias y colaboración
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Incluye pasos para reproducir el problema, resultado esperado y entorno utilizado. No publiques credenciales ni datos personales de usuarios.
