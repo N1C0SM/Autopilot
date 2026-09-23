@@ -1796,29 +1796,30 @@ const Scan = () => {
               <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
                 {/* Photos + similarity */}
                 <div className="space-y-4">
-                  <div className={`grid gap-3 ${objectiveImg || backImg ? "grid-cols-2" : "grid-cols-1 sm:max-w-[320px]"}`}>
-                    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-border">
-                      {currentImg && <img src={currentImg} alt="actual" className="w-full h-full object-cover" />}
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Actual</div>
+                  {(() => {
+                    const shots: { src: string; label: string; primary?: boolean }[] = [];
+                    if (currentImg) shots.push({ src: currentImg, label: "Actual" });
+                    if (objectiveImg) shots.push({ src: objectiveImg, label: "Objetivo", primary: true });
+                    else if (backImg) shots.push({ src: backImg, label: "Espalda" });
+                    return (
+                      <div className={`grid gap-3 ${shots.length > 1 ? "grid-cols-2" : "grid-cols-1 sm:max-w-[320px]"}`}>
+                        {shots.map((p) => (
+                          <div
+                            key={p.label}
+                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden border ${p.primary ? "border-primary/40 glow-shadow" : "border-border"}`}
+                          >
+                            <img src={p.src} alt={p.label.toLowerCase()} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
+                              <div className={`text-[10px] uppercase tracking-widest ${p.primary ? "text-primary" : "text-muted-foreground"}`}>
+                                {p.label}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    {objectiveImg ? (
-                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-primary/40 glow-shadow">
-                        <img src={objectiveImg} alt="objetivo" className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                          <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo</div>
-                        </div>
-                      </div>
-                    ) : backImg ? (
-                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-border">
-                        <img src={backImg} alt="espalda" className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Espalda</div>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                    );
+                  })()}
+
                   {objectiveImg && (
                     <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-4">
                       <div className="flex items-center justify-between mb-2 text-xs">
