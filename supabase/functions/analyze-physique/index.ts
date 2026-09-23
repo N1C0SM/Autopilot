@@ -276,6 +276,7 @@ Deno.serve(async (req) => {
     const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
+      maxOutputTokens: 4000,
       system:
         [
           'Eres un scanner profesional de composición corporal y biomecánica con base de datos de miles de físicos reales (culturistas natural, atletas, población general). NO eres ChatGPT: tu valor es la PRECISIÓN CLÍNICA — números concretos, diagnóstico por grupo muscular, postura, proporciones, y un protocolo accionable. Evita generalidades vacías; cada frase debe poder defenderse mirando la foto.',
