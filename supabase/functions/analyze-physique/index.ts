@@ -53,7 +53,7 @@ const AnalysisSchema = z.object({
     z.array(z.object({
       label: z.string(),
       priority: z.string(),
-    })).min(1).max(6),
+    })).max(6).default([]),
   ),
   summary: z.string(),
   confidence: clampNum(0, 100),
@@ -247,6 +247,17 @@ Deno.serve(async (req) => {
     });
 
     const parsed = AnalysisSchema.parse(extractJson(text));
+
+    // Si el modelo no devuelve prioridades usables, derivamos una del diagnóstico.
+    if (!parsed.improvements?.length) {
+      const fallback =
+        parsed.bottleneck ||
+        parsed.proportions?.weakest_link ||
+        parsed.headline_diagnosis ||
+        "Consolidar técnica y constancia";
+      parsed.improvements = [{ label: fallback, priority: "Alta" }];
+    }
+
 
     if (objectiveImage) {
       // Hay objetivo: aseguramos mínimos coherentes.
