@@ -1796,27 +1796,28 @@ const Scan = () => {
               <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
                 {/* Photos + similarity */}
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid gap-3 ${objectiveImg || backImg ? "grid-cols-2" : "grid-cols-1 sm:max-w-[320px]"}`}>
                     <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-border">
                       {currentImg && <img src={currentImg} alt="actual" className="w-full h-full object-cover" />}
                       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
                         <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Actual</div>
                       </div>
                     </div>
-                    <div className={`relative aspect-[3/4] rounded-2xl overflow-hidden ${objectiveImg ? "border border-primary/40 glow-shadow" : "border border-dashed border-border"}`}>
-                      {objectiveImg ? (
+                    {objectiveImg ? (
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-primary/40 glow-shadow">
                         <img src={objectiveImg} alt="objetivo" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-card/50 flex items-center justify-center p-4 text-center">
-                          <div className="text-xs text-muted-foreground">
-                            Opcional · sube una foto de referencia para una comparación más precisa
-                          </div>
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
+                          <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo</div>
                         </div>
-                      )}
-                      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                        <div className="text-[10px] uppercase tracking-widest text-primary">Objetivo{objectiveImg ? "" : " · opcional"}</div>
                       </div>
-                    </div>
+                    ) : backImg ? (
+                      <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-border">
+                        <img src={backImg} alt="espalda" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
+                          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Espalda</div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                   {objectiveImg && (
                     <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-4">
