@@ -53,7 +53,7 @@ const AnalysisSchema = z.object({
     z.array(z.object({
       label: z.string(),
       priority: z.string(),
-    })).min(1).max(6),
+    })).max(6).default([]),
   ),
   summary: z.string(),
   confidence: clampNum(0, 100),
