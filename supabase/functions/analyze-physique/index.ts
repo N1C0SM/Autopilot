@@ -248,6 +248,17 @@ Deno.serve(async (req) => {
 
     const parsed = AnalysisSchema.parse(extractJson(text));
 
+    // Si el modelo no devuelve prioridades usables, derivamos una del diagnóstico.
+    if (!parsed.improvements?.length) {
+      const fallback =
+        parsed.bottleneck ||
+        parsed.proportions?.weakest_link ||
+        parsed.headline_diagnosis ||
+        "Consolidar técnica y constancia";
+      parsed.improvements = [{ label: fallback, priority: "Alta" }];
+    }
+
+
     if (objectiveImage) {
       // Hay objetivo: aseguramos mínimos coherentes.
       if (typeof parsed.months_with_plan === "number") {
