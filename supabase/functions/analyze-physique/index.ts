@@ -146,12 +146,63 @@ const createLovableAiGatewayProvider = (lovableApiKey: string) =>
     },
   });
 
+// Repara JSON cortado a medias (respuesta truncada): elimina el último fragmento
+// incompleto y cierra las llaves/corchetes que queden abiertos.
+const repairJson = (raw: string) => {
+  let inStr = false, esc = false;
+  const stack: string[] = [];
+  let lastSafe = -1;
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{" || c === "[") stack.push(c === "{" ? "}" : "]");
+    else if (c === "}" || c === "]") stack.pop();
+    if (!inStr && (c === "}" || c === "]" || c === ",")) lastSafe = i;
+  }
+  let out = raw;
+  if (lastSafe >= 0) {
+    out = raw.slice(0, raw[lastSafe] === "," ? lastSafe : lastSafe + 1);
+    // Recalculamos la pila sobre el trozo recortado.
+    return repairClose(out);
+  }
+  return repairClose(out);
+};
+
+const repairClose = (s: string) => {
+  let inStr = false, esc = false;
+  const stack: string[] = [];
+  for (const c of s) {
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === "{") stack.push("}");
+    else if (c === "[") stack.push("]");
+    else if (c === "}" || c === "]") stack.pop();
+  }
+  return s + stack.reverse().join("");
+};
+
 const extractJson = (text: string) => {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
   const start = cleaned.indexOf("{");
+  if (start === -1) throw new Error("Sin resultado del análisis");
   const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) throw new Error("Sin resultado del análisis");
-  return JSON.parse(cleaned.slice(start, end + 1));
+  const candidate = end > start ? cleaned.slice(start, end + 1) : cleaned.slice(start);
+  try {
+    return JSON.parse(candidate);
+  } catch {
+    return JSON.parse(repairJson(cleaned.slice(start)));
+  }
 };
 
 Deno.serve(async (req) => {
@@ -225,6 +276,7 @@ Deno.serve(async (req) => {
     const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
+      maxOutputTokens: 4000,
       system:
         [
           'Eres un scanner profesional de composición corporal y biomecánica con base de datos de miles de físicos reales (culturistas natural, atletas, población general). NO eres ChatGPT: tu valor es la PRECISIÓN CLÍNICA — números concretos, diagnóstico por grupo muscular, postura, proporciones, y un protocolo accionable. Evita generalidades vacías; cada frase debe poder defenderse mirando la foto.',
