@@ -2437,10 +2437,9 @@ const Scan = () => {
                     </div>
                   </div>
 
-                  {currentImg && (() => {
-                    const photos: { src: string; label: string }[] = [
-                      { src: currentImg, label: "Frente" },
-                    ];
+                  {(currentImg || backImg) && (() => {
+                    const photos: { src: string; label: string }[] = [];
+                    if (currentImg) photos.push({ src: currentImg, label: "Frente" });
                     if (backImg) photos.push({ src: backImg, label: "Espalda" });
                     if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo" });
                     const count = photos.length;
