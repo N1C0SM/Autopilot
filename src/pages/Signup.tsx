@@ -39,6 +39,15 @@ const Signup = () => {
   }, [selectedPlan]);
 
   useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("autopilot_scan");
+      const p = raw ? JSON.parse(raw) : null;
+      if (p?.leadName) setName((v) => v || p.leadName);
+      if (p?.leadEmail) setEmail((v) => v || p.leadEmail);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
     if (!fromScan) return;
     try {
       const raw = sessionStorage.getItem("autopilot_scan");

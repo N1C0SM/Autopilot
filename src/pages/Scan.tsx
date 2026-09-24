@@ -2296,15 +2296,20 @@ const Scan = () => {
                       <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días gratis</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Button
-                        variant="hero"
-                        size="xl"
-                        onClick={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
-                        className="hover-scale group"
-                      >
-                        {user ? "Volver a mi cuenta" : "Elegir mi plan"}
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                      </Button>
+                      {(() => {
+                        const { rec } = recommendFor({
+                          bottleneck: (result as any).bottleneck,
+                          improvements: result.improvements as any,
+                          monthsWithPlan: (result as any).months_with_plan,
+                        });
+                        const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
+                        return (
+                          <Button variant="hero" size="xl" onClick={() => navigate(to)} className="hover-scale group">
+                            {user ? "Volver a mi cuenta" : `Empezar con ${rec.name}`}
+                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                          </Button>
+                        );
+                      })()}
                       <Button variant="outline" size="xl" onClick={reset}>
                         Hacer otro scan
                       </Button>
