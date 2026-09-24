@@ -2437,10 +2437,9 @@ const Scan = () => {
                     </div>
                   </div>
 
-                  {currentImg && (() => {
-                    const photos: { src: string; label: string }[] = [
-                      { src: currentImg, label: "Frente" },
-                    ];
+                  {(currentImg || backImg) && (() => {
+                    const photos: { src: string; label: string }[] = [];
+                    if (currentImg) photos.push({ src: currentImg, label: "Frente" });
                     if (backImg) photos.push({ src: backImg, label: "Espalda" });
                     if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo" });
                     const count = photos.length;
@@ -2448,8 +2447,27 @@ const Scan = () => {
                     const h = count === 1 ? 580 : count === 2 ? 540 : 400;
                     return (
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: count === 3 ? 18 : 24 }}>
-                        {photos.map((p, i) => (
+                        {photos.map((p) => (
                           <React.Fragment key={p.label}>
+                            {p.label === "Objetivo" && count >= 2 && (
+                              <div
+                                style={{
+                                  width: 48,
+                                  height: 48,
+                                  borderRadius: 999,
+                                  background: "rgba(250,204,21,0.15)",
+                                  border: "1px solid rgba(250,204,21,0.5)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 24,
+                                  color: "#facc15",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                →
+                              </div>
+                            )}
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                               <img
                                 src={p.src}
