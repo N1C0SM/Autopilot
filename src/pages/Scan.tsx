@@ -2484,25 +2484,6 @@ const Scan = () => {
                                 {p.label}
                               </div>
                             </div>
-                            {count === 3 && i === 1 && (
-                              <div
-                                style={{
-                                  width: 48,
-                                  height: 48,
-                                  borderRadius: 999,
-                                  background: "rgba(250,204,21,0.15)",
-                                  border: "1px solid rgba(250,204,21,0.5)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 24,
-                                  color: "#facc15",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                →
-                              </div>
-                            )}
                           </React.Fragment>
                         ))}
                       </div>
