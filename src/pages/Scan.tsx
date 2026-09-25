@@ -488,12 +488,13 @@ const Scan = () => {
   };
 
   const generateFuture = async () => {
-    if (!currentImg || !result) return;
+    const baseImg = currentImg || backImg;
+    if (!baseImg || !result) return;
     setGenLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-future-self", {
         body: {
-          currentImage: currentImg,
+          currentImage: baseImg,
           months: result.months_with_plan ?? result.estimated_months ?? 6,
           goal: result.inferred_goal,
         },
@@ -1898,9 +1899,9 @@ const Scan = () => {
                     <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-secondary">
                       {futureImg ? (
                         <img src={futureImg} alt="futuro IA" className="w-full h-full object-cover" />
-                      ) : currentImg ? (
+                      ) : (currentImg || backImg) ? (
                         <img
-                          src={currentImg}
+                          src={(currentImg || backImg)!}
                           alt="futuro"
                           className="w-full h-full object-cover scale-110"
                           style={{
