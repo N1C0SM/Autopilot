@@ -8,7 +8,7 @@ import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
 import { track } from "@/lib/analytics";
-import { withBookRef } from "@/lib/buyLink";
+import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
@@ -428,8 +428,10 @@ const Index = () => {
                           href={e.url || "/recursos"}
                           target={e.url ? "_blank" : undefined}
                           rel={e.url ? "noreferrer" : undefined}
+                          onClick={() => rememberBookPurchase(e.id)}
                           className="group flex flex-col h-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
                         >
+
                           {e.cover_url ? (
                             <div className="aspect-[4/3] bg-secondary overflow-hidden">
                               <img
