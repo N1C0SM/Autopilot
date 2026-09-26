@@ -12,13 +12,16 @@ import {
   Upload,
   Folder,
   FolderOpen,
+  FolderPlus,
   FileText,
   Image as ImageIcon,
   ArrowLeft,
+  ChevronRight,
   Eye,
   Package,
   Lock,
   Globe,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +34,8 @@ interface Book {
   cover_path: string | null;
   file_path: string | null;
   is_pack: boolean;
+  is_folder: boolean;
+  parent_id: string | null;
   published: boolean;
   sort_order: number;
 }
@@ -49,12 +54,16 @@ const LibraryDrive = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [covers, setCovers] = useState<Record<string, string>>({});
+  const [path, setPath] = useState<{ id: string; title: string }[]>([]);
+
+  const parentId = path.length ? path[path.length - 1].id : null;
 
   const load = async () => {
     setLoading(true);
     const { data, error } = await (supabase as any)
       .from("library_books")
       .select("*")
+      .order("is_folder", { ascending: false })
       .order("is_pack", { ascending: false })
       .order("sort_order", { ascending: true });
     if (error) toast.error("No se pudo cargar tu biblioteca");
@@ -80,20 +89,29 @@ const LibraryDrive = () => {
     })();
   }, [books]);
 
-  const addBook = async (isPack: boolean) => {
-    const title = isPack ? "Pack completo" : "Nuevo libro";
-    const folder = isPack ? "pack-completo" : slugify(`libro-${books.length + 1}`);
+  const create = async (kind: "folder" | "book" | "pack") => {
+    const title = kind === "pack" ? "Pack completo" : kind === "folder" ? "Nueva carpeta" : "Nuevo libro";
+    const folder =
+      kind === "pack" ? "pack-completo" : slugify(`${kind === "folder" ? "carpeta" : "libro"}-${books.length + 1}`);
     const { data, error } = await (supabase as any)
       .from("library_books")
-      .insert({ title, folder, is_pack: isPack, sort_order: books.length })
+      .insert({
+        title,
+        folder,
+        is_pack: kind === "pack",
+        is_folder: kind === "folder",
+        parent_id: parentId,
+        sort_order: books.length,
+      })
       .select()
       .single();
     if (error) {
-      toast.error("No se pudo crear la carpeta");
+      toast.error("No se pudo crear");
       return;
     }
     setBooks((b) => [...b, data as Book]);
-    setOpenId((data as Book).id);
+    if (kind === "folder") setPath((p) => [...p, { id: (data as Book).id, title }]);
+    else setOpenId((data as Book).id);
   };
 
   const patch = (id: string, p: Partial<Book>) =>
@@ -115,14 +133,21 @@ const LibraryDrive = () => {
     else toast.success("Guardado");
   };
 
+  const rename = async (b: Book) => {
+    const title = prompt("Nombre de la carpeta", b.title);
+    if (!title) return;
+    await (supabase as any).from("library_books").update({ title }).eq("id", b.id);
+    patch(b.id, { title });
+  };
+
   const remove = async (b: Book) => {
-    if (!confirm(`¿Eliminar la carpeta "${b.title}" y sus archivos?`)) return;
+    if (!confirm(`¿Eliminar "${b.title}" y todo lo que contiene?`)) return;
     const paths = [b.cover_path, b.file_path].filter(Boolean) as string[];
     if (paths.length) await supabase.storage.from("library").remove(paths);
     await (supabase as any).from("library_books").delete().eq("id", b.id);
-    setBooks((arr) => arr.filter((x) => x.id !== b.id));
     setOpenId(null);
-    toast.success("Carpeta eliminada");
+    toast.success("Eliminado");
+    load();
   };
 
   const upload = async (b: Book, kind: "cover" | "file", file: File) => {
@@ -152,8 +177,8 @@ const LibraryDrive = () => {
     }
   };
 
-  const openFile = async (path: string) => {
-    const { data, error } = await supabase.storage.from("library").createSignedUrl(path, 600);
+  const openFile = async (p: string) => {
+    const { data, error } = await supabase.storage.from("library").createSignedUrl(p, 600);
     if (error || !data?.signedUrl) {
       toast.error("No se pudo abrir el archivo");
       return;
@@ -178,7 +203,7 @@ const LibraryDrive = () => {
           onClick={() => setOpenId(null)}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4" /> Todas las carpetas
+          <ArrowLeft className="w-4 h-4" /> Volver
         </button>
 
         <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">
@@ -287,7 +312,7 @@ const LibraryDrive = () => {
               </p>
               <p className="text-[11px] text-muted-foreground">
                 {open.published
-                  ? "Visible para tus clientes."
+                  ? "Aparece en la página de recursos de tus clientes."
                   : "Solo lo ves tú. Nadie más puede abrirlo ni encontrarlo."}
               </p>
             </div>
@@ -307,6 +332,9 @@ const LibraryDrive = () => {
     );
   }
 
+  const items = books.filter((b) => (b.parent_id || null) === parentId);
+  const countInside = (id: string) => books.filter((b) => b.parent_id === id).length;
+
   return (
     <div className="space-y-5">
       <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
@@ -316,59 +344,106 @@ const LibraryDrive = () => {
               <Folder className="w-5 h-5 text-primary" /> Tu nube privada
             </h2>
             <p className="text-xs text-muted-foreground mt-1 max-w-xl leading-relaxed">
-              Una carpeta por libro con su portada y su archivo, más la carpeta del pack completo. Todo
-              queda guardado en privado hasta que tú lo publiques.
+              Crea carpetas dentro de carpetas, sube la portada y el archivo de cada libro y decide qué se publica.
+              Todo queda guardado en privado hasta que tú lo publiques.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => addBook(true)}>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => create("folder")}>
+              <FolderPlus className="w-4 h-4 mr-1" /> Nueva carpeta
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => create("pack")}>
               <Package className="w-4 h-4 mr-1" /> Pack completo
             </Button>
-            <Button size="sm" onClick={() => addBook(false)}>
-              <Plus className="w-4 h-4 mr-1" /> Nueva carpeta
+            <Button size="sm" onClick={() => create("book")}>
+              <Plus className="w-4 h-4 mr-1" /> Nuevo libro
             </Button>
           </div>
         </div>
       </div>
 
-      {books.length === 0 && (
+      {/* Migas de pan */}
+      <div className="flex items-center gap-1 text-sm overflow-x-auto">
+        <button
+          onClick={() => setPath([])}
+          className={`px-2 py-1 rounded-md hover:bg-secondary ${path.length === 0 ? "font-semibold" : "text-muted-foreground"}`}
+        >
+          Drive
+        </button>
+        {path.map((p, i) => (
+          <span key={p.id} className="flex items-center gap-1 shrink-0">
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+            <button
+              onClick={() => setPath((arr) => arr.slice(0, i + 1))}
+              className={`px-2 py-1 rounded-md hover:bg-secondary ${i === path.length - 1 ? "font-semibold" : "text-muted-foreground"}`}
+            >
+              {p.title}
+            </button>
+          </span>
+        ))}
+      </div>
+
+      {items.length === 0 && (
         <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          Aún no tienes carpetas. Crea la primera con "Nueva carpeta".
+          Esta carpeta está vacía. Crea una carpeta o sube tu primer libro.
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {books.map((b) => (
-          <button
-            key={b.id}
-            onClick={() => setOpenId(b.id)}
-            className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
-          >
-            <div className="flex items-start gap-3">
-              {covers[b.id] ? (
-                <img src={covers[b.id]} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
-              ) : (
-                <div className="w-14 h-[74px] rounded bg-secondary shrink-0 flex items-center justify-center">
-                  {b.is_pack ? <Package className="w-5 h-5 text-primary" /> : <Folder className="w-5 h-5 text-muted-foreground" />}
+        {items.map((b) =>
+          b.is_folder ? (
+            <div
+              key={b.id}
+              className="bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors flex items-center gap-3"
+            >
+              <button onClick={() => setPath((p) => [...p, { id: b.id, title: b.title }])} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Folder className="w-5 h-5 text-primary" />
                 </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-sm truncate">{b.title || "Sin título"}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {b.file_path ? "Archivo listo" : "Sin archivo"} · {b.cover_path ? "con portada" : "sin portada"}
-                </p>
-                <span
-                  className={`inline-flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                    b.published ? "text-success bg-success/10" : "text-muted-foreground bg-secondary"
-                  }`}
-                >
-                  {b.published ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
-                  {b.published ? "Publicado" : "Borrador"}
-                </span>
-              </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">{b.title}</p>
+                  <p className="text-[11px] text-muted-foreground">{countInside(b.id)} elementos</p>
+                </div>
+              </button>
+              <button onClick={() => rename(b)} className="text-[11px] text-muted-foreground hover:text-foreground px-1">
+                Renombrar
+              </button>
+              <button onClick={() => remove(b)} className="p-1 rounded hover:bg-secondary">
+                <Trash2 className="w-3.5 h-3.5 text-destructive" />
+              </button>
             </div>
-          </button>
-        ))}
+          ) : (
+            <button
+              key={b.id}
+              onClick={() => setOpenId(b.id)}
+              className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
+            >
+              <div className="flex items-start gap-3">
+                {covers[b.id] ? (
+                  <img src={covers[b.id]} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
+                ) : (
+                  <div className="w-14 h-[74px] rounded bg-secondary shrink-0 flex items-center justify-center">
+                    {b.is_pack ? <Package className="w-5 h-5 text-primary" /> : <BookOpen className="w-5 h-5 text-muted-foreground" />}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm truncate">{b.title || "Sin título"}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {b.file_path ? "Archivo listo" : "Sin archivo"} · {b.cover_path ? "con portada" : "sin portada"}
+                  </p>
+                  <span
+                    className={`inline-flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                      b.published ? "text-success bg-success/10" : "text-muted-foreground bg-secondary"
+                    }`}
+                  >
+                    {b.published ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
+                    {b.published ? "Publicado" : "Borrador"}
+                  </span>
+                </div>
+              </div>
+            </button>
+          )
+        )}
       </div>
     </div>
   );
