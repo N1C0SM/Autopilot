@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { z } from "npm:zod";
+import { jsonrepair } from "npm:jsonrepair@3";
 
 // El modelo a veces devuelve "12-15%", "~14", "no estimable" o null.
 // Extraemos el primer número válido; si no hay ninguno → undefined.
@@ -198,11 +199,18 @@ const extractJson = (text: string) => {
   if (start === -1) throw new Error("Sin resultado del análisis");
   const end = cleaned.lastIndexOf("}");
   const candidate = end > start ? cleaned.slice(start, end + 1) : cleaned.slice(start);
-  try {
-    return JSON.parse(candidate);
-  } catch {
-    return JSON.parse(repairJson(cleaned.slice(start)));
+  const attempts: Array<() => unknown> = [
+    () => JSON.parse(candidate),
+    () => JSON.parse(jsonrepair(candidate)),
+    () => JSON.parse(jsonrepair(cleaned.slice(start))),
+    () => JSON.parse(repairJson(cleaned.slice(start))),
+    () => JSON.parse(jsonrepair(repairJson(cleaned.slice(start)))),
+  ];
+  let lastErr: unknown;
+  for (const a of attempts) {
+    try { return a(); } catch (e) { lastErr = e; }
   }
+  throw lastErr;
 };
 
 Deno.serve(async (req) => {
