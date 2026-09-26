@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
 import PageHead from "@/components/PageHead";
 
-const BookSuccess = ({ ref: bookRef, sessionId }: { ref: string; sessionId: string }) => {
+const BookSuccess = ({
+  ref: bookRef,
+  sessionId,
+  onNotBook,
+}: { ref: string; sessionId: string; onNotBook: () => void }) => {
   const navigate = useNavigate();
   const [state, setState] = useState<"verifying" | "ready" | "nofile" | "error" | "missing">("verifying");
   const [title, setTitle] = useState("");
@@ -15,15 +19,24 @@ const BookSuccess = ({ ref: bookRef, sessionId }: { ref: string; sessionId: stri
 
   useEffect(() => {
     if (!sessionId) {
+      if (!bookRef) {
+        onNotBook();
+        return;
+      }
       setState("missing");
       return;
     }
     (async () => {
       try {
         const { data, error } = await supabase.functions.invoke("verify-book-purchase", {
-          body: { session_id: sessionId, ref: bookRef },
+          body: { session_id: sessionId, ref: bookRef || undefined },
         });
         if (error) throw new Error(error.message || "error");
+        if (data?.kind === "subscription") {
+          clearPendingBookPurchase();
+          onNotBook();
+          return;
+        }
         setTitle(data?.title || "Tu compra");
         if (data?.file_url) {
           setFileUrl(data.file_url);
@@ -31,12 +44,19 @@ const BookSuccess = ({ ref: bookRef, sessionId }: { ref: string; sessionId: stri
         } else {
           setState("nofile");
         }
+        clearPendingBookPurchase();
         track("book_purchase_success", { ref: bookRef });
       } catch {
+        if (!bookRef) {
+          onNotBook();
+          return;
+        }
         setState("error");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, bookRef]);
+
 
   if (state === "verifying") {
     return (
