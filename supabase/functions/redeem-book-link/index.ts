@@ -15,8 +15,22 @@ Deno.serve(async (req) => {
 
     const { data: link } = await db.from("book_share_links").select("book_id").eq("token", token).maybeSingle();
     if (!link) return json({ error: "Enlace no válido." }, 404);
-    const { data: pre } = await db.from("library_books").select("file_path").eq("id", link.book_id).maybeSingle();
-    if (!pre?.file_path) return json({ error: "El libro todavía no tiene PDF. Inténtalo más tarde." }, 404);
+    const { data: item } = await db.from("library_books")
+      .select("title, file_path, kind, is_pack, pack_items").eq("id", link.book_id).maybeSingle();
+    if (!item) return json({ error: "Enlace no válido." }, 404);
+
+    const isPack = item.kind === "pack" || item.is_pack;
+    let files: { title: string; file_path: string }[] = [];
+    if (isPack) {
+      const ids: string[] = item.pack_items || [];
+      if (ids.length) {
+        const { data: bs } = await db.from("library_books").select("id, title, file_path").in("id", ids);
+        files = (bs || []).filter((b) => b.file_path).map((b) => ({ title: b.title, file_path: b.file_path! }));
+      }
+    } else if (item.file_path) {
+      files = [{ title: item.title, file_path: item.file_path }];
+    }
+    if (!files.length) return json({ error: "Todavía no hay PDF disponible. Inténtalo más tarde." }, 404);
 
     // Atomic claim: only succeeds once.
     const { data: claimed } = await db
@@ -26,13 +40,14 @@ Deno.serve(async (req) => {
       .select("book_id").maybeSingle();
     if (!claimed) return json({ error: "Este enlace ya se ha usado o ha caducado." }, 410);
 
-    const { data: book } = await db.from("library_books").select("title, file_path").eq("id", claimed.book_id).maybeSingle();
-    if (!book?.file_path) return json({ error: "El libro no tiene PDF todavía." }, 404);
-
-    const { data: signed } = await db.storage.from("library")
-      .createSignedUrl(book.file_path, 60, { download: `${book.title}.pdf` });
-    if (!signed?.signedUrl) return json({ error: "No se pudo preparar la descarga." }, 500);
-    return json({ title: book.title, url: signed.signedUrl });
+    const out: { title: string; url: string }[] = [];
+    for (const f of files) {
+      const { data: s } = await db.storage.from("library")
+        .createSignedUrl(f.file_path, isPack ? 900 : 60, { download: `${f.title}.pdf` });
+      if (s?.signedUrl) out.push({ title: f.title, url: s.signedUrl });
+    }
+    if (!out.length) return json({ error: "No se pudo preparar la descarga." }, 500);
+    return json({ title: item.title, url: out[0].url, files: out, pack: isPack });
   } catch {
     return json({ error: "Error preparando la descarga." }, 500);
   }
