@@ -58,16 +58,34 @@ serve(async (req) => {
       });
     }
 
-    if (session.client_reference_id !== ref) {
+    // A subscription checkout is never a book purchase.
+    if (session.mode === "subscription") {
+      return new Response(JSON.stringify({ kind: "subscription" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+      });
+    }
+
+    const sessionRef = typeof session.client_reference_id === "string" ? session.client_reference_id : "";
+    const resolvedRef = sessionRef.startsWith("book-") && UUID_RE.test(sessionRef.slice(5)) ? sessionRef : ref;
+
+    if (!resolvedRef) {
+      return new Response(JSON.stringify({ kind: "subscription" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+      });
+    }
+    if (sessionRef && sessionRef !== resolvedRef) {
       return new Response(JSON.stringify({ error: "El pago no corresponde a esta compra." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403,
       });
     }
+    const bookId = resolvedRef.slice(5);
+
     if (session.status !== "complete" || session.payment_status !== "paid") {
       return new Response(JSON.stringify({ error: "El pago todavía no está confirmado. Espera unos segundos e inténtalo de nuevo." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409,
       });
     }
+
 
     const { data: book } = await supabaseAdmin
       .from("library_books")
