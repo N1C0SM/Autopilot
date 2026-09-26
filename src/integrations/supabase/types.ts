@@ -531,6 +531,7 @@ export type Database = {
           id: string
           is_folder: boolean
           is_pack: boolean
+          pack_items: string[]
           parent_id: string | null
           price: string
           published: boolean
@@ -548,6 +549,7 @@ export type Database = {
           id?: string
           is_folder?: boolean
           is_pack?: boolean
+          pack_items?: string[]
           parent_id?: string | null
           price?: string
           published?: boolean
@@ -565,6 +567,7 @@ export type Database = {
           id?: string
           is_folder?: boolean
           is_pack?: boolean
+          pack_items?: string[]
           parent_id?: string | null
           price?: string
           published?: boolean
