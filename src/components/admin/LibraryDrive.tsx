@@ -471,12 +471,6 @@ const LibraryDrive = () => {
               <DropdownMenuItem onClick={() => create("pack")}>
                 <Package className="w-4 h-4 mr-2" /> Pack (elige libros)
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("video")}>
-                <Video className="w-4 h-4 mr-2" /> Vídeo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("recommendation")}>
-                <Star className="w-4 h-4 mr-2" /> Recomendación
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
