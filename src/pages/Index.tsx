@@ -108,7 +108,7 @@ const Index = () => {
               title: b.title,
               description: b.description || "",
               cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
-              url: (live ? b.buy_url_live : b.buy_url_test) || "/recursos",
+              url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || "/recursos", b.id),
               price: b.price || "",
             })),
           );
