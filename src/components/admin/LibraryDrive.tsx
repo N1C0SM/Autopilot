@@ -471,8 +471,8 @@ const LibraryDrive = () => {
             >
               {(() => { const packCover = b.is_pack && !covers[b.id] ? covers[((b as any).pack_items || [])[0]] : null; return (
               <div className="flex items-start gap-3">
-                {covers[b.id] ? (
-                  <img src={covers[b.id]} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
+                {covers[b.id] || packCover ? (
+                  <img src={covers[b.id] || packCover!} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
                 ) : (
                   <div className="w-14 h-[74px] rounded bg-secondary shrink-0 flex items-center justify-center">
                     {b.is_pack ? <Package className="w-5 h-5 text-primary" /> : <BookOpen className="w-5 h-5 text-muted-foreground" />}
