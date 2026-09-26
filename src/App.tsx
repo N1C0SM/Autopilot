@@ -14,6 +14,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const BookDownload = lazy(() => import("./pages/BookDownload"));
+const SharedBook = lazy(() => import("./pages/SharedBook"));
 
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
