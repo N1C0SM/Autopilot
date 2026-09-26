@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     const keys: Array<[string, string | undefined]> = [
       [mode, mode === "live" ? Deno.env.get("STRIPE_LIVE_SECRET_KEY") : Deno.env.get("STRIPE_TEST_SECRET_KEY")],
       [mode === "live" ? "test" : "live", mode === "live" ? Deno.env.get("STRIPE_TEST_SECRET_KEY") : Deno.env.get("STRIPE_LIVE_SECRET_KEY")],
+      ["default", Deno.env.get("STRIPE_SECRET_KEY")],
     ];
 
     let session: any = null;
