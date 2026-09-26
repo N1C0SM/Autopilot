@@ -1,14 +1,14 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -20,12 +20,12 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
       });
     }
-    if (!ref.startsWith("book-") || !UUID_RE.test(ref.slice(5))) {
+    if (ref && (!ref.startsWith("book-") || !UUID_RE.test(ref.slice(5)))) {
       return new Response(JSON.stringify({ error: "Referencia de compra no válida." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
       });
     }
-    const bookId = ref.slice(5);
+
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -58,16 +58,34 @@ serve(async (req) => {
       });
     }
 
-    if (session.client_reference_id !== ref) {
+    // A subscription checkout is never a book purchase.
+    if (session.mode === "subscription") {
+      return new Response(JSON.stringify({ kind: "subscription" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+      });
+    }
+
+    const sessionRef = typeof session.client_reference_id === "string" ? session.client_reference_id : "";
+    const resolvedRef = sessionRef.startsWith("book-") && UUID_RE.test(sessionRef.slice(5)) ? sessionRef : ref;
+
+    if (!resolvedRef) {
+      return new Response(JSON.stringify({ kind: "subscription" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+      });
+    }
+    if (sessionRef && sessionRef !== resolvedRef) {
       return new Response(JSON.stringify({ error: "El pago no corresponde a esta compra." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403,
       });
     }
+    const bookId = resolvedRef.slice(5);
+
     if (session.status !== "complete" || session.payment_status !== "paid") {
       return new Response(JSON.stringify({ error: "El pago todavía no está confirmado. Espera unos segundos e inténtalo de nuevo." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409,
       });
     }
+
 
     const { data: book } = await supabaseAdmin
       .from("library_books")

@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { ArrowLeft, BookOpen, Sparkles, Newspaper, ExternalLink, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { withBookRef } from "@/lib/buyLink";
+import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
@@ -215,8 +215,10 @@ const Recursos = () => {
                   href={e.url || "#"}
                   target={e.url ? "_blank" : undefined}
                   rel={e.url ? "noreferrer" : undefined}
+                  onClick={() => rememberBookPurchase(e.id)}
                   className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors flex flex-col"
                 >
+
                   {e.cover_url ? (
                     <div className="aspect-[4/3] bg-secondary overflow-hidden">
                       <img src={e.cover_url} alt={e.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />

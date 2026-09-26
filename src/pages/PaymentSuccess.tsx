@@ -5,9 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, Loader2, Download, ArrowRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
+import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
+
 import PageHead from "@/components/PageHead";
 
-const BookSuccess = ({ ref: bookRef, sessionId }: { ref: string; sessionId: string }) => {
+const BookSuccess = ({
+  bookRef,
+  sessionId,
+  onNotBook,
+}: { bookRef: string; sessionId: string; onNotBook: () => void }) => {
+
   const navigate = useNavigate();
   const [state, setState] = useState<"verifying" | "ready" | "nofile" | "error" | "missing">("verifying");
   const [title, setTitle] = useState("");
@@ -15,15 +22,24 @@ const BookSuccess = ({ ref: bookRef, sessionId }: { ref: string; sessionId: stri
 
   useEffect(() => {
     if (!sessionId) {
+      if (!bookRef) {
+        onNotBook();
+        return;
+      }
       setState("missing");
       return;
     }
     (async () => {
       try {
         const { data, error } = await supabase.functions.invoke("verify-book-purchase", {
-          body: { session_id: sessionId, ref: bookRef },
+          body: { session_id: sessionId, ref: bookRef || undefined },
         });
         if (error) throw new Error(error.message || "error");
+        if (data?.kind === "subscription") {
+          clearPendingBookPurchase();
+          onNotBook();
+          return;
+        }
         setTitle(data?.title || "Tu compra");
         if (data?.file_url) {
           setFileUrl(data.file_url);
@@ -31,12 +47,19 @@ const BookSuccess = ({ ref: bookRef, sessionId }: { ref: string; sessionId: stri
         } else {
           setState("nofile");
         }
+        clearPendingBookPurchase();
         track("book_purchase_success", { ref: bookRef });
       } catch {
+        if (!bookRef) {
+          onNotBook();
+          return;
+        }
         setState("error");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, bookRef]);
+
 
   if (state === "verifying") {
     return (
@@ -129,9 +152,13 @@ const PaymentSuccess = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const bookRef = searchParams.get("client_reference_id") || "";
+  const queryRef = searchParams.get("client_reference_id") || "";
   const sessionId = searchParams.get("session_id") || "";
-  const isBook = bookRef.startsWith("book-");
+  const [pendingRef] = useState(() => readPendingBookRef());
+  const bookRef = queryRef.startsWith("book-") ? queryRef : pendingRef;
+  // If Stripe sends us back with a session but no tag, ask the backend what was bought.
+  const [notBook, setNotBook] = useState(false);
+  const isBook = !notBook && (!!bookRef || !!sessionId);
   const [checking, setChecking] = useState(true);
   const [paid, setPaid] = useState(false);
 
@@ -195,9 +222,10 @@ const PaymentSuccess = () => {
   if (isBook) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <BookSuccess ref={bookRef} sessionId={sessionId} />
+        <BookSuccess bookRef={bookRef} sessionId={sessionId} onNotBook={() => setNotBook(true)} />
       </div>
     );
+
   }
 
   if (loading || checking) {
