@@ -34,13 +34,22 @@ const PLANS = [
   { key: "transform", label: "Transformación 12 semanas", price: "299€ pago único" },
 ] as const;
 
+interface Item { id: string; title: string; kind: string; price: string | null; buy_url_test: string | null; buy_url_live: string | null }
+
 const PaymentModeToggle = () => {
   const [s, setS] = useState<SettingsData | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
+      const { data: lib } = await (supabase as any)
+        .from("library_books")
+        .select("id, title, kind, price, buy_url_test, buy_url_live")
+        .in("kind", ["book", "pack"])
+        .order("sort_order", { ascending: true });
+      setItems((lib as Item[]) || []);
       const { data } = await supabase.from("settings").select("*").limit(1).single();
       if (data) {
         const d = data as any;
@@ -73,14 +82,25 @@ const PaymentModeToggle = () => {
     toast.success(`Modo cambiado a ${newMode.toUpperCase()}`);
   };
 
+  const setItem = (id: string, p: Partial<Item>) =>
+    setItems((arr) => arr.map((x) => (x.id === id ? { ...x, ...p } : x)));
+
   const saveAll = async () => {
     if (!s) return;
     setSaving(true);
     const payload: any = {};
     FIELDS.forEach((f) => (payload[f] = s[f]));
     const { error } = await supabase.from("settings").update(payload).eq("id", s.id);
+    const results = await Promise.all(
+      items.map((b) =>
+        (supabase as any).from("library_books").update({
+          buy_url_test: b.buy_url_test?.trim() || null,
+          buy_url_live: b.buy_url_live?.trim() || null,
+        }).eq("id", b.id),
+      ),
+    );
     setSaving(false);
-    if (error) return toast.error("Error al guardar");
+    if (error || results.some((r: any) => r.error)) return toast.error("Error al guardar");
     toast.success("Configuración guardada");
   };
 
@@ -146,6 +166,33 @@ const PaymentModeToggle = () => {
                 placeholder="https://buy.stripe.com/..."
                 className="mt-1 text-sm font-mono"
               />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Libros y packs */}
+      <div className="bg-card rounded-xl p-5 border border-border space-y-5">
+        <div>
+          <div className="font-medium text-sm">Libros y packs</div>
+          <div className="text-xs text-muted-foreground">Enlaces de Stripe de todo el Drive. Se usa el del modo activo.</div>
+        </div>
+        {items.length === 0 && <div className="text-xs text-muted-foreground">Aún no hay libros ni packs.</div>}
+        {items.map((b) => (
+          <div key={b.id} className="space-y-2 pt-2 border-t border-border first:border-t-0 first:pt-0">
+            <div className="flex items-baseline justify-between">
+              <div className="font-medium text-sm">{b.title}</div>
+              <div className="text-xs text-muted-foreground">{b.kind === "pack" ? "Pack" : "Libro"}{b.price ? ` · ${b.price}` : ""}</div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Test</Label>
+              <Input value={b.buy_url_test || ""} onChange={(e) => setItem(b.id, { buy_url_test: e.target.value })}
+                placeholder="https://buy.stripe.com/test_..." className="mt-1 text-sm font-mono" />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Live</Label>
+              <Input value={b.buy_url_live || ""} onChange={(e) => setItem(b.id, { buy_url_live: e.target.value })}
+                placeholder="https://buy.stripe.com/..." className="mt-1 text-sm font-mono" />
             </div>
           </div>
         ))}

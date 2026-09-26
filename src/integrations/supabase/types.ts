@@ -523,6 +523,8 @@ export type Database = {
       library_books: {
         Row: {
           buy_url: string | null
+          buy_url_live: string | null
+          buy_url_test: string | null
           cover_path: string | null
           created_at: string
           description: string
@@ -543,6 +545,8 @@ export type Database = {
         }
         Insert: {
           buy_url?: string | null
+          buy_url_live?: string | null
+          buy_url_test?: string | null
           cover_path?: string | null
           created_at?: string
           description?: string
@@ -563,6 +567,8 @@ export type Database = {
         }
         Update: {
           buy_url?: string | null
+          buy_url_live?: string | null
+          buy_url_test?: string | null
           cover_path?: string | null
           created_at?: string
           description?: string
@@ -1715,6 +1721,7 @@ export type Database = {
           trainer_id: string
         }[]
       }
+      get_payment_mode: { Args: never; Returns: string }
       get_public_settings: {
         Args: never
         Returns: {

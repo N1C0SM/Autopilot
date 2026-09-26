@@ -92,24 +92,27 @@ const Index = () => {
           show_ebooks: (s as any).show_ebooks ?? false,
           show_recommendations: (s as any).show_recommendations ?? false,
         });
-        (supabase as any)
-          .from("library_books")
-          .select("id, title, description, price, cover_path, buy_url")
-          .eq("published", true)
-          .eq("is_folder", false)
-          .order("sort_order", { ascending: true })
-          .then(({ data }: any) =>
-            setEbooks(
-              (data || []).map((b: any) => ({
-                id: b.id,
-                title: b.title,
-                description: b.description || "",
-                cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
-                url: b.buy_url || "/recursos",
-                price: b.price || "",
-              })),
-            ),
+        Promise.all([
+          (supabase.rpc as any)("get_payment_mode"),
+          (supabase as any)
+            .from("library_books")
+            .select("id, title, description, price, cover_path, buy_url, buy_url_test, buy_url_live")
+            .eq("published", true)
+            .eq("is_folder", false)
+            .order("sort_order", { ascending: true }),
+        ]).then(([modeRes, { data }]: any) => {
+          const live = modeRes?.data === "live";
+          setEbooks(
+            (data || []).map((b: any) => ({
+              id: b.id,
+              title: b.title,
+              description: b.description || "",
+              cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
+              url: (live ? b.buy_url_live : b.buy_url_test) || "/recursos",
+              price: b.price || "",
+            })),
           );
+        });
         setRecommendations(Array.isArray((s as any).recommendations) ? (s as any).recommendations : []);
         if ((s as any).show_blog ?? true) {
           supabase
