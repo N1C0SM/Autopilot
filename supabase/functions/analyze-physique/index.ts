@@ -306,7 +306,15 @@ Deno.serve(async (req) => {
       messages: [{ role: "user", content: userContent }],
     });
 
-    const parsed = AnalysisSchema.parse(extractJson(text));
+    // A veces la respuesta llega como array (varios objetos o envuelta): fusionamos los objetos.
+    let raw: any = extractJson(text);
+    if (Array.isArray(raw)) {
+      raw = raw
+        .filter((x) => x && typeof x === "object" && !Array.isArray(x))
+        .reduce((acc, x) => ({ ...acc, ...x }), {});
+    }
+    if (!raw || typeof raw !== "object") throw new Error("Sin resultado del análisis");
+    const parsed = AnalysisSchema.parse(raw);
 
     // Si el modelo no devuelve prioridades usables, derivamos una del diagnóstico.
     if (!parsed.improvements?.length) {
