@@ -528,7 +528,9 @@ export type Database = {
           file_path: string | null
           folder: string
           id: string
+          is_folder: boolean
           is_pack: boolean
+          parent_id: string | null
           price: string
           published: boolean
           sort_order: number
@@ -542,7 +544,9 @@ export type Database = {
           file_path?: string | null
           folder: string
           id?: string
+          is_folder?: boolean
           is_pack?: boolean
+          parent_id?: string | null
           price?: string
           published?: boolean
           sort_order?: number
@@ -556,14 +560,24 @@ export type Database = {
           file_path?: string | null
           folder?: string
           id?: string
+          is_folder?: boolean
           is_pack?: boolean
+          parent_id?: string | null
           price?: string
           published?: boolean
           sort_order?: number
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "library_books_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "library_books"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
