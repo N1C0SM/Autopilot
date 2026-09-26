@@ -128,6 +128,7 @@ const LibraryDrive = () => {
         description: b.description,
         price: b.price,
         buy_url: b.buy_url?.trim() || null,
+        pack_items: (b as any).pack_items || [],
         published: b.published,
       })
       .eq("id", b.id);
@@ -327,6 +328,29 @@ const LibraryDrive = () => {
               <Label className="text-xs">Enlace de compra (Stripe)</Label>
               <Input value={open.buy_url || ""} placeholder="https://buy.stripe.com/…" onChange={(e) => patch(open.id, { buy_url: e.target.value })} />
             </div>
+            {open.is_pack && (
+              <div>
+                <Label className="text-xs">Libros incluidos en el pack</Label>
+                <div className="mt-1 space-y-1.5">
+                  {books.filter((x) => !x.is_folder && !x.is_pack).map((x) => {
+                    const items: string[] = (open as any).pack_items || [];
+                    const on = items.includes(x.id);
+                    return (
+                      <label key={x.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() =>
+                            patch(open.id, { pack_items: on ? items.filter((i) => i !== x.id) : [...items, x.id] } as any)
+                          }
+                        />
+                        {x.title}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between gap-4 border-t border-border pt-4">

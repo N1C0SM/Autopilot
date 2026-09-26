@@ -362,44 +362,12 @@ const SiteContentEditor = () => {
       </div>
 
 
-      {/* Ebooks */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-bold">Ebooks / Guías</h2>
-          </div>
-          <Button size="sm" onClick={() => setEbooks((a) => [...a, { id: uid(), title: "", description: "", cover_url: "", url: "", price: "" }])}>
-            <Plus className="w-4 h-4 mr-1" /> Añadir
-          </Button>
-        </div>
-        <p className="text-[11px] text-muted-foreground">Se muestran si tienes "Ebooks" activado arriba.</p>
-        {ebooks.length === 0 && <p className="text-sm text-muted-foreground">Sin ebooks todavía.</p>}
-        <div className="space-y-3">
-          {ebooks.map((e) => (
-            <div key={e.id} className="border border-border rounded-xl p-4 space-y-2">
-              <div className="flex items-start gap-3">
-                {e.cover_url ? (
-                  <img src={e.cover_url} alt="" className="w-16 h-20 rounded object-cover shrink-0" />
-                ) : (
-                  <div className="w-16 h-20 rounded bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
-                )}
-                <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 self-start">
-                  <input type="file" accept="image/*" className="hidden" onChange={(ev) => onEbookCover(e.id, ev)} />
-                  <Upload className="w-3 h-3" /> Portada
-                </label>
-                <button className="ml-auto text-destructive" onClick={() => setEbooks((a) => a.filter((x) => x.id !== e.id))} aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
-              </div>
-              <Input placeholder="Título" value={e.title} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, title: ev.target.value } : x))} />
-              <Textarea rows={2} placeholder="Descripción corta" value={e.description} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, description: ev.target.value } : x))} />
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Precio (Gratis, 9€…)" value={e.price} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, price: ev.target.value } : x))} />
-                <Input placeholder="URL de descarga o pago" value={e.url} onChange={(ev) => setEbooks((a) => a.map((x) => x.id === e.id ? { ...x, url: ev.target.value } : x))} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <Button onClick={saveEbooks} disabled={saving}>{saving ? "Guardando..." : "Guardar ebooks"}</Button>
+      {/* Ebooks: ahora se gestionan en el Drive */}
+      <div className="bg-card border border-border rounded-2xl p-6 flex items-center gap-3">
+        <BookOpen className="w-5 h-5 text-primary shrink-0" />
+        <p className="text-sm text-muted-foreground">
+          Los libros y el pack se gestionan ahora en <strong className="text-foreground">Drive · Libros</strong>. Lo que publiques allí aparece en la landing y en Recursos.
+        </p>
       </div>
 
       {/* Recomendaciones */}
