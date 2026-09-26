@@ -644,7 +644,13 @@ const Scan = () => {
       // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Error analizando la imagen");
+      const status = e?.context?.status;
+      const msg = String(e?.message ?? "");
+      if (status === 429 || /too many|429/i.test(msg)) {
+        toast.error("Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo.");
+      } else {
+        toast.error("No hemos podido analizar las fotos. Inténtalo de nuevo en unos segundos.");
+      }
       setPhase("upload");
     } finally {
       clearInterval(interval);

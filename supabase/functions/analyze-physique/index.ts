@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
     );
     const key = `analyze-physique:${ip}`;
     const windowSec = 3600;
-    const limit = 8;
+    const limit = 15;
     const sinceIso = new Date(Date.now() - windowSec * 1000).toISOString();
     const { count } = await sb
       .from("rate_limits")
