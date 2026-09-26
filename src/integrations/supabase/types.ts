@@ -520,6 +520,51 @@ export type Database = {
         }
         Relationships: []
       }
+      library_books: {
+        Row: {
+          cover_path: string | null
+          created_at: string
+          description: string
+          file_path: string | null
+          folder: string
+          id: string
+          is_pack: boolean
+          price: string
+          published: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_path?: string | null
+          created_at?: string
+          description?: string
+          file_path?: string | null
+          folder: string
+          id?: string
+          is_pack?: boolean
+          price?: string
+          published?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          cover_path?: string | null
+          created_at?: string
+          description?: string
+          file_path?: string | null
+          folder?: string
+          id?: string
+          is_pack?: boolean
+          price?: string
+          published?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string

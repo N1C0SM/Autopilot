@@ -10,10 +10,11 @@ import {
   UserCog,
   Settings as SettingsIcon,
   LogOut,
-  ShieldCheck,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import autopilotLogo from "@/assets/autopilot-logo.png";
 import type { AdminSection } from "@/pages/Admin";
+
 
 interface Props {
   title: string;
@@ -61,12 +62,12 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
             <button
               type="button"
               aria-label="Menú de administración"
-              className="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary/60 text-xs font-semibold active:opacity-70"
+              className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-full border border-border bg-secondary/60 overflow-hidden active:opacity-70"
             >
-              <ShieldCheck className="w-4 h-4 text-primary" />
-              Admin
+              <img src={autopilotLogo} alt="Autopilot" className="h-7 w-7 rounded-full object-cover" />
             </button>
           </SheetTrigger>
+
           <SheetContent
             side="right"
             className="w-[82vw] max-w-xs p-0 flex flex-col"
