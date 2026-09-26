@@ -59,9 +59,27 @@ Deno.serve(async (req) => {
           // for this exact book reference in the last 2 hours.
           const since = Math.floor(Date.now() / 1000) - 7200;
           const list = await stripe.checkout.sessions.list({ limit: 100, created: { gte: since } });
-          const match = (list.data || []).find(
-            (s: any) => s.client_reference_id === ref && s.payment_status === "paid" && s.status === "complete"
+          const paid = (list.data || []).filter(
+            (s: any) => s.payment_status === "paid" && s.status === "complete" && s.mode === "payment"
           );
+          let match = paid.find((s: any) => s.client_reference_id === ref);
+          if (!match) {
+            // Fallback: match by the book's Stripe payment link URL.
+            const { data: b } = await supabaseAdmin
+              .from("library_books").select("buy_url, buy_url_test, buy_url_live")
+              .eq("id", ref.slice(5)).maybeSingle();
+            const norm = (u?: string | null) => (u || "").split("?")[0].replace(/\/$/, "");
+            const urls = [b?.buy_url, b?.buy_url_test, b?.buy_url_live].map(norm).filter(Boolean);
+            const linkCache: Record<string, string> = {};
+            for (const s of paid) {
+              const pl = typeof s.payment_link === "string" ? s.payment_link : s.payment_link?.id;
+              if (!pl) continue;
+              if (!(pl in linkCache)) {
+                try { linkCache[pl] = norm((await stripe.paymentLinks.retrieve(pl)).url); } catch { linkCache[pl] = ""; }
+              }
+              if (linkCache[pl] && urls.includes(linkCache[pl])) { match = { ...s, client_reference_id: ref }; break; }
+            }
+          }
           if (match) { session = match; break; }
         }
       } catch {
