@@ -235,6 +235,7 @@ const LibraryDrive = () => {
             )}
           </div>
 
+          {!open.is_pack && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Portada */}
             <div className="space-y-2">
@@ -297,6 +298,7 @@ const LibraryDrive = () => {
               </label>
             </div>
           </div>
+          )}
 
           <div className="space-y-3 pt-2 border-t border-border">
             <div>
@@ -468,8 +470,8 @@ const LibraryDrive = () => {
               className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
             >
               <div className="flex items-start gap-3">
-                {covers[b.id] ? (
-                  <img src={covers[b.id]} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
+                {(covers[b.id] || (b.is_pack && covers[((b as any).pack_items || [])[0]])) ? (
+                  <img src={covers[b.id] || covers[((b as any).pack_items || [])[0]]} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
                 ) : (
                   <div className="w-14 h-[74px] rounded bg-secondary shrink-0 flex items-center justify-center">
                     {b.is_pack ? <Package className="w-5 h-5 text-primary" /> : <BookOpen className="w-5 h-5 text-muted-foreground" />}
