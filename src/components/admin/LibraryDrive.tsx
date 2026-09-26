@@ -30,6 +30,7 @@ interface Book {
   title: string;
   description: string;
   price: string;
+  buy_url?: string | null;
   folder: string;
   cover_path: string | null;
   file_path: string | null;
@@ -82,6 +83,7 @@ const LibraryDrive = () => {
       if (pending.length === 0) return;
       const entries: Record<string, string> = {};
       for (const b of pending) {
+        if (b.cover_path!.startsWith("http")) { entries[b.id] = b.cover_path!; continue; }
         const { data } = await supabase.storage.from("library").createSignedUrl(b.cover_path!, 3600);
         if (data?.signedUrl) entries[b.id] = data.signedUrl;
       }
@@ -125,6 +127,7 @@ const LibraryDrive = () => {
         title: b.title,
         description: b.description,
         price: b.price,
+        buy_url: b.buy_url?.trim() || null,
         published: b.published,
       })
       .eq("id", b.id);
@@ -142,7 +145,7 @@ const LibraryDrive = () => {
 
   const remove = async (b: Book) => {
     if (!confirm(`¿Eliminar "${b.title}" y todo lo que contiene?`)) return;
-    const paths = [b.cover_path, b.file_path].filter(Boolean) as string[];
+    const paths = [b.cover_path, b.file_path].filter((x) => x && !x.startsWith("http")) as string[];
     if (paths.length) await supabase.storage.from("library").remove(paths);
     await (supabase as any).from("library_books").delete().eq("id", b.id);
     setOpenId(null);
@@ -155,26 +158,40 @@ const LibraryDrive = () => {
     try {
       const ext = file.name.split(".").pop() || (kind === "cover" ? "jpg" : "pdf");
       const path = `${b.folder}/${kind === "cover" ? "portada" : "libro"}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("library").upload(path, file, {
+      const bucket = kind === "cover" ? "site-assets" : "library";
+      const finalPath = kind === "cover" ? `library-covers/${path}` : path;
+      const { error } = await supabase.storage.from(bucket).upload(finalPath, file, {
         upsert: false,
         contentType: file.type || (kind === "cover" ? "image/jpeg" : "application/pdf"),
       });
       if (error) throw error;
       const old = kind === "cover" ? b.cover_path : b.file_path;
-      if (old) await supabase.storage.from("library").remove([old]);
+      if (old && !old.startsWith("http")) await supabase.storage.from("library").remove([old]);
       const col = kind === "cover" ? "cover_path" : "file_path";
-      await (supabase as any).from("library_books").update({ [col]: path }).eq("id", b.id);
-      patch(b.id, { [col]: path } as Partial<Book>);
-      if (kind === "cover") {
-        const { data } = await supabase.storage.from("library").createSignedUrl(path, 3600);
-        if (data?.signedUrl) setCovers((c) => ({ ...c, [b.id]: data.signedUrl }));
-      }
+      const value = kind === "cover"
+        ? supabase.storage.from("site-assets").getPublicUrl(finalPath).data.publicUrl
+        : path;
+      await (supabase as any).from("library_books").update({ [col]: value }).eq("id", b.id);
+      patch(b.id, { [col]: value } as Partial<Book>);
+      if (kind === "cover") setCovers((c) => ({ ...c, [b.id]: value }));
       toast.success(kind === "cover" ? "Portada subida" : "Libro subido");
     } catch (err: any) {
       toast.error(err.message || "Error al subir");
     } finally {
       setBusy(null);
     }
+  };
+
+  const [priceTip, setPriceTip] = useState("");
+  const suggestPrice = async (b: Book) => {
+    setBusy("price"); setPriceTip("");
+    const { data, error } = await supabase.functions.invoke("suggest-book-price", {
+      body: { title: b.title, description: b.description, is_pack: b.is_pack, others: books.filter((x) => !x.is_folder && x.id !== b.id && x.price).map((x) => `${x.title}: ${x.price}`) },
+    });
+    setBusy(null);
+    if (error || !data?.price) { toast.error("No se pudo sugerir un precio"); return; }
+    patch(b.id, { price: data.price });
+    setPriceTip(data.reason || "");
   };
 
   const openFile = async (p: string) => {
@@ -301,6 +318,14 @@ const LibraryDrive = () => {
                 placeholder="Gratis, 19 €…"
                 onChange={(e) => patch(open.id, { price: e.target.value })}
               />
+              <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2 text-xs" disabled={busy === "price"} onClick={() => suggestPrice(open)}>
+                {busy === "price" ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : "✨"} Sugerir precio con IA
+              </Button>
+              {priceTip && <p className="text-[11px] text-muted-foreground mt-1">{priceTip}</p>}
+            </div>
+            <div>
+              <Label className="text-xs">Enlace de compra (Stripe)</Label>
+              <Input value={open.buy_url || ""} placeholder="https://buy.stripe.com/…" onChange={(e) => patch(open.id, { buy_url: e.target.value })} />
             </div>
           </div>
 
