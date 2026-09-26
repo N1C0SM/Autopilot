@@ -100,6 +100,8 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/descarga-libro" element={<BookDownload />} />
+
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/dashboard/user/:userId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
