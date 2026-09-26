@@ -225,6 +225,14 @@ const LibraryDrive = () => {
     setPriceTip(data.reason || "");
   };
 
+  const shareOnce = async (bookId: string) => {
+    const { data, error } = await (supabase as any).from("book_share_links").insert({ book_id: bookId }).select("token").single();
+    if (error || !data?.token) { toast.error("No se pudo crear el enlace"); return; }
+    const url = `https://autopilotplan.com/d/${data.token}`;
+    try { await navigator.clipboard.writeText(url); toast.success("Enlace copiado: sirve para 1 descarga, caduca en 7 días"); }
+    catch { window.prompt("Copia este enlace (1 descarga):", url); }
+  };
+
   const openFile = async (p: string) => {
     const { data, error } = await supabase.storage.from("library").createSignedUrl(p, 600);
     if (error || !data?.signedUrl) {
@@ -309,6 +317,9 @@ const LibraryDrive = () => {
                   <p className="text-[11px] text-muted-foreground break-all">{open.file_path.split("/").pop()}</p>
                   <Button size="sm" variant="secondary" onClick={() => openFile(open.file_path!)}>
                     <Eye className="w-3.5 h-3.5 mr-1" /> Abrir
+                  </Button>
+                  <Button size="sm" variant="hero" onClick={() => shareOnce(open.id)}>
+                    Copiar enlace de 1 descarga
                   </Button>
                 </div>
               ) : (
