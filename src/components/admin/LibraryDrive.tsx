@@ -41,6 +41,8 @@ interface Book {
   description: string;
   price: string;
   buy_url?: string | null;
+  buy_url_test?: string | null;
+  buy_url_live?: string | null;
   video_url?: string | null;
   kind: Kind;
   folder: string;
@@ -153,6 +155,8 @@ const LibraryDrive = () => {
         description: b.description,
         price: b.price,
         buy_url: b.buy_url?.trim() || null,
+        buy_url_test: b.buy_url_test?.trim() || null,
+        buy_url_live: b.buy_url_live?.trim() || null,
         video_url: b.video_url?.trim() || null,
         pack_items: b.pack_items || [],
         published: b.published,
@@ -372,12 +376,29 @@ const LibraryDrive = () => {
               </div>
             )}
 
-            {(isBook || isPack || isRec) && (
+            {(isBook || isPack) && (
+              <div className="space-y-2">
+                <Label className="text-xs">Enlace de compra Stripe · Test</Label>
+                <Input
+                  value={open.buy_url_test || ""}
+                  placeholder="https://buy.stripe.com/test_…"
+                  onChange={(e) => patch(open.id, { buy_url_test: e.target.value })}
+                />
+                <Label className="text-xs">Enlace de compra Stripe · Live</Label>
+                <Input
+                  value={open.buy_url_live || ""}
+                  placeholder="https://buy.stripe.com/…"
+                  onChange={(e) => patch(open.id, { buy_url_live: e.target.value })}
+                />
+                <p className="text-[11px] text-muted-foreground">Se usa el del modo activo en Ajustes → Pagos.</p>
+              </div>
+            )}
+            {isRec && (
               <div>
-                <Label className="text-xs">{isRec ? "Enlace de la recomendación" : "Enlace de compra (Stripe)"}</Label>
+                <Label className="text-xs">Enlace de la recomendación</Label>
                 <Input
                   value={open.buy_url || ""}
-                  placeholder={isRec ? "https://…" : "https://buy.stripe.com/…"}
+                  placeholder="https://…"
                   onChange={(e) => patch(open.id, { buy_url: e.target.value })}
                 />
               </div>
