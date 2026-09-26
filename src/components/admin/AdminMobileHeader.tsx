@@ -10,7 +10,6 @@ import {
   UserCog,
   Settings as SettingsIcon,
   LogOut,
-  ShieldCheck,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import autopilotLogo from "@/assets/autopilot-logo.png";
