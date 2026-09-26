@@ -558,7 +558,7 @@ const LibraryDrive = () => {
             kind === "book" ? `${b.file_path ? "PDF listo" : "Sin PDF"} · ${b.cover_path ? "con portada" : "sin portada"}`
             : kind === "pack" ? `${(b.pack_items || []).length} libros incluidos`
             : kind === "video" ? (b.video_url ? "Enlace añadido" : "Sin enlace")
-            : b.buy_url ? "Enlace añadido" : "Sin enlace";
+            : b.buy_url_test || b.buy_url_live || b.buy_url ? `Stripe ${b.buy_url_test ? "Test" : ""}${b.buy_url_test && b.buy_url_live ? " + " : ""}${b.buy_url_live ? "Live" : ""}`.trim() : "Sin enlace";
 
           return (
             <button

@@ -66,9 +66,11 @@ const Recursos = () => {
       const contact = s?.contact_email || "";
 
       // Libros publicados desde tu biblioteca privada
+      const modeRes = await (supabase.rpc as any)("get_payment_mode");
+      const live = modeRes?.data === "live";
       const { data: libraryBooks } = await (supabase as any)
         .from("library_books")
-        .select("id, title, description, price, cover_path, buy_url")
+        .select("id, title, description, price, cover_path, buy_url_test, buy_url_live")
         .eq("published", true)
         .eq("is_folder", false)
         .order("sort_order", { ascending: true });
@@ -86,7 +88,7 @@ const Recursos = () => {
           title: b.title,
           description: b.description || "",
           cover_url: cover,
-          url: b.buy_url || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""),
+          url: (live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""),
           price: b.price || "",
         });
       }
