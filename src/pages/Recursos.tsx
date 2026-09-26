@@ -164,10 +164,15 @@ const Recursos = () => {
           <section>
             <div className="mb-6">
               <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5 flex items-center gap-1.5">
-                <BookOpen className="w-3 h-3" /> Ebooks
+                <BookOpen className="w-3 h-3" /> Guías en PDF
               </p>
-              <h2 className="text-2xl font-bold font-display">Guías descargables</h2>
+              <h2 className="text-2xl font-bold font-display">Material para estudiar por tu cuenta</h2>
+              <p className="text-xs text-muted-foreground mt-2 max-w-xl leading-relaxed">
+                Son documentos PDF para leer tú solo. No incluyen entrenador, plan personalizado ni seguimiento:
+                eso es el Programa Transformación.
+              </p>
             </div>
+
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {ebooks.map((e, i) => (
                 <a
