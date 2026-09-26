@@ -265,6 +265,12 @@ const Admin = () => {
               </div>
             )}
 
+            {section === "drive" && (
+              <div className="max-w-5xl">
+                <LibraryDrive />
+              </div>
+            )}
+
             {section === "rules" && (
               <div className="max-w-2xl">
                 <TrainingRulesEditor />
