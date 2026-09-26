@@ -469,6 +469,7 @@ const LibraryDrive = () => {
               onClick={() => setOpenId(b.id)}
               className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
             >
+              {(() => { const packCover = b.is_pack && !covers[b.id] ? covers[((b as any).pack_items || [])[0]] : null; return (
               <div className="flex items-start gap-3">
                 {covers[b.id] ? (
                   <img src={covers[b.id]} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
