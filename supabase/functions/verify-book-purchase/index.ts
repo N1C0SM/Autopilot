@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
     const sessionId = typeof body?.session_id === "string" ? body.session_id.trim() : "";
     const ref = typeof body?.ref === "string" ? body.ref.trim() : "";
 
-    if (!sessionId.startsWith("cs_") || sessionId.length > 300) {
+    if (sessionId && (!sessionId.startsWith("cs_") || sessionId.length > 300)) {
       return new Response(JSON.stringify({ error: "Sesión de pago no válida." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
       });
@@ -25,6 +25,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
       });
     }
+    if (!sessionId && !ref) {
+      return new Response(JSON.stringify({ error: "Falta la referencia de la compra." }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
+      });
+    }
+
 
 
     const supabaseAdmin = createClient(
