@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, Loader2, Download, ArrowRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
+import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
+
 import PageHead from "@/components/PageHead";
 
 const BookSuccess = ({
@@ -149,9 +151,13 @@ const PaymentSuccess = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const bookRef = searchParams.get("client_reference_id") || "";
+  const queryRef = searchParams.get("client_reference_id") || "";
   const sessionId = searchParams.get("session_id") || "";
-  const isBook = bookRef.startsWith("book-");
+  const [pendingRef] = useState(() => readPendingBookRef());
+  const bookRef = queryRef.startsWith("book-") ? queryRef : pendingRef;
+  // If Stripe sends us back with a session but no tag, ask the backend what was bought.
+  const [notBook, setNotBook] = useState(false);
+  const isBook = !notBook && (!!bookRef || !!sessionId);
   const [checking, setChecking] = useState(true);
   const [paid, setPaid] = useState(false);
 
@@ -215,9 +221,10 @@ const PaymentSuccess = () => {
   if (isBook) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <BookSuccess ref={bookRef} sessionId={sessionId} />
+        <BookSuccess ref={bookRef} sessionId={sessionId} onNotBook={() => setNotBook(true)} />
       </div>
     );
+
   }
 
   if (loading || checking) {
