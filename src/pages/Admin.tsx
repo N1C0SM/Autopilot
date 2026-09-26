@@ -114,6 +114,7 @@ const Admin = () => {
     section === "trainers" ? "Entrenadores" :
     section === "reminders" ? "Recordatorios de pago" :
     section === "exercises" ? "Biblioteca de ejercicios" :
+    section === "drive" ? "Autopilot Drive · Libros" :
     section === "rules" ? "Reglas de generación" :
     section === "landing" ? "Contenido de la landing" :
     section === "blog" ? "Blog · Artículos SEO" :
