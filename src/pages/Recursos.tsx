@@ -192,7 +192,11 @@ const Recursos = () => {
                     </div>
                   )}
                   <div className="p-4 flex-1 flex flex-col">
+                    <span className="inline-block self-start text-[9px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2 py-0.5 rounded-full mb-2">
+                      PDF autodidacta · sin entrenador
+                    </span>
                     <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors">{e.title}</h3>
+
                     <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed flex-1">{e.description}</p>
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                       <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
