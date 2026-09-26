@@ -47,16 +47,28 @@ Deno.serve(async (req) => {
     ];
 
     let session: any = null;
-    for (const [name, key] of keys) {
+    for (const [_name, key] of keys) {
       if (!key) continue;
       try {
         const stripe = new Stripe(key, { apiVersion: "2025-08-27.basil" });
-        const s = await stripe.checkout.sessions.retrieve(sessionId);
-        if (s && !s.error) { session = s; break; }
+        if (sessionId) {
+          const s = await stripe.checkout.sessions.retrieve(sessionId);
+          if (s && !s.error) { session = s; break; }
+        } else {
+          // No session_id in the return URL: find the most recent paid checkout
+          // for this exact book reference in the last 2 hours.
+          const since = Math.floor(Date.now() / 1000) - 7200;
+          const list = await stripe.checkout.sessions.list({ limit: 100, created: { gte: since } });
+          const match = (list.data || []).find(
+            (s: any) => s.client_reference_id === ref && s.payment_status === "paid" && s.status === "complete"
+          );
+          if (match) { session = match; break; }
+        }
       } catch {
         // try next key
       }
     }
+
 
     if (!session) {
       return new Response(JSON.stringify({ error: "No hemos encontrado el pago. Vuelve a intentarlo en unos segundos." }), {
