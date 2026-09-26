@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ExternalLink, Loader2, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, Save, ExternalLink, Loader2, Image as ImageIcon, Sparkles } from "lucide-react";
 
 interface Post {
   id: string;
@@ -38,6 +38,40 @@ const BlogPostsEditor = () => {
   const [editing, setEditing] = useState<Post | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiAudience, setAiAudience] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  const generateWithAI = async () => {
+    if (!aiTopic.trim()) { toast.error("Escribe de qué quieres que hable el artículo"); return; }
+    setGenerating(true);
+    const { data, error } = await supabase.functions.invoke("generate-blog-post", {
+      body: { topic: aiTopic.trim(), audience: aiAudience.trim() },
+    });
+    setGenerating(false);
+    if (error || !data || (data as any).error) {
+      toast.error((data as any)?.error || "No se pudo generar el artículo");
+      return;
+    }
+    const d = data as any;
+    setEditing({
+      id: "",
+      slug: slugify(d.title || aiTopic),
+      title: d.title || aiTopic,
+      excerpt: d.excerpt || "",
+      body_markdown: d.body_markdown || "",
+      cover_url: "",
+      seo_title: d.seo_title || "",
+      seo_description: d.seo_description || "",
+      author_name: "Autopilot",
+      published: false,
+      published_at: null,
+      reading_minutes: null,
+    });
+    setAiTopic("");
+    setAiAudience("");
+    toast.success("Borrador creado. Revísalo antes de publicar.");
+  };
 
   const reload = async () => {
     const { data } = await supabase
@@ -256,6 +290,40 @@ const BlogPostsEditor = () => {
         </div>
         <Button variant="hero" onClick={createNew}>
           <Plus className="w-4 h-4 mr-1.5" /> Nuevo artículo
+        </Button>
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <p className="text-sm font-semibold">Escribir con IA</p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <Label className="text-xs">¿De qué trata?</Label>
+            <Input
+              className="mt-1"
+              value={aiTopic}
+              onChange={(e) => setAiTopic(e.target.value)}
+              placeholder="Cuántos días entrenar a la semana si trabajas 10 horas"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Para quién (opcional)</Label>
+            <Input
+              className="mt-1"
+              value={aiAudience}
+              onChange={(e) => setAiAudience(e.target.value)}
+              placeholder="Hombres de 30-45 con poco tiempo"
+            />
+          </div>
+        </div>
+        <Button variant="hero" onClick={generateWithAI} disabled={generating}>
+          {generating ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
+          {generating ? "Escribiendo borrador..." : "Generar borrador"}
         </Button>
       </div>
 
