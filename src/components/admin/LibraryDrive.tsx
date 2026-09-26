@@ -235,6 +235,7 @@ const LibraryDrive = () => {
             )}
           </div>
 
+          {!open.is_pack && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Portada */}
             <div className="space-y-2">
@@ -297,6 +298,7 @@ const LibraryDrive = () => {
               </label>
             </div>
           </div>
+          )}
 
           <div className="space-y-3 pt-2 border-t border-border">
             <div>
