@@ -14,6 +14,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const BookDownload = lazy(() => import("./pages/BookDownload"));
+const SharedBook = lazy(() => import("./pages/SharedBook"));
 
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/descarga-libro" element={<BookDownload />} />
+            <Route path="/d/:token" element={<SharedBook />} />
 
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<DashboardRedirect />} />
