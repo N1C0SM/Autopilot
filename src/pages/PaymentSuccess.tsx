@@ -9,7 +9,7 @@ import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
 
 import PageHead from "@/components/PageHead";
 
-const BookSuccess = ({
+export const BookSuccess = ({
   bookRef,
   sessionId,
   onNotBook,
@@ -21,18 +21,14 @@ const BookSuccess = ({
   const [fileUrl, setFileUrl] = useState("");
 
   useEffect(() => {
-    if (!sessionId) {
-      if (!bookRef) {
-        onNotBook();
-        return;
-      }
-      setState("missing");
+    if (!sessionId && !bookRef) {
+      onNotBook();
       return;
     }
     (async () => {
       try {
         const { data, error } = await supabase.functions.invoke("verify-book-purchase", {
-          body: { session_id: sessionId, ref: bookRef || undefined },
+          body: { session_id: sessionId || undefined, ref: bookRef || undefined },
         });
         if (error) throw new Error(error.message || "error");
         if (data?.kind === "subscription") {
@@ -59,6 +55,7 @@ const BookSuccess = ({
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, bookRef]);
+
 
 
   if (state === "verifying") {
