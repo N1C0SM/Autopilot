@@ -10,10 +10,11 @@ import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
 import PageHead from "@/components/PageHead";
 
 const BookSuccess = ({
-  ref: bookRef,
+  bookRef,
   sessionId,
   onNotBook,
-}: { ref: string; sessionId: string; onNotBook: () => void }) => {
+}: { bookRef: string; sessionId: string; onNotBook: () => void }) => {
+
   const navigate = useNavigate();
   const [state, setState] = useState<"verifying" | "ready" | "nofile" | "error" | "missing">("verifying");
   const [title, setTitle] = useState("");
