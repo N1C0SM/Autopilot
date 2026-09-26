@@ -17,6 +17,7 @@ import BlogPostsEditor from "@/components/admin/BlogPostsEditor";
 import TrainerManagement from "@/components/admin/TrainerManagement";
 import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
 import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
+import LibraryDrive from "@/components/admin/LibraryDrive";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
@@ -34,7 +35,7 @@ export interface Profile {
   subscription_tier?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -113,6 +114,7 @@ const Admin = () => {
     section === "trainers" ? "Entrenadores" :
     section === "reminders" ? "Recordatorios de pago" :
     section === "exercises" ? "Biblioteca de ejercicios" :
+    section === "drive" ? "Autopilot Drive · Libros" :
     section === "rules" ? "Reglas de generación" :
     section === "landing" ? "Contenido de la landing" :
     section === "blog" ? "Blog · Artículos SEO" :
@@ -260,6 +262,12 @@ const Admin = () => {
             {section === "exercises" && (
               <div className="max-w-3xl">
                 <ExerciseLibraryFull />
+              </div>
+            )}
+
+            {section === "drive" && (
+              <div className="max-w-5xl">
+                <LibraryDrive />
               </div>
             )}
 

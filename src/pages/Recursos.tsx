@@ -63,17 +63,48 @@ const Recursos = () => {
     (async () => {
       const settingsRes = await (supabase.rpc as any)("get_public_settings");
       const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
+      const contact = s?.contact_email || "";
+
+      // Libros publicados desde tu biblioteca privada
+      const { data: libraryBooks } = await (supabase as any)
+        .from("library_books")
+        .select("id, title, description, price, cover_path")
+        .eq("published", true)
+        .eq("is_folder", false)
+        .order("sort_order", { ascending: true });
+
+      const fromLibrary: Ebook[] = [];
+      for (const b of (libraryBooks as any[]) || []) {
+        let cover = "";
+        if (b.cover_path) {
+          const { data } = await supabase.storage.from("library").createSignedUrl(b.cover_path, 3600);
+          if (data?.signedUrl) cover = data.signedUrl;
+        }
+        fromLibrary.push({
+          id: b.id,
+          title: b.title,
+          description: b.description || "",
+          cover_url: cover,
+          url: contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : "",
+          price: b.price || "",
+        });
+      }
+
       if (s) {
         const dbEbooks = Array.isArray(s.ebooks) ? s.ebooks : [];
         const dbRecos = Array.isArray(s.recommendations) ? s.recommendations : [];
-        setEbooks(dbEbooks.length > 0 ? dbEbooks : FALLBACK_EBOOKS);
+        const combined = [...fromLibrary, ...dbEbooks];
+        setEbooks(combined.length > 0 ? combined : FALLBACK_EBOOKS);
         setRecos(dbRecos.length > 0 ? dbRecos : FALLBACK_RECOS);
         setFlags({
           blog: s.show_blog ?? true,
           ebooks: true,
           recos: true,
         });
+      } else if (fromLibrary.length > 0) {
+        setEbooks(fromLibrary);
       }
+
       const { data: p } = await supabase
         .from("blog_posts")
         .select("slug, title, excerpt, cover_url")
