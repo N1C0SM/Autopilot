@@ -501,136 +501,45 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
             </Button>
           </div>
 
-          {/* Filter chips - muscle groups */}
-          <div className="flex gap-1.5 flex-wrap">
-            <button
-              onClick={() => setFilterGroup(null)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                !filterGroup ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Todos
-            </button>
-            {Object.entries(groupCounts).sort(([a], [b]) => a.localeCompare(b)).map(([group, count]) => (
-              <button
-                key={group}
-                onClick={() => setFilterGroup(filterGroup === group ? null : group)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  filterGroup === group ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {group} <span className="opacity-60">({count})</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Filter chips - type */}
-          <div className="flex gap-1.5">
-            {EXERCISE_TYPES.map((t) => (
-              <button
-                key={t}
-                onClick={() => setFilterType(filterType === t ? null : t)}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                  filterType === t ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {/* Card grid */}
+          {/* Lista única y limpia */}
           {filtered.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="divide-y divide-border rounded-xl border border-border overflow-hidden">
               {filtered.map((ex) => (
                 <div
                   key={ex.id}
-                  className={`group relative rounded-lg border p-3.5 transition-all hover:shadow-md hover:border-primary/30 ${
-                    ex.priority === 1 ? "border-amber-500/40 bg-amber-500/5" : "border-border bg-card"
-                  }`}
+                  className="group flex items-center gap-3 px-3.5 py-2.5 bg-card hover:bg-secondary/40 transition-colors"
                 >
-                  {/* Header */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h4 className="font-semibold text-sm leading-tight">{ex.name}</h4>
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <button
-                        onClick={() => { setEditingExercise(ex); setDialogOpen(true); }}
-                        className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-                      >
-                        <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
-                      <button
-                        onClick={() => deleteExercise(ex.id)}
-                        className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-                      </button>
-                    </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{ex.name}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {[ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || "Sin clasificar"}
+                    </p>
                   </div>
 
-                  {/* Muscle group badge */}
-                  {ex.muscle_group && (
-                    <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full border mb-2 ${GROUP_COLORS[ex.muscle_group] || GROUP_COLORS.Otro}`}>
-                      {ex.muscle_group}
+                  {ex.video_url ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium flex items-center gap-1 shrink-0">
+                      <Video className="w-2.5 h-2.5" /> Vídeo
                     </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/60 shrink-0">Sin vídeo</span>
                   )}
 
-                  {/* Info badges */}
-                  <div className="flex flex-wrap gap-1">
-                    {ex.level && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${LEVEL_COLORS[ex.level] || ""}`}>
-                        {levelLabel(ex.level)}
-                      </span>
-                    )}
-                    {ex.priority === 1 && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-400">
-                        Base
-                      </span>
-                    )}
-                    {ex.stimulus_type && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STIMULUS_COLORS[ex.stimulus_type] || "bg-secondary text-muted-foreground"}`}>
-                        {ex.stimulus_type}
-                      </span>
-                    )}
-                    {ex.exercise_type && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                        {ex.exercise_type}
-                      </span>
-                    )}
-                    {ex.movement_pattern && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                        {ex.movement_pattern}
-                      </span>
-                    )}
-                    {ex.video_url && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium flex items-center gap-1">
-                        <Video className="w-2.5 h-2.5" /> Vídeo
-                      </span>
-                    )}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      onClick={() => { setEditingExercise(ex); setDialogOpen(true); }}
+                      className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+                      title="Editar"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => deleteExercise(ex.id)}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                    </button>
                   </div>
-
-                  {/* Skill tag */}
-                  {ex.skill_tag && (
-                    <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-violet-500/10 border border-violet-500/20">
-                      <span className="text-[10px] text-violet-400 font-medium">
-                        🎯 {ex.skill_tag} {ex.progression_order ? `#${ex.progression_order}` : ""}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Alternative */}
-                  {ex.alternative_id && (() => {
-                    const alt = exercises.find((a) => a.id === ex.alternative_id);
-                    return alt ? (
-                      <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-accent/50 border border-border/50">
-                        <ArrowLeftRight className="w-3 h-3 text-muted-foreground shrink-0" />
-                        <span className="text-[10px] text-muted-foreground truncate">
-                          Alt: <span className="font-medium text-foreground">{alt.name}</span>
-                          {alt.exercise_type && <span className="opacity-60"> · {alt.exercise_type}</span>}
-                        </span>
-                      </div>
-                    ) : null;
-                  })()}
                 </div>
               ))}
             </div>
