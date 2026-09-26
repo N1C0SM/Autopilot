@@ -531,6 +531,7 @@ export type Database = {
           id: string
           is_folder: boolean
           is_pack: boolean
+          kind: string
           pack_items: string[]
           parent_id: string | null
           price: string
@@ -538,6 +539,7 @@ export type Database = {
           sort_order: number
           title: string
           updated_at: string
+          video_url: string | null
         }
         Insert: {
           buy_url?: string | null
@@ -549,6 +551,7 @@ export type Database = {
           id?: string
           is_folder?: boolean
           is_pack?: boolean
+          kind?: string
           pack_items?: string[]
           parent_id?: string | null
           price?: string
@@ -556,6 +559,7 @@ export type Database = {
           sort_order?: number
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Update: {
           buy_url?: string | null
@@ -567,6 +571,7 @@ export type Database = {
           id?: string
           is_folder?: boolean
           is_pack?: boolean
+          kind?: string
           pack_items?: string[]
           parent_id?: string | null
           price?: string
@@ -574,6 +579,7 @@ export type Database = {
           sort_order?: number
           title?: string
           updated_at?: string
+          video_url?: string | null
         }
         Relationships: [
           {
