@@ -92,7 +92,24 @@ const Index = () => {
           show_ebooks: (s as any).show_ebooks ?? false,
           show_recommendations: (s as any).show_recommendations ?? false,
         });
-        setEbooks(Array.isArray((s as any).ebooks) ? (s as any).ebooks : []);
+        (supabase as any)
+          .from("library_books")
+          .select("id, title, description, price, cover_path, buy_url")
+          .eq("published", true)
+          .eq("is_folder", false)
+          .order("sort_order", { ascending: true })
+          .then(({ data }: any) =>
+            setEbooks(
+              (data || []).map((b: any) => ({
+                id: b.id,
+                title: b.title,
+                description: b.description || "",
+                cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
+                url: b.buy_url || "/recursos",
+                price: b.price || "",
+              })),
+            ),
+          );
         setRecommendations(Array.isArray((s as any).recommendations) ? (s as any).recommendations : []);
         if ((s as any).show_blog ?? true) {
           supabase
