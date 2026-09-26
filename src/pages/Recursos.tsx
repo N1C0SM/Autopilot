@@ -9,10 +9,53 @@ interface Ebook { id?: string; title: string; description: string; cover_url: st
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
 interface Post { slug: string; title: string; excerpt: string | null; cover_url: string | null }
 
+const FALLBACK_EBOOKS: Ebook[] = [
+  {
+    title: "Guía en PDF: fundamentos de fuerza",
+    description:
+      "Cómo estructurar tus semanas, elegir ejercicios y progresar sin estancarte. Material autodidacta, sin entrenador.",
+    cover_url: "",
+    url: "",
+    price: "Gratis",
+  },
+  {
+    title: "Guía en PDF: nutrición sin dietas imposibles",
+    description:
+      "Calorías, proteína y comidas reales del día a día, explicado sencillo. Material autodidacta, sin entrenador.",
+    cover_url: "",
+    url: "",
+    price: "Gratis",
+  },
+];
+
+const FALLBACK_RECOS: Reco[] = [
+  {
+    title: "Proteína en polvo sencilla",
+    description: "Solo si te cuesta llegar a tu proteína diaria con comida normal. Nada milagroso.",
+    image_url: "",
+    url: "",
+    badge: "Básico",
+  },
+  {
+    title: "Creatina monohidrato",
+    description: "El suplemento con más respaldo para fuerza y rendimiento. 3-5 g al día.",
+    image_url: "",
+    url: "",
+    badge: "Recomendado",
+  },
+  {
+    title: "Bandas elásticas",
+    description: "Para entrenar en casa o de viaje sin perder el ritmo de tu plan.",
+    image_url: "",
+    url: "",
+    badge: "En casa",
+  },
+];
+
 const Recursos = () => {
   const navigate = useNavigate();
-  const [ebooks, setEbooks] = useState<Ebook[]>([]);
-  const [recos, setRecos] = useState<Reco[]>([]);
+  const [ebooks, setEbooks] = useState<Ebook[]>(FALLBACK_EBOOKS);
+  const [recos, setRecos] = useState<Reco[]>(FALLBACK_RECOS);
   const [posts, setPosts] = useState<Post[]>([]);
   const [flags, setFlags] = useState({ blog: true, ebooks: true, recos: true });
 
@@ -21,12 +64,14 @@ const Recursos = () => {
       const settingsRes = await (supabase.rpc as any)("get_public_settings");
       const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
       if (s) {
-        setEbooks(Array.isArray(s.ebooks) ? s.ebooks : []);
-        setRecos(Array.isArray(s.recommendations) ? s.recommendations : []);
+        const dbEbooks = Array.isArray(s.ebooks) ? s.ebooks : [];
+        const dbRecos = Array.isArray(s.recommendations) ? s.recommendations : [];
+        setEbooks(dbEbooks.length > 0 ? dbEbooks : FALLBACK_EBOOKS);
+        setRecos(dbRecos.length > 0 ? dbRecos : FALLBACK_RECOS);
         setFlags({
           blog: s.show_blog ?? true,
-          ebooks: s.show_ebooks ?? true,
-          recos: s.show_recommendations ?? true,
+          ebooks: true,
+          recos: true,
         });
       }
       const { data: p } = await supabase
@@ -39,10 +84,8 @@ const Recursos = () => {
     })();
   }, []);
 
-  const nothing =
-    (!flags.ebooks || ebooks.length === 0) &&
-    (!flags.recos || recos.length === 0) &&
-    (!flags.blog || posts.length === 0);
+  const nothing = false;
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
