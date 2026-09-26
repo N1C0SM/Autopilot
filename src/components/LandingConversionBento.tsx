@@ -156,18 +156,45 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
         </div>
 
         <ScrollReveal>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {visibleTestimonials.map((testimonial) => (
-              <blockquote key={testimonial.name} className="rounded-lg border border-border bg-background/60 p-5">
-                <p className="text-sm leading-relaxed text-foreground/90">“{testimonial.text}”</p>
-                <footer className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4 text-xs">
-                  <span className="font-semibold">{testimonial.name}</span>
-                  <span className="text-primary">{testimonial.result}</span>
-                </footer>
-              </blockquote>
-            ))}
-          </div>
+          {visibleTestimonials.length > 0 ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {visibleTestimonials.map((testimonial) => (
+                <blockquote key={testimonial.name} className="rounded-lg border border-border bg-background/60 p-5">
+                  <p className="text-sm leading-relaxed text-foreground/90">“{testimonial.text}”</p>
+                  <footer className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4 text-xs">
+                    <span className="font-semibold">{testimonial.name}</span>
+                    <span className="text-primary">{testimonial.result}</span>
+                  </footer>
+                </blockquote>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  title: "7 días para probarlo",
+                  text: "Si en la primera semana ves que no es para ti, lo cancelas y no pagas más.",
+                },
+                {
+                  title: "Revisado por una persona",
+                  text: "Tu plan lo prepara y ajusta un entrenador real, no una plantilla automática.",
+                },
+                {
+                  title: "Se adapta a tu semana",
+                  text: "Cambias de horario o te lesionas, se lo dices por chat y tu plan cambia contigo.",
+                },
+              ].map((item) => (
+                <div key={item.title} className="rounded-lg border border-border bg-background/60 p-5">
+                  <p className="flex items-center gap-2 text-sm font-semibold">
+                    <ShieldCheck className="h-4 w-4 text-success" /> {item.title}
+                  </p>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </ScrollReveal>
+
 
         <div className="mt-8 flex flex-col items-center gap-4 text-center">
           <Button variant="hero" size="lg" onClick={onScan} className="group">
