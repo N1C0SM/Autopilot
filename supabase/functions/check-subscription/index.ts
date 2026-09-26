@@ -41,14 +41,20 @@ serve(async (req) => {
 
     if (!stripeKey) throw new Error(`Stripe ${paymentMode} secret key not configured`);
 
+    const noSession = () => new Response(JSON.stringify({
+      subscribed: false, subscription_end: null, tier: "personal", plan: null, reason: "no_session",
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
+
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader) return noSession();
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+    if (userError || !userData?.user?.email) {
+      logStep("No valid session", { message: userError?.message });
+      return noSession();
+    }
     const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     // Check current profile to avoid overwriting free plan users
