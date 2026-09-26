@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
     const keys: Array<[string, string | undefined]> = [
       [mode, mode === "live" ? Deno.env.get("STRIPE_LIVE_SECRET_KEY") : Deno.env.get("STRIPE_TEST_SECRET_KEY")],
       [mode === "live" ? "test" : "live", mode === "live" ? Deno.env.get("STRIPE_TEST_SECRET_KEY") : Deno.env.get("STRIPE_LIVE_SECRET_KEY")],
+      ["default", Deno.env.get("STRIPE_SECRET_KEY")],
     ];
 
     let session: any = null;
@@ -80,10 +81,18 @@ Deno.serve(async (req) => {
               if (linkCache[pl] && urls.includes(linkCache[pl])) { match = { ...s, client_reference_id: ref }; break; }
             }
           }
+          if (!match) {
+            // Last resort: the browser remembered this book; accept the newest
+            // one-off paid checkout from the last 20 minutes.
+            const recent = Math.floor(Date.now() / 1000) - 1200;
+            const newest = paid.find((s: any) => s.created >= recent && !String(s.client_reference_id || "").startsWith("book-"));
+            if (newest) match = { ...newest, client_reference_id: ref };
+          }
+          console.log("verify-book", { mode: _name, paid: paid.length, matched: !!match });
           if (match) { session = match; break; }
         }
-      } catch {
-        // try next key
+      } catch (e) {
+        console.log("verify-book stripe error", _name, String((e as any)?.message || e));
       }
     }
 
