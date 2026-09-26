@@ -38,6 +38,40 @@ const BlogPostsEditor = () => {
   const [editing, setEditing] = useState<Post | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiAudience, setAiAudience] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  const generateWithAI = async () => {
+    if (!aiTopic.trim()) { toast.error("Escribe de qué quieres que hable el artículo"); return; }
+    setGenerating(true);
+    const { data, error } = await supabase.functions.invoke("generate-blog-post", {
+      body: { topic: aiTopic.trim(), audience: aiAudience.trim() },
+    });
+    setGenerating(false);
+    if (error || !data || (data as any).error) {
+      toast.error((data as any)?.error || "No se pudo generar el artículo");
+      return;
+    }
+    const d = data as any;
+    setEditing({
+      id: "",
+      slug: slugify(d.title || aiTopic),
+      title: d.title || aiTopic,
+      excerpt: d.excerpt || "",
+      body_markdown: d.body_markdown || "",
+      cover_url: "",
+      seo_title: d.seo_title || "",
+      seo_description: d.seo_description || "",
+      author_name: "Autopilot",
+      published: false,
+      published_at: null,
+      reading_minutes: null,
+    });
+    setAiTopic("");
+    setAiAudience("");
+    toast.success("Borrador creado. Revísalo antes de publicar.");
+  };
 
   const reload = async () => {
     const { data } = await supabase
