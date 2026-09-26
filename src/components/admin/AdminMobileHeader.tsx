@@ -13,7 +13,9 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import autopilotLogo from "@/assets/autopilot-logo.png";
 import type { AdminSection } from "@/pages/Admin";
+
 
 interface Props {
   title: string;
