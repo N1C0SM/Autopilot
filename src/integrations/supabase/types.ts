@@ -65,6 +65,41 @@ export type Database = {
         }
         Relationships: []
       }
+      book_share_links: {
+        Row: {
+          book_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          token?: string
+          used_at?: string | null
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_share_links_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "library_books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_tokens: {
         Row: {
           created_at: string
