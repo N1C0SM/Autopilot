@@ -242,6 +242,19 @@ const LibraryDrive = () => {
     window.open(data.signedUrl, "_blank", "noopener");
   };
 
+  const previewPath = books.find((b) => b.id === openId)?.file_path || null;
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setPreviewUrl(null);
+    if (!previewPath) return;
+    let alive = true;
+    supabase.storage.from("library").createSignedUrl(previewPath, 1800).then(({ data }) => {
+      if (alive && data?.signedUrl) setPreviewUrl(data.signedUrl);
+    });
+    return () => { alive = false; };
+  }, [previewPath]);
+
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -346,6 +359,17 @@ const LibraryDrive = () => {
           </div>
           )}
 
+          {isBook && open.file_path && (
+            <div className="space-y-2">
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Vista previa del PDF</Label>
+              {previewUrl ? (
+                <iframe src={previewUrl} title="Vista previa del PDF" className="w-full h-[70vh] rounded-xl border border-border bg-secondary/30" />
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando vista previa…</div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-3 pt-2 border-t border-border">
             <div>
               <Label className="text-xs">Título</Label>
@@ -439,6 +463,16 @@ const LibraryDrive = () => {
                     <p className="text-[11px] text-muted-foreground">Crea primero algún libro para poder incluirlo.</p>
                   )}
                 </div>
+                <Button
+                  size="sm"
+                  variant="hero"
+                  className="mt-3"
+                  disabled={(open.pack_items || []).length === 0}
+                  onClick={() => shareOnce(open.id)}
+                >
+                  Copiar enlace de 1 descarga del pack
+                </Button>
+                <p className="text-[11px] text-muted-foreground mt-1">El cliente podrá descargar cada libro incluido una sola vez. Caduca en 7 días.</p>
               </div>
             )}
           </div>
