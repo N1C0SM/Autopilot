@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { ArrowLeft, BookOpen, Sparkles, Newspaper, ExternalLink, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { withBookRef } from "@/lib/buyLink";
 
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
@@ -88,7 +89,7 @@ const Recursos = () => {
           title: b.title,
           description: b.description || "",
           cover_url: cover,
-          url: (live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""),
+          url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""), b.id),
           price: b.price || "",
         });
       }
