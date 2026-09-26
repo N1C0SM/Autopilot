@@ -90,8 +90,8 @@ Deno.serve(async (req) => {
           console.log("verify-book", { mode: _name, paid: paid.length, matched: !!match });
           if (match) { session = match; break; }
         }
-      } catch {
-        // try next key
+      } catch (e) {
+        console.log("verify-book stripe error", _name, String((e as any)?.message || e));
       }
     }
 
