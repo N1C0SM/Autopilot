@@ -8,6 +8,7 @@ import { Helmet } from "react-helmet-async";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
 import { track } from "@/lib/analytics";
+import { withBookRef } from "@/lib/buyLink";
 import AppStoreBadges from "@/components/AppStoreBadges";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
@@ -108,7 +109,7 @@ const Index = () => {
               title: b.title,
               description: b.description || "",
               cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
-              url: (live ? b.buy_url_live : b.buy_url_test) || "/recursos",
+              url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || "/recursos", b.id),
               price: b.price || "",
             })),
           );

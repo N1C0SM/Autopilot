@@ -13,6 +13,7 @@ type EventName =
   | "plan_select"
   | "checkout_start"
   | "checkout_success"
+  | "book_purchase_success"
   | "checkout_abandoned"
   | "plan_ready"
   | "landing_view"
