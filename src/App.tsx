@@ -13,6 +13,8 @@ const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const BookDownload = lazy(() => import("./pages/BookDownload"));
+
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -98,6 +100,8 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/descarga-libro" element={<BookDownload />} />
+
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/dashboard/user/:userId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
