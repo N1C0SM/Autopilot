@@ -9,10 +9,53 @@ interface Ebook { id?: string; title: string; description: string; cover_url: st
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
 interface Post { slug: string; title: string; excerpt: string | null; cover_url: string | null }
 
+const FALLBACK_EBOOKS: Ebook[] = [
+  {
+    title: "Guía en PDF: fundamentos de fuerza",
+    description:
+      "Cómo estructurar tus semanas, elegir ejercicios y progresar sin estancarte. Material autodidacta, sin entrenador.",
+    cover_url: "",
+    url: "",
+    price: "Gratis",
+  },
+  {
+    title: "Guía en PDF: nutrición sin dietas imposibles",
+    description:
+      "Calorías, proteína y comidas reales del día a día, explicado sencillo. Material autodidacta, sin entrenador.",
+    cover_url: "",
+    url: "",
+    price: "Gratis",
+  },
+];
+
+const FALLBACK_RECOS: Reco[] = [
+  {
+    title: "Proteína en polvo sencilla",
+    description: "Solo si te cuesta llegar a tu proteína diaria con comida normal. Nada milagroso.",
+    image_url: "",
+    url: "",
+    badge: "Básico",
+  },
+  {
+    title: "Creatina monohidrato",
+    description: "El suplemento con más respaldo para fuerza y rendimiento. 3-5 g al día.",
+    image_url: "",
+    url: "",
+    badge: "Recomendado",
+  },
+  {
+    title: "Bandas elásticas",
+    description: "Para entrenar en casa o de viaje sin perder el ritmo de tu plan.",
+    image_url: "",
+    url: "",
+    badge: "En casa",
+  },
+];
+
 const Recursos = () => {
   const navigate = useNavigate();
-  const [ebooks, setEbooks] = useState<Ebook[]>([]);
-  const [recos, setRecos] = useState<Reco[]>([]);
+  const [ebooks, setEbooks] = useState<Ebook[]>(FALLBACK_EBOOKS);
+  const [recos, setRecos] = useState<Reco[]>(FALLBACK_RECOS);
   const [posts, setPosts] = useState<Post[]>([]);
   const [flags, setFlags] = useState({ blog: true, ebooks: true, recos: true });
 
@@ -21,12 +64,14 @@ const Recursos = () => {
       const settingsRes = await (supabase.rpc as any)("get_public_settings");
       const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
       if (s) {
-        setEbooks(Array.isArray(s.ebooks) ? s.ebooks : []);
-        setRecos(Array.isArray(s.recommendations) ? s.recommendations : []);
+        const dbEbooks = Array.isArray(s.ebooks) ? s.ebooks : [];
+        const dbRecos = Array.isArray(s.recommendations) ? s.recommendations : [];
+        setEbooks(dbEbooks.length > 0 ? dbEbooks : FALLBACK_EBOOKS);
+        setRecos(dbRecos.length > 0 ? dbRecos : FALLBACK_RECOS);
         setFlags({
           blog: s.show_blog ?? true,
-          ebooks: s.show_ebooks ?? true,
-          recos: s.show_recommendations ?? true,
+          ebooks: true,
+          recos: true,
         });
       }
       const { data: p } = await supabase
@@ -39,10 +84,8 @@ const Recursos = () => {
     })();
   }, []);
 
-  const nothing =
-    (!flags.ebooks || ebooks.length === 0) &&
-    (!flags.recos || recos.length === 0) &&
-    (!flags.blog || posts.length === 0);
+  const nothing = false;
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -121,10 +164,15 @@ const Recursos = () => {
           <section>
             <div className="mb-6">
               <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5 flex items-center gap-1.5">
-                <BookOpen className="w-3 h-3" /> Ebooks
+                <BookOpen className="w-3 h-3" /> Guías en PDF
               </p>
-              <h2 className="text-2xl font-bold font-display">Guías descargables</h2>
+              <h2 className="text-2xl font-bold font-display">Material para estudiar por tu cuenta</h2>
+              <p className="text-xs text-muted-foreground mt-2 max-w-xl leading-relaxed">
+                Son documentos PDF para leer tú solo. No incluyen entrenador, plan personalizado ni seguimiento:
+                eso es el Programa Transformación.
+              </p>
             </div>
+
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {ebooks.map((e, i) => (
                 <a
@@ -144,7 +192,11 @@ const Recursos = () => {
                     </div>
                   )}
                   <div className="p-4 flex-1 flex flex-col">
+                    <span className="inline-block self-start text-[9px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2 py-0.5 rounded-full mb-2">
+                      PDF autodidacta · sin entrenador
+                    </span>
                     <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors">{e.title}</h3>
+
                     <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed flex-1">{e.description}</p>
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                       <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
