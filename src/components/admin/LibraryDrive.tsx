@@ -127,6 +127,7 @@ const LibraryDrive = () => {
         title: b.title,
         description: b.description,
         price: b.price,
+        buy_url: b.buy_url?.trim() || null,
         published: b.published,
       })
       .eq("id", b.id);

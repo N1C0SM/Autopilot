@@ -68,7 +68,7 @@ const Recursos = () => {
       // Libros publicados desde tu biblioteca privada
       const { data: libraryBooks } = await (supabase as any)
         .from("library_books")
-        .select("id, title, description, price, cover_path")
+        .select("id, title, description, price, cover_path, buy_url")
         .eq("published", true)
         .eq("is_folder", false)
         .order("sort_order", { ascending: true });
@@ -76,7 +76,8 @@ const Recursos = () => {
       const fromLibrary: Ebook[] = [];
       for (const b of (libraryBooks as any[]) || []) {
         let cover = "";
-        if (b.cover_path) {
+        if (b.cover_path?.startsWith("http")) cover = b.cover_path;
+        else if (b.cover_path) {
           const { data } = await supabase.storage.from("library").createSignedUrl(b.cover_path, 3600);
           if (data?.signedUrl) cover = data.signedUrl;
         }
@@ -85,7 +86,7 @@ const Recursos = () => {
           title: b.title,
           description: b.description || "",
           cover_url: cover,
-          url: contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : "",
+          url: b.buy_url || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""),
           price: b.price || "",
         });
       }
@@ -93,7 +94,7 @@ const Recursos = () => {
       if (s) {
         const dbEbooks = Array.isArray(s.ebooks) ? s.ebooks : [];
         const dbRecos = Array.isArray(s.recommendations) ? s.recommendations : [];
-        const combined = [...fromLibrary, ...dbEbooks];
+        const combined = fromLibrary;
         setEbooks(combined.length > 0 ? combined : FALLBACK_EBOOKS);
         setRecos(dbRecos.length > 0 ? dbRecos : FALLBACK_RECOS);
         setFlags({
