@@ -13,6 +13,11 @@ Deno.serve(async (req) => {
 
     const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    const { data: link } = await db.from("book_share_links").select("book_id").eq("token", token).maybeSingle();
+    if (!link) return json({ error: "Enlace no válido." }, 404);
+    const { data: pre } = await db.from("library_books").select("file_path").eq("id", link.book_id).maybeSingle();
+    if (!pre?.file_path) return json({ error: "El libro todavía no tiene PDF. Inténtalo más tarde." }, 404);
+
     // Atomic claim: only succeeds once.
     const { data: claimed } = await db
       .from("book_share_links")
