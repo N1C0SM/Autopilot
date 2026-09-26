@@ -17,6 +17,7 @@ import BlogPostsEditor from "@/components/admin/BlogPostsEditor";
 import TrainerManagement from "@/components/admin/TrainerManagement";
 import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
 import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
+import LibraryDrive from "@/components/admin/LibraryDrive";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
