@@ -20,12 +20,12 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
       });
     }
-    if (!ref.startsWith("book-") || !UUID_RE.test(ref.slice(5))) {
+    if (ref && (!ref.startsWith("book-") || !UUID_RE.test(ref.slice(5)))) {
       return new Response(JSON.stringify({ error: "Referencia de compra no válida." }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
       });
     }
-    const bookId = ref.slice(5);
+
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
