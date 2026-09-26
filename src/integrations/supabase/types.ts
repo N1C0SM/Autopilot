@@ -522,6 +522,7 @@ export type Database = {
       }
       library_books: {
         Row: {
+          buy_url: string | null
           cover_path: string | null
           created_at: string
           description: string
@@ -538,6 +539,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          buy_url?: string | null
           cover_path?: string | null
           created_at?: string
           description?: string
@@ -554,6 +556,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          buy_url?: string | null
           cover_path?: string | null
           created_at?: string
           description?: string
