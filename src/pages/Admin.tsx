@@ -168,7 +168,7 @@ const Admin = () => {
           </header>
 
           <main
-            className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[calc(5.5rem+var(--safe-bottom,0px))] md:pb-8"
+            className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[calc(6.5rem+var(--safe-bottom,0px))] md:pb-8"
           >
             <Suspense fallback={<div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />}>
             {section === "dashboard" && (
