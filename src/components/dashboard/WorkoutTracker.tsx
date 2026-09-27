@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock,
-  Timer, TrendingUp, X, Video, Save,
+  Timer, TrendingUp, X, Video, Save, Trophy, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -43,6 +43,8 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const [logsReady, setLogsReady] = useState(false);
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
+  const [personalRecords, setPersonalRecords] = useState<string[]>([]);
+  const [sessionStartedAt, setSessionStartedAt] = useState<Date | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const formatLocalDate = (date: Date) => {
@@ -268,6 +270,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
       await supabase.from("personal_records").upsert(prsToInsert, {
         onConflict: "user_id,exercise_name,weight,reps",
       });
+      setPersonalRecords(prsToInsert.map((pr) => pr.exercise_name));
       toast.success(`🏆 ¡Nuevo PR en ${prsToInsert.length} ejercicio${prsToInsert.length > 1 ? "s" : ""}!`, { duration: 4000 });
     }
   };
@@ -312,6 +315,19 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
   const completedSets = Object.values(exerciseLogs).flat().filter((s) => s.done).length;
   const totalSets = Object.values(exerciseLogs).flat().length;
+  const completedLogEntries = Object.entries(exerciseLogs).flatMap(([name, sets]) =>
+    sets.filter((set) => set.done).map((set) => ({ name, set })),
+  );
+  const totalVolume = completedLogEntries.reduce((total, { set }) => {
+    const weight = Number.parseFloat(set.weight);
+    return total + (Number.isFinite(weight) && weight > 0 ? weight * Math.max(0, set.reps) : 0);
+  }, 0);
+  const musclesWorked = Array.from(new Set(
+    (currentPlan?.exercises || [])
+      .filter((exercise) => (exerciseLogs[exercise.name] || []).some((set) => set.done))
+      .map((exercise) => exercise.muscle_group)
+      .filter(Boolean),
+  ));
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
   const completedExercises = currentPlan?.exercises?.filter((exercise) => {
     const sets = exerciseLogs[exercise.name] || [];
@@ -386,6 +402,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                   onClick={() => {
                     setStarted(true);
                     setExpandedExercise(0);
+                    setSessionStartedAt((startedAt) => startedAt || new Date());
                   }}
                   variant="hero"
                   size="xl"
@@ -412,6 +429,53 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
               />
             </div>
           </div>
+
+          {workoutCompleted && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="font-bold">Sesión completada</p>
+                  <p className="text-xs text-muted-foreground">Esto es lo que has conseguido hoy</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="rounded-xl bg-background/60 p-3">
+                  <p className="text-lg font-bold">{completedExercises}/{currentPlan.exercises?.length || 0}</p>
+                  <p className="text-[10px] text-muted-foreground">ejercicios</p>
+                </div>
+                <div className="rounded-xl bg-background/60 p-3">
+                  <p className="text-lg font-bold">{completedSets}</p>
+                  <p className="text-[10px] text-muted-foreground">series hechas</p>
+                </div>
+                <div className="rounded-xl bg-background/60 p-3">
+                  <p className="text-lg font-bold">{totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—"}</p>
+                  <p className="text-[10px] text-muted-foreground">volumen movido</p>
+                </div>
+                <div className="rounded-xl bg-background/60 p-3">
+                  <p className="text-lg font-bold">
+                    {sessionStartedAt ? `${Math.max(1, Math.round((Date.now() - sessionStartedAt.getTime()) / 60000))} min` : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">duración aprox.</p>
+                </div>
+              </div>
+              <div className="space-y-2 text-sm">
+                {musclesWorked.length > 0 && (
+                  <p><span className="font-semibold">Músculos trabajados:</span> {musclesWorked.join(" · ")}</p>
+                )}
+                {personalRecords.length > 0 && (
+                  <p className="flex items-center gap-1.5 text-primary">
+                    <BarChart3 className="w-4 h-4" />
+                    <span><span className="font-semibold">Récords:</span> {personalRecords.join(" · ")}</span>
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          )}
 
           {/* Rest timer floating */}
           <AnimatePresence>
@@ -471,6 +535,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                     if (!started) {
                       setStarted(true);
                       setExpandedExercise(i);
+                      setSessionStartedAt((startedAt) => startedAt || new Date());
                     } else {
                       setExpandedExercise(isExpanded ? null : i);
                     }
@@ -625,26 +690,42 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                             </span>
 
                             {/* Weight input */}
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={set.weight}
-                              onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
-                              placeholder={prevSets?.[si]?.weight || "kg"}
-                              className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-                            />
+                            <div className="min-w-0">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={set.weight}
+                                onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
+                                placeholder={prevSets?.[si]?.weight || "kg"}
+                                aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                              />
+                              {prevSets?.[si] && (
+                                <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
+                                  Antes: {prevSets[si].weight || "—"} kg
+                                </p>
+                              )}
+                            </div>
 
                             {/* Reps input */}
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={set.reps}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value);
-                                if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
-                              }}
-                              className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
-                            />
+                            <div className="min-w-0">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={set.reps}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value);
+                                  if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
+                                }}
+                                aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                              />
+                              {prevSets?.[si] && (
+                                <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
+                                  Antes: {prevSets[si].reps} reps
+                                </p>
+                              )}
+                            </div>
 
                             {/* Done toggle */}
                             <button
