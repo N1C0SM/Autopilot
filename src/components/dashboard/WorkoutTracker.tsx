@@ -32,9 +32,9 @@ interface Props {
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 const MUSCLE_INTENSITY = {
-  low: { label: "Bajo", range: "1–2 series", fill: "#B77A35" },
-  medium: { label: "Medio", range: "3–5 series", fill: "#E2B84B" },
-  high: { label: "Alto", range: "6+ series", fill: "#FFE39A" },
+  low: { label: "Bajo", range: "1–2 series", fill: "#C47B32" },
+  medium: { label: "Medio", range: "3–5 series", fill: "#F2B632" },
+  high: { label: "Alto", range: "6+ series", fill: "#FFE7A3" },
 };
 
 const getMuscleIntensity = (sets: number) => sets >= 6

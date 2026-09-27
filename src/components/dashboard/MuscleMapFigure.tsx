@@ -1,3 +1,4 @@
+import { useId } from "react";
 import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
 
@@ -24,37 +25,13 @@ const FRONT_REGIONS: MuscleRegion[] = [
   { muscle: "Serrato", d: "M121 203 C132 204 144 212 153 227 L147 252 C137 260 126 252 121 240 L115 220 Z M277 203 C266 204 254 212 245 227 L251 252 C261 260 272 252 277 240 L283 220 Z" },
   {
     muscle: "Core",
-    d: "",
-    details: [
-      "M159 214 C167 210 177 211 187 216 L187 237 C178 241 167 239 158 235 Z",
-      "M197 216 C207 211 217 210 225 214 L226 235 C217 239 206 241 197 237 Z",
-      "M158 241 C167 245 177 245 187 242 L187 266 C178 270 168 269 158 265 Z",
-      "M197 242 C207 245 217 245 226 241 L226 265 C216 269 206 270 197 266 Z",
-      "M159 271 C168 275 177 275 187 272 L187 297 C178 301 168 300 159 297 Z",
-      "M197 272 C207 275 216 275 225 271 L225 297 C216 300 206 301 197 297 Z",
-      "M161 303 C169 308 178 308 186 305 L185 328 C177 333 169 332 162 329 Z",
-      "M198 305 C206 308 215 308 223 303 L222 329 C215 332 207 333 199 328 Z",
-      "M146 215 C151 218 155 222 157 228 L155 256 C151 268 147 278 145 291 C141 278 140 261 141 247 C141 233 143 222 146 215 Z",
-      "M238 215 C233 218 229 222 227 228 L229 256 C233 268 237 278 239 291 C243 278 244 261 243 247 C243 233 241 222 238 215 Z",
-      "M150 296 C155 300 159 305 162 311 L160 326 C155 321 151 314 149 307 Z",
-      "M234 296 C229 300 225 305 222 311 L224 326 C229 321 233 314 235 307 Z",
-    ],
+    d: "M172 207 C180 199 190 198 195 203 L195 328 C181 323 172 305 169 281 L168 225 Z M204 203 C212 198 223 201 227 209 L230 249 C229 281 221 315 204 328 Z M146 222 C151 231 159 237 165 240 L166 303 C154 292 147 276 146 261 Z M253 222 C248 231 240 237 234 240 L233 303 C245 292 252 276 253 261 Z",
   },
   { muscle: "Abductores", d: "M111 325 C124 319 138 324 150 338 L155 380 C148 394 131 399 119 388 C109 373 105 346 111 325 Z M267 325 C254 319 240 324 228 338 L223 380 C230 394 247 399 259 388 C269 373 273 346 267 325 Z" },
   { muscle: "Aductores", d: "M156 339 C166 332 176 335 186 345 L190 410 C184 429 173 445 164 445 C158 425 153 378 156 339 Z M222 339 C212 332 202 335 192 345 L188 410 C194 429 205 445 214 445 C220 425 225 378 222 339 Z" },
   {
     muscle: "Piernas",
-    d: "",
-    details: [
-      "M124 345 C131 337 141 336 150 346 C156 362 155 391 151 416 C145 405 137 398 128 393 C122 378 121 359 124 345 Z",
-      "M129 396 C138 399 146 407 151 420 C149 446 140 470 129 485 C121 478 117 459 117 440 C117 423 121 408 129 396 Z",
-      "M151 348 C158 365 158 390 154 416 C160 405 168 401 177 400 L181 427 C178 451 170 477 160 489 C151 481 145 463 146 444 C149 418 153 389 151 348 Z",
-      "M179 400 C187 406 191 422 191 442 C190 462 184 481 176 492 C168 483 165 469 166 452 C168 429 172 409 179 400 Z",
-      "M274 345 C267 337 257 336 248 346 C242 362 243 391 247 416 C253 405 261 398 270 393 C276 378 277 359 274 345 Z",
-      "M269 396 C260 399 252 407 247 420 C249 446 258 470 269 485 C277 478 281 459 281 440 C281 423 277 408 269 396 Z",
-      "M247 348 C240 365 240 390 244 416 C238 405 230 401 221 400 L217 427 C220 451 228 477 238 489 C247 481 253 463 252 444 C249 418 245 389 247 348 Z",
-      "M219 400 C211 406 207 422 207 442 C208 462 214 481 222 492 C230 483 233 469 232 452 C230 429 226 409 219 400 Z",
-    ],
+    d: "M144 341 C139 367 153 392 169 415 C180 436 179 461 166 479 C153 484 145 474 141 456 C132 449 123 431 123 410 C124 383 131 355 144 341 Z M255 341 C260 367 246 392 230 415 C219 436 220 461 233 479 C246 484 254 474 258 456 C267 449 276 431 276 410 C275 383 268 355 255 341 Z",
   },
   {
     muscle: "Gemelos",
@@ -80,26 +57,12 @@ const BACK_REGIONS: MuscleRegion[] = [
   { muscle: "Lumbares", d: "M163 254 C176 246 189 253 199 263 C209 253 222 246 235 254 L228 298 C218 312 209 322 199 327 C189 322 180 312 170 298 Z" },
   {
     muscle: "Glúteos",
-    d: "",
-    details: [
-      "M132 324 C145 313 163 313 181 321 C172 333 160 345 143 353 C132 348 128 336 132 324 Z",
-      "M185 323 C190 325 195 328 199 332 L198 379 C187 392 171 400 154 399 C143 395 136 385 135 371 C151 361 169 345 185 323 Z",
-      "M266 324 C253 313 235 313 217 321 C226 333 238 345 255 353 C266 348 270 336 266 324 Z",
-      "M213 323 C208 325 203 328 199 332 L200 379 C211 392 227 400 244 399 C255 395 262 385 263 371 C247 361 229 345 213 323 Z",
-      "M132 350 C138 352 144 354 150 354 C145 359 140 364 135 370 C131 365 130 358 132 350 Z",
-      "M266 350 C260 352 254 354 248 354 C253 359 258 364 263 370 C267 365 268 358 266 350 Z",
-    ],
+    d: "M148 308 C165 296 184 301 195 317 L195 357 C191 374 165 376 139 383 C137 363 140 329 148 308 Z M250 308 C233 296 214 301 203 317 L203 357 C207 374 233 376 259 383 C261 363 258 329 250 308 Z",
   },
   { muscle: "Abductores", d: "M120 355 C128 346 138 345 148 351 L151 411 C146 428 135 442 126 441 C118 426 114 382 120 355 Z M278 355 C270 346 260 345 250 351 L247 411 C252 428 263 442 272 441 C280 426 284 382 278 355 Z" },
   {
     muscle: "Isquiotibiales",
-    d: "",
-    details: [
-      "M137 399 C151 397 168 390 189 380 C188 406 182 434 177 460 C171 486 163 507 151 519 C137 510 130 485 128 459 C127 435 130 414 137 399 Z",
-      "M193 380 C198 389 201 407 201 426 C201 461 193 497 181 518 C174 513 169 506 165 498 C177 472 183 440 187 414 C190 399 191 388 193 380 Z",
-      "M261 399 C247 397 230 390 209 380 C210 406 216 434 221 460 C227 486 235 507 247 519 C261 510 268 485 270 459 C271 435 268 414 261 399 Z",
-      "M205 380 C200 389 197 407 197 426 C197 461 205 497 217 518 C224 513 229 506 233 498 C221 472 215 440 211 414 C208 399 207 388 205 380 Z",
-    ],
+    d: "M139 388 C153 381 171 380 183 380 C181 411 172 442 158 467 L150 483 C136 470 124 447 123 422 C122 405 129 394 139 388 Z M260 388 C246 381 228 380 216 380 C218 411 227 442 241 467 L249 483 C263 470 275 447 276 422 C277 405 270 394 260 388 Z",
   },
   {
     muscle: "Gemelos",
@@ -113,13 +76,7 @@ const BACK_REGIONS: MuscleRegion[] = [
   },
   {
     muscle: "Piernas",
-    d: "",
-    details: [
-      "M137 399 C151 397 168 390 189 380 C188 406 182 434 177 460 C171 486 163 507 151 519 C137 510 130 485 128 459 C127 435 130 414 137 399 Z",
-      "M193 380 C198 389 201 407 201 426 C201 461 193 497 181 518 C174 513 169 506 165 498 C177 472 183 440 187 414 C190 399 191 388 193 380 Z",
-      "M261 399 C247 397 230 390 209 380 C210 406 216 434 221 460 C227 486 235 507 247 519 C261 510 268 485 270 459 C271 435 268 414 261 399 Z",
-      "M205 380 C200 389 197 407 197 426 C197 461 205 497 217 518 C224 513 229 506 233 498 C221 472 215 440 211 414 C208 399 207 388 205 380 Z",
-    ],
+    d: "M139 388 C153 381 171 380 183 380 C181 411 172 442 158 467 L150 483 C136 470 124 447 123 422 C122 405 129 394 139 388 Z M260 388 C246 381 228 380 216 380 C218 411 227 442 241 467 L249 483 C263 470 275 447 276 422 C277 405 270 394 260 388 Z",
   },
 ];
 
@@ -127,79 +84,54 @@ const FRONT_SILHOUETTE = "M192 14 L169 35 L165 66 L175 87 L172 100 L137 124 L105
 const BACK_SILHOUETTE = "M194 14 L176 27 L168 55 L175 103 L141 123 L110 130 L98 144 L86 230 L71 256 L64 311 L46 367 L54 394 L73 410 L74 389 L84 385 L80 329 L107 284 L114 246 L135 218 L148 263 L115 408 L128 468 L126 507 L114 539 L125 628 L116 652 L98 669 L129 682 L146 682 L156 671 L238 671 L246 681 L265 682 L295 667 L276 650 L269 628 L281 551 L267 480 L278 396 L250 261 L264 217 L271 218 L285 247 L290 281 L318 331 L311 385 L321 390 L322 410 L342 391 L349 364 L333 310 L330 262 L313 233 L310 198 L301 182 L301 145 L283 128 L261 124 L226 103 L234 57 L230 34 L216 18 Z";
 
 export function MuscleMapFigure({ side, muscles, intensityFor }: Props) {
+  const instanceId = useId().replace(/:/g, "");
   const regions = side === "front" ? FRONT_REGIONS : BACK_REGIONS;
   const anatomy = side === "front" ? frontAnatomy : backAnatomy;
   const silhouette = side === "front" ? FRONT_SILHOUETTE : BACK_SILHOUETTE;
-  const visibleRegions = regions.filter((region) => muscles.includes(region.muscle));
-  const clipId = `muscle-map-${side}-silhouette`;
+  // These aliases share the same posterior region: paint it only once.
+  const visibleRegions = regions.filter((region) => muscles.includes(region.muscle)
+    && !(region.muscle === "Piernas" && side === "back" && muscles.includes("Isquiotibiales")));
+  const clipId = `${instanceId}-${side}-silhouette`;
+  const softenId = `${instanceId}-soften`;
 
   return (
     <svg
       viewBox="0 0 399 698"
       role="img"
-      aria-label={side === "front" ? "Mapa muscular frontal" : "Mapa muscular posterior"}
+      aria-label={`${side === "front" ? "Mapa muscular frontal" : "Mapa muscular posterior"}: ${visibleRegions.map(({ muscle }) => muscle).join(", ") || "sin zonas destacadas"}`}
       className="h-full w-full"
+      style={{ isolation: "isolate" }}
     >
       <defs>
         <clipPath id={clipId}>
           <path d={silhouette} />
         </clipPath>
-        <pattern
-          id={`muscle-map-fibers-${side}`}
-          width="12"
-          height="12"
-          patternUnits="userSpaceOnUse"
-          patternTransform="rotate(-24)"
-        >
-          <path d="M2 0 V12 M8 0 V12" fill="none" stroke="#fff0cf" strokeOpacity="0.28" strokeWidth="0.8" />
-          <path d="M5 0 V12" fill="none" stroke="#5a3511" strokeOpacity="0.2" strokeWidth="0.7" />
-        </pattern>
+        <filter id={softenId} x="-5%" y="-5%" width="110%" height="110%">
+          <feGaussianBlur stdDeviation="0.7" />
+        </filter>
       </defs>
       <image href={anatomy} x="0" y="0" width="399" height="698" preserveAspectRatio="none" />
-      <g clipPath={`url(#${clipId})`}>
-        {visibleRegions.map(({ muscle, d }, index) => {
-          const color = intensityFor(muscle);
-          const paths = visibleRegions[index].details ?? [d];
-          return (
-            <g key={`${muscle}-${index}`}>
-              {paths.map((path, pathIndex) => {
-                const gradientId = `muscle-map-${side}-${index}-${pathIndex}`;
-                return (
-                  <g key={gradientId}>
-                    <defs>
-                      <linearGradient id={gradientId} x1="0" y1="0" x2="0.7" y2="1">
-                        <stop offset="0%" stopColor={color} stopOpacity="0.88" />
-                        <stop offset="48%" stopColor={color} stopOpacity="0.74" />
-                        <stop offset="100%" stopColor={color} stopOpacity="0.9" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d={path}
-                      fill={`url(#${gradientId})`}
-                      stroke={color}
-                      strokeOpacity="0.98"
-                      strokeWidth="1.15"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d={path}
-                      fill={`url(#muscle-map-fibers-${side})`}
-                      opacity="0.42"
-                    />
-                    <path
-                      d={path}
-                      fill="none"
-                      stroke="#fff0cf"
-                      strokeOpacity="0.38"
-                      strokeWidth="0.55"
-                      strokeLinejoin="round"
-                    />
-                  </g>
-                );
-              })}
-            </g>
-          );
-        })}
+      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: "color" }}>
+        {visibleRegions.map(({ muscle, d, details }) => (
+          <path
+            key={muscle}
+            d={(details ?? [d]).join(" ")}
+            fill={intensityFor(muscle)}
+            fillOpacity="0.94"
+            filter={`url(#${softenId})`}
+          />
+        ))}
+      </g>
+      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: "soft-light" }}>
+        {visibleRegions.map(({ muscle, d, details }) => (
+          <path
+            key={muscle}
+            d={(details ?? [d]).join(" ")}
+            fill={intensityFor(muscle)}
+            fillOpacity="0.5"
+            filter={`url(#${softenId})`}
+          />
+        ))}
       </g>
     </svg>
   );
