@@ -397,7 +397,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   return (
     <div className={showCompletionSummary
       ? "fixed inset-0 z-50 overflow-y-auto bg-background px-4 pb-8 pt-[calc(env(safe-area-inset-top)+1rem)]"
-      : "max-w-2xl mx-auto"
+      : "w-full min-w-0"
     }>
       <div className="flex items-center justify-end gap-2 mb-3 text-[11px] text-muted-foreground">
         {!workoutCompleted && savedAt && <span className="flex items-center gap-1"><Save className="w-3 h-3" /> Guardado automático</span>}
