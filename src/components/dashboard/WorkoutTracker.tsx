@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock,
+  Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
   Timer, TrendingUp, X, Video, Save, Trophy, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,12 @@ interface SetLog {
 interface Props {
   userId: string;
   dayPlans: DayPlan[];
+  onExit?: () => void;
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-const WorkoutTracker = ({ userId, dayPlans }: Props) => {
+const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const selectedDay = DAYS_ORDER[todayIndex];
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
@@ -349,6 +350,11 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
     const sets = exerciseLogs[exercise.name] || [];
     return sets.length > 0 && sets.every((set) => set.done);
   }).length || 0;
+  const sessionMessage = personalRecords.length > 0
+    ? "Hoy has superado tu mejor marca. Esto sí es progreso."
+    : totalVolume > 0
+    ? "Trabajo hecho. La próxima sesión tendrás una referencia clara para progresar."
+    : "Trabajo hecho. La próxima sesión quedará registrada para que puedas progresar.";
 
   return (
     <div className={workoutCompleted
@@ -460,7 +466,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                       </div>
                       <div>
                         <p className="text-2xl font-bold font-display">Sesión completada</p>
-                        <p className="mt-1 text-sm text-muted-foreground">Buen trabajo. Esto es lo que has conseguido hoy.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{sessionMessage}</p>
               </div>
                       <div className="grid w-full grid-cols-2 gap-2">
                         <div className="rounded-2xl bg-background/70 p-3 text-left">
@@ -525,6 +531,14 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">Tu progreso y tus récords están guardados.</p>
+                      <Button
+                        type="button"
+                        variant="hero"
+                        className="h-12 w-full rounded-2xl text-base"
+                        onClick={onExit}
+                      >
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Volver al inicio
+                      </Button>
             </motion.div>
           )}
 

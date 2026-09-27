@@ -297,7 +297,7 @@ const Dashboard = () => {
       {hasPlan && section === "training" && user && (
         <div className="max-w-5xl">
           <Suspense fallback={<SectionFallback />}>
-            <WorkoutTracker userId={user.id} dayPlans={dayPlans} />
+            <WorkoutTracker userId={user.id} dayPlans={dayPlans} onExit={() => setSection("home")} />
           </Suspense>
         </div>
       )}
