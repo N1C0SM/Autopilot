@@ -385,7 +385,7 @@ const LibraryDrive = () => {
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/70 backdrop-blur-md border border-border/60 flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    <button className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-background/80 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-background transition-colors">
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   </DropdownMenuTrigger>
