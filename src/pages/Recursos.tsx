@@ -5,6 +5,7 @@ import { Helmet } from "react-helmet-async";
 import { ArrowLeft, BookOpen, Sparkles, Newspaper, ExternalLink, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
+import BookCover from "@/components/BookCover";
 
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
@@ -219,15 +220,9 @@ const Recursos = () => {
                   className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors flex flex-col"
                 >
 
-                  {e.cover_url ? (
-                    <div className="aspect-[4/3] bg-secondary overflow-hidden">
-                      <img src={e.cover_url} alt={e.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
-                    </div>
-                  ) : (
-                    <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-secondary flex items-center justify-center">
-                      <BookOpen className="w-8 h-8 text-primary/60" />
-                    </div>
-                  )}
+                  <div className="px-4 pt-4">
+                    <BookCover title={e.title} src={e.cover_url} />
+                  </div>
                   <div className="p-4 flex-1 flex flex-col">
                     <span className="inline-block self-start text-[9px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2 py-0.5 rounded-full mb-2">
                       PDF autodidacta · sin entrenador

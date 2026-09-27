@@ -1,27 +1,28 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminStats from "@/components/admin/AdminStats";
-import AdminMetrics from "@/components/admin/AdminMetrics";
-import UserList from "@/components/admin/UserList";
-import UserDetail from "@/components/admin/UserDetail";
-import PaymentModeToggle from "@/components/admin/PaymentModeToggle";
-import ExerciseLibrary from "@/components/admin/ExerciseLibrary";
-import TrainingRulesEditor from "@/components/admin/TrainingRulesEditor";
-import PaymentReminders from "@/components/admin/PaymentReminders";
-import SiteContentEditor from "@/components/admin/SiteContentEditor";
-import BlogPostsEditor from "@/components/admin/BlogPostsEditor";
-import TrainerManagement from "@/components/admin/TrainerManagement";
-import EmailTemplatesEditor from "@/components/admin/EmailTemplatesEditor";
-import GoalPhysiquesEditor from "@/components/admin/GoalPhysiquesEditor";
-import LibraryDrive from "@/components/admin/LibraryDrive";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+const AdminMetrics = lazy(() => import("@/components/admin/AdminMetrics"));
+const UserList = lazy(() => import("@/components/admin/UserList"));
+const UserDetail = lazy(() => import("@/components/admin/UserDetail"));
+const PaymentModeToggle = lazy(() => import("@/components/admin/PaymentModeToggle"));
+const ExerciseLibrary = lazy(() => import("@/components/admin/ExerciseLibrary"));
+const TrainingRulesEditor = lazy(() => import("@/components/admin/TrainingRulesEditor"));
+const PaymentReminders = lazy(() => import("@/components/admin/PaymentReminders"));
+const SiteContentEditor = lazy(() => import("@/components/admin/SiteContentEditor"));
+const BlogPostsEditor = lazy(() => import("@/components/admin/BlogPostsEditor"));
+const TrainerManagement = lazy(() => import("@/components/admin/TrainerManagement"));
+const EmailTemplatesEditor = lazy(() => import("@/components/admin/EmailTemplatesEditor"));
+const GoalPhysiquesEditor = lazy(() => import("@/components/admin/GoalPhysiquesEditor"));
+const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
 
 export interface Profile {
   user_id: string;
@@ -59,13 +60,15 @@ const Admin = () => {
       }
       setIsAdmin(true);
       const [{ data: profiles }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("*"),
-        supabase.from("user_roles").select("user_id, role"),
+        supabase
+          .from("profiles")
+          .select("user_id, email, name, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier"),
+        supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
       ]);
       if (profiles) setAllUsers(profiles as unknown as Profile[]);
       if (roles) {
-        setAdminIds(new Set(roles.filter((r: any) => r.role === "admin").map((r: any) => r.user_id)));
-        setTrainerIds(new Set(roles.filter((r: any) => r.role === "trainer").map((r: any) => r.user_id)));
+        setAdminIds(new Set(roles.filter((r) => r.role === "admin").map((r) => r.user_id)));
+        setTrainerIds(new Set(roles.filter((r) => r.role === "trainer").map((r) => r.user_id)));
       }
       setLoading(false);
     };
@@ -73,10 +76,10 @@ const Admin = () => {
   }, [user, navigate]);
 
   const refreshRoles = async () => {
-    const { data: roles } = await supabase.from("user_roles").select("user_id, role");
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]);
     if (roles) {
-      setAdminIds(new Set(roles.filter((r: any) => r.role === "admin").map((r: any) => r.user_id)));
-      setTrainerIds(new Set(roles.filter((r: any) => r.role === "trainer").map((r: any) => r.user_id)));
+      setAdminIds(new Set(roles.filter((r) => r.role === "admin").map((r) => r.user_id)));
+      setTrainerIds(new Set(roles.filter((r) => r.role === "trainer").map((r) => r.user_id)));
     }
   };
 
@@ -156,6 +159,7 @@ const Admin = () => {
           <main
             className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[calc(5.5rem+var(--safe-bottom,0px))] md:pb-8"
           >
+            <Suspense fallback={<div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />}>
             {section === "dashboard" && (
               <div className="max-w-5xl space-y-6">
                 <AdminStats users={users} />
@@ -312,6 +316,7 @@ const Admin = () => {
                 <AdminMetrics />
               </div>
             )}
+            </Suspense>
           </main>
 
           {/* Navegación inferior (móvil / plegable cerrado) */}

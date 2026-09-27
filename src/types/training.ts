@@ -27,8 +27,10 @@ export interface GymExerciseEntry {
   reps: number;
   weight: string;
   rest: string;
-  image_url?: string;
-  video_url?: string;
+  image_url?: string | null;
+  video_url?: string | null;
+  muscle_group?: string | null;
+  exercise_type?: string | null;
 }
 
 export interface DayPlan {

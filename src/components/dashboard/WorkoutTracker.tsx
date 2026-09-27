@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
-import VideoEmbed from "@/components/VideoEmbed";
+import VideoEmbed, { exerciseVideoSearchUrl } from "@/components/VideoEmbed";
 import InfoHint from "@/components/InfoHint";
+import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
 interface SetLog {
   reps: number;
@@ -35,27 +36,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const [restTimer, setRestTimer] = useState<number | null>(null);
   const [restTarget, setRestTarget] = useState(0);
   const [rpeOpen, setRpeOpen] = useState(false);
-  const [videosByName, setVideosByName] = useState<Record<string, string>>({});
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [logsReady, setLogsReady] = useState(false);
-
-  // Cargar URLs de vídeo de la biblioteca de ejercicios (mapeado por nombre)
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from("exercises")
-        .select("name, video_url")
-        .not("video_url", "is", null);
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((row: any) => {
-          if (row.video_url) map[row.name] = row.video_url;
-        });
-        setVideosByName(map);
-      }
-    })();
-  }, []);
+  const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const formatLocalDate = (date: Date) => {
     const year = date.getFullYear();
@@ -451,6 +435,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
             const allDone = doneSets === sets.length && sets.length > 0;
             const prevSets = previousLogs[ex.name];
             const restSec = parseRestSeconds(ex.rest);
+            const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
+            const exerciseVideo = ex.video_url || metadata?.video_url;
+            const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
+            const exerciseType = ex.exercise_type || metadata?.exercise_type;
 
             return (
               <motion.div
@@ -488,6 +476,25 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                     <div className="text-[11px] text-muted-foreground">
                       {ex.series} series × {ex.reps} reps · {ex.rest} descanso
                     </div>
+                    {(exerciseCategory || exerciseType) && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {exerciseCategory && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                            {exerciseCategory}
+                          </span>
+                        )}
+                        {!exerciseCategory && (
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                            Sin categoría
+                          </span>
+                        )}
+                        {exerciseType && (
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                            {exerciseType}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
@@ -519,11 +526,11 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                     >
                       <div className="px-4 pb-4 space-y-1.5">
                         {/* Vídeo del ejercicio */}
-                        {(ex.video_url || videosByName[ex.name]) && (
+                        {exerciseVideo ? (
                           <div className="mb-2">
                             {showVideo[ex.name] ? (
                               <div className="space-y-1.5">
-                                <VideoEmbed url={ex.video_url || videosByName[ex.name]} />
+                                <VideoEmbed url={exerciseVideo} />
                                 <button
                                   onClick={() => setShowVideo((s) => ({ ...s, [ex.name]: false }))}
                                   className="text-[10px] text-muted-foreground hover:text-foreground underline"
@@ -541,6 +548,16 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                               </button>
                             )}
                           </div>
+                        ) : (
+                          <a
+                            href={exerciseVideoSearchUrl(ex.name, exerciseCategory)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
+                          >
+                            <Video className="h-3.5 w-3.5" />
+                            Ver vídeo del ejercicio
+                          </a>
                         )}
 
                         {/* Previous session hint */}
