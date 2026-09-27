@@ -396,7 +396,23 @@ const LibraryDrive = () => {
 
             {isBook && (
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro</Label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-secondary">
+                  <Upload className="h-3.5 w-3.5" />
+                  {open.file_path ? "Cambiar PDF" : "Subir PDF"}
+                  <input
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.currentTarget.value = "";
+                      if (f) upload(open, "file", f);
+                    }}
+                  />
+                </label>
+              </div>
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {open.file_path ? (
                   previewUrl ? (
