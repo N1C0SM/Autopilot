@@ -309,6 +309,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const handleRPEConfirm = async (rpe: number) => {
     setRpeOpen(false);
     setSaving(true);
+    setRestTimer(null);
     try {
       await persistLogs(rpe);
       await supabase.from("day_completions").upsert({
@@ -387,9 +388,9 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
       {/* Gym day */}
       {currentPlan?.type === "gimnasio" && (
-        <div className="space-y-3">
+        <div className={`space-y-3 ${workoutCompleted ? "min-h-[calc(100vh-8rem)]" : ""}`}>
           {/* Header with routine name + progress */}
-          <div className="bg-card rounded-2xl p-4 border border-border">
+          <div className={`bg-card rounded-2xl p-4 border border-border ${workoutCompleted ? "hidden" : ""}`}>
             <div className="flex items-center justify-between mb-1">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Entreno de hoy</p>
@@ -447,51 +448,55 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-4"
+                      className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center rounded-[2rem] border border-primary/30 bg-primary/10 px-4 py-8 text-center space-y-5"
             >
-              <div className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-primary" />
-                <div>
-                  <p className="font-bold">Sesión completada</p>
-                  <p className="text-xs text-muted-foreground">Esto es lo que has conseguido hoy</p>
-                </div>
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 ring-8 ring-primary/5">
+                        <Trophy className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold font-display">Sesión completada</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Buen trabajo. Esto es lo que has conseguido hoy.</p>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-xl bg-background/60 p-3">
-                  <p className="text-lg font-bold">{completedExercises}/{currentPlan.exercises?.length || 0}</p>
+                      <div className="grid w-full grid-cols-2 gap-2">
+                        <div className="rounded-2xl bg-background/70 p-3 text-left">
+                          <p className="text-xl font-bold">{completedExercises}/{currentPlan.exercises?.length || 0}</p>
                   <p className="text-[10px] text-muted-foreground">ejercicios</p>
                 </div>
-                <div className="rounded-xl bg-background/60 p-3">
-                  <p className="text-lg font-bold">{completedSets}</p>
+                        <div className="rounded-2xl bg-background/70 p-3 text-left">
+                          <p className="text-xl font-bold">{completedSets}</p>
                   <p className="text-[10px] text-muted-foreground">series hechas</p>
                 </div>
-                <div className="rounded-xl bg-background/60 p-3">
-                  <p className="text-lg font-bold">{totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—"}</p>
+                        <div className="rounded-2xl bg-background/70 p-3 text-left">
+                          <p className="text-xl font-bold">{totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—"}</p>
                   <p className="text-[10px] text-muted-foreground">volumen movido</p>
                 </div>
-                <div className="rounded-xl bg-background/60 p-3">
-                  <p className="text-lg font-bold">
+                        <div className="rounded-2xl bg-background/70 p-3 text-left">
+                          <p className="text-xl font-bold">
                     {sessionStartedAt ? `${Math.max(1, Math.round((Date.now() - sessionStartedAt.getTime()) / 60000))} min` : "—"}
                   </p>
                   <p className="text-[10px] text-muted-foreground">duración aprox.</p>
                 </div>
               </div>
-              <div className="space-y-2 text-sm">
+                      <div className="w-full space-y-2 text-left text-sm">
                 {musclesWorked.length > 0 && (
-                  <p><span className="font-semibold">Músculos trabajados:</span> {musclesWorked.join(" · ")}</p>
-                )}
-                {personalRecords.length > 0 && (
-                  <p className="flex items-center gap-1.5 text-primary">
-                    <BarChart3 className="w-4 h-4" />
-                    <span><span className="font-semibold">Récords:</span> {personalRecords.join(" · ")}</span>
-                  </p>
-                )}
-              </div>
+                          <div className="rounded-2xl bg-background/50 px-4 py-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Músculos trabajados</p>
+                            <p className="mt-1 font-medium">{musclesWorked.join(" · ")}</p>
+                          </div>
+                        )}
+                        {personalRecords.length > 0 && (
+                          <div className="flex items-center gap-2 rounded-2xl bg-primary/15 px-4 py-3 text-primary">
+                            <BarChart3 className="h-4 w-4 shrink-0" />
+                            <p><span className="font-semibold">Récord:</span> {personalRecords.join(" · ")}</p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Tu progreso y tus récords están guardados.</p>
             </motion.div>
           )}
 
           {/* Rest timer floating */}
-          <AnimatePresence>
+          {!workoutCompleted && <AnimatePresence>
             {restTimer !== null && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -517,10 +522,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
+          </AnimatePresence>}
 
           {/* Exercise list */}
-          {(currentPlan.exercises || []).map((ex, i) => {
+          {!workoutCompleted && (currentPlan.exercises || []).map((ex, i) => {
             const isExpanded = expandedExercise === i;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
@@ -778,7 +783,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
           })}
 
           {/* Save button */}
-          <div className="sticky bottom-3 z-20 pt-3 pb-4">
+          {!workoutCompleted && <div className="sticky bottom-3 z-20 pt-3 pb-4">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
               <span>{savedAt ? "Guardado" : "Se guarda automáticamente"}</span>
               <InfoHint text="Si guardas a medias no pierdes nada: el día se cierra solo cuando marcas todas las series y confirmas el RPE. Ahí se detectan tus récords personales." />
@@ -796,7 +801,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                 ? "✅ Guardar y terminar"
                 : `Guardar progreso (${completedSets}/${totalSets})`}
             </Button>
-          </div>
+          </div>}
         </div>
       )}
 
