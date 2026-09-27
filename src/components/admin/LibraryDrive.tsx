@@ -418,7 +418,7 @@ const LibraryDrive = () => {
                   previewUrl ? (
                     <iframe
                       loading="lazy"
-                      src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
+                      src={`${previewUrl}#page=2&toolbar=0&navpanes=0&view=FitH`}
                       title="Vista previa del contenido del PDF"
                       className="w-full h-full"
                     />
