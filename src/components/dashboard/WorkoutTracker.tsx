@@ -32,6 +32,26 @@ interface Props {
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
+const MUSCLE_HOTSPOTS: Record<string, { front?: string[]; back?: string[] }> = {
+  Pecho: { front: ["left-[38%] top-[25%]", "left-[54%] top-[25%]"] },
+  Hombros: { front: ["left-[27%] top-[21%]", "left-[65%] top-[21%]"] },
+  Bíceps: { front: ["left-[24%] top-[30%]", "left-[68%] top-[30%]"] },
+  Tríceps: { back: ["left-[24%] top-[30%]", "left-[68%] top-[30%]"] },
+  Espalda: { back: ["left-[38%] top-[25%]", "left-[54%] top-[25%]"] },
+  Trapecios: { back: ["left-[45%] top-[20%]"] },
+  Lumbares: { back: ["left-[45%] top-[40%]"] },
+  Piernas: { front: ["left-[39%] top-[57%]", "left-[54%] top-[57%]"], back: ["left-[39%] top-[57%]", "left-[54%] top-[57%]"] },
+  Glúteos: { back: ["left-[45%] top-[46%]"] },
+  Isquiotibiales: { back: ["left-[39%] top-[57%]", "left-[54%] top-[57%]"] },
+  Gemelos: { back: ["left-[40%] top-[76%]", "left-[54%] top-[76%]"] },
+  Core: { front: ["left-[45%] top-[39%]"] },
+  Abductores: { front: ["left-[35%] top-[52%]", "left-[58%] top-[52%]"] },
+  Aductores: { front: ["left-[43%] top-[52%]", "left-[51%] top-[52%]"] },
+};
+
+const getHotspots = (muscles: string[], side: "front" | "back") =>
+  muscles.flatMap((muscle) => MUSCLE_HOTSPOTS[muscle]?.[side] || []);
+
 const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const selectedDay = DAYS_ORDER[todayIndex];
@@ -491,26 +511,39 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                       <div className="w-full space-y-2 text-left text-sm">
                 {musclesWorked.length > 0 && (
                           <div className="rounded-2xl bg-background/50 px-3 py-3">
-                            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               Mapa muscular de hoy
                             </p>
-                            <div className="flex items-center justify-center gap-3">
-                              <div className="relative h-40 w-24 overflow-hidden rounded-xl bg-secondary/40">
-                                <img src={poseFrontImg} alt="Silueta frontal del cuerpo" className="h-full w-full object-contain opacity-80" />
-                                <span className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground shadow-lg">
-                                  Frente
-                                </span>
-                              </div>
-                              <div className="relative h-40 w-24 overflow-hidden rounded-xl bg-secondary/40">
-                                <img src={poseBackImg} alt="Silueta posterior del cuerpo" className="h-full w-full object-contain opacity-80" />
-                                <span className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground shadow-lg">
-                                  Espalda
-                                </span>
-                              </div>
+                            <p className="mt-1 text-center text-xs text-foreground">Hoy has activado estas zonas</p>
+                            <div className="mt-3 flex items-end justify-center gap-4">
+                              {(["front", "back"] as const).map((side) => {
+                                const hotspots = getHotspots(musclesWorked, side);
+                                return (
+                                <div key={side} className="text-center">
+                                  <div className="relative h-48 w-28 overflow-hidden rounded-2xl border border-border bg-secondary/30">
+                                    <img
+                                      src={side === "front" ? poseFrontImg : poseBackImg}
+                                      alt={side === "front" ? "Mapa muscular frontal" : "Mapa muscular posterior"}
+                                      className="h-full w-full object-contain opacity-75"
+                                    />
+                                    {hotspots.map((position, index) => (
+                                      <span
+                                        key={`${side}-${position}-${index}`}
+                                        className={`absolute ${position} h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_0_4px_hsl(var(--primary)/.18),0_0_16px_hsl(var(--primary)/.9)]`}
+                                        aria-hidden="true"
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="mt-1 block text-[10px] font-medium text-muted-foreground">
+                                    {side === "front" ? "Frontal" : "Posterior"}
+                                  </span>
+                                </div>
+                                );
+                              })}
                             </div>
                             <div className="mt-3 flex flex-wrap justify-center gap-1.5">
                               {musclesWorked.map((muscle) => (
-                                <span key={muscle} className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-medium text-primary">
+                                <span key={muscle} className="rounded-full border border-primary/30 bg-primary/15 px-2.5 py-1 text-[10px] font-medium text-primary">
                                   {muscle}
                                 </span>
                               ))}
