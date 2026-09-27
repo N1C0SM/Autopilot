@@ -8,10 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye, Check, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { PLAN_LABEL } from "@/config/tiers";
+import { PLAN_LABEL, TIERS } from "@/config/tiers";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
 import TransformCyclePanel from "./TransformCyclePanel";
@@ -35,9 +35,9 @@ import { impersonateUser } from "@/lib/impersonate";
 import OnboardingEditor from "./OnboardingEditor";
 
 const TIER_OPTIONS = [
-  { value: "training", label: "Entrenamiento (29€/mes)" },
-  { value: "full", label: "Completo (49€/mes)" },
-  { value: "transform", label: "Transformación 12 semanas (299€)" },
+  { value: "training", label: "Entrenamiento" },
+  { value: "full", label: "Completo" },
+  { value: "transform", label: "Transformación 12 semanas" },
 ];
 
 interface OnboardingData {
@@ -402,17 +402,22 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
 
       {/* Tabs */}
-      {profile.payment_status !== "paid" && (
+      {profile.payment_status !== "paid" && !restricted && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-5 text-center">
           <p className="text-sm font-medium text-amber-400">⚠️ Este usuario aún no ha pagado.</p>
-          <p className="text-xs text-muted-foreground mt-1">Puedes darle acceso gratis tú mismo desde «Plan del cliente» (elige el plan y pulsa «Dar acceso gratis»).</p>
+          <p className="text-xs text-muted-foreground mt-1">Abre «Plan y acceso» para elegir qué incluir y activar su acceso gratis.</p>
         </div>
       )}
-      <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? "md:grid-cols-6" : "md:grid-cols-7") : "md:grid-cols-1"}`}>
+      <Tabs defaultValue={!hasAccess && !restricted ? "access" : "info"} className="space-y-6">
+        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? (restricted ? "md:grid-cols-6" : "md:grid-cols-7") : (restricted ? "md:grid-cols-7" : "md:grid-cols-8")) : (restricted ? "md:grid-cols-1" : "md:grid-cols-2")}`}>
           <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
             <User2 className="w-3.5 h-3.5" /> Info
           </TabsTrigger>
+          {!restricted && (
+            <TabsTrigger value="access" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
+              <CreditCard className="w-3.5 h-3.5" /> Plan y acceso
+            </TabsTrigger>
+          )}
           {profile.payment_status === "paid" && (
             <>
               <TabsTrigger value="goal" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
@@ -439,44 +444,32 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
         </TabsList>
 
-        {/* Tab: Info */}
-        <TabsContent value="info" className="space-y-6">
-          {(profile as any).subscription_tier === "transform" && (
-            <TransformCyclePanel
-              userId={profile.user_id}
-              cycleStartDate={((profile as any).cycle_start_date as string) || null}
-              renewalDecision={((profile as any).renewal_decision as string) || null}
-              disabled={restricted}
-            />
-          )}
-
-
-          {/* Plan asignado + acceso gratis */}
-          {!restricted && (
-            <div className="bg-card rounded-xl p-5 border border-border space-y-3">
-              <div className="flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <div>
-                  <div className="font-medium text-sm">Plan del cliente</div>
-                  <div className="text-xs text-muted-foreground">
+        {/* Tab: Plan and access */}
+        {!restricted && (
+          <TabsContent value="access" className="space-y-4">
+            <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-5">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-primary mt-0.5" />
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-base">Plan y acceso</div>
+                  <div className="text-xs text-muted-foreground mt-1">
                     {hasAccess
-                      ? "Usa el selector para cambiarle de plan."
-                      : "Elige un plan y dáselo gratis, sin pasar por Stripe."}
+                      ? "Consulta el plan actual o selecciona otro para cambiarlo."
+                      : "Elige qué plan tendrá el cliente. Activarlo desde aquí no genera ningún cobro."}
                   </div>
                 </div>
               </div>
 
-              {/* Plan actual: si aparece un plan, está activo; si no, inactivo. Quitar acceso actúa sobre este plan */}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">Plan actual:</span>
-                  <Badge variant={hasAccess ? (currentTier ? "default" : "destructive") : "outline"}>
+              <div className={`rounded-lg border p-3 flex flex-wrap items-center justify-between gap-2 ${hasAccess ? "border-primary/30 bg-primary/5" : "border-amber-500/30 bg-amber-500/5"}`}>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Estado del acceso</div>
+                  <div className="text-sm font-medium mt-0.5">
                     {hasAccess
-                      ? (currentTier ? (PLAN_LABEL[currentTier] || currentTier) : "Pagado sin plan · asígnale uno")
-                      : "Inactivo"}
-                  </Badge>
-
+                      ? (currentTier ? (PLAN_LABEL[currentTier] || currentTier) : "Acceso activo · falta asignar un plan")
+                      : "Sin acceso activo"}
+                  </div>
                 </div>
+                <Badge variant={hasAccess ? "default" : "outline"}>{hasAccess ? "Activo" : "Inactivo"}</Badge>
                 {hasAccess && (
                   <Button
                     size="sm"
@@ -492,31 +485,59 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       toast.success(`Acceso retirado · ${PLAN_LABEL[currentTier || ""] || currentTier}`);
                     }}
                   >
-                    Quitar acceso{currentTier ? ` (${(PLAN_LABEL[currentTier] || currentTier).split(" ·")[0]})` : ""}
+                    Quitar acceso
                   </Button>
                 )}
               </div>
+
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                  {hasAccess ? "Cambiar a otro plan (opcional)" : "Elegir plan"}
+                <div className="text-sm font-medium mb-2">{hasAccess ? "Selecciona el plan nuevo" : "1. Elige un plan"}</div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {TIER_OPTIONS.map((tier) => {
+                    const selected = effectiveTier === tier.value;
+                    const isCurrent = hasAccess && currentTier === tier.value;
+                    const details = TIERS[tier.value];
+                    return (
+                      <button
+                        key={tier.value}
+                        type="button"
+                        aria-pressed={selected}
+                        disabled={tierSaving}
+                        onClick={() => setSelectedTier(tier.value)}
+                        className={`relative text-left rounded-xl border p-4 transition-colors disabled:opacity-60 ${
+                          selected
+                            ? "border-primary bg-primary/10 ring-1 ring-primary"
+                            : "border-border bg-background hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-semibold text-sm">{tier.label}</div>
+                            <div className="text-xs text-primary font-medium mt-1">
+                              {details.price}€ {details.interval === "month" ? "/ mes" : "pago único"}
+                            </div>
+                          </div>
+                          <span className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${selected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
+                            {selected && <Check className="w-3 h-3" />}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed mt-3">{details.tagline}</p>
+                        <ul className="mt-3 space-y-1">
+                          {details.features.slice(0, 2).map((feature) => (
+                            <li key={feature} className="text-[11px] text-muted-foreground flex gap-1.5">
+                              <Check className="w-3 h-3 text-primary shrink-0 mt-0.5" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {isCurrent && <span className="inline-block mt-3 text-[10px] font-semibold uppercase tracking-wide text-primary">Plan actual</span>}
+                      </button>
+                    );
+                  })}
                 </div>
-                <Select
-                  value={selectedTier}
-                  onValueChange={(v) => setSelectedTier(v)}
-                  disabled={tierSaving}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={hasAccess ? "Cambiar a…" : "Elige un plan"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIER_OPTIONS.filter((t) => t.value !== currentTier).map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 {pendingTierChange && (
-                  <div className="text-[11px] text-amber-400 mt-1">
-                    Sin guardar: pulsa el botón para aplicar el cambio.
+                  <div className="text-[11px] text-amber-400 mt-2">
+                    {hasAccess ? "2. Confirma abajo para aplicar el cambio." : "2. Confirma abajo para activar el acceso."}
                   </div>
                 )}
               </div>
@@ -538,7 +559,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     }}
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Cambiar plan a {(PLAN_LABEL[selectedTier!] || selectedTier!).split(" ·")[0]}
+                    Confirmar cambio a {TIER_OPTIONS.find((tier) => tier.value === selectedTier)?.label}
                   </Button>
                 )}
                 {!hasAccess && (
@@ -565,11 +586,25 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     }}
                   >
                     {tierSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Dar acceso gratis{effectiveTier ? ` a ${(PLAN_LABEL[effectiveTier] || effectiveTier).split(" ·")[0]}` : ""}
+                    {effectiveTier
+                      ? `Activar ${TIER_OPTIONS.find((tier) => tier.value === effectiveTier)?.label} gratis`
+                      : "Elige un plan para activar el acceso"}
                   </Button>
                 )}
               </div>
             </div>
+          </TabsContent>
+        )}
+
+        {/* Tab: Info */}
+        <TabsContent value="info" className="space-y-6">
+          {(profile as any).subscription_tier === "transform" && (
+            <TransformCyclePanel
+              userId={profile.user_id}
+              cycleStartDate={((profile as any).cycle_start_date as string) || null}
+              renewalDecision={((profile as any).renewal_decision as string) || null}
+              disabled={restricted}
+            />
           )}
 
 
