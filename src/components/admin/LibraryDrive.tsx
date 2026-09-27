@@ -279,6 +279,26 @@ const LibraryDrive = () => {
     } catch { window.open(url, "_blank", "noopener"); }
   };
 
+  const previewPath = books.find((b) => b.id === openId)?.file_path || null;
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setPreviewUrl(null);
+    if (!previewPath) return;
+    let active = true;
+    supabase.storage.from("library").createSignedUrl(previewPath, 1800).then(({ data, error }) => {
+      if (!active) return;
+      if (error || !data?.signedUrl) {
+        toast.error("No se pudo cargar la vista previa del PDF");
+        return;
+      }
+      setPreviewUrl(data.signedUrl);
+    });
+    return () => {
+      active = false;
+    };
+  }, [previewPath]);
+
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -374,10 +394,18 @@ const LibraryDrive = () => {
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro</Label>
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {open.file_path ? (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <FileText className="w-8 h-8" />
-                    <span>PDF guardado</span>
-                  </div>
+                  previewUrl ? (
+                    <iframe
+                      loading="lazy"
+                      src={`${previewUrl}#toolbar=0&navpanes=0&view=FitH`}
+                      title="Vista previa del contenido del PDF"
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando contenido…
+                    </div>
+                  )
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
                     <FileText className="w-4 h-4" /> Sin archivo
