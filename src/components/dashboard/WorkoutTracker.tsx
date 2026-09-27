@@ -15,6 +15,7 @@ import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { getProgressionSuggestion } from "@/lib/workoutProgression";
+import { WorkoutReview } from "./WorkoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
 
 interface SetLog {
@@ -60,6 +61,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [showCompletionSummary, setShowCompletionSummary] = useState(false);
+  const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const [sessionStartedAt, setSessionStartedAt] = useState<Date | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
@@ -103,7 +105,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
           .eq("logged_at", selectedDate),
         supabase
           .from("day_completions")
-          .select("id")
+          .select("id, rpe")
           .eq("user_id", userId)
           .eq("day_label", selectedDay)
           .eq("completed_at", selectedDate)
@@ -116,6 +118,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
         setWorkoutCompleted(false);
       } else {
         setWorkoutCompleted(Boolean(completion));
+        setSessionRpe(completion?.rpe ?? null);
       }
       setCompletionReady(true);
       if (data && data.length > 0) {
@@ -161,10 +164,9 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
         if ((!data || data.length === 0) && currentPlan?.type === "gimnasio") {
           const progressedLogs: Record<string, SetLog[]> = {};
           currentPlan.exercises?.forEach((exercise) => {
-            const suggestion = getProgressionSuggestion(exercise, prev[exercise.name]);
             progressedLogs[exercise.name] = Array.from({ length: exercise.series }, () => ({
               reps: exercise.reps,
-              weight: suggestion?.weight || exercise.weight || "",
+              weight: exercise.weight || "",
               done: false,
             }));
           });
@@ -238,7 +240,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
       exercise_name: name,
       sets_completed: JSON.parse(JSON.stringify(sets)),
       logged_at: selectedDate,
-      rpe: rpe ?? null,
+      rpe: rpe ?? sessionRpe,
     }));
 
     if (rows.length > 0) {
@@ -251,7 +253,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
 
   // El gimnasio no siempre tiene buena cobertura: guarda silenciosamente tras cada cambio.
   useEffect(() => {
-    if (!logsReady || Object.keys(exerciseLogs).length === 0) return;
+    if (!logsReady || workoutCompleted || Object.keys(exerciseLogs).length === 0) return;
     const timeout = window.setTimeout(async () => {
       try {
         await persistLogs();
@@ -261,7 +263,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
       }
     }, 800);
     return () => window.clearTimeout(timeout);
-  }, [exerciseLogs, logsReady, selectedDay, selectedDate]);
+  }, [exerciseLogs, logsReady, selectedDay, selectedDate, workoutCompleted]);
 
   const detectAndSavePRs = async () => {
     // For each exercise with weight > 0, find best (weight, reps) and upsert
@@ -352,6 +354,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
       });
       if (completionError) throw completionError;
       await detectAndSavePRs();
+      setSessionRpe(rpe);
       setWorkoutCompleted(true);
       setShowCompletionSummary(true);
       toast.success("¡Entrenamiento completado! 💪");
@@ -587,6 +590,11 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                             </p>
                           </div>
                         )}
+                        <WorkoutReview
+                          current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
+                          previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
+                          rpe={sessionRpe}
+                        />
                         {personalRecords.length > 0 && (
                           <div className="flex items-center gap-2 rounded-2xl bg-primary/15 px-4 py-3 text-primary">
                             <BarChart3 className="h-4 w-4 shrink-0" />
@@ -638,7 +646,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos trabajados</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {musclesWorked.map((muscle) => (
-                        <span key={muscle} className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${getMuscleIntensity(muscleSetCounts[muscle]).chip}`}>
+                        <span key={muscle} className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">
                           {muscle}
                         </span>
                       ))}
@@ -774,7 +782,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                       <p className={`mt-1 truncate text-[10px] font-medium ${
                         progression.label === "Subir" ? "text-primary" : "text-muted-foreground"
                       }`}>
-                        {progression.label === "Subir" ? "↗" : "→"} {progression.reason}
+                        {progression.label === "Subir" ? "↗" : "→"} Propuesta para revisar con tu entrenador: {progression.reason}
                       </p>
                     )}
                   </div>
@@ -891,7 +899,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                                 inputMode="decimal"
                                 value={set.weight}
                                 onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
-                                placeholder={progression?.weight || prevSets?.[si]?.weight || "kg"}
+                                placeholder={ex.weight || "kg"}
                                 aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
                               />
@@ -902,7 +910,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                               )}
                               {!prevSets?.[si] && progression && (
                                 <p className="mt-1 truncate text-center text-[10px] font-medium text-primary">
-                                  Sugerido: {progression.weight} kg
+                                  Para revisar: {progression.weight} kg
                                 </p>
                               )}
                             </div>

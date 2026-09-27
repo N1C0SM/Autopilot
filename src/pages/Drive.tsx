@@ -32,7 +32,7 @@ const Drive = () => {
 
     let active = true;
     setAccess("checking-role");
-    supabase.rpc("has_role", { _user_id: user.id, _role: "admin" })
+    Promise.resolve(supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }))
       .then(({ data, error }) => {
         if (!active) return;
         if (error) {

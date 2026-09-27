@@ -1,3 +1,4 @@
+import { WorkoutReview } from "@/components/dashboard/WorkoutReview";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Trophy, Activity, ClipboardCheck, Plane, Dumbbell, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
@@ -54,6 +55,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   const [tests, setTests] = useState<InitialTests | null>(null);
   const [prs, setPRs] = useState<PR[]>([]);
   const [rpeData, setRpeData] = useState<RPEPoint[]>([]);
+  const [completedSessionKeys, setCompletedSessionKeys] = useState<string[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -75,8 +77,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           .from("day_completions")
           .select("completed_at, rpe, day_label")
           .eq("user_id", userId)
-          .not("rpe", "is", null)
-          .order("completed_at", { ascending: true })
+          .order("completed_at", { ascending: false })
           .limit(60),
         supabase
           .from("workout_logs")
@@ -97,8 +98,9 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       if (onb?.initial_tests) setTests(onb.initial_tests as InitialTests);
       if (prData) setPRs(prData as PR[]);
       if (dayData) {
+        setCompletedSessionKeys(dayData.map(d => `${d.completed_at}|${d.day_label}`));
         setRpeData(
-          (dayData as any[]).map((d) => ({
+          (dayData as any[]).filter(d => d.rpe != null).reverse().map((d) => ({
             date: new Date(d.completed_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
             rpe: d.rpe,
             label: d.day_label,
@@ -150,6 +152,8 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       return acc;
     }, {}),
   );
+  const completedReviewSession = sessions.find(([key]) => completedSessionKeys.includes(key));
+  const reviewPrevious = completedReviewSession ? sessions.find(([key, logs]) => key.split("|")[0] < completedReviewSession[0].split("|")[0] && logs[0]?.day_label === completedReviewSession[1][0]?.day_label) : undefined;
   const latestSession = sessions[0]?.[1] || [];
   const latestSessionDate = sessions[0]?.[0]?.split("|")[0];
   const latestSessionDone = latestSession.reduce((sum, log) => sum + log.sets_completed.filter((set) => set.done).length, 0);
@@ -208,6 +212,15 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
             ))}
           </div>
         </div>
+      )}
+
+      {!loadError && completedReviewSession && (
+        <WorkoutReview
+          coach
+          current={completedReviewSession[1].map(log => ({ name: log.exercise_name, sets: log.sets_completed }))}
+          previous={(reviewPrevious?.[1] || []).map(log => ({ name: log.exercise_name, sets: log.sets_completed }))}
+          rpe={completedReviewSession[1].find(log => log.rpe != null)?.rpe}
+        />
       )}
 
       {/* Travel mode banner */}
