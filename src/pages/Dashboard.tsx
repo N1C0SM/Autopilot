@@ -11,7 +11,6 @@ import { motion } from "framer-motion";
 import type { DayPlan } from "@/types/training";
 import WeeklyProgress from "@/components/WeeklyProgress";
 import HomeOverview from "@/components/dashboard/HomeOverview";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import MyTrainerCard from "@/components/dashboard/MyTrainerCard";
 import RenewalFlow from "@/components/dashboard/RenewalFlow";
@@ -30,8 +29,6 @@ import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { TIERS } from "@/config/tiers";
 
 const Chat = lazy(() => import("@/components/Chat"));
-const TrainingPlanView = lazy(() => import("@/components/dashboard/TrainingPlanView"));
-const CalendarView = lazy(() => import("@/components/dashboard/CalendarView"));
 const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
 const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"));
 const WorkoutTracker = lazy(() => import("@/components/dashboard/WorkoutTracker"));
@@ -298,31 +295,11 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "training" && user && (
-        <Tabs defaultValue="workout" className="max-w-5xl">
-          <div className="flex items-center gap-2 mb-4">
-            <TabsList>
-              <TabsTrigger value="workout">Entrenar</TabsTrigger>
-              <TabsTrigger value="list">Plan</TabsTrigger>
-              <TabsTrigger value="calendar">Calendario</TabsTrigger>
-            </TabsList>
-            <InfoHint text="«Entrenar» registra pesos, repeticiones y descansos. «Plan» muestra la rutina completa. «Calendario» organiza tu semana." />
-          </div>
-          <TabsContent value="workout">
-            <Suspense fallback={<SectionFallback />}>
-              <WorkoutTracker userId={user.id} dayPlans={dayPlans} />
-            </Suspense>
-          </TabsContent>
-          <TabsContent value="list">
-            <Suspense fallback={<SectionFallback />}>
-              <TrainingPlanView dayPlans={dayPlans} />
-            </Suspense>
-          </TabsContent>
-          <TabsContent value="calendar">
-            <Suspense fallback={<SectionFallback />}>
-              <CalendarView dayPlans={dayPlans} />
-            </Suspense>
-          </TabsContent>
-        </Tabs>
+        <div className="max-w-5xl">
+          <Suspense fallback={<SectionFallback />}>
+            <WorkoutTracker userId={user.id} dayPlans={dayPlans} />
+          </Suspense>
+        </div>
       )}
 
       {hasPlan && section === "nutrition" && isTrainingOnly && (

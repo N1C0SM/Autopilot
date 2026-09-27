@@ -29,7 +29,7 @@ const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 
 const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const [selectedDay, setSelectedDay] = useState<string>(DAYS_ORDER[todayIndex]);
+  const selectedDay = DAYS_ORDER[todayIndex];
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, SetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, SetLog[]>>({});
@@ -300,38 +300,8 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="flex items-center justify-between gap-2 mb-2 text-[11px] text-muted-foreground">
-        <span>Elige el día y registra tus series</span>
+      <div className="flex items-center justify-end gap-2 mb-3 text-[11px] text-muted-foreground">
         {savedAt && <span className="flex items-center gap-1"><Save className="w-3 h-3" /> Guardado automático</span>}
-        <InfoHint text="🏋️ = día de gimnasio · 🏃 = actividad · sin icono = descanso. El día de hoy aparece resaltado. Puedes registrar cualquier día de la semana." />
-      </div>
-      {/* Day selector pills */}
-      <div className="flex gap-1.5 mb-5 overflow-x-auto pb-2 scrollbar-hide">
-        {DAYS_ORDER.map((day) => {
-          const plan = dayPlans.find((p) => p.day === day);
-          const isSelected = day === selectedDay;
-          const isToday = day === DAYS_ORDER[todayIndex];
-          return (
-            <button
-              key={day}
-              onClick={() => setSelectedDay(day)}
-              className={`flex flex-col items-center px-3 py-2.5 rounded-xl text-xs font-medium transition-all shrink-0 min-w-[48px] ${
-                isSelected
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                  : plan
-                  ? "bg-card border border-border hover:border-primary/30"
-                  : "bg-card/30 border border-border/30 opacity-40"
-              } ${isToday && !isSelected ? "ring-2 ring-primary/30" : ""}`}
-            >
-              <span className="font-bold">{day.slice(0, 3)}</span>
-              {plan && (
-                <span className="text-[10px] mt-0.5 opacity-80">
-                  {plan.type === "gimnasio" ? "🏋️" : "🏃"}
-                </span>
-              )}
-            </button>
-          );
-        })}
       </div>
 
       {/* Rest day */}
