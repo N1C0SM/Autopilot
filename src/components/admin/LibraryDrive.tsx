@@ -345,7 +345,7 @@ const LibraryDrive = () => {
           {(isBook || isPack) && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Portada */}
-            <div className="space-y-1.5">
+            <div className={`space-y-1.5 ${isPack ? "sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-sm" : ""}`}>
               <div className="flex items-center justify-between gap-2">
                 <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Portada</Label>
                 <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-secondary">
