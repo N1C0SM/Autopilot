@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
-import VideoEmbed, { exerciseVideoSearchUrl } from "@/components/VideoEmbed";
+import VideoEmbed from "@/components/VideoEmbed";
+import { exerciseVideoSearchUrl } from "@/lib/exerciseVideo";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
