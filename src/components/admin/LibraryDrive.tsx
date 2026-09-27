@@ -439,22 +439,11 @@ const LibraryDrive = () => {
             )}
 
             {(isBook || isPack) && (
-              <div className="space-y-2">
-                <Label className="text-xs">Enlace de compra Stripe · Test</Label>
-                <Input
-                  value={open.buy_url_test || ""}
-                  placeholder="https://buy.stripe.com/test_…"
-                  onChange={(e) => patch(open.id, { buy_url_test: e.target.value })}
-                />
-                <Label className="text-xs">Enlace de compra Stripe · Live</Label>
-                <Input
-                  value={open.buy_url_live || ""}
-                  placeholder="https://buy.stripe.com/…"
-                  onChange={(e) => patch(open.id, { buy_url_live: e.target.value })}
-                />
-                <p className="text-[11px] text-muted-foreground">Se usa el del modo activo en Ajustes → Pagos.</p>
-              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Los enlaces de compra se gestionan en Ajustes → Pagos.
+              </p>
             )}
+
             {isRec && (
               <div>
                 <Label className="text-xs">Enlace de la recomendación</Label>
