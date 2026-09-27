@@ -25,6 +25,9 @@ import {
   ChevronRight,
   Eye,
   Download,
+  MoreVertical,
+  Link as LinkIcon,
+
   Package,
   Lock,
   Globe,
