@@ -191,6 +191,9 @@ const LibraryDrive = () => {
   const upload = async (b: Book, kind: "cover" | "file", file: File) => {
     setBusy(b.id);
     try {
+      if (kind === "file" && file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+        throw new Error("Selecciona un archivo PDF");
+      }
       const ext = file.name.split(".").pop() || (kind === "cover" ? "jpg" : "pdf");
       const path = `${b.folder}/${kind === "cover" ? "portada" : "libro"}-${Date.now()}.${ext}`;
       const bucket = kind === "cover" ? "site-assets" : "library";
@@ -201,15 +204,27 @@ const LibraryDrive = () => {
       });
       if (error) throw error;
       const old = kind === "cover" ? b.cover_path : b.file_path;
-      if (old && !old.startsWith("http")) await supabase.storage.from("library").remove([old]);
       const col = kind === "cover" ? "cover_path" : "file_path";
       const value = kind === "cover"
         ? supabase.storage.from("site-assets").getPublicUrl(finalPath).data.publicUrl
         : path;
-      await (supabase as any).from("library_books").update({ [col]: value }).eq("id", b.id);
+      const { error: updateError } = await (supabase as any)
+        .from("library_books")
+        .update({ [col]: value })
+        .eq("id", b.id);
+      if (updateError) {
+        await supabase.storage.from(bucket).remove([finalPath]);
+        throw updateError;
+      }
+      if (old && !old.startsWith("http")) {
+        const oldBucket = kind === "cover" ? "site-assets" : "library";
+        const { error: removeError } = await supabase.storage.from(oldBucket).remove([old]);
+        if (removeError) console.warn("New file saved, but old file could not be removed", removeError);
+      }
       patch(b.id, { [col]: value } as Partial<Book>);
       if (kind === "cover") setCovers((c) => ({ ...c, [b.id]: value }));
-      toast.success(kind === "cover" ? "Portada subida" : "Archivo subido");
+      setPreviewUrl(null);
+      toast.success(kind === "cover" ? "Portada reemplazada" : "PDF reemplazado correctamente");
     } catch (err: any) {
       toast.error(err.message || "Error al subir");
     } finally {
@@ -265,15 +280,21 @@ const LibraryDrive = () => {
 
   const previewPath = books.find((b) => b.id === openId)?.file_path || null;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   useEffect(() => {
     setPreviewUrl(null);
-    if (!previewPath) return;
-    let alive = true;
-    supabase.storage.from("library").createSignedUrl(previewPath, 1800).then(({ data }) => {
-      if (alive && data?.signedUrl) setPreviewUrl(data.signedUrl);
-    });
-    return () => { alive = false; };
   }, [previewPath]);
+  const loadPreview = async () => {
+    if (!previewPath || previewUrl || previewLoading) return;
+    setPreviewLoading(true);
+    const { data, error } = await supabase.storage.from("library").createSignedUrl(previewPath, 1800);
+    setPreviewLoading(false);
+    if (error || !data?.signedUrl) {
+      toast.error("No se pudo cargar la vista previa");
+      return;
+    }
+    setPreviewUrl(data.signedUrl);
+  };
 
 
   if (loading) {
@@ -374,8 +395,12 @@ const LibraryDrive = () => {
                   previewUrl ? (
                     <iframe src={previewUrl + "#toolbar=0&navpanes=0&view=FitH"} title="Vista previa del PDF" className="w-full h-full" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando…
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-xs text-muted-foreground">
+                      <FileText className="w-8 h-8" />
+                      <Button type="button" variant="outline" size="sm" onClick={loadPreview} disabled={previewLoading}>
+                        {previewLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                        {previewLoading ? "Cargando vista previa…" : "Cargar vista previa"}
+                      </Button>
                     </div>
                   )
                 ) : (
