@@ -94,6 +94,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [isUserTrainer, setIsUserTrainer] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -108,14 +109,16 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
   useEffect(() => {
     const fetchData = async () => {
-      const [{ data: onb }, { data: roleData }, { data: tp }, { data: np }] = await Promise.all([
+      const [{ data: onb }, { data: roleData }, { data: trainerRoleData }, { data: tp }, { data: np }] = await Promise.all([
         supabase.from("onboarding").select("*").eq("user_id", profile.user_id).single(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "admin").maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "trainer" as any).maybeSingle(),
         supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).single(),
       supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).single(),
       ]);
       setOnboarding(onb as OnboardingData | null);
       setIsUserAdmin(!!roleData);
+      setIsUserTrainer(!!trainerRoleData);
       
 
       if (tp?.workouts_json) {
@@ -190,6 +193,20 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "admin" as any });
       if (!error) { setIsUserAdmin(true); toast.success("Rol de admin asignado"); }
       else toast.error("Error al cambiar rol");
+    }
+    setRoleLoading(false);
+  };
+
+  const toggleTrainerRole = async () => {
+    setRoleLoading(true);
+    if (isUserTrainer) {
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", profile.user_id).eq("role", "trainer" as any);
+      if (!error) { setIsUserTrainer(false); toast.success("Rol de entrenador eliminado"); }
+      else toast.error("Error al cambiar rol de entrenador");
+    } else {
+      const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "trainer" as any });
+      if (!error) { setIsUserTrainer(true); toast.success("Rol de entrenador asignado"); }
+      else toast.error("Error al cambiar rol de entrenador");
     }
     setRoleLoading(false);
   };
@@ -593,6 +610,67 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 )}
               </div>
             </div>
+
+            <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
+              <div>
+                <h2 className="font-semibold text-base">Roles y entrenador responsable</h2>
+                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta y quién acompaña al cliente.</p>
+              </div>
+
+              <div className="divide-y divide-border rounded-lg border border-border">
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">Administrador</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Puede gestionar la administración de Autopilot.</div>
+                    </div>
+                  </div>
+                  <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />
+                </div>
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Dumbbell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">Entrenador</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Puede entrar al panel de entrenador y gestionar clientes asignados.</div>
+                    </div>
+                  </div>
+                  <Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-secondary/30 p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <User2 className="w-5 h-5 text-primary shrink-0" />
+                  <div>
+                    <div className="font-medium text-sm">Entrenador responsable</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {trainers.length === 0
+                        ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
+                        : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
+                    </div>
+                  </div>
+                </div>
+                {trainers.length > 0 && (
+                  <Select
+                    value={assignedTrainerId || "__none__"}
+                    onValueChange={assignTrainer}
+                    disabled={trainerSaving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin entrenador asignado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sin entrenador asignado</SelectItem>
+                      {trainers.map((t) => (
+                        <SelectItem key={t.user_id} value={t.user_id}>{t.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
           </TabsContent>
         )}
 
@@ -607,56 +685,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             />
           )}
 
-
-          {/* Admin role toggle */}
-          {!restricted && <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="w-5 h-5 text-primary" />
-              <div>
-                <div className="font-medium text-sm">Rol de Administrador</div>
-                <div className="text-xs text-muted-foreground">
-                  {isUserAdmin ? "Este usuario es admin" : "Usuario normal"}
-                </div>
-              </div>
-            </div>
-            <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} />
-          </div>}
-
-          {/* Trainer assignment */}
-          {!restricted && (
-            <div className="bg-card rounded-xl p-5 border border-border">
-              <div className="flex items-center gap-3 mb-3">
-                <User2 className="w-5 h-5 text-primary" />
-                <div>
-                  <div className="font-medium text-sm">Entrenador asignado</div>
-                  <div className="text-xs text-muted-foreground">
-                    {trainers.length === 0
-                      ? "Aún no hay entrenadores. Crea uno desde la sección Entrenadores."
-                      : "Asigna o cambia al entrenador responsable de este usuario."}
-                  </div>
-                </div>
-              </div>
-              {trainers.length > 0 && (
-                <Select
-                  value={assignedTrainerId || "__none__"}
-                  onValueChange={assignTrainer}
-                  disabled={trainerSaving}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin asignar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— Sin entrenador —</SelectItem>
-                    {trainers.map((t) => (
-                      <SelectItem key={t.user_id} value={t.user_id}>
-                        {t.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
 
           {editingOnboarding && !restricted ? (
             <OnboardingEditor
