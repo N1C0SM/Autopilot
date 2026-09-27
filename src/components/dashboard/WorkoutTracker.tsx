@@ -15,6 +15,8 @@ import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { getProgressionSuggestion } from "@/lib/workoutProgression";
+import poseFrontImg from "@/assets/pose-front.png";
+import poseBackImg from "@/assets/pose-back.png";
 
 interface SetLog {
   reps: number;
@@ -482,6 +484,34 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
               </div>
                       <div className="w-full space-y-2 text-left text-sm">
                 {musclesWorked.length > 0 && (
+                          <div className="rounded-2xl bg-background/50 px-3 py-3">
+                            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Mapa muscular de hoy
+                            </p>
+                            <div className="flex items-center justify-center gap-3">
+                              <div className="relative h-40 w-24 overflow-hidden rounded-xl bg-secondary/40">
+                                <img src={poseFrontImg} alt="Silueta frontal del cuerpo" className="h-full w-full object-contain opacity-80" />
+                                <span className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground shadow-lg">
+                                  Frente
+                                </span>
+                              </div>
+                              <div className="relative h-40 w-24 overflow-hidden rounded-xl bg-secondary/40">
+                                <img src={poseBackImg} alt="Silueta posterior del cuerpo" className="h-full w-full object-contain opacity-80" />
+                                <span className="absolute left-1/2 top-1/3 -translate-x-1/2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-primary-foreground shadow-lg">
+                                  Espalda
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                              {musclesWorked.map((muscle) => (
+                                <span key={muscle} className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-medium text-primary">
+                                  {muscle}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {musclesWorked.length > 0 && (
                           <div className="rounded-2xl bg-background/50 px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Músculos trabajados</p>
                             <p className="mt-1 font-medium">{musclesWorked.join(" · ")}</p>
