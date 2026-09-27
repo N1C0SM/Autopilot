@@ -13,6 +13,7 @@ import VideoEmbed from "@/components/VideoEmbed";
 import { exerciseVideoSearchUrl } from "@/lib/exerciseVideo";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
+import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 
 interface SetLog {
   reps: number;
@@ -162,9 +163,11 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
     // Start rest timer when marking set as done
-    if (!wasDone && restSeconds) {
-      setRestTarget(restSeconds);
-      setRestTimer(restSeconds);
+    if (!wasDone) {
+      const configuredRest = getWorkoutRestSeconds(userId);
+      const effectiveRest = configuredRest || restSeconds || 60;
+      setRestTarget(effectiveRest);
+      setRestTimer(effectiveRest);
     }
 
     const exerciseIndex = currentPlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
@@ -645,7 +648,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
                             {/* Done toggle */}
                             <button
+                              type="button"
                               onClick={() => toggleSetDone(ex.name, si, restSec)}
+                              aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
+                              title={set.done ? "Desmarcar serie" : "Marcar serie como hecha"}
                               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all mx-auto ${
                                 set.done
                                   ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"

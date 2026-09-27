@@ -13,6 +13,7 @@ import {
   Save, Camera, Trash2, Loader2, User, Lock, ClipboardList,
   CreditCard, ExternalLink, Calendar, Crown, CalendarClock, Check, Zap, Unplug, RefreshCw,
   ShieldCheck, Download, FileText,
+  Timer,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -20,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
+import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/lib/workoutPreferences";
 
 const SettingsPanel = () => {
   const { user, signOut } = useAuth();
@@ -63,6 +65,7 @@ const SettingsPanel = () => {
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLastSync, setGcalLastSync] = useState<string | null>(null);
   const [gcalLoading, setGcalLoading] = useState(false);
+  const [restSeconds, setRestSeconds] = useState(60);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +96,7 @@ const SettingsPanel = () => {
           nutrition_preferences: onb.nutrition_preferences || "", allergies: onb.allergies || "",
         });
       }
+      setRestSeconds(getWorkoutRestSeconds(user.id));
       setLoading(false);
 
       // Fetch current plan (monthly/yearly) from check-subscription + yearly price
@@ -289,6 +293,55 @@ const SettingsPanel = () => {
 
   return (
     <div className="space-y-8">
+      {/* Workout preferences */}
+      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+        <div className="flex items-center gap-2 mb-2">
+          <Timer className="w-5 h-5 text-primary" />
+          <h2 className="font-bold font-display text-lg">Tu forma de entrenar</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">
+          Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.
+        </p>
+        <Label className="text-sm">Descanso entre series</Label>
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
+          {REST_PRESETS.map((seconds) => (
+            <Button
+              key={seconds}
+              type="button"
+              size="sm"
+              variant={restSeconds === seconds ? "default" : "outline"}
+              onClick={() => {
+                if (!user) return;
+                const saved = setWorkoutRestSeconds(user.id, seconds);
+                setRestSeconds(saved);
+              }}
+            >
+              {seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`}
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 mt-3 max-w-xs">
+          <Input
+            type="number"
+            min={15}
+            max={600}
+            step={5}
+            value={restSeconds}
+            onChange={(e) => setRestSeconds(Number(e.target.value) || 0)}
+            onBlur={() => {
+              if (!user) return;
+              const saved = setWorkoutRestSeconds(user.id, restSeconds);
+              setRestSeconds(saved);
+            }}
+            aria-label="Descanso personalizado en segundos"
+          />
+          <span className="text-sm text-muted-foreground shrink-0">segundos</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-2">
+          Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan.
+        </p>
+      </div>
+
       {/* Avatar + Profile */}
       <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-6">
