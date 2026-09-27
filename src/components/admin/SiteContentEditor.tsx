@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { toOptimizedWebp } from "@/lib/imageOptimization";
 
 interface Testimonial {
   id: string;
@@ -42,9 +43,13 @@ interface Recommendation {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const uploadImage = async (file: File, folder: string) => {
-  const ext = file.name.split(".").pop() || "jpg";
+  const optimized = await toOptimizedWebp(file);
+  const ext = optimized.name.split(".").pop() || "webp";
   const path = `${folder}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: false });
+  const { error } = await supabase.storage.from("site-assets").upload(path, optimized, {
+    upsert: false,
+    contentType: optimized.type || "image/webp",
+  });
   if (error) throw error;
   return supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
 };

@@ -36,6 +36,7 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toOptimizedWebp } from "@/lib/imageOptimization";
 
 type Kind = "folder" | "book" | "pack" | "video" | "recommendation";
 
@@ -194,13 +195,14 @@ const LibraryDrive = () => {
       if (kind === "file" && file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
         throw new Error("Selecciona un archivo PDF");
       }
-      const ext = file.name.split(".").pop() || (kind === "cover" ? "jpg" : "pdf");
+      const uploadFile = kind === "cover" ? await toOptimizedWebp(file) : file;
+      const ext = uploadFile.name.split(".").pop() || (kind === "cover" ? "webp" : "pdf");
       const path = `${b.folder}/${kind === "cover" ? "portada" : "libro"}-${Date.now()}.${ext}`;
       const bucket = kind === "cover" ? "site-assets" : "library";
       const finalPath = kind === "cover" ? `library-covers/${path}` : path;
-      const { error } = await supabase.storage.from(bucket).upload(finalPath, file, {
+      const { error } = await supabase.storage.from(bucket).upload(finalPath, uploadFile, {
         upsert: false,
-        contentType: file.type || (kind === "cover" ? "image/jpeg" : "application/pdf"),
+        contentType: uploadFile.type || (kind === "cover" ? "image/webp" : "application/pdf"),
       });
       if (error) throw error;
       const old = kind === "cover" ? b.cover_path : b.file_path;
@@ -393,7 +395,7 @@ const LibraryDrive = () => {
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {open.file_path ? (
                   previewUrl ? (
-                    <iframe src={previewUrl + "#toolbar=0&navpanes=0&view=FitH"} title="Vista previa del PDF" className="w-full h-full" />
+                    <iframe loading="lazy" src={previewUrl + "#toolbar=0&navpanes=0&view=FitH"} title="Vista previa del PDF" className="w-full h-full" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-xs text-muted-foreground">
                       <FileText className="w-8 h-8" />
