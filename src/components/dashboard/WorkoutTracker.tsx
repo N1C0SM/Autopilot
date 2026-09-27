@@ -60,6 +60,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
     return formatLocalDate(date);
   })();
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
+  const currentPlanSignature = JSON.stringify(currentPlan || null);
 
   // Start with a clean overview; the first exercise opens when the user starts.
   useEffect(() => {
@@ -69,6 +70,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
   // Load existing logs + previous session
   useEffect(() => {
+    let active = true;
     const loadLogs = async () => {
       setLogsReady(false);
       // Today's logs
@@ -79,6 +81,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
         .eq("day_label", selectedDay)
         .eq("logged_at", selectedDate);
 
+      if (!active) return;
       if (data && data.length > 0) {
         const logs: Record<string, SetLog[]> = {};
         data.forEach((row: any) => {
@@ -109,6 +112,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
         .order("logged_at", { ascending: false })
         .limit(20);
 
+      if (!active) return;
       if (prevData && prevData.length > 0) {
         const lastDate = prevData[0].logged_at;
         const prev: Record<string, SetLog[]> = {};
@@ -124,7 +128,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
       setLogsReady(true);
     };
     loadLogs();
-  }, [selectedDay, selectedDate, userId, currentPlan]);
+    return () => {
+      active = false;
+    };
+  }, [selectedDay, selectedDate, userId, currentPlanSignature]);
 
   // Rest timer countdown
   useEffect(() => {
