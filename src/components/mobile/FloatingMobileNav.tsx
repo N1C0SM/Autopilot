@@ -46,16 +46,16 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              {isActive && (
-                <motion.span
-                  layoutId={`${layoutId}-active`}
-                  className="absolute inset-0 rounded-full border border-primary/60 bg-primary/20 shadow-[inset_0_1px_0_hsl(var(--primary)/.25),0_4px_18px_-8px_hsl(var(--primary)/.9)]"
-                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                />
-              )}
-              <span className="relative z-10">
+              <span className="relative z-10 flex h-11 w-12 items-center justify-center">
+                {isActive && (
+                  <motion.span
+                    layoutId={`${layoutId}-active`}
+                    className="absolute inset-0 rounded-[1.1rem] border border-primary/60 bg-primary/20 shadow-[inset_0_1px_0_hsl(var(--primary)/.25),0_4px_18px_-8px_hsl(var(--primary)/.9)]"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  />
+                )}
                 <Icon
-                  className={`h-[21px] w-[21px] transition-transform duration-200 ${
+                  className={`relative z-10 h-[21px] w-[21px] transition-transform duration-200 ${
                     isActive ? "scale-110 text-primary drop-shadow-[0_0_7px_hsl(var(--primary)/.45)]" : "text-current"
                   }`}
                   strokeWidth={isActive ? 2.35 : 1.9}
