@@ -40,6 +40,8 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [logsReady, setLogsReady] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const formatLocalDate = (date: Date) => {
@@ -59,13 +61,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   })();
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
 
-  // Auto-expand first exercise on day change
+  // Start with a clean overview; the first exercise opens when the user starts.
   useEffect(() => {
-    if (currentPlan?.type === "gimnasio" && currentPlan.exercises?.length) {
-      setExpandedExercise(0);
-    } else {
-      setExpandedExercise(null);
-    }
+    setStarted(false);
+    setExpandedExercise(null);
   }, [selectedDay]);
 
   // Load existing logs + previous session
@@ -159,6 +158,12 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
     if (!wasDone && restSeconds) {
       setRestTarget(restSeconds);
       setRestTimer(restSeconds);
+    }
+
+    const exerciseIndex = currentPlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
+    const sets = exerciseLogs[exerciseName] || [];
+    if (!wasDone && exerciseIndex >= 0 && setIndex === sets.length - 1 && currentPlan?.exercises?.[exerciseIndex + 1]) {
+      setExpandedExercise(exerciseIndex + 1);
     }
   };
 
@@ -287,6 +292,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
         rpe,
       });
       await detectAndSavePRs();
+      setWorkoutCompleted(true);
       toast.success("¡Entrenamiento completado! 💪");
     } catch {
       toast.error("Error al guardar");
@@ -297,6 +303,10 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   const completedSets = Object.values(exerciseLogs).flat().filter((s) => s.done).length;
   const totalSets = Object.values(exerciseLogs).flat().length;
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+  const completedExercises = currentPlan?.exercises?.filter((exercise) => {
+    const sets = exerciseLogs[exercise.name] || [];
+    return sets.length > 0 && sets.every((set) => set.done);
+  }).length || 0;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -343,6 +353,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
           <div className="bg-card rounded-2xl p-4 border border-border">
             <div className="flex items-center justify-between mb-1">
               <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Entreno de hoy</p>
                 <h3 className="font-display font-bold text-base">
                   {currentPlan.routine_name || selectedDay}
                 </h3>
@@ -353,12 +364,35 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
               <div className="text-right">
                 <div className="flex items-center justify-end gap-1">
                   <span className="text-2xl font-bold font-display text-gradient">
-                    {completedSets}/{totalSets}
+                    {completedExercises}/{currentPlan.exercises?.length || 0}
                   </span>
-                  <InfoHint text="Series marcadas como completadas hoy sobre el total previsto. Al llegar al 100% podrás cerrar el día indicando tu RPE." />
+                  <InfoHint text="Ejercicios completados hoy sobre el total previsto." />
                 </div>
-                <p className="text-[10px] text-muted-foreground">series</p>
+                <p className="text-[10px] text-muted-foreground">ejercicios</p>
               </div>
+
+              {!started && (
+                <Button
+                  onClick={() => {
+                    setStarted(true);
+                    setExpandedExercise(0);
+                  }}
+                  variant="hero"
+                  size="xl"
+                  className="w-full h-14 text-lg"
+                >
+                  Empezar
+                </Button>
+              )}
+
+              {workoutCompleted && (
+                <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+                  <p className="text-sm font-bold text-primary">Entrenamiento completado 💪</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {completedExercises} ejercicios · {completedSets} series registradas · tu progreso y récords están guardados.
+                  </p>
+                </div>
+              )}
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden mt-3">
               <motion.div
@@ -380,7 +414,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
               >
                 <div className="flex items-center gap-2">
                   <Timer className="w-4 h-4 text-primary animate-pulse" />
-                  <span className="text-sm font-medium">Descanso</span>
+                  <span className="text-sm font-medium">Descanso · siguiente serie</span>
                   <InfoHint text={`Cuenta atrás automática al marcar una serie (${restTarget}s según tu plan). Puedes reiniciarla o saltarla con el icono de la derecha.`} />
                 </div>
                 <div className="flex items-center gap-3">
@@ -423,7 +457,14 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
               >
                 {/* Exercise header */}
                 <button
-                  onClick={() => setExpandedExercise(isExpanded ? null : i)}
+                  onClick={() => {
+                    if (!started) {
+                      setStarted(true);
+                      setExpandedExercise(i);
+                    } else {
+                      setExpandedExercise(isExpanded ? null : i);
+                    }
+                  }}
                   className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-secondary/20 transition-colors"
                 >
                   {/* Exercise image or icon */}
@@ -487,7 +528,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
 
                 {/* Expanded set tracking */}
                 <AnimatePresence>
-                  {isExpanded && (
+                  {started && isExpanded && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
@@ -515,7 +556,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                                 className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium px-2 py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 transition-colors"
                               >
                                 <Video className="w-3.5 h-3.5" />
-                                Ver vídeo del ejercicio
+                                Ver técnica
                               </button>
                             )}
                           </div>
@@ -527,7 +568,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                             className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
                           >
                             <Video className="h-3.5 w-3.5" />
-                            Ver vídeo del ejercicio
+                            Ver técnica
                           </a>
                         )}
 
@@ -617,9 +658,9 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
           })}
 
           {/* Save button */}
-          <div className="pt-3 pb-4">
+          <div className="sticky bottom-3 z-20 pt-3 pb-4">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
-              <span>Guarda cuando quieras, aunque no acabes</span>
+              <span>{savedAt ? "Guardado" : "Se guarda automáticamente"}</span>
               <InfoHint text="Si guardas a medias no pierdes nada: el día se cierra solo cuando marcas todas las series y confirmas el RPE. Ahí se detectan tus récords personales." />
             </div>
             <Button
@@ -632,8 +673,8 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
               {saving
                 ? "Guardando..."
                 : progressPercent === 100
-                ? "✅ Completar entrenamiento"
-                : `Guardar ahora (${completedSets}/${totalSets})`}
+                ? "✅ Guardar y terminar"
+                : `Guardar progreso (${completedSets}/${totalSets})`}
             </Button>
           </div>
         </div>
