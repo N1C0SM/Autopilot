@@ -225,7 +225,6 @@ const LibraryDrive = () => {
       }
       patch(b.id, { [col]: value } as Partial<Book>);
       if (kind === "cover") setCovers((c) => ({ ...c, [b.id]: value }));
-      setPreviewUrl(null);
       toast.success(kind === "cover" ? "Portada reemplazada" : "PDF reemplazado correctamente");
     } catch (err: any) {
       toast.error(err.message || "Error al subir");
@@ -279,25 +278,6 @@ const LibraryDrive = () => {
       URL.revokeObjectURL(a.href);
     } catch { window.open(url, "_blank", "noopener"); }
   };
-
-  const previewPath = books.find((b) => b.id === openId)?.file_path || null;
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  useEffect(() => {
-    setPreviewUrl(null);
-  }, [previewPath]);
-  const loadPreview = async () => {
-    if (!previewPath || previewUrl || previewLoading) return;
-    setPreviewLoading(true);
-    const { data, error } = await supabase.storage.from("library").createSignedUrl(previewPath, 1800);
-    setPreviewLoading(false);
-    if (error || !data?.signedUrl) {
-      toast.error("No se pudo cargar la vista previa");
-      return;
-    }
-    setPreviewUrl(data.signedUrl);
-  };
-
 
   if (loading) {
     return (
@@ -394,17 +374,10 @@ const LibraryDrive = () => {
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro</Label>
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {open.file_path ? (
-                  previewUrl ? (
-                    <iframe loading="lazy" src={previewUrl + "#toolbar=0&navpanes=0&view=FitH"} title="Vista previa del PDF" className="w-full h-full" />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-xs text-muted-foreground">
-                      <FileText className="w-8 h-8" />
-                      <Button type="button" variant="outline" size="sm" onClick={loadPreview} disabled={previewLoading}>
-                        {previewLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        {previewLoading ? "Cargando vista previa…" : "Cargar vista previa"}
-                      </Button>
-                    </div>
-                  )
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <FileText className="w-8 h-8" />
+                    <span>PDF guardado</span>
+                  </div>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
                     <FileText className="w-4 h-4" /> Sin archivo
