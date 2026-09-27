@@ -349,9 +349,12 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
   }).length || 0;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className={workoutCompleted
+      ? "fixed inset-0 z-50 overflow-y-auto bg-background px-4 pb-8 pt-[calc(env(safe-area-inset-top)+1rem)]"
+      : "max-w-2xl mx-auto"
+    }>
       <div className="flex items-center justify-end gap-2 mb-3 text-[11px] text-muted-foreground">
-        {savedAt && <span className="flex items-center gap-1"><Save className="w-3 h-3" /> Guardado automático</span>}
+        {!workoutCompleted && savedAt && <span className="flex items-center gap-1"><Save className="w-3 h-3" /> Guardado automático</span>}
       </div>
 
       {/* Rest day */}
