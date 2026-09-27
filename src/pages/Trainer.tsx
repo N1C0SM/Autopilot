@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, MessageCircle, LogOut, Users as UsersIcon } from "lucide-react";
+import { Loader2, ArrowLeft, MessageCircle, LogOut, Users as UsersIcon, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { UserPlus, Trash2 } from "lucide-react";
 import Chat from "@/components/Chat";
 import InfoHint from "@/components/InfoHint";
 import UserDetail from "@/components/admin/UserDetail";
+import TrainerSelfProfile from "@/components/trainer/TrainerSelfProfile";
 import type { Profile } from "@/pages/Admin";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +27,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-type TrainerSection = "users" | "chat";
+type TrainerSection = "users" | "chat" | "profile";
 
 const TrainerSidebar = ({
   section,
@@ -44,6 +45,7 @@ const TrainerSidebar = ({
   const items: { title: string; section: TrainerSection; icon: typeof UsersIcon }[] = [
     { title: "Mis usuarios", section: "users", icon: UsersIcon },
     { title: "Chat con admin", section: "chat", icon: MessageCircle },
+    { title: "Mi perfil", section: "profile", icon: UserRound },
   ];
   return (
     <Sidebar collapsible="icon">
@@ -111,19 +113,28 @@ const TrainerPage = () => {
   const [users, setUsers] = useState<Profile[]>([]);
   const [selected, setSelected] = useState<Profile | null>(null);
   const [section, setSection] = useState<TrainerSection>("users");
-  const [assignEmail, setAssignEmail] = useState("");
-  const [assigning, setAssigning] = useState(false);
   const [query, setQuery] = useState("");
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
 
-  const loadUsers = async () => {
-    const { data: profiles } = await (supabase.rpc as any)("get_trainer_assigned_profiles");
-    setUsers((profiles as unknown as Profile[]) || []);
-  };
+  const loadUsers = useCallback(async () => {
+    const { data: profiles, error } = await supabase.rpc("get_trainer_assigned_profiles");
+    if (error) {
+      toast.error("No se pudieron actualizar tus clientes.");
+      return;
+    }
+    const updatedProfiles = (profiles as unknown as Profile[]) || [];
+    setUsers(updatedProfiles);
+    setSelected((current) =>
+      current && !updatedProfiles.some((assignedUser) => assignedUser.user_id === current.user_id)
+        ? null
+        : current,
+    );
+  }, []);
 
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data: trainerRole } = await supabase.rpc("has_role", { _user_id: user.id, _role: "trainer" as any });
+      const { data: trainerRole } = await supabase.rpc("has_role", { _user_id: user.id, _role: "trainer" });
       const { data: adminRole } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
       if (!trainerRole && !adminRole) {
         navigate("/dashboard");
@@ -133,34 +144,47 @@ const TrainerPage = () => {
       await loadUsers();
       setLoading(false);
     })();
-  }, [user, navigate]);
+  }, [user, navigate, loadUsers]);
 
-  const handleAssign = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const email = assignEmail.trim();
-    if (!email) return;
-    setAssigning(true);
-    const { error } = await (supabase.rpc as any)("trainer_assign_user_by_email", { _email: email });
-    setAssigning(false);
-    if (error) {
-      toast.error(error.message === "user not found" ? "Usuario no encontrado" : "No se pudo asignar");
-      return;
-    }
-    toast.success("Usuario asignado");
-    setAssignEmail("");
-    await loadUsers();
-  };
+  const assignedUserIds = users.map((assignedUser) => assignedUser.user_id).sort().join(",");
 
-  const handleUnassign = async (userId: string) => {
-    if (!confirm("¿Quitar este usuario de tus asignados?")) return;
-    const { error } = await (supabase.rpc as any)("trainer_unassign_user", { _user_id: userId });
-    if (error) {
-      toast.error("No se pudo quitar");
-      return;
-    }
-    toast.success("Usuario retirado");
-    await loadUsers();
-  };
+  useEffect(() => {
+    if (!user || !isTrainer) return;
+    const channel = supabase.channel(`trainer-live-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "trainer_assignments", filter: `trainer_id=eq.${user.id}` },
+        () => { void loadUsers(); },
+      );
+
+    assignedUserIds.split(",").filter(Boolean).forEach((assignedUserId) => {
+      channel.on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${assignedUserId}` },
+        (payload) => {
+          const updates = payload.new as Partial<Profile>;
+          setUsers((current) => current.map((profile) =>
+            profile.user_id === assignedUserId ? { ...profile, ...updates } : profile,
+          ));
+          setSelected((current) =>
+            current?.user_id === assignedUserId ? { ...current, ...updates } : current,
+          );
+        },
+      );
+    });
+
+    channel.subscribe((status) => {
+      setRealtimeConnected(status === "SUBSCRIBED");
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        toast.error("No se pudo conectar con las actualizaciones en tiempo real.");
+      }
+    });
+
+    return () => {
+      setRealtimeConnected(false);
+      void supabase.removeChannel(channel);
+    };
+  }, [user, isTrainer, assignedUserIds, loadUsers]);
 
   if (loading) {
     return (
@@ -186,7 +210,7 @@ const TrainerPage = () => {
           <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-40 flex items-center px-4 gap-3">
             <SidebarTrigger />
             <span className="text-sm font-medium text-muted-foreground">
-              {section === "users" ? "Usuarios asignados" : "Chat con administrador"}
+              {section === "users" ? "Usuarios asignados" : section === "chat" ? "Chat con administrador" : "Mi perfil"}
             </span>
           </header>
           <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-5xl mx-auto w-full">
@@ -209,23 +233,15 @@ const TrainerPage = () => {
               <div className="space-y-2">
                 <h1 className="text-xl font-bold font-display mb-1 flex items-center gap-2">
                   Usuarios asignados ({users.length})
-                  <InfoHint text="Solo ves los usuarios que tú mismo has asignado. Pulsa en cualquiera para revisar su plan, su progreso y hablar con él." />
+                  <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />
                 </h1>
-                <p className="text-xs text-muted-foreground mb-4">Asigna usuarios por email para poder seguir su progreso y ajustar su plan.</p>
-                <form onSubmit={handleAssign} className="flex gap-2 mb-4">
-                  <Input
-                    type="email"
-                    placeholder="Email del usuario a asignar"
-                    value={assignEmail}
-                    onChange={(e) => setAssignEmail(e.target.value)}
-                    required
-                    className="flex-1"
-                  />
-                  <Button type="submit" disabled={assigning} variant="hero">
-                    {assigning ? <Loader2 className="w-4 h-4 animate-spin" /> : <><UserPlus className="w-4 h-4 mr-1.5" /> Asignar</>}
-                  </Button>
-                  <InfoHint className="self-center" text="El usuario debe existir ya en Autopilot con ese email. Asignarlo no le envía ningún aviso." />
-                </form>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <p className="text-xs text-muted-foreground">Tus clientes y sus cambios aparecen aquí en directo.</p>
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 shrink-0" aria-live="polite">
+                    <span className={`w-1.5 h-1.5 rounded-full ${realtimeConnected ? "bg-emerald-500" : "bg-muted-foreground"}`} />
+                    {realtimeConnected ? "En directo" : "Conectando…"}
+                  </span>
+                </div>
                 {users.length > 3 && (
                   <Input
                     type="search"
@@ -238,8 +254,8 @@ const TrainerPage = () => {
                 )}
                 {users.length === 0 ? (
                   <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
-                    <p className="text-sm text-muted-foreground">Aún no tienes usuarios asignados.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Escribe arriba el email de un usuario y pulsa «Asignar» para empezar a seguirlo.</p>
+                    <p className="text-sm text-muted-foreground">Aún no tienes clientes asignados.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Pide al administrador que te asigne clientes para empezar a seguir su progreso.</p>
                   </div>
                 ) : (
                   users
@@ -250,27 +266,25 @@ const TrainerPage = () => {
                       className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all group"
                       onClick={() => setSelected(u)}
                     >
-                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                        <span className="text-sm font-bold">{u.email.charAt(0).toUpperCase()}</span>
-                      </div>
+                      <Avatar className="w-10 h-10 shrink-0">
+                        <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
+                        <AvatarFallback className="bg-secondary text-sm font-bold">
+                          {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">{u.email}</div>
+                        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">{u.name?.trim() || u.email}</div>
                         <div className="text-xs text-muted-foreground">
-                          {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "🆕 Onboarding"}
+                          {u.email}{u.plan_status === "plan_ready" ? " · Plan listo" : u.plan_status === "plan_pending" ? " · Pendiente" : " · Perfil pendiente"}
                         </div>
                       </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleUnassign(u.user_id); }}
-                        className="text-muted-foreground hover:text-destructive transition-colors p-1.5"
-                        aria-label="Quitar usuario"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                       <span className="text-muted-foreground group-hover:text-primary">→</span>
                     </div>
                   ))
                 )}
               </div>
+            ) : section === "profile" ? (
+              <TrainerSelfProfile assignedClientCount={users.length} />
             ) : (
               user && (
                 <div>

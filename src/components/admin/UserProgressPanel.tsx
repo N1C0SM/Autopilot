@@ -57,10 +57,17 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [realtimeError, setRealtimeError] = useState(false);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
+    let active = true;
+    let requestId = 0;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const fetchAll = async (initialLoad = false) => {
+      const currentRequest = ++requestId;
+      if (initialLoad) setLoading(true);
       const [onboardingResult, prsResult, completionsResult, logsResult] = await Promise.all([
         supabase.from("onboarding").select("initial_tests").eq("user_id", userId).maybeSingle(),
         supabase.from("personal_records").select("*").eq("user_id", userId).order("estimated_1rm", { ascending: false }).limit(20),
@@ -78,6 +85,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           .order("logged_at", { ascending: false })
           .limit(100),
       ]);
+      if (!active || currentRequest !== requestId) return;
       const { data: onb } = onboardingResult;
       const { data: prData, error: prsError } = prsResult;
       const { data: dayData, error: completionsError } = completionsResult;
@@ -100,7 +108,29 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       if (logData) setWorkoutLogs(logData as unknown as WorkoutLog[]);
       setLoading(false);
     };
-    fetchAll();
+
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => { void fetchAll(); }, 200);
+    };
+
+    void fetchAll(true);
+    const channel = supabase.channel(`trainer-progress-${userId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "workout_logs", filter: `user_id=eq.${userId}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "day_completions", filter: `user_id=eq.${userId}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "personal_records", filter: `user_id=eq.${userId}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "onboarding", filter: `user_id=eq.${userId}` }, scheduleRefresh)
+      .subscribe((status) => {
+        setRealtimeConnected(status === "SUBSCRIBED");
+        setRealtimeError(status === "CHANNEL_ERROR" || status === "TIMED_OUT");
+      });
+
+    return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      setRealtimeConnected(false);
+      void supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   if (loading) {
@@ -144,13 +174,20 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           </div>
         </div>
       )}
+      {!realtimeConnected && (
+        <div className="text-xs text-amber-500" role="status">
+          {realtimeError ? "No se pudo conectar con las actualizaciones en directo." : "Conectando con las actualizaciones en directo…"}
+        </div>
+      )}
 
       {/* Immediate coach view: what the user actually did most recently */}
       {latestSession.length > 0 && (
         <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Último entreno realizado</div>
+              <div className="text-[10px] uppercase tracking-wider text-primary font-bold">
+                Último entreno realizado · {realtimeConnected ? "En directo" : "conectando"}
+              </div>
               <h2 className="font-bold font-display text-lg mt-1">
                 {latestSession[0].day_label} · {latestSessionDate ? new Date(`${latestSessionDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" }) : "—"}
               </h2>

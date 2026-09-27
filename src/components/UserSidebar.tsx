@@ -10,9 +10,8 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen, ShoppingBag } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const TOOLTIPS: Partial<Record<UserSection, string>> = {
@@ -20,7 +19,7 @@ const TOOLTIPS: Partial<Record<UserSection, string>> = {
   training: "Tu rutina de la semana y registro de series",
   nutrition: "Macros y comidas del día",
   chat: "Habla con tu entrenador, envía fotos o vídeos",
-  progress: "Fotos, peso y evolución semanal",
+  progress: "Fotos, peso, evolución semanal y AI Scan",
   settings: "Perfil, suscripción y notificaciones",
 };
 
@@ -39,7 +38,7 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
   { title: "Inicio", section: "home", icon: Home },
   { title: "Entrenamiento", section: "training", icon: Dumbbell },
   { title: "Nutrición", section: "nutrition", icon: Apple },
-  { title: "Progreso", section: "progress", icon: Sparkles },
+  { title: "Mi progreso", section: "progress", icon: Sparkles },
   { title: "Chat", section: "chat", icon: MessageCircle },
   { title: "Ajustes", section: "settings", icon: Settings },
 ];
@@ -48,7 +47,6 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
@@ -100,25 +98,9 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Herramientas</SidebarGroupLabel>
+          <SidebarGroupLabel>Más</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SidebarMenuButton
-                      onClick={() => navigate(user ? `/scan/user/${user.id}` : "/scan")}
-                      className="cursor-pointer text-primary hover:bg-sidebar-accent/50"
-                    >
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>Mi progreso · AI Scan</span>}
-                    </SidebarMenuButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs max-w-[220px]">
-                    Análisis con IA de tus fotos: puntos fuertes, cuello de botella y proyección
-                  </TooltipContent>
-                </Tooltip>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => navigate("/recursos")}

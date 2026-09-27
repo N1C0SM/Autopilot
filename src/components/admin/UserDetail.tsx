@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_LABEL, TIERS } from "@/config/tiers";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
@@ -102,13 +103,19 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [assignedTrainerId, setAssignedTrainerId] = useState<string>("");
   const [trainerSaving, setTrainerSaving] = useState(false);
   const [editingOnboarding, setEditingOnboarding] = useState(false);
+  const [showGoalDetails, setShowGoalDetails] = useState(false);
   const [tierSaving, setTierSaving] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string | undefined>(undefined);
 
 
 
   useEffect(() => {
+    let active = true;
+    let requestId = 0;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+
     const fetchData = async () => {
+      const currentRequest = ++requestId;
       const [{ data: onb }, { data: roleData }, { data: trainerRoleData }, { data: tp }, { data: np }] = await Promise.all([
         supabase.from("onboarding").select("*").eq("user_id", profile.user_id).single(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "admin").maybeSingle(),
@@ -116,6 +123,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).single(),
       supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).single(),
       ]);
+      if (!active || currentRequest !== requestId) return;
       setOnboarding(onb as OnboardingData | null);
       setIsUserAdmin(!!roleData);
       setIsUserTrainer(!!trainerRoleData);
@@ -138,7 +146,30 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       }
       setDataLoading(false);
     };
-    fetchData();
+
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => { void fetchData(); }, 150);
+    };
+
+    setDataLoading(true);
+    void fetchData();
+    const channel = supabase.channel(`client-detail-${profile.user_id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "onboarding", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "training_plan", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          toast.error("No se pudieron conectar las actualizaciones del cliente.");
+        }
+      });
+
+    return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      void supabase.removeChannel(channel);
+    };
   }, [profile.user_id]);
 
   // Load trainers + current assignment for this user (admin only)
@@ -359,14 +390,21 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.email}</h1>
-          <div className="flex flex-wrap gap-2 mt-1">
+       <Avatar className="w-11 h-11 shrink-0">
+         <AvatarImage src={profile.avatar_url || undefined} alt={profile.name?.trim() || "Foto del cliente"} />
+         <AvatarFallback className="bg-secondary font-semibold text-muted-foreground">
+           {(profile.name?.trim() || profile.email).charAt(0).toUpperCase()}
+         </AvatarFallback>
+       </Avatar>
+       <div className="flex-1 min-w-0">
+         <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.name?.trim() || profile.email}</h1>
+         {profile.name?.trim() && <p className="text-xs text-muted-foreground truncate">{profile.email}</p>}
+         <div className="flex flex-wrap gap-2 mt-1">
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.payment_status === "paid" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
               {profile.payment_status === "paid" ? (PLAN_LABEL[(profile as any).subscription_tier as string] || "Activo") : "Inactivo"}
             </span>
             <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.plan_status === "plan_ready" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
-              {profile.plan_status === "plan_ready" ? "Plan listo" : profile.plan_status === "plan_pending" ? "Pendiente" : "Onboarding"}
+              {profile.plan_status === "plan_ready" ? "Plan listo" : profile.plan_status === "plan_pending" ? "Pendiente" : "Perfil pendiente"}
             </span>
           </div>
         </div>
@@ -698,7 +736,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           ) : onboarding ? (
             <div className="bg-card rounded-xl p-6 border border-border">
               <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">Datos del Onboarding</h2>
+                <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">Perfil del cliente</h2>
                 {!restricted && (
                   <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Editar</Button>
                 )}
@@ -778,14 +816,30 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
           ) : (
             <div className="bg-card rounded-xl p-8 border border-border text-center space-y-3">
-              <p className="text-sm text-muted-foreground">El usuario aún no ha completado el onboarding.</p>
+              <p className="text-sm text-muted-foreground">Aún no hay datos de perfil.</p>
               {!restricted && (
-                <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Rellenarlo yo</Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Añadir datos</Button>
               )}
             </div>
           )}
           {profile.payment_status === "paid" && (
-            <UserGoalPanel userId={profile.user_id} email={profile.email} />
+            <details
+              className="bg-card rounded-xl border border-border p-4"
+              onToggle={(event) => setShowGoalDetails(event.currentTarget.open)}
+            >
+              <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 font-medium text-sm">
+                  <Target className="w-4 h-4 text-primary" />
+                  Físico objetivo
+                </span>
+                <span className="text-xs text-muted-foreground">{showGoalDetails ? "Ocultar" : "Ver"}</span>
+              </summary>
+              {showGoalDetails && (
+                <div className="border-t border-border mt-4 pt-4">
+                  <UserGoalPanel userId={profile.user_id} email={profile.email} />
+                </div>
+              )}
+            </details>
           )}
         </TabsContent>
 
@@ -907,6 +961,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
   const [assignEmail, setAssignEmail] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [removingTrainerRole, setRemovingTrainerRole] = useState(false);
 
   const reloadAssigned = async () => {
     const { data: assignments } = await supabase
@@ -1026,6 +1081,23 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
     onBack();
   };
 
+  const handleRemoveTrainerRole = async () => {
+    if (assigned.length > 0) return;
+    setRemovingTrainerRole(true);
+    const { error } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", profile.user_id)
+      .eq("role", "trainer");
+    setRemovingTrainerRole(false);
+    if (error) {
+      toast.error("No se pudo quitar el rol de entrenador");
+      return;
+    }
+    toast.success("Rol de entrenador eliminado");
+    onBack();
+  };
+
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
@@ -1039,15 +1111,44 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           </span>
         </div>
         {!restricted && kind === "trainer" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => impersonateUser(profile.user_id, "/trainer")}
-            title="Abrir el panel del entrenador como esta persona"
-          >
-            <Eye className="w-4 h-4 mr-1.5" /> Ver como
-          </Button>
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => impersonateUser(profile.user_id, "/trainer")}
+              title="Abrir el panel del entrenador como esta persona"
+            >
+              <Eye className="w-4 h-4 mr-1.5" /> Ver como
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="shrink-0 text-destructive hover:text-destructive" disabled={removingTrainerRole}>
+                  Quitar rol
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Quitarle el rol de entrenador?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {assigned.length > 0
+                      ? `Primero reasigna o retira sus ${assigned.length} cliente${assigned.length === 1 ? "" : "s"} desde la pestaña «Asignados».`
+                      : `${profile.email} dejará de tener acceso al panel de entrenador. Su cuenta y sus datos no se eliminarán.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleRemoveTrainerRole}
+                    disabled={assigned.length > 0 || removingTrainerRole}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {removingTrainerRole ? "Quitando..." : "Quitar rol de entrenador"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
         {!restricted && (
           <AlertDialog>
@@ -1241,7 +1342,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{u.email}</div>
                         <div className="text-[11px] text-muted-foreground">
-                          {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "🆕 Onboarding"}
+                          {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "Perfil pendiente"}
                           {" · "}
                           {u.payment_status === "paid" ? "Pagado" : "Sin pagar"}
                         </div>

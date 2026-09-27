@@ -9,12 +9,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import type { Profile } from "@/pages/Admin";
+import CreateTestAccountDialog, { type TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Props {
   users: Profile[];
   adminIds: Set<string>;
   trainerIds?: Set<string>;
   onSelectUser: (user: Profile) => void;
+  onTestAccountCreated: (profile: Profile, kind: TestAccountKind) => void;
 }
 
 const STATUS_FILTERS = [
@@ -26,7 +29,7 @@ const STATUS_FILTERS = [
   { label: "✈️ En viaje", value: "traveling" },
 ] as const;
 
-const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
+const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCreated }: Props) => {
   const trainerSet = trainerIds ?? new Set<string>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
@@ -78,17 +81,22 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
       className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5 group"
       onClick={() => onSelectUser(u)}
     >
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kind === "admin" ? "bg-primary/20" : kind === "trainer" ? "bg-amber-500/20" : "bg-secondary"}`}>
-        {kind === "admin" ? (
-          <Shield className="w-4 h-4 text-primary" />
-        ) : kind === "trainer" ? (
-          <UserCog className="w-4 h-4 text-amber-400" />
-        ) : (
-          <span className="text-sm font-bold text-muted-foreground">
+      {kind === "user" ? (
+        <Avatar className="w-10 h-10 shrink-0">
+          <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
+          <AvatarFallback className="bg-secondary text-sm font-semibold text-muted-foreground">
             {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
-          </span>
-        )}
-      </div>
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kind === "admin" ? "bg-primary/20" : "bg-amber-500/20"}`}>
+          {kind === "admin" ? (
+          <Shield className="w-4 h-4 text-primary" />
+          ) : (
+            <UserCog className="w-4 h-4 text-amber-400" />
+          )}
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
@@ -125,7 +133,7 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
             variant="secondary"
             className={`text-[10px] ${u.plan_status === "plan_ready" ? "bg-primary/20 text-primary border-primary/30" : ""}`}
           >
-            {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "🆕 Onboarding"}
+            {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "Perfil pendiente"}
           </Badge>
         </div>
       )}
@@ -138,12 +146,15 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser }: Props) => {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Users className="w-5 h-5 text-primary" />
-        <h1 className="text-2xl font-bold font-display">Usuarios</h1>
-        <span className="text-sm text-muted-foreground ml-2">
-          ({regularUsers.length + trainerUsers.length} usuarios · {trainerSet.size} entrenadores · {adminIds.size} admin)
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2 min-w-0">
+          <Users className="w-5 h-5 text-primary shrink-0" />
+          <h1 className="text-2xl font-bold font-display">Usuarios</h1>
+          <span className="text-sm text-muted-foreground ml-2">
+            ({regularUsers.length + trainerUsers.length} usuarios · {trainerSet.size} entrenadores · {adminIds.size} admin)
+          </span>
+        </div>
+        <CreateTestAccountDialog onCreated={onTestAccountCreated} />
       </div>
 
       {/* Search & Filters */}

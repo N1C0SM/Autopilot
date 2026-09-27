@@ -22,40 +22,43 @@ const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
 const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
   return (
     <nav
-      className="mobile-tabbar fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border"
+      className="mobile-tabbar fixed z-50 md:hidden"
       style={{
-        paddingBottom: "var(--safe-bottom, 0px)",
-        paddingLeft: "var(--safe-left, 0px)",
-        paddingRight: "var(--safe-right, 0px)",
+        left: "max(0.75rem, var(--safe-left, 0px))",
+        right: "max(0.75rem, var(--safe-right, 0px))",
+        bottom: "calc(0.75rem + var(--safe-bottom, 0px))",
       }}
+      aria-label="Navegación principal"
     >
-      <ul className="flex items-stretch justify-around h-16 px-1">
+      <ul className="mx-auto flex h-[4.25rem] max-w-[30rem] items-center gap-1 rounded-full border border-border/80 bg-background/85 p-1.5 shadow-[0_12px_40px_-12px_hsl(var(--foreground)/0.3)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/75">
         {TABS.map((t) => {
           const isActive = active === t.key;
           const isLocked = lockedTabs.includes(t.key);
           return (
-            <li key={t.key} className="flex-1">
+            <li key={t.key} className="min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => {
                   hapticTap();
                   onChange(t.key);
                 }}
-                className="relative w-full h-full flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+                className={`relative flex h-full w-full flex-col items-center justify-center gap-1 rounded-full transition-transform active:scale-95 ${
+                  isActive ? "text-primary" : "text-muted-foreground"
+                }`}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={t.label}
               >
                 {isActive && (
                   <motion.span
                     layoutId="mobile-tab-indicator"
-                    className="absolute top-0 w-10 h-0.5 bg-primary rounded-full"
-                    transition={{ type: "spring", stiffness: 500, damping: 32 }}
+                    className="absolute inset-0 rounded-full border border-primary/30 bg-primary/[0.12] shadow-[0_0_22px_-8px_hsl(var(--primary)/0.65)]"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
                   />
                 )}
-                <span className="relative">
+                <span className="relative z-10">
                   <t.icon
-                    className={`w-[22px] h-[22px] transition-colors ${
-                      isActive ? "text-primary" : "text-muted-foreground"
+                    className={`h-[21px] w-[21px] transition-transform duration-200 ${
+                      isActive ? "scale-110 text-primary" : "text-current"
                     }`}
                   />
                   {isLocked && (
@@ -63,8 +66,8 @@ const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
                   )}
                 </span>
                 <span
-                  className={`text-[10px] font-medium transition-colors ${
-                    isActive ? "text-primary" : "text-muted-foreground"
+                  className={`relative z-10 truncate px-0.5 text-[10px] leading-none transition-colors ${
+                    isActive ? "font-semibold text-primary" : "font-medium text-current"
                   }`}
                 >
                   {t.label}

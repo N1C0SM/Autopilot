@@ -9,6 +9,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 
 const AdminMetrics = lazy(() => import("@/components/admin/AdminMetrics"));
 const UserList = lazy(() => import("@/components/admin/UserList"));
@@ -28,6 +29,7 @@ export interface Profile {
   user_id: string;
   email: string;
   name?: string | null;
+  avatar_url?: string | null;
   plan_status: string;
   payment_status: string;
   created_at: string;
@@ -62,7 +64,7 @@ const Admin = () => {
       const [{ data: profiles }, { data: roles }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("user_id, email, name, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier"),
+          .select("user_id, email, name, avatar_url, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier"),
         supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
       ]);
       if (profiles) setAllUsers(profiles as unknown as Profile[]);
@@ -86,6 +88,15 @@ const Admin = () => {
   const updateUserInList = (userId: string, updates: Partial<Profile>) => {
     setAllUsers((u) => u.map((p) => p.user_id === userId ? { ...p, ...updates } : p));
     setSelectedUser((p) => p?.user_id === userId ? { ...p, ...updates } : p);
+  };
+
+  const handleTestAccountCreated = (profile: Profile, kind: TestAccountKind) => {
+    setAllUsers((current) => [profile, ...current.filter((item) => item.user_id !== profile.user_id)]);
+    if (kind === "admin") {
+      setAdminIds((current) => new Set(current).add(profile.user_id));
+    } else if (kind === "trainer") {
+      setTrainerIds((current) => new Set(current).add(profile.user_id));
+    }
   };
 
   const handleSelectUser = (u: Profile) => {
@@ -229,7 +240,13 @@ const Admin = () => {
             {section === "users" && (
               <div className="max-w-5xl">
                 {!selectedUser ? (
-                  <UserList users={users} adminIds={adminIds} trainerIds={trainerIds} onSelectUser={handleSelectUser} />
+                  <UserList
+                    users={users}
+                    adminIds={adminIds}
+                    trainerIds={trainerIds}
+                    onSelectUser={handleSelectUser}
+                    onTestAccountCreated={handleTestAccountCreated}
+                  />
                 ) : (
                   <UserDetail
                     profile={selectedUser}

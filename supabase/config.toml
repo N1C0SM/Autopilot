@@ -3,6 +3,8 @@ project_id = "enebrcdrdnfkyduzyrzm"
 [functions]
   [functions.auth-email-hook]
     verify_jwt = false
+  [functions.admin-create-test-account]
+    verify_jwt = false
   [functions.auto-tasks]
     verify_jwt = false
   [functions.check-subscription]
