@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -73,78 +73,123 @@ const Dashboard = () => {
   const [section, setSection] = useState<MobileTab>("home");
   const [profileCreatedAt, setProfileCreatedAt] = useState<string>("");
   const [completedDays, setCompletedDays] = useState(0);
+  const [completedToday, setCompletedToday] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async ({
+    syncSubscription = false,
+    checkAdmin = false,
+  }: { syncSubscription?: boolean; checkAdmin?: boolean } = {}) => {
     if (!user) return;
-      // Sync subscription status with Stripe
-      supabase.functions.invoke("check-subscription").catch(() => {});
 
-      const { data: roleData } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      if (roleData) {
-        navigate("/admin");
+    if (syncSubscription) {
+      void supabase.functions.invoke("check-subscription").catch(() => {});
+    }
+
+    const profileRequest = supabase
+      .from("profiles")
+      .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier")
+      .eq("user_id", user.id)
+      .single();
+    const roleRequest = checkAdmin
+      ? supabase.rpc("has_role", { _user_id: user.id, _role: "admin" })
+      : Promise.resolve(null);
+    const [profileResult, roleResult] = await Promise.all([profileRequest, roleRequest]);
+
+    if (roleResult?.data) {
+      navigate("/admin");
+      return;
+    }
+
+    const profile = profileResult.data;
+    if (profile) {
+      setPlanStatus(profile.plan_status);
+      setPaymentStatus(profile.payment_status);
+      setSubscriptionTier(profile.subscription_tier || "full");
+      setProfileName(profile.name || "");
+      setProfileAvatar(profile.avatar_url || "");
+      setProfileCreatedAt(profile.created_at || "");
+
+      if (profile.payment_status === "unpaid") {
+        setLoading(false);
+        return;
+      }
+      if (profile.plan_status === "onboarding") {
+        navigate("/onboarding");
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier")
-        .eq("user_id", user.id)
-        .single();
+      if (profile.plan_status === "plan_ready") {
+        const today = new Date();
+        const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const [{ data: tp }, { data: np }, { count: completionCount }, { data: todayCompletion }] = await Promise.all([
+          supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).single(),
+          supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).single(),
+          supabase
+            .from("day_completions")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id),
+          supabase
+            .from("day_completions")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("completed_at", todayDate)
+            .limit(1)
+            .maybeSingle(),
+        ]);
 
-      if (profile) {
-        setPlanStatus(profile.plan_status);
-        setPaymentStatus(profile.payment_status);
-        setSubscriptionTier(profile.subscription_tier || "full");
-        setProfileName(profile.name || "");
-        setProfileAvatar(profile.avatar_url || "");
-        setProfileCreatedAt(profile.created_at || "");
-
-        if (profile.payment_status === "unpaid") { setLoading(false); return; }
-        if (profile.plan_status === "onboarding") { navigate("/onboarding"); return; }
-
-        if (profile.plan_status === "plan_ready") {
-          const [{ data: tp }, { data: np }, { count: completionCount }] = await Promise.all([
-            supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).single(),
-            supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).single(),
-            supabase
-              .from("day_completions")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id),
-          ]);
-
-          if (tp) setDayPlans(tp.workouts_json as unknown as DayPlan[]);
-          if (np) {
-            setMacros(np.macros_json as unknown as Macros);
-            setMeals(np.meals_json as unknown as Meal[]);
-          }
-          setCompletedDays(completionCount ?? 0);
+        if (tp) setDayPlans(tp.workouts_json as unknown as DayPlan[]);
+        if (np) {
+          setMacros(np.macros_json as unknown as Macros);
+          setMeals(np.meals_json as unknown as Meal[]);
         }
+        setCompletedDays(completionCount ?? 0);
+        setCompletedToday(Boolean(todayCompletion));
       }
-      setLoading(false);
-  };
+    }
+    setLoading(false);
+  }, [user, navigate]);
 
   useEffect(() => {
     if (!user) return;
-    fetchData();
+    void fetchData({ syncSubscription: true, checkAdmin: true });
 
-    // Realtime: refetch when this user's plan changes (e.g. after scan auto-apply)
+    const refreshTrainingPlan = async () => {
+      const { data } = await supabase
+        .from("training_plan")
+        .select("workouts_json")
+        .eq("user_id", user.id)
+        .single();
+      if (data) setDayPlans(data.workouts_json as unknown as DayPlan[]);
+    };
+    const refreshNutritionPlan = async () => {
+      const { data } = await supabase
+        .from("nutrition_plan")
+        .select("macros_json, meals_json")
+        .eq("user_id", user.id)
+        .single();
+      if (data) {
+        setMacros(data.macros_json as unknown as Macros);
+        setMeals(data.meals_json as unknown as Meal[]);
+      }
+    };
+
     const channel = supabase
       .channel(`dashboard-${user.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "training_plan", filter: `user_id=eq.${user.id}` }, () => fetchData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${user.id}` }, () => fetchData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` }, () => { void fetchData(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "training_plan", filter: `user_id=eq.${user.id}` }, () => { void refreshTrainingPlan(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${user.id}` }, () => { void refreshNutritionPlan(); })
       .subscribe();
 
-    // Refetch when tab regains focus (e.g. user returns from /scan)
-    const onFocus = () => fetchData();
+    const onFocus = () => {
+      if (document.visibilityState === "visible") void fetchData({ syncSubscription: true });
+    };
     window.addEventListener("focus", onFocus);
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
       window.removeEventListener("focus", onFocus);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, navigate]);
+  }, [user, fetchData]);
 
   const handleCompletePayment = async (plan: "training" | "full" | "transform" = "full") => {
     try {
@@ -289,7 +334,7 @@ const Dashboard = () => {
         <div className="max-w-4xl mx-auto space-y-6">
           {user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           <MyTrainerCard onOpenChat={() => setSection("chat")} />
-          <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} />
+          <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
           {user && <TravelModeCard userId={user.id} />}
         </div>
       )}
@@ -297,7 +342,14 @@ const Dashboard = () => {
       {hasPlan && section === "training" && user && (
         <div className="max-w-5xl">
           <Suspense fallback={<SectionFallback />}>
-            <WorkoutTracker userId={user.id} dayPlans={dayPlans} onExit={() => setSection("home")} />
+            <WorkoutTracker
+              userId={user.id}
+              dayPlans={dayPlans}
+              onExit={() => {
+                setCompletedToday(true);
+                setSection("home");
+              }}
+            />
           </Suspense>
         </div>
       )}
@@ -441,7 +493,7 @@ const Dashboard = () => {
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar */}
-          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 flex items-center px-4 gap-3">
+          <header className="app-chrome h-14 border-b sticky top-0 z-50 flex items-center px-4 gap-3">
             <SidebarTrigger />
             <div className="flex-1 min-w-0">
               <h1 className="font-display font-bold text-sm uppercase tracking-wider text-foreground truncate">

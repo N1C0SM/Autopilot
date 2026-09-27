@@ -207,7 +207,7 @@ const TrainerPage = () => {
           onSignOut={handleSignOut}
         />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-40 flex items-center px-4 gap-3">
+          <header className="app-chrome h-14 border-b sticky top-0 z-40 flex items-center px-4 gap-3">
             <SidebarTrigger />
             <span className="text-sm font-medium text-muted-foreground">
               {section === "users" ? "Usuarios asignados" : section === "chat" ? "Chat con administrador" : "Mi perfil"}

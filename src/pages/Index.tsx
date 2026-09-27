@@ -197,7 +197,7 @@ const Index = () => {
       </Helmet>
 
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
+      <nav className="app-chrome fixed top-0 w-full z-50 border-b">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <span className="font-display text-xl font-bold text-gradient">Autopilot</span>
 

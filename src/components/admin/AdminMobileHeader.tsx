@@ -45,7 +45,7 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
 
   return (
     <header
-      className="sticky top-0 z-40 md:hidden bg-card/95 backdrop-blur-xl border-b border-border"
+      className="app-chrome sticky top-0 z-40 border-b md:hidden"
       style={{
         paddingTop: "var(--safe-top, 0px)",
         paddingLeft: "var(--safe-left, 0px)",

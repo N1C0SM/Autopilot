@@ -87,7 +87,7 @@ const Drive = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
+      <header className="app-chrome sticky top-0 z-40 border-b">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <Link to="/drive" className="inline-flex items-center gap-2 font-display font-bold">
             <HardDrive className="h-5 w-5 text-primary" />

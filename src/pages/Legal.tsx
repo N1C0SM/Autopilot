@@ -20,7 +20,7 @@ const Legal = () => {
         <meta name="robots" content="index,follow" />
       </Helmet>
 
-      <nav className="border-b border-border sticky top-0 bg-background/80 backdrop-blur z-10">
+      <nav className="app-chrome border-b sticky top-0 z-10">
         <div className="container mx-auto h-16 flex items-center justify-between px-4">
           <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Volver</Link>

@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2 } from "lucide-react";
@@ -15,10 +14,6 @@ import {
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
 
 const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS, "Otro"] as const;
-
-interface ExerciseLibraryProps {
-  defaultOpen?: boolean;
-}
 
 /* ── Helpers ── */
 
@@ -370,9 +365,8 @@ const ExerciseFormDialog = ({
 
 /* ── Main Component ── */
 
-const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
+const ExerciseLibrary = () => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [open, setOpen] = useState(defaultOpen);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
@@ -465,23 +459,22 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
   const orderLabel = (o: number) => RECOMMENDED_ORDERS.find((x) => x.value === o)?.label || "";
 
   return (
-    <div className="bg-card rounded-xl border border-border mb-6">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-5 text-left"
-      >
+    <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-[0_16px_44px_-36px_hsl(var(--primary)/.55)] sm:p-5">
+      <div className="mb-4 flex items-center gap-2 border-b border-border/70 pb-4">
         <div className="flex items-center gap-2">
-          <Dumbbell className="w-5 h-5 text-primary" />
-          <span className="font-bold font-display">Biblioteca de Ejercicios</span>
-          <Badge variant="secondary" className="ml-1 text-xs">{exercises.length}</Badge>
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
+            <Dumbbell className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-bold font-display">Biblioteca de ejercicios</h2>
+            <p className="text-xs text-muted-foreground">{filtered.length} de {exercises.length} ejercicios</p>
+          </div>
         </div>
-        <span className="text-muted-foreground text-sm">{open ? "▲" : "▼"}</span>
-      </button>
+      </div>
 
-      {open && (
-        <div className="px-5 pb-5 space-y-4 animate-fade-in">
+        <div className="space-y-4">
           {/* Search + Add */}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -500,14 +493,42 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
               <Plus className="w-4 h-4 mr-1" /> Nuevo
             </Button>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Músculo</span>
+              <select
+                className="flex h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
+                value={filterGroup ?? ""}
+                onChange={(event) => setFilterGroup(event.target.value || null)}
+                aria-label="Filtrar ejercicios por músculo"
+              >
+                <option value="">Todos los músculos</option>
+                {Object.keys(groupCounts).sort((a, b) => a.localeCompare(b, "es")).map((group) => (
+                  <option key={group} value={group}>{group} · {groupCounts[group]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1 text-xs text-muted-foreground">
+              <span>Tipo de ejercicio</span>
+              <select
+                className="flex h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
+                value={filterType ?? ""}
+                onChange={(event) => setFilterType(event.target.value || null)}
+                aria-label="Filtrar ejercicios por tipo"
+              >
+                <option value="">Todos los tipos</option>
+                {EXERCISE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </label>
+          </div>
 
           {/* Lista única y limpia */}
           {filtered.length > 0 ? (
-            <div className="divide-y divide-border rounded-xl border border-border overflow-hidden">
+            <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80">
               {filtered.map((ex) => (
                 <div
                   key={ex.id}
-                  className="group flex items-center gap-3 px-3.5 py-2.5 bg-card hover:bg-secondary/40 transition-colors"
+                  className="group flex items-center gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{ex.name}</p>
@@ -562,7 +583,6 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
             </div>
           )}
         </div>
-      )}
 
       {/* Form Dialog */}
       <ExerciseFormDialog

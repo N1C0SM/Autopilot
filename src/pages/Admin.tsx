@@ -160,7 +160,7 @@ const Admin = () => {
           />
 
           {/* Top bar escritorio / tablet */}
-          <header className="hidden md:flex h-14 border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50 items-center px-4 gap-3">
+          <header className="app-chrome hidden md:flex h-14 border-b sticky top-0 z-50 items-center px-4 gap-3">
             <SidebarTrigger />
             <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground truncate">
               {sectionTitle}
@@ -369,7 +369,7 @@ function StatusDot({ status, payment }: { status: string; payment: string }) {
 function ExerciseLibraryFull() {
   return (
     <div>
-      <ExerciseLibrary defaultOpen />
+      <ExerciseLibrary />
     </div>
   );
 }

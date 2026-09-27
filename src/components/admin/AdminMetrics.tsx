@@ -210,13 +210,28 @@ const AdminMetrics = () => {
   return (
     <div className="space-y-8">
       {/* Toolbar */}
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Actualizar
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card/70 p-3 backdrop-blur-xl sm:p-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/50" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+          </span>
+          <span className="truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:text-xs">
+            Panel de métricas
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="border-primary/25 bg-background/60">
+          <RefreshCw className={`w-3.5 h-3.5 sm:mr-1.5 ${loading ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">Actualizar datos</span>
+          <span className="sm:hidden">Actualizar</span>
         </Button>
-        <Button variant="destructive" size="sm" onClick={resetMetrics} disabled={resetting}>
-          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> {resetting ? "Reseteando..." : "Resetear métricas"}
+        <Button variant="destructive" size="sm" onClick={resetMetrics} disabled={resetting} className="shadow-[0_4px_18px_-10px_hsl(var(--destructive)/.8)]">
+          <Trash2 className="w-3.5 h-3.5 sm:mr-1.5" />
+          <span className="hidden sm:inline">{resetting ? "Reseteando..." : "Resetear métricas"}</span>
+          <span className="sm:hidden">{resetting ? "Reset..." : "Resetear"}</span>
         </Button>
+        </div>
       </div>
 
       {/* Top KPI grid */}
@@ -305,20 +320,52 @@ const AdminMetrics = () => {
         <div className="bg-card rounded-2xl p-6 border border-border">
           <div className="flex items-center gap-2 mb-4">
             <Dumbbell className="w-4 h-4 text-primary" />
-            <h3 className="font-display font-bold text-sm uppercase tracking-wider">Plan elegido (pagados)</h3>
+            <div>
+              <h3 className="font-display font-bold text-sm uppercase tracking-wider">Planes elegidos</h3>
+              <p className="text-[11px] text-muted-foreground">Distribución entre {data.paid} clientes de pago</p>
+            </div>
           </div>
-          {data.tiersData.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-12 text-center">Sin datos todavía</p>
+          {data.paid === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">Todavía no hay clientes de pago.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data.tiersData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="value" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-5 pt-2">
+              {[
+                { name: "Completo", key: "full", color: "from-primary to-amber-200", marker: "bg-primary" },
+                { name: "Entrenamiento", key: "training", color: "from-sky-500 to-cyan-300", marker: "bg-sky-400" },
+                { name: "Transformación", key: "transform", color: "from-violet-500 to-fuchsia-300", marker: "bg-violet-400" },
+                { name: "Sin plan", key: "none", color: "from-slate-500 to-slate-300", marker: "bg-slate-400" },
+              ].map((tier) => {
+                const count = data.tiersData.find((entry: { name: string; value: number }) => entry.name === tier.name)?.value ?? 0;
+                const percentage = Math.round((count / data.paid) * 100);
+                return (
+                  <div key={tier.key} className="space-y-2">
+                    <div className="flex items-end justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${tier.marker}`} />
+                        <span className="truncate text-sm font-medium">{tier.name}</span>
+                      </div>
+                      <div className="flex shrink-0 items-baseline gap-2">
+                        <span className="font-display text-lg font-bold tabular-nums">{count}</span>
+                        <span className="text-xs text-muted-foreground">{percentage}%</span>
+                      </div>
+                    </div>
+                    <div
+                      className="h-2 overflow-hidden rounded-full bg-secondary"
+                      role="progressbar"
+                      aria-label={`${tier.name}: ${percentage}% de clientes`}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={percentage}
+                    >
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${tier.color} transition-[width] duration-700 ease-out`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 

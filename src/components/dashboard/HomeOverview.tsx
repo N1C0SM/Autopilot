@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Dumbbell, Apple, MessageCircle, ArrowRight, Flame, Clock, Calendar } from "lucide-react";
 import type { DayPlan } from "@/types/training";
@@ -22,14 +23,17 @@ interface Props {
   onNavigate: (s: UserSection) => void;
   weeksActive?: number;
   completedDays?: number;
+  completedToday?: boolean;
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays }: Props) => {
+const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
   const todayPlan = dayPlans.find((p) => p.day === todayName);
+  const [selectedWeekDay, setSelectedWeekDay] = useState(todayName);
+  const selectedWeekPlan = dayPlans.find((p) => p.day === selectedWeekDay);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -71,7 +75,8 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         onClick={() => onNavigate("training")}
-        className="bg-card rounded-2xl p-6 border border-border hover:border-primary/40 transition-all duration-200 text-left group cursor-pointer sm:col-span-2 lg:col-span-2"
+        disabled={completedToday}
+        className="bg-card rounded-2xl p-6 border border-border hover:border-primary/40 disabled:cursor-default disabled:hover:border-border transition-all duration-200 text-left group cursor-pointer sm:col-span-2 lg:col-span-2"
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -79,20 +84,29 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
               <Dumbbell className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Hoy · {todayName}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+                Hoy · {todayName}{completedToday ? " · COMPLETADO" : ""}
+              </p>
               <h3 className="font-display font-bold text-lg">
-                {todayPlan
+                {completedToday
+                  ? "Sesión completada"
+                  : todayPlan
                   ? todayPlan.type === "gimnasio"
                     ? todayPlan.routine_name || "Entrenamiento"
                     : todayPlan.sport || "Actividad"
                   : "Día de descanso"}
               </h3>
+              {completedToday && (
+                <p className="mt-1 text-sm text-muted-foreground">Ya has hecho lo previsto para hoy. Descansa y vuelve mañana.</p>
+              )}
             </div>
           </div>
-          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          {!completedToday && (
+            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          )}
         </div>
 
-        {todayPlan?.type === "gimnasio" && todayPlan.exercises && (
+        {!completedToday && todayPlan?.type === "gimnasio" && todayPlan.exercises && (
           <div className="space-y-1.5">
             {todayPlan.exercises.slice(0, 4).map((ex, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -110,14 +124,14 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
           </div>
         )}
 
-        {todayPlan?.type === "actividad" && (
+        {!completedToday && todayPlan?.type === "actividad" && (
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1"><Flame className="w-3.5 h-3.5 text-primary" />{todayPlan.intensity}</span>
             <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-primary" />{todayPlan.duration}</span>
           </div>
         )}
 
-        {!todayPlan && (
+        {!completedToday && !todayPlan && (
           <p className="text-sm text-muted-foreground">Recupera y descansa. Mañana vuelves. 😴</p>
         )}
       </motion.button>
@@ -186,23 +200,61 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
             return (
               <button
                 key={day}
-                onClick={() => { onNavigate("training"); }}
-                className={`text-center p-2 rounded-xl transition-all hover:scale-105 ${
-                  isToday ? "ring-2 ring-primary/40 bg-primary/10" : ""
-                } ${plan ? "bg-secondary/50 hover:bg-secondary" : "opacity-30"}`}
+                type="button"
+                onClick={() => setSelectedWeekDay(day)}
+                aria-pressed={selectedWeekDay === day}
+                aria-label={`${day}${isToday ? ", hoy" : ""}: ${plan?.routine_name || plan?.sport || (plan ? "Actividad" : "Descanso")}`}
+                className={`min-w-0 rounded-xl p-2 text-center transition-colors ${
+                  selectedWeekDay === day
+                    ? "bg-primary/10 ring-2 ring-primary/50"
+                    : "bg-secondary/50 hover:bg-secondary"
+                } ${isToday ? "ring-offset-1 ring-offset-background" : ""}`}
               >
                 <div className="text-[10px] font-bold text-muted-foreground uppercase">{day.slice(0, 2)}</div>
                 <div className="text-sm mt-0.5">
                   {plan?.type === "gimnasio" ? "🏋️" : plan?.type === "actividad" ? "🏃" : "—"}
                 </div>
-                {plan?.type === "gimnasio" && (
-                  <div className="text-[9px] text-muted-foreground truncate mt-0.5">
-                    {plan.routine_name?.split(" ")[0] || ""}
-                  </div>
-                )}
               </button>
             );
           })}
+        </div>
+        <div className="mt-3 rounded-xl border border-border/70 bg-background/50 p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                {selectedWeekDay === todayName ? "Hoy" : selectedWeekDay}
+              </p>
+              <p className="truncate text-sm font-semibold">
+                {selectedWeekPlan?.type === "gimnasio"
+                  ? selectedWeekPlan.routine_name || "Entrenamiento"
+                  : selectedWeekPlan?.type === "actividad"
+                    ? selectedWeekPlan.sport || "Actividad"
+                    : "Día de descanso"}
+              </p>
+            </div>
+            {selectedWeekPlan?.muscle_focus && (
+              <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">
+                {selectedWeekPlan.muscle_focus}
+              </span>
+            )}
+          </div>
+          {selectedWeekPlan?.type === "gimnasio" && selectedWeekPlan.exercises?.length ? (
+            <div className="space-y-1.5">
+              {selectedWeekPlan.exercises.map((exercise, index) => (
+                <div key={`${exercise.name}-${index}`} className="flex min-w-0 items-center gap-2 text-xs">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                  <span className="min-w-0 flex-1 truncate text-foreground/90">{exercise.name}</span>
+                  <span className="shrink-0 text-muted-foreground">{exercise.series} × {exercise.reps}</span>
+                </div>
+              ))}
+            </div>
+          ) : selectedWeekPlan?.type === "actividad" ? (
+            <p className="text-xs text-muted-foreground">
+              {selectedWeekPlan.intensity} · {selectedWeekPlan.duration}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">El entrenador no ha programado una sesión para este día.</p>
+          )}
         </div>
       </motion.div>
       {/* Progress stats */}

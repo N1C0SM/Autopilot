@@ -130,7 +130,7 @@ const Recursos = () => {
         <meta name="description" content="Ebooks, recomendaciones y artículos seleccionados por el equipo de Autopilot." />
       </Helmet>
 
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
+      <header className="app-chrome sticky top-0 z-40 border-b">
         <div className="container mx-auto max-w-5xl flex items-center justify-between h-14 px-4">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver

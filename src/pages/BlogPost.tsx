@@ -98,7 +98,7 @@ const BlogPost = () => {
         })}</script>
       </Helmet>
 
-      <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
+      <nav className="app-chrome border-b sticky top-0 z-50">
         <div className="container mx-auto flex items-center justify-between h-16 px-4">
           <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
           <Link to="/scan" className="text-sm text-primary font-medium hover:underline">

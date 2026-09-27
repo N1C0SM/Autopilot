@@ -12,7 +12,7 @@ interface Props {
 const MobileHeader = ({ title, profileName, profileAvatar, userId, onSettings }: Props) => {
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-40 md:hidden bg-card/95 backdrop-blur-xl border-b border-border"
+      className="app-chrome fixed top-0 left-0 right-0 z-40 border-b md:hidden"
       style={{
         paddingTop: "var(--safe-top, 0px)",
         paddingLeft: "var(--safe-left, 0px)",

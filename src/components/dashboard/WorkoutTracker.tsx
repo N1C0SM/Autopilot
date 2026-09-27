@@ -15,8 +15,7 @@ import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { getProgressionSuggestion } from "@/lib/workoutProgression";
-import poseFrontImg from "@/assets/pose-front.png";
-import poseBackImg from "@/assets/pose-back.png";
+import { MuscleMapFigure } from "./MuscleMapFigure";
 
 interface SetLog {
   reps: number;
@@ -32,25 +31,17 @@ interface Props {
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-const MUSCLE_HOTSPOTS: Record<string, { front?: string[]; back?: string[] }> = {
-  Pecho: { front: ["left-[38%] top-[25%]", "left-[54%] top-[25%]"] },
-  Hombros: { front: ["left-[27%] top-[21%]", "left-[65%] top-[21%]"] },
-  Bíceps: { front: ["left-[24%] top-[30%]", "left-[68%] top-[30%]"] },
-  Tríceps: { back: ["left-[24%] top-[30%]", "left-[68%] top-[30%]"] },
-  Espalda: { back: ["left-[38%] top-[25%]", "left-[54%] top-[25%]"] },
-  Trapecios: { back: ["left-[45%] top-[20%]"] },
-  Lumbares: { back: ["left-[45%] top-[40%]"] },
-  Piernas: { front: ["left-[39%] top-[57%]", "left-[54%] top-[57%]"], back: ["left-[39%] top-[57%]", "left-[54%] top-[57%]"] },
-  Glúteos: { back: ["left-[45%] top-[46%]"] },
-  Isquiotibiales: { back: ["left-[39%] top-[57%]", "left-[54%] top-[57%]"] },
-  Gemelos: { back: ["left-[40%] top-[76%]", "left-[54%] top-[76%]"] },
-  Core: { front: ["left-[45%] top-[39%]"] },
-  Abductores: { front: ["left-[35%] top-[52%]", "left-[58%] top-[52%]"] },
-  Aductores: { front: ["left-[43%] top-[52%]", "left-[51%] top-[52%]"] },
+const MUSCLE_INTENSITY = {
+  low: { label: "Bajo", range: "1–2 series", fill: "#B77A35" },
+  medium: { label: "Medio", range: "3–5 series", fill: "#E2B84B" },
+  high: { label: "Alto", range: "6+ series", fill: "#FFE39A" },
 };
 
-const getHotspots = (muscles: string[], side: "front" | "back") =>
-  muscles.flatMap((muscle) => MUSCLE_HOTSPOTS[muscle]?.[side] || []);
+const getMuscleIntensity = (sets: number) => sets >= 6
+  ? MUSCLE_INTENSITY.high
+  : sets >= 3
+    ? MUSCLE_INTENSITY.medium
+    : MUSCLE_INTENSITY.low;
 
 const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
@@ -65,8 +56,10 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [logsReady, setLogsReady] = useState(false);
+  const [completionReady, setCompletionReady] = useState(false);
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
+  const [showCompletionSummary, setShowCompletionSummary] = useState(false);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const [sessionStartedAt, setSessionStartedAt] = useState<Date | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
@@ -100,15 +93,31 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
     let active = true;
     const loadLogs = async () => {
       setLogsReady(false);
-      // Today's logs
-      const { data } = await supabase
-        .from("workout_logs")
-        .select("exercise_name, sets_completed")
-        .eq("user_id", userId)
-        .eq("day_label", selectedDay)
-        .eq("logged_at", selectedDate);
+      setCompletionReady(false);
+      const [{ data }, { data: completion, error: completionError }] = await Promise.all([
+        supabase
+          .from("workout_logs")
+          .select("exercise_name, sets_completed")
+          .eq("user_id", userId)
+          .eq("day_label", selectedDay)
+          .eq("logged_at", selectedDate),
+        supabase
+          .from("day_completions")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("day_label", selectedDay)
+          .eq("completed_at", selectedDate)
+          .maybeSingle(),
+      ]);
 
       if (!active) return;
+      if (completionError) {
+        toast.error("No se pudo comprobar el estado del entrenamiento.");
+        setWorkoutCompleted(false);
+      } else {
+        setWorkoutCompleted(Boolean(completion));
+      }
+      setCompletionReady(true);
       if (data && data.length > 0) {
         const logs: Record<string, SetLog[]> = {};
         data.forEach((row: any) => {
@@ -335,14 +344,16 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
     setRestTimer(null);
     try {
       await persistLogs(rpe);
-      await supabase.from("day_completions").upsert({
+      const { error: completionError } = await supabase.from("day_completions").upsert({
         user_id: userId,
         day_label: selectedDay,
         completed_at: selectedDate,
         rpe,
       });
+      if (completionError) throw completionError;
       await detectAndSavePRs();
       setWorkoutCompleted(true);
+      setShowCompletionSummary(true);
       toast.success("¡Entrenamiento completado! 💪");
     } catch {
       toast.error("Error al guardar");
@@ -359,12 +370,16 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
     const weight = Number.parseFloat(set.weight);
     return total + (Number.isFinite(weight) && weight > 0 ? weight * Math.max(0, set.reps) : 0);
   }, 0);
-  const musclesWorked = Array.from(new Set(
-    (currentPlan?.exercises || [])
-      .filter((exercise) => (exerciseLogs[exercise.name] || []).some((set) => set.done))
-      .map((exercise) => exercise.muscle_group)
-      .filter(Boolean),
-  ));
+  const muscleSetCounts = (currentPlan?.exercises || []).reduce<Record<string, number>>((counts, exercise) => {
+    const completedSetsForExercise = (exerciseLogs[exercise.name] || []).filter((set) => set.done).length;
+    if (completedSetsForExercise === 0) return counts;
+
+    const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
+    const muscle = exercise.muscle_group || metadata?.muscle_group;
+    if (muscle) counts[muscle] = (counts[muscle] || 0) + completedSetsForExercise;
+    return counts;
+  }, {});
+  const musclesWorked = Object.keys(muscleSetCounts);
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
   const completedExercises = currentPlan?.exercises?.filter((exercise) => {
     const sets = exerciseLogs[exercise.name] || [];
@@ -377,7 +392,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
     : "Trabajo hecho. La próxima sesión quedará registrada para que puedas progresar.";
 
   return (
-    <div className={workoutCompleted
+    <div className={showCompletionSummary
       ? "fixed inset-0 z-50 overflow-y-auto bg-background px-4 pb-8 pt-[calc(env(safe-area-inset-top)+1rem)]"
       : "max-w-2xl mx-auto"
     }>
@@ -420,62 +435,65 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
       {/* Gym day */}
       {currentPlan?.type === "gimnasio" && (
         <div className={`space-y-3 ${workoutCompleted ? "min-h-[calc(100vh-8rem)]" : ""}`}>
-          {/* Header with routine name + progress */}
-          <div className={`bg-card rounded-2xl p-4 border border-border ${workoutCompleted ? "hidden" : ""}`}>
-            <div className="flex items-center justify-between mb-1">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">Entreno de hoy</p>
-                <h3 className="font-display font-bold text-base">
+          {/* Today's workout summary */}
+          <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady ? "hidden" : ""}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+                  Entrenamiento · {selectedDay}
+                </p>
+                <h3 className="truncate font-display text-lg font-bold sm:text-xl">
                   {currentPlan.routine_name || selectedDay}
                 </h3>
                 {currentPlan.muscle_focus && (
-                  <p className="text-xs text-muted-foreground">{currentPlan.muscle_focus}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{currentPlan.muscle_focus}</p>
                 )}
               </div>
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <span className="text-2xl font-bold font-display text-gradient">
-                    {completedExercises}/{currentPlan.exercises?.length || 0}
-                  </span>
-                  <InfoHint text="Ejercicios completados hoy sobre el total previsto." />
-                </div>
-                <p className="text-[10px] text-muted-foreground">ejercicios</p>
+              <div className="flex h-12 min-w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/20 bg-primary/10 px-2">
+                <span className="font-display text-lg font-bold leading-none text-primary">
+                  {completedExercises}/{currentPlan.exercises?.length || 0}
+                </span>
+                <span className="mt-1 text-[9px] leading-none text-muted-foreground">hechos</span>
               </div>
-
-              {!started && (
-                <Button
-                  onClick={() => {
-                    setStarted(true);
-                    setExpandedExercise(0);
-                    setSessionStartedAt((startedAt) => startedAt || new Date());
-                  }}
-                  variant="hero"
-                  size="xl"
-                  className="w-full h-14 text-lg"
-                >
-                  Empezar
-                </Button>
-              )}
-
-              {workoutCompleted && (
-                <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-                  <p className="text-sm font-bold text-primary">Entrenamiento completado 💪</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {completedExercises} ejercicios · {completedSets} series registradas · tu progreso y récords están guardados.
-                  </p>
-                </div>
-              )}
             </div>
-            <div className="h-2 bg-secondary rounded-full overflow-hidden mt-3">
-              <motion.div
-                className="h-full bg-primary rounded-full"
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-              />
+
+            <div className="mt-4">
+              <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                <span className="text-muted-foreground">{started ? "Progreso del entrenamiento" : "Tu sesión de hoy"}</span>
+                <span className="font-medium tabular-nums text-foreground">{completedSets}/{totalSets} series</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-amber-200"
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                />
+              </div>
             </div>
+
+            {!started && (
+              <Button
+                onClick={() => {
+                  setStarted(true);
+                  setExpandedExercise(0);
+                  setSessionStartedAt((startedAt) => startedAt || new Date());
+                }}
+                variant="hero"
+                size="lg"
+                className="mt-4 h-12 w-full text-base"
+              >
+                Empezar entrenamiento
+              </Button>
+            )}
           </div>
 
-          {workoutCompleted && (
+          {!completionReady && (
+            <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+              Comprobando tu entrenamiento de hoy…
+            </div>
+          )}
+
+          {workoutCompleted && showCompletionSummary && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -511,49 +529,62 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                       <div className="w-full space-y-2 text-left text-sm">
                 {musclesWorked.length > 0 && (
                           <div className="rounded-2xl bg-background/50 px-3 py-3">
-                            <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                              Mapa muscular de hoy
-                            </p>
-                            <p className="mt-1 text-center text-xs text-foreground">Hoy has activado estas zonas</p>
-                            <div className="mt-3 flex items-end justify-center gap-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Mapa muscular</p>
+                                <p className="mt-1 text-xs text-muted-foreground">Zonas según las series que completaste</p>
+                              </div>
+                              <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                                {musclesWorked.length} {musclesWorked.length === 1 ? "grupo" : "grupos"}
+                              </span>
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
                               {(["front", "back"] as const).map((side) => {
-                                const hotspots = getHotspots(musclesWorked, side);
                                 return (
-                                <div key={side} className="text-center">
-                                  <div className="relative h-48 w-28 overflow-hidden rounded-2xl border border-border bg-secondary/30">
-                                    <img
-                                      src={side === "front" ? poseFrontImg : poseBackImg}
-                                      alt={side === "front" ? "Mapa muscular frontal" : "Mapa muscular posterior"}
-                                      className="h-full w-full object-contain opacity-75"
+                                <div key={side} className="min-w-0">
+                                  <div className="relative mx-auto aspect-[399/698] w-full max-w-[11rem] overflow-hidden rounded-2xl border border-border/80 bg-[radial-gradient(ellipse_at_50%_38%,hsl(var(--primary)/.09),transparent_68%),linear-gradient(180deg,hsl(var(--secondary)/.38),hsl(var(--background)/.7))]">
+                                    <MuscleMapFigure
+                                      side={side}
+                                      muscles={musclesWorked}
+                                      intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
                                     />
-                                    {hotspots.map((position, index) => (
-                                      <span
-                                        key={`${side}-${position}-${index}`}
-                                        className={`absolute ${position} h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary shadow-[0_0_0_4px_hsl(var(--primary)/.18),0_0_16px_hsl(var(--primary)/.9)]`}
-                                        aria-hidden="true"
-                                      />
-                                    ))}
+                                    <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-background/80 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-foreground/80 backdrop-blur-sm">
+                                      {side === "front" ? "Frontal" : "Posterior"}
+                                    </span>
                                   </div>
-                                  <span className="mt-1 block text-[10px] font-medium text-muted-foreground">
-                                    {side === "front" ? "Frontal" : "Posterior"}
-                                  </span>
                                 </div>
                                 );
                               })}
                             </div>
-                            <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                              {musclesWorked.map((muscle) => (
-                                <span key={muscle} className="rounded-full border border-primary/30 bg-primary/15 px-2.5 py-1 text-[10px] font-medium text-primary">
-                                  {muscle}
-                                </span>
+                            <div className="mt-4 grid grid-cols-3 gap-1.5">
+                              {Object.entries(MUSCLE_INTENSITY).map(([level, intensity]) => (
+                                <div key={level} className="rounded-xl border border-border/70 bg-background/50 px-2 py-2 text-center">
+                                  <span className="mx-auto mb-1 block h-1.5 w-8 rounded-full" style={{ backgroundColor: intensity.fill }} />
+                                  <span className="block text-[9px] font-semibold text-foreground">{intensity.label}</span>
+                                  <span className="block text-[8px] text-muted-foreground">{intensity.range}</span>
+                                </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                        {musclesWorked.length > 0 && (
-                          <div className="rounded-2xl bg-background/50 px-4 py-3">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Músculos trabajados</p>
-                            <p className="mt-1 font-medium">{musclesWorked.join(" · ")}</p>
+                            <div className="mt-3 grid grid-cols-2 gap-1.5">
+                              {musclesWorked.map((muscle) => (
+                                <div
+                                  key={muscle}
+                                  className="flex min-w-0 items-center justify-between gap-2 rounded-xl border px-2.5 py-2"
+                                  style={{
+                                    borderColor: `${getMuscleIntensity(muscleSetCounts[muscle]).fill}55`,
+                                    backgroundColor: `${getMuscleIntensity(muscleSetCounts[muscle]).fill}12`,
+                                  }}
+                                >
+                                  <span className="truncate text-[10px] font-medium text-foreground">{muscle}</span>
+                                  <span className="shrink-0 text-[9px] font-semibold tabular-nums" style={{ color: getMuscleIntensity(muscleSetCounts[muscle]).fill }}>
+                                    {muscleSetCounts[muscle]} series
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="mt-2 text-center text-[9px] text-muted-foreground">
+                              Estimación visual según las series completadas por grupo muscular.
+                            </p>
                           </div>
                         )}
                         {personalRecords.length > 0 && (
@@ -575,8 +606,71 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
             </motion.div>
           )}
 
+          {workoutCompleted && !showCompletionSummary && (
+            <div className="flex min-h-[calc(100dvh-12rem)] flex-col justify-center rounded-[2rem] border border-primary/25 bg-gradient-to-b from-primary/10 via-card to-card p-5 sm:p-8">
+              <div className="mx-auto w-full max-w-lg text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
+                  <Check className="h-8 w-8 text-primary" />
+                </div>
+                <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Entrenamiento de hoy</p>
+                <h2 className="mt-1 font-display text-3xl font-bold">Hecho por hoy</h2>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                  Ya completaste {currentPlan.routine_name || selectedDay}. Ahora toca recuperar: mañana podrás volver a entrenar.
+                </p>
+
+                <div className="mt-7 grid grid-cols-3 gap-2 text-left">
+                  <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
+                    <p className="text-xl font-bold tabular-nums">{completedExercises}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">ejercicios</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
+                    <p className="text-xl font-bold tabular-nums">{completedSets}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">series hechas</p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
+                    <p className="text-xl font-bold tabular-nums">{totalVolume > 0 ? `${Math.round(totalVolume)}` : "—"}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{totalVolume > 0 ? "kg de volumen" : "volumen"}</p>
+                  </div>
+                </div>
+
+                {musclesWorked.length > 0 && (
+                  <div className="mt-3 rounded-2xl border border-border/70 bg-background/60 p-4 text-left">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos trabajados</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {musclesWorked.map((muscle) => (
+                        <span key={muscle} className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${getMuscleIntensity(muscleSetCounts[muscle]).chip}`}>
+                          {muscle}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-3 flex items-start gap-3 rounded-2xl bg-secondary/50 p-4 text-left">
+                  <Flame className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <div>
+                    <p className="text-xs font-semibold">Prioriza la recuperación</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Hidrátate, come bien y deja que el cuerpo asimile el trabajo. Tu plan semanal sigue aquí cuando lo necesites.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="mt-5 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+                  onClick={() => setShowCompletionSummary(true)}
+                >
+                  Ver mapa muscular
+                </button>
+                <Button type="button" variant="hero" className="mt-3 h-12 w-full rounded-2xl" onClick={onExit}>
+                  Volver al inicio
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Rest timer floating */}
-          {!workoutCompleted && <AnimatePresence>
+          {!workoutCompleted && completionReady && <AnimatePresence>
             {restTimer !== null && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -605,7 +699,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
           </AnimatePresence>}
 
           {/* Exercise list */}
-          {!workoutCompleted && (currentPlan.exercises || []).map((ex, i) => {
+          {!workoutCompleted && completionReady && (currentPlan.exercises || []).map((ex, i) => {
             const isExpanded = expandedExercise === i;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
@@ -624,8 +718,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className={`bg-card rounded-xl border overflow-hidden transition-colors ${
-                  allDone ? "border-primary/40" : "border-border"
+                className={`overflow-hidden rounded-2xl border bg-card transition-colors ${
+                  allDone ? "border-primary/40" : "border-border/80"
                 }`}
               >
                 {/* Exercise header */}
@@ -639,63 +733,58 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                       setExpandedExercise(isExpanded ? null : i);
                     }
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-secondary/20 transition-colors"
+                  className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-secondary/20 sm:px-4"
                 >
                   {/* Exercise image or icon */}
                   {ex.image_url ? (
                     <img
                       src={ex.image_url}
                       alt={ex.name}
-                      className="w-10 h-10 rounded-lg object-cover shrink-0"
+                      className="h-11 w-11 shrink-0 rounded-xl object-cover"
                     />
                   ) : (
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                       allDone ? "bg-primary/20" : "bg-secondary"
                     }`}>
                       <Dumbbell className={`w-4 h-4 ${allDone ? "text-primary" : "text-muted-foreground"}`} />
                     </div>
                   )}
                   <div className="flex-1 text-left min-w-0">
-                    <div className={`font-medium text-sm ${allDone ? "text-primary" : ""}`}>
+                    <div className={`truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
                       {ex.name}
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {ex.series} series × {ex.reps} reps · {ex.rest} descanso
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      {ex.series} series <span className="px-0.5 text-border">·</span> {ex.reps} reps <span className="px-0.5 text-border">·</span> {ex.rest}
                     </div>
                     {(exerciseCategory || exerciseType) && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {exerciseCategory && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary">
                             {exerciseCategory}
                           </span>
                         )}
-                        {progression && (
-                          <p className={`mt-1 text-[10px] font-medium ${
-                            progression.label === "Subir" ? "text-primary" : "text-muted-foreground"
-                          }`}>
-                            {progression.label === "Subir" ? "↗" : "→"} {progression.reason}
-                          </p>
-                        )}
-                        {!exerciseCategory && (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
-                            Sin categoría
-                          </span>
-                        )}
                         {exerciseType && (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[9px] text-muted-foreground">
                             {exerciseType}
                           </span>
                         )}
                       </div>
                     )}
+                    {progression && (
+                      <p className={`mt-1 truncate text-[10px] font-medium ${
+                        progression.label === "Subir" ? "text-primary" : "text-muted-foreground"
+                      }`}>
+                        {progression.label === "Subir" ? "↗" : "→"} {progression.reason}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
                       allDone
-                        ? "bg-primary/20 text-primary"
+                        ? "bg-primary/15 text-primary"
                         : doneSets > 0
                         ? "bg-secondary text-foreground"
-                        : "bg-secondary text-muted-foreground"
+                        : "bg-secondary/70 text-muted-foreground"
                     }`}>
                       {doneSets}/{sets.length}
                     </span>
@@ -863,7 +952,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
           })}
 
           {/* Save button */}
-          {!workoutCompleted && <div className="sticky bottom-3 z-20 pt-3 pb-4">
+          {!workoutCompleted && completionReady && <div className="sticky bottom-3 z-20 pt-3 pb-4">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
               <span>{savedAt ? "Guardado" : "Se guarda automáticamente"}</span>
               <InfoHint text="Si guardas a medias no pierdes nada: el día se cierra solo cuando marcas todas las series y confirmas el RPE. Ahí se detectan tus récords personales." />
