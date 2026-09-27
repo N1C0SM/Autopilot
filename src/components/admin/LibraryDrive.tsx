@@ -372,7 +372,7 @@ const LibraryDrive = () => {
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {open.file_path ? (
                   previewUrl ? (
-                    <iframe src={previewUrl} title="Vista previa del PDF" className="w-full h-full" />
+                    <iframe src={previewUrl + "#toolbar=0&navpanes=0&view=FitH"} title="Vista previa del PDF" className="w-full h-full" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando…
