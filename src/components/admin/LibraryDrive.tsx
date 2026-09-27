@@ -346,7 +346,23 @@ const LibraryDrive = () => {
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Portada */}
             <div className="space-y-1.5">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Portada</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Portada</Label>
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-secondary">
+                  <Upload className="h-3.5 w-3.5" />
+                  {open.cover_path ? "Cambiar portada" : "Subir portada"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.currentTarget.value = "";
+                      if (f) upload(open, "cover", f);
+                    }}
+                  />
+                </label>
+              </div>
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {covers[open.id] ? (
                   <img src={covers[open.id]} alt="Portada" className="w-full h-full object-cover" />
