@@ -21,6 +21,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Settings = lazy(() => import("./pages/Settings"));
 const MySchedule = lazy(() => import("./pages/MySchedule"));
 const Admin = lazy(() => import("./pages/Admin"));
+const Drive = lazy(() => import("./pages/Drive"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Unsubscribe = lazy(() => import("./pages/Unsubscribe"));
 const Legal = lazy(() => import("./pages/Legal"));
@@ -110,6 +111,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><NoIndex><Settings /></NoIndex></ProtectedRoute>} />
             <Route path="/my-schedule" element={<ProtectedRoute><MySchedule /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><NoIndex><Admin /></NoIndex></ProtectedRoute>} />
+            <Route path="/drive" element={<NoIndex><Drive /></NoIndex>} />
             <Route path="/admin/email-preview/:templateKey" element={<ProtectedRoute><EmailPreview /></ProtectedRoute>} />
             <Route path="/trainer" element={<ProtectedRoute><NoIndex><Trainer /></NoIndex></ProtectedRoute>} />
             <Route path="/unsubscribe" element={<NoIndex><Unsubscribe /></NoIndex>} />
