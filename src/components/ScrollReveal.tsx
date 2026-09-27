@@ -41,7 +41,7 @@ const ScrollReveal = ({ children, className = "", delay = 0, direction = "up" }:
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}s` }}
-      className={`transition-all duration-700 ease-out will-change-transform ${
+      className={`transition-all duration-700 ease-out ${
         visible ? "opacity-100 translate-x-0 translate-y-0" : `opacity-0 ${hiddenTransform}`
       } ${className}`}
     >

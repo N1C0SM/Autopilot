@@ -10,7 +10,7 @@ const corsHeaders = {
 
 interface ExerciseRow {
   id: string; name: string; image_url: string | null;
-  muscle_group: string | null; exercise_type: string | null;
+  muscle_group: string | null; exercise_type: string | null; video_url: string | null;
   movement_pattern: string | null; level: number | null;
   priority: number | null; stimulus_type: string | null;
   load_level: string | null; fatigue_level: string | null;
@@ -26,6 +26,9 @@ interface PickedExercise {
   weight: string;
   rest: string;
   image_url?: string;
+  video_url?: string;
+  muscle_group?: string | null;
+  exercise_type?: string | null;
   movement_pattern?: string;
   priority?: number;
   fatigue_level?: string;
@@ -261,6 +264,9 @@ function pickExercisesForSession(
       weight: "",
       rest: scheme.rest,
       image_url: ex.image_url || undefined,
+      video_url: ex.video_url || undefined,
+      muscle_group: ex.muscle_group,
+      exercise_type: ex.exercise_type,
       movement_pattern: pattern,
       priority,
       fatigue_level: fatigue,
@@ -357,6 +363,9 @@ function pickExercisesForSession(
         weight: "",
         rest: scheme.rest,
         image_url: ex.image_url || undefined,
+        video_url: ex.video_url || undefined,
+        muscle_group: ex.muscle_group,
+        exercise_type: ex.exercise_type,
         movement_pattern: ex.movement_pattern || "Otro",
         priority: ex.priority ?? 2,
         fatigue_level: ex.fatigue_level || "Media",
@@ -875,7 +884,7 @@ serve(async (req) => {
 
     const { data: allExercises } = await supabase
       .from("exercises")
-      .select("id, name, muscle_group, image_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order, is_stable, is_progressable, high_tension")
+      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order, is_stable, is_progressable, high_tension")
       .eq("is_stable", true)
       .eq("is_progressable", true)
       .eq("high_tension", true);
@@ -920,6 +929,9 @@ serve(async (req) => {
         weight: "",
         rest: rules.rest_fuerza,
         image_url: ex.image_url || undefined,
+        video_url: ex.video_url || undefined,
+        muscle_group: ex.muscle_group,
+        exercise_type: ex.exercise_type,
         is_progression: true,
       }));
 

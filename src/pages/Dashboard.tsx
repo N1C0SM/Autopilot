@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,17 +10,11 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import type { DayPlan } from "@/types/training";
 import WeeklyProgress from "@/components/WeeklyProgress";
-import Chat from "@/components/Chat";
-import Greeting from "@/components/Greeting";
 import HomeOverview from "@/components/dashboard/HomeOverview";
-import TrainingPlanView from "@/components/dashboard/TrainingPlanView";
-import CalendarView from "@/components/dashboard/CalendarView";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import PRsList from "@/components/dashboard/PRsList";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import MyTrainerCard from "@/components/dashboard/MyTrainerCard";
 import RenewalFlow from "@/components/dashboard/RenewalFlow";
-import MealsList from "@/components/dashboard/MealsList";
 import UserSidebar from "@/components/UserSidebar";
 import type { UserSection } from "@/components/UserSidebar";
 import SettingsPanel from "@/components/SettingsPanel";
@@ -32,10 +26,19 @@ import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
-import ProgressPhotos from "@/components/dashboard/ProgressPhotos";
-import WorkoutTracker from "@/components/dashboard/WorkoutTracker";
 import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { TIERS } from "@/config/tiers";
+
+const Chat = lazy(() => import("@/components/Chat"));
+const TrainingPlanView = lazy(() => import("@/components/dashboard/TrainingPlanView"));
+const CalendarView = lazy(() => import("@/components/dashboard/CalendarView"));
+const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
+const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"));
+const WorkoutTracker = lazy(() => import("@/components/dashboard/WorkoutTracker"));
+
+const SectionFallback = () => (
+  <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
+);
 
 export interface Profile {
   user_id: string;
@@ -94,19 +97,22 @@ const Dashboard = () => {
       if (profile) {
         setPlanStatus(profile.plan_status);
         setPaymentStatus(profile.payment_status);
-        setSubscriptionTier(((profile as any).subscription_tier as string) || "full");
-        setProfileName((profile as any).name || "");
-        setProfileAvatar((profile as any).avatar_url || "");
-        setProfileCreatedAt((profile as any).created_at || "");
+        setSubscriptionTier(profile.subscription_tier || "full");
+        setProfileName(profile.name || "");
+        setProfileAvatar(profile.avatar_url || "");
+        setProfileCreatedAt(profile.created_at || "");
 
         if (profile.payment_status === "unpaid") { setLoading(false); return; }
         if (profile.plan_status === "onboarding") { navigate("/onboarding"); return; }
 
         if (profile.plan_status === "plan_ready") {
-          const [{ data: tp }, { data: np }, { data: dc }] = await Promise.all([
+          const [{ data: tp }, { data: np }, { count: completionCount }] = await Promise.all([
             supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).single(),
             supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).single(),
-            supabase.from("day_completions").select("id").eq("user_id", user.id),
+            supabase
+              .from("day_completions")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id),
           ]);
 
           if (tp) setDayPlans(tp.workouts_json as unknown as DayPlan[]);
@@ -114,7 +120,7 @@ const Dashboard = () => {
             setMacros(np.macros_json as unknown as Macros);
             setMeals(np.meals_json as unknown as Meal[]);
           }
-          setCompletedDays(dc?.length ?? 0);
+          setCompletedDays(completionCount ?? 0);
         }
       }
       setLoading(false);
@@ -217,7 +223,7 @@ const Dashboard = () => {
       conversation_user_id: user.id,
       sender_id: user.id,
       content: "Hola 👋 Me gustaría agendar una videollamada por Google Meet. ¿Qué horarios tienes disponibles esta semana?",
-    } as any);
+    });
     if (error) {
       toast.error("No se pudo enviar la solicitud");
       return;
@@ -301,9 +307,21 @@ const Dashboard = () => {
             </TabsList>
             <InfoHint text="«Entrenar» registra pesos, repeticiones y descansos. «Plan» muestra la rutina completa. «Calendario» organiza tu semana." />
           </div>
-          <TabsContent value="workout"><WorkoutTracker userId={user.id} dayPlans={dayPlans} /></TabsContent>
-          <TabsContent value="list"><TrainingPlanView dayPlans={dayPlans} /></TabsContent>
-          <TabsContent value="calendar"><CalendarView dayPlans={dayPlans} /></TabsContent>
+          <TabsContent value="workout">
+            <Suspense fallback={<SectionFallback />}>
+              <WorkoutTracker userId={user.id} dayPlans={dayPlans} />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="list">
+            <Suspense fallback={<SectionFallback />}>
+              <TrainingPlanView dayPlans={dayPlans} />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="calendar">
+            <Suspense fallback={<SectionFallback />}>
+              <CalendarView dayPlans={dayPlans} />
+            </Suspense>
+          </TabsContent>
         </Tabs>
       )}
 
@@ -336,7 +354,9 @@ const Dashboard = () => {
           <div className="bg-card rounded-xl p-4 md:p-6 border border-border">
             <h3 className="font-bold font-display mb-1">Comidas</h3>
             <p className="text-xs text-muted-foreground mb-3">Doble click en una comida para marcarla como hecha hoy ✓</p>
-            <MealsList meals={meals} />
+            <Suspense fallback={<SectionFallback />}>
+              <MealsList meals={meals} />
+            </Suspense>
           </div>
           <div className="text-center pt-2">
             <Button variant="ghost" size="sm" onClick={handleManageSubscription} className="text-muted-foreground">Gestionar suscripción</Button>
@@ -365,7 +385,11 @@ const Dashboard = () => {
               </Button>
             </div>
           </div>
-          {user && <Chat conversationUserId={user.id} />}
+          {user && (
+            <Suspense fallback={<SectionFallback />}>
+              <Chat conversationUserId={user.id} />
+            </Suspense>
+          )}
         </div>
       )}
 
@@ -382,7 +406,9 @@ const Dashboard = () => {
             </Button>
           </div>
           <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
-          <ProgressPhotos userId={user.id} />
+          <Suspense fallback={<SectionFallback />}>
+            <ProgressPhotos userId={user.id} />
+          </Suspense>
         </div>
       )}
 

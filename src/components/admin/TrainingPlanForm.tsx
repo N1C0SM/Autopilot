@@ -262,7 +262,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
   useEffect(() => {
     supabase.from("exercises")
-      .select("id, name, muscle_group, image_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order")
+      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order")
       .order("muscle_group").order("recommended_order").order("name")
       .then(({ data }) => { if (data) setExercises(data as Exercise[]); });
   }, []);
@@ -299,6 +299,9 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
           exercise_id: ex.id, name: ex.name,
           series: params.series, reps: params.reps,
           weight: "", rest: params.rest, image_url: ex.image_url || undefined,
+          muscle_group: ex.muscle_group,
+          exercise_type: ex.exercise_type,
+          video_url: ex.video_url || undefined,
         });
       }
     }
@@ -346,6 +349,9 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
             weight: "",
             rest: params.skillRest,
             image_url: se.image_url || undefined,
+            muscle_group: se.muscle_group,
+            exercise_type: se.exercise_type,
+            video_url: se.video_url || undefined,
           });
         }
       }
@@ -365,6 +371,9 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
             weight: "",
             rest: params.rest,
             image_url: ex.image_url || undefined,
+            muscle_group: ex.muscle_group,
+            exercise_type: ex.exercise_type,
+            video_url: ex.video_url || undefined,
           });
         }
       }
@@ -455,6 +464,9 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
         exercise_id: ex.id,
         name: ex.name,
         image_url: ex.image_url || undefined,
+        muscle_group: ex.muscle_group,
+        exercise_type: ex.exercise_type,
+        video_url: ex.video_url || undefined,
       });
     }
   };

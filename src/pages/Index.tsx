@@ -10,6 +10,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import AppStoreBadges from "@/components/AppStoreBadges";
+import BookCover from "@/components/BookCover";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
 const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
@@ -432,20 +433,9 @@ const Index = () => {
                           className="group flex flex-col h-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
                         >
 
-                          {e.cover_url ? (
-                            <div className="aspect-[4/3] bg-secondary overflow-hidden">
-                              <img
-                                src={e.cover_url}
-                                alt={e.title || "Guía de Autopilot"}
-                                loading="lazy"
-                                className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                              />
-                            </div>
-                          ) : (
-                            <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-secondary flex items-center justify-center">
-                              <BookOpen className="w-8 h-8 text-primary/60" />
-                            </div>
-                          )}
+                          <div className="px-5 pt-5">
+                            <BookCover title={e.title || "Guía de Autopilot"} src={e.cover_url} />
+                          </div>
                           <div className="p-5 flex-1 flex flex-col">
                             <h4 className="font-display font-bold leading-snug group-hover:text-primary transition-colors">{e.title}</h4>
                             {e.description && (

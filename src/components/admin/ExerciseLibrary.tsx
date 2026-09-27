@@ -169,7 +169,7 @@ const ExerciseFormDialog = ({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Grupo muscular</Label>
+                <Label className="text-xs">Categoría · grupo muscular</Label>
                 <SmallSelect value={form.muscle_group || ""} onChange={(v) => set("muscle_group", v)} options={ALL_MUSCLE_GROUPS} placeholder="Seleccionar..." />
               </div>
               <div>
@@ -511,9 +511,19 @@ const ExerciseLibrary = ({ defaultOpen = false }: ExerciseLibraryProps) => {
                 >
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-sm truncate">{ex.name}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {[ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || "Sin clasificar"}
-                    </p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {[ex.muscle_group, ex.exercise_type].filter(Boolean).map((category) => (
+                        <span
+                          key={category}
+                          className="rounded-full border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                        >
+                          {category}
+                        </span>
+                      ))}
+                      {!ex.muscle_group && !ex.exercise_type && (
+                        <span className="text-[10px] text-muted-foreground">Sin clasificar</span>
+                      )}
+                    </div>
                   </div>
 
                   {ex.video_url ? (

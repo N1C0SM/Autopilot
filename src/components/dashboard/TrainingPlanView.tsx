@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Dumbbell, Flame, Clock, Download, Copy, Check, ChevronDown, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
+import { Dumbbell, Flame, Clock, Download, Copy, Check, ChevronDown, ChevronUp, Calendar as CalendarIcon, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import CalendarExportDialog from "./CalendarExportDialog";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import VideoEmbed, { exerciseVideoSearchUrl } from "@/components/VideoEmbed";
+import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -39,6 +41,8 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const [expandedDay, setExpandedDay] = useState<string | null>(DAYS_ORDER[todayIndex]);
   const [copied, setCopied] = useState(false);
+  const [expandedVideos, setExpandedVideos] = useState<Record<string, boolean>>({});
+  const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(planToText(dayPlans));
@@ -155,26 +159,75 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                 animate={{ height: "auto", opacity: 1 }}
                 className="px-3 sm:px-4 pb-3 sm:pb-4 space-y-2"
               >
-                {plan.exercises.map((ex, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3 bg-secondary/20 rounded-lg"
-                  >
-                    {ex.image_url ? (
-                      <img src={ex.image_url} alt={ex.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                        <Dumbbell className="w-4 h-4 text-muted-foreground" />
+                {plan.exercises.map((ex, i) => {
+                  const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
+                  const video = ex.video_url || metadata?.video_url;
+                  const category = ex.muscle_group || metadata?.muscle_group;
+                  const exerciseType = ex.exercise_type || metadata?.exercise_type;
+                  const videoKey = `${day}-${ex.exercise_id || ex.name}-${i}`;
+                  const isVideoOpen = expandedVideos[videoKey] ?? false;
+
+                  return (
+                    <div key={videoKey} className="rounded-lg bg-secondary/20 p-2.5 sm:p-3">
+                      <div className="flex items-center gap-2.5 sm:gap-3">
+                        {ex.image_url ? (
+                          <img src={ex.image_url} alt={ex.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                            <Dumbbell className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-[13px] sm:text-sm truncate">{ex.name}</p>
+                          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
+                            {ex.series} series × {ex.reps} reps · {ex.rest}
+                          </p>
+                        </div>
+                        {video ? (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedVideos((current) => ({ ...current, [videoKey]: !isVideoOpen }))}
+                            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
+                          >
+                            <Video className="h-3.5 w-3.5" />
+                            {isVideoOpen ? "Ocultar" : "Vídeo"}
+                          </button>
+                        ) : (
+                          <a
+                            href={exerciseVideoSearchUrl(ex.name, category)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
+                          >
+                            <Video className="h-3.5 w-3.5" />
+                            Ver vídeo
+                          </a>
+                        )}
                       </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-[13px] sm:text-sm truncate">{ex.name}</p>
-                      <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
-                        {ex.series} series × {ex.reps} reps · {ex.rest}
-                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1 pl-12">
+                        {category ? (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                            {category}
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                            Sin categoría
+                          </span>
+                        )}
+                        {exerciseType && (
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
+                            {exerciseType}
+                          </span>
+                        )}
+                      </div>
+                      {video && isVideoOpen && (
+                        <div className="mt-3">
+                          <VideoEmbed url={video} />
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </motion.div>
             )}
 
