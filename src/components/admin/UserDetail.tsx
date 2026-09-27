@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Target, Eye, Check, CreditCard } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, CreditCard } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABEL, TIERS } from "@/config/tiers";
@@ -426,9 +426,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         </div>
       )}
       <Tabs defaultValue={!hasAccess && !restricted ? "access" : "info"} className="space-y-6">
-        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? (restricted ? "md:grid-cols-6" : "md:grid-cols-7") : (restricted ? "md:grid-cols-7" : "md:grid-cols-8")) : (restricted ? "md:grid-cols-1" : "md:grid-cols-2")}`}>
+        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? (restricted ? "md:grid-cols-4" : "md:grid-cols-5") : (restricted ? "md:grid-cols-5" : "md:grid-cols-6")) : (restricted ? "md:grid-cols-1" : "md:grid-cols-2")}`}>
           <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-            <User2 className="w-3.5 h-3.5" /> Info
+            <User2 className="w-3.5 h-3.5" /> Cliente
           </TabsTrigger>
           {!restricted && (
             <TabsTrigger value="access" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
@@ -437,17 +437,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="goal" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <Target className="w-3.5 h-3.5" /> Objetivo
-              </TabsTrigger>
               <TabsTrigger value="progress" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <TrendingUp className="w-3.5 h-3.5" /> Progreso
               </TabsTrigger>
               <TabsTrigger value="training" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
                 <Dumbbell className="w-3.5 h-3.5" /> Entreno
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <Calendar className="w-3.5 h-3.5" /> Calendario
               </TabsTrigger>
               {!trainingOnly && (
                 <TabsTrigger value="nutrition" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
@@ -487,24 +481,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   </div>
                 </div>
                 <Badge variant={hasAccess ? "default" : "outline"}>{hasAccess ? "Activo" : "Inactivo"}</Badge>
-                {hasAccess && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={tierSaving}
-                    onClick={async () => {
-                      const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
-                      setTierSaving(true);
-                      const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
-                      setTierSaving(false);
-                      if (error) return toast.error("No se pudo quitar el acceso");
-                      onUpdate(profile.user_id, updates);
-                      toast.success(`Acceso retirado · ${PLAN_LABEL[currentTier || ""] || currentTier}`);
-                    }}
-                  >
-                    Quitar acceso
-                  </Button>
-                )}
               </div>
 
               <div>
@@ -609,6 +585,32 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   </Button>
                 )}
               </div>
+              {hasAccess && (
+                <details className="group rounded-lg border border-border px-4 py-3">
+                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                    Más opciones
+                  </summary>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
+                    <p className="text-xs text-muted-foreground">Desactivar el acceso impide que el cliente entre en la app. Cambiar de plan no lo desactiva.</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={tierSaving}
+                      onClick={async () => {
+                        const updates: any = { payment_status: "unpaid", subscription_status: "inactive" };
+                        setTierSaving(true);
+                        const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                        setTierSaving(false);
+                        if (error) return toast.error("No se pudo desactivar el acceso");
+                        onUpdate(profile.user_id, updates);
+                        toast.success("Acceso desactivado");
+                      }}
+                    >
+                      Desactivar acceso
+                    </Button>
+                  </div>
+                </details>
+              )}
             </div>
 
             <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
@@ -782,11 +784,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               )}
             </div>
           )}
-        </TabsContent>
-
-        {/* Tab: Goal */}
-        <TabsContent value="goal">
-          <UserGoalPanel userId={profile.user_id} email={profile.email} />
+          {profile.payment_status === "paid" && (
+            <UserGoalPanel userId={profile.user_id} email={profile.email} />
+          )}
         </TabsContent>
 
         {/* Tab: Progress */}
@@ -796,12 +796,22 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Training */}
         <TabsContent value="training" className="space-y-6">
-          <TrainingPlanForm dayPlans={dayPlans} onChange={setDayPlans} userSports={onboarding?.sports} equipmentType={onboarding?.equipment_type || "Mixto"} specificGoal={onboarding?.specific_goal || undefined} intensityLevel={onboarding?.intensity_level ?? 5} userGoal={onboarding?.goal || undefined} userInjuries={onboarding?.injuries || undefined} userAge={onboarding?.age ?? undefined} userAvailability={onboarding?.availability as Record<string, boolean> | null} />
-        </TabsContent>
-
-        {/* Tab: Calendar (admin) */}
-        <TabsContent value="calendar" className="space-y-6">
-          <AdminCalendarTab profile={profile} dayPlans={dayPlans} />
+          <Tabs defaultValue="plan" className="space-y-4">
+            <TabsList className="bg-secondary/50">
+              <TabsTrigger value="plan" className="text-xs gap-1.5">
+                <Dumbbell className="w-3.5 h-3.5" /> Plan de entreno
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className="text-xs gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> Calendario
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="plan">
+              <TrainingPlanForm dayPlans={dayPlans} onChange={setDayPlans} userSports={onboarding?.sports} equipmentType={onboarding?.equipment_type || "Mixto"} specificGoal={onboarding?.specific_goal || undefined} intensityLevel={onboarding?.intensity_level ?? 5} userGoal={onboarding?.goal || undefined} userInjuries={onboarding?.injuries || undefined} userAge={onboarding?.age ?? undefined} userAvailability={onboarding?.availability as Record<string, boolean> | null} />
+            </TabsContent>
+            <TabsContent value="calendar" className="space-y-6">
+              <AdminCalendarTab profile={profile} dayPlans={dayPlans} />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* Tab: Nutrition */}
