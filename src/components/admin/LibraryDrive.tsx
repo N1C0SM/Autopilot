@@ -25,6 +25,9 @@ import {
   ChevronRight,
   Eye,
   Download,
+  MoreVertical,
+  Link as LinkIcon,
+
   Package,
   Lock,
   Globe,
@@ -314,88 +317,114 @@ const LibraryDrive = () => {
           {(isBook || isPack) && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Portada */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Portada</Label>
-              {covers[open.id] ? (
-                <img src={covers[open.id]} alt="Portada" className="w-full aspect-[3/4] object-cover rounded-xl border border-border" />
-              ) : (
-                <div className="w-full aspect-[3/4] rounded-xl bg-secondary/50 border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground gap-1.5">
-                  <ImageIcon className="w-4 h-4" /> Sin portada
-                </div>
-              )}
-              <label className="cursor-pointer block">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) upload(open, "cover", f);
-                  }}
-                />
-                <span className="inline-flex w-full justify-center items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary">
-                  <Upload className="w-3.5 h-3.5" /> {open.cover_path ? "Cambiar portada" : "Subir portada"}
-                </span>
-              </label>
-              {covers[open.id] && (
-                <Button size="sm" variant="secondary" className="w-full" onClick={() => downloadUrl(covers[open.id], `${open.title || "portada"}-portada.${(open.cover_path || "").split(".").pop()?.split("?")[0] || "jpg"}`)}>
-                  <Download className="w-3.5 h-3.5 mr-1" /> Descargar portada
-                </Button>
-              )}
+              <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
+                {covers[open.id] ? (
+                  <img src={covers[open.id]} alt="Portada" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
+                    <ImageIcon className="w-4 h-4" /> Sin portada
+                  </div>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-background/80 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-background transition-colors">
+
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    {covers[open.id] && (
+                      <DropdownMenuItem
+                        onClick={() =>
+                          downloadUrl(
+                            covers[open.id],
+                            `${open.title || "portada"}-portada.${(open.cover_path || "").split(".").pop()?.split("?")[0] || "jpg"}`,
+                          )
+                        }
+                      >
+                        <Download className="w-4 h-4 mr-2" /> Descargar portada
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem asChild>
+                      <label className="cursor-pointer flex items-center w-full">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) upload(open, "cover", f);
+                          }}
+                        />
+                        <Upload className="w-4 h-4 mr-2" /> {open.cover_path ? "Cambiar portada" : "Subir portada"}
+                      </label>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {isBook && (
-            <div className="space-y-2">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro (PDF)</Label>
-              {open.file_path ? (
-                <div className="w-full aspect-[3/4] rounded-xl bg-secondary/40 border border-border flex flex-col items-center justify-center gap-3 p-4 text-center">
-                  <FileText className="w-8 h-8 text-primary" />
-                  <p className="text-[11px] text-muted-foreground break-all">{open.file_path.split("/").pop()}</p>
-                  <Button size="sm" variant="secondary" onClick={() => openFile(open.file_path!)}>
-                    <Eye className="w-3.5 h-3.5 mr-1" /> Abrir
-                  </Button>
-                  <Button size="sm" variant="secondary" onClick={() => downloadFile(open.file_path!, `${open.title || "libro"}.pdf`)}>
-                    <Download className="w-3.5 h-3.5 mr-1" /> Descargar
-                  </Button>
-                  <Button size="sm" variant="hero" onClick={() => shareOnce(open.id)}>
-                    Copiar enlace de 1 descarga
-                  </Button>
-                </div>
-              ) : (
-                <div className="w-full aspect-[3/4] rounded-xl bg-secondary/50 border border-dashed border-border flex items-center justify-center text-xs text-muted-foreground gap-1.5">
-                  <FileText className="w-4 h-4" /> Sin archivo
-                </div>
-              )}
-              <label className="cursor-pointer block">
-                <input
-                  type="file"
-                  accept="application/pdf,application/zip,application/epub+zip"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) upload(open, "file", f);
-                  }}
-                />
-                <span className="inline-flex w-full justify-center items-center gap-1.5 text-xs px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90">
-                  {busy === open.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                  {open.file_path ? "Reemplazar archivo" : "Subir archivo"}
-                </span>
-              </label>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro</Label>
+              <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
+                {open.file_path ? (
+                  previewUrl ? (
+                    <iframe src={previewUrl + "#toolbar=0&navpanes=0&view=FitH"} title="Vista previa del PDF" className="w-full h-full" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando…
+                    </div>
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
+                    <FileText className="w-4 h-4" /> Sin archivo
+                  </div>
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-background/80 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-background transition-colors">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    {open.file_path && (
+                      <>
+                        <DropdownMenuItem onClick={() => downloadFile(open.file_path!, `${open.title || "libro"}.pdf`)}>
+                          <Download className="w-4 h-4 mr-2" /> Descargar PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => shareOnce(open.id)}>
+                          <LinkIcon className="w-4 h-4 mr-2" /> Copiar enlace de 1 descarga
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openFile(open.file_path!)}>
+                          <Eye className="w-4 h-4 mr-2" /> Abrir a pantalla completa
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuItem asChild>
+                      <label className="cursor-pointer flex items-center w-full">
+                        <input
+                          type="file"
+                          accept="application/pdf,application/zip,application/epub+zip"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) upload(open, "file", f);
+                          }}
+                        />
+                        <Upload className="w-4 h-4 mr-2" /> {open.file_path ? "Reemplazar archivo" : "Subir archivo"}
+                      </label>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             )}
           </div>
           )}
 
-          {isBook && open.file_path && (
-            <div className="space-y-2">
-              <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Vista previa del PDF</Label>
-              {previewUrl ? (
-                <iframe src={previewUrl} title="Vista previa del PDF" className="w-full h-[70vh] rounded-xl border border-border bg-secondary/30" />
-              ) : (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando vista previa…</div>
-              )}
-            </div>
-          )}
 
           <div className="space-y-3 pt-2 border-t border-border">
             <div>
@@ -439,22 +468,11 @@ const LibraryDrive = () => {
             )}
 
             {(isBook || isPack) && (
-              <div className="space-y-2">
-                <Label className="text-xs">Enlace de compra Stripe · Test</Label>
-                <Input
-                  value={open.buy_url_test || ""}
-                  placeholder="https://buy.stripe.com/test_…"
-                  onChange={(e) => patch(open.id, { buy_url_test: e.target.value })}
-                />
-                <Label className="text-xs">Enlace de compra Stripe · Live</Label>
-                <Input
-                  value={open.buy_url_live || ""}
-                  placeholder="https://buy.stripe.com/…"
-                  onChange={(e) => patch(open.id, { buy_url_live: e.target.value })}
-                />
-                <p className="text-[11px] text-muted-foreground">Se usa el del modo activo en Ajustes → Pagos.</p>
-              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Los enlaces de compra se gestionan en Ajustes → Pagos.
+              </p>
             )}
+
             {isRec && (
               <div>
                 <Label className="text-xs">Enlace de la recomendación</Label>
