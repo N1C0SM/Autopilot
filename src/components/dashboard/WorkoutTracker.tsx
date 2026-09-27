@@ -32,9 +32,9 @@ interface Props {
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 const MUSCLE_INTENSITY = {
-  low: { label: "Bajo", range: "1–2 series", fill: "#C47B32" },
-  medium: { label: "Medio", range: "3–5 series", fill: "#F2B632" },
-  high: { label: "Alto", range: "6+ series", fill: "#FFE7A3" },
+  low: { label: "Bajo", range: "1–2 series", fill: "color-mix(in srgb, hsl(var(--primary)) 65%, hsl(var(--muted-foreground)))" },
+  medium: { label: "Medio", range: "3–5 series", fill: "hsl(var(--primary))" },
+  high: { label: "Alto", range: "6+ series", fill: "hsl(var(--accent))" },
 };
 
 const getMuscleIntensity = (sets: number) => sets >= 6
@@ -571,8 +571,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                                   key={muscle}
                                   className="flex min-w-0 items-center justify-between gap-2 rounded-xl border px-2.5 py-2"
                                   style={{
-                                    borderColor: `${getMuscleIntensity(muscleSetCounts[muscle]).fill}55`,
-                                    backgroundColor: `${getMuscleIntensity(muscleSetCounts[muscle]).fill}12`,
+                                    borderColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 33%, transparent)`,
+                                    backgroundColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 7%, transparent)`,
                                   }}
                                 >
                                   <span className="truncate text-[10px] font-medium text-foreground">{muscle}</span>
