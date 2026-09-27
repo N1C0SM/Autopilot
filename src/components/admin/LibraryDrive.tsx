@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   ChevronRight,
   Eye,
+  Download,
   Package,
   Lock,
   Globe,
@@ -242,6 +243,23 @@ const LibraryDrive = () => {
     window.open(data.signedUrl, "_blank", "noopener");
   };
 
+  const downloadFile = async (p: string, name: string) => {
+    const { data, error } = await supabase.storage.from("library").createSignedUrl(p, 600, { download: name });
+    if (error || !data?.signedUrl) { toast.error("No se pudo descargar"); return; }
+    window.location.href = data.signedUrl;
+  };
+
+  const downloadUrl = async (url: string, name: string) => {
+    try {
+      const blob = await (await fetch(url)).blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch { window.open(url, "_blank", "noopener"); }
+  };
+
   const previewPath = books.find((b) => b.id === openId)?.file_path || null;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -293,7 +311,7 @@ const LibraryDrive = () => {
             </span>
           </div>
 
-          {isBook && (
+          {(isBook || isPack) && (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Portada */}
             <div className="space-y-2">
@@ -319,9 +337,14 @@ const LibraryDrive = () => {
                   <Upload className="w-3.5 h-3.5" /> {open.cover_path ? "Cambiar portada" : "Subir portada"}
                 </span>
               </label>
+              {covers[open.id] && (
+                <Button size="sm" variant="secondary" className="w-full" onClick={() => downloadUrl(covers[open.id], `${open.title || "portada"}-portada.${(open.cover_path || "").split(".").pop()?.split("?")[0] || "jpg"}`)}>
+                  <Download className="w-3.5 h-3.5 mr-1" /> Descargar portada
+                </Button>
+              )}
             </div>
 
-            {/* Archivo del libro */}
+            {isBook && (
             <div className="space-y-2">
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro (PDF)</Label>
               {open.file_path ? (
@@ -330,6 +353,9 @@ const LibraryDrive = () => {
                   <p className="text-[11px] text-muted-foreground break-all">{open.file_path.split("/").pop()}</p>
                   <Button size="sm" variant="secondary" onClick={() => openFile(open.file_path!)}>
                     <Eye className="w-3.5 h-3.5 mr-1" /> Abrir
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={() => downloadFile(open.file_path!, `${open.title || "libro"}.pdf`)}>
+                    <Download className="w-3.5 h-3.5 mr-1" /> Descargar
                   </Button>
                   <Button size="sm" variant="hero" onClick={() => shareOnce(open.id)}>
                     Copiar enlace de 1 descarga
@@ -356,6 +382,7 @@ const LibraryDrive = () => {
                 </span>
               </label>
             </div>
+            )}
           </div>
           )}
 
