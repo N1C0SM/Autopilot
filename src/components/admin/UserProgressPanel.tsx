@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Activity, ClipboardCheck, Plane, Dumbbell, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Trophy, Activity, ClipboardCheck, Plane, Dumbbell, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -56,11 +56,12 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   const [rpeData, setRpeData] = useState<RPEPoint[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
-      const [{ data: onb }, { data: prData }, { data: dayData }, { data: logData }] = await Promise.all([
+      const [onboardingResult, prsResult, completionsResult, logsResult] = await Promise.all([
         supabase.from("onboarding").select("initial_tests").eq("user_id", userId).maybeSingle(),
         supabase.from("personal_records").select("*").eq("user_id", userId).order("estimated_1rm", { ascending: false }).limit(20),
         supabase
@@ -77,6 +78,13 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           .order("logged_at", { ascending: false })
           .limit(100),
       ]);
+      const { data: onb } = onboardingResult;
+      const { data: prData, error: prsError } = prsResult;
+      const { data: dayData, error: completionsError } = completionsResult;
+      const { data: logData, error: logsError } = logsResult;
+
+      const firstError = prsError || completionsError || logsError;
+      setLoadError(firstError ? "No se ha podido cargar todo el historial de entrenamiento." : null);
 
       if (onb?.initial_tests) setTests(onb.initial_tests as InitialTests);
       if (prData) setPRs(prData as PR[]);
@@ -112,9 +120,59 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       return acc;
     }, {}),
   );
+  const latestSession = sessions[0]?.[1] || [];
+  const latestSessionDate = sessions[0]?.[0]?.split("|")[0];
+  const latestSessionDone = latestSession.reduce((sum, log) => sum + log.sets_completed.filter((set) => set.done).length, 0);
+  const latestSessionTotal = latestSession.reduce((sum, log) => sum + log.sets_completed.length, 0);
+  const latestSessionVolume = latestSession.reduce(
+    (sum, log) =>
+      sum +
+      log.sets_completed
+        .filter((set) => set.done)
+        .reduce((setSum, set) => setSum + (Number.parseFloat(set.weight) || 0) * (Number(set.reps) || 0), 0),
+    0,
+  );
 
   return (
     <div className="space-y-6">
+      {loadError && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-start gap-3 text-sm">
+          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <div className="font-medium text-destructive">{loadError}</div>
+            <div className="text-xs text-muted-foreground mt-1">Comprueba las políticas de acceso del entrenador asignado y vuelve a abrir la ficha.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Immediate coach view: what the user actually did most recently */}
+      {latestSession.length > 0 && (
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-primary font-bold">Último entreno realizado</div>
+              <h2 className="font-bold font-display text-lg mt-1">
+                {latestSession[0].day_label} · {latestSessionDate ? new Date(`${latestSessionDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" }) : "—"}
+              </h2>
+            </div>
+            <div className="text-right text-xs text-muted-foreground">
+              <div><span className="font-bold text-foreground">{latestSessionDone}/{latestSessionTotal}</span> series</div>
+              <div>{latestSessionVolume.toLocaleString("es-ES")} kg de volumen</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {latestSession.map((log) => (
+              <div key={log.id} className="bg-card/70 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+                <span className="text-sm font-medium truncate">{log.exercise_name}</span>
+                <span className="text-xs text-muted-foreground text-right shrink-0">
+                  {log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || "No completado"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Travel mode banner */}
       {isTraveling && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center gap-3">
