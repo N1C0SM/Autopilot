@@ -14,6 +14,7 @@ import { exerciseVideoSearchUrl } from "@/lib/exerciseVideo";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
+import { getProgressionSuggestion } from "@/lib/workoutProgression";
 
 interface SetLog {
   reps: number;
@@ -125,6 +126,18 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
             prev[row.exercise_name] = row.sets_completed as SetLog[];
           });
         setPreviousLogs(prev);
+        if ((!data || data.length === 0) && currentPlan?.type === "gimnasio") {
+          const progressedLogs: Record<string, SetLog[]> = {};
+          currentPlan.exercises?.forEach((exercise) => {
+            const suggestion = getProgressionSuggestion(exercise, prev[exercise.name]);
+            progressedLogs[exercise.name] = Array.from({ length: exercise.series }, () => ({
+              reps: exercise.reps,
+              weight: suggestion?.weight || exercise.weight || "",
+              done: false,
+            }));
+          });
+          setExerciseLogs(progressedLogs);
+        }
       } else {
         setPreviousLogs({});
       }
@@ -518,6 +531,7 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
             const exerciseVideo = ex.video_url || metadata?.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
             const exerciseType = ex.exercise_type || metadata?.exercise_type;
+            const progression = getProgressionSuggestion(ex, prevSets);
 
             return (
               <motion.div
@@ -569,6 +583,13 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
                             {exerciseCategory}
                           </span>
+                        )}
+                        {progression && (
+                          <p className={`mt-1 text-[10px] font-medium ${
+                            progression.label === "Subir" ? "text-primary" : "text-muted-foreground"
+                          }`}>
+                            {progression.label === "Subir" ? "↗" : "→"} {progression.reason}
+                          </p>
                         )}
                         {!exerciseCategory && (
                           <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
@@ -696,13 +717,18 @@ const WorkoutTracker = ({ userId, dayPlans }: Props) => {
                                 inputMode="decimal"
                                 value={set.weight}
                                 onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
-                                placeholder={prevSets?.[si]?.weight || "kg"}
+                                placeholder={progression?.weight || prevSets?.[si]?.weight || "kg"}
                                 aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                 className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
                                   Antes: {prevSets[si].weight || "—"} kg
+                                </p>
+                              )}
+                              {!prevSets?.[si] && progression && (
+                                <p className="mt-1 truncate text-center text-[10px] font-medium text-primary">
+                                  Sugerido: {progression.weight} kg
                                 </p>
                               )}
                             </div>
