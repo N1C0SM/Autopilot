@@ -192,8 +192,11 @@ const LibraryDrive = () => {
   const upload = async (b: Book, kind: "cover" | "file", file: File) => {
     setBusy(b.id);
     try {
-      if (kind === "file" && file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      if (kind === "file" && !file.name.toLowerCase().endsWith(".pdf")) {
         throw new Error("Selecciona un archivo PDF");
+      }
+      if (kind === "file" && file.size === 0) {
+        throw new Error("El PDF está vacío");
       }
       const uploadFile = kind === "cover" ? await toOptimizedWebp(file) : file;
       const ext = uploadFile.name.split(".").pop() || (kind === "cover" ? "webp" : "pdf");
@@ -226,8 +229,10 @@ const LibraryDrive = () => {
       patch(b.id, { [col]: value } as Partial<Book>);
       if (kind === "cover") setCovers((c) => ({ ...c, [b.id]: value }));
       toast.success(kind === "cover" ? "Portada reemplazada" : "PDF reemplazado correctamente");
-    } catch (err: any) {
-      toast.error(err.message || "Error al subir");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Error al subir el archivo";
+      console.error("Library file upload failed", err);
+      toast.error(message);
     } finally {
       setBusy(null);
     }
@@ -439,6 +444,7 @@ const LibraryDrive = () => {
                           className="hidden"
                           onChange={(e) => {
                             const f = e.target.files?.[0];
+                            e.currentTarget.value = "";
                             if (f) upload(open, "file", f);
                           }}
                         />
