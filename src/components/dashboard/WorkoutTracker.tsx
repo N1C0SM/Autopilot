@@ -207,6 +207,19 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
     });
   };
 
+  const copyPreviousSession = (exerciseName: string) => {
+    const previous = previousLogs[exerciseName];
+    if (!previous?.length) return;
+    setExerciseLogs((current) => ({
+      ...current,
+      [exerciseName]: (current[exerciseName] || []).map((set, index) => ({
+        ...set,
+        weight: previous[index]?.weight || set.weight,
+        reps: previous[index]?.reps || set.reps,
+      })),
+    }));
+  };
+
   const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number) => {
     const wasDone = exerciseLogs[exerciseName]?.[setIndex]?.done;
     updateSet(exerciseName, setIndex, "done", !wasDone);
@@ -857,6 +870,16 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                             <span>Última sesión: {prevSets.map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
                             <InfoHint text="Peso × repeticiones de la última vez que hiciste este ejercicio. Intenta igualar o superar al menos una serie para progresar." />
                           </div>
+                        )}
+
+                        {prevSets && prevSets.length > 0 && sets.some((set) => !set.done) && (
+                          <button
+                            type="button"
+                            onClick={() => copyPreviousSession(ex.name)}
+                            className="mb-2 min-h-10 w-full rounded-xl border border-primary/30 bg-primary/10 px-3 text-left text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+                          >
+                            Repetir pesos y repeticiones de la última sesión
+                          </button>
                         )}
 
                         {/* Column headers */}
