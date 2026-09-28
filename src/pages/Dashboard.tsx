@@ -99,7 +99,7 @@ const Dashboard = () => {
       .from("profiles")
       .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
     const roleRequest = checkAdmin
       ? supabase.rpc("has_role", { _user_id: user.id, _role: "admin" })
       : Promise.resolve(null);
@@ -132,8 +132,8 @@ const Dashboard = () => {
         const today = new Date();
         const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
         const [{ data: tp }, { data: np }, { count: completionCount }, { data: todayCompletion }] = await Promise.all([
-          supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).single(),
-          supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).single(),
+          supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
+          supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
           supabase
             .from("day_completions")
             .select("id", { count: "exact", head: true })
@@ -168,7 +168,7 @@ const Dashboard = () => {
         .from("training_plan")
         .select("workouts_json")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       if (data) setDayPlans(data.workouts_json as unknown as DayPlan[]);
     };
     const refreshNutritionPlan = async () => {
@@ -176,7 +176,7 @@ const Dashboard = () => {
         .from("nutrition_plan")
         .select("macros_json, meals_json")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       if (data) {
         setMacros(data.macros_json as unknown as Macros);
         setMeals(data.meals_json as unknown as Meal[]);

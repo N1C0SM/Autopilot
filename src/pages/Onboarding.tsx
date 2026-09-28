@@ -404,7 +404,7 @@ const Onboarding = () => {
         .from("profiles")
         .select("payment_status")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (profile?.payment_status === "paid") {
         supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });

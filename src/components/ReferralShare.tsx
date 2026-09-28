@@ -19,7 +19,7 @@ const ReferralShare = () => {
         .from("profiles")
         .select("referral_code")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
       if (profile?.referral_code) setReferralCode(profile.referral_code);
 
       const { count } = await supabase

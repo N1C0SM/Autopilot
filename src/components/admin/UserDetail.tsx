@@ -117,11 +117,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     const fetchData = async () => {
       const currentRequest = ++requestId;
       const [{ data: onb }, { data: roleData }, { data: trainerRoleData }, { data: tp }, { data: np }] = await Promise.all([
-        supabase.from("onboarding").select("*").eq("user_id", profile.user_id).single(),
+        supabase.from("onboarding").select("*").eq("user_id", profile.user_id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "admin").maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "trainer" as any).maybeSingle(),
-        supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).single(),
-      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).single(),
+        supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).maybeSingle(),
+      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).maybeSingle(),
       ]);
       if (!active || currentRequest !== requestId) return;
       setOnboarding(onb as OnboardingData | null);
@@ -320,8 +320,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
     // Reload the plan data
     const [{ data: tp }, { data: np }] = await Promise.all([
-      supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).single(),
-      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).single(),
+      supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).maybeSingle(),
+      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).maybeSingle(),
     ]);
 
     if (tp?.workouts_json) {
