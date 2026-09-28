@@ -23,9 +23,11 @@ interface Message {
 interface Props {
   conversationUserId: string;
   isAdmin?: boolean;
+  onRequestVideoCall?: () => void;
+  callLabel?: string;
 }
 
-const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
+const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLabel = "Videollamada" }: Props) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMsg, setNewMsg] = useState("");
