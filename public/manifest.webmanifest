@@ -1,0 +1,11 @@
+{
+  "name": "Autopilot",
+  "short_name": "Autopilot",
+  "description": "Tu entrenamiento y progreso, siempre contigo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090909",
+  "theme_color": "#090909",
+  "orientation": "portrait-primary",
+  "icons": [{ "src": "/favicon.ico", "sizes": "48x48 64x64", "type": "image/x-icon" }]
+}
