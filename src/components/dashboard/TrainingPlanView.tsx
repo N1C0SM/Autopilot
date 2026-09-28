@@ -239,17 +239,9 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                             {isVideoOpen ? "Ocultar" : "Vídeo"}
                           </button>
                         ) : (
-                          <a
-                            href={exerciseVideoSearchUrl(ex.name, category)}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
-                          >
-                            <Video className="h-3.5 w-3.5" />
-                            Ver vídeo
-                          </a>
+                          <span className="shrink-0 text-[10px] text-muted-foreground/60">Sin vídeo</span>
                         )}
+
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1 pl-12">
                         {category ? (
