@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle, Lock, Video, Sparkles } from "lucide-react";
+import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle, Lock, Video, Sparkles, BookOpen } from "lucide-react";
 import { Download } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import { toast } from "sonner";
@@ -280,6 +280,7 @@ const Dashboard = () => {
     chat: "Chat",
     settings: "Ajustes",
     progress: "Progreso",
+    resources: "Recursos",
   };
 
   const SECTION_HINTS: Record<MobileTab, string> = {
@@ -289,6 +290,7 @@ const Dashboard = () => {
     chat: "Habla con tu entrenador y envía fotos o vídeos",
     progress: "Fotos, peso y evolución semanal",
     settings: "Perfil, suscripción y notificaciones",
+    resources: "Biblioteca, guías y recomendaciones",
   };
 
   const pageContent = (
@@ -302,6 +304,7 @@ const Dashboard = () => {
           chat: { icon: <MessageCircle className="w-8 h-8 text-primary" />, title: "Habla con tu entrenador", description: "Resuelve dudas, ajusta tu plan y recibe feedback directo. Siempre disponible.", cta: "Activar chat con entrenador" },
           progress: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Sigue tu progreso", description: "Sube fotos, ve tu evolución y desbloquea AI Scan.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
           settings: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
+          resources: { icon: <BookOpen className="w-8 h-8 text-primary" />, title: "Recursos", description: "Guías, artículos y recomendaciones para acompañar tu plan.", cta: "Ver recursos" },
         };
         const content = paywallContent[section] || paywallContent.home;
         return (

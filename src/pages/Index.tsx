@@ -82,7 +82,6 @@ const Index = () => {
           trainer_photo_url: s.trainer_photo_url || "",
           trainer_bio: s.trainer_bio || "",
         });
-        setTransformationSlots(slots != null && Number.isFinite(Number(slots)) ? Math.max(0, Number(slots)) : null);
         setHeroVideo({
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",

@@ -43,7 +43,7 @@ interface Tw {
 }
 
 const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
-  const t = TIERS.transform;
+  const t = TIERS.full;
   const [tw, setTw] = useState<Tw | null>(null);
 
   useEffect(() => {
@@ -126,7 +126,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
                 variant="hero"
                 size="lg"
                 className="w-full hover-scale group"
-                onClick={() => onSelect("transform")}
+                onClick={() => onSelect("full")}
                 disabled={availableSlots === 0}
               >
                 {availableSlots === 0 ? "Sin plazas disponibles" : "Solicitar mi plaza"}
