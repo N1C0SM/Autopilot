@@ -167,7 +167,7 @@ const Chat = ({ conversationUserId, isAdmin = false }: Props) => {
 
   return (
     <>
-      <div className="bg-card rounded-2xl border border-border card-shadow flex flex-col h-[500px]">
+      <div className="bg-card rounded-2xl border border-border card-shadow flex flex-col h-[calc(100vh-10rem)] min-h-[600px]">
         {/* Header with tabs */}
         <div className="flex items-center gap-2 p-3 border-b border-border">
           <button

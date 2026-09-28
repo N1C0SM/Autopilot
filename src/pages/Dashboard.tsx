@@ -280,7 +280,7 @@ const Dashboard = () => {
     chat: "Chat",
     settings: "Ajustes",
     progress: "Progreso",
-    resources: "Recursos",
+    resources: " ",
   };
 
   const SECTION_HINTS: Record<MobileTab, string> = {
@@ -334,7 +334,7 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "home" && (
-        <div className="w-full max-w-4xl mx-auto space-y-6 md:max-w-none">
+        <div className="w-full space-y-6">
           {user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           <MyTrainerCard onOpenChat={() => setSection("chat")} />
           <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
@@ -367,7 +367,7 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "nutrition" && !isTrainingOnly && (
-        <div className="w-full max-w-4xl space-y-6 md:max-w-none">
+        <div className="w-full space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <Apple className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
@@ -397,7 +397,7 @@ const Dashboard = () => {
       )}
 
       {section === "chat" && (
-        <div className="w-full max-w-3xl space-y-4 md:max-w-none">
+        <div className="w-full space-y-4">
           <MyTrainerCard onOpenChat={undefined} />
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/15 flex items-center justify-center shrink-0"><Video className="w-5 h-5 text-primary" /></div>
@@ -445,7 +445,7 @@ const Dashboard = () => {
       )}
 
       {section === "settings" && (
-        <div className="w-full max-w-2xl md:max-w-none"><SettingsPanel /></div>
+        <div className="w-full"><SettingsPanel /></div>
       )}
     </>
   );
@@ -510,7 +510,9 @@ const Dashboard = () => {
           </header>
 
           <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {pageContent}
+            <div className="max-w-7xl mx-auto w-full">
+              {pageContent}
+            </div>
           </main>
         </div>
       </div>
