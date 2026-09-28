@@ -176,7 +176,7 @@ const TrainerPage = () => {
     channel.subscribe((status) => {
       setRealtimeConnected(status === "SUBSCRIBED");
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        toast.error("No se pudo conectar con las actualizaciones en tiempo real.");
+        console.warn("[Trainer] realtime status", status);
       }
     });
 
