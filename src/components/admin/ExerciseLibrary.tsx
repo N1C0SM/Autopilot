@@ -101,6 +101,7 @@ const ExerciseFormDialog = ({
       if (data?.error) throw new Error(data.error);
       if (!data?.image_url) throw new Error("No se recibió ninguna foto");
       set("image_url", data.image_url);
+      onMediaChange?.();
       toast.success("Foto generada");
     } catch (e: any) {
       toast.error(e.message || "Error con IA");
@@ -127,6 +128,7 @@ const ExerciseFormDialog = ({
         if (d?.error) throw new Error(d.error);
         if (d?.status === "completed" && d.video_url) {
           set("video_url", d.video_url);
+          onMediaChange?.();
           setGenStatus(null);
           setGenLoading(false);
           toast.success("Vídeo generado");
@@ -744,6 +746,7 @@ const ExerciseLibrary = () => {
         onSave={handleSave}
         loading={loading}
         allExercises={exercises}
+        onMediaChange={fetchExercises}
       />
     </div>
   );
