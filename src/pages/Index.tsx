@@ -11,6 +11,7 @@ import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import AppStoreBadges from "@/components/AppStoreBadges";
 import BookCover from "@/components/BookCover";
+import TrainersSection from "@/components/TrainersSection";
 import ProductPreview from "@/components/ProductPreview";
 import { TIERS } from "@/config/tiers";
 
@@ -49,7 +50,7 @@ const Index = () => {
     name: string; result: string; text: string; photo_url: string | null;
     photo_before_url: string | null; photo_after_url: string | null;
   }>>([]);
-  const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
+  const [trainer] = useState({ trainer_name: "Tu entrenador", trainer_photo_url: "", trainer_bio: "" });
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -77,11 +78,7 @@ const Index = () => {
       const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
       if (t && t.length > 0) setTestimonials(t as any);
       if (s) {
-        setTrainer({
-          trainer_name: s.trainer_name || "Nicolás",
-          trainer_photo_url: s.trainer_photo_url || "",
-          trainer_bio: s.trainer_bio || "",
-        });
+
         setHeroVideo({
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",
@@ -314,19 +311,14 @@ const Index = () => {
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Quién te acompaña</p>
                   <div className="mt-4 flex items-center gap-3">
-                    {trainer.trainer_photo_url ? (
-                      <img src={trainer.trainer_photo_url} alt={`${trainer.trainer_name}, entrenador de Autopilot`} width={48} height={48} decoding="async" className="h-12 w-12 rounded-lg object-cover ring-1 ring-primary/30" />
-                    ) : (
-                      <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15"><User className="h-5 w-5 text-primary" /></span>
-                    )}
+                    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15"><User className="h-5 w-5 text-primary" /></span>
                     <div>
-                      <p className="font-display font-bold">{trainer.trainer_name}</p>
-                      <p className="text-xs text-muted-foreground">Entrenador y fundador</p>
+                      <p className="font-display font-bold">El equipo de Autopilot</p>
+                      <p className="text-xs text-muted-foreground">Entrenamiento y seguimiento personal</p>
                     </div>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    {trainer.trainer_bio || "Una persona a la que escribir sobre tu entrenamiento, tus dudas y los cambios de tu semana."}
-                  </p>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Nicolás dirige Autopilot. Tu entrenador prepara el plan y te acompaña en el seguimiento.</p>
+                  <a href="#equipo" className="mt-4 inline-block text-sm text-primary underline underline-offset-4">Conocer al equipo</a>
                 </div>
                 {stats.paid >= 20 && (
                   <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
@@ -345,6 +337,8 @@ const Index = () => {
           testimonials={testimonials}
           onScan={() => goScan("conversion_bento")}
         />
+
+        <TrainersSection />
 
         {/* COMPARISON — antes de precios para contextualizar el valor */}
         <Suspense fallback={<SectionFallback />}>

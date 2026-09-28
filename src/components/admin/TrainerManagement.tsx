@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, UserPlus, Loader2, Save, X, MessageCircle, User2, Users as UsersIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
+import TrainerCertificates from "./TrainerCertificates";
 import Chat from "@/components/Chat";
 import type { Profile } from "@/pages/Admin";
 
@@ -101,9 +102,10 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
   const saveProfile = async () => {
     if (!profile) return;
     setSaving(true);
-    const { error } = await supabase.from("trainer_profiles").upsert(profile, { onConflict: "user_id" });
+    const { data, error } = await supabase.from("trainer_profiles").upsert(profile, { onConflict: "user_id" }).select().single();
     setSaving(false);
     if (error) { toast.error("Error: " + error.message); return; }
+    if (data) setProfile(data);
     toast.success("Perfil guardado");
   };
 
@@ -205,7 +207,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
                   </div>
                   <div>
                     <Label>Titular corto</Label>
-                    <Input className="mt-1.5" value={profile.headline} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} placeholder="Entrenador certificado · 5 años" />
+                    <Input className="mt-1.5" value={profile.headline} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} placeholder="Entrenamiento de fuerza adaptado a tu nivel" />
                   </div>
                   <div>
                     <Label>Bio</Label>
@@ -243,6 +245,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
                   <Button variant="hero" onClick={saveProfile} disabled={saving}>
                     <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar perfil"}
                   </Button>
+                  {profile.id ? <TrainerCertificates key={profile.id} profileId={profile.id} /> : <p className="text-sm text-muted-foreground">Guarda primero el perfil para añadir certificados.</p>}
                 </div>
               )}
             </TabsContent>
