@@ -361,10 +361,10 @@ const Index = () => {
                   Planes
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display mb-3 leading-tight">
-                  Elige cómo quieres empezar
+                  Empieza gratis y decide después
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Elige el nivel de seguimiento y tu entrenador preparará el plan contigo.
+                  Crea tu cuenta gratis, prueba una sesión y decide después si quieres seguimiento de tu entrenador.
                 </p>
               </div>
             </ScrollReveal>
