@@ -163,6 +163,7 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                 {plan.exercises.map((ex, i) => {
                   const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
                   const video = ex.video_url || metadata?.video_url;
+                  const image = ex.image_url || metadata?.image_url;
                   const category = ex.muscle_group || metadata?.muscle_group;
                   const exerciseType = ex.exercise_type || metadata?.exercise_type;
                   const videoKey = `${day}-${ex.exercise_id || ex.name}-${i}`;
@@ -171,8 +172,8 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                   return (
                     <div key={videoKey} className="rounded-lg bg-secondary/20 p-2.5 sm:p-3">
                       <div className="flex items-center gap-2.5 sm:gap-3">
-                        {ex.image_url ? (
-                          <img src={ex.image_url} alt={ex.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0" />
+                        {image ? (
+                          <img src={image} alt={ex.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0" />
                         ) : (
                           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
                             <Dumbbell className="w-4 h-4 text-muted-foreground" />

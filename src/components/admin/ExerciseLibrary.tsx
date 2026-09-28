@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2, ImagePlus } from "lucide-react";
 import type { Exercise } from "@/types/training";
 import {
   MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
@@ -84,6 +84,23 @@ const ExerciseFormDialog = ({
   const [form, setForm] = useState<Partial<Exercise>>({});
   const [altSearch, setAltSearch] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
+
+  const uploadImage = async (file: File) => {
+    setImgUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `exercise-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
+      set("image_url", data.publicUrl);
+      toast.success("Imagen subida");
+    } catch (e: any) {
+      toast.error(e.message || "Error al subir la imagen");
+    }
+    setImgUploading(false);
+  };
 
   useEffect(() => {
     if (open) {
@@ -274,6 +291,45 @@ const ExerciseFormDialog = ({
             <p className="text-[10px] text-muted-foreground">Asigna un skill y orden para crear cadenas de progresión (1=más fácil → mayor=más difícil)</p>
           </div>
 
+          {/* Imagen */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <ImagePlus className="w-3.5 h-3.5" /> Imagen del ejercicio
+            </p>
+            <div className="flex items-center gap-3">
+              {form.image_url ? (
+                <img src={form.image_url} alt="" className="w-16 h-16 rounded-lg object-cover border border-border shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-secondary/50 border border-dashed border-border flex items-center justify-center shrink-0">
+                  <Dumbbell className="w-5 h-5 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 space-y-1.5">
+                <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
+                  {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+                  {form.image_url ? "Cambiar imagen" : "Subir imagen"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={imgUploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadImage(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                {form.image_url && (
+                  <button type="button" onClick={() => set("image_url", null)} className="block text-[10px] text-muted-foreground hover:text-destructive">
+                    Quitar imagen
+                  </button>
+                )}
+                <p className="text-[10px] text-muted-foreground">Se mostrará al usuario en su plan de entrenamiento.</p>
+              </div>
+            </div>
+          </div>
+
           {/* Video */}
           <div className="space-y-3">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
@@ -426,6 +482,7 @@ const ExerciseLibrary = () => {
       skill_tag: form.skill_tag || null,
       progression_order: form.progression_order ?? null,
       video_url: form.video_url?.trim() || null,
+      image_url: form.image_url || null,
       is_stable: form.is_stable ?? true,
       is_progressable: form.is_progressable ?? true,
       high_tension: form.high_tension ?? true,
