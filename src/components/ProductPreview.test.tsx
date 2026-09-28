@@ -20,11 +20,11 @@ describe("public product preview", () => {
   it("retains the demo session across views and labels illustrative data", () => {
     render(<ProductPreview onPlans={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Completar Remo con mancuerna" }));
-    fireEvent.click(screen.getByRole("button", { name: "Nutrición", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
     expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Progreso", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Progreso" }));
     expect(screen.getByText(/no representan resultados de un cliente/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Entrenamiento", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Entrenamiento" }));
     expect(screen.getByRole("status")).toHaveTextContent("1 de 3 completados");
     expect(screen.getByText(/Demo con datos ficticios/)).toBeVisible();
   });
