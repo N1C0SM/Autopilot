@@ -207,6 +207,18 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               <span className="hidden sm:inline">Videollamada</span>
             </Button>
           )}
+          {!isAdmin && onRequestVideoCall && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="ml-auto shrink-0 gap-1.5"
+              onClick={onRequestVideoCall}
+            >
+              <Video className="w-4 h-4" />
+              {callLabel}
+            </Button>
+          )}
         </div>
 
 
