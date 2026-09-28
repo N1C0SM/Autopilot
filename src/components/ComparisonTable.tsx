@@ -17,7 +17,7 @@ const ComparisonTable = () => (
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Autopilot combina el registro del entrenamiento con un plan preparado por una persona y chat para hablar de tus dudas. Ese seguimiento es lo que estás contratando desde {TIERS.training.price}€/mes.</p>
           </div>
         </div>
-        <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">El acompañamiento es online. No incluye supervisión presencial de cada sesión ni sustituye atención médica o rehabilitación. La nutrición está incluida en Completo y Transformación.</p>
+        <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">El acompañamiento es online. No incluye supervisión presencial de cada sesión ni sustituye atención médica o rehabilitación. La nutrición está incluida en Completo.</p>
       </ScrollReveal>
     </div>
   </section>

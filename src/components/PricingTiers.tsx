@@ -14,7 +14,7 @@ const ORDER: PlanKey[] = ["free", "training", "full"];
 const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => {
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="grid md:grid-cols-2 gap-5 md:gap-6 items-stretch max-w-4xl mx-auto">
+      <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-stretch max-w-6xl mx-auto">
         {ORDER.map((key) => {
           const t = TIERS[key];
           const isRec = key === recommended;
@@ -80,12 +80,12 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
               </ul>
 
               <Button
-                variant={isRec ? "hero" : "outline"}
+                variant={key === "free" ? "hero" : isRec ? "hero" : "outline"}
                 size="lg"
                 className="w-full hover-scale"
                 onClick={() => key === "free" ? window.location.assign("/signup?free=true") : onSelect(key)}
               >
-                {t.cta}
+                {key === "free" ? "Empezar gratis" : t.cta}
               </Button>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y decide más adelante si quieres seguimiento humano." : `Tras 7 días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
             </motion.div>
