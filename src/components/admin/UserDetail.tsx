@@ -160,8 +160,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
       .subscribe((status) => {
+        // Una caída momentánea del canal no debe alarmar: reintentamos en silencio.
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          toast.error("No se pudieron conectar las actualizaciones del cliente.");
+          console.warn("[UserDetail] realtime status", status);
+          scheduleRefresh();
         }
       });
 
