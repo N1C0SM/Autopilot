@@ -393,29 +393,14 @@ const Dashboard = () => {
       )}
 
       {section === "chat" && (
-        <div className="w-full space-y-4">
-          <MyTrainerCard onOpenChat={undefined} />
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/15 flex items-center justify-center shrink-0"><Video className="w-5 h-5 text-primary" /></div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-display font-bold text-sm md:text-base mb-1">
-                {paymentStatus === "unpaid" ? "Primera llamada gratis con tu entrenador" : "Videollamada con tu entrenador"}
-              </h3>
-              <p className="text-xs text-muted-foreground mb-3">
-                {paymentStatus === "unpaid"
-                  ? "Cuéntale tu objetivo por aquí y hablad sin compromiso antes de suscribirte. Él prepara tu plan después."
-                  : isTransform
-                    ? "Tu plan Transformación 12 semanas incluye llamada inicial y check-ins semanales."
-                    : "Pídela y tu entrenador te llamará aquí dentro de Autopilot, sin apps ni enlaces externos."}
-              </p>
-              <Button size="sm" variant="hero" onClick={requestVideoCall}>
-                <Video className="w-3.5 h-3.5 mr-1.5" /> {paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Pedir videollamada"}
-              </Button>
-            </div>
-          </div>
+        <div className="w-full">
           {user && (
             <Suspense fallback={<SectionFallback />}>
-              <Chat conversationUserId={user.id} />
+              <Chat
+                conversationUserId={user.id}
+                onRequestVideoCall={requestVideoCall}
+                callLabel={paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Videollamada"}
+              />
             </Suspense>
           )}
         </div>

@@ -85,6 +85,43 @@ const ExerciseFormDialog = ({
   const [altSearch, setAltSearch] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
+  const [genLoading, setGenLoading] = useState(false);
+  const [genStatus, setGenStatus] = useState<string | null>(null);
+
+  const generateVideoWithAI = async () => {
+    const id = initial?.id;
+    if (!id) return;
+    setGenLoading(true);
+    try {
+      const start = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "create" } });
+      if (start.error) throw new Error(start.error.message || "Error al iniciar");
+      if (start.data?.error) throw new Error(start.data.error);
+      setGenStatus("Generando vídeo…");
+      const deadline = Date.now() + 4 * 60 * 1000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 6000));
+        const check = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "check" } });
+        if (check.error) throw new Error(check.error.message || "Error al comprobar");
+        const d = check.data;
+        if (d?.error) throw new Error(d.error);
+        if (d?.status === "completed" && d.video_url) {
+          set("video_url", d.video_url);
+          setGenStatus(null);
+          setGenLoading(false);
+          toast.success("Vídeo generado");
+          return;
+        }
+        if (d?.status === "failed") throw new Error(d.error || "La generación falló");
+        const pct = d?.progress ? Math.round(d.progress * 100) : 0;
+        setGenStatus(pct > 0 ? `Generando vídeo… ${pct}%` : "Generando vídeo…");
+      }
+      throw new Error("El vídeo está tardando más de lo normal. Cierra y vuelve a abrir el ejercicio en un minuto.");
+    } catch (e: any) {
+      toast.error(e.message || "Error con IA");
+      setGenStatus(null);
+      setGenLoading(false);
+    }
+  };
 
   const uploadImage = async (file: File) => {
     setImgUploading(true);
@@ -341,8 +378,23 @@ const ExerciseFormDialog = ({
               placeholder="YouTube, Vimeo o MP4 directo (https://...)"
               className="h-9"
             />
+            {initial?.id ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={generateVideoWithAI}
+                disabled={genLoading}
+                className="gap-1.5 self-start"
+              >
+                {genLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {genStatus || (form.video_url ? "Generar otro vídeo con IA" : "Generar vídeo con IA")}
+              </Button>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">Guarda el ejercicio y después podrás generar su vídeo con IA.</p>
+            )}
             <p className="text-[10px] text-muted-foreground">
-              Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo. Se mostrará al usuario en su entrenamiento.
+              Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento.
             </p>
             {form.video_url && toEmbedUrl(form.video_url) && (
               <div className="rounded-lg overflow-hidden border border-border">

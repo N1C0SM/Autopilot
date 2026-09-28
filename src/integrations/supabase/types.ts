@@ -349,6 +349,7 @@ export type Database = {
           recommended_order: number | null
           skill_tag: string | null
           stimulus_type: string | null
+          video_job_id: string | null
           video_url: string | null
         }
         Insert: {
@@ -371,6 +372,7 @@ export type Database = {
           recommended_order?: number | null
           skill_tag?: string | null
           stimulus_type?: string | null
+          video_job_id?: string | null
           video_url?: string | null
         }
         Update: {
@@ -393,6 +395,7 @@ export type Database = {
           recommended_order?: number | null
           skill_tag?: string | null
           stimulus_type?: string | null
+          video_job_id?: string | null
           video_url?: string | null
         }
         Relationships: [

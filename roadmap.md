@@ -9,3 +9,7 @@
 - [x] Simplificar y reorganizar toda la landing con una composición modular orientada a compra y uso real.
 - [x] Auditar y convertir el entrenamiento del cliente en un tracker de gimnasio realmente utilizable, revisando también entrenador y administración.
 - [ ] Mejorar conversión integral de landing, escáner, planes y recursos sin claims inventados
+- [ ] Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
+- [x] Biblioteca: ya existe con 271 ejercicios, 100% editable en admin
+- [x] Vídeo de técnica con IA (botón en el editor, función exercise-video)
+- [ ] (anterior) Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
