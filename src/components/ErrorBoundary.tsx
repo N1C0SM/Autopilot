@@ -22,7 +22,15 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
+  componentDidMount() {
+    try {
+      sessionStorage.removeItem("autopilot_auto_reload");
+    } catch {
+      /* ignorar */
+    }
   }
+
+
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("ErrorBoundary:", error?.name, error?.message, error?.stack, info.componentStack);
