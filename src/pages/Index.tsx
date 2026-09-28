@@ -299,7 +299,7 @@ const Index = () => {
             <div className="mt-10 grid gap-4 md:grid-cols-[1.35fr_0.65fr]">
               {heroVideo.url ? (
                 <div className="overflow-hidden rounded-lg border border-border bg-card premium-shadow">
-                  <video key={heroVideo.url} src={heroVideo.url} poster={heroVideo.poster || undefined} autoPlay muted loop playsInline controls preload="metadata" className="aspect-video w-full object-cover" />
+                  <video key={heroVideo.url} src={heroVideo.url} poster={heroVideo.poster || undefined} autoPlay muted loop playsInline controls preload="none" className="aspect-video w-full object-cover" />
                 </div>
               ) : (
                 <div className="grid min-h-[220px] place-items-center rounded-lg border border-border bg-card p-7 text-center">
@@ -315,7 +315,7 @@ const Index = () => {
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-primary">Quién te acompaña</p>
                   <div className="mt-4 flex items-center gap-3">
                     {trainer.trainer_photo_url ? (
-                      <img src={trainer.trainer_photo_url} alt={`${trainer.trainer_name}, entrenador de Autopilot`} width={48} height={48} className="h-12 w-12 rounded-lg object-cover ring-1 ring-primary/30" />
+                      <img src={trainer.trainer_photo_url} alt={`${trainer.trainer_name}, entrenador de Autopilot`} width={48} height={48} decoding="async" className="h-12 w-12 rounded-lg object-cover ring-1 ring-primary/30" />
                     ) : (
                       <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/15"><User className="h-5 w-5 text-primary" /></span>
                     )}

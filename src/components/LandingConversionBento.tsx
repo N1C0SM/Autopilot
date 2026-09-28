@@ -91,6 +91,7 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
                     src={trainer.trainer_photo_url}
                     alt={`${trainer.trainer_name}, entrenador de Autopilot`}
                     loading="lazy"
+                    decoding="async"
                     className="hidden h-20 w-20 shrink-0 rounded-lg object-cover ring-1 ring-primary/30 sm:block"
                   />
                 ) : null}
@@ -111,6 +112,7 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
                     src={trainer.trainer_photo_url}
                     alt=""
                     loading="lazy"
+                    decoding="async"
                     className="h-10 w-10 rounded-full object-cover ring-2 ring-primary/30"
                   />
                 ) : (
