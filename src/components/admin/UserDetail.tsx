@@ -35,7 +35,7 @@ import TrainingPlanForm from "./TrainingPlanForm";
 import { impersonateUser } from "@/lib/impersonate";
 import OnboardingEditor from "./OnboardingEditor";
 
-type TierDetails = { price: number; interval: "month" | "one_time"; tagline: string; features: string[] };
+type TierDetails = { price: number; interval: string; tagline: string; features: readonly string[] };
 
 const TIER_OPTIONS: { value: string; label: string; fallback: TierDetails }[] = [
   {
@@ -550,7 +550,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     const isCurrent = hasAccess && currentTier === tier.value;
                     // Hay planes (como Transformación) que no están en el catálogo: usamos su copia de respaldo.
                     const details: TierDetails =
-                      (TIERS as Record<string, TierDetails | undefined>)[tier.value] ?? tier.fallback;
+                      (TIERS as unknown as Record<string, TierDetails | undefined>)[tier.value] ?? tier.fallback;
                     return (
                       <button
                         key={tier.value}
