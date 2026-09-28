@@ -125,6 +125,7 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
                   </p>
                 </div>
               </div>
+              <p className="mb-3 text-[11px] text-muted-foreground">Conversación ilustrativa</p>
               <div className="space-y-3 text-sm">
                 <div className="ml-8 rounded-lg rounded-br-sm bg-primary px-3 py-2 text-primary-foreground">
                   Esta semana solo puedo entrenar 3 días.
@@ -173,7 +174,7 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
               {[
                 {
                   title: "7 días para probarlo",
-                  text: "Si en la primera semana ves que no es para ti, lo cancelas y no pagas más.",
+                  text: "Prueba de 7 días en los planes mensuales. Cancela antes de que termine para evitar el primer cobro.",
                 },
                 {
                   title: "Revisado por una persona",
@@ -181,7 +182,7 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
                 },
                 {
                   title: "Se adapta a tu semana",
-                  text: "Cambias de horario o te lesionas, se lo dices por chat y tu plan cambia contigo.",
+                  text: "Si cambia tu horario o tu material, explícaselo a tu entrenador para revisar tu plan.",
                 },
               ].map((item) => (
                 <div key={item.title} className="rounded-lg border border-border bg-background/60 p-5">
@@ -204,7 +205,7 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" /> Sin tarjeta · 60 segundos · después decides si quieres un entrenador
+            <ShieldCheck className="h-3.5 w-3.5 text-success" /> Análisis gratis y sin tarjeta · después decides si quieres un entrenador
           </p>
         </div>
       </div>

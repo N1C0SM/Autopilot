@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Quote, Star } from "lucide-react";
+import { Quote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Testimonial = {
@@ -74,11 +74,7 @@ export default function SocialProofStrip() {
               </div>
             </div>
             <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4">{t.text}</p>
-            <div className="flex gap-0.5 mt-3">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-3 h-3 fill-primary text-primary" />
-              ))}
-            </div>
+
           </motion.div>
         ))}
       </div>

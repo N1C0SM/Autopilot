@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   onSelect: (plan: PlanKey) => void;
-  availableSlots: number;
+  availableSlots: number | null;
 }
 
 const TIMELINE = [
@@ -19,12 +19,12 @@ const TIMELINE = [
   {
     weeks: "Semana 3-6",
     title: "Bloque de fuerza",
-    desc: "Construimos base con progresiones medibles. Primeros récords personales y cambios visibles en composición corporal.",
+    desc: "Construimos base con progresiones medibles. Revisamos tus registros para ajustar la dificultad.",
   },
   {
     weeks: "Semana 7-9",
     title: "Hipertrofia y volumen",
-    desc: "Subimos volumen y afinamos nutrición. Aquí es donde notarás el cambio en espejo y en cómo te queda la ropa.",
+    desc: "Subimos volumen y afinamos nutrición. Valoramos tu evolución y adaptamos el siguiente bloque.",
   },
   {
     weeks: "Semana 10-12",
@@ -70,7 +70,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
           Opción premium
         </p>
         <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-          ¿Quieres una transformación más seria?
+          ¿Prefieres un programa de 12 semanas?
         </h2>
         <p className="text-sm sm:text-base text-muted-foreground mt-4 max-w-xl mx-auto leading-relaxed">
           Un entrenador real dirige tus 12 semanas: prepara entrenamiento y nutrición, habla contigo y realiza los ajustes semanales.
@@ -91,7 +91,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 border border-primary/30 mb-5">
                 <Crown className="w-3.5 h-3.5 text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
-                  {availableSlots > 0 ? `Quedan ${availableSlots} plazas este mes` : "Sin plazas este mes"}
+                  {availableSlots === null ? "Consulta disponibilidad" : availableSlots > 0 ? `${availableSlots} plazas disponibles` : "Sin plazas disponibles"}
                 </span>
               </div>
               <h3 className="text-2xl sm:text-3xl font-bold font-display mb-3">
@@ -127,9 +127,9 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
                 size="lg"
                 className="w-full hover-scale group"
                 onClick={() => onSelect("transform")}
-                disabled={availableSlots <= 0}
+                disabled={availableSlots === 0}
               >
-                {availableSlots > 0 ? "Solicitar mi plaza" : "Sin plazas disponibles"}
+                {availableSlots === 0 ? "Sin plazas disponibles" : "Solicitar mi plaza"}
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <p className="text-[11px] text-muted-foreground mt-3 text-center leading-relaxed">

@@ -11,6 +11,8 @@ import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import AppStoreBadges from "@/components/AppStoreBadges";
 import BookCover from "@/components/BookCover";
+import ProductPreview from "@/components/ProductPreview";
+import { TIERS } from "@/config/tiers";
 
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
 const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
@@ -29,31 +31,30 @@ import {
 
 const faqs = [
   { q: "¿El análisis inicial es gratis?", a: "Sí. El AI Physique Scan es un análisis inicial 100% gratis, sin tarjeta y sin necesidad de crear una cuenta." },
-  { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. Recibes el resultado inicial en 60 segundos; el plan y el seguimiento empiezan cuando eliges un plan con entrenador." },
+  { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. El tiempo del análisis puede variar; el plan y el seguimiento empiezan cuando eliges un plan con entrenador." },
   { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo y Transformación." },
   { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
   { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
   { q: "¿Quién prepara y ajusta mi plan?", a: "Un entrenador real. La IA solo sirve como herramienta de apoyo para el análisis inicial; no diseña tu plan, no lo reorganiza y no responde a tus mensajes." },
-  { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Sin permanencia. Cancelas en un clic desde tu cuenta cuando quieras." },
+  { q: "¿Puedo cancelar cuando quiera?", a: "Los planes mensuales se renuevan automáticamente hasta que cancelas desde Ajustes → Suscripción. Transformación es un pago único de 12 semanas." },
   { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis. Incluye análisis inicial y llamada con tu entrenador dentro de Autopilot antes de empezar." },
   { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y tu entrenador prepara el plan sobre esa base: calistenia, mancuernas en casa o cero material." },
   { q: "¿Y si nunca he entrenado?", a: "Tu entrenador parte de tu nivel real y te guía paso a paso, sin saltar fases." },
   { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto, YouTube te da una rutina genérica. Aquí hay una persona real que conoce tu nivel, tu equipamiento y tu semana, y ajusta el plan contigo cada vez que algo cambia." },
-  { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Lo avisas por chat y reorganizamos. El plan se adapta a viajes, lesiones o semanas malas sin que pierdas progreso." },
-  { q: "¿Y si veo que no es para mí?", a: "Cancelas antes del día 7 desde tu cuenta y no se cobra nada. Sin llamadas, sin formularios, sin preguntas." },
+  { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Lo avisas por chat y reorganizamos. Tu entrenador puede ajustar el plan a tu disponibilidad. Si hay una lesión, consulta con un profesional sanitario antes de continuar." },
+  { q: "¿Y si veo que no es para mí?", a: "En los planes mensuales, cancela antes de que termine la prueba de 7 días para evitar el primer cobro. Después se renuevan al precio del plan. Transformación no tiene prueba gratuita. Consulta las condiciones de devolución en los términos." },
 ];
 
 const Index = () => {
   const navigate = useNavigate();
-  const [testimonials, setTestimonials] = useState([
-    { name: "María G.", result: "−7 kg en 4 meses", text: "Lo que más valoro no es el plan, es saber que puedo escribir cuando algo no encaja y al día siguiente está ajustado.", photo_url: null as string | null, photo_before_url: null as string | null, photo_after_url: null as string | null },
-    { name: "Carlos R.", result: "+6 kg de músculo", text: "Antes empezaba algo nuevo cada mes. Ahora sigo el mismo camino y lo afinamos juntos.", photo_url: null, photo_before_url: null, photo_after_url: null },
-    { name: "Laura M.", result: "Sin lesiones · 8 meses", text: "Tuve molestia en la rodilla y al día siguiente ya tenía el plan reajustado. Eso vale el precio solo.", photo_url: null, photo_before_url: null, photo_after_url: null },
-  ]);
+  const [testimonials, setTestimonials] = useState<Array<{
+    name: string; result: string; text: string; photo_url: string | null;
+    photo_before_url: string | null; photo_after_url: string | null;
+  }>>([]);
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
-  const [transformationSlots, setTransformationSlots] = useState(10);
+  const [transformationSlots, setTransformationSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
   const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
@@ -84,7 +85,8 @@ const Index = () => {
           trainer_photo_url: s.trainer_photo_url || "",
           trainer_bio: s.trainer_bio || "",
         });
-        setTransformationSlots(Math.max(0, Number((s as any).transformation_slots ?? 10)));
+        const slots = (s as any).transformation_slots;
+        setTransformationSlots(slots != null && Number.isFinite(Number(slots)) ? Math.max(0, Number(slots)) : null);
         setHeroVideo({
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",
@@ -278,32 +280,24 @@ const Index = () => {
               </div>
 
               <h1 className="font-display text-[2.5rem] font-bold leading-[1.05] sm:text-5xl lg:text-6xl animate-fade-in">
-                Tu entrenamiento, en manos <span className="text-gradient">de un entrenador real.</span>
+                Vuelve a entrenar con un plan. <span className="text-gradient">Y alguien que te acompañe.</span>
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg animate-fade-in">
-                Tu entrenador prepara el plan, habla contigo por chat y lo ajusta cuando cambia tu semana. Nutrición personalizada en Completo y Transformación.
+                Para empezar o retomar el gimnasio sin improvisar cada día. Tu entrenador organiza las sesiones según tu nivel, tu material y el tiempo que tienes.
               </p>
 
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row animate-fade-in">
-                <Button variant="hero" size="xl" onClick={() => goScan("hero")} className="group w-full sm:w-auto">
-                  <ScanLine className="h-4 w-4" />
-                  <span className="sm:hidden">Análisis inicial gratis</span>
-                  <span className="hidden sm:inline">Ver mi punto de partida gratis</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <Button variant="hero" size="xl" onClick={goToPricing} className="w-full sm:w-auto">
+                  Ver planes desde {TIERS.training.price}€/mes <ArrowRight className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="xl" onClick={goToPricing} className="w-full sm:w-auto">
-                  Ver planes y precios
+                <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
+                  <a href="#ver-app" onClick={() => track("plan_preview_view", { source: "hero" })}>Probar la demo sin registro</a>
                 </Button>
               </div>
-
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> Gratis y sin tarjeta</span>
-                <span className="flex items-center gap-1.5"><Check className="h-3 w-3 text-success" /> Resultado inicial en 60 segundos</span>
-                <span className="flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-success" /> Datos privados</span>
-              </div>
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                La IA solo apoya este análisis inicial. El plan y el seguimiento empiezan cuando eliges entrenador.
-              </p>
+              <p className="mt-4 text-xs text-muted-foreground">Entrenamiento y chat desde {TIERS.training.price}€/mes · Nutrición en Completo ({TIERS.full.price}€/mes)</p>
+              <button type="button" onClick={() => goScan("hero_secondary")} className="mt-3 min-h-11 text-xs text-primary underline underline-offset-4">
+                También puedes hacer el análisis inicial con IA gratis
+              </button>
               <AppStoreBadges size="compact" label="También en tu móvil" className="mt-5" />
             </div>
 
@@ -336,7 +330,7 @@ const Index = () => {
                     </div>
                   </div>
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                    Detrás de cada plan, cada ajuste y cada respuesta. No delegamos tu seguimiento en un bot.
+                    {trainer.trainer_bio || "Una persona a la que escribir sobre tu entrenamiento, tus dudas y los cambios de tu semana."}
                   </p>
                 </div>
                 {stats.paid >= 20 && (
@@ -348,6 +342,8 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        <ProductPreview onPlans={goToPricing} />
 
         <LandingConversionBento
           trainer={trainer}
@@ -386,8 +382,8 @@ const Index = () => {
             {/* GARANTÍA — línea única (antes 3 tarjetas de "7 días gratis") */}
             <ScrollReveal delay={0.15}>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-success" /> Cancelas en 1 clic antes del día 7</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-success" /> Sin permanencia ni renovaciones sorpresa</span>
+                <span className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5 text-success" /> Gestiona la cancelación desde Ajustes → Suscripción</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-success" /> Planes mensuales con renovación automática</span>
                 <span className="flex items-center gap-1.5"><Check className="w-3.5 h-3.5 text-success" /> Pago seguro con Stripe</span>
               </div>
             </ScrollReveal>

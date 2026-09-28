@@ -2,6 +2,7 @@ import { TIERS, type PlanKey } from "@/config/tiers";
 import { CheckCircle2, X, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 interface PricingTiersProps {
   onSelect: (plan: PlanKey) => void;
@@ -33,7 +34,7 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
             >
               {isRec && (
                 <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
-                  Más recomendado
+                  Incluye nutrición
                 </div>
               )}
 
@@ -57,7 +58,7 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                 </span>
               </div>
                  <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
-                  <Sparkles className="w-3 h-3" /> 7 días para probarlo
+                  <Sparkles className="w-3 h-3" /> {t.trial_days} días de prueba en este plan
                </div>
 
               <ul className="space-y-2.5 mb-7 flex-1">
@@ -86,6 +87,7 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
               >
                 {t.cta}
               </Button>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Tras {t.trial_days} días de prueba: {t.price}€/mes, con renovación automática. Cancela antes de que termine la prueba para evitar el primer cobro.</p>
             </motion.div>
           );
         })}
@@ -93,14 +95,15 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
         Después de la primera semana, sigues por <span className="text-foreground font-semibold">29€/mes</span> o{" "}
-        <span className="text-foreground font-semibold">49€/mes</span> según el plan. Sin permanencia. Cancelas cuando quieras.
+        <span className="text-foreground font-semibold">49€/mes</span> según el plan. Sin permanencia. Cancela desde Ajustes → Suscripción.
       </p>
       <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
         En ambos planes, un entrenador real prepara tu entrenamiento y atiende tu seguimiento. La nutrición personalizada está incluida en Completo.
       </p>
       <p className="text-center text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
-        <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía 30 días · Sin permanencia
+        <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía de devolución de 30 días en planes mensuales
       </p>
+      <p className="mt-2 text-center text-xs"><Link to="/legal/terminos" className="text-primary underline underline-offset-4">Ver condiciones de prueba, cancelación y devolución</Link></p>
     </div>
   );
 };
