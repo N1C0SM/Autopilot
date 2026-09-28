@@ -12,6 +12,7 @@ import {
   PRIORITIES, STIMULUS_TYPES, LOAD_LEVELS, FATIGUE_LEVELS, RECOMMENDED_ORDERS, SKILL_TAGS,
 } from "@/types/training";
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
+import ExerciseMedia from "@/components/ExerciseMedia";
 
 const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS, "Otro"] as const;
 
@@ -72,7 +73,7 @@ const STIMULUS_COLORS: Record<string, string> = {
 /* ── Exercise Form Dialog ── */
 
 const ExerciseFormDialog = ({
-  open, onOpenChange, initial, onSave, loading, allExercises,
+  open, onOpenChange, initial, onSave, loading, allExercises, onMediaChange,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -80,13 +81,34 @@ const ExerciseFormDialog = ({
   onSave: (data: Partial<Exercise>) => void;
   loading: boolean;
   allExercises: Exercise[];
+  onMediaChange?: () => void;
 }) => {
   const [form, setForm] = useState<Partial<Exercise>>({});
   const [altSearch, setAltSearch] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
+  const [imgAiLoading, setImgAiLoading] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [genStatus, setGenStatus] = useState<string | null>(null);
+
+  const generateImageWithAI = async () => {
+    const id = initial?.id;
+    if (!id) return;
+    setImgAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "image" } });
+      if (error) throw new Error(error.message || "Error al generar la foto");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.image_url) throw new Error("No se recibió ninguna foto");
+      set("image_url", data.image_url);
+      onMediaChange?.();
+      toast.success("Foto generada");
+    } catch (e: any) {
+      toast.error(e.message || "Error con IA");
+    }
+    setImgAiLoading(false);
+  };
+
 
   const generateVideoWithAI = async () => {
     const id = initial?.id;
@@ -106,6 +128,7 @@ const ExerciseFormDialog = ({
         if (d?.error) throw new Error(d.error);
         if (d?.status === "completed" && d.video_url) {
           set("video_url", d.video_url);
+          onMediaChange?.();
           setGenStatus(null);
           setGenLoading(false);
           toast.success("Vídeo generado");
@@ -195,13 +218,23 @@ const ExerciseFormDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        {/* Hero: vídeo del ejercicio arriba del todo (se reproduce al pasar el ratón) */}
+        <div className="-mx-6 -mt-6 mb-1 overflow-hidden border-b border-border bg-black">
+          <ExerciseMedia video={form.video_url} image={form.image_url} name={form.name} />
+        </div>
+
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Dumbbell className="w-5 h-5 text-primary" />
+            {form.image_url ? (
+              <img src={form.image_url} alt="" className="h-8 w-8 shrink-0 rounded-lg border border-border object-cover" />
+            ) : (
+              <Dumbbell className="w-5 h-5 text-primary" />
+            )}
             {initial ? "Editar ejercicio" : "Nuevo ejercicio"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-5 pt-2">
+
           {/* Basic info */}
           <div className="space-y-3">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Información básica</p>
@@ -342,28 +375,37 @@ const ExerciseFormDialog = ({
                 </div>
               )}
               <div className="flex-1 space-y-1.5">
-                <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
-                  {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
-                  {form.image_url ? "Cambiar imagen" : "Subir imagen"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={imgUploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadImage(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
+                    {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+                    {form.image_url ? "Cambiar imagen" : "Subir imagen"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={imgUploading}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadImage(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {initial?.id && (
+                    <Button type="button" variant="secondary" size="sm" onClick={generateImageWithAI} disabled={imgAiLoading} className="h-[30px] gap-1.5 px-3 text-xs">
+                      {imgAiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {form.image_url ? "Otra foto con IA" : "Generar foto con IA"}
+                    </Button>
+                  )}
+                </div>
                 {form.image_url && (
                   <button type="button" onClick={() => set("image_url", null)} className="block text-[10px] text-muted-foreground hover:text-destructive">
                     Quitar imagen
                   </button>
                 )}
-                <p className="text-[10px] text-muted-foreground">Se mostrará al usuario en su plan de entrenamiento.</p>
+                <p className="text-[10px] text-muted-foreground">Se mostrará al usuario en su plan. Las fotos generadas con IA usan siempre el mismo estilo que los vídeos.</p>
               </div>
+
             </div>
           </div>
 
@@ -396,11 +438,8 @@ const ExerciseFormDialog = ({
             <p className="text-[10px] text-muted-foreground">
               Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento.
             </p>
-            {form.video_url && toEmbedUrl(form.video_url) && (
-              <div className="rounded-lg overflow-hidden border border-border">
-                <VideoEmbed url={form.video_url} />
-              </div>
-            )}
+            <p className="text-[10px] text-muted-foreground">El vídeo se ve arriba, en la cabecera del ejercicio.</p>
+
           </div>
 
           {/* Alternative exercise */}
@@ -639,7 +678,13 @@ const ExerciseLibrary = () => {
                   key={ex.id}
                   className="group flex items-center gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
                 >
+                  {ex.image_url ? (
+                    <img src={ex.image_url} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-border/70 object-cover" />
+                  ) : (
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-gradient-to-b from-secondary/70 to-secondary/30" />
+                  )}
                   <div className="min-w-0 flex-1">
+
                     <p className="font-medium text-sm truncate">{ex.name}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {[ex.muscle_group, ex.exercise_type].filter(Boolean).map((category) => (
@@ -701,6 +746,7 @@ const ExerciseLibrary = () => {
         onSave={handleSave}
         loading={loading}
         allExercises={exercises}
+        onMediaChange={fetchExercises}
       />
     </div>
   );

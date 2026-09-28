@@ -8,7 +8,7 @@ import type { DayPlan } from "@/types/training";
 import CalendarExportDialog from "./CalendarExportDialog";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import VideoEmbed from "@/components/VideoEmbed";
-import { exerciseVideoSearchUrl } from "@/lib/exerciseVideo";
+import ExerciseMedia from "@/components/ExerciseMedia";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -239,17 +239,9 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                             {isVideoOpen ? "Ocultar" : "Vídeo"}
                           </button>
                         ) : (
-                          <a
-                            href={exerciseVideoSearchUrl(ex.name, category)}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
-                          >
-                            <Video className="h-3.5 w-3.5" />
-                            Ver vídeo
-                          </a>
+                          <span className="shrink-0 text-[10px] text-muted-foreground/60">Sin vídeo</span>
                         )}
+
                       </div>
                       <div className="mt-2 flex flex-wrap gap-1 pl-12">
                         {category ? (
@@ -301,11 +293,11 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
       {/* Ficha de técnica del ejercicio */}
       <Sheet open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
         <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
-          <div className="aspect-[4/3] w-full bg-gradient-to-b from-secondary/70 to-secondary/30 overflow-hidden">
-            {detail?.image && (
-              <img src={detail.image} alt={detail.name} className="w-full h-full object-cover" />
-            )}
+          <div className="w-full overflow-hidden bg-black">
+            <ExerciseMedia video={detail?.video} image={detail?.image} name={detail?.name} />
           </div>
+
+
           <div className="p-4 pb-8 space-y-4">
             <SheetHeader className="p-0 space-y-0 text-left">
               <SheetTitle className="font-display text-xl font-bold">{detail?.name}</SheetTitle>
@@ -338,22 +330,12 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                 )}
               </div>
             )}
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Técnica</p>
-              {detail?.video ? (
-                <VideoEmbed url={detail.video} />
-              ) : (
-                <a
-                  href={exerciseVideoSearchUrl(detail?.name ?? "", detail?.category ?? undefined)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/15"
-                >
-                  <Video className="h-4 w-4" />
-                  Buscar vídeo de la técnica
-                </a>
-              )}
-            </div>
+            {!detail?.video && (
+              <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+                El vídeo de la técnica de este ejercicio todavía no está disponible. Pregunta a tu entrenador por el chat.
+              </p>
+            )}
+
           </div>
         </SheetContent>
       </Sheet>

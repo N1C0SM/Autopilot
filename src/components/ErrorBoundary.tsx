@@ -1,63 +1,74 @@
-import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { RefreshCw, Home } from "lucide-react";
+import { Component, Fragment, type ErrorInfo, type ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   children: ReactNode;
 }
 interface State {
   error: Error | null;
+  retryKey: number;
+  attempts: number;
 }
 
+const MAX_AUTO_RETRIES = 3;
+
 /**
- * Captura errores de render en toda la app y muestra una pantalla amable
- * en lugar de una página en blanco.
+ * Captura errores de render y se recupera sola: reintenta el render en silencio
+ * en lugar de mostrar una pantalla de error al usuario.
  */
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, retryKey: 0, attempts: 0 };
+  private timer: number | null = null;
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
   }
 
+  componentDidMount() {
+    try {
+      sessionStorage.removeItem("autopilot_auto_reload");
+    } catch {
+      /* ignorar */
+    }
+  }
+
+
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Siempre registramos el fallo (también en producción) para poder diagnosticarlo.
     console.error("ErrorBoundary:", error?.name, error?.message, error?.stack, info.componentStack);
+    if (this.state.attempts < MAX_AUTO_RETRIES) {
+      this.timer = window.setTimeout(() => {
+        this.setState((s) => ({ error: null, retryKey: s.retryKey + 1, attempts: s.attempts + 1 }));
+      }, 250);
+      return;
+    }
+    // Último recurso: una sola recarga automática, sin pantalla de error ni botones.
+    try {
+      const reloads = Number(sessionStorage.getItem("autopilot_auto_reload") || "0");
+      if (reloads < 1) {
+        sessionStorage.setItem("autopilot_auto_reload", String(reloads + 1));
+        window.setTimeout(() => window.location.reload(), 400);
+      }
+    } catch {
+      /* sin sessionStorage no reintentamos */
+    }
+  }
+
+
+  componentWillUnmount() {
+    if (this.timer) window.clearTimeout(this.timer);
   }
 
   render() {
-    if (!this.state.error) return this.props.children;
+    if (this.state.error) {
+      // Recuperación silenciosa: solo un indicador de carga, sin mensajes de error.
+      return (
+        <main className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">Cargando</span>
+        </main>
+      );
+    }
 
-    return (
-      <main className="min-h-screen bg-background flex items-center justify-center px-5 py-12">
-        <div className="w-full max-w-md text-center">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">
-            Algo ha fallado
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Hemos tenido un problema cargando esta pantalla. Recarga la página; si
-            vuelve a ocurrir, escríbenos desde el chat.
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:justify-center">
-            <Button onClick={() => window.location.reload()} size="lg">
-              <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
-              Recargar
-            </Button>
-            <Button variant="outline" size="lg" onClick={() => (window.location.href = "/")}>
-              <Home className="mr-2 h-4 w-4" aria-hidden="true" />
-              Ir al inicio
-            </Button>
-          </div>
-          <details className="mt-6 text-left">
-            <summary className="text-xs text-muted-foreground cursor-pointer">Detalles técnicos</summary>
-            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-muted p-3 text-[11px] text-muted-foreground">
-              {this.state.error?.name}: {this.state.error?.message}
-              {"\n"}
-              {this.state.error?.stack}
-            </pre>
-          </details>
-        </div>
-      </main>
-    );
+    return <Fragment key={this.state.retryKey}>{this.props.children}</Fragment>;
   }
 }

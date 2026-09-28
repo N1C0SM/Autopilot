@@ -6,8 +6,31 @@ const json = (b: unknown, status = 200) =>
 
 const GATEWAY = "https://ai.gateway.lovable.dev";
 const MODEL = "google/gemini-omni-1.1-flash";
+const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
+
+/** Estilo visual maestro compartido por foto y vídeo (coherencia tipo Hevy/Symmetry). */
+const STYLE = [
+  "Setting: minimalist dark photo studio, matte charcoal rubber gym flooring, clean empty dark background, no clutter, no background people, no mirrors, no logos.",
+  "Lighting: soft overhead studio lighting with subtle rim light defining muscle contours, neutral color grading, slightly desaturated.",
+  "Athlete: one lean athletic adult wearing fitted dark charcoal compression sportswear and minimalist flat training shoes.",
+  "Framing: locked tripod shot at mid-torso height, full body always fully inside frame, 16:9.",
+  "Prohibited: no text, no captions, no watermarks, no logos, no music, no on-screen graphics, no morphed or floating equipment, no extra limbs, no camera movement, no cuts.",
+].join(" ");
+
+/** Ángulo de cámara estandarizado según el patrón biomecánico. */
+function cameraAngle(name: string, group: string): string {
+  const n = `${name} ${group}`.toLowerCase();
+  if (/sentadilla|squat|peso muerto|deadlift|zancada|lunge|hip thrust|pierna|glúteo|gluteo|bulgara|búlgara|prensa/.test(n)) {
+    return "Camera angle: strict 90 degree side profile to show spine neutrality and depth.";
+  }
+  if (/press|fondo|dip|remo|row|dominada|pull|jalon|jalón|empuje|banca|militar|pecho|espalda|hombro/.test(n)) {
+    return "Camera angle: 45 degree three-quarter front view to show bar path and elbow position.";
+  }
+  return "Camera angle: centered 45 degree medium shot focused on the working muscle.";
+}
 
 type Job = { id: string; status: string; progress?: number; error?: { code: string; message: string } };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -23,7 +46,7 @@ Deno.serve(async (req) => {
 
     const { exercise_id: exerciseId, action } = await req.json().catch(() => ({}) as any);
     if (!exerciseId) return json({ error: "Falta el ejercicio" }, 400);
-    if (action !== "create" && action !== "check") return json({ error: "Acción no válida" }, 400);
+    if (action !== "create" && action !== "check" && action !== "image") return json({ error: "Acción no válida" }, 400);
 
     // Service-role client for exercise + storage access
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -33,13 +56,50 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);
 
+    const name = exercise.name || "un ejercicio";
+    const group = exercise.muscle_group || "full body";
+    const angle = cameraAngle(name, group);
+
+    if (action === "image") {
+      const prompt = `Professional exercise technique reference photograph of the exercise "${name}" (${group}). The athlete is captured at the key contracted position of the movement with perfect biomechanical form. ${angle} ${STYLE}`;
+      const r = await fetch(`${GATEWAY}/v1/images/generations`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
+        body: JSON.stringify({ model: IMAGE_MODEL, prompt, n: 1, size: "1536x1024" }),
+      });
+      if (!r.ok) {
+        const body = await r.json().catch(() => null);
+        const msg = (body as any)?.message || `Error de IA (${r.status})`;
+        console.error(`image create failed [${r.status}]: ${msg}`);
+        return json({ error: r.status === 429 ? "Demasiadas peticiones, espera unos segundos" : r.status === 402 ? "Sin créditos de IA suficientes" : msg }, r.status);
+      }
+      const out = await r.json();
+      const b64 = out?.data?.[0]?.b64_json;
+      const url = out?.data?.[0]?.url;
+      let bytes: Uint8Array | null = null;
+      if (b64) {
+        bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      } else if (url) {
+        const dl = await fetch(url);
+        if (dl.ok) bytes = new Uint8Array(await dl.arrayBuffer());
+      }
+      if (!bytes) return json({ error: "La IA no devolvió ninguna imagen" }, 502);
+      const path = `exercise-images/${exerciseId}-${Date.now()}.png`;
+      const { error: upErr } = await svc.storage.from("site-assets").upload(path, bytes, { contentType: "image/png", upsert: true });
+      if (upErr) {
+        console.error(`storage upload failed: ${upErr.message}`);
+        return json({ error: "No se pudo guardar la imagen" }, 500);
+      }
+      const { data: pub } = svc.storage.from("site-assets").getPublicUrl(path);
+      await svc.from("exercises").update({ image_url: pub.publicUrl }).eq("id", exerciseId);
+      return json({ status: "completed", image_url: pub.publicUrl });
+    }
+
     if (action === "create") {
       if (exercise.video_job_id) {
         return json({ jobId: exercise.video_job_id, status: "in_progress", resumed: true });
       }
-      const name = exercise.name || "un ejercicio";
-      const group = exercise.muscle_group || "full body";
-      const prompt = `Professional fitness technique demonstration video: an athletic person performs ${name} (${group}) with perfect form in a bright modern gym. Fixed camera in a single continuous shot, full body always visible, clean and controlled repetitions, realistic lighting. No text, no watermarks, no subtitles, no music, no extra sound effects.`;
+      const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). The athlete performs exactly 2 smooth controlled repetitions with perfect biomechanical form, cadence 2 seconds eccentric, 1 second pause, 2 seconds concentric, full range of motion, ending back at the exact starting position so the clip loops seamlessly. ${angle} ${STYLE}`;
       const r = await fetch(`${GATEWAY}/v1/videos`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
@@ -61,10 +121,11 @@ Deno.serve(async (req) => {
     }
 
     // action === "check"
-    if (exercise.video_url) {
-      return json({ status: "completed", video_url: exercise.video_url });
+    if (!exercise.video_job_id) {
+      if (exercise.video_url) return json({ status: "completed", video_url: exercise.video_url });
+      return json({ error: "No hay ningún vídeo en curso" }, 400);
     }
-    if (!exercise.video_job_id) return json({ error: "No hay ningún vídeo en curso" }, 400);
+
 
     const poll = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(exercise.video_job_id)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
