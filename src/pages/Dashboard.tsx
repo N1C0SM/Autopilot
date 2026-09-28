@@ -305,7 +305,7 @@ const Dashboard = () => {
         };
         const content = paywallContent[section] || paywallContent.home;
         return (
-          <motion.div key={section} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto">
+          <motion.div key={section} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">{content.icon}</div>
             <h2 className="text-xl font-bold font-display mb-2">{content.title}</h2>
             <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
@@ -322,7 +322,7 @@ const Dashboard = () => {
       })()}
 
       {paymentStatus === "paid" && planStatus === "plan_pending" && section === "home" && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Clock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Tu plan se está creando 🔥</h2>
           <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento y tu nutrición con los datos que nos has dado.</p>
@@ -331,7 +331,7 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "home" && (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="w-full max-w-4xl mx-auto space-y-6 md:max-w-none">
           {user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           <MyTrainerCard onOpenChat={() => setSection("chat")} />
           <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
@@ -355,7 +355,7 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "nutrition" && isTrainingOnly && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto">
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
           <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
@@ -364,7 +364,7 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "nutrition" && !isTrainingOnly && (
-        <div className="max-w-4xl space-y-6">
+        <div className="w-full max-w-4xl space-y-6 md:max-w-none">
           <div className="flex items-center gap-2 mb-2">
             <Apple className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
@@ -394,7 +394,7 @@ const Dashboard = () => {
       )}
 
       {section === "chat" && (
-        <div className="max-w-3xl space-y-4">
+        <div className="w-full max-w-3xl space-y-4 md:max-w-none">
           <MyTrainerCard onOpenChat={undefined} />
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary/15 flex items-center justify-center shrink-0"><Video className="w-5 h-5 text-primary" /></div>
@@ -442,7 +442,7 @@ const Dashboard = () => {
       )}
 
       {section === "settings" && (
-        <div className="max-w-2xl"><SettingsPanel /></div>
+        <div className="w-full max-w-2xl md:max-w-none"><SettingsPanel /></div>
       )}
     </>
   );
@@ -506,7 +506,7 @@ const Dashboard = () => {
             {user && <NotificationsBell userId={user.id} />}
           </header>
 
-          <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+          <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 overflow-y-auto">
             {pageContent}
           </main>
         </div>
