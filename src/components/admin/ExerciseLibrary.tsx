@@ -73,7 +73,7 @@ const STIMULUS_COLORS: Record<string, string> = {
 /* ── Exercise Form Dialog ── */
 
 const ExerciseFormDialog = ({
-  open, onOpenChange, initial, onSave, loading, allExercises,
+  open, onOpenChange, initial, onSave, loading, allExercises, onMediaChange,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -81,6 +81,7 @@ const ExerciseFormDialog = ({
   onSave: (data: Partial<Exercise>) => void;
   loading: boolean;
   allExercises: Exercise[];
+  onMediaChange?: () => void;
 }) => {
   const [form, setForm] = useState<Partial<Exercise>>({});
   const [altSearch, setAltSearch] = useState("");
