@@ -8,6 +8,7 @@ import type { DayPlan } from "@/types/training";
 import CalendarExportDialog from "./CalendarExportDialog";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import VideoEmbed from "@/components/VideoEmbed";
+import ExerciseMedia from "@/components/ExerciseMedia";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
