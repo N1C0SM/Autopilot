@@ -318,7 +318,7 @@ const Dashboard = () => {
         };
         const content = paywallContent[section] || paywallContent.home;
         return (
-          <motion.div key={section} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
+          <motion.div key={section} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">{content.icon}</div>
             <h2 className="text-xl font-bold font-display mb-2">{content.title}</h2>
             <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
