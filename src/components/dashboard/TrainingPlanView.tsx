@@ -44,6 +44,16 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
   const [expandedDay, setExpandedDay] = useState<string | null>(DAYS_ORDER[todayIndex]);
   const [copied, setCopied] = useState(false);
   const [expandedVideos, setExpandedVideos] = useState<Record<string, boolean>>({});
+  const [detail, setDetail] = useState<{
+    name: string;
+    image?: string | null;
+    video?: string | null;
+    series?: string;
+    reps?: string;
+    rest?: string;
+    category?: string | null;
+    type?: string | null;
+  } | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const handleCopy = async () => {
