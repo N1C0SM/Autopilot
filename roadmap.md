@@ -16,3 +16,4 @@
 - [x] Foto y vídeo con IA coherentes (mismo estilo), vídeo como hero y miniatura junto al nombre; nada de YouTube en usuario
 - [x] Nunca mostrar pantalla de error al usuario: fallos silenciosos y recuperación automática
 
+- [ ] Revisar fallo al abrir el usuario propio (N1C0) desde /admin
