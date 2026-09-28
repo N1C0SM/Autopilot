@@ -383,23 +383,9 @@ const Dashboard = () => {
             <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
             <InfoHint text="Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante." />
           </div>
-          {macros && (
-            <div className="grid grid-cols-3 gap-3 md:gap-4">
-              {[{ label: "Proteína", value: `${macros.protein}g` }, { label: "Carbos", value: `${macros.carbs}g` }, { label: "Grasas", value: `${macros.fats}g` }].map((m) => (
-                <motion.div key={m.label} whileHover={{ scale: 1.03 }} className="bg-card rounded-xl p-4 md:p-5 border border-border text-center hover:border-primary/30 transition-colors">
-                  <div className="text-xl md:text-2xl font-bold font-display text-gradient">{m.value}</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">{m.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-          <div className="bg-card rounded-xl p-4 md:p-6 border border-border">
-            <h3 className="font-bold font-display mb-1">Comidas</h3>
-            <p className="text-xs text-muted-foreground mb-3">Doble click en una comida para marcarla como hecha hoy ✓</p>
-            <Suspense fallback={<SectionFallback />}>
-              <MealsList meals={meals} />
-            </Suspense>
-          </div>
+          <Suspense fallback={<SectionFallback />}>
+            <MealsList meals={meals} macros={macros as any} />
+          </Suspense>
           <div className="text-center pt-2">
             <Button variant="ghost" size="sm" onClick={handleManageSubscription} className="text-muted-foreground">Gestionar suscripción</Button>
           </div>
