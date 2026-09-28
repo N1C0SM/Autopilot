@@ -280,7 +280,7 @@ const Dashboard = () => {
     chat: "Chat",
     settings: "Ajustes",
     progress: "Progreso",
-    resources: "Recursos",
+    resources: " ",
   };
 
   const SECTION_HINTS: Record<MobileTab, string> = {
