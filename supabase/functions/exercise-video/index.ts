@@ -120,12 +120,12 @@ Deno.serve(async (req) => {
       return json({ jobId: job.id, status: job.status });
     }
 
-
     // action === "check"
-    if (exercise.video_url) {
-      return json({ status: "completed", video_url: exercise.video_url });
+    if (!exercise.video_job_id) {
+      if (exercise.video_url) return json({ status: "completed", video_url: exercise.video_url });
+      return json({ error: "No hay ningún vídeo en curso" }, 400);
     }
-    if (!exercise.video_job_id) return json({ error: "No hay ningún vídeo en curso" }, 400);
+
 
     const poll = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(exercise.video_job_id)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
