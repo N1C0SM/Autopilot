@@ -128,6 +128,17 @@ const Dashboard = () => {
         return;
       }
 
+      // Si faltan sus respuestas no se pueden calcular calorías ni macros: las pedimos antes de seguir.
+      const { data: onb } = await supabase
+        .from("onboarding")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!onb) {
+        navigate("/onboarding");
+        return;
+      }
+
       if (profile.plan_status === "plan_ready") {
         const today = new Date();
         const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
