@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -38,6 +39,16 @@ const SettingsPanel = () => {
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [privacy, setPrivacy] = useState({ name_public: false, avatar_public: false, progress_public: false });
+  const updatePrivacy = async (key: keyof typeof privacy, value: boolean) => {
+    if (!user) return;
+    setPrivacy((p) => ({ ...p, [key]: value }));
+    const { error } = await supabase.from("profiles").update({ [key]: value } as any).eq("user_id", user.id);
+    if (error) {
+      setPrivacy((p) => ({ ...p, [key]: !value }));
+      toast.error("No se pudo guardar la privacidad");
+    } else toast.success("Privacidad actualizada");
+  };
 
   // Subscription
   const [subscriptionStatus, setSubscriptionStatus] = useState("");
@@ -71,7 +82,7 @@ const SettingsPanel = () => {
     if (!user) return;
     const fetch = async () => {
       const [{ data: profile }, { data: onb }] = await Promise.all([
-        supabase.from("profiles").select("name, email, avatar_url, subscription_status, subscription_tier, subscription_end, payment_status").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("name, email, avatar_url, subscription_status, subscription_tier, subscription_end, payment_status, name_public, avatar_public, progress_public").eq("user_id", user.id).single(),
         supabase.from("onboarding").select("*").eq("user_id", user.id).single(),
       ]);
 
@@ -79,6 +90,7 @@ const SettingsPanel = () => {
         setName(profile.name || "");
         setEmail(profile.email || "");
         setAvatarUrl(profile.avatar_url || "");
+        setPrivacy({ name_public: !!(profile as any).name_public, avatar_public: !!(profile as any).avatar_public, progress_public: !!(profile as any).progress_public });
         setSubscriptionStatus(profile.subscription_status || "inactive");
         setSubscriptionTier(profile.subscription_tier || "none");
         setSubscriptionEnd(profile.subscription_end);
@@ -292,7 +304,7 @@ const SettingsPanel = () => {
   const isActive = subscriptionStatus === "active" || subscriptionStatus === "trialing";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
       {/* Workout preferences */}
       <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-2">
@@ -365,6 +377,26 @@ const SettingsPanel = () => {
         <Button variant="default" className="mt-4" onClick={saveProfile} disabled={saving}>
           <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar perfil"}
         </Button>
+
+        <div className="mt-8 pt-6 border-t border-border">
+          <h3 className="font-display font-bold text-sm mb-1">Privacidad</h3>
+          <p className="text-xs text-muted-foreground mb-4">Tu entrenador siempre te ve. Esto decide qué pueden ver los demás.</p>
+          <div className="space-y-3">
+            {([
+              ["name_public", "Nombre público", "Si está apagado, se muestran solo tus iniciales."],
+              ["avatar_public", "Foto de perfil pública", "Si está apagado, se muestra un icono genérico."],
+              ["progress_public", "Progreso público", "Permite mostrar tu evolución (fotos, logros) fuera de tu cuenta."],
+            ] as const).map(([key, label, hint]) => (
+              <label key={key} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-secondary/30 cursor-pointer">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{label}</div>
+                  <div className="text-[11px] text-muted-foreground">{hint}</div>
+                </div>
+                <Switch checked={privacy[key]} onCheckedChange={(v) => updatePrivacy(key, v)} />
+              </label>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Subscription */}
