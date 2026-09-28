@@ -548,7 +548,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   {TIER_OPTIONS.map((tier) => {
                     const selected = effectiveTier === tier.value;
                     const isCurrent = hasAccess && currentTier === tier.value;
-                    const details = TIERS[tier.value];
+                    // Hay planes (como Transformación) que no están en el catálogo: usamos su copia de respaldo.
+                    const details: TierDetails =
+                      (TIERS as Record<string, TierDetails | undefined>)[tier.value] ?? tier.fallback;
                     return (
                       <button
                         key={tier.value}
