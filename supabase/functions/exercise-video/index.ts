@@ -6,8 +6,31 @@ const json = (b: unknown, status = 200) =>
 
 const GATEWAY = "https://ai.gateway.lovable.dev";
 const MODEL = "google/gemini-omni-1.1-flash";
+const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
+
+/** Estilo visual maestro compartido por foto y vídeo (coherencia tipo Hevy/Symmetry). */
+const STYLE = [
+  "Setting: minimalist dark photo studio, matte charcoal rubber gym flooring, clean empty dark background, no clutter, no background people, no mirrors, no logos.",
+  "Lighting: soft overhead studio lighting with subtle rim light defining muscle contours, neutral color grading, slightly desaturated.",
+  "Athlete: one lean athletic adult wearing fitted dark charcoal compression sportswear and minimalist flat training shoes.",
+  "Framing: locked tripod shot at mid-torso height, full body always fully inside frame, 16:9.",
+  "Prohibited: no text, no captions, no watermarks, no logos, no music, no on-screen graphics, no morphed or floating equipment, no extra limbs, no camera movement, no cuts.",
+].join(" ");
+
+/** Ángulo de cámara estandarizado según el patrón biomecánico. */
+function cameraAngle(name: string, group: string): string {
+  const n = `${name} ${group}`.toLowerCase();
+  if (/sentadilla|squat|peso muerto|deadlift|zancada|lunge|hip thrust|pierna|glúteo|gluteo|bulgara|búlgara|prensa/.test(n)) {
+    return "Camera angle: strict 90 degree side profile to show spine neutrality and depth.";
+  }
+  if (/press|fondo|dip|remo|row|dominada|pull|jalon|jalón|empuje|banca|militar|pecho|espalda|hombro/.test(n)) {
+    return "Camera angle: 45 degree three-quarter front view to show bar path and elbow position.";
+  }
+  return "Camera angle: centered 45 degree medium shot focused on the working muscle.";
+}
 
 type Job = { id: string; status: string; progress?: number; error?: { code: string; message: string } };
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
