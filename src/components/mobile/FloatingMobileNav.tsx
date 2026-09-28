@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { Lock } from "lucide-react";
@@ -19,17 +20,17 @@ interface Props {
   className: string;
 }
 
-const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className }: Props) => (
+const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className }: Props) => createPortal(
   <nav
     className={`${className} fixed z-50 md:hidden`}
     style={{
       left: "max(0.75rem, var(--safe-left, 0px))",
       right: "max(0.75rem, var(--safe-right, 0px))",
-      bottom: "calc(0.75rem + var(--safe-bottom, 0px))",
+      bottom: "calc(var(--mobile-nav-offset) + var(--safe-bottom, 0px))",
     }}
     aria-label={label}
   >
-    <ul className="mx-auto flex h-[4.25rem] max-w-[30rem] items-center gap-1 rounded-full border border-border/80 bg-background/90 p-1.5 shadow-[0_12px_40px_-12px_hsl(var(--foreground)/0.3)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80">
+    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-center gap-1 rounded-full border border-border/80 bg-background/90 p-1.5 shadow-[0_12px_40px_-12px_hsl(var(--foreground)/0.3)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80">
       {items.map(({ key, label: itemLabel, icon: Icon, locked }) => {
         const isActive = active === key;
         return (
@@ -76,7 +77,8 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
         );
       })}
     </ul>
-  </nav>
+  </nav>,
+  document.body,
 );
 
 export default FloatingMobileNav;

@@ -39,7 +39,7 @@ const MobileAppShell = ({
       <main
         style={{
           paddingTop: "calc(56px + var(--safe-top, 0px) + 12px)",
-          paddingBottom: "calc(5.5rem + var(--safe-bottom, 0px))",
+          paddingBottom: "var(--mobile-nav-content-padding)",
           paddingLeft: "max(0.75rem, var(--safe-left, 0px))",
           paddingRight: "max(0.75rem, var(--safe-right, 0px))",
         }}
