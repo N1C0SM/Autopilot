@@ -304,7 +304,7 @@ const SettingsPanel = () => {
   const isActive = subscriptionStatus === "active" || subscriptionStatus === "trialing";
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 auto-rows-min">
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-6">
       {/* Workout preferences */}
       <div className="order-3 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-2">
