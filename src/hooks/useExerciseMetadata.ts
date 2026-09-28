@@ -9,6 +9,7 @@ export interface ExerciseMetadata {
   muscle_group: string | null;
   exercise_type: string | null;
   video_url: string | null;
+  image_url: string | null;
 }
 
 interface ExerciseMetadataIndex {
