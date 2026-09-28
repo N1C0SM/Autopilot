@@ -297,6 +297,66 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
           </motion.div>
         );
       })}
+
+      {/* Ficha de técnica del ejercicio */}
+      <Sheet open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
+        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
+          <div className="aspect-[4/3] w-full bg-gradient-to-b from-secondary/70 to-secondary/30 overflow-hidden">
+            {detail?.image && (
+              <img src={detail.image} alt={detail.name} className="w-full h-full object-cover" />
+            )}
+          </div>
+          <div className="p-4 pb-8 space-y-4">
+            <SheetHeader className="p-0 space-y-0 text-left">
+              <SheetTitle className="font-display text-xl font-bold">{detail?.name}</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Series</p>
+                <p className="font-bold text-lg font-display">{detail?.series ?? "—"}</p>
+              </div>
+              <div className="rounded-xl bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</p>
+                <p className="font-bold text-lg font-display">{detail?.reps ?? "—"}</p>
+              </div>
+              <div className="rounded-xl bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Descanso</p>
+                <p className="font-bold text-sm font-display mt-1.5">{detail?.rest ?? "—"}</p>
+              </div>
+            </div>
+            {(detail?.category || detail?.type) && (
+              <div className="flex flex-wrap gap-1.5">
+                {detail?.category && (
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    {detail.category}
+                  </span>
+                )}
+                {detail?.type && (
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
+                    {detail.type}
+                  </span>
+                )}
+              </div>
+            )}
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Técnica</p>
+              {detail?.video ? (
+                <VideoEmbed url={detail.video} />
+              ) : (
+                <a
+                  href={exerciseVideoSearchUrl(detail?.name ?? "", detail?.category ?? undefined)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/15"
+                >
+                  <Video className="h-4 w-4" />
+                  Buscar vídeo de la técnica
+                </a>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
