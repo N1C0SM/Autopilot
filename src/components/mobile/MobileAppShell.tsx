@@ -44,14 +44,7 @@ const MobileAppShell = ({
           paddingRight: "max(0.75rem, var(--safe-right, 0px))",
         }}
       >
-        <motion.div
-          key={active}
-          initial={{ opacity: 0.6 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-        >
-          {children}
-        </motion.div>
+        {children}
       </main>
 
       <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} />

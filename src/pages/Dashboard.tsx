@@ -318,7 +318,7 @@ const Dashboard = () => {
         };
         const content = paywallContent[section] || paywallContent.home;
         return (
-          <motion.div key={section} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
+          <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
             <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">{content.icon}</div>
             <h2 className="text-xl font-bold font-display mb-2">{content.title}</h2>
             <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
@@ -330,17 +330,17 @@ const Dashboard = () => {
             <button onClick={() => setSection("chat")} className="mx-auto mt-4 text-xs text-muted-foreground hover:text-primary underline inline-flex items-center gap-1.5">
               <MessageCircle className="w-3 h-3" /> Prefiero hablar antes con un entrenador (gratis)
             </button>
-          </motion.div>
+          </div>
         );
       })()}
 
       {paymentStatus === "paid" && planStatus === "plan_pending" && section === "home" && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
+        <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Clock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Tu plan se está creando 🔥</h2>
           <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento y tu nutrición con los datos que nos has dado.</p>
           <p className="text-sm text-primary font-medium">Recibirás una notificación en menos de 48h.</p>
-        </motion.div>
+        </div>
       )}
 
       {hasPlan && section === "home" && (
@@ -368,12 +368,12 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "nutrition" && isTrainingOnly && (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
+        <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
           <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
           <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Mejorar a Completo — {TIERS.full.price}€/mes</Button>
-        </motion.div>
+        </div>
       )}
 
       {hasPlan && section === "nutrition" && !isTrainingOnly && (
