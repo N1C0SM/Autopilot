@@ -10,6 +10,8 @@ html, body, #root {
   overscroll-behavior-y: none;
 }
 :root {
+  --mobile-nav-height: 4rem;
+  --mobile-nav-content-padding: calc(var(--mobile-nav-height) + 1px + 1.5rem + var(--safe-bottom, 0px));
   --safe-top: 0px;
   --safe-bottom: 0px;
   --safe-left: 0px;

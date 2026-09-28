@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { Home, Dumbbell, Apple, MessageCircle, Sparkles, Lock } from "lucide-react";
 import { hapticTap } from "@/lib/native";
@@ -20,7 +21,7 @@ const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
 ];
 
 const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
-  return (
+  return createPortal(
     <nav
       className="mobile-tabbar fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card/95 backdrop-blur-xl border-t border-border"
       style={{
@@ -29,7 +30,7 @@ const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
         paddingRight: "var(--safe-right, 0px)",
       }}
     >
-      <ul className="flex items-stretch justify-around h-16 px-1">
+      <ul className="flex items-stretch justify-around h-[var(--mobile-nav-height)] px-1">
         {TABS.map((t) => {
           const isActive = active === t.key;
           const isLocked = lockedTabs.includes(t.key);
@@ -74,7 +75,8 @@ const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
           );
         })}
       </ul>
-    </nav>
+    </nav>,
+    document.body,
   );
 };
 
