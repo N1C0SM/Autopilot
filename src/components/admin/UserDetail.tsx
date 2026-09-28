@@ -35,10 +35,29 @@ import TrainingPlanForm from "./TrainingPlanForm";
 import { impersonateUser } from "@/lib/impersonate";
 import OnboardingEditor from "./OnboardingEditor";
 
-const TIER_OPTIONS = [
-  { value: "training", label: "Entrenamiento" },
-  { value: "full", label: "Completo" },
-  { value: "transform", label: "Transformación 12 semanas" },
+type TierDetails = { price: number; interval: "month" | "one_time"; tagline: string; features: string[] };
+
+const TIER_OPTIONS: { value: string; label: string; fallback: TierDetails }[] = [
+  {
+    value: "training",
+    label: "Entrenamiento",
+    fallback: { price: 29, interval: "month", tagline: "Plan de entrenamiento con seguimiento.", features: [] },
+  },
+  {
+    value: "full",
+    label: "Completo",
+    fallback: { price: 49, interval: "month", tagline: "Entrenamiento y nutrición con seguimiento.", features: [] },
+  },
+  {
+    value: "transform",
+    label: "Transformación 12 semanas",
+    fallback: {
+      price: 299,
+      interval: "one_time",
+      tagline: "Acompañamiento intensivo de 12 semanas.",
+      features: ["Entrenamiento y nutrición", "Seguimiento cercano del entrenador"],
+    },
+  },
 ];
 
 interface OnboardingData {
