@@ -1,10 +1,26 @@
 // Catálogo de productos Autopilot.
 // Los price_id reales NO viven aquí: se leen dinámicamente desde la tabla `settings`
-// (price_id_training_*, price_id_full_*, price_id_transform_*) en el edge function create-checkout.
+// (price_id_training_* y price_id_full_*) en el edge function create-checkout.
 
-export type PlanKey = "training" | "full" | "transform";
+export type PlanKey = "free" | "training" | "full";
 
 export const TIERS = {
+  free: {
+    key: "free" as const,
+    name: "Gratis",
+    price: 0,
+    interval: "month" as const,
+    trial_days: 0,
+    tagline: "Prueba una sesión desde el móvil y empieza a registrar tu progreso.",
+    features: [
+      "Perfil y objetivo de entrenamiento",
+      "Sesión de ejemplo para empezar",
+      "Registro de series, peso y repeticiones",
+      "Progreso básico",
+    ],
+    notIncluded: ["Chat con entrenador", "Nutrición personalizada"],
+    cta: "Crear cuenta gratis",
+  },
   training: {
     key: "training" as const,
     name: "Entrenamiento",
@@ -45,27 +61,6 @@ export const TIERS = {
     notIncluded: [],
     cta: "Probar Completo gratis",
   },
-  transform: {
-    key: "transform" as const,
-    name: "Transformación 12 semanas",
-    price: 299,
-    interval: "one_time" as const,
-    trial_days: 0,
-    tagline:
-      "Para quien quiere un acompañamiento más cercano, check-ins semanales y un plan completo de 12 semanas con entrenamiento, nutrición y seguimiento prioritario.",
-    features: [
-      "Entrenamiento preparado por tu entrenador durante 12 semanas",
-      "Nutrición personalizada durante 12 semanas",
-      "Check-in semanal",
-      "Revisión de fotos y medidas",
-      "Respuesta en menos de 4h",
-      "Llamada inicial",
-      "Ajustes semanales",
-      "Al finalizar, elige: renovar o pasar a Completo (49€/mes)",
-    ],
-    notIncluded: [],
-    cta: "Solicitar mi plaza",
-  },
 } as const;
 
 // Alias legacy (algunos componentes antiguos lo siguen importando)
@@ -80,7 +75,7 @@ export function getTierByProductId(_productId: string): TierKey | null {
 
 // Etiquetas cortas del plan para el panel de administración.
 export const PLAN_LABEL: Record<string, string> = {
+  free: "Gratis",
   training: "Entrenamiento · 29€/mes",
   full: "Completo · 49€/mes",
-  transform: "Transformación 12 sem · 299€",
 };

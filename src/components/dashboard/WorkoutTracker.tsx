@@ -834,7 +834,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                                 className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium px-2 py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 transition-colors"
                               >
                                 <Video className="w-3.5 h-3.5" />
-                                Ver técnica
+                                  Ver vídeo de técnica
                               </button>
                             )}
                           </div>
@@ -846,7 +846,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                             className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
                           >
                             <Video className="h-3.5 w-3.5" />
-                            Ver técnica
+                            Ver vídeo de técnica
                           </a>
                         )}
 

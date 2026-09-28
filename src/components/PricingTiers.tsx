@@ -9,7 +9,7 @@ interface PricingTiersProps {
   recommended?: PlanKey;
 }
 
-const ORDER: PlanKey[] = ["training", "full"];
+const ORDER: PlanKey[] = ["free", "training", "full"];
 
 const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => {
   return (
@@ -51,14 +51,14 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                     isRec ? "text-gradient" : "text-foreground"
                   }`}
                 >
-                  €{t.price}
+                  {t.price === 0 ? "Gratis" : `€${t.price}`}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  {t.interval === "one_time" ? "/12 sem" : " al mes"}
+                  {t.price === 0 ? "" : " al mes"}
                 </span>
               </div>
                  <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
-                  <Sparkles className="w-3 h-3" /> {t.trial_days} días de prueba en este plan
+                  {t.price === 0 ? "Sin tarjeta ni prueba que cancelar" : <><Sparkles className="w-3 h-3" /> 7 días de prueba</>}
                </div>
 
               <ul className="space-y-2.5 mb-7 flex-1">
@@ -83,18 +83,18 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                 variant={isRec ? "hero" : "outline"}
                 size="lg"
                 className="w-full hover-scale"
-                onClick={() => onSelect(key)}
+                onClick={() => key === "free" ? window.location.assign("/signup?free=true") : onSelect(key)}
               >
                 {t.cta}
               </Button>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Tras {t.trial_days} días de prueba: {t.price}€/mes, con renovación automática. Cancela antes de que termine la prueba para evitar el primer cobro.</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y decide más adelante si quieres seguimiento humano." : `Tras 7 días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
             </motion.div>
           );
         })}
       </div>
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
-        Después de la primera semana, sigues por <span className="text-foreground font-semibold">29€/mes</span> o{" "}
+        Después de probar Gratis, puedes seguir por <span className="text-foreground font-semibold">29€/mes</span> o{" "}
         <span className="text-foreground font-semibold">49€/mes</span> según el plan. Sin permanencia. Cancela desde Ajustes → Suscripción.
       </p>
       <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">

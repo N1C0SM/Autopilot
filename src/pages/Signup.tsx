@@ -28,8 +28,8 @@ const Signup = () => {
   const fromQuiz = searchParams.get("from") === "quiz";
   const fromScan = searchParams.get("from") === "scan";
   const planParam = (searchParams.get("plan") || "").toLowerCase();
-  const selectedPlan: "training" | "full" | "transform" | null =
-    planParam === "training" ? "training" : planParam === "full" ? "full" : planParam === "transform" ? "transform" : null;
+  const selectedPlan: "training" | "full" | null =
+    planParam === "training" ? "training" : planParam === "full" ? "full" : null;
   const [scanCtx, setScanCtx] = useState<any>(null);
   const { signUp } = useAuth();
 
@@ -162,9 +162,7 @@ const Signup = () => {
               ? "Último paso para desbloquear tu plan"
               : fromScan
               ? "Último paso para desbloquear tu AI Report y plan completo"
-               : selectedPlan === "transform"
-               ? "Completa tus datos para solicitar tu plaza"
-               : "Empieza tu transformación hoy"}
+               : "Empieza hoy"}
           </p>
         </div>
 

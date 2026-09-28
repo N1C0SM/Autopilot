@@ -60,14 +60,6 @@ const PLANS: Record<string, Item> = {
     cta: "Empezar con entrenador",
     kind: "plan",
   },
-  transform: {
-    name: "Transformación",
-    price: "299 €",
-    why: "12 semanas acompañadas de principio a fin: es el camino más rápido para tu punto de partida.",
-    to: "/signup?plan=transform",
-    cta: "Ver Transformación",
-    kind: "plan",
-  },
 };
 
 // Una sola recomendación: el plan que encaja, y si no toca plan, un libro.
@@ -76,7 +68,7 @@ const pick = (text: string, monthsWithPlan?: number): Item => {
   const nutrition = /(grasa|graso|abdomen|cintura|definic|peso|dieta|nutric|aliment|barriga)/.test(t);
   const long = typeof monthsWithPlan === "number" && monthsWithPlan >= 6;
 
-  if (nutrition && long) return PLANS.transform;
+  if (nutrition && long) return PLANS.full;
   if (nutrition) return PLANS.full;
   if (/(técnica|tecnica|básic|basic|postura|principiante|empez)/.test(t)) return GUIDES.base;
   if (/(estanc|plateau|progres|variant)/.test(t)) return GUIDES.atlas;

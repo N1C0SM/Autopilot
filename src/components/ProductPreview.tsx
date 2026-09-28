@@ -64,7 +64,7 @@ export default function ProductPreview({ onPlans }: { onPlans: () => void }) {
               </div>
             )}
             {view === "nutrition" && <div>
-              <p className="text-xs text-primary">Incluida en Completo y Transformación</p>
+              <p className="text-xs text-primary">Disponible en el plan Completo</p>
               <h3 className="mt-1 font-display text-xl font-bold">Tus comidas, en un mismo lugar.</h3>
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">En tu plan verás los objetivos diarios y las comidas que haya preparado tu entrenador. Este ejemplo solo muestra la organización.</p>
               <dl className="mt-6 divide-y divide-border">{[["Desayuno", "Yogur, avena y fruta"], ["Comida", "Arroz, pollo y verduras"], ["Cena", "Tortilla, patata y ensalada"]].map(([meal, text]) => <div key={meal} className="grid gap-1 py-4 sm:grid-cols-[10rem_1fr]"><dt className="text-sm font-semibold">{meal}</dt><dd className="text-sm text-muted-foreground">{text}</dd></div>)}</dl>

@@ -35,13 +35,12 @@ const faqs = [
   { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
   { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
   { q: "¿Quién prepara y ajusta mi plan?", a: "Un entrenador real. La IA solo sirve como herramienta de apoyo para el análisis inicial; no diseña tu plan, no lo reorganiza y no responde a tus mensajes." },
-  { q: "¿Puedo cancelar cuando quiera?", a: "Los planes mensuales se renuevan automáticamente hasta que cancelas desde Ajustes → Suscripción. Transformación es un pago único de 12 semanas." },
-  { q: "¿La Transformación 12 semanas tiene prueba gratis?", a: "No tiene prueba gratis. Incluye análisis inicial y llamada con tu entrenador dentro de Autopilot antes de empezar." },
+  { q: "¿Puedo cancelar cuando quiera?", a: "Los planes mensuales se renuevan automáticamente hasta que cancelas desde Ajustes → Suscripción." },
   { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y tu entrenador prepara el plan sobre esa base: calistenia, mancuernas en casa o cero material." },
   { q: "¿Y si nunca he entrenado?", a: "Tu entrenador parte de tu nivel real y te guía paso a paso, sin saltar fases." },
   { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto, YouTube te da una rutina genérica. Aquí hay una persona real que conoce tu nivel, tu equipamiento y tu semana, y ajusta el plan contigo cada vez que algo cambia." },
   { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Lo avisas por chat y reorganizamos. Tu entrenador puede ajustar el plan a tu disponibilidad. Si hay una lesión, consulta con un profesional sanitario antes de continuar." },
-  { q: "¿Y si veo que no es para mí?", a: "En los planes mensuales, cancela antes de que termine la prueba de 7 días para evitar el primer cobro. Después se renuevan al precio del plan. Transformación no tiene prueba gratuita. Consulta las condiciones de devolución en los términos." },
+  { q: "¿Y si veo que no es para mí?", a: "Empieza con el plan Gratis sin tarjeta. Si quieres seguimiento, prueba un plan de pago durante 7 días y cancela antes del primer cobro." },
 ];
 
 const Index = () => {
@@ -83,7 +82,6 @@ const Index = () => {
           trainer_photo_url: s.trainer_photo_url || "",
           trainer_bio: s.trainer_bio || "",
         });
-        const slots = (s as any).transformation_slots;
         setTransformationSlots(slots != null && Number.isFinite(Number(slots)) ? Math.max(0, Number(slots)) : null);
         setHeroVideo({
           url: (s as any).hero_video_url || "",
@@ -191,7 +189,7 @@ const Index = () => {
           offers: [
             { "@type": "Offer", name: "Entrenamiento", price: "29", priceCurrency: "EUR" },
             { "@type": "Offer", name: "Completo", price: "49", priceCurrency: "EUR" },
-            { "@type": "Offer", name: "Transformación 12 semanas", price: "299", priceCurrency: "EUR" },
+            { "@type": "Offer", name: "Gratis", price: "0", priceCurrency: "EUR" },
           ],
         })}</script>
       </Helmet>
