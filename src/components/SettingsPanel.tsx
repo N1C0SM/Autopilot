@@ -304,7 +304,7 @@ const SettingsPanel = () => {
   const isActive = subscriptionStatus === "active" || subscriptionStatus === "trialing";
 
   return (
-    <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+    <div className="w-full space-y-8">
       {/* Workout preferences */}
       <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-2">
