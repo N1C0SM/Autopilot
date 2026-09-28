@@ -423,7 +423,7 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "progress" && user && (
-        <div className="max-w-3xl mx-auto space-y-4">
+        <div className="w-full space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />

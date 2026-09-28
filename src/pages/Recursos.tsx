@@ -6,6 +6,9 @@ import { ArrowLeft, BookOpen, Sparkles, Newspaper, ExternalLink, ArrowRight } fr
 import { Button } from "@/components/ui/button";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import BookCover from "@/components/BookCover";
+import { useAuth } from "@/contexts/AuthContext";
+import UserSidebar from "@/components/UserSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
@@ -55,6 +58,7 @@ const FALLBACK_RECOS: Reco[] = [
 ];
 
 const Recursos = () => {
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>(FALLBACK_EBOOKS);
   const [recos, setRecos] = useState<Reco[]>(FALLBACK_RECOS);
@@ -124,7 +128,10 @@ const Recursos = () => {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <SidebarProvider>
+    <div className="min-h-screen bg-background text-foreground flex w-full">
+      {user && <UserSidebar section="resources" onNavigate={(s) => navigate(s === "resources" ? "/recursos" : "/dashboard")} onSignOut={() => { signOut(); navigate("/"); }} />}
+      <div className="flex-1 min-w-0">
       <Helmet>
         <title>Recursos · Autopilot</title>
         <meta name="description" content="Ebooks, recomendaciones y artículos seleccionados por el equipo de Autopilot." />
@@ -132,6 +139,7 @@ const Recursos = () => {
 
       <header className="app-chrome sticky top-0 z-40 border-b">
         <div className="container mx-auto max-w-5xl flex items-center justify-between h-14 px-4">
+          {user && <SidebarTrigger />}
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver
           </Button>
@@ -285,7 +293,9 @@ const Recursos = () => {
           </section>
         )}
       </main>
+      </div>
     </div>
+    </SidebarProvider>
   );
 };
 

@@ -21,9 +21,10 @@ const TOOLTIPS: Partial<Record<UserSection, string>> = {
   chat: "Habla con tu entrenador, envía fotos o vídeos",
   progress: "Fotos, peso, evolución semanal y AI Scan",
   settings: "Perfil, suscripción y notificaciones",
+  resources: "Biblioteca, guías y recomendaciones",
 };
 
-export type UserSection = "home" | "training" | "nutrition" | "chat" | "progress" | "settings";
+export type UserSection = "home" | "training" | "nutrition" | "chat" | "progress" | "settings" | "resources";
 
 interface Props {
   section: UserSection;

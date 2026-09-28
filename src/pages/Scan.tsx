@@ -3,6 +3,8 @@ import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
+import UserSidebar from "@/components/UserSidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Upload,
   ScanLine,
@@ -999,7 +1001,10 @@ const Scan = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <SidebarProvider>
+    <div className="min-h-screen bg-background relative overflow-hidden flex">
+      {user && <UserSidebar section="progress" onNavigate={(s) => navigate(s === "progress" ? `/scan/user/${user.id}` : "/dashboard")} onSignOut={() => { void supabase.auth.signOut(); navigate("/"); }} />}
+      <div className="flex-1 min-w-0 relative">
       <Helmet>
         <title>{routeUserId ? "Mi progreso · AI Scan" : "AI Body Scan · Autopilot"}</title>
         <meta name="description" content="Sube una foto y recibe un análisis IA de tu físico con recomendaciones personalizadas." />
@@ -1025,6 +1030,7 @@ const Scan = () => {
 
       {/* Header */}
       <header className="container mx-auto max-w-6xl px-4 py-6 flex items-center justify-between">
+        {user && <SidebarTrigger />}
         <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
           <ArrowLeft className="w-4 h-4" />
           {user ? "Volver al dashboard" : "Volver"}
@@ -2540,7 +2546,9 @@ const Scan = () => {
           )}
         </AnimatePresence>
       </main>
+      </div>
     </div>
+    </SidebarProvider>
   );
 };
 

@@ -304,9 +304,9 @@ const SettingsPanel = () => {
   const isActive = subscriptionStatus === "active" || subscriptionStatus === "trialing";
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-8 flex flex-col">
       {/* Workout preferences */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-2 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-2">
           <Timer className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Tu forma de entrenar</h2>
@@ -355,7 +355,7 @@ const SettingsPanel = () => {
       </div>
 
       {/* Avatar + Profile */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-1 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-6">
           <User className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Perfil</h2>
