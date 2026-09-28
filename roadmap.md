@@ -13,3 +13,6 @@
 - [x] Biblioteca: ya existe con 271 ejercicios, 100% editable en admin
 - [x] Vídeo de técnica con IA (botón en el editor, función exercise-video)
 - [ ] (anterior) Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
+- [ ] Foto e vídeo con IA coherentes (mismo estilo), vídeo como hero y miniatura junto al nombre; nada de YouTube en usuario
+- [ ] Nunca mostrar pantalla de error al usuario: fallos silenciosos y recuperación automática
+
