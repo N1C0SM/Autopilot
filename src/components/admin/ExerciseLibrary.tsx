@@ -362,28 +362,37 @@ const ExerciseFormDialog = ({
                 </div>
               )}
               <div className="flex-1 space-y-1.5">
-                <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
-                  {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
-                  {form.image_url ? "Cambiar imagen" : "Subir imagen"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={imgUploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadImage(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
+                    {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+                    {form.image_url ? "Cambiar imagen" : "Subir imagen"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={imgUploading}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadImage(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  {initial?.id && (
+                    <Button type="button" variant="secondary" size="sm" onClick={generateImageWithAI} disabled={imgAiLoading} className="h-[30px] gap-1.5 px-3 text-xs">
+                      {imgAiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      {form.image_url ? "Otra foto con IA" : "Generar foto con IA"}
+                    </Button>
+                  )}
+                </div>
                 {form.image_url && (
                   <button type="button" onClick={() => set("image_url", null)} className="block text-[10px] text-muted-foreground hover:text-destructive">
                     Quitar imagen
                   </button>
                 )}
-                <p className="text-[10px] text-muted-foreground">Se mostrará al usuario en su plan de entrenamiento.</p>
+                <p className="text-[10px] text-muted-foreground">Se mostrará al usuario en su plan. Las fotos generadas con IA usan siempre el mismo estilo que los vídeos.</p>
               </div>
+
             </div>
           </div>
 
