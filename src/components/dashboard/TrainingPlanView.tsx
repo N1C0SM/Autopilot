@@ -301,11 +301,20 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
       {/* Ficha de técnica del ejercicio */}
       <Sheet open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
         <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
-          <div className="aspect-[4/3] w-full bg-gradient-to-b from-secondary/70 to-secondary/30 overflow-hidden">
-            {detail?.image && (
-              <img src={detail.image} alt={detail.name} className="w-full h-full object-cover" />
+          <div className="w-full overflow-hidden bg-black">
+            {detail?.video ? (
+              <VideoEmbed url={detail.video} className="rounded-none" />
+            ) : detail?.image ? (
+              <div className="aspect-video w-full">
+                <img src={detail.image} alt={detail.name} className="h-full w-full object-cover" />
+              </div>
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center bg-gradient-to-b from-secondary/70 to-secondary/30">
+                <Video className="h-7 w-7 text-muted-foreground/50" />
+              </div>
             )}
           </div>
+
           <div className="p-4 pb-8 space-y-4">
             <SheetHeader className="p-0 space-y-0 text-left">
               <SheetTitle className="font-display text-xl font-bold">{detail?.name}</SheetTitle>
