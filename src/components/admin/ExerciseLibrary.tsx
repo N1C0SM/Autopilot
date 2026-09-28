@@ -434,11 +434,8 @@ const ExerciseFormDialog = ({
             <p className="text-[10px] text-muted-foreground">
               Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento.
             </p>
-            {form.video_url && toEmbedUrl(form.video_url) && (
-              <div className="rounded-lg overflow-hidden border border-border">
-                <VideoEmbed url={form.video_url} />
-              </div>
-            )}
+            <p className="text-[10px] text-muted-foreground">El vídeo se ve arriba, en la cabecera del ejercicio.</p>
+
           </div>
 
           {/* Alternative exercise */}
