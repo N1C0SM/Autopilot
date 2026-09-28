@@ -181,14 +181,44 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                   const isVideoOpen = expandedVideos[videoKey] ?? false;
 
                   return (
-                    <div key={videoKey} className="rounded-lg bg-secondary/20 p-2.5 sm:p-3">
+                    <div
+                      key={videoKey}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        setDetail({
+                          name: ex.name,
+                          image,
+                          video,
+                          series: ex.series,
+                          reps: ex.reps,
+                          rest: ex.rest,
+                          category,
+                          type: exerciseType,
+                        })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDetail({
+                            name: ex.name,
+                            image,
+                            video,
+                            series: ex.series,
+                            reps: ex.reps,
+                            rest: ex.rest,
+                            category,
+                            type: exerciseType,
+                          });
+                        }
+                      }}
+                      className="rounded-lg bg-secondary/20 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-secondary/30 active:bg-secondary/40"
+                    >
                       <div className="flex items-center gap-2.5 sm:gap-3">
                         {image ? (
                           <img src={image} alt={ex.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0" />
                         ) : (
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-                            <Dumbbell className="w-4 h-4 text-muted-foreground" />
-                          </div>
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-b from-secondary/70 to-secondary/30 shrink-0" />
                         )}
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-[13px] sm:text-sm truncate">{ex.name}</p>
@@ -199,7 +229,10 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                         {video ? (
                           <button
                             type="button"
-                            onClick={() => setExpandedVideos((current) => ({ ...current, [videoKey]: !isVideoOpen }))}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedVideos((current) => ({ ...current, [videoKey]: !isVideoOpen }));
+                            }}
                             className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
                           >
                             <Video className="h-3.5 w-3.5" />
@@ -210,6 +243,7 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                             href={exerciseVideoSearchUrl(ex.name, category)}
                             target="_blank"
                             rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
                           >
                             <Video className="h-3.5 w-3.5" />
