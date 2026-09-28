@@ -347,22 +347,12 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                 )}
               </div>
             )}
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Técnica</p>
-              {detail?.video ? (
-                <VideoEmbed url={detail.video} />
-              ) : (
-                <a
-                  href={exerciseVideoSearchUrl(detail?.name ?? "", detail?.category ?? undefined)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/15"
-                >
-                  <Video className="h-4 w-4" />
-                  Buscar vídeo de la técnica
-                </a>
-              )}
-            </div>
+            {!detail?.video && (
+              <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+                El vídeo de la técnica de este ejercicio todavía no está disponible. Pregunta a tu entrenador por el chat.
+              </p>
+            )}
+
           </div>
         </SheetContent>
       </Sheet>
