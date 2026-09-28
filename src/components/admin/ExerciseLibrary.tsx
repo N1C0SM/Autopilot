@@ -378,8 +378,23 @@ const ExerciseFormDialog = ({
               placeholder="YouTube, Vimeo o MP4 directo (https://...)"
               className="h-9"
             />
+            {initial?.id ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={generateVideoWithAI}
+                disabled={genLoading}
+                className="gap-1.5 self-start"
+              >
+                {genLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                {genStatus || (form.video_url ? "Generar otro vídeo con IA" : "Generar vídeo con IA")}
+              </Button>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">Guarda el ejercicio y después podrás generar su vídeo con IA.</p>
+            )}
             <p className="text-[10px] text-muted-foreground">
-              Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo. Se mostrará al usuario en su entrenamiento.
+              Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento.
             </p>
             {form.video_url && toEmbedUrl(form.video_url) && (
               <div className="rounded-lg overflow-hidden border border-border">
