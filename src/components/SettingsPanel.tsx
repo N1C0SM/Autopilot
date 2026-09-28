@@ -306,7 +306,7 @@ const SettingsPanel = () => {
   return (
     <div className="w-full space-y-8 flex flex-col">
       {/* Workout preferences */}
-      <div className="order-2 bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-3 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-2">
           <Timer className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Tu forma de entrenar</h2>
@@ -400,7 +400,7 @@ const SettingsPanel = () => {
       </div>
 
       {/* Subscription */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-5 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-6">
           <CreditCard className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Suscripción</h2>
@@ -473,7 +473,7 @@ const SettingsPanel = () => {
       </div>
 
       {/* Calendar */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-6 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-4">
           <CalendarClock className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Google Calendar</h2>
@@ -523,7 +523,7 @@ const SettingsPanel = () => {
       </div>
 
       {/* Password */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-4 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-6">
           <Lock className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Cambiar contraseña</h2>
@@ -539,7 +539,7 @@ const SettingsPanel = () => {
 
       {/* Onboarding data */}
       {hasOnboarding && (
-        <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+        <div className="order-2 bg-card rounded-2xl p-6 border border-border card-shadow">
           <div className="flex items-center gap-2 mb-6">
             <ClipboardList className="w-5 h-5 text-primary" />
             <h2 className="font-bold font-display text-lg">Tus datos</h2>
@@ -579,7 +579,7 @@ const SettingsPanel = () => {
       )}
 
       {/* Privacy & Data (RGPD) */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="order-7 bg-card rounded-2xl p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-2">
           <ShieldCheck className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Privacidad y mis datos</h2>
@@ -626,7 +626,7 @@ const SettingsPanel = () => {
       </div>
 
       {/* Danger zone */}
-      <div className="bg-card rounded-2xl p-6 border border-destructive/30 card-shadow">
+      <div className="order-8 bg-card rounded-2xl p-6 border border-destructive/30 card-shadow">
         <h2 className="font-bold font-display text-lg text-destructive mb-4">Zona peligrosa</h2>
         <div className="space-y-4">
           <Separator />
