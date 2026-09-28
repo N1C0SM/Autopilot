@@ -85,8 +85,27 @@ const ExerciseFormDialog = ({
   const [altSearch, setAltSearch] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [imgUploading, setImgUploading] = useState(false);
+  const [imgAiLoading, setImgAiLoading] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [genStatus, setGenStatus] = useState<string | null>(null);
+
+  const generateImageWithAI = async () => {
+    const id = initial?.id;
+    if (!id) return;
+    setImgAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "image" } });
+      if (error) throw new Error(error.message || "Error al generar la foto");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.image_url) throw new Error("No se recibió ninguna foto");
+      set("image_url", data.image_url);
+      toast.success("Foto generada");
+    } catch (e: any) {
+      toast.error(e.message || "Error con IA");
+    }
+    setImgAiLoading(false);
+  };
+
 
   const generateVideoWithAI = async () => {
     const id = initial?.id;
