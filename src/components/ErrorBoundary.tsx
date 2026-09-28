@@ -22,6 +22,8 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
+  }
+
   componentDidMount() {
     try {
       sessionStorage.removeItem("autopilot_auto_reload");
@@ -29,7 +31,6 @@ export default class ErrorBoundary extends Component<Props, State> {
       /* ignorar */
     }
   }
-
 
 
   componentDidCatch(error: Error, info: ErrorInfo) {
