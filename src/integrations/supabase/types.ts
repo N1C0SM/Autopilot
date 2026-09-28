@@ -1804,14 +1804,6 @@ export type Database = {
           user_id: string
         }[]
       }
-      trainer_resign: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      trainer_update_own_profile: {
-        Args: { _display_name: string; _photo_url: string; _visible: boolean }
-        Returns: undefined
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
