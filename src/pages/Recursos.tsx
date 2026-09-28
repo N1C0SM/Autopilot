@@ -138,17 +138,17 @@ const Recursos = () => {
       </Helmet>
 
       <header className="app-chrome sticky top-0 z-40 border-b">
-        <div className="container mx-auto max-w-5xl flex items-center justify-between h-14 px-4">
+        <div className="container mx-auto max-w-7xl flex items-center justify-between h-14 px-4">
           {user && <SidebarTrigger />}
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-          <span className="font-display font-bold text-gradient">Recursos</span>
+          <span className="font-display font-bold text-gradient">{"\n"}</span>
           <span className="w-16" />
         </div>
       </header>
 
-      <main className="container mx-auto max-w-5xl px-4 py-10 space-y-16">
+      <main className="container mx-auto max-w-7xl px-4 py-10 space-y-16">
         <div className="text-center max-w-xl mx-auto">
           <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-2">Biblioteca</p>
           <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
