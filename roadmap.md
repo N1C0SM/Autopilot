@@ -16,6 +16,6 @@
 - [x] Foto y vídeo con IA coherentes (mismo estilo), vídeo como hero y miniatura junto al nombre; nada de YouTube en usuario
 - [x] Nunca mostrar pantalla de error al usuario: fallos silenciosos y recuperación automática
 
-- [ ] Revisar fallo al abrir el usuario propio (N1C0) desde /admin
+- [x] Revisar fallo al abrir el usuario propio (N1C0) desde /admin: faltaba su onboarding; ahora se le pide al entrar
 - [x] Foto con IA verificada (funciona con cuenta admin) + miniatura junto al nombre en la lista admin
 - [x] No repetir el vídeo debajo si ya está en el hero; al pasar el ratón sobre la portada, reproducir el vídeo
