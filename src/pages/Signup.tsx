@@ -157,7 +157,7 @@ const Signup = () => {
           <h1 className="text-2xl font-bold font-display mt-6 mb-2">Crea tu cuenta</h1>
           <p className="text-muted-foreground text-sm">
             {isFree
-              ? "Acceso completo por invitación"
+              ? "Crea tu cuenta gratis y prueba una sesión desde el móvil"
               : fromQuiz
               ? "Último paso para desbloquear tu plan"
               : fromScan

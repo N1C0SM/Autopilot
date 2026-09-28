@@ -17,7 +17,6 @@ import { TIERS } from "@/config/tiers";
 // Bajo el fold → lazy. No bloquea el render inicial de la landing.
 const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
 const PricingTiers = lazy(() => import("@/components/PricingTiers"));
-const PremiumTransformation = lazy(() => import("@/components/PremiumTransformation"));
 import LandingConversionBento from "@/components/LandingConversionBento";
 
 const SectionFallback = () => <div className="min-h-[200px]" aria-hidden />;
@@ -32,7 +31,7 @@ import {
 const faqs = [
   { q: "¿El análisis inicial es gratis?", a: "Sí. El AI Physique Scan es un análisis inicial 100% gratis, sin tarjeta y sin necesidad de crear una cuenta." },
   { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. El tiempo del análisis puede variar; el plan y el seguimiento empiezan cuando eliges un plan con entrenador." },
-  { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo y Transformación." },
+  { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo." },
   { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
   { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
   { q: "¿Quién prepara y ajusta mi plan?", a: "Un entrenador real. La IA solo sirve como herramienta de apoyo para el análisis inicial; no diseña tu plan, no lo reorganiza y no responde a tus mensajes." },
@@ -54,7 +53,6 @@ const Index = () => {
   const [trainer, setTrainer] = useState({ trainer_name: "Nicolás", trainer_photo_url: "", trainer_bio: "" });
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
-  const [transformationSlots, setTransformationSlots] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
   const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
@@ -379,6 +377,16 @@ const Index = () => {
               </Suspense>
             </ScrollReveal>
 
+            <ScrollReveal delay={0.15}>
+              <div className="mx-auto mt-8 max-w-2xl border-t border-border pt-6 text-center">
+                <p className="text-sm font-semibold">¿Quieres probar la app antes de hablar de planes?</p>
+                <p className="mt-1 text-xs text-muted-foreground">Crea una cuenta gratis, completa tu perfil y prueba una sesión desde el móvil.</p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/signup?free=true")}>
+                  Crear cuenta gratis <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </ScrollReveal>
+
             {/* GARANTÍA — línea única (antes 3 tarjetas de "7 días gratis") */}
             <ScrollReveal delay={0.15}>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
@@ -389,11 +397,6 @@ const Index = () => {
             </ScrollReveal>
           </div>
         </section>
-
-        {/* PREMIUM TRANSFORMATION */}
-        <Suspense fallback={<SectionFallback />}>
-          <PremiumTransformation onSelect={selectPlan} availableSlots={transformationSlots} />
-        </Suspense>
 
         {/* RECURSOS — guías y recomendaciones reales del administrador */}
         {((sections.show_ebooks && ebooks.length > 0) || (sections.show_recommendations && recommendations.length > 0)) && (
