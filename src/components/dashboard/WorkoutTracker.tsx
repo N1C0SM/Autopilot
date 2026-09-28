@@ -852,16 +852,11 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                             )}
                           </div>
                         ) : (
-                          <a
-                            href={exerciseVideoSearchUrl(ex.name, exerciseCategory)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
-                          >
-                            <Video className="h-3.5 w-3.5" />
-                            Ver vídeo de técnica
-                          </a>
+                          <p className="mb-2 rounded-md bg-secondary/40 px-2 py-1.5 text-[11px] text-muted-foreground">
+                            Vídeo de técnica no disponible todavía.
+                          </p>
                         )}
+
 
                         {/* Previous session hint */}
                         {prevSets && prevSets.length > 0 && (
