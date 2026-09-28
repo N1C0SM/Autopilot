@@ -17,3 +17,5 @@
 - [x] Nunca mostrar pantalla de error al usuario: fallos silenciosos y recuperación automática
 
 - [ ] Revisar fallo al abrir el usuario propio (N1C0) desde /admin
+- [ ] Foto con IA no funciona: arreglar edge function + miniatura junto al nombre en la lista admin
+- [ ] No repetir el vídeo debajo si ya está en el hero; al pasar el ratón sobre la portada, reproducir el vídeo
