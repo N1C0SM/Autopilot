@@ -510,7 +510,9 @@ const Dashboard = () => {
           </header>
 
           <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 overflow-y-auto">
-            {pageContent}
+            <div className="max-w-7xl mx-auto w-full">
+              {pageContent}
+            </div>
           </main>
         </div>
       </div>
