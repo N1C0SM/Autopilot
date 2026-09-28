@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ReactNode } from "react";
 import MobileHeader from "./MobileHeader";
 import MobileTabBar, { MobileTab } from "./MobileTabBar";
