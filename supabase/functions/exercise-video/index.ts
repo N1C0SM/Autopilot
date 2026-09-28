@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) return json({ error: "Forbidden" }, 403);
 
-    const { exercise_id: exerciseId, action } = await req.json().catch(() => ({}) as any));
+    const { exercise_id: exerciseId, action } = await req.json().catch(() => ({}) as any);
     if (!exerciseId) return json({ error: "Falta el ejercicio" }, 400);
     if (action !== "create" && action !== "check") return json({ error: "Acción no válida" }, 400);
 
