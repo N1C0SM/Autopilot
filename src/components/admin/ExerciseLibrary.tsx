@@ -195,13 +195,33 @@ const ExerciseFormDialog = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        {/* Hero: vídeo del ejercicio arriba del todo */}
+        <div className="-mx-6 -mt-6 mb-1 overflow-hidden border-b border-border bg-black">
+          {form.video_url && toEmbedUrl(form.video_url) ? (
+            <VideoEmbed url={form.video_url} className="rounded-none" />
+          ) : form.image_url ? (
+            <div className="aspect-video w-full">
+              <img src={form.image_url} alt="" className="h-full w-full object-cover" />
+            </div>
+          ) : (
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-secondary/60 to-secondary/20">
+              <Video className="h-7 w-7 text-muted-foreground/50" />
+              <p className="text-[11px] text-muted-foreground">Sin vídeo de técnica todavía</p>
+            </div>
+          )}
+        </div>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Dumbbell className="w-5 h-5 text-primary" />
+            {form.image_url ? (
+              <img src={form.image_url} alt="" className="h-8 w-8 shrink-0 rounded-lg border border-border object-cover" />
+            ) : (
+              <Dumbbell className="w-5 h-5 text-primary" />
+            )}
             {initial ? "Editar ejercicio" : "Nuevo ejercicio"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-5 pt-2">
+
           {/* Basic info */}
           <div className="space-y-3">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Información básica</p>
