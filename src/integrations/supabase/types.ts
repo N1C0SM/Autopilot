@@ -1836,7 +1836,12 @@ export type Database = {
         Args: { _email: string }
         Returns: string
       }
+      trainer_resign: { Args: never; Returns: undefined }
       trainer_unassign_user: { Args: { _user_id: string }; Returns: undefined }
+      trainer_update_own_profile: {
+        Args: { _display_name: string; _photo_url: string; _visible: boolean }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "trainer"
