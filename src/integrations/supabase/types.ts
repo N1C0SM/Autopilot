@@ -823,6 +823,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_public: boolean
           avatar_url: string | null
           created_at: string
           cycle_start_date: string | null
@@ -830,8 +831,10 @@ export type Database = {
           id: string
           lifecycle_emails_sent: string[]
           name: string | null
+          name_public: boolean
           payment_status: string
           plan_status: string
+          progress_public: boolean
           referral_code: string | null
           referred_by: string | null
           renewal_decision: string | null
@@ -849,6 +852,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_public?: boolean
           avatar_url?: string | null
           created_at?: string
           cycle_start_date?: string | null
@@ -856,8 +860,10 @@ export type Database = {
           id?: string
           lifecycle_emails_sent?: string[]
           name?: string | null
+          name_public?: boolean
           payment_status?: string
           plan_status?: string
+          progress_public?: boolean
           referral_code?: string | null
           referred_by?: string | null
           renewal_decision?: string | null
@@ -875,6 +881,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_public?: boolean
           avatar_url?: string | null
           created_at?: string
           cycle_start_date?: string | null
@@ -882,8 +889,10 @@ export type Database = {
           id?: string
           lifecycle_emails_sent?: string[]
           name?: string | null
+          name_public?: boolean
           payment_status?: string
           plan_status?: string
+          progress_public?: boolean
           referral_code?: string | null
           referred_by?: string | null
           renewal_decision?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name_public boolean NOT NULL DEFAULT false, ADD COLUMN IF NOT EXISTS avatar_public boolean NOT NULL DEFAULT false, ADD COLUMN IF NOT EXISTS progress_public boolean NOT NULL DEFAULT false;
