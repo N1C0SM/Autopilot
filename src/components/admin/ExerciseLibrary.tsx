@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2, ImagePlus } from "lucide-react";
 import type { Exercise } from "@/types/training";
 import {
   MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
@@ -84,6 +84,23 @@ const ExerciseFormDialog = ({
   const [form, setForm] = useState<Partial<Exercise>>({});
   const [altSearch, setAltSearch] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [imgUploading, setImgUploading] = useState(false);
+
+  const uploadImage = async (file: File) => {
+    setImgUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `exercise-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
+      set("image_url", data.publicUrl);
+      toast.success("Imagen subida");
+    } catch (e: any) {
+      toast.error(e.message || "Error al subir la imagen");
+    }
+    setImgUploading(false);
+  };
 
   useEffect(() => {
     if (open) {
