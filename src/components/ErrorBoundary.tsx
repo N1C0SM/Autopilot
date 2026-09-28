@@ -69,6 +69,6 @@ export default class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    return <div key={this.state.retryKey} className="contents">{this.props.children}</div>;
+    return <Fragment key={this.state.retryKey}>{this.props.children}</Fragment>;
   }
 }
