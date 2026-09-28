@@ -12,6 +12,7 @@ import {
   PRIORITIES, STIMULUS_TYPES, LOAD_LEVELS, FATIGUE_LEVELS, RECOMMENDED_ORDERS, SKILL_TAGS,
 } from "@/types/training";
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
+import ExerciseMedia from "@/components/ExerciseMedia";
 
 const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS, "Otro"] as const;
 
