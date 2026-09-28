@@ -341,7 +341,7 @@ const Scan = () => {
       .from("profiles")
       .select("payment_status, email, name")
       .eq("user_id", user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         setIsPaid(data?.payment_status === "paid");
         setUserEmail(data?.email ?? user.email ?? null);

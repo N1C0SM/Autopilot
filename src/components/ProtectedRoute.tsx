@@ -19,7 +19,7 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       .from("profiles")
       .select("plan_status")
       .eq("user_id", user.id)
-      .single()
+      .maybeSingle()
       .then(({ data }) => {
         setPlanStatus(data?.plan_status ?? null);
         setChecking(false);

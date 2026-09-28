@@ -35,10 +35,29 @@ import TrainingPlanForm from "./TrainingPlanForm";
 import { impersonateUser } from "@/lib/impersonate";
 import OnboardingEditor from "./OnboardingEditor";
 
-const TIER_OPTIONS = [
-  { value: "training", label: "Entrenamiento" },
-  { value: "full", label: "Completo" },
-  { value: "transform", label: "Transformación 12 semanas" },
+type TierDetails = { price: number; interval: string; tagline: string; features: readonly string[] };
+
+const TIER_OPTIONS: { value: string; label: string; fallback: TierDetails }[] = [
+  {
+    value: "training",
+    label: "Entrenamiento",
+    fallback: { price: 29, interval: "month", tagline: "Plan de entrenamiento con seguimiento.", features: [] },
+  },
+  {
+    value: "full",
+    label: "Completo",
+    fallback: { price: 49, interval: "month", tagline: "Entrenamiento y nutrición con seguimiento.", features: [] },
+  },
+  {
+    value: "transform",
+    label: "Transformación 12 semanas",
+    fallback: {
+      price: 299,
+      interval: "one_time",
+      tagline: "Acompañamiento intensivo de 12 semanas.",
+      features: ["Entrenamiento y nutrición", "Seguimiento cercano del entrenador"],
+    },
+  },
 ];
 
 interface OnboardingData {
@@ -117,11 +136,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     const fetchData = async () => {
       const currentRequest = ++requestId;
       const [{ data: onb }, { data: roleData }, { data: trainerRoleData }, { data: tp }, { data: np }] = await Promise.all([
-        supabase.from("onboarding").select("*").eq("user_id", profile.user_id).single(),
+        supabase.from("onboarding").select("*").eq("user_id", profile.user_id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "admin").maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "trainer" as any).maybeSingle(),
-        supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).single(),
-      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).single(),
+        supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).maybeSingle(),
+      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).maybeSingle(),
       ]);
       if (!active || currentRequest !== requestId) return;
       setOnboarding(onb as OnboardingData | null);
@@ -160,8 +179,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "user_roles", filter: `user_id=eq.${profile.user_id}` }, scheduleRefresh)
       .subscribe((status) => {
+        // Una caída momentánea del canal no debe alarmar: reintentamos en silencio.
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-          toast.error("No se pudieron conectar las actualizaciones del cliente.");
+          console.warn("[UserDetail] realtime status", status);
+          scheduleRefresh();
         }
       });
 
@@ -320,8 +341,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
     // Reload the plan data
     const [{ data: tp }, { data: np }] = await Promise.all([
-      supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).single(),
-      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).single(),
+      supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).maybeSingle(),
+      supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).maybeSingle(),
     ]);
 
     if (tp?.workouts_json) {
@@ -527,7 +548,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   {TIER_OPTIONS.map((tier) => {
                     const selected = effectiveTier === tier.value;
                     const isCurrent = hasAccess && currentTier === tier.value;
-                    const details = TIERS[tier.value];
+                    // Hay planes (como Transformación) que no están en el catálogo: usamos su copia de respaldo.
+                    const details: TierDetails =
+                      (TIERS as unknown as Record<string, TierDetails | undefined>)[tier.value] ?? tier.fallback;
                     return (
                       <button
                         key={tier.value}

@@ -50,6 +50,18 @@ const MealsList = ({ meals, macros }: Props) => {
   const C = 2 * Math.PI * R;
   const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
+  // Sin comidas ni objetivos: avisamos con calma en vez de mostrar una pantalla vacía.
+  if (!meals.length && kcal <= 0) {
+    return (
+      <div className="rounded-3xl bg-card border border-border p-6 text-center">
+        <div className="font-semibold mb-1">Tu plan de nutrición está en preparación</div>
+        <p className="text-sm text-muted-foreground">
+          En cuanto tu entrenador lo cierre lo verás aquí con tus calorías, macros y comidas del día.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {macros && kcal > 0 && (

@@ -82,8 +82,8 @@ const SettingsPanel = () => {
     if (!user) return;
     const fetch = async () => {
       const [{ data: profile }, { data: onb }] = await Promise.all([
-        supabase.from("profiles").select("name, email, avatar_url, subscription_status, subscription_tier, subscription_end, payment_status, name_public, avatar_public, progress_public").eq("user_id", user.id).single(),
-        supabase.from("onboarding").select("*").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("name, email, avatar_url, subscription_status, subscription_tier, subscription_end, payment_status, name_public, avatar_public, progress_public").eq("user_id", user.id).maybeSingle(),
+        supabase.from("onboarding").select("*").eq("user_id", user.id).maybeSingle(),
       ]);
 
       if (profile) {

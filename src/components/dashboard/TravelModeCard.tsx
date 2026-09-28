@@ -23,7 +23,7 @@ const TravelModeCard = ({ userId }: Props) => {
         .from("profiles")
         .select("travel_mode_until, travel_equipment")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
       if (data?.travel_mode_until) {
         const endDate = new Date(data.travel_mode_until);
         if (endDate >= new Date(new Date().toDateString())) {
