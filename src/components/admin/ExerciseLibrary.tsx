@@ -687,7 +687,13 @@ const ExerciseLibrary = () => {
                   key={ex.id}
                   className="group flex items-center gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
                 >
+                  {ex.image_url ? (
+                    <img src={ex.image_url} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-border/70 object-cover" />
+                  ) : (
+                    <div className="h-10 w-10 shrink-0 rounded-lg bg-gradient-to-b from-secondary/70 to-secondary/30" />
+                  )}
                   <div className="min-w-0 flex-1">
+
                     <p className="font-medium text-sm truncate">{ex.name}</p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {[ex.muscle_group, ex.exercise_type].filter(Boolean).map((category) => (
