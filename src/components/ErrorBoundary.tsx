@@ -30,8 +30,20 @@ export default class ErrorBoundary extends Component<Props, State> {
       this.timer = window.setTimeout(() => {
         this.setState((s) => ({ error: null, retryKey: s.retryKey + 1, attempts: s.attempts + 1 }));
       }, 250);
+      return;
+    }
+    // Último recurso: una sola recarga automática, sin pantalla de error ni botones.
+    try {
+      const reloads = Number(sessionStorage.getItem("autopilot_auto_reload") || "0");
+      if (reloads < 1) {
+        sessionStorage.setItem("autopilot_auto_reload", String(reloads + 1));
+        window.setTimeout(() => window.location.reload(), 400);
+      }
+    } catch {
+      /* sin sessionStorage no reintentamos */
     }
   }
+
 
   componentWillUnmount() {
     if (this.timer) window.clearTimeout(this.timer);
