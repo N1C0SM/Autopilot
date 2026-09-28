@@ -43,7 +43,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
           requests.push(
             supabase
               .from("exercises")
-              .select("id, name, muscle_group, exercise_type, video_url")
+              .select("id, name, muscle_group, exercise_type, video_url, image_url")
               .in("id", ids),
           );
         }
@@ -51,7 +51,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
           requests.push(
             supabase
               .from("exercises")
-              .select("id, name, muscle_group, exercise_type, video_url")
+              .select("id, name, muscle_group, exercise_type, video_url, image_url")
               .in("name", names),
           );
         }
@@ -69,6 +69,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
               muscle_group: row.muscle_group,
               exercise_type: row.exercise_type,
               video_url: row.video_url,
+              image_url: row.image_url,
             };
             index.byId[item.id] = item;
             index.byName[item.name] = item;
