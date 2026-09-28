@@ -70,7 +70,17 @@ const Dashboard = () => {
   const [macros, setMacros] = useState<Macros | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState<MobileTab>("home");
+  const [section, setSectionState] = useState<MobileTab>(() => {
+    try {
+      const saved = sessionStorage.getItem("autopilot_section");
+      if (saved && ["home", "training", "nutrition", "chat", "progress", "settings"].includes(saved)) return saved as MobileTab;
+    } catch { /* storage no disponible */ }
+    return "home";
+  });
+  const setSection = useCallback((s: MobileTab) => {
+    setSectionState(s);
+    try { sessionStorage.setItem("autopilot_section", s); } catch { /* storage no disponible */ }
+  }, []);
   const [profileCreatedAt, setProfileCreatedAt] = useState<string>("");
   const [completedDays, setCompletedDays] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
