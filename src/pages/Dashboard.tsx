@@ -394,15 +394,13 @@ const Dashboard = () => {
 
       {section === "chat" && (
         <div className="w-full">
-          <div className="flex justify-end mb-1.5">
-            <Button size="sm" variant="outline" onClick={requestVideoCall} className="gap-1.5 shrink-0">
-              <Video className="w-3.5 h-3.5" />
-              {paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Videollamada"}
-            </Button>
-          </div>
           {user && (
             <Suspense fallback={<SectionFallback />}>
-              <Chat conversationUserId={user.id} />
+              <Chat
+                conversationUserId={user.id}
+                onRequestVideoCall={requestVideoCall}
+                callLabel={paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Videollamada"}
+              />
             </Suspense>
           )}
         </div>
