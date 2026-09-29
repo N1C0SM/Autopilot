@@ -29,3 +29,9 @@ No cambia automáticamente a gratis cuentas antiguas con cliente/pago Stripe o s
 La última prueba crea una base de datos desechable con roles y políticas. Verifica registro gratuito, imposibilidad de autoactivarse, edición legítima de perfil, bloqueo de chat gratis, acceso de prueba a chat, nutrición por plan y caducidad. No conecta a producción.
 
 También se verificó en navegador con respuestas de prueba aisladas: rutina accesible en Gratis, oferta y checkout de Entrenamiento desde Chat, chat accesible en planes de pago y nutrición exclusiva de Completo. Esto no sustituye una prueba integral con Stripe y las funciones desplegadas.
+
+## Trabajo desde VS Code, sin el asistente de Lovable
+
+El codigo se modifica, prueba y sube desde este repositorio. En VS Code, abre **Terminal > Ejecutar tarea > Autopilot: iniciar sesion de despliegue** para iniciar sesion en Supabase en tu propio ordenador. No compartas tokens en chats ni los guardes en Git. Despues ejecuta **Autopilot: comprobar acceso al servidor**: el proyecto `enebrcdrdnfkyduzyrzm` debe aparecer. Si no aparece, esa cuenta no tiene acceso al servidor y no se debe desplegar a otro proyecto.
+
+Estas tareas no publican ni modifican datos. Una vez verificado el acceso, sigue la activacion coordinada indicada arriba; iniciar sesion o hacer commit no despliega las funciones ni aplica la migracion.
