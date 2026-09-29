@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, CheckCircle, Mail, Apple } from "lucide-react";
+import { Loader2, Mail, Apple, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
+import { authRedirect } from "@/lib/authRedirect";
 import { signInWithApple } from "@/lib/nativeAuth";
 
 const Signup = () => {
@@ -18,11 +19,18 @@ const Signup = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [nameTaken, setNameTaken] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
-  const [checkingName, setCheckingName] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const emailCheck = useRef(0);
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown(value => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
   const referralCode = searchParams.get("ref") || "";
   const isFree = searchParams.get("free") === "true";
   const fromQuiz = searchParams.get("from") === "quiz";
@@ -64,25 +72,23 @@ const Signup = () => {
     } catch {}
   }, [fromScan]);
 
-  const checkAvailability = async (field: "name" | "email", value: string) => {
+  const checkEmail = async (value: string) => {
     if (!value.trim()) return;
-    const setter = field === "name" ? setCheckingName : setCheckingEmail;
-    const takenSetter = field === "name" ? setNameTaken : setEmailTaken;
-    setter(true);
+    const requestId = ++emailCheck.current;
+    setCheckingEmail(true);
     try {
-      const { data } = await supabase.functions.invoke("check-availability", {
-        body: { [field]: value.trim() },
-      });
-      takenSetter(field === "name" ? data?.nameTaken : data?.emailTaken);
+      const { data } = await supabase.functions.invoke("check-availability", { body: { email: value.trim() } });
+      if (requestId === emailCheck.current) setEmailTaken(!!data?.emailTaken);
     } catch {
-      // ignore
+      // Availability is advisory; signup still validates the email on the server.
+    } finally {
+      if (requestId === emailCheck.current) setCheckingEmail(false);
     }
-    setter(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (nameTaken || emailTaken) {
+    if (emailTaken) {
       toast.error("Corrige los campos marcados antes de continuar");
       return;
     }
@@ -92,39 +98,39 @@ const Signup = () => {
     }
     setLoading(true);
 
-    // Final server-side check
-    const { data: avail } = await supabase.functions.invoke("check-availability", {
-      body: { name: name.trim(), email: email.trim() },
-    });
-    if (avail?.nameTaken) {
-      setNameTaken(true);
-      toast.error("Ese nombre de usuario ya está en uso");
-      setLoading(false);
-      return;
-    }
-    if (avail?.emailTaken) {
-      setEmailTaken(true);
-      toast.error("Ese correo ya está registrado");
-      setLoading(false);
-      return;
-    }
+    try {
+      // Final server-side check
+      const { data: avail } = await supabase.functions.invoke("check-availability", {
+        body: { email: email.trim() },
+      });
+      if (avail?.emailTaken) {
+        setEmailTaken(true);
+        toast.error("Ese correo ya está registrado");
+        setLoading(false);
+        return;
+      }
 
-    const { error } = await signUp(email, password, {
-      display_name: name.trim(),
-      referral_code: referralCode,
-      is_free: isFree ? "true" : "false",
-      selected_plan: selectedPlan || "",
-    });
-    if (error) {
-      toast.error(error.message);
-      setLoading(false);
-      return;
-    }
+      const { error } = await signUp(email.trim(), password, {
+        display_name: name.trim(),
+        referral_code: referralCode,
+        is_free: isFree ? "true" : "false",
+        selected_plan: selectedPlan || "",
+      });
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
 
-    // Email verification required — show confirmation screen
-    track("register", { from: fromQuiz ? "quiz" : fromScan ? "scan" : "direct", plan: isFree ? "free" : selectedPlan || undefined });
-    setEmailSent(true);
-    setLoading(false);
+      // Email verification required — show confirmation screen
+      track("register", { from: fromQuiz ? "quiz" : fromScan ? "scan" : "direct", plan: isFree ? "free" : selectedPlan || undefined });
+      setResendCooldown(60);
+      setEmailSent(true);
+    } catch {
+      toast.error("No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (emailSent) {
@@ -137,7 +143,18 @@ const Signup = () => {
             Te hemos enviado un enlace de verificación a <span className="text-foreground font-medium">{email}</span>. 
             Haz clic en él para activar tu cuenta.
           </p>
-          <Link to="/login" className="text-primary hover:underline text-sm block mt-4">Ir a iniciar sesión</Link>
+          <p className="text-xs text-muted-foreground">Revisa también la carpeta de spam. El enlace te llevará a preparar tu rutina.</p>
+          <Button variant="outline" disabled={resending || resendCooldown > 0} onClick={async () => {
+            setResending(true);
+            try {
+              const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: authRedirect("/onboarding") } });
+              if (error) toast.error("No se ha podido reenviar. Espera un momento y vuelve a intentarlo.");
+              else { setResendCooldown(60); toast.success("Enlace reenviado. Revisa tu correo."); }
+            } catch { toast.error("No se ha podido reenviar el correo."); }
+            finally { setResending(false); }
+          }}>{resending ? "Reenviando…" : resendCooldown > 0 ? `Reenviar en ${resendCooldown}s` : "Reenviar enlace"}</Button>
+          <button type="button" className="block mx-auto text-sm underline underline-offset-4" onClick={() => setEmailSent(false)}>Corregir mi correo</button>
+          <Link to="/login" className="text-primary hover:underline text-sm block mt-4">Ya lo he verificado: iniciar sesión</Link>
         </div>
       </div>
     );
@@ -147,10 +164,10 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
-        <meta name="description" content="Crea tu cuenta de Autopilot y empieza con 7 días gratis tu plan personalizado de entrenamiento y nutrición." />
+        <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta. Entrenador opcional." />
         <link rel="canonical" href="https://autopilotplan.com/signup" />
         <meta property="og:title" content="Crear cuenta · Autopilot" />
-        <meta property="og:description" content="7 días gratis. Plan personalizado de entrenamiento y nutrición con seguimiento real." />
+        <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Añade seguimiento de entrenador cuando lo necesites." />
         <meta property="og:url" content="https://autopilotplan.com/signup" />
       </Helmet>
       <div className="w-full max-w-md">
@@ -216,20 +233,17 @@ const Signup = () => {
 
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-8 border border-border card-shadow space-y-5">
           <div>
-            <Label htmlFor="name">Nombre de usuario</Label>
+            <Label htmlFor="name">Tu nombre</Label>
             <Input
               id="name"
               type="text"
               value={name}
-              onChange={(e) => { setName(e.target.value); setNameTaken(false); }}
-              onBlur={() => checkAvailability("name", name)}
+              onChange={(e) => setName(e.target.value)}
               required
-              className={`mt-1.5 ${nameTaken ? "border-destructive" : ""}`}
-              placeholder="Tu nombre de usuario"
+              className="mt-1.5"
+              autoComplete="given-name"
+              placeholder="Tu nombre"
             />
-            {checkingName && <p className="text-xs text-muted-foreground mt-1">Verificando...</p>}
-            {nameTaken && <p className="text-xs text-destructive mt-1">Este nombre ya está en uso</p>}
-            {name.trim() && !nameTaken && !checkingName && <p className="text-xs text-primary mt-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Disponible</p>}
           </div>
           <div>
             <Label htmlFor="email">Correo electrónico</Label>
@@ -237,8 +251,11 @@ const Signup = () => {
               id="email"
               type="email"
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setEmailTaken(false); }}
-              onBlur={() => checkAvailability("email", email)}
+              onChange={(e) => { emailCheck.current++; setCheckingEmail(false); setEmail(e.target.value); setEmailTaken(false); }}
+              onBlur={() => void checkEmail(email)}
+              autoComplete="email"
+              autoCapitalize="none"
+              spellCheck={false}
               required
               className={`mt-1.5 ${emailTaken ? "border-destructive" : ""}`}
               placeholder="tu@ejemplo.com"
@@ -248,10 +265,13 @@ const Signup = () => {
           </div>
           <div>
             <Label htmlFor="password">Contraseña</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1.5" placeholder="Mínimo 6 caracteres" minLength={6} />
+            <div className="relative mt-1.5">
+              <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pr-12" placeholder="Mínimo 6 caracteres" minLength={6} />
+              <button type="button" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-muted-foreground" onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            </div>
           </div>
 
-          <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading || nameTaken || emailTaken}>
+          <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading || emailTaken}>
             {loading ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Procesando...</>
             ) : (
