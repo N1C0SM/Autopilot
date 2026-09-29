@@ -632,7 +632,7 @@ const SettingsPanel = () => {
         <Button
           variant="outline"
           className="w-full"
-          onClick={async () => { await signOut(); navigate("/"); }}
+          onClick={async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); }}
         >
           <LogOut className="w-4 h-4 mr-2" /> Cerrar sesión
         </Button>

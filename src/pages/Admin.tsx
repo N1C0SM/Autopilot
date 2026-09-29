@@ -136,7 +136,7 @@ const Admin = () => {
     section === "payments" ? "Pagos · Stripe" :
     section === "metrics" ? "Métricas" : "";
 
-  const handleSignOut = () => { signOut(); navigate("/"); };
+  const handleSignOut = async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); };
 
   return (
     <SidebarProvider>

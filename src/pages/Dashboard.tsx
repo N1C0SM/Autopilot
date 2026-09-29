@@ -259,9 +259,10 @@ const Dashboard = () => {
     window.open(data.url, "_blank");
   };
 
-  const handleSignOut = () => {
-    signOut();
-    navigate("/");
+  const handleSignOut = async () => {
+    sessionStorage.removeItem("autopilot_section");
+    await signOut();
+    navigate("/login", { replace: true });
   };
 
   if (loading) {
