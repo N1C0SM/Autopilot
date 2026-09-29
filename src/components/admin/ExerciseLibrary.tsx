@@ -105,7 +105,10 @@ const ExerciseFormDialog = ({
     setImgAiLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "image" } });
-      if (error) throw new Error(error.message || "Error al generar la foto");
+      if (error) {
+        toast.error(await fnErrorMessage(error, "No se pudo generar la foto"));
+        return;
+      }
       if (data?.error) throw new Error(data.error);
       if (!data?.image_url) throw new Error("No se recibió ninguna foto");
       set("image_url", data.image_url);
@@ -113,8 +116,9 @@ const ExerciseFormDialog = ({
       toast.success("Foto generada");
     } catch (e: any) {
       toast.error(e.message || "Error con IA");
+    } finally {
+      setImgAiLoading(false);
     }
-    setImgAiLoading(false);
   };
 
 
@@ -124,14 +128,20 @@ const ExerciseFormDialog = ({
     setGenLoading(true);
     try {
       const start = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "create" } });
-      if (start.error) throw new Error(start.error.message || "Error al iniciar");
+      if (start.error) {
+        toast.error(await fnErrorMessage(start.error, "No se pudo iniciar el vídeo"));
+        return;
+      }
       if (start.data?.error) throw new Error(start.data.error);
       setGenStatus("Generando vídeo…");
       const deadline = Date.now() + 4 * 60 * 1000;
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 6000));
         const check = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "check" } });
-        if (check.error) throw new Error(check.error.message || "Error al comprobar");
+        if (check.error) {
+          toast.error(await fnErrorMessage(check.error, "No se pudo comprobar el vídeo"));
+          return;
+        }
         const d = check.data;
         if (d?.error) throw new Error(d.error);
         if (d?.status === "completed" && d.video_url) {
@@ -149,6 +159,7 @@ const ExerciseFormDialog = ({
       throw new Error("El vídeo está tardando más de lo normal. Cierra y vuelve a abrir el ejercicio en un minuto.");
     } catch (e: any) {
       toast.error(e.message || "Error con IA");
+    } finally {
       setGenStatus(null);
       setGenLoading(false);
     }
