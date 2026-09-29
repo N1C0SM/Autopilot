@@ -1319,6 +1319,12 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_certificates: {
+        Row: { id: string; trainer_profile_id: string; title: string; issuer: string; file_path: string; created_at: string }
+        Insert: { id?: string; trainer_profile_id: string; title: string; issuer: string; file_path: string; created_at?: string }
+        Update: { id?: string; trainer_profile_id?: string; title?: string; issuer?: string; file_path?: string; created_at?: string }
+        Relationships: [{ foreignKeyName: "trainer_certificates_trainer_profile_id_fkey"; columns: ["trainer_profile_id"]; isOneToOne: false; referencedRelation: "trainer_profiles"; referencedColumns: ["id"] }]
+      }
       trainer_profiles: {
         Row: {
           bio: string

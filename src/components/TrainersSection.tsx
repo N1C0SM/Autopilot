@@ -1,152 +1,48 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
-import ScrollReveal from "@/components/ScrollReveal";
-import { User, Sparkles, BadgeCheck, Quote } from "lucide-react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
+import { User } from "lucide-react";
+import CertificateLink from "@/components/CertificateLink";
+import type { Database } from "@/integrations/supabase/types";
 
-interface TrainerCard {
-  id: string;
-  display_name: string;
-  headline: string;
-  bio: string;
-  photo_url: string;
-  specialty: string;
+type Trainer = Database["public"]["Views"]["trainer_profiles_public"]["Row"];
+type Certificate = Database["public"]["Tables"]["trainer_certificates"]["Row"];
+
+export function TrainerPresentation({ trainer, certificates }: { trainer: Trainer; certificates: Certificate[] }) {
+  return <article className="grid gap-6 border-t border-border py-8 sm:grid-cols-[96px_1fr]">
+    {trainer.photo_url ? <img src={trainer.photo_url} alt={trainer.display_name || "Entrenador del equipo"} loading="lazy" className="h-24 w-24 rounded-lg object-cover" /> : <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-secondary"><User className="h-9 w-9 text-muted-foreground" /></div>}
+    <div className="min-w-0 space-y-3">
+      <p className="text-xs uppercase tracking-wider text-primary">Entrenador del equipo</p>
+      <h3 className="font-display text-2xl font-bold break-words">{trainer.display_name || "Equipo de entrenamiento"}</h3>
+      {trainer.specialty && <p className="text-sm text-primary">{trainer.specialty}</p>}
+      {trainer.headline && <p className="font-medium">{trainer.headline}</p>}
+      <p className="text-muted-foreground">{trainer.bio || "Te acompaña con un plan adaptado a tu nivel, tu disponibilidad y tu material."}</p>
+      {certificates.length > 0 && <div className="pt-2"><h4 className="text-sm font-semibold">Formación y certificados</h4><ul className="mt-3 space-y-3">{certificates.map(c => <li key={c.id} className="space-y-1"><p className="text-sm break-words">{c.title} · {c.issuer}</p><CertificateLink path={c.file_path} title={c.title} /></li>)}</ul></div>}
+    </div>
+  </article>;
 }
 
-const TrainersSection = () => {
-  const [trainers, setTrainers] = useState<TrainerCard[]>([]);
-
+export default function TrainersSection() {
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   useEffect(() => {
-    supabase
-      .from("trainer_profiles_public")
-      .select("id, display_name, headline, bio, photo_url, specialty")
-      .eq("visible", true)
-      .order("sort_order", { ascending: true })
-      .then(({ data }) => {
-        if (data) setTrainers(data as TrainerCard[]);
-      });
+    let active = true;
+    void (async () => {
+      const [profiles, documents] = await Promise.all([
+        supabase.from("trainer_profiles_public").select("*").eq("visible", true).order("sort_order"),
+        supabase.from("trainer_certificates").select("*").order("created_at"),
+      ]);
+      if (!active) return;
+      setTrainers(profiles.data || []);
+      setCertificates(documents.data || []);
+    })();
+    return () => { active = false; };
   }, []);
-
-  if (trainers.length === 0) return null;
-
-  return (
-    <section className="relative py-32 px-4 border-t border-border overflow-hidden">
-      {/* Ambient background */}
-      <div className="absolute inset-0 -z-10 opacity-60 pointer-events-none">
-        <div className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px]" />
-        <div className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[140px]" />
-      </div>
-
-      <div className="container mx-auto max-w-6xl">
-        <ScrollReveal>
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 mb-4">
-              <Sparkles className="w-3 h-3 text-primary" />
-              <p className="text-[10px] uppercase tracking-widest text-primary font-semibold">El equipo</p>
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-bold font-display leading-[1.05] tracking-tight">
-              Entrenadores <span className="text-gradient italic font-display">verificados</span>
-            </h2>
-            <p className="text-muted-foreground mt-5 max-w-lg mx-auto text-base sm:text-lg leading-relaxed">
-              Personas reales que preparan tu plan, hablan contigo y lo ajustan cada semana. La IA solo apoya el análisis inicial.
-            </p>
-            <p className="text-sm text-foreground/80 mt-4 max-w-xl mx-auto leading-relaxed">
-              <span className="text-primary font-semibold">Nicolás</span> asigna y supervisa cada caso.{" "}
-              <span className="text-primary font-semibold">Iván</span> se especializa en hipertrofia en gimnasio.{" "}
-              Siempre sabrás con quién trabajas.
-            </p>
-          </div>
-        </ScrollReveal>
-
-        <Carousel
-          opts={{ align: "start", loop: trainers.length > 2 }}
-          plugins={trainers.length > 1 ? [Autoplay({ delay: 5000, stopOnInteraction: true })] : []}
-          className="w-full"
-        >
-          <CarouselContent className="-ml-4">
-            {trainers.map((t, i) => (
-              <CarouselItem key={t.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                  whileHover={{ y: -8 }}
-                  className="group relative h-full rounded-3xl border border-border bg-gradient-to-b from-card via-card/80 to-card/40 overflow-hidden hover:border-primary/50 transition-colors duration-500"
-                >
-                  {/* Hover glow */}
-                  <div className="absolute -top-32 -right-32 w-64 h-64 rounded-full bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-                  {/* Photo cover */}
-                  <div className="relative aspect-[4/5] overflow-hidden">
-                    {t.photo_url ? (
-                      <img
-                        src={t.photo_url}
-                        alt={t.display_name}
-                        loading="lazy"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
-                        <User className="w-20 h-20 text-primary/40" />
-                      </div>
-                    )}
-                    {/* Gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-
-                    {/* Verified badge */}
-                    <div className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 rounded-full bg-background/80 backdrop-blur-md border border-primary/30">
-                      <BadgeCheck className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">Verificado</span>
-                    </div>
-
-                    {/* Name + specialty floating */}
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <div className="font-display font-bold text-xl tracking-tight mb-1.5 leading-tight">
-                        {t.display_name || "Entrenador"}
-                      </div>
-                      {t.specialty && (
-                        <div className="inline-block text-[10px] uppercase tracking-widest text-primary font-semibold px-2.5 py-0.5 rounded-full bg-primary/15 border border-primary/30">
-                          {t.specialty}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-6 space-y-3">
-                    {t.headline && (
-                      <div className="relative pl-5">
-                        <Quote className="absolute top-0 left-0 w-3.5 h-3.5 text-primary/50" />
-                        <p className="text-sm italic text-foreground/80 leading-snug">{t.headline}</p>
-                      </div>
-                    )}
-                    {t.bio && (
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{t.bio}</p>
-                    )}
-                  </div>
-                </motion.div>
-              </CarouselItem>
-            ))}
-          </CarouselContent>
-          {trainers.length > 1 && (
-            <>
-              <CarouselPrevious className="hidden md:flex -left-4 lg:-left-12" />
-              <CarouselNext className="hidden md:flex -right-4 lg:-right-12" />
-            </>
-          )}
-        </Carousel>
-      </div>
-    </section>
-  );
-};
-
-export default TrainersSection;
+  return <section id="equipo" className="border-t border-border px-4 py-16">
+    <div className="container mx-auto max-w-4xl">
+      <p className="text-xs uppercase tracking-widest text-primary">Quién te acompaña</p>
+      <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Conoce al equipo de entrenamiento</h2>
+      <p className="mt-4 mb-8 max-w-2xl text-muted-foreground">Nicolás es el fundador y dirige Autopilot. Los entrenadores del equipo se encargan de preparar y ajustar tu entrenamiento.</p>
+      {trainers.length ? trainers.map(t => <TrainerPresentation key={t.id} trainer={t} certificates={certificates.filter(c => c.trainer_profile_id === t.id)} />) : <div className="border-t border-border pt-6"><h3 className="font-display text-xl font-semibold">Un equipo para acompañarte</h3><p className="mt-3 text-muted-foreground">En los planes con seguimiento, tu entrenador prepara tu plan y atiende tus dudas por chat. La dirección de Autopilot se ocupa de coordinar el servicio.</p></div>}
+    </div>
+  </section>;
+}
