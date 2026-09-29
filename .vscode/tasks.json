@@ -1,0 +1,50 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Autopilot: iniciar sesion de despliegue",
+      "type": "process",
+      "command": "npx",
+      "args": [
+        "--yes",
+        "supabase",
+        "login"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Autopilot: comprobar acceso al servidor",
+      "type": "process",
+      "command": "npx",
+      "args": [
+        "--yes",
+        "supabase",
+        "projects",
+        "list"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Autopilot: pruebas",
+      "type": "npm",
+      "script": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Autopilot: compilar",
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": []
+    }
+  ]
+}
