@@ -625,9 +625,23 @@ const SettingsPanel = () => {
         </div>
       </div>
 
+      {/* Sign out */}
+      <div className="order-8 bg-card rounded-2xl p-6 border border-border card-shadow">
+        <h2 className="font-bold font-display text-lg mb-1">Sesión</h2>
+        <p className="text-sm text-muted-foreground mb-4">Cierra tu sesión en este dispositivo.</p>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={async () => { await signOut(); navigate("/"); }}
+        >
+          <LogOut className="w-4 h-4 mr-2" /> Cerrar sesión
+        </Button>
+      </div>
+
       {/* Danger zone */}
-      <div className="order-8 bg-card rounded-2xl p-6 border border-destructive/30 card-shadow">
+      <div className="order-9 bg-card rounded-2xl p-6 border border-destructive/30 card-shadow">
         <h2 className="font-bold font-display text-lg text-destructive mb-4">Zona peligrosa</h2>
+
         <div className="space-y-4">
           <Separator />
           <AlertDialog>
