@@ -11,7 +11,7 @@ export const TIERS = {
     price: 0,
     interval: "month" as const,
     trial_days: 0,
-    tagline: "Entrena y registra tu progreso sin pagar ni introducir tarjeta.",
+    tagline: "Para entrenar por tu cuenta y guardar tu progreso, sin tarjeta.",
     features: [
       "Perfil y objetivo de entrenamiento",
       "Rutina inicial para empezar",
@@ -27,7 +27,7 @@ export const TIERS = {
     price: 29,
     interval: "month" as const,
     trial_days: 7,
-    tagline: "Para quien solo quiere entrenar mejor y dejar de improvisar.",
+    tagline: "Para tener una rutina adaptada y un entrenador que revise cómo vas.",
     features: [
       "Plan preparado por un entrenador real",
       "Adaptado a gimnasio, casa o material disponible",
@@ -47,7 +47,7 @@ export const TIERS = {
     trial_days: 7,
     recommended: true,
     tagline:
-      "Para quien quiere mejorar físico de verdad combinando entrenamiento, nutrición y seguimiento.",
+      "Para trabajar entrenamiento y alimentación con seguimiento semanal.",
     features: [
       "Entrenamiento preparado por un entrenador real",
       "Nutrición personalizada por tu entrenador",

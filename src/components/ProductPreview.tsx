@@ -62,7 +62,7 @@ const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
 ];
 
 /** Public, isolated example. Never reads or writes a customer's training data. */
-export default function ProductPreview({ onPlans }: { onPlans: () => void }) {
+export default function ProductPreview({ onPlans, onFree }: { onPlans: () => void; onFree?: () => void }) {
   const [view, setView] = useState<View>("home");
   const [completed, setCompleted] = useState<string[]>([]);
   const pct = Math.round((completed.length / exercises.length) * 100);
@@ -78,7 +78,7 @@ export default function ProductPreview({ onPlans }: { onPlans: () => void }) {
           <div className="max-w-xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="font-display text-3xl font-bold sm:text-4xl">Prueba cómo sería tu día.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Toca la app: es la misma que usarías como cliente. Marca ejercicios, mira tu nutrición y escribe a tu entrenador. Sin cuenta, sin tarjeta.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora un ejemplo de la app: marca ejercicios y descubre cómo se muestran el plan, la nutrición y el chat. Sin cuenta, sin tarjeta.</p>
           </div>
           <span className="text-xs text-muted-foreground">Demo con datos ficticios · no es un plan personal</span>
         </div>
@@ -93,7 +93,7 @@ export default function ProductPreview({ onPlans }: { onPlans: () => void }) {
                     <li key={p} className="flex gap-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}</li>
                   ))}
                 </ul>
-                <p className="mt-6 max-w-md text-sm text-muted-foreground">La app organiza el día a día. El valor está en la persona que prepara y revisa tu plan.</p>
+                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? "Nutrición personalizada incluida en Completo · 49€/mes tras la prueba." : view === "chat" ? "Chat en los planes de pago: respuesta en 48h con Entrenamiento y en 24h con Completo." : "Gratis incluye rutina inicial y registro. Los planes de pago añaden un entrenador que prepara y revisa tu plan."}</p>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -309,8 +309,9 @@ export default function ProductPreview({ onPlans }: { onPlans: () => void }) {
           </div>
         </div>
 
-        <div className="mt-10 flex justify-center">
-          <Button variant="hero" onClick={onPlans}>Ver qué incluye cada plan <ArrowRight className="h-4 w-4" /></Button>
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          {onFree && <Button variant="hero" onClick={onFree}>Crear cuenta gratis y guardar mi progreso <ArrowRight className="h-4 w-4" /></Button>}
+          <Button variant="outline" onClick={onPlans}>Ver qué incluye cada plan</Button>
         </div>
       </div>
     </section>

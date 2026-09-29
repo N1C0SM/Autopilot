@@ -2,6 +2,7 @@ import { TIERS, type PlanKey } from "@/config/tiers";
 import { CheckCircle2, X, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { track } from "@/lib/analytics";
 import { Link } from "react-router-dom";
 
 interface PricingTiersProps {
@@ -34,7 +35,7 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
             >
               {isRec && (
                 <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
-                  Incluye nutrición
+                  {key === "full" ? "Incluye nutrición" : key === "training" ? "Con entrenador" : "Sin tarjeta"}
                 </div>
               )}
 
@@ -80,10 +81,15 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
               </ul>
 
               <Button
-                variant={key === "free" ? "hero" : isRec ? "hero" : "outline"}
+                variant={isRec ? "hero" : "outline"}
                 size="lg"
                 className="w-full hover-scale"
-                onClick={() => key === "free" ? window.location.assign("/signup?free=true") : onSelect(key)}
+                onClick={() => {
+                  if (key === "free") {
+                    track("plan_select", { plan: "free", source: "pricing" });
+                    window.location.assign("/signup?free=true");
+                  } else onSelect(key);
+                }}
               >
                 {key === "free" ? "Empezar gratis" : t.cta}
               </Button>
@@ -94,11 +100,11 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
       </div>
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
-        Después de probar Gratis, puedes seguir por <span className="text-foreground font-semibold">29€/mes</span> o{" "}
+        Puedes quedarte en Gratis sin límite de prueba. Si necesitas seguimiento, elige <span className="text-foreground font-semibold">29€/mes</span> o{" "}
         <span className="text-foreground font-semibold">49€/mes</span> según el plan. Sin permanencia. Cancela desde Ajustes → Suscripción.
       </p>
       <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
-        En ambos planes, un entrenador real prepara tu entrenamiento y atiende tu seguimiento. La nutrición personalizada está incluida en Completo.
+        En ambos planes de pago, un entrenador real prepara tu entrenamiento y atiende tu seguimiento. La nutrición personalizada está incluida en Completo.
       </p>
       <p className="text-center text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía de devolución de 30 días en planes mensuales

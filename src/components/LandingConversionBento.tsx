@@ -29,7 +29,7 @@ interface Testimonial {
 interface Props {
   trainer: Trainer;
   testimonials: Testimonial[];
-  onScan: () => void;
+  onStart: () => void;
 }
 
 const steps = [
@@ -37,7 +37,7 @@ const steps = [
     icon: ScanLine,
     number: "01",
     title: "Conocemos tu punto de partida",
-    text: "Haces el análisis inicial y nos cuentas tu objetivo, disponibilidad y material.",
+    text: "Eliges tu plan con entrenador y nos cuentas tu objetivo, disponibilidad y material.",
   },
   {
     icon: User,
@@ -53,7 +53,7 @@ const steps = [
   },
 ];
 
-const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
+const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
   const visibleTestimonials = testimonials.slice(0, 3);
 
   return (
@@ -62,13 +62,13 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
         <ScrollReveal>
           <div className="mx-auto mb-8 max-w-2xl text-center">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-widest text-primary">
-              Lo que recibes
+              Cuando quieras dar el siguiente paso
             </p>
             <h2 className="font-display text-3xl font-bold leading-tight sm:text-4xl">
               Un plan que encaja en tu vida. <span className="text-gradient">Y alguien que lo lleva contigo.</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              No compras una rutina automática. Compras criterio, seguimiento y ajustes de un entrenador real.
+              Empieza por tu cuenta gratis. Si necesitas ayuda para adaptar tu rutina, los planes de pago añaden seguimiento de un entrenador real.
             </p>
           </div>
         </ScrollReveal>
@@ -81,9 +81,9 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
                   <span className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-lg border border-primary/30 bg-primary/15 text-primary">
                     <BarChart3 className="h-5 w-5" />
                   </span>
-                  <h3 className="font-display text-2xl font-bold">Tecnología para entenderte. Entrenador para ayudarte.</h3>
+                  <h3 className="font-display text-2xl font-bold">Tu semana cambia. Tu entrenamiento también.</h3>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                    La IA apoya el análisis inicial. {trainer.trainer_name} revisa tu situación, habla contigo y se encarga de preparar y ajustar el plan.
+                    {trainer.trainer_name} revisa tu situación y prepara tu plan. Si cambian tus horarios, tu material o tus sensaciones, tienes a quién escribir.
                   </p>
                 </div>
                 {trainer.trainer_photo_url ? (
@@ -200,14 +200,13 @@ const LandingConversionBento = ({ trainer, testimonials, onScan }: Props) => {
 
 
         <div className="mt-8 flex flex-col items-center gap-4 text-center">
-          <Button variant="hero" size="lg" onClick={onScan} className="group">
-            <ScanLine className="h-4 w-4" />
-            <span className="sm:hidden">Análisis inicial gratis</span>
-            <span className="hidden sm:inline">Ver mi punto de partida gratis</span>
+          <Button variant="hero" size="lg" onClick={onStart} className="group">
+            <MessageCircle className="h-4 w-4" />
+            Empezar gratis; decidir después
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" /> Análisis gratis y sin tarjeta · después decides si quieres un entrenador
+            <ShieldCheck className="h-3.5 w-3.5 text-success" /> Entrenamiento: revisión cada 2 semanas · Completo: revisión semanal
           </p>
         </div>
       </div>

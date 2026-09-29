@@ -1,4 +1,4 @@
-import { ShieldCheck, User, Check, ArrowRight, ScanLine } from "lucide-react";
+import { ShieldCheck, User, Check, ArrowRight } from "lucide-react";
 import { Menu, BookOpen, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, Link } from "react-router-dom";
@@ -29,6 +29,9 @@ import {
 } from "@/components/ui/accordion";
 
 const faqs = [
+  { q: "¿Qué diferencia hay entre Gratis y tener entrenador?", a: "Gratis incluye una rutina inicial y el registro de tus entrenamientos y progreso, sin tarjeta. Con Entrenamiento, una persona prepara tu plan, lo revisa cada 2 semanas y responde por chat en 48h. Completo añade nutrición personalizada, revisión semanal y respuesta en 24h." },
+  { q: "¿La demo me crea una cuenta o me cobra?", a: "No. La demo es un ejemplo interactivo con datos ficticios. Puedes explorarla sin registrarte. Para guardar tus propios entrenamientos, crea una cuenta Gratis." },
+  { q: "¿Qué ocurre al terminar los 7 días de prueba?", a: "En los planes de pago, la suscripción se renueva automáticamente por 29€/mes o 49€/mes según el plan. Cancela antes de terminar la prueba para evitar el primer cobro, desde Ajustes → Suscripción. El plan Gratis no tiene una prueba que cancelar." },
   { q: "¿El análisis inicial es gratis?", a: "Sí. El AI Physique Scan es un análisis inicial 100% gratis, sin tarjeta y sin necesidad de crear una cuenta." },
   { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. El tiempo del análisis puede variar; el plan y el seguimiento empiezan cuando eliges un plan con entrenador." },
   { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo." },
@@ -145,13 +148,31 @@ const Index = () => {
     track("landing_view");
   }, []);
 
+  useEffect(() => {
+    const pricing = document.getElementById("pricing");
+    if (!pricing || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        track("pricing_view", { source: "landing_section" });
+        observer.disconnect();
+      }
+    });
+    observer.observe(pricing);
+    return () => observer.disconnect();
+  }, []);
+
   const goScan = (source: string) => {
     track("cta_click", { cta: "scan", source });
     navigate("/scan");
   };
 
-  const goToPricing = () => {
-    track("pricing_view", { source: "nav" });
+  const goFree = (source: string) => {
+    track("cta_click", { cta: "free_signup", source });
+    navigate("/signup?free=true");
+  };
+
+  const goToPricing = (source = "landing") => {
+    track("cta_click", { cta: "view_plans", source });
     const el = document.getElementById("pricing");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -200,7 +221,7 @@ const Index = () => {
 
           {/* Desktop nav */}
           <div className="hidden sm:flex gap-3 items-center">
-            <button onClick={goToPricing} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+            <button onClick={() => goToPricing("landing_button")} className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
               Planes
             </button>
             <Link to="/recursos" className="text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
@@ -209,15 +230,15 @@ const Index = () => {
             <Button variant="ghost" size="sm" onClick={() => navigate("/login")}>
               Iniciar sesión
             </Button>
-            <Button variant="default" size="sm" onClick={() => goScan("header")}>
-              Diagnóstico gratis
+            <Button variant="default" size="sm" onClick={() => goFree("header")}>
+              Empezar gratis
             </Button>
           </div>
 
           {/* Mobile nav */}
           <div className="flex sm:hidden items-center gap-2">
-            <Button variant="default" size="sm" onClick={() => goScan("header_mobile")} className="text-xs px-3">
-              Diagnóstico
+            <Button variant="default" size="sm" onClick={() => goFree("header_mobile")} className="text-xs px-3">
+              Empezar gratis
             </Button>
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -231,7 +252,7 @@ const Index = () => {
               <SheetContent side="right" className="w-[78vw] max-w-xs p-6 flex flex-col gap-2">
                 <span className="font-display text-xl font-bold text-gradient mb-6">Autopilot</span>
                 <button
-                  onClick={() => { setMobileMenuOpen(false); setTimeout(goToPricing, 50); }}
+                  onClick={() => { setMobileMenuOpen(false); setTimeout(() => goToPricing("mobile_menu"), 50); }}
                   className="text-left py-3 px-3 rounded-md text-base font-medium hover:bg-muted/60 transition-colors"
                 >
                   Planes
@@ -252,9 +273,9 @@ const Index = () => {
                   variant="default"
                   size="lg"
                   className="mt-4 w-full"
-                  onClick={() => { setMobileMenuOpen(false); goScan("menu"); }}
+                  onClick={() => { setMobileMenuOpen(false); goFree("menu"); }}
                 >
-                  Diagnóstico gratis
+                  Empezar gratis
                 </Button>
               </SheetContent>
             </Sheet>
@@ -270,26 +291,26 @@ const Index = () => {
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.08] px-3 py-1.5 animate-fade-in">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
                 <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-                  Entrenador real · plan personal · seguimiento directo
+                  Tu rutina · tus entrenamientos · tu progreso
                 </span>
               </div>
 
               <h1 className="font-display text-[2.5rem] font-bold leading-[1.05] sm:text-5xl lg:text-6xl animate-fade-in">
-                Vuelve a entrenar con un plan. <span className="text-gradient">Y alguien que te acompañe.</span>
+                Empieza a entrenar gratis. <span className="text-gradient">Hazlo tuyo.</span>
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg animate-fade-in">
-                Para empezar o retomar el gimnasio sin improvisar cada día. Tu entrenador organiza las sesiones según tu nivel, tu material y el tiempo que tienes.
+                Crea tu cuenta, empieza con una rutina y guarda tus entrenamientos. Cuando necesites seguimiento, podrás contratar a tu entrenador desde la app.
               </p>
 
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row animate-fade-in">
-                <Button variant="hero" size="xl" onClick={goToPricing} className="w-full sm:w-auto">
-                  Ver planes desde {TIERS.training.price}€/mes <ArrowRight className="h-4 w-4" />
+                <Button variant="hero" size="xl" onClick={() => goFree("hero")} className="w-full sm:w-auto">
+                  Ver planes con entrenador <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
                   <a href="#ver-app" onClick={() => track("plan_preview_view", { source: "hero" })}>Probar la demo sin registro</a>
                 </Button>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">Entrenamiento y chat desde {TIERS.training.price}€/mes · Nutrición en Completo ({TIERS.full.price}€/mes)</p>
+              <p className="mt-4 text-xs text-muted-foreground">Sin tarjeta · Sin prueba que cancelar · Entrenador opcional de pago</p>
               <button type="button" onClick={() => goScan("hero_secondary")} className="mt-3 min-h-11 text-xs text-primary underline underline-offset-4">
                 También puedes hacer el análisis inicial con IA gratis
               </button>
@@ -338,12 +359,12 @@ const Index = () => {
           </div>
         </section>
 
-        <ProductPreview onPlans={goToPricing} />
+        <ProductPreview onPlans={() => goToPricing("demo")} onFree={() => goFree("demo")} />
 
         <LandingConversionBento
           trainer={trainer}
           testimonials={testimonials}
-          onScan={() => goScan("conversion_bento")}
+          onStart={() => goFree("coaching_example")}
         />
 
         {/* COMPARISON — antes de precios para contextualizar el valor */}
@@ -360,17 +381,17 @@ const Index = () => {
                   Planes
                 </p>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display mb-3 leading-tight">
-                  Empieza gratis y decide después
+                  Empieza gratis. Añade seguimiento cuando lo necesites.
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Crea tu cuenta gratis, prueba una sesión y decide después si quieres seguimiento de tu entrenador.
+                  Entrena por tu cuenta gratis o prueba 7 días con un entrenador que prepare y revise tu plan.
                 </p>
               </div>
             </ScrollReveal>
 
             <ScrollReveal delay={0.1}>
               <Suspense fallback={<SectionFallback />}>
-                <PricingTiers onSelect={selectPlan} recommended="full" />
+                <PricingTiers onSelect={selectPlan} recommended="free" />
               </Suspense>
             </ScrollReveal>
 
@@ -547,26 +568,25 @@ const Index = () => {
           <div className="container mx-auto max-w-2xl text-center">
             <ScrollReveal>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display mb-6 leading-[1.05] tracking-tight">
-                Pon tu entrenamiento{" "}
-                <span className="text-gradient">en manos de un entrenador real.</span>
+                Tu primer paso:{" "}
+                <span className="text-gradient">crear tu cuenta gratis.</span>
               </h2>
               <p className="text-base text-muted-foreground mb-10 max-w-md mx-auto">
-                Empieza con un análisis inicial gratis asistido por IA. Para recibir el plan y seguimiento de un entrenador, elige el plan que mejor encaje contigo.
+                Empieza con tu rutina y registra tu progreso. Si después quieres que un entrenador te acompañe, elige el seguimiento que necesites.
               </p>
               <Button
                 variant="hero"
                 size="xl"
-                onClick={() => goScan("cta_final")}
+                onClick={() => goFree("footer")}
                 className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
               >
-                <ScanLine className="w-4 h-4" />
-                Hacer mi análisis inicial gratis
+                Crear mi cuenta gratis
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </Button>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Gratis</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Cuenta gratis</span>
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Sin tarjeta</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> 60 segundos</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Entrenador opcional</span>
               </div>
             </ScrollReveal>
           </div>
@@ -574,7 +594,7 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="py-10 px-4 border-t border-border">
+      <footer className="pt-10 pb-28 px-4 border-t border-border">
         <div className="container mx-auto max-w-4xl flex flex-col gap-8 text-muted-foreground text-sm">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <span><span className="font-display font-bold text-gradient">Autopilot</span> &copy; {new Date().getFullYear()}</span>
@@ -597,8 +617,8 @@ const Index = () => {
       <div className={`fixed bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-md border-t border-border z-50 md:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))] transition-all duration-300 ${
         showStickyCta ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
       }`}>
-        <Button variant="hero" size="lg" className="w-full" onClick={() => goScan("sticky_mobile")}>
-          <ScanLine className="w-4 h-4" /> Análisis inicial gratis
+        <Button variant="hero" size="lg" className="w-full" onClick={() => goFree("sticky_mobile")}>
+          Crear mi cuenta gratis
         </Button>
       </div>
 
@@ -610,12 +630,11 @@ const Index = () => {
       >
         <div className="flex items-center gap-4 rounded-2xl border border-primary/30 bg-card/95 backdrop-blur-xl px-5 py-3 premium-shadow">
           <div className="text-left">
-            <div className="text-sm font-semibold">Análisis inicial gratis en 60s</div>
-            <div className="text-[11px] text-muted-foreground">La IA analiza; tu entrenador prepara y ajusta el plan</div>
+            <div className="text-sm font-semibold">Empieza a entrenar gratis</div>
+            <div className="text-[11px] text-muted-foreground">Guarda tu progreso · Sin tarjeta</div>
           </div>
-          <Button variant="hero" size="lg" onClick={() => goScan("sticky_desktop")} className="group whitespace-nowrap">
-            <ScanLine className="w-4 h-4" />
-            Hacer análisis gratis
+          <Button variant="hero" size="lg" onClick={() => goFree("sticky_desktop")} className="group whitespace-nowrap">
+            Crear cuenta gratis
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Button>
         </div>

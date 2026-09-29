@@ -29,14 +29,16 @@ const Signup = () => {
   const fromScan = searchParams.get("from") === "scan";
   const planParam = (searchParams.get("plan") || "").toLowerCase();
   const selectedPlan: "training" | "full" | null =
-    planParam === "training" ? "training" : planParam === "full" ? "full" : null;
+    isFree ? null : planParam === "training" ? "training" : planParam === "full" ? "full" : null;
   const [scanCtx, setScanCtx] = useState<any>(null);
   const { signUp } = useAuth();
 
   useEffect(() => {
-    if (!selectedPlan) return;
-    try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch {}
-  }, [selectedPlan]);
+    try {
+      if (isFree) sessionStorage.removeItem("autopilot_selected_plan");
+      else if (selectedPlan) sessionStorage.setItem("autopilot_selected_plan", selectedPlan);
+    } catch {}
+  }, [isFree, selectedPlan]);
 
   useEffect(() => {
     try {
@@ -120,7 +122,7 @@ const Signup = () => {
     }
 
     // Email verification required — show confirmation screen
-    track("register", { from: fromQuiz ? "quiz" : fromScan ? "scan" : "direct", plan: selectedPlan || undefined });
+    track("register", { from: fromQuiz ? "quiz" : fromScan ? "scan" : "direct", plan: isFree ? "free" : selectedPlan || undefined });
     setEmailSent(true);
     setLoading(false);
   };
@@ -165,6 +167,12 @@ const Signup = () => {
                : "Empieza hoy"}
           </p>
         </div>
+
+        {isFree && (
+          <p className="mb-5 text-center text-sm text-muted-foreground">
+            Sin tarjeta ni prueba que cancelar. El seguimiento de un entrenador es opcional y de pago.
+          </p>
+        )}
 
         {fromScan && scanCtx?.result && (
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 mb-4 flex items-center gap-3">
@@ -247,7 +255,7 @@ const Signup = () => {
             {loading ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Procesando...</>
             ) : (
-              "Crear cuenta"
+              isFree ? "Crear cuenta gratis" : "Crear cuenta"
             )}
           </Button>
           <div className="relative my-2">
