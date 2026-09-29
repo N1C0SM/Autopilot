@@ -122,7 +122,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/", { replace: true });
+    navigate("/login", { replace: true });
   };
 
   if (loading) {

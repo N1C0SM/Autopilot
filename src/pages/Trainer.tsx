@@ -195,7 +195,7 @@ const TrainerPage = () => {
   }
   if (!isTrainer) return null;
 
-  const handleSignOut = () => { signOut(); navigate("/"); };
+  const handleSignOut = async () => { await signOut(); navigate("/login", { replace: true }); };
 
   return (
     <SidebarProvider>
