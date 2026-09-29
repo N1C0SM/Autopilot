@@ -1,3 +1,4 @@
+import { hasCoaching } from "@/lib/entitlements";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -183,11 +184,11 @@ const PaymentSuccess = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("payment_status")
+        .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (profile?.payment_status === "paid") {
+      if (hasCoaching(profile)) {
         setPaid(true);
         setChecking(false);
         track("checkout_success", {});

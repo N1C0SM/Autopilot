@@ -1,3 +1,4 @@
+import { hasCoaching } from "@/lib/entitlements";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap, Upload, Image as ImageIcon, X, Crown } from "lucide-react";
-import PricingTiers from "@/components/PricingTiers";
-import PlanPreview from "@/components/PlanPreview";
 import { track } from "@/lib/analytics";
 import PageHead from "@/components/PageHead";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,7 +16,6 @@ import { Link } from "react-router-dom";
 import { logConsent } from "@/lib/consents";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import { signedUrlFor } from "@/lib/storageSign";
-import { TIERS, type PlanKey } from "@/config/tiers";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
@@ -114,20 +112,9 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [yearlyPrice, setYearlyPrice] = useState(190);
   const [gcalConnected, setGcalConnected] = useState(false);
   const [gcalLoading, setGcalLoading] = useState(false);
   const [goalPreviewUrl, setGoalPreviewUrl] = useState<string | null>(null);
-  const metadataPlan = user?.user_metadata?.selected_plan;
-  const storedPlan = (() => {
-    try { return sessionStorage.getItem("autopilot_selected_plan"); } catch { return null; }
-  })();
-  const selectedPlan: PlanKey | null = ["training", "full"].includes(metadataPlan)
-    ? metadataPlan as PlanKey
-    : ["training", "full"].includes(storedPlan || "")
-      ? storedPlan as PlanKey
-      : null;
   const [data, setData] = useState({
     age: "",
     height: "",
@@ -402,46 +389,30 @@ const Onboarding = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("payment_status")
+        .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (profile?.payment_status === "paid") {
-        supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
-        toast.success("¡Tu plan se está preparando! 🎉");
+      if (hasCoaching(profile)) {
+        toast.success("Tu entrenador ya puede preparar tu plan.");
         track("onboarding_complete", { paid: true });
-        track("plan_ready", { });
         navigate("/dashboard");
       } else {
-        const { data: settingsData } = await (supabase.rpc as any)("get_public_settings");
-        const settings = Array.isArray(settingsData) ? settingsData[0] : settingsData;
-        if (settings?.yearly_price_eur) setYearlyPrice(settings.yearly_price_eur);
-        toast.success("¡Cuestionario completado! Elige tu plan.");
-        track("onboarding_complete", { paid: false });
-        track("plan_preview_view", { focus: data.primary_focus, goal: data.goal });
-        track("paywall_view", { focus: data.primary_focus, goal: data.goal });
-        setShowPaywall(true);
+        const { data: generated, error: generationError } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
+        if (generationError || !generated?.success) {
+          toast.error("No se ha podido preparar tu rutina. Puedes volver a intentarlo.");
+          setLoading(false);
+          return;
+        }
+        toast.success("Tu rutina inicial está lista. Ya puedes entrenar gratis.");
+        track("onboarding_complete", { paid: false, plan: "free" });
+        track("plan_ready", { plan: "free" });
+        navigate("/dashboard");
       }
     } else {
       toast.error("Algo salió mal. Por favor, inténtalo de nuevo.");
     }
     setLoading(false);
-  };
-
-  const goToCheckout = async (plan: "training" | "full") => {
-    setLoading(true);
-    track("plan_select", { plan });
-    track("checkout_start", { plan });
-    const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
-      "create-checkout",
-      { body: { referral_code: "", plan } }
-    );
-    if (checkoutError || !checkoutData?.url) {
-      toast.error("Error al iniciar el pago. Inténtalo de nuevo.");
-      setLoading(false);
-    } else {
-      window.location.href = checkoutData.url;
-    }
   };
 
   // Pasos dinámicos según datos
@@ -473,39 +444,6 @@ const Onboarding = () => {
 
   const suggestions = SPECIFIC_GOAL_SUGGESTIONS[focusToEquipment(data.primary_focus)] || SPECIFIC_GOAL_SUGGESTIONS["Mixto"];
 
-  if (showPaywall) {
-    return (
-      <div
-        className="min-h-screen bg-background flex items-center justify-center px-4 py-8 md:py-12"
-        style={{ paddingTop: "max(2rem, var(--safe-top, 0px))", paddingBottom: "max(2rem, var(--safe-bottom, 0px))" }}
-      >
-        <div className="w-full max-w-2xl">
-          <div className="text-center mb-8">
-            <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
-            <h1 className="text-3xl font-bold font-display mt-6 mb-2">
-              Elige tu plan
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              7 días gratis · Requiere tarjeta · No se cobra hasta el día 8
-            </p>
-          </div>
-          <PlanPreview
-            focus={data.primary_focus}
-            goal={data.goal}
-            weight={parseFloat(data.weight) || undefined}
-            sex={data.sex}
-            days={parseInt(String((data as any).availability?.days || "4")) || 4}
-          />
-          <PricingTiers onSelect={(plan) => { if (plan !== "free") void goToCheckout(plan); }} recommended={selectedPlan || "full"} />
-          {loading && (
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              Preparando tu pago...
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div

@@ -1,3 +1,5 @@
+import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
+import { hasCoaching, resolvePaidTier, subscriptionAllowsCoaching } from "../_shared/entitlements.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -140,49 +142,35 @@ serve(async (req) => {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const customerEmail = session.customer_details?.email || session.customer_email;
-
-      if (customerEmail) {
-        const { data: existingProfile } = await supabaseAdmin
-          .from("profiles")
-          .select("plan_status, name")
-          .eq("email", customerEmail)
-          .single();
-
-        const updates: any = {
-          payment_status: "paid",
-        };
-
-        if (existingProfile?.plan_status !== "plan_ready") {
-          updates.plan_status = "plan_pending";
-        }
-
-        if (session.mode === "subscription") {
-          updates.subscription_status = "active";
-          updates.stripe_customer_id = session.customer as string;
-          updates.subscription_tier = session.metadata?.tier || "personal";
-        } else {
-          updates.stripe_payment_id = session.payment_intent as string;
-        }
-
-        await supabaseAdmin.from("profiles").update(updates).eq("email", customerEmail);
-        console.log(`Checkout completed for ${customerEmail}, mode: ${session.mode}`);
-
-        // Send welcome email (idempotent per Stripe session)
-        try {
-          await supabaseAdmin.functions.invoke("send-transactional-email", {
-            body: {
-              templateName: "welcome-paid",
-              recipientEmail: customerEmail,
+      // An ebook purchase, pending payment or arbitrary return URL is not a coaching purchase.
+      if (session.mode === "subscription" && session.subscription) {
+        const sub = await stripe.subscriptions.retrieve(session.subscription as string);
+        const { data: settings, error: settingsError } = await supabaseAdmin.from("settings").select("*").limit(1).single();
+        if (settingsError) throw settingsError;
+        const prices = await loadPlanPrices(stripe, settings || {}, paymentMode);
+        const tier = resolvePaidTier(sub.items.data[0]?.price.id, prices, paymentMode);
+        if (tier && subscriptionAllowsCoaching(sub.status)) {
+          const customerEmail = session.customer_details?.email || session.customer_email;
+          let query = supabaseAdmin.from("profiles").select("user_id, name, email, plan_status, payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id");
+          query = session.client_reference_id ? query.eq("user_id", session.client_reference_id) : query.eq("email", customerEmail || "");
+          const { data: profile, error: profileError } = await query.single();
+          if (profileError || !profile) throw profileError || new Error("Checkout account not found");
+          const periodEnd = (sub as any).current_period_end ?? sub.items.data[0]?.current_period_end;
+          const { error } = await supabaseAdmin.from("profiles").update({
+            payment_status: "paid", subscription_status: sub.status,
+            stripe_customer_id: session.customer as string, subscription_tier: tier,
+            subscription_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+            plan_status: hasCoaching(profile) ? profile.plan_status : "plan_pending",
+          }).eq("user_id", profile.user_id);
+          if (error) throw error;
+          // Preserve the existing welcome email, idempotent per verified checkout.
+          try {
+            await supabaseAdmin.functions.invoke("send-transactional-email", { body: {
+              templateName: "welcome-paid", recipientEmail: profile.email,
               idempotencyKey: `welcome-paid-${session.id}`,
-              templateData: {
-                name: existingProfile?.name || "",
-                dashboardUrl: "https://autopilotplan.com/dashboard",
-              },
-            },
-          });
-        } catch (e) {
-          console.error("Failed to send welcome-paid email", e);
+              templateData: { name: profile.name || "", dashboardUrl: "https://autopilotplan.com/dashboard" },
+            } });
+          } catch (emailError) { console.error("Failed to send welcome-paid email", emailError); }
         }
       }
     }
@@ -198,30 +186,40 @@ serve(async (req) => {
     }
 
     if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
-      const subscription = event.data.object as Stripe.Subscription;
-      const customerId = subscription.customer as string;
-
-      const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
-      if (customer.email) {
-        const periodEnd = (subscription as any).current_period_end
-          ?? subscription.items?.data?.[0]?.current_period_end
-          ?? null;
-        const periodEndIso = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
-        const nowSec = Math.floor(Date.now() / 1000);
-
-        // Consider the user still paid while inside the paid period, even if they cancelled.
-        // Only revoke access when Stripe actually deletes the subscription OR the period has passed.
-        const stillWithinPaidPeriod = periodEnd ? periodEnd > nowSec : false;
-        const isActive = subscription.status === "active" || subscription.status === "trialing";
-        const keepPaid = isActive || (event.type !== "customer.subscription.deleted" && stillWithinPaidPeriod);
-
-        await supabaseAdmin.from("profiles").update({
-          subscription_status: keepPaid ? "active" : "inactive",
-          subscription_end: periodEndIso,
-          payment_status: keepPaid ? "paid" : "unpaid",
-        }).eq("email", customer.email);
-
-        console.log(`Subscription ${subscription.status} for ${customer.email} — keepPaid=${keepPaid}, periodEnd=${periodEndIso}`);
+      const eventSub = event.data.object as Stripe.Subscription;
+      // Read current state so a delayed webhook cannot restore an expired subscription.
+      const sub = await stripe.subscriptions.retrieve(eventSub.id);
+      const customerId = sub.customer as string;
+      const { data: settings, error: settingsError } = await supabaseAdmin.from("settings").select("*").limit(1).single();
+      if (settingsError) throw settingsError;
+      const prices = await loadPlanPrices(stripe, settings || {}, paymentMode);
+      const tier = resolvePaidTier(sub.items.data[0]?.price.id, prices, paymentMode);
+      if (tier) {
+        const { data: profiles, error: profileError } = await supabaseAdmin.from("profiles")
+          .select("user_id, payment_status, subscription_status, subscription_tier, subscription_end, stripe_payment_id, plan_status")
+          .eq("stripe_customer_id", customerId);
+        if (profileError) throw profileError;
+        // An older cancelled subscription must not revoke a different current one.
+        let active = subscriptionAllowsCoaching(sub.status) ? sub : null;
+        if (!active) {
+          for await (const candidate of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
+            if (subscriptionAllowsCoaching(candidate.status) && resolvePaidTier(candidate.items.data[0]?.price.id, prices, paymentMode)) {
+              if (!active || candidate.created > active.created) active = candidate;
+            }
+          }
+        }
+        for (const profile of profiles || []) {
+          if (!active && profile.stripe_payment_id && hasCoaching(profile)) continue;
+          const end = active && ((active as any).current_period_end ?? active.items.data[0]?.current_period_end);
+          const updates: Record<string, unknown> = {
+            subscription_status: active?.status || "inactive", subscription_end: end ? new Date(end * 1000).toISOString() : null,
+            payment_status: active ? "paid" : "unpaid",
+            subscription_tier: active ? resolvePaidTier(active.items.data[0]?.price.id, prices, paymentMode) : "free",
+          };
+          if (active && !hasCoaching(profile)) updates.plan_status = "plan_pending";
+          const { error } = await supabaseAdmin.from("profiles").update(updates).eq("user_id", profile.user_id);
+          if (error) throw error;
+        }
       }
     }
 

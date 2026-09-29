@@ -1,3 +1,4 @@
+import { hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -788,6 +789,30 @@ serve(async (req) => {
       /* no body */
     }
 
+    const { data: billing, error: billingError } = await supabase.from("profiles")
+      .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
+      .eq("user_id", targetUserId).single();
+    if (billingError) throw billingError;
+    const paidCoaching = hasCoaching(billing);
+    const includeNutrition = hasNutrition(billing);
+    if (paidCoaching && targetUserId === user.id) {
+      const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (!isAdmin) return new Response(JSON.stringify({ error: "Tu entrenador prepara y revisa tu plan." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!paidCoaching) {
+      // Free accounts get one initial routine. Repeated requests preserve it and its logs.
+      const { data: existing, error } = await supabase.from("training_plan").select("id")
+        .eq("user_id", targetUserId).maybeSingle();
+      if (error) throw error;
+      if (existing) {
+        const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
+        if (readyError) throw readyError;
+        return new Response(JSON.stringify({ success: true, existing: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     // Fetch rules, onboarding and user_schedule in parallel
     const [onbResult, rulesResult, scheduleResult] = await Promise.all([
       supabase.from("onboarding").select("*").eq("user_id", targetUserId).single(),
@@ -963,6 +988,7 @@ serve(async (req) => {
 
     // Try AI-personalized meals based on user's actual food preferences
     try {
+      if (!includeNutrition) throw new Error("Nutrition not included in this plan");
       const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-generate-meals`, {
         method: "POST",
         headers: {
@@ -992,9 +1018,17 @@ serve(async (req) => {
 
     console.log(`[GENERATE-PLAN] Nutrition: diet=${diet}, goal=${goal}, macros=${JSON.stringify(macros)}, meals=${meals.length}`);
 
-    await supabase.from("training_plan").upsert({ user_id: targetUserId, workouts_json: weeklyPlan });
-    await supabase.from("nutrition_plan").upsert({ user_id: targetUserId, macros_json: macros, meals_json: meals });
-    await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
+    const { error: trainingError } = await supabase.from("training_plan").upsert(
+      { user_id: targetUserId, workouts_json: weeklyPlan },
+      { onConflict: "user_id", ignoreDuplicates: !paidCoaching },
+    );
+    if (trainingError) throw trainingError;
+    if (includeNutrition) {
+      const { error } = await supabase.from("nutrition_plan").upsert({ user_id: targetUserId, macros_json: macros, meals_json: meals });
+      if (error) throw error;
+    }
+    const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
+    if (readyError) throw readyError;
 
     console.log(`[GENERATE-PLAN] Plan generated for ${targetUserId}: ${weeklyPlan.length} days, skill="${specificGoal}"`);
 
@@ -1022,7 +1056,7 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      success: true, training_days: weeklyPlan.length, macros, meals_count: meals.length,
+      success: true, training_days: weeklyPlan.length, macros: includeNutrition ? macros : null, meals_count: includeNutrition ? meals.length : 0,
       skill_profile: skillProfile ? { muscles: skillProfile.priorityMuscles, patterns: skillProfile.priorityPatterns } : null,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {

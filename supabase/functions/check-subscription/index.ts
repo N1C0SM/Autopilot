@@ -1,186 +1,74 @@
+import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { hasCoaching, resolvePaidTier, subscriptionAllowsCoaching } from "../_shared/entitlements.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-const logStep = (step: string, details?: any) => {
-  console.log(`[CHECK-SUBSCRIPTION] ${step}${details ? ` - ${JSON.stringify(details)}` : ''}`);
-};
-
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+});
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-    { auth: { persistSession: false } }
-  );
-
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  const db = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
   try {
-    logStep("Function started");
-
-    const { data: settings } = await supabaseClient.from("settings").select("payment_mode").limit(1).single();
-    const paymentMode = settings?.payment_mode || "test";
-
-    // Read all price IDs to detect plan type later
-    const { data: priceSettings } = await supabaseClient
-      .from("settings")
-      .select("price_id_test, price_id_live, price_id_yearly_test, price_id_yearly_live")
-      .limit(1)
-      .single();
-
-    const stripeKey = paymentMode === "live"
-      ? Deno.env.get("STRIPE_LIVE_SECRET_KEY")
-      : Deno.env.get("STRIPE_TEST_SECRET_KEY");
-
-    if (!stripeKey) throw new Error(`Stripe ${paymentMode} secret key not configured`);
-
-    const noSession = () => new Response(JSON.stringify({
-      subscribed: false, subscription_end: null, tier: "personal", plan: null, reason: "no_session",
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return noSession();
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData?.user?.email) {
-      logStep("No valid session", { message: userError?.message });
-      return noSession();
-    }
-    const user = userData.user;
-    logStep("User authenticated", { userId: user.id, email: user.email });
-
-    // Check current profile to avoid overwriting free plan users
-    const { data: profile } = await supabaseClient
-      .from("profiles")
-      .select("payment_status, subscription_status, plan_status")
-      .eq("user_id", user.id)
-      .single();
-
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-
-    if (customers.data.length === 0) {
-      logStep("No Stripe customer found");
-      // DON'T overwrite payment_status if user has a free plan (payment_status already "paid")
-      if (profile?.payment_status !== "paid") {
-        await supabaseClient.from("profiles").update({
-          subscription_status: "inactive",
-        }).eq("user_id", user.id);
+    const token = req.headers.get("Authorization")?.replace("Bearer ", "");
+    if (!token) return json({ subscribed: false, tier: "free", reason: "no_session" });
+    const { data: { user }, error: authError } = await db.auth.getUser(token);
+    if (authError || !user?.email) return json({ subscribed: false, tier: "free", reason: "no_session" });
+    const { data: profile, error: profileError } = await db.from("profiles")
+      .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id, stripe_customer_id, plan_status")
+      .eq("user_id", user.id).single();
+    if (profileError) throw profileError;
+    const { data: settings, error: settingsError } = await db.from("settings").select("*").limit(1).single();
+    if (settingsError) throw settingsError;
+    const mode = settings.payment_mode === "live" ? "live" : "test";
+    const key = Deno.env.get(mode === "live" ? "STRIPE_LIVE_SECRET_KEY" : "STRIPE_TEST_SECRET_KEY");
+    if (!key) throw new Error("Payment service is not configured");
+    const stripe = new Stripe(key, { apiVersion: "2025-08-27.basil" });
+    const prices = await loadPlanPrices(stripe, settings, mode);
+    // Prefer the customer bound to the account. Do not select an arbitrary matching email.
+    const customers = profile.stripe_customer_id
+      ? [profile.stripe_customer_id]
+      : (await stripe.customers.list({ email: user.email, limit: 100 })).data.map(c => c.id);
+    let chosen: { sub: Stripe.Subscription; tier: string; customerId: string } | null = null;
+    for (const customerId of customers) {
+      for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
+        const tier = resolvePaidTier(sub.items.data[0]?.price.id, prices, mode);
+        if (tier && subscriptionAllowsCoaching(sub.status)) {
+          if (!chosen || sub.created > chosen.sub.created) chosen = { sub, tier, customerId };
+        }
       }
-
-      return new Response(JSON.stringify({
-        subscribed: profile?.payment_status === "paid",
-        subscription_end: null,
-        tier: "personal",
-        plan: null,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
-
-    const customerId = customers.data[0].id;
-    logStep("Found customer", { customerId });
-
-    await supabaseClient.from("profiles").update({
-      stripe_customer_id: customerId,
-    }).eq("user_id", user.id);
-
-    // Fetch all recent subs so we can honor "cancelled but still within paid period"
-    const allSubs = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 5 });
-    const nowSec = Math.floor(Date.now() / 1000);
-    const getPeriodEnd = (s: Stripe.Subscription) =>
-      (s as any).current_period_end ?? s.items?.data?.[0]?.current_period_end ?? 0;
-
-    // Priority: active/trialing → cancelled but still within paid period → nothing
-    const activeOrTrial = allSubs.data.find(
-      (s) => s.status === "active" || s.status === "trialing"
-    );
-    const cancelledStillValid = allSubs.data.find(
-      (s) => (s.status === "canceled" || s.cancel_at_period_end) && getPeriodEnd(s) > nowSec
-    );
-    const sub = activeOrTrial || cancelledStillValid;
-    const hasActiveSub = !!sub;
-    let subscriptionEnd = null;
-    let tier = "personal";
-    let plan: "monthly" | "yearly" | null = null;
-
-    if (hasActiveSub) {
-      const periodEnd = getPeriodEnd(sub!) || null;
-      subscriptionEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
-      tier = sub.metadata?.tier || "personal";
-
-      // Detect plan by comparing price_id
-      const subPriceId = sub.items?.data?.[0]?.price?.id;
-      const monthlyIds = [priceSettings?.price_id_test, priceSettings?.price_id_live].filter(Boolean);
-      const yearlyIds = [priceSettings?.price_id_yearly_test, priceSettings?.price_id_yearly_live].filter(Boolean);
-      if (subPriceId && yearlyIds.includes(subPriceId)) plan = "yearly";
-      else if (subPriceId && monthlyIds.includes(subPriceId)) plan = "monthly";
-      else plan = sub.metadata?.plan === "yearly" ? "yearly" : "monthly";
-
-      logStep("Active subscription found", { endDate: subscriptionEnd, tier, status: sub.status, plan });
-
-      // Treat "cancelled but still within paid period" as active for access control.
-      const effectiveStatus =
-        sub.status === "active" || sub.status === "trialing" ? sub.status : "active";
-      const updateData: Record<string, string> = {
-        subscription_status: effectiveStatus,
-        payment_status: "paid",
-        subscription_tier: tier,
+    if (chosen) {
+      const { sub, tier, customerId } = chosen;
+      const end = (sub as any).current_period_end ?? sub.items.data[0]?.current_period_end;
+      const subscriptionEnd = end ? new Date(end * 1000).toISOString() : null;
+      const updates: Record<string, unknown> = {
+        payment_status: "paid", subscription_tier: tier, subscription_status: sub.status,
+        subscription_end: subscriptionEnd, stripe_customer_id: customerId,
       };
-      if (subscriptionEnd) updateData.subscription_end = subscriptionEnd;
-      // Auto-activate: if user was onboarding, move to plan_pending
-      if (profile?.plan_status === "onboarding") {
-        updateData.plan_status = "plan_pending";
-      }
-      await supabaseClient.from("profiles").update(updateData).eq("user_id", user.id);
-    } else {
-      logStep("No active subscription");
-      // Only update subscription_status, preserve payment_status for free plan users
-      if (profile?.payment_status !== "paid") {
-        await supabaseClient.from("profiles").update({
-          subscription_status: "inactive",
-          payment_status: "unpaid",
-        }).eq("user_id", user.id);
-      } else {
-        await supabaseClient.from("profiles").update({
-          subscription_status: "inactive",
-        }).eq("user_id", user.id);
-      }
+      // A free routine is not a trainer-reviewed paid plan.
+      if (!hasCoaching(profile)) updates.plan_status = "plan_pending";
+      const { error } = await db.from("profiles").update(updates).eq("user_id", user.id);
+      if (error) throw error;
+      return json({ subscribed: true, tier, subscription_end: subscriptionEnd,
+        plan: sub.items.data[0]?.price.recurring?.interval === "year" ? "yearly" : "monthly" });
     }
-
-    return new Response(JSON.stringify({
-      subscribed: hasActiveSub || profile?.payment_status === "paid",
-      subscription_end: subscriptionEnd,
-      tier,
-      plan,
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Preserve historical one-time coaching purchases; metadata/old free flags are not proof.
+    if (profile.stripe_payment_id && hasCoaching(profile)) {
+      return json({ subscribed: true, tier: profile.subscription_tier, subscription_end: null, plan: null });
+    }
+    const { error } = await db.from("profiles").update({
+      payment_status: "unpaid", subscription_tier: "free", subscription_status: "inactive", subscription_end: null,
+    }).eq("user_id", user.id);
+    if (error) throw error;
+    return json({ subscribed: false, tier: "free", subscription_end: null, plan: null });
   } catch (error) {
-    logStep("ERROR", { message: error.message });
-    // Handle Stripe rate limit gracefully so the client doesn't crash
-    const msg = String(error?.message || "");
-    if (msg.includes("rate limit")) {
-      return new Response(JSON.stringify({
-        error: "STRIPE_RATE_LIMIT_EXCEEDED",
-        fallback: true,
-        subscribed: false,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
+    console.error("check-subscription failed", error);
+    return json({ error: "No se ha podido verificar la suscripción. Vuelve a intentarlo." }, 500);
   }
 });

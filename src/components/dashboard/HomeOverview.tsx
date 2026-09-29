@@ -24,11 +24,13 @@ interface Props {
   weeksActive?: number;
   completedDays?: number;
   completedToday?: boolean;
+  coaching?: boolean;
+  nutrition?: boolean;
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false }: Props) => {
+const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false, coaching = true, nutrition = true }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
   const todayPlan = dayPlans.find((p) => p.day === todayName);
@@ -51,7 +53,7 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
               { n: 1, text: "Abre tu entrenamiento de hoy y marca las series al terminarlas", to: "training" as UserSection, cta: "Ver entrenamiento" },
               { n: 2, text: "Revisa tus macros y comidas del día", to: "nutrition" as UserSection, cta: "Ver nutrición" },
               { n: 3, text: "Saluda a tu entrenador y cuéntale tu objetivo", to: "chat" as UserSection, cta: "Abrir chat" },
-            ].map((s) => (
+            ].filter(s => s.to === "training" || (s.to === "nutrition" ? nutrition : coaching)).map((s) => (
               <li key={s.n} className="flex items-center gap-3">
                 <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-[11px] font-bold flex items-center justify-center shrink-0">
                   {s.n}
@@ -150,8 +152,8 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
-        <h3 className="font-display font-bold text-sm mb-1">Chat con tu entrenador</h3>
-        <p className="text-xs text-muted-foreground">Dudas, cambios o feedback</p>
+        <h3 className="font-display font-bold text-sm mb-1">{coaching ? "Chat con tu entrenador" : "Añadir un entrenador"}</h3>
+        <p className="text-xs text-muted-foreground">{coaching ? "Dudas, cambios o feedback" : "Seguimiento opcional desde 29€/mes"}</p>
       </motion.button>
 
       {/* Nutrition Card */}
@@ -168,7 +170,7 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
         </div>
-        <h3 className="font-display font-bold text-sm mb-1">Tu Nutrición</h3>
+        <h3 className="font-display font-bold text-sm mb-1">{nutrition ? "Tu nutrición" : "Nutrición con Completo"}</h3>
         {macros ? (
           <div className="flex items-center gap-2 text-xs mt-1">
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{macros.protein}g P</span>
@@ -177,7 +179,7 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
             <InfoHint text="P = proteína, C = carbohidratos, G = grasas. Son los gramos objetivo de todo el día." />
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Sin plan aún</p>
+          <p className="text-xs text-muted-foreground">{nutrition ? "Sin plan aún" : "Opcional · incluida en Completo"}</p>
         )}
       </motion.button>
 

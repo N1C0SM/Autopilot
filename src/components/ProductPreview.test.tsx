@@ -8,7 +8,7 @@ afterEach(cleanup);
 describe("public product preview", () => {
   it("records, undoes and resets sample exercises", async () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Plan", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
     fireEvent.click(await screen.findByRole("button", { name: "Completar Sentadilla goblet" }));
     fireEvent.click(screen.getByRole("button", { name: "Completar Remo con mancuerna" }));
     expect(await screen.findByRole("status")).toHaveTextContent("2 de 3");
@@ -20,13 +20,13 @@ describe("public product preview", () => {
 
   it("retains the demo session across views and labels illustrative data", async () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Plan", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
     fireEvent.click(await screen.findByRole("button", { name: "Completar Remo con mancuerna" }));
-    fireEvent.click(screen.getByRole("button", { name: "Nutrición", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
     await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: "Progreso" }));
     await waitFor(() => expect(screen.getByText(/no representan resultados de un cliente/)).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "Plan", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
     expect(await screen.findByRole("status")).toHaveTextContent("1 de 3");
     expect(screen.getByText(/Demo con datos ficticios/)).toBeVisible();
   });

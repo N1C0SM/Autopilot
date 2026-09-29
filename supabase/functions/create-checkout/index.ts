@@ -60,11 +60,7 @@ serve(async (req) => {
       throw new Error(`Payment link no configurado para el plan "${plan}" en modo ${paymentMode}. Configúralo en Admin → Pagos.`);
     }
 
-    // Marca el tier elegido en el perfil para que webhook y dashboard lo reconozcan
-    await supabaseClient
-      .from("profiles")
-      .update({ subscription_tier: plan } as any)
-      .eq("user_id", user.id);
+    // A checkout attempt does not grant access; only verified Stripe events do.
 
     // Append client_reference_id para que Stripe webhook pueda mapear al usuario
     const sep = PAYMENT_LINK.includes("?") ? "&" : "?";

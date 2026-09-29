@@ -1,3 +1,6 @@
+import { hasCoaching, hasNutrition } from "@/lib/entitlements";
+import CoachingOffer from "@/components/dashboard/CoachingOffer";
+import { track } from "@/lib/analytics";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +28,6 @@ import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
-import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { TIERS } from "@/config/tiers";
 
 const Chat = lazy(() => import("@/components/Chat"));
@@ -65,6 +67,9 @@ const Dashboard = () => {
   const [profileAvatar, setProfileAvatar] = useState("");
   const [planStatus, setPlanStatus] = useState<string>("onboarding");
   const [paymentStatus, setPaymentStatus] = useState<string>("unpaid");
+  const [coaching, setCoaching] = useState(false);
+  const [nutrition, setNutrition] = useState(false);
+  const [preparingRoutine, setPreparingRoutine] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<string>("full");
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState<Macros | null>(null);
@@ -92,12 +97,12 @@ const Dashboard = () => {
     if (!user) return;
 
     if (syncSubscription) {
-      void supabase.functions.invoke("check-subscription").catch(() => {});
+      await supabase.functions.invoke("check-subscription").catch(() => {});
     }
 
     const profileRequest = supabase
       .from("profiles")
-      .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier")
+      .select("plan_status, payment_status, name, avatar_url, created_at, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
       .eq("user_id", user.id)
       .maybeSingle();
     const roleRequest = checkAdmin
@@ -114,15 +119,13 @@ const Dashboard = () => {
     if (profile) {
       setPlanStatus(profile.plan_status);
       setPaymentStatus(profile.payment_status);
-      setSubscriptionTier(profile.subscription_tier || "full");
+      setSubscriptionTier(profile.subscription_tier || "free");
+      setCoaching(hasCoaching(profile));
+      setNutrition(hasNutrition(profile));
       setProfileName(profile.name || "");
       setProfileAvatar(profile.avatar_url || "");
       setProfileCreatedAt(profile.created_at || "");
 
-      if (profile.payment_status === "unpaid") {
-        setLoading(false);
-        return;
-      }
       if (profile.plan_status === "onboarding") {
         navigate("/onboarding");
         return;
@@ -214,6 +217,7 @@ const Dashboard = () => {
 
   const handleCompletePayment = async (plan: "training" | "full" | "transform" = "full") => {
     try {
+      track("checkout_start", { plan, source: "dashboard" });
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
         body: { referral_code: "", plan },
       });
@@ -275,8 +279,8 @@ const Dashboard = () => {
     );
   }
 
-  const hasPlan = paymentStatus === "paid" && planStatus === "plan_ready";
-  const isTrainingOnly = subscriptionTier === "training";
+  const hasPlan = planStatus === "plan_ready";
+  const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
   const canRequestVideoCall = isTransform || isFull;
@@ -317,50 +321,50 @@ const Dashboard = () => {
 
   const pageContent = (
     <>
-      {/* Unpaid state — shown on all sections EXCEPT settings */}
-      {paymentStatus === "unpaid" && section !== "settings" && section !== "chat" && (() => {
-        const paywallContent: Record<MobileTab, { icon: React.ReactNode; title: string; description: string; cta: string }> = {
-          home: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Un entrenador prepara tu plan", description: "Un entrenador real revisa tus datos y te prepara el entrenamiento y la nutrición. Tú no tienes que montar nada.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
-          training: { icon: <Dumbbell className="w-8 h-8 text-primary" />, title: "Tu rutina te está esperando", description: "Ejercicios, series y descansos diseñados para tus objetivos. Actualizado cada semana por tu entrenador.", cta: "Desbloquear mi entrenamiento" },
-          nutrition: { icon: <UtensilsCrossed className="w-8 h-8 text-primary" />, title: "Come según tu objetivo", description: "Plan de comidas con macros calculados para ti. Sin recetas genéricas, todo personalizado.", cta: "Desbloquear mi nutrición" },
-          chat: { icon: <MessageCircle className="w-8 h-8 text-primary" />, title: "Habla con tu entrenador", description: "Resuelve dudas, ajusta tu plan y recibe feedback directo. Siempre disponible.", cta: "Activar chat con entrenador" },
-          progress: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Sigue tu progreso", description: "Sube fotos, ve tu evolución y desbloquea AI Scan.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
-          settings: { icon: <Crown className="w-8 h-8 text-primary" />, title: "Obtén tu plan personalizado", description: "Entrenamiento y nutrición 100% adaptados a ti.", cta: `Empezar ${TRIAL_DAYS} días gratis — ${TIERS.full.price}€/mes` },
-          resources: { icon: <BookOpen className="w-8 h-8 text-primary" />, title: "Recursos", description: "Guías, artículos y recomendaciones para acompañar tu plan.", cta: "Ver recursos" },
-        };
-        const content = paywallContent[section] || paywallContent.home;
-        return (
-          <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">{content.icon}</div>
-            <h2 className="text-xl font-bold font-display mb-2">{content.title}</h2>
-            <p className="text-muted-foreground mb-6 text-sm md:text-base">{content.description}</p>
-            <Button variant="hero" size="lg" onClick={() => handleCompletePayment("full")} className="w-full md:w-auto">{content.cta}</Button>
-            <button onClick={() => handleCompletePayment("training")} className="mx-auto mt-4 text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1.5">
-              <Dumbbell className="w-3 h-3" /> Solo entrenamiento — {TIERS.training.price}€/mes
-            </button>
-            <p className="text-xs text-muted-foreground mt-3">Cancela cuando quieras · Garantía {GUARANTEE_DAYS} días</p>
-            <button onClick={() => setSection("chat")} className="mx-auto mt-4 text-xs text-muted-foreground hover:text-primary underline inline-flex items-center gap-1.5">
-              <MessageCircle className="w-3 h-3" /> Prefiero hablar antes con un entrenador (gratis)
-            </button>
+      {!coaching && section === "home" && (
+        <div className="space-y-4 mb-6">
+          <div>
+            <p className="text-xs font-semibold text-primary">Plan Gratis · Sin tarjeta</p>
+            <h2 className="mt-1 text-xl font-bold font-display">Tu rutina y tu progreso, a tu ritmo.</h2>
+            <p className="mt-2 text-sm text-muted-foreground">La rutina inicial se prepara automáticamente con tus datos. El seguimiento de un entrenador es opcional.</p>
           </div>
-        );
-      })()}
+        </div>
+      )}
+      {!coaching && !hasPlan && (section === "home" || section === "training") && (
+        <div className="rounded-xl border border-border p-6">
+          <h2 className="font-display text-xl font-bold">Prepara tu rutina inicial gratis</h2>
+          <p className="my-3 text-sm text-muted-foreground">No necesitas contratar un entrenador para empezar.</p>
+          <Button disabled={preparingRoutine} onClick={async () => {
+            setPreparingRoutine(true);
+            try {
+              const { data, error } = await supabase.functions.invoke("generate-plan", { body: { user_id: user?.id } });
+              if (error || !data?.success) throw new Error("generation_failed");
+              await fetchData();
+            } catch { toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo."); }
+            finally { setPreparingRoutine(false); }
+          }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
+        </div>
+      )}
+      {!coaching && (section === "chat" || section === "nutrition") && (
+        <CoachingOffer onChoose={handleCompletePayment} nutrition={section === "nutrition"} />
+      )}
 
-      {paymentStatus === "paid" && planStatus === "plan_pending" && section === "home" && (
+      {coaching && planStatus === "plan_pending" && (section === "home" || section === "training") && (
         <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Clock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Tu plan se está creando 🔥</h2>
-          <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento y tu nutrición con los datos que nos has dado.</p>
+          <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento{nutrition ? " y tu nutrición" : ""} con los datos que nos has dado.</p>
           <p className="text-sm text-primary font-medium">Recibirás una notificación en menos de 48h.</p>
         </div>
       )}
 
       {hasPlan && section === "home" && (
         <div className="w-full space-y-6">
-          {user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
-          <MyTrainerCard onOpenChat={() => setSection("chat")} />
-          <HomeOverview dayPlans={dayPlans} macros={macros} meals={meals} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
-          {user && <TravelModeCard userId={user.id} />}
+          {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
+          {coaching && <MyTrainerCard onOpenChat={() => setSection("chat")} />}
+          <HomeOverview coaching={coaching} nutrition={nutrition} dayPlans={dayPlans} macros={nutrition ? macros : null} meals={nutrition ? meals : []} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
+          {!coaching && <CoachingOffer onChoose={handleCompletePayment} compact />}
+          {coaching && user && <TravelModeCard userId={user.id} />}
         </div>
       )}
 
@@ -388,7 +392,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {hasPlan && section === "nutrition" && !isTrainingOnly && (
+      {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full space-y-6">
           <div className="flex items-center gap-2 mb-2">
             <Apple className="w-5 h-5 text-primary" />
@@ -404,7 +408,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      {section === "chat" && (
+      {coaching && section === "chat" && (
         <div className="w-full">
           {user && (
             <Suspense fallback={<SectionFallback />}>
@@ -460,7 +464,7 @@ const Dashboard = () => {
         profileName={profileName}
         profileAvatar={profileAvatar}
         userId={user?.id}
-        lockedTabs={isTrainingOnly ? ["nutrition"] : []}
+        lockedTabs={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
         onSettings={() => setSection("settings")}
       >
         {pageContent}
@@ -484,7 +488,7 @@ const Dashboard = () => {
           onSignOut={handleSignOut}
           profileName={profileName}
           profileAvatar={profileAvatar}
-          lockedSections={isTrainingOnly ? ["nutrition"] : []}
+          lockedSections={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
         />
 
         <div className="flex-1 flex flex-col min-w-0">

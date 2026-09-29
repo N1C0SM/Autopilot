@@ -1,3 +1,4 @@
+import { hasNutrition } from "../_shared/entitlements.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -16,7 +17,15 @@ Deno.serve(async (req) => {
     } else if (token) {
       const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
       const { data: { user } } = await sb.auth.getUser(token);
-      authorized = !!user;
+      if (user) {
+        const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+        const { data: profile } = await admin.from("profiles")
+          .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
+          .eq("user_id", user.id).single();
+        const { data: isAdmin } = await admin.rpc("has_role", { _user_id: user.id, _role: "admin" });
+        const { data: isTrainer } = await admin.rpc("has_role", { _user_id: user.id, _role: "trainer" });
+        authorized = hasNutrition(profile) || !!isAdmin || !!isTrainer;
+      }
     }
     if (!authorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });

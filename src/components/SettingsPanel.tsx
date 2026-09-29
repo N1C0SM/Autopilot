@@ -413,16 +413,16 @@ const SettingsPanel = () => {
                 <Crown className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
               </div>
               <div>
-                <div className="font-medium text-sm">Plan {subscriptionTier === "personal" ? "Personal" : subscriptionTier || "—"}</div>
+                <div className="font-medium text-sm">Plan {subscriptionTier === "free" ? "Gratis" : subscriptionTier === "personal" ? "Personal" : subscriptionTier || "—"}</div>
                 <div className="text-xs text-muted-foreground">
                   {isActive ? (
                     subscriptionStatus === "trialing" ? "Prueba gratuita activa" : "Suscripción activa"
-                  ) : paymentStatus === "paid" ? "Plan activo (pago único)" : "Sin suscripción activa"}
+                  ) : paymentStatus === "paid" ? "Plan activo (pago único)" : "Cuenta gratuita · entrenador opcional"}
                 </div>
               </div>
             </div>
             <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isActive ? "bg-primary/20 text-primary" : paymentStatus === "paid" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
-              {isActive ? (subscriptionStatus === "trialing" ? "Trial" : "Activa") : paymentStatus === "paid" ? "Pagado" : "Inactiva"}
+              {isActive ? (subscriptionStatus === "trialing" ? "Trial" : "Activa") : paymentStatus === "paid" ? "Pagado" : "Gratis"}
             </span>
           </div>
 
