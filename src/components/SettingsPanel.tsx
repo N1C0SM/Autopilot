@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import {
   Save, Camera, Trash2, Loader2, User, Lock, ClipboardList,
   CreditCard, ExternalLink, Calendar, Crown, CalendarClock, Check, Zap, Unplug, RefreshCw,
-  ShieldCheck, Download, FileText,
+  ShieldCheck, Download, FileText, LogOut,
   Timer,
 } from "lucide-react";
 import { Link } from "react-router-dom";
