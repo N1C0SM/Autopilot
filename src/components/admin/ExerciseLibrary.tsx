@@ -91,6 +91,14 @@ const ExerciseFormDialog = ({
   const [genLoading, setGenLoading] = useState(false);
   const [genStatus, setGenStatus] = useState<string | null>(null);
 
+  const fnErrorMessage = async (err: any, fallback: string) => {
+    try {
+      const body = await err?.context?.json?.();
+      if (body?.error) return String(body.error);
+    } catch { /* ignore */ }
+    return fallback;
+  };
+
   const generateImageWithAI = async () => {
     const id = initial?.id;
     if (!id) return;
