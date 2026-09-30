@@ -209,6 +209,25 @@ const Index = () => {
             { "@type": "Offer", name: "Gratis", price: "0", priceCurrency: "EUR" },
           ],
         })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Autopilot",
+          url: "https://autopilotplan.com/",
+          description: "Entrenamiento y nutrición personalizados con seguimiento de un entrenador real, para toda España.",
+          areaServed: { "@type": "Country", name: "España" },
+          address: { "@type": "PostalAddress", addressCountry: "ES" },
+          availableLanguage: ["es"],
+          contactPoint: [{ "@type": "ContactPoint", contactType: "Atención al cliente", availableLanguage: ["es"], areaServed: "ES" }],
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Autopilot",
+          url: "https://autopilotplan.com/",
+          inLanguage: "es-ES",
+        })}</script>
+
       </Helmet>
 
       {/* Nav */}
