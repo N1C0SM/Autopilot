@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "lucide-react";
+import { User, ShieldCheck } from "lucide-react";
 import CertificateLink from "@/components/CertificateLink";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -16,7 +16,15 @@ export function TrainerPresentation({ trainer, certificates }: { trainer: Traine
       {trainer.specialty && <p className="text-sm text-primary">{trainer.specialty}</p>}
       {trainer.headline && <p className="font-medium">{trainer.headline}</p>}
       <p className="text-muted-foreground">{trainer.bio || "Te acompaña con un plan adaptado a tu nivel, tu disponibilidad y tu material."}</p>
-      {certificates.length > 0 && <div className="pt-2"><h4 className="text-sm font-semibold">Formación y certificados</h4><ul className="mt-3 space-y-3">{certificates.map(c => <li key={c.id} className="space-y-1"><p className="text-sm break-words">{c.title} · {c.issuer}</p><CertificateLink path={c.file_path} title={c.title} /></li>)}</ul></div>}
+      {certificates.length > 0 && <div className="pt-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"><ShieldCheck className="h-3.5 w-3.5" />Titulación verificada</span>
+          <span className="text-xs text-muted-foreground">{certificates.length} {certificates.length === 1 ? "documento acreditativo" : "documentos acreditativos"}</span>
+        </div>
+        <h4 className="mt-4 text-sm font-semibold">Formación y certificados</h4>
+        <ul className="mt-3 space-y-3">{certificates.map(c => <li key={c.id} className="space-y-1"><p className="text-sm break-words">{c.title} · {c.issuer}</p><CertificateLink path={c.file_path} title={c.title} /></li>)}</ul>
+      </div>}
+
     </div>
   </article>;
 }
