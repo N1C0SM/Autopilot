@@ -791,12 +791,18 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                       </div>
                     )}
                     {progression && (
-                      <p className={`mt-1 truncate text-[10px] font-medium ${
-                        progression.label === "Subir" ? "text-primary" : "text-muted-foreground"
+                      <span className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        progression.label === "Subir" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
                       }`}>
-                        {progression.label === "Subir" ? "↗" : "→"} Propuesta para revisar con tu entrenador: {progression.reason}
-                      </p>
+                        <TrendingUp className="h-3 w-3 shrink-0" />
+                        <span className="truncate">
+                          {progression.label === "Subir"
+                            ? `Sube a ${progression.weight} kg hoy`
+                            : `Repite ${progression.weight} kg hoy`}
+                        </span>
+                      </span>
                     )}
+
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
