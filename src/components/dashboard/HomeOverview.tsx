@@ -26,19 +26,51 @@ interface Props {
   completedToday?: boolean;
   coaching?: boolean;
   nutrition?: boolean;
+  planStatus?: string;
+  tier?: string;
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false, coaching = true, nutrition = true }: Props) => {
+const TIER_LABEL: Record<string, string> = {
+  free: "Plan Gratis",
+  training: "Plan Entrenamiento",
+  full: "Plan Completo",
+};
+
+const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false, coaching = true, nutrition = true, planStatus, tier }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
   const todayPlan = dayPlans.find((p) => p.day === todayName);
   const [selectedWeekDay, setSelectedWeekDay] = useState(todayName);
   const selectedWeekPlan = dayPlans.find((p) => p.day === selectedWeekDay);
+  const planReady = planStatus === "plan_ready" && dayPlans.length > 0;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Estado del plan de un vistazo */}
+      {planStatus && (
+        <div className={`sm:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-3 rounded-2xl border p-4 ${planReady ? "border-primary/30 bg-primary/5" : "border-border bg-secondary/40"}`}>
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${planReady ? "bg-primary" : "bg-muted-foreground"}`} aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">
+              {planReady ? "Tu plan está listo" : "Tu entrenador está preparando tu plan"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {planReady
+                ? `${TIER_LABEL[tier || ""] || "Tu plan"} · ${dayPlans.length} días de entrenamiento${nutrition ? " · nutrición incluida" : ""}${weeksActive ? ` · semana ${weeksActive + 1}` : ""}`
+                : "Te avisaremos en cuanto esté. No tienes que hacer nada."}
+            </p>
+          </div>
+          {planReady && (
+            <button onClick={() => onNavigate("training")} className="shrink-0 text-xs font-semibold text-primary hover:underline">
+              Ver mi plan
+            </button>
+          )}
+        </div>
+      )}
+
+
       {/* Primeros pasos — solo hasta que complete su primer día */}
       {(completedDays ?? 0) === 0 && (
         <motion.div

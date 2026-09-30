@@ -136,7 +136,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                       {view === "home" && (
                         <div className="space-y-3">
                           <p className="text-[11px] font-medium text-primary">Lunes 28 · Semana 3 de 12</p>
-                          <h4 className="font-display text-xl font-bold leading-tight">Hola, Marta.<br />Hoy toca fuerza.</h4>
+                          <h4 className="font-display text-xl font-bold leading-tight">Hola, Nicolás.<br />Hoy toca fuerza.</h4>
                           <button type="button" onClick={() => changeView("training")} className="flex w-full items-center gap-3 rounded-2xl bg-primary p-4 text-left text-primary-foreground transition-opacity hover:opacity-90">
                             <Dumbbell className="h-6 w-6 shrink-0" />
                             <span className="min-w-0 flex-1">
@@ -147,14 +147,31 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                           </button>
                           <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => changeView("nutrition")} className="rounded-2xl border border-border p-3 text-left transition-colors hover:bg-secondary">
-                              <Utensils className="mb-1.5 h-4 w-4 text-primary" />
-                              <p className="text-xs font-semibold">Nutrición</p>
-                              <p className="text-[10px] text-muted-foreground">1.420 / 2.300 kcal</p>
+                              <div className="flex items-center gap-2">
+                                <svg viewBox="0 0 36 36" aria-hidden className="h-9 w-9 -rotate-90 shrink-0">
+                                  <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="4" />
+                                  <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-primary" strokeWidth="4" strokeLinecap="round" strokeDasharray="97.4" strokeDashoffset="38" />
+                                </svg>
+                                <div className="min-w-0">
+                                  <p className="flex items-center gap-1 text-xs font-semibold"><Utensils className="h-3 w-3 text-primary" />Nutrición</p>
+                                  <p className="text-[10px] text-muted-foreground">1.420 / 2.300 kcal</p>
+                                </div>
+                              </div>
+                              <div className="mt-2 flex gap-1">
+                                {[["P", 96, 150], ["C", 150, 240], ["G", 45, 75]].map(([l, v, t]) => (
+                                  <div key={l as string} className="flex-1">
+                                    <div className="h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${((v as number) / (t as number)) * 100}%` }} /></div>
+                                    <p className="mt-0.5 text-[8px] text-muted-foreground">{l}</p>
+                                  </div>
+                                ))}
+                              </div>
                             </button>
                             <button type="button" onClick={() => changeView("progress")} className="rounded-2xl border border-border p-3 text-left transition-colors hover:bg-secondary">
-                              <LineChart className="mb-1.5 h-4 w-4 text-primary" />
-                              <p className="text-xs font-semibold">Peso</p>
+                              <p className="flex items-center gap-1 text-xs font-semibold"><LineChart className="h-3 w-3 text-primary" />Peso</p>
                               <p className="text-[10px] text-muted-foreground">80,6 kg · −1,8 kg</p>
+                              <svg viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden className="mt-2 h-8 w-full">
+                                <polyline points={path} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                              </svg>
                             </button>
                           </div>
                           <div className="flex gap-2.5 rounded-2xl bg-secondary p-3">
@@ -163,6 +180,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                           </div>
                         </div>
                       )}
+
 
                       {view === "training" && (
                         <div>

@@ -1319,6 +1319,48 @@ export type Database = {
         }
         Relationships: []
       }
+      trainer_certificates: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          issuer: string
+          title: string
+          trainer_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          issuer: string
+          title: string
+          trainer_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          issuer?: string
+          title?: string
+          trainer_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_certificates_trainer_profile_id_fkey"
+            columns: ["trainer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trainer_certificates_trainer_profile_id_fkey"
+            columns: ["trainer_profile_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_profiles: {
         Row: {
           bio: string

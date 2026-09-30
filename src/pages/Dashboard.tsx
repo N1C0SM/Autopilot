@@ -362,7 +362,7 @@ const Dashboard = () => {
         <div className="w-full space-y-6">
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {coaching && <MyTrainerCard onOpenChat={() => setSection("chat")} />}
-          <HomeOverview coaching={coaching} nutrition={nutrition} dayPlans={dayPlans} macros={nutrition ? macros : null} meals={nutrition ? meals : []} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
+          <HomeOverview coaching={coaching} nutrition={nutrition} planStatus={planStatus} tier={subscriptionTier} dayPlans={dayPlans} macros={nutrition ? macros : null} meals={nutrition ? meals : []} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
           {!coaching && <CoachingOffer onChoose={handleCompletePayment} compact />}
           {coaching && user && <TravelModeCard userId={user.id} />}
         </div>
