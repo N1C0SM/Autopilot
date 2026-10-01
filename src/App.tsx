@@ -16,7 +16,7 @@ const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const BookDownload = lazy(() => import("./pages/BookDownload"));
 const SharedBook = lazy(() => import("./pages/SharedBook"));
 
-const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Onboarding = lazy(() => import("./pages/Configurator"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Settings = lazy(() => import("./pages/Settings"));
 const MySchedule = lazy(() => import("./pages/MySchedule"));
