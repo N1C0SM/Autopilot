@@ -787,6 +787,12 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   { label: "Deportes", value: onboarding.sports },
                   { label: "Intensidad", value: onboarding.intensity_level ? `${onboarding.intensity_level}/10` : null },
                   { label: "Disponibilidad", value: summary },
+                  { label: "Días elegidos", value: Array.isArray(av?.training_days) ? av.training_days.map((d: number) => dowNames[d]).join(", ") : null },
+                  { label: "Estructura", value: ({ full_body: "Full Body", torso_pierna: "Torso / Pierna", ppl: "Empuje / Tirón / Pierna", coach: "Elige el entrenador" } as Record<string, string>)[av?.structure] || null },
+                  { label: "Revisión preferida", value: av?.checkin_time ? `${dowNames[av.checkin_dow] ?? "?"} ${av.checkin_time}` : null },
+                  { label: "Estilo de coach", value: ({ direct: "Directo y exigente", flexible: "Flexible y realista", technical: "Técnico y analítico" } as Record<string, string>)[av?.coach_style] || null },
+                  { label: "Cocina", value: ({ quick: "Rápido / sin tiempo", normal: "Algo de cocina", loves: "Le gusta cocinar" } as Record<string, string>)[av?.cooking] || null },
+                  { label: "Modalidad", value: av?.training_mode === "pareja" ? `En pareja · ${av.partner_email || ""}` : av?.training_mode ? "Individual" : null },
                 ].map((item) => (
                   <div key={item.label} className="bg-secondary/30 rounded-lg p-3">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{item.label}</div>
