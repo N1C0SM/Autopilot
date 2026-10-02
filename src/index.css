@@ -99,7 +99,7 @@ body.keyboard-open main {
     --popover: 225 12% 9%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 42 68% 58%;
+    --primary: 43 61% 60%;
     --primary-foreground: 0 0% 0%;
 
     --secondary: 225 10% 13%;
@@ -119,18 +119,18 @@ body.keyboard-open main {
 
     --border: 225 9% 18%;
     --input: 225 9% 20%;
-    --ring: 42 68% 58%;
+    --ring: 43 61% 60%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 225 14% 5%;
     --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 42 68% 58%;
+    --sidebar-primary: 43 61% 60%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 225 10% 11%;
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 225 9% 16%;
-    --sidebar-ring: 42 68% 58%;
+    --sidebar-ring: 43 61% 60%;
 
     --font-display: 'Space Grotesk', sans-serif;
     --font-sans: 'Space Grotesk', sans-serif;
