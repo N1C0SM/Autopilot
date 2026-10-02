@@ -188,16 +188,15 @@ const HomeOverview = ({
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => onNavigate("nutrition")}
-              className="min-w-0 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
+              className="flex w-full min-w-0 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
             >
-              <span className="flex items-center gap-2">
-                <span className="relative h-9 w-9 shrink-0">
-                  <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
-                    <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="4" />
+              <span className="relative h-12 w-12 shrink-0">
+                  <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
+                    <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3" />
                     {nutrition && meals.length > 0 && (
                       <circle
                         cx="18"
@@ -205,21 +204,21 @@ const HomeOverview = ({
                         r="15.5"
                         fill="none"
                         className="stroke-primary"
-                        strokeWidth="4"
+                        strokeWidth="3"
                         strokeLinecap="round"
                         strokeDasharray="97.4"
                         strokeDashoffset={97.4 * (1 - mealProgress)}
                       />
                     )}
                   </svg>
-                  {nutrition && <Utensils className="absolute inset-0 m-auto h-3 w-3 text-primary" />}
-                </span>
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1 text-sm font-semibold">
+                  {nutrition && <Utensils className="absolute inset-0 m-auto h-4 w-4 text-primary" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-base font-semibold">
                     Nutrición
-                    {!nutrition && <LockKeyhole className="h-3 w-3 text-muted-foreground" />}
+                    {!nutrition && <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" />}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="mt-0.5 block truncate text-sm text-muted-foreground">
                     {nutrition
                       ? meals.length
                         ? `${doneMealCount}/${meals.length} comidas`
@@ -228,44 +227,44 @@ const HomeOverview = ({
                           : "Ver plan de hoy"
                       : "Plan Completo"}
                   </span>
-                </span>
               </span>
               {nutrition && macros ? (
-                <span className="mt-2 flex gap-1.5 text-[10px] text-muted-foreground">
+                <span className="hidden gap-2 text-xs text-muted-foreground min-[390px]:flex">
                   {[
                     { label: "P", value: macros.protein },
                     { label: "C", value: macros.carbs },
                     { label: "G", value: macros.fats },
                   ].map((macro) => (
-                    <span key={macro.label} className="min-w-0 flex-1 whitespace-nowrap">{macro.label} · {macro.value}g</span>
+                    <span key={macro.label} className="whitespace-nowrap"><span className="font-semibold text-foreground">{macro.label}</span> {macro.value}g</span>
                   ))}
                 </span>
               ) : (
-                <span className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="h-1 flex-1 rounded-full bg-secondary" />
-                  <span>Ver plan</span>
-                </span>
+                <span className="hidden text-xs text-muted-foreground min-[390px]:inline">Ver plan</span>
               )}
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate("progress")}
-              className="min-w-0 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
+              className="flex w-full min-w-0 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
             >
-              <span className="flex items-center gap-1 text-sm font-semibold">
-                <LineChart className="h-3 w-3 text-primary" />
-                Tu semana
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                <LineChart className="h-5 w-5 text-primary" />
               </span>
-              <span className="mt-1 block truncate text-xs text-muted-foreground">
-                {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-semibold">Tu semana</span>
+                <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+                  {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
+                </span>
+                <span className="mt-2 block h-2 overflow-hidden rounded-full bg-secondary">
+                  <span
+                    className="block h-full rounded-full bg-primary transition-all"
+                    style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
+                  />
+                </span>
               </span>
-              <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-secondary">
-                <span
-                  className="block h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
-                />
-              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
           </div>
 
