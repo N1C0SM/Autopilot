@@ -20,14 +20,8 @@ import { WorkoutReview } from "./WorkoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
-import { getWorkoutSetInputError } from "@/lib/workoutSet";
+import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-
-interface SetLog {
-  reps: number;
-  weight: string;
-  done: boolean;
-}
 
 interface Props {
   userId: string;
@@ -55,8 +49,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const todayIndex = (new Date().getDay() + 6) % 7;
   const selectedDay = DAYS_ORDER[todayIndex];
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
-  const [exerciseLogs, setExerciseLogs] = useState<Record<string, SetLog[]>>({});
-  const [previousLogs, setPreviousLogs] = useState<Record<string, SetLog[]>>({});
+  const [exerciseLogs, setExerciseLogs] = useState<Record<string, WorkoutSetLog[]>>({});
+  const [previousLogs, setPreviousLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousSessionRpe, setPreviousSessionRpe] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [restTimer, setRestTimer] = useState<number | null>(null);
@@ -161,49 +155,33 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       setSessionRpe(completionResult.data?.rpe ?? null);
       setCompletionReady(true);
       const data = currentResult.data;
+      const prevData = previousResult.data;
+      const prev: Record<string, WorkoutSetLog[]> = {};
+      if (prevData && prevData.length > 0) {
+        const lastDate = prevData[0].logged_at;
+        prevData
+          .filter((row) => row.logged_at === lastDate)
+          .forEach((row) => {
+            prev[row.exercise_name] = row.sets_completed as WorkoutSetLog[];
+          });
+      }
       if (data && data.length > 0) {
-        const logs: Record<string, SetLog[]> = {};
-        data.forEach((row: any) => {
-          logs[row.exercise_name] = row.sets_completed as SetLog[];
+        const logs: Record<string, WorkoutSetLog[]> = {};
+        data.forEach((row) => {
+          logs[row.exercise_name] = row.sets_completed as unknown as WorkoutSetLog[];
         });
         setExerciseLogs(logs);
       } else if (currentPlan?.type === "gimnasio" && currentPlan.exercises) {
-        const logs: Record<string, SetLog[]> = {};
-        currentPlan.exercises.forEach((ex) => {
-          logs[ex.name] = Array.from({ length: ex.series }, () => ({
-            reps: ex.reps,
-            weight: ex.weight || "",
-            done: false,
-          }));
-        });
-        setExerciseLogs(logs);
+        setExerciseLogs(createWorkoutSetLogs(currentPlan.exercises, prev));
       } else {
         setExerciseLogs({});
       }
 
       // Previous session logs (last workout on this day)
-      const prevData = previousResult.data;
       if (prevData && prevData.length > 0) {
         const lastDate = prevData[0].logged_at;
-        const prev: Record<string, SetLog[]> = {};
-        prevData
-          .filter((r: any) => r.logged_at === lastDate)
-          .forEach((row: any) => {
-            prev[row.exercise_name] = row.sets_completed as SetLog[];
-          });
         setPreviousLogs(prev);
         setPreviousSessionRpe(prevData.find((row) => row.logged_at === lastDate && row.rpe !== null)?.rpe ?? null);
-        if ((!data || data.length === 0) && currentPlan?.type === "gimnasio") {
-          const progressedLogs: Record<string, SetLog[]> = {};
-          currentPlan.exercises?.forEach((exercise) => {
-            progressedLogs[exercise.name] = Array.from({ length: exercise.series }, () => ({
-              reps: exercise.reps,
-              weight: exercise.weight || "",
-              done: false,
-            }));
-          });
-          setExerciseLogs(progressedLogs);
-        }
       } else {
         setPreviousLogs({});
       }
@@ -237,25 +215,17 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     return () => clearInterval(interval);
   }, [restTimer !== null]);
 
-  const updateSet = (exerciseName: string, setIndex: number, field: keyof SetLog, value: any) => {
+  const updateSet = <Field extends keyof WorkoutSetLog>(
+    exerciseName: string,
+    setIndex: number,
+    field: Field,
+    value: WorkoutSetLog[Field],
+  ) => {
     setExerciseLogs((prev) => {
       const sets = [...(prev[exerciseName] || [])];
       sets[setIndex] = { ...sets[setIndex], [field]: value };
       return { ...prev, [exerciseName]: sets };
     });
-  };
-
-  const copyPreviousSession = (exerciseName: string) => {
-    const previous = previousLogs[exerciseName];
-    if (!previous?.length) return;
-    setExerciseLogs((current) => ({
-      ...current,
-      [exerciseName]: (current[exerciseName] || []).map((set, index) => ({
-        ...set,
-        weight: previous[index]?.weight || set.weight,
-        reps: previous[index]?.reps || set.reps,
-      })),
-    }));
   };
 
   const applyProgression = (exerciseName: string, progression: NonNullable<ReturnType<typeof getProgressionSuggestion>>) => {
@@ -476,14 +446,14 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     }
   };
 
-  const handleRPEConfirm = async (rpe: number) => {
+  const handleRPEConfirm = async (rpe: number | null) => {
     setRpeOpen(false);
     setSaving(true);
     setSaveStatus("saving");
     cancelPendingAutosave();
     setRestTimer(null);
     try {
-      await persistLogs(rpe);
+      await persistLogs(rpe ?? undefined);
       setSaveError(false);
       setSaveStatus("saved");
     const { error: completionError } = await supabase.from("day_completions").upsert({
@@ -1004,11 +974,11 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
 
 
                         {/* Previous session hint */}
-                        {prevSets && prevSets.length > 0 && (
+                        {prevSets?.some((set) => set.done) && (
                           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-2 px-1">
                             <TrendingUp className="w-3 h-3" />
-                            <span>Última sesión: {prevSets.map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
-                            <InfoHint text="Peso × repeticiones de la última vez que hiciste este ejercicio. Intenta igualar o superar al menos una serie para progresar." />
+                            <span>Precargado de la última vez: {prevSets.filter((set) => set.done).map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
+                            <InfoHint text="Los pesos y repeticiones de las series completadas la última vez ya están puestos. Ajusta solo lo que cambie hoy." />
                           </div>
                         )}
 
@@ -1023,16 +993,6 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                               Aplicar a las series pendientes
                             </button>
                           </div>
-                        )}
-
-                        {prevSets && prevSets.length > 0 && sets.some((set) => !set.done) && (
-                          <button
-                            type="button"
-                            onClick={() => copyPreviousSession(ex.name)}
-                            className="mb-2 min-h-10 w-full rounded-xl border border-primary/30 bg-primary/10 px-3 text-left text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
-                          >
-                            Repetir pesos y repeticiones de la última sesión
-                          </button>
                         )}
 
                         {/* Column headers */}
@@ -1080,7 +1040,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                                 placeholder={ex.weight || "kg"}
                                 aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                 aria-invalid={Boolean(inputError && set.weight.trim())}
-                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && set.weight.trim() ? "border-destructive" : "border-border"}`}
+                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1106,7 +1066,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                                 }}
                                 aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
                                 aria-invalid={Boolean(inputError && (!Number.isInteger(set.reps) || set.reps <= 0))}
-                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1121,7 +1081,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                               onClick={() => toggleSetDone(ex.name, si, restSec)}
                               aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
                               title={set.done ? "Desmarcar serie" : "Marcar serie como hecha"}
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all mx-auto ${
+                              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all mx-auto ${
                                 set.done
                                   ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
                                   : "bg-secondary hover:bg-secondary/80 text-muted-foreground"

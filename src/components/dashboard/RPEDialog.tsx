@@ -12,7 +12,7 @@ import { Flame } from "lucide-react";
 
 interface Props {
   open: boolean;
-  onConfirm: (rpe: number) => void;
+  onConfirm: (rpe: number | null) => void;
 }
 
 const RPE_DESCRIPTIONS: Record<number, { label: string; emoji: string }> = {
@@ -65,9 +65,14 @@ const RPEDialog = ({ open, onConfirm }: Props) => {
           </div>
         </div>
 
-        <Button variant="hero" className="w-full" onClick={() => onConfirm(rpe)}>
-          Confirmar y completar día
-        </Button>
+        <div className="space-y-2">
+          <Button variant="hero" className="w-full" onClick={() => onConfirm(rpe)}>
+            Guardar esfuerzo y completar
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={() => onConfirm(null)}>
+            Completar sin valorar esfuerzo
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
