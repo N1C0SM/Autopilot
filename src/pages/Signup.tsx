@@ -173,6 +173,11 @@ const Signup = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>
+          {!fromQuiz && (
+            <Link to="/onboarding" className="mt-6 block rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
+              ¿Aún no has configurado tu plan? <span className="font-semibold text-primary underline">Diséñalo en 1 minuto gratis</span>
+            </Link>
+          )}
           <h1 className="text-2xl font-bold font-display mt-6 mb-2">Crea tu cuenta</h1>
           <p className="text-muted-foreground text-sm">
             {isFree
