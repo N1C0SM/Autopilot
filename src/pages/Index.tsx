@@ -165,7 +165,7 @@ const Index = () => {
 
   const goFree = (source: string) => {
     track("cta_click", { cta: "free_signup", source });
-    navigate("/signup?free=true");
+    navigate("/onboarding");
   };
 
   const goToPricing = (source = "landing") => {
@@ -412,7 +412,7 @@ const Index = () => {
               <div className="mx-auto mt-8 max-w-2xl border-t border-border pt-6 text-center">
                 <p className="text-sm font-semibold">¿Quieres probar la app antes de hablar de planes?</p>
                 <p className="mt-1 text-xs text-muted-foreground">Crea una cuenta gratis, completa tu perfil y prueba una sesión desde el móvil.</p>
-                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/signup?free=true")}>
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate("/onboarding")}>
                   Crear cuenta gratis <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </div>

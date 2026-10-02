@@ -53,8 +53,9 @@ const AppStoreBadges = ({
   label,
   size = "default",
 }: Props) => {
-  const [appStoreUrl, setAppStoreUrl] = useState("");
-  const [playStoreUrl, setPlayStoreUrl] = useState("");
+  // Enlaces provisionales: se sustituyen por los configurados en Ajustes del admin.
+  const [appStoreUrl, setAppStoreUrl] = useState("https://apps.apple.com/es/app/apple-fitness/id1208224953");
+  const [playStoreUrl, setPlayStoreUrl] = useState("https://play.google.com/store/apps/details?id=com.google.android.apps.fitness");
 
   useEffect(() => {
     let alive = true;
@@ -62,8 +63,10 @@ const AppStoreBadges = ({
       if (!alive) return;
       const row = Array.isArray(data) ? data[0] : data;
       if (row) {
-        setAppStoreUrl(((row as any).app_store_url || "").trim());
-        setPlayStoreUrl(((row as any).play_store_url || "").trim());
+        const a = ((row as any).app_store_url || "").trim();
+        const p = ((row as any).play_store_url || "").trim();
+        if (a) setAppStoreUrl(a);
+        if (p) setPlayStoreUrl(p);
       }
     });
     return () => {

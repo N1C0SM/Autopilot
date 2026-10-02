@@ -87,7 +87,7 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                 onClick={() => {
                   if (key === "free") {
                     track("plan_select", { plan: "free", source: "pricing" });
-                    window.location.assign("/signup?free=true");
+                    window.location.assign("/onboarding");
                   } else onSelect(key);
                 }}
               >
