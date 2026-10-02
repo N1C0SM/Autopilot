@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBodyWeight, parseMacroTargets } from "./nutrition";
+import { parseBodyWeight, parseMacroTargets, resolveNutritionPreview } from "./nutrition";
 
 describe("nutrition inputs", () => {
   it.each([null, undefined, "", 0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
@@ -24,5 +24,18 @@ describe("nutrition inputs", () => {
     expect(parseMacroTargets({})).toBeNull();
     expect(parseMacroTargets({ protein: 0, carbs: 220, fats: 65 })).toBeNull();
     expect(parseMacroTargets(null)).toBeNull();
+  });
+
+  it("does not fabricate nutrition numbers without a valid body weight", () => {
+    expect(resolveNutritionPreview({ weight: null, goal: "gain_muscle" })).toEqual({
+      calories: null,
+      protein: null,
+      hasWeight: false,
+    });
+    expect(resolveNutritionPreview({ weight: 72, goal: "gain_muscle" })).toEqual({
+      calories: 2604,
+      protein: 144,
+      hasWeight: true,
+    });
   });
 });
