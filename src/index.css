@@ -191,18 +191,30 @@ body.keyboard-open main {
   }
 
   .app-chrome {
-    border-color: hsl(var(--primary) / 0.12);
-    background: hsl(var(--background) / 0.82);
-    box-shadow:
-      0 1px 0 hsl(var(--foreground) / 0.025),
-      0 10px 30px -24px hsl(var(--primary) / 0.4);
+    border-color: hsl(var(--border) / 0.75);
+    background: hsl(var(--background) / 0.78);
     -webkit-backdrop-filter: blur(20px) saturate(1.3);
     backdrop-filter: blur(20px) saturate(1.3);
   }
 
   .mobile-dashboard-shell {
     background-color: hsl(var(--background));
+    background-image: radial-gradient(ellipse at 50% -24%, hsl(var(--primary) / 0.055), transparent 36rem);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+
+  .mobile-dashboard-shell :is(h1, h2, h3, h4, h5, h6) {
+    font-family: inherit;
+    letter-spacing: -0.035em;
+  }
+
+  .mobile-dashboard-shell .bg-card {
     background-image: none;
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.035);
+  }
+
+  .mobile-dashboard-shell .card-shadow {
+    box-shadow: none;
   }
 
   .mobile-dashboard-content {

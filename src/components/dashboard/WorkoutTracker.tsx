@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
-  Timer, TrendingUp, X, Video, Save, Trophy, BarChart3,
+  Timer, TrendingUp, X, Video, Save, Trophy,
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutReview } from "./WorkoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
+import { hapticTap } from "@/lib/native";
+import { getWorkoutSetInputError } from "@/lib/workoutSet";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 interface SetLog {
   reps: number;
@@ -54,6 +57,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, SetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, SetLog[]>>({});
+  const [previousSessionRpe, setPreviousSessionRpe] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [restTimer, setRestTimer] = useState<number | null>(null);
   const [restTarget, setRestTarget] = useState(0);
@@ -61,17 +65,19 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
   const [logsReady, setLogsReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadLogs, setReloadLogs] = useState(0);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveAttemptRef = useRef(0);
+  const saveTimeoutRef = useRef<number | null>(null);
   const [completionReady, setCompletionReady] = useState(false);
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [showCompletionSummary, setShowCompletionSummary] = useState(false);
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
-  const [sessionStartedAt, setSessionStartedAt] = useState<Date | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const formatLocalDate = (date: Date) => {
@@ -96,7 +102,6 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     if (!logsReady || loadError) return;
     setStarted(true);
     setExpandedExercise(exerciseIndex);
-    setSessionStartedAt((startedAt) => startedAt || new Date());
     onSessionModeChange?.(true);
   };
 
@@ -114,8 +119,12 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       setCompletionReady(false);
       setLoadError(false);
       setWorkoutCompleted(false);
+      setShowCompletionSummary(false);
+      setSaveStatus("idle");
+      setSavedAt(null);
       setExerciseLogs({});
       setPreviousLogs({});
+      setPreviousSessionRpe(null);
       const [currentResult, completionResult, previousResult] = await Promise.all([
         supabase
           .from("workout_logs")
@@ -148,6 +157,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
         return;
       }
       setWorkoutCompleted(Boolean(completionResult.data));
+      setShowCompletionSummary(Boolean(completionResult.data));
       setSessionRpe(completionResult.data?.rpe ?? null);
       setCompletionReady(true);
       const data = currentResult.data;
@@ -182,6 +192,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             prev[row.exercise_name] = row.sets_completed as SetLog[];
           });
         setPreviousLogs(prev);
+        setPreviousSessionRpe(prevData.find((row) => row.logged_at === lastDate)?.rpe ?? null);
         if ((!data || data.length === 0) && currentPlan?.type === "gimnasio") {
           const progressedLogs: Record<string, SetLog[]> = {};
           currentPlan.exercises?.forEach((exercise) => {
@@ -248,11 +259,21 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   };
 
   const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number) => {
-    const wasDone = exerciseLogs[exerciseName]?.[setIndex]?.done;
+    const set = exerciseLogs[exerciseName]?.[setIndex];
+    const wasDone = set?.done;
+    if (!set) return;
+    if (!wasDone) {
+      const inputError = getWorkoutSetInputError(set);
+      if (inputError) {
+        toast.error(inputError);
+        return;
+      }
+    }
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
     // Start rest timer when marking set as done
     if (!wasDone) {
+      void hapticTap();
       const configuredRest = getWorkoutRestSeconds(userId);
       const effectiveRest = configuredRest || restSeconds || 60;
       setRestTarget(effectiveRest);
@@ -294,19 +315,40 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     await write;
   };
 
+  const cancelPendingAutosave = () => {
+    saveAttemptRef.current += 1;
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+  };
+
   // Save each change so the session can be resumed after a connection drop or app close.
   useEffect(() => {
+    const attempt = ++saveAttemptRef.current;
     if (!logsReady || workoutCompleted || Object.keys(exerciseLogs).length === 0) return;
+    setSaveStatus("pending");
+    setSaveError(false);
     const timeout = window.setTimeout(async () => {
+      saveTimeoutRef.current = null;
+      setSaveStatus("saving");
       try {
         await persistLogs();
+        if (attempt !== saveAttemptRef.current) return;
         setSavedAt(new Date());
         setSaveError(false);
+        setSaveStatus("saved");
       } catch {
+        if (attempt !== saveAttemptRef.current) return;
         setSaveError(true);
+        setSaveStatus("error");
       }
     }, 800);
-    return () => window.clearTimeout(timeout);
+    saveTimeoutRef.current = timeout;
+    return () => {
+      window.clearTimeout(timeout);
+      if (saveTimeoutRef.current === timeout) saveTimeoutRef.current = null;
+    };
   }, [exerciseLogs, logsReady, selectedDay, selectedDate, workoutCompleted]);
 
   const detectAndSavePRs = async () => {
@@ -381,9 +423,12 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     }
 
     setSaving(true);
+    setSaveStatus("saving");
+    cancelPendingAutosave();
     try {
       await persistLogs();
       setSaveError(false);
+      setSaveStatus("saved");
       setRestTimer(null);
       setStarted(false);
       setExpandedExercise(null);
@@ -392,6 +437,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       toast.success("Entrenamiento terminado. Tu progreso ya está guardado.");
     } catch {
       setSaveError(true);
+      setSaveStatus("error");
       toast.error("No se pudo guardar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.");
     } finally {
       setSaving(false);
@@ -400,9 +446,12 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
 
   const saveAndExit = async () => {
     setSaving(true);
+    setSaveStatus("saving");
+    cancelPendingAutosave();
     try {
       await persistLogs();
       setSaveError(false);
+      setSaveStatus("saved");
       setRestTimer(null);
       setStarted(false);
       setExpandedExercise(null);
@@ -411,6 +460,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       onCancel?.();
     } catch {
       setSaveError(true);
+      setSaveStatus("error");
       toast.error("No se pudo guardar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.");
     } finally {
       setSaving(false);
@@ -420,10 +470,13 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const handleRPEConfirm = async (rpe: number) => {
     setRpeOpen(false);
     setSaving(true);
+    setSaveStatus("saving");
+    cancelPendingAutosave();
     setRestTimer(null);
     try {
       await persistLogs(rpe);
-    setSaveError(false);
+      setSaveError(false);
+      setSaveStatus("saved");
     const { error: completionError } = await supabase.from("day_completions").upsert({
         user_id: userId,
         day_label: selectedDay,
@@ -442,6 +495,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       }
     } catch {
       setSaveError(true);
+      setSaveStatus("error");
       toast.error("No se pudo guardar el entrenamiento. Comprueba tu conexión e inténtalo de nuevo.");
     } finally {
       setSaving(false);
@@ -479,10 +533,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     : "Trabajo hecho. La próxima sesión quedará registrada para que puedas progresar.";
 
   return (
-    <div className={showCompletionSummary
-      ? "fixed inset-0 z-50 overflow-y-auto bg-background px-4 pb-8 pt-[calc(env(safe-area-inset-top)+1rem)]"
-      : `w-full min-w-0 ${started ? "min-h-dvh px-3 pb-8 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:px-5" : ""}`
-    }>
+    <div className={`w-full min-w-0 ${started ? "min-h-dvh px-3 pb-8 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:px-5" : ""}`}>
       <div className={`mb-3 flex items-center gap-3 text-[11px] text-muted-foreground ${started && !workoutCompleted ? "sticky top-0 z-30 -mx-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:-mx-5 sm:px-5" : "justify-end"}`}>
         {started && !workoutCompleted && (
           <>
@@ -495,8 +546,15 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             </div>
           </>
         )}
-        {!workoutCompleted && saveError && <span role="status" className="shrink-0 text-destructive">Error al guardar</span>}
-        {!workoutCompleted && !saveError && savedAt && <span className="flex shrink-0 items-center gap-1"><Save className="h-3 w-3" /> Guardado</span>}
+        {!workoutCompleted && saveStatus === "error" && <span role="status" className="shrink-0 text-destructive">Error al guardar</span>}
+        {!workoutCompleted && (saveStatus === "pending" || saveStatus === "saving") && (
+          <span role="status" aria-live="polite" className="shrink-0">
+            {saveStatus === "pending" ? "Pendiente de guardar" : "Guardando…"}
+          </span>
+        )}
+        {!workoutCompleted && saveStatus === "saved" && savedAt && (
+          <span role="status" className="flex shrink-0 items-center gap-1"><Save className="h-3 w-3" /> Guardado</span>
+        )}
       </div>
 
       {/* Rest day */}
@@ -583,123 +641,123 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             </div>
           )}
 
-          {workoutCompleted && showCompletionSummary && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-                      className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center rounded-[2rem] border border-primary/30 bg-primary/10 px-4 py-8 text-center space-y-5"
-            >
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 ring-8 ring-primary/5">
-                        <Trophy className="h-8 w-8 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold font-display">Sesión completada</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{sessionMessage}</p>
-              </div>
-                      <div className="grid w-full grid-cols-2 gap-2">
-                        <div className="rounded-2xl bg-background/70 p-3 text-left">
-                          <p className="text-xl font-bold">{completedExercises}/{currentPlan.exercises?.length || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">ejercicios</p>
+          <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
+            {workoutCompleted && showCompletionSummary && (
+              <DialogContent className="max-h-[92dvh] w-[calc(100%-1rem)] max-w-xl overflow-y-auto rounded-[2rem] border-border bg-background p-4 shadow-2xl sm:p-6">
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4 pb-1">
+              <header className="rounded-[1.75rem] border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-5 text-center shadow-sm sm:p-6">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+                  <Trophy className="h-7 w-7" />
                 </div>
-                        <div className="rounded-2xl bg-background/70 p-3 text-left">
-                          <p className="text-xl font-bold">{completedSets}</p>
-                  <p className="text-[10px] text-muted-foreground">series hechas</p>
+                <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+                  Sesión guardada · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+                </p>
+                <DialogTitle className="mt-1 font-display text-2xl font-bold tracking-tight">Entrenamiento completado</DialogTitle>
+                <DialogDescription className="mt-1 text-sm text-muted-foreground">{trainingTitle || sessionMessage}</DialogDescription>
+                {personalRecords.length > 0 && (
+                  <div className="mx-auto mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-left text-xs font-semibold text-primary">
+                    <Trophy className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">Nuevo récord · {personalRecords.join(" · ")}</span>
+                  </div>
+                )}
+              </header>
+
+              <section aria-label="Resumen de la sesión" className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "Ejercicios", value: `${completedExercises}/${currentPlan.exercises?.length || 0}` },
+                  { label: "Series completadas", value: String(completedSets) },
+                  { label: "Volumen con carga", value: totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—" },
+                  { label: "Esfuerzo percibido", value: sessionRpe !== null ? `${sessionRpe}/10` : "—" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-2xl border border-border/80 bg-card px-3.5 py-3">
+                    <p className="text-lg font-bold tabular-nums">{item.value}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">{item.label}</p>
+                  </div>
+                ))}
+              </section>
+
+              <section className="rounded-[1.75rem] border border-border/80 bg-card p-4 sm:p-5" aria-labelledby="workout-muscle-map-title">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 id="workout-muscle-map-title" className="font-display text-base font-bold">Así trabajaste hoy</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">Mapa estimado a partir de las series que marcaste.</p>
+                  </div>
+                  {musclesWorked.length > 0 && (
+                    <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                      {musclesWorked.length} {musclesWorked.length === 1 ? "grupo" : "grupos"}
+                    </span>
+                  )}
                 </div>
-                        <div className="rounded-2xl bg-background/70 p-3 text-left">
-                          <p className="text-xl font-bold">{totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—"}</p>
-                  <p className="text-[10px] text-muted-foreground">volumen movido</p>
-                </div>
-                        <div className="rounded-2xl bg-background/70 p-3 text-left">
-                          <p className="text-xl font-bold">
-                    {sessionStartedAt ? `${Math.max(1, Math.round((Date.now() - sessionStartedAt.getTime()) / 60000))} min` : "—"}
+
+                {musclesWorked.length > 0 ? (
+                  <>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {(["front", "back"] as const).map((side) => (
+                        <div
+                          key={side}
+                          className="relative mx-auto aspect-[399/698] w-full max-w-[9rem] overflow-hidden rounded-2xl border border-border/70 bg-[radial-gradient(ellipse_at_50%_38%,hsl(var(--primary)/.09),transparent_68%),linear-gradient(180deg,hsl(var(--secondary)/.25),hsl(var(--background)/.65))]"
+                        >
+                          <MuscleMapFigure
+                            side={side}
+                            muscles={musclesWorked}
+                            intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
+                          />
+                          <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-border/70 bg-background/85 px-2.5 py-1 text-[9px] font-semibold text-muted-foreground backdrop-blur-sm">
+                            {side === "front" ? "Frontal" : "Posterior"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                      {musclesWorked.map((muscle) => (
+                        <span
+                          key={muscle}
+                          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-medium"
+                          style={{
+                            borderColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 33%, transparent)`,
+                            backgroundColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 7%, transparent)`,
+                          }}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: getMuscleIntensity(muscleSetCounts[muscle]).fill }} />
+                          {muscle}
+                          <span className="text-muted-foreground">{muscleSetCounts[muscle]} series</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center justify-center gap-3 text-[9px] text-muted-foreground">
+                      {Object.entries(MUSCLE_INTENSITY).map(([level, intensity]) => (
+                        <span key={level} className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: intensity.fill }} />
+                          {intensity.label}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="mt-4 rounded-xl bg-secondary/40 p-4 text-center text-xs text-muted-foreground">
+                    Este plan no tiene grupos musculares asociados, así que no mostramos un mapa estimado.
                   </p>
-                  <p className="text-[10px] text-muted-foreground">duración aprox.</p>
-                </div>
-              </div>
-                      <div className="w-full space-y-2 text-left text-sm">
-                {musclesWorked.length > 0 && (
-                          <div className="rounded-2xl bg-background/50 px-3 py-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">Mapa muscular</p>
-                                <p className="mt-1 text-xs text-muted-foreground">Zonas según las series que completaste</p>
-                              </div>
-                              <span className="shrink-0 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
-                                {musclesWorked.length} {musclesWorked.length === 1 ? "grupo" : "grupos"}
-                              </span>
-                            </div>
-                            <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
-                              {(["front", "back"] as const).map((side) => {
-                                return (
-                                <div key={side} className="min-w-0">
-                                  <div className="relative mx-auto aspect-[399/698] w-full max-w-[11rem] overflow-hidden rounded-2xl border border-border/80 bg-[radial-gradient(ellipse_at_50%_38%,hsl(var(--primary)/.09),transparent_68%),linear-gradient(180deg,hsl(var(--secondary)/.38),hsl(var(--background)/.7))]">
-                                    <MuscleMapFigure
-                                      side={side}
-                                      muscles={musclesWorked}
-                                      intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
-                                    />
-                                    <span className="absolute left-2 top-2 rounded-full border border-white/10 bg-background/80 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-foreground/80 backdrop-blur-sm">
-                                      {side === "front" ? "Frontal" : "Posterior"}
-                                    </span>
-                                  </div>
-                                </div>
-                                );
-                              })}
-                            </div>
-                            <div className="mt-4 grid grid-cols-3 gap-1.5">
-                              {Object.entries(MUSCLE_INTENSITY).map(([level, intensity]) => (
-                                <div key={level} className="rounded-xl border border-border/70 bg-background/50 px-2 py-2 text-center">
-                                  <span className="mx-auto mb-1 block h-1.5 w-8 rounded-full" style={{ backgroundColor: intensity.fill }} />
-                                  <span className="block text-[9px] font-semibold text-foreground">{intensity.label}</span>
-                                  <span className="block text-[8px] text-muted-foreground">{intensity.range}</span>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="mt-3 grid grid-cols-2 gap-1.5">
-                              {musclesWorked.map((muscle) => (
-                                <div
-                                  key={muscle}
-                                  className="flex min-w-0 items-center justify-between gap-2 rounded-xl border px-2.5 py-2"
-                                  style={{
-                                    borderColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 33%, transparent)`,
-                                    backgroundColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 7%, transparent)`,
-                                  }}
-                                >
-                                  <span className="truncate text-[10px] font-medium text-foreground">{muscle}</span>
-                                  <span className="shrink-0 text-[9px] font-semibold tabular-nums" style={{ color: getMuscleIntensity(muscleSetCounts[muscle]).fill }}>
-                                    {muscleSetCounts[muscle]} series
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                            <p className="mt-2 text-center text-[9px] text-muted-foreground">
-                              Estimación visual según las series completadas por grupo muscular.
-                            </p>
-                          </div>
-                        )}
-                        <WorkoutReview
-                          current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
-                          previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
-                          rpe={sessionRpe}
-                        />
-                        {personalRecords.length > 0 && (
-                          <div className="flex items-center gap-2 rounded-2xl bg-primary/15 px-4 py-3 text-primary">
-                            <BarChart3 className="h-4 w-4 shrink-0" />
-                            <p><span className="font-semibold">Récord:</span> {personalRecords.join(" · ")}</p>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">Tu progreso y tus récords están guardados.</p>
-                      <Button
-                        type="button"
-                        variant="hero"
-                        className="h-12 w-full rounded-2xl text-base"
-                        onClick={onExit}
-                      >
-                        <ArrowLeft className="mr-2 h-4 w-4" /> Volver al inicio
-                      </Button>
-            </motion.div>
-          )}
+                )}
+              </section>
+
+              <WorkoutReview
+                current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
+                previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
+                rpe={sessionRpe}
+              />
+              <p className="text-center text-[11px] text-muted-foreground">Tu sesión y los datos del resumen están guardados.</p>
+              <Button
+                type="button"
+                variant="hero"
+                className="sticky bottom-2 h-12 w-full rounded-2xl text-base shadow-lg"
+                onClick={onExit}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" /> Volver al inicio
+              </Button>
+              </motion.div>
+              </DialogContent>
+            )}
+          </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
             <div className="flex min-h-[calc(100dvh-12rem)] flex-col justify-center rounded-[2rem] border border-primary/25 bg-gradient-to-b from-primary/10 via-card to-card p-5 sm:p-8">
@@ -805,7 +863,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             const exerciseVideo = ex.video_url || metadata?.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
             const exerciseType = ex.exercise_type || metadata?.exercise_type;
-            const progression = getProgressionSuggestion(ex, prevSets);
+            const progression = getProgressionSuggestion(ex, prevSets, previousSessionRpe);
 
             return (
               <motion.div
@@ -864,14 +922,23 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                       </div>
                     )}
                     {started && progression && (
-                      <span className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                        progression.label === "Subir" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
-                      }`}>
+                      <span
+                        title={progression.reason}
+                        className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          progression.label === "Subir" || progression.label === "Añadir rep"
+                            ? "bg-primary/15 text-primary"
+                            : "bg-secondary text-muted-foreground"
+                        }`}
+                      >
                         <TrendingUp className="h-3 w-3 shrink-0" />
                         <span className="truncate">
                           {progression.label === "Subir"
                             ? `Sube a ${progression.weight} kg hoy`
-                            : `Repite ${progression.weight} kg hoy`}
+                            : progression.label === "Añadir rep"
+                              ? "Prueba 1 rep más por serie"
+                              : progression.label === "Mantener"
+                                ? progression.weight ? `Mantén ${progression.weight} kg hoy` : "Mantén las repeticiones hoy"
+                                : progression.weight ? `Repite ${progression.weight} kg hoy` : "Repite las repeticiones hoy"}
                         </span>
                       </span>
                     )}
@@ -963,7 +1030,9 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                           </span>
                         </div>
 
-                        {sets.map((set, si) => (
+                        {sets.map((set, si) => {
+                          const inputError = !set.done ? getWorkoutSetInputError(set) : null;
+                          return (
                           <div
                             key={si}
                             className={`grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center p-2 rounded-lg transition-all ${
@@ -988,7 +1057,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                                 onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
                                 placeholder={ex.weight || "kg"}
                                 aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                                aria-invalid={Boolean(inputError && set.weight.trim())}
+                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1013,7 +1083,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                                   if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
                                 }}
                                 aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
-                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all"
+                                aria-invalid={Boolean(inputError && (!Number.isInteger(set.reps) || set.reps <= 0))}
+                                className={`w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1036,8 +1107,10 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                             >
                               <Check className="w-5 h-5" />
                             </button>
+                            {inputError && <p className="col-span-full px-1 text-[10px] text-destructive">{inputError}</p>}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </motion.div>
                   )}
@@ -1050,7 +1123,15 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
           {!workoutCompleted && completionReady && !loadError && <div className="sticky bottom-3 z-20 pt-3 pb-4">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
               <span role="status" aria-live="polite" className={saveError ? "text-destructive" : ""}>
-                {saveError ? "Error al guardar. Comprueba tu conexión." : savedAt ? "Guardado automáticamente" : "Se guarda automáticamente"}
+                {saveStatus === "error"
+                  ? "Error al guardar. Comprueba tu conexión."
+                  : saveStatus === "pending"
+                    ? "Cambios pendientes de guardar"
+                    : saveStatus === "saving"
+                      ? "Guardando cambios…"
+                      : saveStatus === "saved"
+                        ? "Guardado automáticamente"
+                        : "Se guarda automáticamente"}
               </span>
               <InfoHint text="Tus series se guardan automáticamente. Al terminar se guardará cualquier cambio pendiente; solo se marcará el día como completado si has hecho todas las series." />
             </div>

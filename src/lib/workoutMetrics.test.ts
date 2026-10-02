@@ -18,6 +18,7 @@ describe("buildExerciseHistory", () => {
       volumeKg: 900,
       bestEstimated1RmKg: 76,
       completedSets: 2,
+      loadedSets: 2,
       reps: 15,
       bestSetLabel: "60 kg × 8",
     });
@@ -42,6 +43,7 @@ describe("buildExerciseHistory", () => {
       volumeKg: 60,
       bestEstimated1RmKg: 12,
       completedSets: 2,
+      loadedSets: 1,
       reps: 14,
     });
   });

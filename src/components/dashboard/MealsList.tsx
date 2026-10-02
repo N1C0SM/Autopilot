@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
+import { hapticTap } from "@/lib/native";
 
 interface Meal {
   name: string;
@@ -35,8 +36,12 @@ const MealsList = ({ meals, macros }: Props) => {
 
   const toggle = (name: string) => {
     const next = new Set(done);
-    if (next.has(name)) next.delete(name);
-    else next.add(name);
+    if (next.has(name)) {
+      next.delete(name);
+    } else {
+      next.add(name);
+      void hapticTap();
+    }
     setDone(next);
     try { localStorage.setItem(todayKey(), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
   };
@@ -105,6 +110,7 @@ const MealsList = ({ meals, macros }: Props) => {
               key={i}
               type="button"
               onClick={() => toggle(meal.name)}
+              aria-pressed={isDone}
               className="w-full text-left flex items-center gap-3 p-4 sm:p-5 hover:bg-muted/40 transition-colors"
             >
               <div className="flex-1 min-w-0">

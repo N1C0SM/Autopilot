@@ -2,6 +2,9 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import HomeOverview from "./HomeOverview";
 
+const mocks = vi.hoisted(() => ({ hapticTap: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap }));
+
 afterEach(cleanup);
 
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -22,6 +25,7 @@ describe("dashboard home overview", () => {
     expect(screen.getByText("Hoy toca Pull B · Espalda y bíceps.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" }));
     expect(onNavigate).toHaveBeenCalledWith("training");
+    expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
   it("matches the demo's weekly and nutrition cards while keeping paid nutrition reachable", () => {

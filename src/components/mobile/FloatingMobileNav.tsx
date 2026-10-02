@@ -30,7 +30,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
     }}
     aria-label={label}
   >
-    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-center gap-1 rounded-full border border-border/80 bg-background/90 p-1.5 shadow-[0_12px_40px_-12px_hsl(var(--foreground)/0.3)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/80">
+    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-center gap-1 rounded-[1.75rem] border border-border/70 bg-background/80 p-1.5 shadow-[0_10px_32px_-18px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/72">
       {items.map(({ key, label: itemLabel, icon: Icon, locked }) => {
         const isActive = active === key;
         return (
@@ -51,13 +51,13 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
                 {isActive && (
                   <motion.span
                     layoutId={`${layoutId}-active`}
-                    className="absolute inset-0 rounded-[1.1rem] border border-primary/60 bg-primary/20 shadow-[inset_0_1px_0_hsl(var(--primary)/.25),0_4px_18px_-8px_hsl(var(--primary)/.9)]"
-                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    className="absolute inset-0 rounded-[1.1rem] border border-primary/25 bg-primary/10"
+                    transition={{ type: "spring", stiffness: 360, damping: 32 }}
                   />
                 )}
                 <Icon
                   className={`relative z-10 h-[21px] w-[21px] transition-transform duration-200 ${
-                    isActive ? "scale-110 text-primary drop-shadow-[0_0_7px_hsl(var(--primary)/.45)]" : "text-current"
+                    isActive ? "scale-105 text-primary" : "text-current"
                   }`}
                   strokeWidth={isActive ? 2.35 : 1.9}
                 />

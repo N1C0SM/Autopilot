@@ -50,4 +50,37 @@ describe("getProgressionSuggestion", () => {
 
     expect(result).toMatchObject({ label: "Repetir", weight: "60" });
   });
+
+  it("adds one rep per set for bodyweight exercises after meeting the target", () => {
+    const result = getProgressionSuggestion(
+      { ...exercise, weight: "" },
+      [
+        { weight: "", reps: 8, done: true },
+        { weight: "", reps: 9, done: true },
+        { weight: "", reps: 8, done: true },
+      ],
+    );
+
+    expect(result).toMatchObject({ label: "Añadir rep", weight: "" });
+  });
+
+  it("does not increase load after a very hard session", () => {
+    const result = getProgressionSuggestion(exercise, [
+      { weight: "60", reps: 8, done: true },
+      { weight: "60", reps: 9, done: true },
+      { weight: "60", reps: 8, done: true },
+    ], 9);
+
+    expect(result).toMatchObject({ label: "Mantener", weight: "60" });
+  });
+
+  it("holds progression until the working sets use a consistent load", () => {
+    const result = getProgressionSuggestion(exercise, [
+      { weight: "55", reps: 10, done: true },
+      { weight: "60", reps: 10, done: true },
+      { weight: "60", reps: 10, done: true },
+    ]);
+
+    expect(result).toMatchObject({ label: "Mantener", weight: "60" });
+  });
 });

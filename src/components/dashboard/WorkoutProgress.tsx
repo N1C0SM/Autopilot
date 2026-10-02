@@ -13,7 +13,7 @@ interface Props {
 const WorkoutProgress = ({ userId }: Props) => {
   const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
   const [selectedExercise, setSelectedExercise] = useState("");
-  const [metric, setMetric] = useState<"volumeKg" | "bestEstimated1RmKg">("volumeKg");
+  const [metric, setMetric] = useState<"volumeKg" | "reps" | "bestEstimated1RmKg">("volumeKg");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reload, setReload] = useState(0);
@@ -55,6 +55,9 @@ const WorkoutProgress = ({ userId }: Props) => {
   );
   const history = historyByExercise[selectedExercise] || [];
   const latest = history[history.length - 1];
+  const selectedMetric = metric === "volumeKg" && history.length > 0 && history.every((entry) => entry.loadedSets === 0)
+    ? "reps"
+    : metric;
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6" aria-labelledby="workout-progress-title">
@@ -98,7 +101,7 @@ const WorkoutProgress = ({ userId }: Props) => {
             <ExerciseProgressChart
               exerciseName={selectedExercise}
               history={history}
-              metric={metric}
+              metric={selectedMetric}
               onMetricChange={setMetric}
             />
           </div>
@@ -113,8 +116,8 @@ const WorkoutProgress = ({ userId }: Props) => {
                 <p className="text-[11px] text-muted-foreground sm:text-xs">repeticiones</p>
               </div>
               <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{Math.round(latest.volumeKg)} kg</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">volumen última sesión</p>
+                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.loadedSets > 0 ? `${Math.round(latest.volumeKg)} kg` : "—"}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">volumen con carga</p>
               </div>
               <div className="rounded-xl bg-secondary/40 p-3">
                 <p className="text-base font-bold tabular-nums sm:text-lg">{latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—"}</p>

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { DayPlan } from "@/types/training";
 import type { UserSection } from "@/components/UserSidebar";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
+import { hapticTap } from "@/lib/native";
 
 interface Macros {
   protein: number;
@@ -166,8 +167,11 @@ const HomeOverview = ({
 
           <button
             type="button"
-            onClick={() => onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress")}
-            className="group flex w-full items-center gap-3 rounded-2xl border border-primary/50 bg-primary p-5 text-left text-primary-foreground shadow-[0_10px_32px_-18px_hsl(var(--primary)/.65)] transition-all hover:brightness-105 active:scale-[0.99]"
+            onClick={() => {
+              void hapticTap();
+              onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress");
+            }}
+            className="group flex min-h-[5.5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
             aria-label={completedToday ? "Ver progreso de la sesión" : `Empezar ${sessionTitle}`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">

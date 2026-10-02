@@ -12,6 +12,7 @@ export interface ExerciseHistoryEntry {
   volumeKg: number;
   bestEstimated1RmKg: number | null;
   completedSets: number;
+  loadedSets: number;
   reps: number;
   bestSetLabel: string | null;
 }
@@ -58,6 +59,7 @@ export function buildExerciseHistory(logs: WorkoutLogRecord[]): Record<string, E
       volumeKg,
       bestEstimated1RmKg: bestSet ? Math.round(bestSet.estimated1Rm * 10) / 10 : null,
       completedSets: validSets.length,
+      loadedSets: weightedSets.length,
       reps: validSets.reduce((sum, set) => sum + set.reps, 0),
       bestSetLabel: bestSet ? `${bestSet.weight} kg × ${bestSet.reps}` : null,
     };
@@ -67,6 +69,7 @@ export function buildExerciseHistory(logs: WorkoutLogRecord[]): Record<string, E
     if (existing) {
       existing.volumeKg += entry.volumeKg;
       existing.completedSets += entry.completedSets;
+      existing.loadedSets += entry.loadedSets;
       existing.reps += entry.reps;
       if (
         entry.bestEstimated1RmKg !== null

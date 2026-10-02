@@ -43,12 +43,36 @@ describe("weight progress", () => {
     mocks.upsert.mockResolvedValue({ error: new Error("save failed") });
     render(<ProgressCharts userId="user" />);
     await screen.findByText("Registra tu peso para empezar a ver tu evolución.");
-    fireEvent.change(await screen.findByRole("spinbutton", { name: "Peso en kilogramos" }), {
+    fireEvent.change(await screen.findByRole("textbox", { name: "Peso en kilogramos" }), {
       target: { value: "72.5" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
 
     await waitFor(() => expect(mocks.error).toHaveBeenCalledWith("Error al guardar"));
     expect(mocks.success).not.toHaveBeenCalled();
+  });
+
+  it("accepts decimal commas without truncating kilograms", async () => {
+    render(<ProgressCharts userId="user" />);
+    await screen.findByText("Registra tu peso para empezar a ver tu evolución.");
+    fireEvent.change(screen.getByRole("textbox", { name: "Peso en kilogramos" }), {
+      target: { value: "72,5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
+
+    await waitFor(() => expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ weight: 72.5 })));
+    expect(mocks.success).toHaveBeenCalledWith("Peso registrado ✅");
+  });
+
+  it("rejects malformed weights instead of partially parsing them", async () => {
+    render(<ProgressCharts userId="user" />);
+    await screen.findByText("Registra tu peso para empezar a ver tu evolución.");
+    fireEvent.change(screen.getByRole("textbox", { name: "Peso en kilogramos" }), {
+      target: { value: "72kg" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
+
+    expect(mocks.error).toHaveBeenCalledWith("Introduce un peso válido");
+    expect(mocks.upsert).not.toHaveBeenCalled();
   });
 });

@@ -4,26 +4,38 @@ import type { ExerciseHistoryEntry } from "@/lib/workoutMetrics";
 interface Props {
   exerciseName: string;
   history: ExerciseHistoryEntry[];
-  metric: "volumeKg" | "bestEstimated1RmKg";
-  onMetricChange: (metric: "volumeKg" | "bestEstimated1RmKg") => void;
+  metric: "volumeKg" | "reps" | "bestEstimated1RmKg";
+  onMetricChange: (metric: "volumeKg" | "reps" | "bestEstimated1RmKg") => void;
   compact?: boolean;
 }
 
 const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, compact = false }: Props) => {
   const chartData = history.slice(-12).map((entry) => ({
     ...entry,
-    metricValue: metric === "volumeKg" ? Math.round(entry.volumeKg) : entry.bestEstimated1RmKg,
+    metricValue: metric === "volumeKg"
+      ? entry.loadedSets > 0 ? Math.round(entry.volumeKg) : null
+      : metric === "reps" ? entry.reps : entry.bestEstimated1RmKg,
   }));
   const latest = history[history.length - 1];
   const previous = history[history.length - 2];
-  const latestMetric = latest ? (metric === "volumeKg" ? latest.volumeKg : latest.bestEstimated1RmKg) : null;
-  const previousMetric = previous ? (metric === "volumeKg" ? previous.volumeKg : previous.bestEstimated1RmKg) : null;
+  const metricValue = (entry: ExerciseHistoryEntry | undefined) => {
+    if (!entry) return null;
+    if (metric === "volumeKg") return entry.loadedSets > 0 ? entry.volumeKg : null;
+    if (metric === "reps") return entry.reps;
+    return entry.bestEstimated1RmKg;
+  };
+  const latestMetric = metricValue(latest);
+  const previousMetric = metricValue(previous);
   const change = latestMetric !== null && previousMetric !== null ? latestMetric - previousMetric : null;
+  const unit = metric === "reps" ? " reps" : " kg";
+  const metricName = metric === "volumeKg" ? "volumen" : metric === "reps" ? "repeticiones" : "fuerza estimada";
+  const metricLabel = metric === "volumeKg" ? "Volumen (kg)" : metric === "reps" ? "Repeticiones" : "Fuerza estimada";
+  const formatValue = (value: number) => `${Math.round(value * 10) / 10}${unit}`;
 
   return (
     <div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" role="group" aria-label="Métrica de progresión">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
           <button
             type="button"
             aria-pressed={metric === "volumeKg"}
@@ -31,6 +43,14 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
             className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "volumeKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
           >
             Volumen (kg)
+          </button>
+          <button
+            type="button"
+            aria-pressed={metric === "reps"}
+            onClick={() => onMetricChange("reps")}
+            className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "reps" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+          >
+            Repeticiones
           </button>
           <button
             type="button"
@@ -42,8 +62,8 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
           </button>
         </div>
         {change !== null && (
-          <span className={`text-right text-xs font-semibold sm:ml-auto ${change > 0 ? "text-primary" : change < 0 ? "text-destructive" : "text-muted-foreground"}`}>
-            {change > 0 ? "+" : ""}{Math.round(change * 10) / 10} kg vs. sesión anterior
+          <span className="text-right text-xs font-semibold text-muted-foreground sm:ml-auto">
+            {change > 0 ? "+" : ""}{Math.round(change * 10) / 10}{unit} vs. sesión anterior
           </span>
         )}
       </div>
@@ -51,7 +71,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
       <div
         className={`mt-3 w-full ${compact ? "h-36" : "h-56"}`}
         role="img"
-        aria-label={`Gráfica de ${metric === "volumeKg" ? "volumen" : "fuerza estimada"} para ${exerciseName}`}
+        aria-label={`Gráfica de ${metricName} para ${exerciseName}`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 4 }}>
@@ -60,24 +80,26 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
             <YAxis
               width={48}
               tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value: number) => `${Math.round(value)} kg`}
-              domain={["dataMin - 5", "dataMax + 5"]}
+              tickFormatter={(value: number) => `${Math.round(value)}${metric === "reps" ? "" : " kg"}`}
+              domain={metric === "reps" ? ["dataMin - 1", "dataMax + 1"] : ["dataMin - 5", "dataMax + 5"]}
             />
             <Tooltip
               cursor={{ fill: "hsl(var(--secondary) / .5)" }}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }}
               labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-              formatter={(value: number) => [`${Math.round(value * 10) / 10} kg`, metric === "volumeKg" ? "Volumen total" : "1RM estimado"]}
+              formatter={(value: number) => [formatValue(value), metricLabel]}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ""}
             />
-            <Bar dataKey="metricValue" name={metric === "volumeKg" ? "Volumen total" : "1RM estimado"} fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={38} />
+            <Bar dataKey="metricValue" name={metricLabel} fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={38} />
           </BarChart>
         </ResponsiveContainer>
       </div>
       <p className="mt-1 text-[10px] text-muted-foreground">
         {metric === "volumeKg"
           ? "Volumen = suma de peso × repeticiones de las series completadas con carga."
-          : "1RM estimado (Epley) a partir de la mejor serie completada con carga; no es una prueba máxima."}
+          : metric === "reps"
+            ? "Repeticiones totales de las series completadas; compara también cuántas series hiciste."
+            : "1RM estimado (Epley) a partir de la mejor serie completada con carga; no es una prueba máxima."}
       </p>
     </div>
   );

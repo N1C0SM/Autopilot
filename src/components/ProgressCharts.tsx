@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Scale, TrendingDown, TrendingUp, Minus, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { parseLocalDate, toLocalDateString } from "@/lib/localDates";
+import { parsePositiveWeight } from "@/lib/weight";
 
 interface Props {
   userId: string;
@@ -55,8 +56,8 @@ const ProgressCharts = ({ userId }: Props) => {
   }, [userId, reload]);
 
   const logWeight = async () => {
-    const w = parseFloat(newWeight);
-    if (!w || w < 20 || w > 300) {
+    const w = parsePositiveWeight(newWeight);
+    if (w === null || w < 20 || w > 300) {
       toast.error("Introduce un peso válido");
       return;
     }
@@ -83,9 +84,14 @@ const ProgressCharts = ({ userId }: Props) => {
     }
   };
 
-  const weightDiff = weightLogs.length >= 2
-    ? weightLogs[weightLogs.length - 1].weight - weightLogs[0].weight
-    : null;
+  const firstWeight = weightLogs[0];
+  const latestWeight = weightLogs[weightLogs.length - 1];
+  const weightDiff = weightLogs.length >= 2 ? latestWeight.weight - firstWeight.weight : null;
+  const formatWeightDate = (date: string) => parseLocalDate(date).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   const chartData = weightLogs.map((w) => ({
     date: parseLocalDate(w.logged_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
@@ -105,8 +111,8 @@ const ProgressCharts = ({ userId }: Props) => {
             <Input
               aria-label="Peso en kilogramos"
               disabled={saving || loading}
-              type="number"
-              step="0.1"
+                type="text"
+                inputMode="decimal"
               value={newWeight}
               onChange={(e) => setNewWeight(e.target.value)}
               placeholder="Ej: 72.5"
@@ -138,12 +144,15 @@ const ProgressCharts = ({ userId }: Props) => {
         <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold font-display">Evolución de peso</h3>
-            {weightDiff !== null && (
-              <div className={`flex items-center gap-1 text-sm font-medium ${
-                weightDiff < 0 ? "text-primary" : weightDiff > 0 ? "text-destructive" : "text-muted-foreground"
-              }`}>
-                {weightDiff < 0 ? <TrendingDown className="w-4 h-4" /> : weightDiff > 0 ? <TrendingUp className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-                {weightDiff > 0 ? "+" : ""}{weightDiff.toFixed(1)}kg
+            {weightDiff !== null && firstWeight && latestWeight && (
+              <div className="text-right">
+                <div className="flex items-center justify-end gap-1 text-sm font-medium text-muted-foreground">
+                  {weightDiff < 0 ? <TrendingDown className="w-4 h-4" /> : weightDiff > 0 ? <TrendingUp className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+                  {weightDiff > 0 ? "+" : ""}{weightDiff.toFixed(1)} kg
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {formatWeightDate(firstWeight.logged_at)} — {formatWeightDate(latestWeight.logged_at)}
+                </p>
               </div>
             )}
           </div>
