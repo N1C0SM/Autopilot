@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Apple, ArrowRight, Check, Dumbbell, LockKeyhole, MessageCircle, Moon, Sparkles, Activity } from "lucide-react";
+import { ArrowRight, Check, Dumbbell, LockKeyhole, MessageCircle, Moon, Sparkles, Activity, LineChart, Utensils } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { DayPlan } from "@/types/training";
@@ -12,8 +12,14 @@ interface Macros {
   calories?: number;
 }
 
+interface Meal {
+  name: string;
+  description: string;
+}
+
 interface Props {
   dayPlans: DayPlan[];
+  meals?: Meal[];
   userId?: string;
   onNavigate: (section: UserSection) => void;
   profileName?: string;
@@ -37,6 +43,7 @@ interface ChatPreviewMessage {
 
 const HomeOverview = ({
   dayPlans,
+  meals = [],
   userId,
   onNavigate,
   profileName,
@@ -50,6 +57,7 @@ const HomeOverview = ({
   const [chatMessages, setChatMessages] = useState<ChatPreviewMessage[]>([]);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [chatError, setChatError] = useState(false);
+  const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
   const now = new Date();
   const todayIndex = (now.getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
@@ -59,6 +67,10 @@ const HomeOverview = ({
   const firstName = profileName?.trim().split(/\s+/)[0];
   const greetingDate = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric" }).format(now);
   const sessionCount = Math.min(completedThisWeek, scheduledDays.length);
+  const doneMealCount = meals.filter((meal) => completedMeals.has(meal.name)).length;
+  const mealProgress = meals.length
+    ? doneMealCount / meals.length
+    : 0;
   const calorieTarget = macros
     ? Number(macros.calories) || Math.round(macros.protein * 4 + macros.carbs * 4 + macros.fats * 9)
     : null;
@@ -69,6 +81,17 @@ const HomeOverview = ({
       : todayPlan?.type === "actividad"
         ? todayPlan.sport || "Actividad"
         : "Día de recuperación";
+
+  useEffect(() => {
+    const date = new Date();
+    const key = `meals_done_${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) setCompletedMeals(new Set(JSON.parse(saved) as string[]));
+    } catch {
+      setCompletedMeals(new Set());
+    }
+  }, []);
 
   useEffect(() => {
     if (!userId || !coaching) return;
@@ -143,115 +166,148 @@ const HomeOverview = ({
           <button
             type="button"
             onClick={() => onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress")}
-            className={`group w-full rounded-2xl border p-4 text-left transition-all active:scale-[0.99] sm:p-5 ${
+            className={`group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
               completedToday
                 ? "border-primary/25 bg-card"
-                : "border-[#DDA34B] bg-[#DDA34B] text-black shadow-[0_10px_32px_-18px_rgba(221,163,75,0.65)] hover:brightness-105"
+                : "border-primary/50 bg-primary text-primary-foreground shadow-[0_10px_32px_-18px_hsl(var(--primary)/.65)] hover:brightness-105"
             }`}
             aria-label={completedToday ? "Ver progreso de la sesión" : `Empezar ${sessionTitle}`}
           >
-            <span className="flex items-center justify-between gap-3">
-              <span className={`text-xs font-semibold uppercase tracking-[0.14em] ${completedToday ? "text-primary" : "text-primary-foreground/75"}`}>
-                Tu semana · {sessionCount}/{scheduledDays.length} sesiones
-              </span>
-              <ArrowRight className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" />
-            </span>
-            <span className="mt-3 flex min-w-0 items-center gap-3">
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center ${completedToday ? "text-primary" : ""}`}>
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center">
                 {completedToday ? <Check className="h-5 w-5" /> : todayPlan?.type === "actividad" ? <Activity className="h-5 w-5" /> : todayPlan ? <Dumbbell className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-bold">{sessionTitle}</span>
-                <span className={`mt-0.5 block truncate text-sm ${completedToday ? "text-muted-foreground" : "text-primary-foreground/75"}`}>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold">{sessionTitle}</span>
+              <span className={`block truncate text-xs ${completedToday ? "text-muted-foreground" : "text-primary-foreground/80"}`}>
                   {completedToday
                     ? "Tu registro ya está guardado"
                     : todayPlan?.type === "gimnasio"
-                      ? [todayPlan.muscle_focus, `${exerciseCount} ${exerciseCount === 1 ? "ejercicio" : "ejercicios"}`].filter(Boolean).join(" · ")
+                      ? `${exerciseCount} ${exerciseCount === 1 ? "ejercicio" : "ejercicios"}`
                       : todayPlan?.type === "actividad"
                         ? [todayPlan.intensity, todayPlan.duration].filter(Boolean).join(" · ")
                         : "Día de descanso"}
-                </span>
               </span>
             </span>
-            <span className={`mt-4 block h-1.5 overflow-hidden rounded-full ${completedToday ? "bg-secondary" : "bg-black/15"}`}>
-              <span
-                className={`block h-full rounded-full ${completedToday ? "bg-primary" : "bg-primary-foreground/75"}`}
-                style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
-              />
-            </span>
+            <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          <button
-            type="button"
-            onClick={() => onNavigate("nutrition")}
-            className="flex w-full min-w-0 items-center gap-4 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/30 active:bg-secondary/40 sm:p-5"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Apple className="h-5 w-5 text-primary" />
-            </span>
-            <span className="min-w-0 flex-1">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate("nutrition")}
+              className="min-w-0 rounded-2xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
+            >
               <span className="flex items-center gap-2">
-                <span className="truncate text-base font-semibold">Nutrición</span>
-                {!nutrition && <LockKeyhole className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                <span className="relative h-9 w-9 shrink-0">
+                  <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90">
+                    <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="4" />
+                    {nutrition && meals.length > 0 && (
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="15.5"
+                        fill="none"
+                        className="stroke-primary"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeDasharray="97.4"
+                        strokeDashoffset={97.4 * (1 - mealProgress)}
+                      />
+                    )}
+                  </svg>
+                  {nutrition && <Utensils className="absolute inset-0 m-auto h-3 w-3 text-primary" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1 text-xs font-semibold">
+                    Nutrición
+                    {!nutrition && <LockKeyhole className="h-3 w-3 text-muted-foreground" />}
+                  </span>
+                  <span className="block truncate text-[10px] text-muted-foreground">
+                    {nutrition
+                      ? meals.length
+                        ? `${doneMealCount}/${meals.length} comidas`
+                        : calorieTarget
+                          ? `${calorieTarget.toLocaleString("es-ES")} kcal objetivo`
+                          : "Ver plan de hoy"
+                      : "Plan Completo"}
+                  </span>
+                </span>
               </span>
-              <span className="mt-0.5 block truncate text-sm text-muted-foreground">
-                {nutrition
-                  ? calorieTarget ? `${calorieTarget.toLocaleString("es-ES")} kcal objetivo` : "Ver plan de hoy"
-                  : "Incluida en Plan Completo"}
-              </span>
-              {nutrition && macros && (
-                <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {nutrition && macros ? (
+                <span className="mt-2 flex gap-1.5 text-[8px] text-muted-foreground">
                   {[
                     { label: "P", value: macros.protein },
                     { label: "C", value: macros.carbs },
                     { label: "G", value: macros.fats },
                   ].map((macro) => (
-                    <span key={macro.label} className="whitespace-nowrap">{macro.label} · {macro.value}g</span>
+                    <span key={macro.label} className="min-w-0 flex-1 whitespace-nowrap">{macro.label} · {macro.value}g</span>
                   ))}
                 </span>
+              ) : (
+                <span className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <span className="h-1 flex-1 rounded-full bg-secondary" />
+                  <span>Ver plan</span>
+                </span>
               )}
-            </span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-          </button>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onNavigate("progress")}
+              className="min-w-0 rounded-2xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
+            >
+              <span className="flex items-center gap-1 text-xs font-semibold">
+                <LineChart className="h-3 w-3 text-primary" />
+                Tu semana
+              </span>
+              <span className="mt-1 block truncate text-[10px] text-muted-foreground">
+                {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
+              </span>
+              <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-secondary">
+                <span
+                  className="block h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
+                />
+              </span>
+            </button>
+          </div>
 
           <button
             type="button"
             onClick={() => onNavigate(coaching ? "chat" : "progress")}
-            className="w-full rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/30 active:bg-secondary/40 sm:p-5"
+            className="flex w-full items-start gap-2.5 rounded-2xl bg-secondary p-3 text-left transition-colors hover:bg-secondary/80"
           >
-            <span className="flex items-center justify-between gap-3">
-              <span className="flex min-w-0 items-center gap-2">
-                <MessageCircle className="h-5 w-5 shrink-0 text-primary" />
-                <span className="truncate font-semibold">{coaching ? "Chat con tu entrenador" : "Tu progreso"}</span>
-              </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            {coaching ? <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+            <span className="min-w-0 flex-1 text-xs leading-relaxed">
+              {coaching ? (
+                chatMessages.length > 0 ? (
+                  <>
+                    <span className="block font-semibold">Tu entrenador</span>
+                    {chatMessages.slice(-2).map((message) => (
+                      <span key={message.id} className="mt-1 block truncate text-muted-foreground">
+                        {message.sender_id === userId && <span className="font-medium">Tú: </span>}
+                        {message.content || (message.media_type === "video" ? "Vídeo" : "Foto")}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold">{chatError && chatLoaded ? "Chat: " : "En planes con entrenador: "}</span>
+                    <span className="text-muted-foreground">
+                      {chatError && chatLoaded
+                        ? "no se pudieron cargar los mensajes."
+                        : "recibes seguimiento humano y ajustes de tu plan."}
+                    </span>
+                  </>
+                )
+              ) : (
+                <>
+                  <span className="font-semibold">Tu progreso: </span>
+                  <span className="text-muted-foreground">tus series, peso y fotos quedan guardados en un mismo lugar.</span>
+                </>
+              )}
             </span>
-            {coaching ? (
-              <span className="mt-3 block space-y-2">
-                {chatMessages.length ? chatMessages.map((message) => (
-                  <span key={message.id} className={`block max-w-[90%] rounded-xl px-3 py-2 text-sm ${
-                    message.sender_id === userId ? "ml-auto bg-primary/10 text-foreground" : "bg-secondary/70 text-foreground"
-                  }`}>
-                    <span className="mb-0.5 block text-[10px] font-semibold text-muted-foreground">
-                      {message.sender_id === userId ? "Tú" : "Entrenador"}
-                    </span>
-                    <span className="block line-clamp-2 break-words">
-                      {message.content || (message.media_type === "video" ? "Vídeo" : "Foto")}
-                    </span>
-                  </span>
-                )) : (
-                  <span className="block text-sm text-muted-foreground">
-                    {chatError
-                      ? "No se pudieron cargar los mensajes. Abre el chat para volver a intentarlo."
-                      : chatLoaded
-                        ? "Aún no hay mensajes. Escribe a tu entrenador cuando quieras."
-                        : "Tus mensajes con el entrenador aparecerán aquí."}
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span className="mt-2 block text-sm text-muted-foreground">Tus series, peso y fotos quedan guardados en un mismo lugar.</span>
-            )}
+            <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </button>
 
           {!scheduledDays.length && (

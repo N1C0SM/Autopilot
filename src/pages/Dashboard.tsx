@@ -409,6 +409,7 @@ const Dashboard = () => {
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           <HomeOverview
             userId={user?.id}
+            meals={meals}
             coaching={coaching}
             nutrition={nutrition}
             planStatus={planStatus}
