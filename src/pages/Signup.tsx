@@ -1,3 +1,4 @@
+import AppStoreBadges from "@/components/AppStoreBadges";
 import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";

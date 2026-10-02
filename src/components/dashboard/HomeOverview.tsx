@@ -1,3 +1,5 @@
+import AppStoreBadges from "@/components/AppStoreBadges";
+import { isNative } from "@/lib/native";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Dumbbell, Apple, MessageCircle, ArrowRight, Flame, Clock, Calendar } from "lucide-react";
