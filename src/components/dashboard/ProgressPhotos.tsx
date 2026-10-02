@@ -1,8 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { signedUrlsFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
@@ -23,36 +33,55 @@ const ProgressPhotos = ({ userId }: Props) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [signed, setSigned] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
+  const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    loadPhotos();
+  const loadPhotos = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const { data, error } = await supabase
+        .from("progress_photos")
+        .select("*")
+        .eq("user_id", userId)
+        .order("taken_at", { ascending: false });
+      if (error) throw error;
+      const list = (data as Photo[]) || [];
+      const map = await signedUrlsFor("progress-photos", list.map((p) => p.photo_url));
+      setPhotos(list);
+      setSigned(map);
+    } catch (error) {
+      console.error("Failed to load progress photos", error);
+      setLoadError(true);
+      toast.error("No se pudieron cargar tus fotos de progreso. Comprueba la conexión e inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
-  const loadPhotos = async () => {
-    const { data } = await supabase
-      .from("progress_photos")
-      .select("*")
-      .eq("user_id", userId)
-      .order("taken_at", { ascending: false });
-    const list = (data as Photo[]) || [];
-    setPhotos(list);
-    const map = await signedUrlsFor("progress-photos", list.map((p) => p.photo_url));
-    setSigned(map);
-    setLoading(false);
-  };
+  useEffect(() => {
+    void loadPhotos();
+  }, [loadPhotos]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    let uploadedCount = 0;
     try {
       for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          throw new Error("Selecciona solo archivos de imagen.");
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error("Cada foto debe ocupar menos de 10 MB.");
+        }
         const ext = file.name.split(".").pop() || "jpg";
-        const path = `${userId}/${Date.now()}.${ext}`;
+        const path = `${userId}/${crypto.randomUUID()}.${ext}`;
 
         const { error: uploadError } = await supabase.storage
           .from("progress-photos")
@@ -63,30 +92,59 @@ const ProgressPhotos = ({ userId }: Props) => {
           .from("progress-photos")
           .getPublicUrl(path);
 
-        await supabase.from("progress_photos").insert({
+        const { error: insertError } = await supabase.from("progress_photos").insert({
           user_id: userId,
           photo_url: urlData.publicUrl,
           taken_at: toLocalDateString(),
         });
+        if (insertError) {
+          const { error: cleanupError } = await supabase.storage.from("progress-photos").remove([path]);
+          if (cleanupError) {
+            console.error("Failed to clean up a progress photo after its record could not be saved", cleanupError);
+            throw new Error(`${insertError.message} No se pudo limpiar el archivo temporal.`);
+          }
+          throw insertError;
+        }
+        uploadedCount++;
       }
-      toast.success("Foto subida correctamente 📸");
-      loadPhotos();
-    } catch (err: any) {
-      toast.error("Error al subir: " + (err.message || ""));
+      toast.success(uploadedCount === 1 ? "Foto subida correctamente 📸" : `${uploadedCount} fotos subidas correctamente 📸`);
+    } catch (error) {
+      console.error("Failed to upload progress photos", error);
+      const detail = error instanceof Error ? error.message : "Comprueba la conexión e inténtalo de nuevo.";
+      toast.error(uploadedCount > 0
+        ? `Se subieron ${uploadedCount} fotos, pero no se pudieron guardar todas. ${detail}`
+        : `No se pudo subir la foto. ${detail}`);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+      if (uploadedCount > 0) void loadPhotos();
     }
-    setUploading(false);
-    if (fileRef.current) fileRef.current.value = "";
   };
 
   const handleDelete = async (photo: Photo) => {
-    const pathMatch = photo.photo_url.match(/progress-photos\/(.+)$/);
-    if (pathMatch) {
-      await supabase.storage.from("progress-photos").remove([pathMatch[1]]);
+    try {
+      const { error: deleteRecordError } = await supabase
+        .from("progress_photos")
+        .delete()
+        .eq("id", photo.id);
+      if (deleteRecordError) throw deleteRecordError;
+
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      setViewingPhoto(null);
+      toast.success("Foto eliminada");
+
+      const pathMatch = photo.photo_url.match(/progress-photos\/(.+)$/);
+      if (pathMatch) {
+        const { error: removeFileError } = await supabase.storage.from("progress-photos").remove([pathMatch[1]]);
+        if (removeFileError) {
+          console.error("Progress photo record deleted but its storage file could not be removed", removeFileError);
+          toast.error("La foto se quitó de tu progreso, pero no se pudo borrar el archivo almacenado.");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete progress photo", error);
+      toast.error("No se pudo eliminar la foto. Comprueba la conexión e inténtalo de nuevo.");
     }
-    await supabase.from("progress_photos").delete().eq("id", photo.id);
-    setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
-    setViewingPhoto(null);
-    toast.success("Foto eliminada");
   };
 
   const formatDate = (d: string) => {
@@ -138,8 +196,24 @@ const ProgressPhotos = ({ userId }: Props) => {
         />
       </div>
 
+      {loading && (
+        <div className="grid grid-cols-3 gap-2" aria-label="Cargando fotos de progreso">
+          {[0, 1, 2].map((item) => <div key={item} className="aspect-[3/4] animate-pulse rounded-xl bg-secondary/70" />)}
+        </div>
+      )}
+
+      {loadError && (
+        <div role="alert" className="rounded-2xl border border-destructive/30 bg-card p-5 text-center">
+          <p className="text-sm font-semibold">No se han podido cargar tus fotos</p>
+          <p className="mt-1 text-xs text-muted-foreground">Tus fotos no se han modificado.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadPhotos()}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Reintentar
+          </Button>
+        </div>
+      )}
+
       {/* Empty state */}
-      {!loading && photos.length === 0 && (
+      {!loading && !loadError && photos.length === 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -157,7 +231,7 @@ const ProgressPhotos = ({ userId }: Props) => {
       )}
 
       {/* Photo grid by month */}
-      {Object.entries(grouped).map(([month, monthPhotos]) => (
+      {!loading && !loadError && Object.entries(grouped).map(([month, monthPhotos]) => (
         <div key={month}>
           <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 capitalize">
             {monthLabel(month)}
@@ -200,9 +274,10 @@ const ProgressPhotos = ({ userId }: Props) => {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Eliminar foto"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete(photos[viewingPhoto]);
+                  setPhotoToDelete(photos[viewingPhoto]);
                 }}
                 className="text-white/70 hover:text-destructive hover:bg-white/10"
               >
@@ -249,6 +324,34 @@ const ProgressPhotos = ({ userId }: Props) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AlertDialog
+        open={photoToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPhotoToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta foto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se quitará de tu progreso y no se podrá recuperar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (photoToDelete) void handleDelete(photoToDelete);
+                setPhotoToDelete(null);
+              }}
+            >
+              Eliminar foto
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

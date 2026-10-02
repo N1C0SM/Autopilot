@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Scale, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Scale, TrendingDown, TrendingUp, Minus, RefreshCw } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { parseLocalDate, toLocalDateString } from "@/lib/localDates";
 
@@ -16,52 +15,44 @@ const ProgressCharts = ({ userId }: Props) => {
   const [weightLogs, setWeightLogs] = useState<{ logged_at: string; weight: number }[]>([]);
   const [newWeight, setNewWeight] = useState("");
   const [saving, setSaving] = useState(false);
-  const [weeklyStats, setWeeklyStats] = useState<{ completed: number; total: number }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    let active = true;
     const fetchData = async () => {
-      const [{ data: weights }, { data: completions }] = await Promise.all([
-        supabase
+      setLoading(true);
+      setLoadError(false);
+      try {
+        const { data: weights, error } = await supabase
           .from("weight_logs")
           .select("logged_at, weight")
           .eq("user_id", userId)
           .order("logged_at", { ascending: false })
-          .limit(90),
-        supabase
-          .from("day_completions")
-          .select("completed_at")
-          .eq("user_id", userId)
-          .order("completed_at", { ascending: true })
-          .limit(200),
-      ]);
-
-      if (weights) {
+          .limit(90);
+        if (error) throw error;
+        if (!active) return;
         setWeightLogs(
-          weights
+          (weights || [])
             .map((weight) => ({ ...weight, weight: Number(weight.weight) }))
             .sort((a, b) => a.logged_at.localeCompare(b.logged_at)),
         );
-      }
-
-      // Group completions by week
-      if (completions && completions.length > 0) {
-        const weeks: Record<string, number> = {};
-        completions.forEach((c: any) => {
-          const d = parseLocalDate(c.completed_at);
-          const weekStart = new Date(d);
-          weekStart.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-          const key = toLocalDateString(weekStart);
-          weeks[key] = (weeks[key] || 0) + 1;
-        });
-        setWeeklyStats(
-          Object.entries(weeks)
-            .slice(-8)
-            .map(([week, completed]) => ({ completed, total: 7 }))
-        );
+      } catch (error) {
+        console.error("Failed to load weight history", error);
+        if (active) {
+          setLoadError(true);
+          toast.error("No se pudo cargar tu historial de peso.");
+        }
+      } finally {
+        if (active) setLoading(false);
       }
     };
-    fetchData();
-  }, [userId]);
+    void fetchData();
+    return () => {
+      active = false;
+    };
+  }, [userId, reload]);
 
   const logWeight = async () => {
     const w = parseFloat(newWeight);
@@ -70,24 +61,26 @@ const ProgressCharts = ({ userId }: Props) => {
       return;
     }
     setSaving(true);
-    const today = toLocalDateString();
-    const { error } = await supabase.from("weight_logs").upsert({
-      user_id: userId,
-      weight: w,
-      logged_at: today,
-    });
-
-    if (!error) {
+    try {
+      const today = toLocalDateString();
+      const { error } = await supabase.from("weight_logs").upsert({
+        user_id: userId,
+        weight: w,
+        logged_at: today,
+      });
+      if (error) throw error;
       toast.success("Peso registrado ✅");
       setWeightLogs((prev) => {
         const filtered = prev.filter((l) => l.logged_at !== today);
         return [...filtered, { logged_at: today, weight: w }].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
       });
       setNewWeight("");
-    } else {
+    } catch (error) {
+      console.error("Failed to save weight", error);
       toast.error("Error al guardar");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const weightDiff = weightLogs.length >= 2
@@ -110,6 +103,8 @@ const ProgressCharts = ({ userId }: Props) => {
         <div className="flex gap-3">
           <div className="flex-1">
             <Input
+              aria-label="Peso en kilogramos"
+              disabled={saving || loading}
               type="number"
               step="0.1"
               value={newWeight}
@@ -118,14 +113,28 @@ const ProgressCharts = ({ userId }: Props) => {
               onKeyDown={(e) => e.key === "Enter" && logWeight()}
             />
           </div>
-          <Button onClick={logWeight} disabled={saving}>
+          <Button onClick={logWeight} disabled={saving || loading}>
             {saving ? "Guardando..." : "Registrar"}
           </Button>
         </div>
       </div>
 
+      {loading && (
+        <div className="h-52 animate-pulse rounded-2xl border border-border bg-card" aria-label="Cargando historial de peso" />
+      )}
+
+      {loadError && (
+        <div role="alert" className="rounded-2xl border border-destructive/30 bg-card p-5 text-center">
+          <p className="text-sm font-semibold">No se ha podido cargar tu historial de peso</p>
+          <p className="mt-1 text-xs text-muted-foreground">Tus registros no se han modificado.</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>
+            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Reintentar
+          </Button>
+        </div>
+      )}
+
       {/* Weight chart */}
-      {weightLogs.length >= 2 && (
+      {!loading && !loadError && weightLogs.length >= 2 && (
         <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold font-display">Evolución de peso</h3>
@@ -154,9 +163,15 @@ const ProgressCharts = ({ userId }: Props) => {
       )}
 
       {/* Weight log placeholder */}
-      {weightLogs.length < 2 && weightLogs.length > 0 && (
+      {!loading && !loadError && weightLogs.length === 1 && (
         <div className="bg-card rounded-xl p-5 border border-border text-center text-sm text-muted-foreground">
           Registra tu peso al menos 2 días para ver el gráfico de evolución 📈
+        </div>
+      )}
+
+      {!loading && !loadError && weightLogs.length === 0 && (
+        <div className="rounded-xl border border-dashed border-border bg-card p-5 text-center text-sm text-muted-foreground">
+          Registra tu peso para empezar a ver tu evolución.
         </div>
       )}
     </div>

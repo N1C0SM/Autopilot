@@ -502,8 +502,8 @@ const Dashboard = () => {
           </div>}
           <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
           <Suspense fallback={<SectionFallback />}>
-            <ProgressCharts userId={user.id} />
             <WorkoutProgress userId={user.id} />
+            <ProgressCharts userId={user.id} />
             <PRsList userId={user.id} />
           </Suspense>
           <Suspense fallback={<SectionFallback />}>
