@@ -1,3 +1,5 @@
+import AppStoreBadges from "@/components/AppStoreBadges";
+import { isNative } from "@/lib/native";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Dumbbell, Apple, MessageCircle, ArrowRight, Flame, Clock, Calendar } from "lucide-react";
@@ -48,6 +50,15 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {!isNative() && (
+        <div className="sm:col-span-2 lg:col-span-3 flex flex-col md:flex-row md:items-center gap-4 rounded-2xl border border-border bg-card p-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Entrena desde el móvil</p>
+            <p className="text-xs text-muted-foreground">Descarga la app para registrar tus series y descansos en el gimnasio.</p>
+          </div>
+          <AppStoreBadges size="compact" align="start" />
+        </div>
+      )}
       {/* Estado del plan de un vistazo */}
       {planStatus && (
         <div className={`sm:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-3 rounded-2xl border p-4 ${planReady ? "border-primary/30 bg-primary/5" : "border-border bg-secondary/40"}`}>

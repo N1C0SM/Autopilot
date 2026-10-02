@@ -1,3 +1,4 @@
+import AppStoreBadges from "@/components/AppStoreBadges";
 import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
@@ -155,6 +156,11 @@ const Signup = () => {
           }}>{resending ? "Reenviando…" : resendCooldown > 0 ? `Reenviar en ${resendCooldown}s` : "Reenviar enlace"}</Button>
           <button type="button" className="block mx-auto text-sm underline underline-offset-4" onClick={() => setEmailSent(false)}>Corregir mi correo</button>
           <Link to="/login" className="text-primary hover:underline text-sm block mt-4">Ya lo he verificado: iniciar sesión</Link>
+          <div className="mt-6 rounded-2xl border border-border bg-card p-5 space-y-3">
+            <p className="font-semibold">Llévate tu plan al gimnasio</p>
+            <p className="text-sm text-muted-foreground">Puedes usar Autopilot desde la web o descargar la app para registrar series y descansos desde el móvil.</p>
+            <AppStoreBadges size="compact" />
+          </div>
         </div>
       </div>
     );
