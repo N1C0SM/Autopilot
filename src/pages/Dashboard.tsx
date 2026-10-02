@@ -89,6 +89,8 @@ const Dashboard = () => {
     setSectionState(s);
     try { sessionStorage.setItem("autopilot_section", s); } catch { /* storage no disponible */ }
   }, []);
+  const [profileCreatedAt, setProfileCreatedAt] = useState("");
+  const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [firstWeek, setFirstWeek] = useState<{
@@ -133,6 +135,7 @@ const Dashboard = () => {
       setNutrition(hasNutrition(profile));
       setProfileName(profile.name || "");
       setProfileAvatar(profile.avatar_url || "");
+      setProfileCreatedAt(profile.created_at || "");
 
       if (profile.plan_status === "onboarding") {
         navigate("/onboarding");
@@ -153,6 +156,9 @@ const Dashboard = () => {
       if (profile.plan_status === "plan_ready") {
         const today = new Date();
         const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+        const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
         const firstWeekWindow = getFirstWeekJourney(profile.created_at, []);
         const firstWeekCompletionsRequest = firstWeekWindow
           ? supabase
@@ -162,7 +168,7 @@ const Dashboard = () => {
               .gte("completed_at", firstWeekWindow.startDate)
               .lte("completed_at", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
           : Promise.resolve({ data: [], error: null });
-        const [{ data: tp }, { data: np }, { data: todayCompletion }, firstWeekCompletions] = await Promise.all([
+        const [{ data: tp }, { data: np }, { data: todayCompletion }, weeklyCompletions, firstWeekCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
           supabase
@@ -172,11 +178,27 @@ const Dashboard = () => {
             .eq("completed_at", todayDate)
             .limit(1)
             .maybeSingle(),
+          supabase
+            .from("day_completions")
+            .select("day_label")
+            .eq("user_id", user.id)
+            .gte("completed_at", weekStartDate)
+            .lte("completed_at", todayDate),
           firstWeekCompletionsRequest,
         ]);
 
         const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
         if (plans) setDayPlans(plans);
+        if (weeklyCompletions.error) {
+          toast.error("No se pudo cargar el resumen de esta semana.");
+        } else {
+          const scheduledDays = new Set((plans || []).map((plan) => plan.day));
+          setCompletedThisWeek(new Set(
+            (weeklyCompletions.data || [])
+              .map((row) => row.day_label)
+              .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
+          ).size);
+        }
         if (np) {
           setMacros(np.macros_json as unknown as Macros);
           setMeals(np.meals_json as unknown as Meal[]);
@@ -387,7 +409,18 @@ const Dashboard = () => {
       {hasPlan && section === "home" && (
         <div className="w-full space-y-3">
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
-          <HomeOverview coaching={coaching} nutrition={nutrition} planStatus={planStatus} dayPlans={dayPlans} onNavigate={(s) => setSection(s as MobileTab)} completedToday={completedToday} firstWeek={firstWeek} />
+          <HomeOverview
+            coaching={coaching}
+            nutrition={nutrition}
+            planStatus={planStatus}
+            dayPlans={dayPlans}
+            onNavigate={(s) => setSection(s as MobileTab)}
+            profileName={profileName}
+            profileCreatedAt={profileCreatedAt}
+            macros={nutrition ? macros : null}
+            completedThisWeek={completedThisWeek}
+            completedToday={completedToday}
+          />
           {coaching && user && (
             <details className="mx-auto w-full max-w-3xl rounded-xl border border-border bg-card px-4 py-3">
               <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Más opciones de tu plan</summary>

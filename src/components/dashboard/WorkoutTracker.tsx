@@ -57,6 +57,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const [rpeOpen, setRpeOpen] = useState(false);
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const [logsReady, setLogsReady] = useState(false);
   const [completionReady, setCompletionReady] = useState(false);
   const [started, setStarted] = useState(false);
@@ -271,15 +272,16 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     }
   };
 
-  // El gimnasio no siempre tiene buena cobertura: guarda silenciosamente tras cada cambio.
+  // Save each change so the session can be resumed after a connection drop or app close.
   useEffect(() => {
     if (!logsReady || workoutCompleted || Object.keys(exerciseLogs).length === 0) return;
     const timeout = window.setTimeout(async () => {
       try {
         await persistLogs();
         setSavedAt(new Date());
+        setSaveError(false);
       } catch {
-        // El botón manual sigue disponible si la conexión falla.
+        setSaveError(true);
       }
     }, 800);
     return () => window.clearTimeout(timeout);
@@ -342,28 +344,36 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     }
   };
 
-  const saveWorkout = async () => {
+  const finishWorkout = async () => {
     const allDone = Object.values(exerciseLogs).flat().every((s) => s.done) && Object.keys(exerciseLogs).length > 0;
     if (allDone) {
-      // Force RPE before completing day
       setRpeOpen(true);
       return;
     }
-    // Partial save (no RPE yet)
+
     setSaving(true);
     try {
       await persistLogs();
-      toast.success("Progreso guardado 💪");
+      setSaveError(false);
+      setRestTimer(null);
+      setStarted(false);
+      setExpandedExercise(null);
+      onSessionModeChange?.(false);
+      onCancel?.();
+      toast.success("Entrenamiento terminado. Tu progreso ya está guardado.");
     } catch {
-      toast.error("Error al guardar");
+      setSaveError(true);
+      toast.error("No se pudo guardar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const saveAndExit = async () => {
     setSaving(true);
     try {
       await persistLogs();
+      setSaveError(false);
       setRestTimer(null);
       setStarted(false);
       setExpandedExercise(null);
@@ -371,6 +381,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       toast.success("Entrenamiento guardado");
       onCancel?.();
     } catch {
+      setSaveError(true);
       toast.error("No se pudo guardar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.");
     } finally {
       setSaving(false);
@@ -383,7 +394,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     setRestTimer(null);
     try {
       await persistLogs(rpe);
-      const { error: completionError } = await supabase.from("day_completions").upsert({
+    setSaveError(false);
+    const { error: completionError } = await supabase.from("day_completions").upsert({
         user_id: userId,
         day_label: selectedDay,
         completed_at: selectedDate,
@@ -396,6 +408,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       setShowCompletionSummary(true);
       toast.success("¡Entrenamiento completado! 💪");
     } catch {
+      setSaveError(true);
       toast.error("Error al guardar");
     }
     setSaving(false);
@@ -448,7 +461,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             </div>
           </>
         )}
-        {!workoutCompleted && savedAt && <span className="flex shrink-0 items-center gap-1"><Save className="h-3 w-3" /> Guardado</span>}
+        {!workoutCompleted && saveError && <span role="status" className="shrink-0 text-destructive">Error al guardar</span>}
+        {!workoutCompleted && !saveError && savedAt && <span className="flex shrink-0 items-center gap-1"><Save className="h-3 w-3" /> Guardado</span>}
       </div>
 
       {/* Rest day */}
@@ -1012,24 +1026,22 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             );
           })}
 
-          {/* Save button */}
+          {/* Finish workout */}
           {!workoutCompleted && completionReady && <div className="sticky bottom-3 z-20 pt-3 pb-4">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
-              <span>{savedAt ? "Guardado" : "Se guarda automáticamente"}</span>
-              <InfoHint text="Si guardas a medias no pierdes nada: el día se cierra solo cuando marcas todas las series y confirmas el RPE. Ahí se detectan tus récords personales." />
+              <span role="status" aria-live="polite" className={saveError ? "text-destructive" : ""}>
+                {saveError ? "Error al guardar. Comprueba tu conexión." : savedAt ? "Guardado automáticamente" : "Se guarda automáticamente"}
+              </span>
+              <InfoHint text="Tus series se guardan automáticamente. Al terminar se guardará cualquier cambio pendiente; solo se marcará el día como completado si has hecho todas las series." />
             </div>
             <Button
-              onClick={saveWorkout}
+              onClick={finishWorkout}
               disabled={saving || completedSets === 0}
               className="w-full h-12 text-base font-bold"
-              variant={progressPercent === 100 ? "hero" : "default"}
+              variant="hero"
               size="lg"
             >
-              {saving
-                ? "Guardando..."
-                : progressPercent === 100
-                ? "✅ Guardar y terminar"
-                : `Guardar progreso (${completedSets}/${totalSets})`}
+              {saving ? "Guardando y terminando..." : "Terminar entrenamiento"}
             </Button>
           </div>}
         </div>
