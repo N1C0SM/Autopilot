@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Circle, Flame, RefreshCw, Trophy } from "lucide-react";
+import { RefreshCw, Trophy } from "lucide-react";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import type { DayPlan } from "@/types/training";
 import { toLocalDateString } from "@/lib/localDates";
@@ -13,6 +13,7 @@ interface Props {
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+const DAYS_SHORT = ["L", "M", "X", "J", "V", "S", "D"];
 
 const getMonday = (date: Date) => {
   const day = date.getDay();
@@ -35,7 +36,8 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
   const todayStr = toLocalDateString(today);
 
   const weekDates = useMemo(() => {
-    const monday = getMonday(new Date());
+    const [year, month, day] = todayStr.split("-").map(Number);
+    const monday = getMonday(new Date(year, month - 1, day, 12));
     const dates: Record<string, string> = {};
     DAYS_ORDER.forEach((day, i) => {
       const d = new Date(monday);
@@ -160,8 +162,6 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
   const planDays = dayPlans.map((p) => p.day);
   const completedCount = planDays.filter((d) => completedDays.has(d)).length;
   const totalDays = planDays.length;
-  const progressPct = totalDays > 0 ? (completedCount / totalDays) * 100 : 0;
-
   if (loading) return null;
 
   return (
@@ -175,39 +175,18 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
           </Button>
         </div>
       ) : <>
-      {/* Header with streak */}
-      <div className="flex items-center justify-between mb-4 sm:mb-6">
+      <div className="mb-3">
         <div>
-          <h2 className="font-bold font-display text-lg">Tu Semana</h2>
-          <p className="text-sm text-muted-foreground">
-            {completedCount}/{totalDays} días completados
+          <h2 className="font-bold font-display text-sm">Sesiones esta semana</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {completedCount} de {totalDays} sesiones previstas · la rutina marca tus días
+            {streak > 0 ? ` · ${streak} días de racha` : ""}
           </p>
         </div>
-        {streak > 0 && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2"
-          >
-            <Flame className="w-4 h-4 text-primary" />
-            <span className="text-sm font-bold text-primary">{streak} días de racha</span>
-          </motion.div>
-        )}
       </div>
 
-      {/* Progress bar */}
-      <div className="h-3 bg-secondary rounded-full mb-4 sm:mb-6 overflow-hidden">
-        <motion.div
-          className="h-full bg-primary rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${progressPct}%` }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        />
-      </div>
-
-      {/* Day circles */}
       <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-        {DAYS_ORDER.map((day) => {
+        {DAYS_ORDER.map((day, index) => {
           const hasPlan = planDays.includes(day);
           const canSelfReport = dayPlans.some((plan) => plan.day === day && plan.type === "actividad");
           const isCompleted = completedDays.has(day);
@@ -225,35 +204,19 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
               key={day}
               onClick={() => canSelfReport && toggleDay(day)}
               disabled={!canSelfReport}
+              aria-pressed={isCompleted}
               aria-label={label}
-              className={`flex flex-col items-center gap-1.5 p-1.5 sm:p-2 rounded-xl transition-all duration-200 ${
-                canSelfReport ? "cursor-pointer hover:bg-secondary/50" : hasPlan ? "cursor-default" : "opacity-30 cursor-default"
-              } ${isToday ? "ring-2 ring-primary/40 ring-offset-2 ring-offset-background" : ""}`}
+              className={`flex h-10 items-center justify-center rounded-xl text-xs font-semibold transition-all duration-200 ${
+                isCompleted
+                  ? "bg-primary text-primary-foreground"
+                  : hasPlan
+                    ? "bg-secondary text-muted-foreground"
+                    : "bg-secondary/50 text-muted-foreground/50"
+              } ${canSelfReport ? "cursor-pointer hover:brightness-110" : "cursor-default"} ${
+                isToday && !isCompleted ? "border border-dashed border-primary text-foreground" : "border border-transparent"
+              }`}
             >
-              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase">
-                {day.slice(0, 3)}
-              </span>
-              <AnimatePresence mode="wait">
-                {isCompleted ? (
-                  <motion.div
-                    key="checked"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                  >
-                    <CheckCircle2 className="w-8 h-8 text-primary" />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="unchecked"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                  >
-                    <Circle className={`w-8 h-8 ${hasPlan ? "text-muted-foreground/40" : "text-muted-foreground/20"}`} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {DAYS_SHORT[index]}
             </button>
           );
         })}

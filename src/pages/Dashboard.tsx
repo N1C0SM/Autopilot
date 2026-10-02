@@ -460,13 +460,13 @@ const Dashboard = () => {
 
       {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full space-y-6">
-          <div className="flex items-center gap-2 mb-2">
+          {!isMobile && <div className="flex items-center gap-2 mb-2">
             <Apple className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
             <InfoHint text="Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante." />
-          </div>
+          </div>}
           <Suspense fallback={<SectionFallback />}>
-            <MealsList meals={meals} macros={macros as any} />
+            <MealsList meals={meals} macros={macros} />
           </Suspense>
           <div className="text-center pt-2">
             <Button variant="ghost" size="sm" onClick={handleManageSubscription} className="text-muted-foreground">Gestionar suscripción</Button>
@@ -490,7 +490,7 @@ const Dashboard = () => {
 
       {hasPlan && section === "progress" && user && (
         <div className="w-full space-y-4">
-          <div className="flex items-center justify-between gap-2">
+          {!isMobile && <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <h2 className="text-xl font-bold font-display">Tu progreso</h2>
@@ -499,7 +499,7 @@ const Dashboard = () => {
             <Button size="sm" variant="outline" onClick={() => navigate(`/scan/user/${user.id}`)}>
               AI Scan
             </Button>
-          </div>
+          </div>}
           <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
           <Suspense fallback={<SectionFallback />}>
             <ProgressCharts userId={user.id} />
@@ -509,6 +509,13 @@ const Dashboard = () => {
           <Suspense fallback={<SectionFallback />}>
             <ProgressPhotos userId={user.id} />
           </Suspense>
+          {isMobile && (
+            <div className="flex justify-end">
+              <Button size="sm" variant="outline" onClick={() => navigate(`/scan/user/${user.id}`)}>
+                AI Scan
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
