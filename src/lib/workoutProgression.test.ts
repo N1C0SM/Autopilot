@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getProgressionSuggestion } from "./workoutProgression";
+import { applyProgressionToPendingSets, getProgressionSuggestion } from "./workoutProgression";
 
 const exercise = { exercise_id: "1", name: "Press banca", series: 3, reps: 8, weight: "60", rest: "90 s" };
 
@@ -11,6 +11,42 @@ describe("getProgressionSuggestion", () => {
       { weight: "60", reps: 8, done: true },
     ]);
     expect(result).toMatchObject({ label: "Subir", weight: "62.5" });
+  });
+
+  describe("applyProgressionToPendingSets", () => {
+    it("applies the suggested load only to unfinished sets", () => {
+      const sets = [
+        { weight: "62.5", reps: 8, done: false },
+        { weight: "60", reps: 8, done: true },
+        { weight: "60", reps: 8, done: false },
+      ];
+
+      expect(applyProgressionToPendingSets(sets, {
+        label: "Subir",
+        weight: "62.5",
+        reason: "Sugerencia",
+      })).toEqual([
+        { weight: "62.5", reps: 8, done: false },
+        { weight: "60", reps: 8, done: true },
+        { weight: "62.5", reps: 8, done: false },
+      ]);
+    });
+
+    it("adds one rep only to unfinished bodyweight sets", () => {
+      const sets = [
+        { weight: "", reps: 9, done: false },
+        { weight: "", reps: 8, done: true },
+      ];
+
+      expect(applyProgressionToPendingSets(sets, {
+        label: "Añadir rep",
+        weight: "",
+        reason: "Sugerencia",
+      })).toEqual([
+        { weight: "", reps: 10, done: false },
+        { weight: "", reps: 8, done: true },
+      ]);
+    });
   });
 
   it("keeps the previous weight when target reps were missed", () => {

@@ -13,6 +13,24 @@ export interface ProgressionSuggestion {
   reason: string;
 }
 
+export interface ProgressionSet {
+  reps: number;
+  weight: string;
+  done: boolean;
+}
+
+export function applyProgressionToPendingSets(
+  sets: ProgressionSet[],
+  suggestion: ProgressionSuggestion,
+): ProgressionSet[] {
+  return sets.map((set) => {
+    if (set.done) return set;
+    if (suggestion.label === "Añadir rep") return { ...set, reps: set.reps + 1 };
+    if (suggestion.weight !== "") return { ...set, weight: suggestion.weight };
+    return set;
+  });
+}
+
 const incrementFor = (weight: number) => (weight >= 40 ? 2.5 : 1.25);
 
 export const getProgressionSuggestion = (

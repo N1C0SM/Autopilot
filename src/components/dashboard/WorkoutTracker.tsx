@@ -14,7 +14,7 @@ import VideoEmbed from "@/components/VideoEmbed";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
-import { getProgressionSuggestion } from "@/lib/workoutProgression";
+import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutReview } from "./WorkoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
@@ -141,7 +141,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
           .maybeSingle(),
         supabase
           .from("workout_logs")
-          .select("exercise_name, sets_completed, logged_at")
+          .select("exercise_name, sets_completed, logged_at, rpe")
           .eq("user_id", userId)
           .eq("day_label", selectedDay)
           .lt("logged_at", selectedDate)
@@ -192,7 +192,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             prev[row.exercise_name] = row.sets_completed as SetLog[];
           });
         setPreviousLogs(prev);
-        setPreviousSessionRpe(prevData.find((row) => row.logged_at === lastDate)?.rpe ?? null);
+        setPreviousSessionRpe(prevData.find((row) => row.logged_at === lastDate && row.rpe !== null)?.rpe ?? null);
         if ((!data || data.length === 0) && currentPlan?.type === "gimnasio") {
           const progressedLogs: Record<string, SetLog[]> = {};
           currentPlan.exercises?.forEach((exercise) => {
@@ -256,6 +256,15 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
         reps: previous[index]?.reps || set.reps,
       })),
     }));
+  };
+
+  const applyProgression = (exerciseName: string, progression: NonNullable<ReturnType<typeof getProgressionSuggestion>>) => {
+    setExerciseLogs((current) => ({
+      ...current,
+      [exerciseName]: applyProgressionToPendingSets(current[exerciseName] || [], progression),
+    }));
+    void hapticTap();
+    toast.success("Propuesta aplicada a las series pendientes. Puedes ajustarla antes de empezar.");
   };
 
   const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number) => {
@@ -1000,6 +1009,19 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                             <TrendingUp className="w-3 h-3" />
                             <span>Última sesión: {prevSets.map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
                             <InfoHint text="Peso × repeticiones de la última vez que hiciste este ejercicio. Intenta igualar o superar al menos una serie para progresar." />
+                          </div>
+                        )}
+
+                        {progression && !allDone && (
+                          <div className="mb-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
+                            <p className="text-xs font-semibold">{progression.reason}</p>
+                            <button
+                              type="button"
+                              onClick={() => applyProgression(ex.name, progression)}
+                              className="mt-2 min-h-10 w-full rounded-lg bg-primary/10 px-3 text-left text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
+                            >
+                              Aplicar a las series pendientes
+                            </button>
                           </div>
                         )}
 
