@@ -536,28 +536,17 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
         <div className={`space-y-3 ${workoutCompleted ? "min-h-[calc(100vh-8rem)]" : ""}`}>
           {/* Today's workout summary */}
           <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady || loadError || started ? "hidden" : ""}`}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
-                  Entrenamiento · {selectedDay}
-                </p>
-                <h3 className="font-display text-lg font-bold leading-tight sm:text-xl">
-                  {trainingTitle || selectedDay}
-                </h3>
-              </div>
-              <div className="flex h-12 min-w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/20 bg-primary/10 px-2">
-                <span className="font-display text-lg font-bold leading-none text-primary">
-                  {completedExercises}/{currentPlan.exercises?.length || 0}
-                </span>
-                <span className="mt-1 text-[9px] leading-none text-muted-foreground">hechos</span>
-              </div>
+            <p className="text-[11px] font-medium text-primary">{selectedDay}</p>
+            <div className="mt-1 flex items-end justify-between gap-2">
+              <h3 className="min-w-0 font-display text-lg font-bold leading-tight sm:text-xl">
+                {trainingTitle || selectedDay}
+              </h3>
+              <p role="status" className="shrink-0 text-xs font-semibold tabular-nums">
+                {completedSets} de {totalSets} series
+              </p>
             </div>
 
-            <div className="mt-4">
-              <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                <span className="text-muted-foreground">{started ? "Progreso del entrenamiento" : "Tu sesión de hoy"}</span>
-                <span className="font-medium tabular-nums text-foreground">{completedSets}/{totalSets} series</span>
-              </div>
+            <div className="mt-3">
               <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
                 <motion.div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-amber-200"
@@ -860,7 +849,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
                       {ex.series} series <span className="px-0.5 text-border">·</span> {ex.reps} reps <span className="px-0.5 text-border">·</span> {ex.rest}
                     </div>
-                    {(exerciseCategory || exerciseType) && (
+                    {started && (exerciseCategory || exerciseType) && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {exerciseCategory && (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary">
@@ -874,7 +863,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                         )}
                       </div>
                     )}
-                    {progression && (
+                    {started && progression && (
                       <span className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         progression.label === "Subir" ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
                       }`}>
@@ -889,15 +878,6 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
 
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
-                      allDone
-                        ? "bg-primary/15 text-primary"
-                        : doneSets > 0
-                        ? "bg-secondary text-foreground"
-                        : "bg-secondary/70 text-muted-foreground"
-                    }`}>
-                      {doneSets}/{sets.length}
-                    </span>
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
