@@ -21,6 +21,7 @@ import { MuscleMapFigure } from "./MuscleMapFigure";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
 import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
+import { getExerciseTrackingConfig } from "@/lib/exerciseTrackingConfig";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
@@ -854,6 +855,12 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             const exerciseVideo = ex.video_url || metadata?.video_url;
             const exerciseCategory = ex.muscle_group || metadata?.muscle_group;
             const exerciseType = ex.exercise_type || metadata?.exercise_type;
+            const trackingConfig = getExerciseTrackingConfig({
+              name: ex.name,
+              skill_tag: metadata?.skill_tag ?? undefined,
+              movement_pattern: ex.movement_pattern ?? metadata?.movement_pattern ?? undefined,
+              exercise_type: exerciseType ?? undefined,
+            });
             const progression = getProgressionSuggestion(ex, prevSets, previousSessionRpe);
 
             return (
@@ -898,7 +905,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
                       {ex.series} series <span className="px-0.5 text-border">·</span> {ex.reps} reps <span className="px-0.5 text-border">·</span> {ex.rest}
                     </div>
-                    {started && (exerciseCategory || exerciseType) && (
+                    {started && (exerciseCategory || exerciseType || trackingConfig) && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {exerciseCategory && (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary">
@@ -908,6 +915,11 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                         {exerciseType && (
                           <span className="rounded-full bg-secondary px-2 py-0.5 text-[9px] text-muted-foreground">
                             {exerciseType}
+                          </span>
+                        )}
+                        {trackingConfig && (
+                          <span className="rounded-full bg-secondary/80 px-2 py-0.5 text-[9px] text-muted-foreground">
+                            {trackingConfig.valueLabel}
                           </span>
                         )}
                       </div>
@@ -1011,12 +1023,12 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                         <div className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-1 pb-1">
                           <span>Serie</span>
                           <span className="flex items-center gap-1">
-                            Peso (kg)
-                            <InfoHint text="Peso total levantado en esa serie. En ejercicios con tu propio peso corporal déjalo vacío o pon el lastre añadido." />
+                            {trackingConfig.weightLabel}
+                            <InfoHint text={trackingConfig.description} />
                           </span>
                           <span className="flex items-center gap-1">
-                            Reps
-                            <InfoHint text="Repeticiones que realmente completaste, aunque sean menos o más de las previstas." />
+                            {trackingConfig.valueLabel}
+                            <InfoHint text="Registra el valor que realmente completaste, aunque sea menor o mayor que lo planificado." />
                           </span>
                           <span className="text-center flex items-center justify-center gap-1">
                             ✓

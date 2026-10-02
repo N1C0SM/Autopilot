@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Dumbbell, Utensils, Lock, Sparkles, Flame } from "lucide-react";
+import { resolveNutritionPreview } from "@/lib/nutrition";
 
 interface Props {
   focus?: string; // gimnasio | calistenia | mixto
@@ -7,15 +8,6 @@ interface Props {
   weight?: number;
   sex?: string;
   days?: number;
-}
-
-// Estimación rápida de kcal objetivo (orientativo, sólo teaser)
-function estimateKcal(weight?: number, sex?: string, goal?: string) {
-  const w = weight && weight > 30 ? weight : 70;
-  const base = sex === "female" ? w * 28 : w * 32;
-  if (goal === "lose_weight") return Math.round(base - 350);
-  if (goal === "gain_muscle") return Math.round(base + 300);
-  return Math.round(base);
 }
 
 function sampleWorkout(focus?: string) {
@@ -57,8 +49,7 @@ function sampleWorkout(focus?: string) {
 
 const PlanPreview = ({ focus, goal, weight, sex, days = 4 }: Props) => {
   const workout = sampleWorkout(focus);
-  const kcal = estimateKcal(weight, sex, goal);
-  const protein = Math.round((weight && weight > 30 ? weight : 70) * 2);
+  const nutritionPreview = resolveNutritionPreview({ weight, sex, goal });
 
   return (
     <motion.div
@@ -113,19 +104,28 @@ const PlanPreview = ({ focus, goal, weight, sex, days = 4 }: Props) => {
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <div className="bg-secondary/30 rounded-lg p-2 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Kcal/día</p>
-              <p className="font-bold text-base flex items-center justify-center gap-1">
-                <Flame className="w-3.5 h-3.5 text-primary" />
-                {kcal}
+          {nutritionPreview.hasWeight ? (
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="bg-secondary/30 rounded-lg p-2 text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Kcal/día</p>
+                <p className="font-bold text-base flex items-center justify-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-primary" />
+                  {nutritionPreview.calories}
+                </p>
+              </div>
+              <div className="bg-secondary/30 rounded-lg p-2 text-center">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Proteína</p>
+                <p className="font-bold text-base">{nutritionPreview.protein}g</p>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-3 rounded-lg border border-dashed border-primary/30 bg-secondary/20 p-3 text-center">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Peso pendiente</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Añade tu peso para ver kcal y proteína personalizadas.
               </p>
             </div>
-            <div className="bg-secondary/30 rounded-lg p-2 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Proteína</p>
-              <p className="font-bold text-base">{protein}g</p>
-            </div>
-          </div>
+          )}
           <div className="space-y-1.5">
             <div className="text-xs bg-secondary/30 px-2.5 py-1.5 rounded-lg flex items-center justify-between">
               <span>Desayuno · Tortilla + avena</span>
