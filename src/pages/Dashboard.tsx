@@ -1,4 +1,5 @@
 import { hasCoaching, hasNutrition } from "@/lib/entitlements";
+import { parseMacroTargets } from "@/lib/nutrition";
 import CoachingOffer from "@/components/dashboard/CoachingOffer";
 import { track } from "@/lib/analytics";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
@@ -198,7 +199,7 @@ const Dashboard = () => {
           ).size);
         }
         if (np) {
-          setMacros(np.macros_json as unknown as Macros);
+          setMacros(parseMacroTargets(np.macros_json));
           setMeals(np.meals_json as unknown as Meal[]);
         }
         setCompletedToday(Boolean(todayCompletion));
@@ -238,7 +239,7 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       if (data) {
-        setMacros(data.macros_json as unknown as Macros);
+        setMacros(parseMacroTargets(data.macros_json));
         setMeals(data.meals_json as unknown as Meal[]);
       }
     };
@@ -463,10 +464,12 @@ const Dashboard = () => {
           {!isMobile && <div className="flex items-center gap-2 mb-2">
             <Apple className="w-5 h-5 text-primary" />
             <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
-            <InfoHint text="Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante." />
+            <InfoHint text={macros
+              ? "Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante."
+              : "Las comidas son orientativas hasta que tu entrenador calcule objetivos con tu peso actual."} />
           </div>}
           <Suspense fallback={<SectionFallback />}>
-            <MealsList meals={meals} macros={macros} />
+            <MealsList meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
           </Suspense>
           <div className="text-center pt-2">
             <Button variant="ghost" size="sm" onClick={handleManageSubscription} className="text-muted-foreground">Gestionar suscripción</Button>

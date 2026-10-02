@@ -1,4 +1,5 @@
 import { hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
+import { parseBodyWeight } from "../_shared/nutrition.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -856,7 +857,7 @@ serve(async (req) => {
     }
     console.log(`[GENERATE-PLAN] Rules loaded: min=${rules.min_sets_per_session} max=${rules.max_sets_per_session} patterns=${rules.required_patterns.join(",")}`);
 
-    const weight = onb.weight || 70;
+    const weight = parseBodyWeight(onb.weight);
     const goal = onb.goal || "general_health";
     const specificGoal = onb.specific_goal || "";
     const sports = onb.sports ? onb.sports.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
@@ -983,12 +984,12 @@ serve(async (req) => {
     }
 
     const diet = detectDiet((onb as any).nutrition_preferences);
-    const macros = calcMacros(weight, goal, diet);
+    const macros = includeNutrition && weight !== null ? calcMacros(weight, goal, diet) : null;
     let meals = getMeals(goal, diet, (onb as any).allergies);
 
     // Try AI-personalized meals based on user's actual food preferences
-    try {
-      if (!includeNutrition) throw new Error("Nutrition not included in this plan");
+    if (macros && weight !== null) {
+      try {
       const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-generate-meals`, {
         method: "POST",
         headers: {
@@ -1012,11 +1013,12 @@ serve(async (req) => {
       } else {
         console.log(`[GENERATE-PLAN] AI meals fallback (status ${aiResp.status})`);
       }
-    } catch (e) {
-      console.log(`[GENERATE-PLAN] AI meals error, using fallback: ${e}`);
+      } catch (e) {
+        console.log(`[GENERATE-PLAN] AI meals error, using fallback: ${e}`);
+      }
     }
 
-    console.log(`[GENERATE-PLAN] Nutrition: diet=${diet}, goal=${goal}, macros=${JSON.stringify(macros)}, meals=${meals.length}`);
+    console.log(`[GENERATE-PLAN] Nutrition: diet=${diet}, goal=${goal}, macros=${JSON.stringify(macros)}, meals=${includeNutrition ? meals.length : 0}`);
 
     const { error: trainingError } = await supabase.from("training_plan").upsert(
       { user_id: targetUserId, workouts_json: weeklyPlan },
@@ -1024,7 +1026,7 @@ serve(async (req) => {
     );
     if (trainingError) throw trainingError;
     if (includeNutrition) {
-      const { error } = await supabase.from("nutrition_plan").upsert({ user_id: targetUserId, macros_json: macros, meals_json: meals });
+      const { error } = await supabase.from("nutrition_plan").upsert({ user_id: targetUserId, macros_json: macros ?? {}, meals_json: meals });
       if (error) throw error;
     }
     const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);

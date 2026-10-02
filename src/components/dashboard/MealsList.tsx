@@ -1,22 +1,18 @@
 import { useEffect, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, UserRound } from "lucide-react";
 import { hapticTap } from "@/lib/native";
+import { Button } from "@/components/ui/button";
+import type { MacroTargets } from "@/lib/nutrition";
 
 interface Meal {
   name: string;
   description: string;
 }
 
-interface Macros {
-  protein: number;
-  carbs: number;
-  fats: number;
-  calories?: number;
-}
-
 interface Props {
   meals: Meal[];
-  macros?: Macros | null;
+  macros?: MacroTargets | null;
+  onOpenProfile?: () => void;
 }
 
 const todayKey = () => {
@@ -24,7 +20,7 @@ const todayKey = () => {
   return `meals_done_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 };
 
-const MealsList = ({ meals, macros }: Props) => {
+const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
   const [done, setDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -69,6 +65,24 @@ const MealsList = ({ meals, macros }: Props) => {
 
   return (
     <div className="space-y-3">
+      {meals.length > 0 && !macros && (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-sm">Aún no hay objetivos de macros personalizados</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Actualiza tu peso en Perfil y coméntaselo a tu entrenador para revisar tus objetivos. Las comidas de abajo son orientativas.
+              </p>
+              {onOpenProfile && (
+                <Button variant="outline" size="sm" className="mt-3" onClick={onOpenProfile}>
+                  Actualizar peso en Perfil
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {macros && kcal > 0 && (
         <>
           <div className="rounded-3xl bg-card border border-border p-4 sm:p-5 flex items-center gap-4 sm:gap-5">

@@ -25,4 +25,22 @@ describe("meal check-ins", () => {
     expect(localStorage.getItem(`meals_done_${new Date().getFullYear()}-${new Date().getMonth() + 1}-${new Date().getDate()}`))
       .toBe(JSON.stringify(["Desayuno"]));
   });
+
+  it("explains missing personalized targets and opens profile without inventing macros", () => {
+    const onOpenProfile = vi.fn();
+    render(
+      <MealsList
+        meals={[{ name: "Comida", description: "Plato equilibrado" }]}
+        macros={null}
+        onOpenProfile={onOpenProfile}
+      />,
+    );
+
+    expect(screen.getByText("Aún no hay objetivos de macros personalizados")).toBeVisible();
+    expect(screen.getByText(/coméntaselo a tu entrenador/)).toBeVisible();
+    expect(screen.getByText(/Las comidas de abajo son orientativas/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Actualizar peso en Perfil" }));
+    expect(onOpenProfile).toHaveBeenCalledOnce();
+    expect(screen.queryByText(/kcal/)).not.toBeInTheDocument();
+  });
 });

@@ -280,7 +280,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
   const applyMacroTemplate = (key: string) => {
     const tpl = MACRO_TEMPLATES[key];
-    const weight = onboarding?.weight || 70;
+    const weight = onboarding?.weight;
+    if (!weight || !Number.isFinite(weight) || weight <= 0) {
+      toast.error("Añade el peso actual del cliente antes de calcular sus macros.");
+      return;
+    }
     const result = tpl.calc(weight);
     setMacros({
       protein: result.protein.toString(),
@@ -304,7 +308,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
     const { error: npError } = await supabase.from("nutrition_plan").upsert({
       user_id: profile.user_id,
-      macros_json: { protein: parseInt(macros.protein) || 0, carbs: parseInt(macros.carbs) || 0, fats: parseInt(macros.fats) || 0 } as unknown as Json,
+      macros_json: [macros.protein, macros.carbs, macros.fats].every((value) => Number(value) > 0)
+        ? { protein: parseInt(macros.protein), carbs: parseInt(macros.carbs), fats: parseInt(macros.fats) } as unknown as Json
+        : {} as unknown as Json,
       meals_json: meals as unknown as Json,
     }, { onConflict: "user_id" });
 
@@ -361,7 +367,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     }
 
     onUpdate(profile.user_id, { plan_status: "plan_ready" });
-    toast.success(`¡Plan auto-generado! ${data.training_days} días de entrenamiento, macros: P${data.macros.protein}/C${data.macros.carbs}/F${data.macros.fats}`);
+    toast.success(data.macros
+      ? `¡Plan auto-generado! ${data.training_days} días de entrenamiento, macros: P${data.macros.protein}/C${data.macros.carbs}/F${data.macros.fats}`
+      : `Plan de entrenamiento generado para ${data.training_days} días. Faltan datos para calcular macros.`);
     setGenerating(false);
   };
 
@@ -910,12 +918,14 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Calcular macros ({onboarding?.weight || 70}kg)
+                  {onboarding?.weight
+                    ? `Calcular macros (${onboarding.weight}kg)`
+                    : "Añade el peso actual del cliente para calcular macros"}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(MACRO_TEMPLATES).map(([key, tpl]) => (
-                  <Button key={key} variant="outline" size="sm" className="text-xs h-7" onClick={() => applyMacroTemplate(key)}>
+                  <Button key={key} variant="outline" size="sm" className="text-xs h-7" onClick={() => applyMacroTemplate(key)} disabled={!onboarding?.weight || onboarding.weight <= 0}>
                     {tpl.label}
                   </Button>
                 ))}
