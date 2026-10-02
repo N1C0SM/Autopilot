@@ -829,9 +829,9 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                   className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-secondary/20 sm:px-4"
                 >
                   {/* Exercise image or icon */}
-                  {ex.image_url ? (
+                  {(ex.image_url || metadata?.image_url) ? (
                     <img
-                      src={ex.image_url}
+                      src={ex.image_url || metadata?.image_url || ""}
                       alt={ex.name}
                       className="h-11 w-11 shrink-0 rounded-xl object-cover"
                     />

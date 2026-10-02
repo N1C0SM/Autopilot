@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2, ImagePlus } from "lucide-react";
 import type { Exercise } from "@/types/training";
@@ -534,6 +544,8 @@ const ExerciseFormDialog = ({
 const ExerciseLibrary = () => {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mediaBatchOpen, setMediaBatchOpen] = useState(false);
+  const [mediaBatch, setMediaBatch] = useState<{ current: number; total: number; exercise: string; task: string } | null>(null);
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
@@ -550,6 +562,84 @@ const ExerciseLibrary = () => {
   };
 
   useEffect(() => { fetchExercises(); }, []);
+
+  const exercisesMissingMedia = exercises.filter((exercise) => !exercise.image_url || !exercise.video_url);
+
+  const invokeExerciseMedia = async (exerciseId: string, action: "image" | "create" | "check") => {
+    const { data, error } = await supabase.functions.invoke("exercise-video", {
+      body: { exercise_id: exerciseId, action },
+    });
+    if (error) {
+      let message = "No se pudo generar el recurso";
+      try {
+        const body = await error.context?.json?.();
+        if (body?.error) message = String(body.error);
+      } catch {
+        // Keep the actionable fallback when the function response is not JSON.
+      }
+      throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
+  const generateMissingMediaForAll = async () => {
+    const queue = exercisesMissingMedia;
+    if (queue.length === 0) {
+      setMediaBatchOpen(false);
+      toast.success("Todos los ejercicios ya tienen imagen y vídeo de técnica.");
+      return;
+    }
+
+    setMediaBatchOpen(false);
+    let completed = 0;
+    for (const exercise of queue) {
+      try {
+        let imageUrl = exercise.image_url;
+        let videoUrl = exercise.video_url;
+        if (!imageUrl) {
+          setMediaBatch({ current: completed + 1, total: queue.length, exercise: exercise.name, task: "Generando imagen" });
+          const image = await invokeExerciseMedia(exercise.id, "image");
+          if (!image?.image_url) throw new Error("La IA no devolvió una imagen.");
+          imageUrl = image.image_url;
+          setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, image_url: image.image_url } : item));
+        }
+
+        if (!videoUrl) {
+          setMediaBatch({ current: completed + 1, total: queue.length, exercise: exercise.name, task: "Generando técnica en vídeo" });
+          await invokeExerciseMedia(exercise.id, "create");
+          const deadline = Date.now() + 4 * 60 * 1000;
+          let completedVideoUrl: string | null = null;
+          while (Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, 6000));
+            const status = await invokeExerciseMedia(exercise.id, "check");
+            if (status?.status === "failed") throw new Error(status.error || "La generación del vídeo falló.");
+            if (status?.status === "completed" && status.video_url) {
+              completedVideoUrl = status.video_url;
+              break;
+            }
+            const progress = status?.progress ? ` (${Math.round(status.progress * 100)}%)` : "";
+            setMediaBatch({ current: completed + 1, total: queue.length, exercise: exercise.name, task: `Generando técnica en vídeo${progress}` });
+          }
+          if (!completedVideoUrl) throw new Error("El vídeo sigue generándose. Puedes volver a iniciar la cola más tarde; el trabajo se reanudará.");
+          videoUrl = completedVideoUrl;
+          setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, video_url: completedVideoUrl } : item));
+        }
+        if (!imageUrl || !videoUrl) throw new Error("Faltan recursos después de la generación.");
+        completed++;
+      } catch (error) {
+        console.error(`Failed to generate media for exercise "${exercise.name}"`, error);
+        toast.error(`${exercise.name}: ${error instanceof Error ? error.message : "No se pudo completar la generación."} La cola se detuvo; puedes reanudarla después.`);
+        setMediaBatch(null);
+        void fetchExercises();
+        return;
+      }
+    }
+
+    setMediaBatch(null);
+    void fetchExercises();
+    toast.success(`Imagen y técnica generadas para ${completed} ejercicios.`);
+  };
 
   const filtered = useMemo(() => {
     let result = exercises;
@@ -627,7 +717,7 @@ const ExerciseLibrary = () => {
 
   return (
     <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-[0_16px_44px_-36px_hsl(var(--primary)/.55)] sm:p-5">
-      <div className="mb-4 flex items-center gap-2 border-b border-border/70 pb-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-4">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
             <Dumbbell className="h-4 w-4 text-primary" />
@@ -636,6 +726,25 @@ const ExerciseLibrary = () => {
             <h2 className="font-bold font-display">Biblioteca de ejercicios</h2>
             <p className="text-xs text-muted-foreground">{filtered.length} de {exercises.length} ejercicios</p>
           </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {mediaBatch ? (
+            <p role="status" className="text-xs text-muted-foreground">
+              {mediaBatch.current}/{mediaBatch.total} · {mediaBatch.exercise}: {mediaBatch.task}
+            </p>
+          ) : (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={exercisesMissingMedia.length === 0}
+              onClick={() => setMediaBatchOpen(true)}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Completar medios ({exercisesMissingMedia.length})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -767,6 +876,30 @@ const ExerciseLibrary = () => {
         allExercises={exercises}
         onMediaChange={fetchExercises}
       />
+      <AlertDialog open={mediaBatchOpen} onOpenChange={setMediaBatchOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Completar medios de los ejercicios</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se generará una imagen y un vídeo de técnica con IA para cada ejercicio que aún no los tenga
+              ({exercisesMissingMedia.length} ejercicios). El proceso puede tardar bastante y consume créditos de IA.
+              Los recursos se guardan a medida que se completan; si se interrumpe, podrás reanudarlo sin repetir los que ya estén listos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Ahora no</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={exercisesMissingMedia.length === 0 || mediaBatch !== null}
+              onClick={(event) => {
+                event.preventDefault();
+                void generateMissingMediaForAll();
+              }}
+            >
+              Generar para todos
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
