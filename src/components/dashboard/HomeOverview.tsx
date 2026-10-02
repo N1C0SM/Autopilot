@@ -188,14 +188,15 @@ const HomeOverview = ({
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex items-stretch gap-3">
             <button
               type="button"
               onClick={() => onNavigate("nutrition")}
-              className="flex w-full min-w-0 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
+              className="flex min-h-40 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
             >
-              <span className="relative h-12 w-12 shrink-0">
-                  <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
+              <span className="flex min-w-0 items-center gap-3">
+                <span className="relative h-11 w-11 shrink-0">
+                  <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
                     <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3" />
                     {nutrition && meals.length > 0 && (
                       <circle
@@ -212,13 +213,13 @@ const HomeOverview = ({
                     )}
                   </svg>
                   {nutrition && <Utensils className="absolute inset-0 m-auto h-4 w-4 text-primary" />}
-              </span>
-              <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-base font-semibold">
+                </span>
+                <span className="min-w-0">
+                  <span className="flex items-center gap-1 text-base font-semibold leading-tight">
                     Nutrición
-                    {!nutrition && <LockKeyhole className="h-3.5 w-3.5 text-muted-foreground" />}
+                    {!nutrition && <LockKeyhole className="h-3 w-3 shrink-0 text-muted-foreground" />}
                   </span>
-                  <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+                  <span className="mt-1 block text-xs leading-tight text-muted-foreground">
                     {nutrition
                       ? meals.length
                         ? `${doneMealCount}/${meals.length} comidas`
@@ -227,9 +228,10 @@ const HomeOverview = ({
                           : "Ver plan de hoy"
                       : "Plan Completo"}
                   </span>
+                </span>
               </span>
               {nutrition && macros ? (
-                <span className="hidden gap-2 text-xs text-muted-foreground min-[390px]:flex">
+                <span className="flex w-full justify-between gap-1 border-t border-border/70 pt-3 text-[11px] text-muted-foreground sm:text-xs">
                   {[
                     { label: "P", value: macros.protein },
                     { label: "C", value: macros.carbs },
@@ -239,32 +241,33 @@ const HomeOverview = ({
                   ))}
                 </span>
               ) : (
-                <span className="hidden text-xs text-muted-foreground min-[390px]:inline">Ver plan</span>
+                <span className="flex w-full items-center gap-1.5 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                  <span className="h-2 flex-1 rounded-full bg-secondary" />
+                  Ver plan
+                </span>
               )}
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
 
             <button
               type="button"
               onClick={() => onNavigate("progress")}
-              className="flex w-full min-w-0 items-center gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
+              className="flex min-h-40 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
-                <LineChart className="h-5 w-5 text-primary" />
+              <span className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <LineChart className="h-5 w-5 text-primary" />
+                </span>
+                <span className="text-base font-semibold">Tu semana</span>
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-base font-semibold">Tu semana</span>
-                <span className="mt-0.5 block truncate text-sm text-muted-foreground">
+              <span className="block truncate text-sm text-muted-foreground">
                   {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
-                </span>
-                <span className="mt-2 block h-2 overflow-hidden rounded-full bg-secondary">
-                  <span
-                    className="block h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
-                  />
-                </span>
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="block h-2 overflow-hidden rounded-full bg-secondary">
+                <span
+                  className="block h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
+                />
+              </span>
             </button>
           </div>
 
