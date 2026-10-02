@@ -42,7 +42,10 @@ describe("dashboard home overview", () => {
 
     expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
     expect(screen.getByText("Incluida en Plan Completo")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /Nutrición/ }));
+    const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
+    expect(nutritionCard).toHaveClass("p-5");
+    expect(nutritionCard.closest(".grid")).toHaveClass("grid-cols-1", "sm:grid-cols-2");
+    fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenCalledWith("nutrition");
   });
 });
