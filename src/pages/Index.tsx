@@ -9,7 +9,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import ScrollReveal from "@/components/ScrollReveal";
 import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
-import AppStoreBadges from "@/components/AppStoreBadges";
 import BookCover from "@/components/BookCover";
 import TrainersSection from "@/components/TrainersSection";
 import ProductPreview from "@/components/ProductPreview";
@@ -330,7 +329,6 @@ const Index = () => {
               <button type="button" onClick={() => goScan("hero_secondary")} className="mt-3 min-h-11 text-xs text-primary underline underline-offset-4">
                 También puedes hacer el análisis inicial con IA gratis
               </button>
-              <AppStoreBadges size="compact" label="También en tu móvil" className="mt-5" />
             </div>
 
             <div className="mt-10 grid gap-4 md:grid-cols-[1.35fr_0.65fr]">
