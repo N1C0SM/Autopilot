@@ -330,6 +330,7 @@ export type Database = {
       }
       exercises: {
         Row: {
+          tracking_kind: string | null
           alternative_id: string | null
           created_at: string
           exercise_type: string | null
@@ -353,6 +354,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          tracking_kind?: string | null
           alternative_id?: string | null
           created_at?: string
           exercise_type?: string | null
@@ -376,6 +378,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          tracking_kind?: string | null
           alternative_id?: string | null
           created_at?: string
           exercise_type?: string | null

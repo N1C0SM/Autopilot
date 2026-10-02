@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => ({
-      select: () => ({ eq: () => ({ order: () => ({ limit: mocks.list }) }) }),
+      select: () => ({ eq: () => ({ order: () => ({ range: mocks.list }) }) }),
       upsert: mocks.upsert,
     }),
   },

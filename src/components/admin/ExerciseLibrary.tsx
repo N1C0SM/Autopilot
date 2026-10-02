@@ -1,3 +1,4 @@
+import { kinds } from "@/lib/tracking/model";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -286,6 +287,7 @@ const ExerciseFormDialog = ({
               <div>
                 <Label className="text-xs">Tipo</Label>
                 <SmallSelect value={form.exercise_type || ""} onChange={(v) => set("exercise_type", v)} options={EXERCISE_TYPES} placeholder="Tipo..." />
+                <label className="block text-xs mt-3">Registro del ejercicio<select className="h-11 w-full rounded-md border bg-background" value={form.tracking_kind || "weight"} onChange={e => set("tracking_kind", e.target.value)}>{Object.entries(kinds).filter(([k]) => k !== 'legacy').map(([k,label]) => <option key={k} value={k}>{label}</option>)}</select></label>
               </div>
             </div>
           </div>
@@ -556,7 +558,7 @@ const ExerciseLibrary = () => {
 
   const fetchExercises = async () => {
     const { data } = await supabase.from("exercises")
-      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension")
+      .select("id, name, muscle_group, image_url, video_url, tracking_kind, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension")
       .order("muscle_group").order("recommended_order").order("name");
     if (data) setExercises(data as Exercise[]);
   };
@@ -671,6 +673,7 @@ const ExerciseLibrary = () => {
       name: form.name?.trim(),
       muscle_group: form.muscle_group || null,
       exercise_type: form.exercise_type || null,
+      tracking_kind: form.tracking_kind || null,
       movement_pattern: form.movement_pattern || null,
       level: form.level ?? 1,
       priority: form.priority ?? 2,

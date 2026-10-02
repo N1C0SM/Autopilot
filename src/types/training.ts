@@ -1,4 +1,5 @@
 export interface Exercise {
+  tracking_kind?: import("@/lib/tracking/model").TrackingKind;
   id: string;
   name: string;
   muscle_group: string | null;
@@ -21,6 +22,11 @@ export interface Exercise {
 }
 
 export interface GymExerciseEntry {
+  tracking_kind?: import('@/lib/tracking/model').TrackingKind;
+  variant?: string;
+  load_mode?: import('@/lib/tracking/model').LoadMode;
+  target_seconds?: number | null;
+  target_distance?: number | null;
   exercise_id: string;
   name: string;
   series: number;

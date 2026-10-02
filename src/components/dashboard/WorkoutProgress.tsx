@@ -1,134 +1,510 @@
-import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Dumbbell, RefreshCw } from "lucide-react";
+import { allowedMetrics, seriesPoints } from "@/lib/tracking/metrics";
+import { es } from "date-fns/locale";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { buildExerciseHistory, type ExerciseHistoryEntry, type WorkoutLogRecord } from "@/lib/workoutMetrics";
-import ExerciseProgressChart from "@/components/dashboard/ExerciseProgressChart";
-
-interface Props {
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { parseLocalDate, toLocalDateString } from "@/lib/localDates";
+import {
+  modes,
+  comparisonKey,
+  defaultRules,
+  recommendation,
+  resultLabel,
+  stats,
+  validResult,
+  weeklyMuscles,
+  type Session,
+} from "@/lib/tracking/model";
+import { loadSessions, saveSession, trackingDb } from "@/lib/tracking/store";
+import { SessionEditor } from "@/components/tracking/SessionEditor";
+export default function WorkoutProgress({
+  userId,
+  trainer = false,
+}: {
   userId: string;
+  trainer?: boolean;
+}) {
+  return <History key={userId} userId={userId} trainer={trainer} />;
 }
-
-const WorkoutProgress = ({ userId }: Props) => {
-  const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
-  const [selectedExercise, setSelectedExercise] = useState("");
-  const [metric, setMetric] = useState<"volumeKg" | "reps" | "bestEstimated1RmKg">("volumeKg");
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [reload, setReload] = useState(0);
-
+function History({ userId, trainer }: { userId: string; trainer: boolean }) {
+  const [sessions, setSessions] = useState<Session[]>([]),
+    [selected, setSelected] = useState<Session | null>(null),
+    [editing, setEditing] = useState(false),
+    [reason, setReason] = useState(""),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [reload, setReload] = useState(0),
+    [saving, setSaving] = useState(false);
+  const [period, setPeriod] = useState(30),
+    [date, setDate] = useState<Date>(),
+    [exerciseKey, setExerciseKey] = useState(""),
+    [metric, setMetric] = useState("reps"),
+    [fixed, setFixed] = useState(""),
+    [rules, setRules] = useState(defaultRules),
+    [audit, setAudit] = useState<
+      Array<{
+        id: string;
+        actor_id: string;
+        reason: string;
+        created_at: string;
+      }>
+    >([]);
   useEffect(() => {
     let active = true;
-    const loadHistory = async () => {
-      setLoading(true);
-      setLoadError(false);
-      const { data, error } = await supabase
-        .from("workout_logs")
-        .select("exercise_name, logged_at, sets_completed")
-        .eq("user_id", userId)
-        .order("logged_at", { ascending: false })
-        .limit(500);
-
-      if (!active) return;
-      if (error) {
-        toast.error("No se pudo cargar el historial de entrenamiento.");
-        setHistoryByExercise({});
-        setLoadError(true);
-      } else {
-        const history = buildExerciseHistory((data || []) as WorkoutLogRecord[]);
-        setHistoryByExercise(history);
-        const mostTracked = Object.entries(history).sort((a, b) => b[1].length - a[1].length)[0]?.[0] || "";
-        setSelectedExercise((current) => current in history ? current : mostTracked);
-      }
-      setLoading(false);
-    };
-    void loadHistory();
+    setLoading(true);
+    loadSessions(userId)
+      .then((rows) => {
+        if (active) {
+          setSessions(rows);
+          setError("");
+        }
+      })
+      .catch(() => {
+        if (active) setError("No se pudo cargar el historial.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
     return () => {
       active = false;
     };
   }, [userId, reload]);
-
-  const exercises = useMemo(
-    () => Object.keys(historyByExercise).sort((a, b) => a.localeCompare(b, "es")),
-    [historyByExercise],
+  const selectedId = selected?.id;
+  const selectedRevision = selected?.revision;
+  const correction = useRef<import("@/lib/tracking/store").Pending | null>(
+    null,
   );
-  const history = historyByExercise[selectedExercise] || [];
-  const latest = history[history.length - 1];
-  const selectedMetric = metric === "volumeKg" && history.length > 0 && history.every((entry) => entry.loadedSets === 0)
-    ? "reps"
-    : metric;
-
+  useEffect(() => {
+    if (!selectedId) {
+      setAudit([]);
+      return;
+    }
+    let active = true;
+    trackingDb
+      .from("session_adjustments")
+      .select("*")
+      .eq("session_id", selectedId)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (active) {
+          setAudit(data || []);
+          if (error) setError("No se pudo cargar la auditoría.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedId, selectedRevision]);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - period + 1);
+  const filtered = sessions.filter(
+    (s) => period === 0 || s.local_date >= toLocalDateString(cutoff),
+  );
+  const performed = filtered.filter((s) => stats(s).performed);
+  const groups = new Map(
+    performed.flatMap((s) =>
+      s.payload.exercises
+        .filter((e) => e.kind !== "legacy")
+        .map((e) => [comparisonKey(e), e] as const),
+    ),
+  );
+  const key = groups.has(exerciseKey)
+    ? exerciseKey
+    : groups.keys().next().value || "";
+  const exercise = groups.get(key);
+  const allowed = allowedMetrics(exercise);
+  const effectiveMetric = allowed.includes(metric) ? metric : allowed[0];
+  const points = seriesPoints(performed, key, effectiveMetric, fixed);
+  const metricLabels: Record<string, string> = {
+    reps: "Repeticiones a la misma carga",
+    kg: "Carga para las mismas repeticiones",
+    seconds: "Segundos en la misma variante",
+    e1rm: "1RM estimado (pesas, 1–12 reps)",
+    volume: "Volumen externo (kg × reps)",
+    rpe: "Esfuerzo medio (RPE)",
+  };
+  const open = (s: Session) => {
+    correction.current = null;
+    setSelected(structuredClone(s));
+    setEditing(false);
+    setReason("");
+  };
+  const save = async () => {
+    if (!selected || !reason.trim()) return;
+    setSaving(true);
+    try {
+      correction.current ||= {
+        session: structuredClone(selected),
+        mutation: crypto.randomUUID(),
+        reason,
+      };
+      const saved = await saveSession(correction.current);
+      correction.current = null;
+      setSessions((rows) => rows.map((s) => (s.id === saved.id ? saved : s)));
+      setSelected(saved);
+      setEditing(false);
+      setError("");
+    } catch (e) {
+      setError(
+        `No se guardó la corrección: ${(e as { message?: string }).message || "reintenta"}`,
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6" aria-labelledby="workout-progress-title">
-      <div>
-        <div className="flex min-w-0 items-center gap-2">
-          <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
-          <h3 id="workout-progress-title" className="min-w-0 flex-1 truncate font-display text-sm font-bold sm:text-lg">Progresión por ejercicio</h3>
-          {exercises.length > 0 && (
-            <select
-              aria-label="Ejercicio para ver progresión"
-              value={selectedExercise}
-              onChange={(event) => setSelectedExercise(event.target.value)}
-              className="min-h-9 w-[42%] min-w-0 shrink-0 rounded-xl border border-border bg-background px-2 text-xs sm:min-h-10 sm:w-auto sm:max-w-[45%] sm:px-3 sm:text-sm"
-            >
-              {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise}</option>)}
-            </select>
-          )}
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">Compara tus sesiones con series registradas como completadas.</p>
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-display font-bold">Historial y progreso</h2>
+        <select
+          aria-label="Periodo del historial"
+          className="h-11 rounded-md border bg-background px-3"
+          value={period}
+          onChange={(e) => setPeriod(Number(e.target.value))}
+        >
+          <option value="7">Semana</option>
+          <option value="30">Mes</option>
+          <option value="90">Tres meses</option>
+          <option value="0">Todo el historial</option>
+        </select>
       </div>
-
-      {loading ? (
-        <div className="mt-6 h-52 animate-pulse rounded-xl bg-secondary/50" aria-label="Cargando historial" />
-      ) : loadError ? (
-        <div className="mt-5 rounded-xl border border-destructive/30 p-6 text-center">
-          <p className="text-sm font-semibold">No se ha podido cargar tu evolución</p>
-          <p className="mt-1 text-xs text-muted-foreground">Tus entrenamientos siguen guardados. Comprueba la conexión y vuelve a intentarlo.</p>
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Reintentar
+      {loading && <p role="status">Cargando historial…</p>}
+      {error && (
+        <div role="alert">
+          {error}
+          <Button variant="outline" onClick={() => setReload((n) => n + 1)}>
+            Reintentar
           </Button>
         </div>
-      ) : exercises.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-border p-6 text-center">
-          <Dumbbell className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
-          <p className="text-sm font-semibold">Aún no hay sesiones registradas</p>
-          <p className="mt-1 text-xs text-muted-foreground">Completa series en Entrenamiento y aquí aparecerá tu evolución por ejercicio.</p>
-        </div>
-      ) : (
-        <>
-          <div className="mt-4">
-            <ExerciseProgressChart
-              exerciseName={selectedExercise}
-              history={history}
-              metric={selectedMetric}
-              onMetricChange={setMetric}
-            />
+      )}
+      {!loading && !error && !sessions.length && (
+        <p className="rounded-xl border border-dashed p-5">
+          Aún no hay sesiones. Tu primera sesión será el punto de partida.
+        </p>
+      )}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          [performed.length, "sesiones realizadas"],
+          [
+            performed.reduce((n, s) => n + stats(s).done, 0),
+            "series completadas",
+          ],
+          [
+            performed.reduce((n, s) => n + stats(s).extra, 0),
+            "series adicionales",
+          ],
+        ].map(([n, l]) => (
+          <div key={l} className="rounded-xl bg-card border p-3">
+            <strong className="block text-xl">{n}</strong>
+            <span className="text-xs">{l}</span>
           </div>
-          {latest && (
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.completedSets}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">series completadas</p>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border bg-card p-3">
+          <Calendar
+            locale={es}
+            weekStartsOn={1}
+            mode="single"
+            selected={date}
+            onSelect={setDate}
+            modifiers={{
+              trained: sessions
+                .filter((s) => stats(s).performed)
+                .map((s) => parseLocalDate(s.local_date)),
+            }}
+            modifiersClassNames={{ trained: "bg-primary/20 font-bold" }}
+          />
+          <Button variant="ghost" onClick={() => setDate(undefined)}>
+            Ver todas las fechas
+          </Button>
+        </div>
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filtered
+            .filter((s) => !date || s.local_date === toLocalDateString(date))
+            .map((s) => (
+              <button
+                key={s.id}
+                className="w-full rounded-xl border bg-card p-4 text-left"
+                onClick={() => open(s)}
+              >
+                <strong>
+                  {s.local_date} · {s.payload.title}
+                </strong>
+                <p className="text-sm">
+                  {s.status === "completed" ? "Finalizada" : "En curso"} ·{" "}
+                  {stats(s).done} series · {stats(s).compliance ?? "—"} % del
+                  plan
+                </p>
+              </button>
+            ))}
+        </div>
+      </div>
+      {exercise && (
+        <div className="rounded-2xl border bg-card p-4 space-y-3">
+          <h3 className="font-bold">Evolución comparable</h3>
+          <select
+            aria-label="Ejercicio y variante"
+            value={key}
+            onChange={(e) => {
+              setExerciseKey(e.target.value);
+              setFixed("");
+            }}
+            className="h-12 w-full rounded-md border bg-background px-2"
+          >
+            {[...groups].map(([k, e]) => (
+              <option key={k} value={k}>
+                {e.name} · {e.variant || "sin variante"} · {modes[e.mode]}{" "}
+                {e.assistance}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Métrica"
+            value={effectiveMetric}
+            onChange={(e) => {
+              setMetric(e.target.value);
+              setFixed("");
+            }}
+            className="h-11 w-full rounded-md border bg-background px-2"
+          >
+            {allowed.map((m) => (
+              <option value={m} key={m}>
+                {metricLabels[m]}
+              </option>
+            ))}
+          </select>
+          {(effectiveMetric === "kg" ||
+            effectiveMetric === "reps" ||
+            effectiveMetric === "seconds") &&
+            exercise.mode !== "bodyweight" && (
+              <label className="block text-sm">
+                {effectiveMetric === "kg"
+                  ? "Repeticiones fijas"
+                  : "Carga fija (kg)"}
+                <Input
+                  type="number"
+                  min="0"
+                  value={fixed}
+                  onChange={(e) => setFixed(e.target.value)}
+                />
+              </label>
+            )}
+          {points.length ? (
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={points}>
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    dataKey="value"
+                    stroke="hsl(var(--primary))"
+                    dot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <p className="text-sm">
+                {points.length === 1
+                  ? "Punto de partida; aún no hay tendencia."
+                  : `Mejor valor comparable: ${effectiveMetric === "rpe" ? "el esfuerzo no es un récord" : Math.max(...points.map((p) => p.value))}`}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {points.map((p) => (
+                  <Button
+                    key={p.id}
+                    className="h-auto min-h-11 whitespace-normal text-left"
+                    variant="outline"
+                    onClick={() => open(sessions.find((s) => s.id === p.id)!)}
+                  >
+                    {p.date}: {p.value} · {p.sets} series
+                    {p.best ? ` · Mejor serie: ${p.best}` : ""}
+                  </Button>
+                ))}
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.reps}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">repeticiones</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.loadedSets > 0 ? `${Math.round(latest.volumeKg)} kg` : "—"}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">volumen con carga</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—"}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">1RM estimado</p>
-              </div>
-            </div>
+            </>
+          ) : (
+            <p>Sin registros compatibles con este filtro.</p>
           )}
-        </>
+          <p className="text-xs text-muted-foreground">
+            Más volumen puede proceder de añadir series; no implica
+            automáticamente más fuerza. Solo se incluyen series completadas. La
+            carga, la asistencia y las variantes se comparan por separado.
+          </p>
+          <details>
+            <summary className="py-2 cursor-pointer">
+              Reglas de las propuestas
+            </summary>
+            <div className="grid grid-cols-3 gap-2">
+              {Object.entries(rules).map(([k, v]) => (
+                <label className="text-xs" key={k}>
+                  {
+                    {
+                      minimumSessions: "Sesiones mínimas",
+                      maxRpe: "RPE máximo",
+                      incrementKg: "Incremento kg",
+                    }[k]
+                  }
+                  <Input
+                    type="number"
+                    min="1"
+                    max={k === "maxRpe" ? 10 : undefined}
+                    value={v}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      if (n >= 1 && (k !== "maxRpe" || n <= 10))
+                        setRules((r) => ({
+                          ...r,
+                          [k]: k === "minimumSessions" ? Math.floor(n) : n,
+                        }));
+                    }}
+                  />
+                </label>
+              ))}
+            </div>
+          </details>
+          {(() => {
+            const proposal = recommendation(
+              performed[0],
+              exercise,
+              sessions,
+              rules,
+            );
+            return (
+              <div className="rounded-xl bg-secondary/40 p-3 text-sm">
+                <strong>
+                  {proposal.label}
+                  {proposal.kg !== null ? ` a ${proposal.kg} kg` : ""}
+                </strong>
+                <p>{proposal.reason}</p>
+                {trainer && proposal.kg !== null && (
+                  <>
+                    <label className="block mt-2">
+                      Motivo del ajuste para la próxima sesión
+                      <Input
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                      />
+                    </label>
+                    <Button
+                      disabled={!reason.trim() || saving}
+                      onClick={async () => {
+                        setSaving(true);
+                        const result = await trackingDb.rpc(
+                          "approve_training_target",
+                          {
+                            p_id: crypto.randomUUID(),
+                            p_session: proposal.evidence[0],
+                            p_exercise_key: key,
+                            p_kg: proposal.kg!,
+                            p_reason: `${reason}. ${proposal.conditions} ${proposal.reason}`,
+                          },
+                        );
+                        setSaving(false);
+                        setError(
+                          result.error ? "No se pudo aprobar el ajuste." : "",
+                        );
+                        if (!result.error)
+                          setReason(
+                            "Ajuste aprobado para las próximas sesiones nuevas.",
+                          );
+                      }}
+                    >
+                      Aprobar objetivo para próximas sesiones
+                    </Button>
+                  </>
+                )}
+
+                <p>{proposal.conditions}</p>
+                <p>
+                  Propuesta orientativa: revisa técnica y recuperación con tu
+                  entrenador.
+                </p>
+                {proposal.evidence.map((id) => (
+                  <Button
+                    key={id}
+                    variant="link"
+                    onClick={() => open(sessions.find((s) => s.id === id)!)}
+                  >
+                    Ver registro {sessions.find((s) => s.id === id)?.local_date}
+                  </Button>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+      <details className="rounded-xl border p-4">
+        <summary className="cursor-pointer">
+          Series por músculo y semana
+        </summary>
+        {Object.entries(weeklyMuscles(filtered)).map(([key, n]) => (
+          <p key={key}>
+            {key}: {n}
+          </p>
+        ))}
+        <p className="text-xs text-muted-foreground">
+          Una serie válida cuenta una vez para el músculo principal registrado.
+          No se asignan fracciones a músculos secundarios. Cardio y músculos
+          desconocidos se excluyen.
+        </p>
+      </details>
+      {selected && (
+        <div className="rounded-2xl border border-primary/40 p-3 space-y-3">
+          <Button
+            variant="outline"
+            disabled={saving}
+            onClick={() => setSelected(null)}
+          >
+            Cerrar detalle
+          </Button>
+          <SessionEditor
+            session={selected}
+            history={sessions}
+            onChange={setSelected}
+            readOnly={!editing || saving || !!correction.current}
+          />
+          <p className="text-xs">Zona horaria guardada: {selected.timezone}</p>
+          {!editing ? (
+            <Button onClick={() => setEditing(true)}>
+              {trainer ? "Revisar y corregir con motivo" : "Corregir registro"}
+            </Button>
+          ) : (
+            <>
+              <label className="block">
+                Motivo de la corrección
+                <Input
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </label>
+              <Button
+                disabled={saving || !reason.trim()}
+                onClick={() => void save()}
+              >
+                {saving ? "Guardando…" : "Guardar corrección y recalcular"}
+              </Button>
+            </>
+          )}
+          <details>
+            <summary>Historial de ajustes ({audit.length})</summary>
+            {audit.map((a) => (
+              <p key={a.id} className="text-xs py-2">
+                {a.created_at} · Autor: {a.actor_id} · {a.reason}
+              </p>
+            ))}
+          </details>
+        </div>
       )}
     </section>
   );
-};
-
-export default WorkoutProgress;
+}

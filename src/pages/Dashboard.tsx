@@ -1,3 +1,6 @@
+import { loadSessions, trackingDb } from "@/lib/tracking/store";
+import { stats as sessionStats } from "@/lib/tracking/model";
+import FoodDiary from "@/components/tracking/FoodDiary";
 import { hasCoaching, hasNutrition } from "@/lib/entitlements";
 import { parseMacroTargets } from "@/lib/nutrition";
 import CoachingOffer from "@/components/dashboard/CoachingOffer";
@@ -13,7 +16,6 @@ import NotificationsBell from "@/components/NotificationsBell";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import type { DayPlan } from "@/types/training";
-import WeeklyProgress from "@/components/WeeklyProgress";
 import HomeOverview from "@/components/dashboard/HomeOverview";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import RenewalFlow from "@/components/dashboard/RenewalFlow";
@@ -37,7 +39,6 @@ const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"
 const ProgressCharts = lazy(() => import("@/components/ProgressCharts"));
 const WorkoutTracker = lazy(() => import("@/components/dashboard/WorkoutTracker"));
 const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgress"));
-const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 
 const SectionFallback = () => (
   <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
@@ -161,49 +162,32 @@ const Dashboard = () => {
         const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
         const firstWeekWindow = getFirstWeekJourney(profile.created_at, []);
         const firstWeekCompletionsRequest = firstWeekWindow
-          ? supabase
-              .from("day_completions")
-              .select("completed_at")
+          ? trackingDb
+              .from("workout_sessions")
+              .select("completed_at:local_date")
+              .eq("status", "completed")
               .eq("user_id", user.id)
-              .gte("completed_at", firstWeekWindow.startDate)
-              .lte("completed_at", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
+              .gte("local_date", firstWeekWindow.startDate)
+              .lte("local_date", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
           : Promise.resolve({ data: [], error: null });
-        const [{ data: tp }, { data: np }, { data: todayCompletion }, weeklyCompletions, firstWeekCompletions] = await Promise.all([
+        const [{ data: tp }, { data: np }, firstWeekCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
-          supabase
-            .from("day_completions")
-            .select("id")
-            .eq("user_id", user.id)
-            .eq("completed_at", todayDate)
-            .limit(1)
-            .maybeSingle(),
-          supabase
-            .from("day_completions")
-            .select("day_label")
-            .eq("user_id", user.id)
-            .gte("completed_at", weekStartDate)
-            .lte("completed_at", todayDate),
           firstWeekCompletionsRequest,
         ]);
 
         const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
         if (plans) setDayPlans(plans);
-        if (weeklyCompletions.error) {
-          toast.error("No se pudo cargar el resumen de esta semana.");
-        } else {
-          const scheduledDays = new Set((plans || []).map((plan) => plan.day));
-          setCompletedThisWeek(new Set(
-            (weeklyCompletions.data || [])
-              .map((row) => row.day_label)
-              .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
-          ).size);
-        }
         if (np) {
           setMacros(parseMacroTargets(np.macros_json));
           setMeals(np.meals_json as unknown as Meal[]);
         }
-        setCompletedToday(Boolean(todayCompletion));
+        try {
+          const performed = (await loadSessions(user.id)).filter(s => sessionStats(s).performed);
+          setCompletedToday(performed.some(s => s.local_date === todayDate));
+          setCompletedThisWeek(performed.filter(s => s.local_date >= weekStartDate && s.local_date <= todayDate).length);
+        } catch { toast.error("No se pudo cargar el resumen de sesiones."); }
+
         const journey = getFirstWeekJourney(profile.created_at, plans || []);
         if (journey) {
           if (firstWeekCompletions.error) {
@@ -475,8 +459,9 @@ const Dashboard = () => {
               : "Las comidas son orientativas hasta que tu entrenador calcule objetivos con tu peso actual."} />
           </div>}
           <Suspense fallback={<SectionFallback />}>
-            <MealsList meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
+            <MealsList userId={user?.id} meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
           </Suspense>
+          {user && <FoodDiary userId={user.id} meals={meals} />}
           <div className="text-center pt-2">
             <Button variant="ghost" size="sm" onClick={handleManageSubscription} className="text-muted-foreground">Gestionar suscripción</Button>
           </div>
@@ -497,23 +482,22 @@ const Dashboard = () => {
         </div>
       )}
 
-      {hasPlan && section === "progress" && user && (
+      {section === "progress" && user && (
         <div className="w-full space-y-4">
           {!isMobile && <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
               <h2 className="text-xl font-bold font-display">Tu progreso</h2>
-              <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
+              <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Úsalas junto con tus medidas y rendimiento." />
             </div>
             <Button size="sm" variant="outline" onClick={() => navigate(`/scan/user/${user.id}`)}>
               AI Scan
             </Button>
           </div>}
-          <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
+
           <Suspense fallback={<SectionFallback />}>
             <WorkoutProgress userId={user.id} />
             <ProgressCharts userId={user.id} />
-            <PRsList userId={user.id} />
           </Suspense>
           <Suspense fallback={<SectionFallback />}>
             <ProgressPhotos userId={user.id} />

@@ -1,3 +1,4 @@
+import { trackingDb } from "@/lib/tracking/store";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
@@ -55,7 +56,7 @@ const AdminMetrics = () => {
         supabase.from("scan_leads").select("id, goal, email, created_at, user_id"),
         supabase.from("leads").select("id, source, created_at"),
         supabase.from("email_send_log").select("template_name, status, created_at, message_id").gte("created_at", d30),
-        supabase.from("day_completions").select("user_id, completed_at").gte("completed_at", d30.slice(0, 10)),
+        trackingDb.from("workout_sessions").select("user_id, completed_at:local_date").eq("status", "completed").gte("local_date", d30.slice(0, 10)),
         supabase.from("chat_messages").select("id, created_at").gte("created_at", d7),
       ]);
 
