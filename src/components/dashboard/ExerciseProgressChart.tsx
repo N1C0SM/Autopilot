@@ -22,25 +22,27 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Métrica de progresión">
-        <button
-          type="button"
-          aria-pressed={metric === "volumeKg"}
-          onClick={() => onMetricChange("volumeKg")}
-          className={`min-h-9 rounded-full px-3 text-xs font-semibold ${metric === "volumeKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-        >
-          Volumen (kg)
-        </button>
-        <button
-          type="button"
-          aria-pressed={metric === "bestEstimated1RmKg"}
-          onClick={() => onMetricChange("bestEstimated1RmKg")}
-          className={`min-h-9 rounded-full px-3 text-xs font-semibold ${metric === "bestEstimated1RmKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-        >
-          Fuerza estimada
-        </button>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" role="group" aria-label="Métrica de progresión">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            aria-pressed={metric === "volumeKg"}
+            onClick={() => onMetricChange("volumeKg")}
+            className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "volumeKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+          >
+            Volumen (kg)
+          </button>
+          <button
+            type="button"
+            aria-pressed={metric === "bestEstimated1RmKg"}
+            onClick={() => onMetricChange("bestEstimated1RmKg")}
+            className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "bestEstimated1RmKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+          >
+            Fuerza estimada
+          </button>
+        </div>
         {change !== null && (
-          <span className={`ml-auto text-xs font-semibold ${change > 0 ? "text-primary" : change < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+          <span className={`text-right text-xs font-semibold sm:ml-auto ${change > 0 ? "text-primary" : change < 0 ? "text-destructive" : "text-muted-foreground"}`}>
             {change > 0 ? "+" : ""}{Math.round(change * 10) / 10} kg vs. sesión anterior
           </span>
         )}

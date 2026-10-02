@@ -58,24 +58,22 @@ const WorkoutProgress = ({ userId }: Props) => {
 
   return (
     <section className="rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6" aria-labelledby="workout-progress-title">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h3 id="workout-progress-title" className="font-display text-lg font-bold">Progresión por ejercicio</h3>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">Compara tus sesiones con series registradas como completadas.</p>
+      <div>
+        <div className="flex min-w-0 items-center gap-2">
+          <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
+          <h3 id="workout-progress-title" className="min-w-0 flex-1 truncate font-display text-sm font-bold sm:text-lg">Progresión por ejercicio</h3>
+          {exercises.length > 0 && (
+            <select
+              aria-label="Ejercicio para ver progresión"
+              value={selectedExercise}
+              onChange={(event) => setSelectedExercise(event.target.value)}
+              className="min-h-9 w-[42%] min-w-0 shrink-0 rounded-xl border border-border bg-background px-2 text-xs sm:min-h-10 sm:w-auto sm:max-w-[45%] sm:px-3 sm:text-sm"
+            >
+              {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise}</option>)}
+            </select>
+          )}
         </div>
-        {exercises.length > 0 && (
-          <select
-            aria-label="Ejercicio para ver progresión"
-            value={selectedExercise}
-            onChange={(event) => setSelectedExercise(event.target.value)}
-            className="min-h-10 max-w-full rounded-xl border border-border bg-background px-3 text-sm"
-          >
-            {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise}</option>)}
-          </select>
-        )}
+        <p className="mt-1 text-xs text-muted-foreground">Compara tus sesiones con series registradas como completadas.</p>
       </div>
 
       {loading ? (
@@ -106,21 +104,21 @@ const WorkoutProgress = ({ userId }: Props) => {
           </div>
           {latest && (
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
-                <p className="text-lg font-bold tabular-nums">{latest.completedSets}</p>
-                <p className="text-xs text-muted-foreground">series completadas</p>
+              <div className="rounded-xl bg-secondary/40 p-3">
+                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.completedSets}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">series completadas</p>
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
-                <p className="text-lg font-bold tabular-nums">{latest.reps}</p>
-                <p className="text-xs text-muted-foreground">repeticiones</p>
+              <div className="rounded-xl bg-secondary/40 p-3">
+                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.reps}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">repeticiones</p>
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
-                <p className="text-lg font-bold tabular-nums">{Math.round(latest.volumeKg)} kg</p>
-                <p className="text-xs text-muted-foreground">volumen última sesión</p>
+              <div className="rounded-xl bg-secondary/40 p-3">
+                <p className="text-base font-bold tabular-nums sm:text-lg">{Math.round(latest.volumeKg)} kg</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">volumen última sesión</p>
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
-                <p className="text-lg font-bold tabular-nums">{latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—"}</p>
-                <p className="text-xs text-muted-foreground">1RM estimado</p>
+              <div className="rounded-xl bg-secondary/40 p-3">
+                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—"}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">1RM estimado</p>
               </div>
             </div>
           )}

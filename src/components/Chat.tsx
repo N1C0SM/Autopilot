@@ -169,7 +169,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
   return (
     <>
-      <div className="flex h-[min(62dvh,38rem)] min-h-[20rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card card-shadow sm:h-[calc(100dvh-10rem)] sm:min-h-[32rem]">
+      <div className="flex h-[calc(100dvh-68px-var(--safe-top,0px)-var(--mobile-nav-content-padding))] min-h-[20rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card card-shadow sm:h-[calc(100dvh-10rem)] sm:min-h-[32rem]">
         {/* Header with tabs */}
         <div className="flex min-w-0 items-center gap-1.5 border-b border-border p-2 sm:gap-2 sm:p-3">
           <button

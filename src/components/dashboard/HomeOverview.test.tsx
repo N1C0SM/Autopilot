@@ -44,9 +44,11 @@ describe("dashboard home overview", () => {
     expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
     expect(screen.getByText("Plan Completo")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    expect(nutritionCard).toHaveClass("p-3");
+    expect(nutritionCard).toHaveClass("p-4");
     expect(nutritionCard.closest(".grid")).toHaveClass("grid-cols-2");
-    expect(screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ })).toBeVisible();
+    const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
+    expect(startButton).toBeVisible();
+    expect(startButton).toHaveClass("bg-primary", "text-primary-foreground");
     fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenCalledWith("nutrition");
   });

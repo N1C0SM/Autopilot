@@ -146,10 +146,10 @@ const HomeOverview = ({
       ) : (
         <>
           <div className="px-1 pb-1">
-            <p className="text-[11px] font-medium capitalize text-primary">
+            <p className="text-xs font-semibold capitalize text-primary">
               {greetingDate}
             </p>
-            <h2 className="mt-1 font-display text-xl font-bold leading-tight tracking-tight">
+            <h2 className="mt-1 font-display text-2xl font-bold leading-tight tracking-tight">
               {firstName ? `Hola, ${firstName}.` : "Hola."}
               <span className="block">
                 {completedToday
@@ -166,19 +166,15 @@ const HomeOverview = ({
           <button
             type="button"
             onClick={() => onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress")}
-            className={`group flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
-              completedToday
-                ? "border-primary/25 bg-card"
-                : "border-primary/50 bg-primary text-primary-foreground shadow-[0_10px_32px_-18px_hsl(var(--primary)/.65)] hover:brightness-105"
-            }`}
+            className="group flex w-full items-center gap-3 rounded-2xl border border-primary/50 bg-primary p-5 text-left text-primary-foreground shadow-[0_10px_32px_-18px_hsl(var(--primary)/.65)] transition-all hover:brightness-105 active:scale-[0.99]"
             aria-label={completedToday ? "Ver progreso de la sesión" : `Empezar ${sessionTitle}`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
                 {completedToday ? <Check className="h-5 w-5" /> : todayPlan?.type === "actividad" ? <Activity className="h-5 w-5" /> : todayPlan ? <Dumbbell className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-bold">{sessionTitle}</span>
-              <span className={`block truncate text-xs ${completedToday ? "text-muted-foreground" : "text-primary-foreground/80"}`}>
+              <span className="block truncate text-base font-bold">{sessionTitle}</span>
+              <span className="block truncate text-sm text-primary-foreground/85">
                   {completedToday
                     ? "Tu registro ya está guardado"
                     : todayPlan?.type === "gimnasio"
@@ -195,7 +191,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("nutrition")}
-              className="min-w-0 rounded-2xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
+              className="min-w-0 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
             >
               <span className="flex items-center gap-2">
                 <span className="relative h-9 w-9 shrink-0">
@@ -218,11 +214,11 @@ const HomeOverview = ({
                   {nutrition && <Utensils className="absolute inset-0 m-auto h-3 w-3 text-primary" />}
                 </span>
                 <span className="min-w-0">
-                  <span className="flex items-center gap-1 text-xs font-semibold">
+                  <span className="flex items-center gap-1 text-sm font-semibold">
                     Nutrición
                     {!nutrition && <LockKeyhole className="h-3 w-3 text-muted-foreground" />}
                   </span>
-                  <span className="block truncate text-[10px] text-muted-foreground">
+                  <span className="block truncate text-xs text-muted-foreground">
                     {nutrition
                       ? meals.length
                         ? `${doneMealCount}/${meals.length} comidas`
@@ -234,7 +230,7 @@ const HomeOverview = ({
                 </span>
               </span>
               {nutrition && macros ? (
-                <span className="mt-2 flex gap-1.5 text-[8px] text-muted-foreground">
+                <span className="mt-2 flex gap-1.5 text-[10px] text-muted-foreground">
                   {[
                     { label: "P", value: macros.protein },
                     { label: "C", value: macros.carbs },
@@ -244,7 +240,7 @@ const HomeOverview = ({
                   ))}
                 </span>
               ) : (
-                <span className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+                <span className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                   <span className="h-1 flex-1 rounded-full bg-secondary" />
                   <span>Ver plan</span>
                 </span>
@@ -254,13 +250,13 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("progress")}
-              className="min-w-0 rounded-2xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
+              className="min-w-0 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/30 hover:bg-secondary/40"
             >
-              <span className="flex items-center gap-1 text-xs font-semibold">
+              <span className="flex items-center gap-1 text-sm font-semibold">
                 <LineChart className="h-3 w-3 text-primary" />
                 Tu semana
               </span>
-              <span className="mt-1 block truncate text-[10px] text-muted-foreground">
+              <span className="mt-1 block truncate text-xs text-muted-foreground">
                 {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
               </span>
               <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-secondary">
@@ -275,10 +271,10 @@ const HomeOverview = ({
           <button
             type="button"
             onClick={() => onNavigate(coaching ? "chat" : "progress")}
-            className="flex w-full items-start gap-2.5 rounded-2xl bg-secondary p-3 text-left transition-colors hover:bg-secondary/80"
+            className="flex w-full items-start gap-2.5 rounded-2xl bg-secondary p-4 text-left transition-colors hover:bg-secondary/80"
           >
             {coaching ? <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
-            <span className="min-w-0 flex-1 text-xs leading-relaxed">
+            <span className="min-w-0 flex-1 text-sm leading-relaxed">
               {coaching ? (
                 chatMessages.length > 0 ? (
                   <>
