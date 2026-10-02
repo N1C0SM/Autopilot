@@ -20,22 +20,19 @@ const MobileHeader = ({ title, profileName, profileAvatar, userId, onSettings }:
       }}
     >
       <div className="h-14 px-3 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onSettings}
-          className="flex items-center gap-2 min-w-0 active:opacity-70"
-          aria-label="Ajustes"
+        <div
+          role="img"
+          aria-label={`Foto de perfil de ${profileName || "usuario"}`}
+          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-border"
         >
-          <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-border">
-            {profileAvatar ? (
-              <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xs font-bold text-foreground">
-                {(profileName || "?").charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
-        </button>
+          {profileAvatar ? (
+            <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <span aria-hidden="true" className="text-xs font-bold text-foreground">
+              {(profileName || "?").charAt(0).toUpperCase()}
+            </span>
+          )}
+        </div>
         <h1 className="flex-1 text-center font-display font-bold text-base truncate">
           {title}
         </h1>
