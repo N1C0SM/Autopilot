@@ -18,6 +18,7 @@ import { getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutReview } from "./WorkoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
+import { formatTrainingTitle } from "@/lib/trainingDisplay";
 
 interface SetLog {
   reps: number;
@@ -89,6 +90,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     return formatLocalDate(date);
   })();
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
+  const trainingTitle = formatTrainingTitle(currentPlan?.routine_name, currentPlan?.muscle_focus);
   const currentPlanSignature = JSON.stringify(currentPlan || null);
   const startWorkout = (exerciseIndex = 0) => {
     if (!logsReady || loadError) return;
@@ -488,7 +490,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
               <ArrowLeft className="mr-1 h-4 w-4" /> Salir
             </Button>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-foreground">{currentPlan?.routine_name || "Entrenamiento"}</p>
+              <p className="line-clamp-2 text-xs font-semibold leading-tight text-foreground">{trainingTitle || "Entrenamiento"}</p>
               <p className="tabular-nums">{completedSets}/{totalSets} series</p>
             </div>
           </>
@@ -539,12 +541,9 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
                   Entrenamiento · {selectedDay}
                 </p>
-                <h3 className="truncate font-display text-lg font-bold sm:text-xl">
-                  {currentPlan.routine_name || selectedDay}
+                <h3 className="font-display text-lg font-bold leading-tight sm:text-xl">
+                  {trainingTitle || selectedDay}
                 </h3>
-                {currentPlan.muscle_focus && (
-                  <p className="mt-1 text-sm text-muted-foreground">{currentPlan.muscle_focus}</p>
-                )}
               </div>
               <div className="flex h-12 min-w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-primary/20 bg-primary/10 px-2">
                 <span className="font-display text-lg font-bold leading-none text-primary">
@@ -722,7 +721,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
                 <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Entrenamiento de hoy</p>
                 <h2 className="mt-1 font-display text-3xl font-bold">Hecho por hoy</h2>
                 <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Ya completaste {currentPlan.routine_name || selectedDay}. Ahora toca recuperar: mañana podrás volver a entrenar.
+                  Ya completaste {trainingTitle || selectedDay}. Ahora toca recuperar: mañana podrás volver a entrenar.
                 </p>
 
                 <div className="mt-7 grid grid-cols-3 gap-2 text-left">

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
+import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import CalendarExportDialog from "./CalendarExportDialog";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import VideoEmbed from "@/components/VideoEmbed";
@@ -149,7 +150,7 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                 </div>
                 <span className="text-[11px] sm:text-xs text-muted-foreground line-clamp-1 block">
                   {plan?.type === "gimnasio"
-                    ? `${plan.routine_name} · ${plan.muscle_focus}`
+                    ? formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"
                     : plan?.type === "actividad"
                     ? plan.sport
                     : "Descanso"}

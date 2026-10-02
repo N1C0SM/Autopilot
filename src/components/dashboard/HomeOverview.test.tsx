@@ -12,15 +12,15 @@ describe("dashboard home overview", () => {
     const onNavigate = vi.fn();
     render(
       <HomeOverview
-        dayPlans={[{ day: today, type: "gimnasio", routine_name: "Fuerza cuerpo completo", muscle_focus: "Cuerpo completo", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] }]}
+        dayPlans={[{ day: today, type: "gimnasio", routine_name: "Pull B", muscle_focus: "Espalda · Bíceps", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] }]}
         onNavigate={onNavigate}
         profileName="Nicolás Pérez"
       />,
     );
 
     expect(screen.getByText("Hola, Nicolás.")).toBeVisible();
-    expect(screen.getByText("Fuerza cuerpo completo")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Empezar Fuerza cuerpo completo" }));
+    expect(screen.getByText("Hoy toca Pull B · Espalda y bíceps.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" }));
     expect(onNavigate).toHaveBeenCalledWith("training");
   });
 

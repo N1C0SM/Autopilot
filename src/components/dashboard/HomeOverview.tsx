@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { DayPlan } from "@/types/training";
 import type { UserSection } from "@/components/UserSidebar";
+import { formatTrainingTitle } from "@/lib/trainingDisplay";
 
 interface Macros {
   protein: number;
@@ -77,7 +78,7 @@ const HomeOverview = ({
   const sessionTitle = completedToday
     ? "Entrenamiento completado"
     : todayPlan?.type === "gimnasio"
-      ? todayPlan.routine_name || todayPlan.muscle_focus || "Entrenamiento de fuerza"
+      ? formatTrainingTitle(todayPlan.routine_name, todayPlan.muscle_focus) || "Entrenamiento de fuerza"
       : todayPlan?.type === "actividad"
         ? todayPlan.sport || "Actividad"
         : "Día de recuperación";
@@ -155,7 +156,7 @@ const HomeOverview = ({
                 {completedToday
                   ? "Sesión hecha. Buen trabajo."
                   : todayPlan?.type === "gimnasio"
-                    ? `Hoy toca ${todayPlan.muscle_focus || todayPlan.routine_name || "entrenar"}.`
+                    ? `Hoy toca ${formatTrainingTitle(todayPlan.routine_name, todayPlan.muscle_focus)}.`
                     : todayPlan?.type === "actividad"
                       ? `Hoy toca ${todayPlan.sport || "moverte"}.`
                       : "Hoy toca recuperar."}
@@ -173,7 +174,7 @@ const HomeOverview = ({
                 {completedToday ? <Check className="h-5 w-5" /> : todayPlan?.type === "actividad" ? <Activity className="h-5 w-5" /> : todayPlan ? <Dumbbell className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-base font-bold">{sessionTitle}</span>
+              <span className="block line-clamp-2 text-base font-bold leading-tight">{sessionTitle}</span>
               <span className="block truncate text-sm text-primary-foreground/85">
                   {completedToday
                     ? "Tu registro ya está guardado"
