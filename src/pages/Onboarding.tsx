@@ -16,17 +16,16 @@ import { Link } from "react-router-dom";
 import { logConsent } from "@/lib/consents";
 import AIDisclaimer from "@/components/AIDisclaimer";
 import { signedUrlFor } from "@/lib/storageSign";
+import {
+  canSkipOnboardingStep,
+  getAboutStepError,
+  getOnboardingSteps,
+  type OnboardingStepKey,
+} from "@/lib/onboardingFlow";
 
 // Pasos dinámicos: la lista activa se calcula según los datos del usuario.
 // Claves posibles: about, focus_goal, specific_goal, sports_schedule, level, health, summary
-type StepKey =
-  | "about"
-  | "focus_goal"
-  | "specific_goal"
-  | "sports_schedule"
-  | "level"
-  | "health"
-  | "summary";
+type StepKey = OnboardingStepKey;
 
 const STEP_LABELS: Record<StepKey, string> = {
   about: "Sobre ti",
@@ -432,16 +431,13 @@ const Onboarding = () => {
 
   const canNext = () => {
     if (currentKey === "about") {
-      if (!(data.age && data.height && data.weight && data.sex && data.occupation)) return false;
-      if (data.occupation === "otro" && !data.occupation_detail.trim()) return false;
-      const ageNum = parseInt(data.age);
-      if (!Number.isFinite(ageNum) || ageNum < 16 || ageNum > 100) return false;
-      return true;
+      return getAboutStepError(data) === null;
     }
     if (currentKey === "focus_goal") return !!data.primary_focus && !!data.goal;
     return true;
   };
 
+  const skipToSummary = () => setStep(activeSteps.length - 1);
   const suggestions = SPECIFIC_GOAL_SUGGESTIONS[focusToEquipment(data.primary_focus)] || SPECIFIC_GOAL_SUGGESTIONS["Mixto"];
 
 
@@ -459,11 +455,20 @@ const Onboarding = () => {
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
           <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
-          <h1 className="text-2xl font-bold font-display mt-6 mb-2">Cuéntanos lo justo</h1>
-          <p className="text-muted-foreground text-sm">Paso {Math.min(step, activeSteps.length - 1) + 1} de {activeSteps.length}: {STEP_LABELS[currentKey]}</p>
+          <h1 className="text-2xl font-bold font-display mt-6 mb-2">
+            {currentKey === "focus_goal" ? "Empecemos por lo que te importa" : "Tu plan, a tu manera"}
+          </h1>
+          <p className="text-xs font-medium text-primary">
+            Paso {Math.min(step, activeSteps.length - 1) + 1} de {activeSteps.length} · {STEP_LABELS[currentKey]}
+          </p>
+          {currentKey === "focus_goal" && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Elige tu objetivo y enfoque. El resto puedes completarlo ahora o más adelante.
+            </p>
+          )}
         </div>
 
-        <div className="flex gap-1.5 mb-8">
+        <div className="mb-8 flex gap-1.5" role="progressbar" aria-label="Progreso de configuración" aria-valuemin={1} aria-valuemax={activeSteps.length} aria-valuenow={Math.min(step, activeSteps.length - 1) + 1}>
           {activeSteps.map((_, i) => (
             <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-secondary"}`} />
           ))}
@@ -473,26 +478,29 @@ const Onboarding = () => {
           {/* Step 0: Sobre ti */}
           {currentKey === "about" && (
             <div className="space-y-4">
+              <div className="rounded-xl border border-primary/15 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                Estos datos afinan tus recomendaciones, pero son opcionales. Puedes seguir sin rellenarlos y añadirlos después.
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <Label className="text-xs">Edad</Label>
+                  <Label className="text-xs">Edad <span className="text-muted-foreground">(opcional)</span></Label>
                   <Input type="number" min={16} max={100} value={data.age} onChange={(e) => update("age", e.target.value)} placeholder="25" className="mt-1.5" />
                   {data.age && (parseInt(data.age) < 16 || parseInt(data.age) > 100) && (
                     <p className="text-[10px] text-destructive mt-1">Debes tener entre 16 y 100 años.</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs">Altura (cm)</Label>
+                  <Label className="text-xs">Altura <span className="text-muted-foreground">(cm)</span></Label>
                   <Input type="number" value={data.height} onChange={(e) => update("height", e.target.value)} placeholder="175" className="mt-1.5" />
                 </div>
                 <div>
-                  <Label className="text-xs">Peso (kg)</Label>
+                  <Label className="text-xs">Peso <span className="text-muted-foreground">(kg)</span></Label>
                   <Input type="number" value={data.weight} onChange={(e) => update("weight", e.target.value)} placeholder="70" className="mt-1.5" />
                 </div>
               </div>
 
               <div>
-                <Label className="mb-2 block text-xs">Sexo biológico</Label>
+                <Label className="mb-2 block text-xs">Sexo biológico <span className="text-muted-foreground">(opcional)</span></Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { value: "male", label: "Hombre", emoji: "♂️" },
@@ -514,7 +522,7 @@ const Onboarding = () => {
               </div>
 
               <div>
-                <Label className="mb-2 block text-xs">¿A qué te dedicas?</Label>
+                <Label className="mb-2 block text-xs">¿A qué te dedicas? <span className="text-muted-foreground">(opcional)</span></Label>
                 <div className="grid grid-cols-1 gap-1.5">
                   {OCCUPATION_OPTIONS.map((opt) => (
                     <button
@@ -904,8 +912,12 @@ const Onboarding = () => {
             <div className="space-y-5">
               <div className="text-center mb-2">
                 <div className="text-4xl mb-2">🎯</div>
-                <h2 className="text-xl font-bold font-display">Tu plan personalizado</h2>
-                <p className="text-sm text-muted-foreground mt-1">Esto recibirás en menos de 48h</p>
+                <h2 className="text-xl font-bold font-display">Tu plan de arranque</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {user
+                    ? "Tu rutina se prepara con este enfoque. Si tienes entrenador, la coordina contigo; si no, generamos tu plan inicial."
+                    : "Al crear tu cuenta y verificar el correo, prepararemos tu rutina inicial con este enfoque."}
+                </p>
               </div>
 
               <div className="space-y-2.5">
@@ -913,12 +925,12 @@ const Onboarding = () => {
                   <span className="text-xl">🏋️</span>
                   <div>
                     <p className="font-semibold text-sm">
-                      Rutina ajustada a tus huecos · {PRIMARY_FOCUS_OPTIONS.find((p) => p.value === data.primary_focus)?.label || "Mixto"}
+                      Rutina para {GOALS.find((g) => g.value === data.goal)?.label?.toLowerCase() || "tu objetivo"} · {PRIMARY_FOCUS_OPTIONS.find((p) => p.value === data.primary_focus)?.label || "Mixto"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {data.sports.length > 0
                         ? SPORTS.filter((s) => data.sports.includes(s.value)).map((s) => s.label).join(", ")
-                        : "Adaptada a ti"}
+                        : "Puedes ajustar días y ejercicios después"}
                     </p>
                   </div>
                 </div>
@@ -927,17 +939,17 @@ const Onboarding = () => {
                   <span className="text-xl">🍽️</span>
                   <div>
                     <p className="font-semibold text-sm">
-                      Plan nutricional ~{data.weight ? Math.round(Number(data.weight) * 30) : "?"} kcal
+                      Nutrición según tu plan
                     </p>
-                    <p className="text-xs text-muted-foreground">Macros para tu objetivo</p>
+                    <p className="text-xs text-muted-foreground">Sin estimaciones inventadas; se muestra si está incluida.</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
                   <span className="text-xl">💬</span>
                   <div>
-                    <p className="font-semibold text-sm">Chat directo con tu entrenador</p>
-                    <p className="text-xs text-muted-foreground">Dudas, cambios y seguimiento</p>
+                    <p className="font-semibold text-sm">Tú marcas el ritmo</p>
+                    <p className="text-xs text-muted-foreground">Empieza gratis; añade seguimiento de entrenador cuando lo necesites.</p>
                   </div>
                 </div>
               </div>
@@ -1071,9 +1083,16 @@ const Onboarding = () => {
               <ArrowLeft className="w-4 h-4 mr-1" /> Atrás
             </Button>
             {step < activeSteps.length - 1 ? (
-              <Button variant="default" onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
-                Siguiente <ArrowRight className="w-4 h-4 ml-1" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {canSkipOnboardingStep(currentKey) && (
+                  <Button type="button" variant="ghost" onClick={skipToSummary} disabled={!canNext()} className="px-2 text-xs text-muted-foreground">
+                    Saltar lo opcional
+                  </Button>
+                )}
+                <Button variant="default" onClick={() => setStep((s) => s + 1)} disabled={!canNext()}>
+                  Siguiente <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="hero"
