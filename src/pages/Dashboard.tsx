@@ -93,6 +93,7 @@ const Dashboard = () => {
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
+  const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [firstWeek, setFirstWeek] = useState<{
     dayNumber: number;
     startDate: string;
@@ -415,7 +416,10 @@ const Dashboard = () => {
             nutrition={nutrition}
             planStatus={planStatus}
             dayPlans={dayPlans}
-            onNavigate={(s) => setSection(s as MobileTab)}
+            onNavigate={(s) => {
+              setAutoStartWorkout(s === "training");
+              setSection(s as MobileTab);
+            }}
             profileName={profileName}
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
@@ -437,6 +441,8 @@ const Dashboard = () => {
             <WorkoutTracker
               userId={user.id}
               dayPlans={dayPlans}
+              autoStart={autoStartWorkout}
+              onAutoStartConsumed={() => setAutoStartWorkout(false)}
               onSessionModeChange={setWorkoutMode}
               onCancel={() => setWorkoutMode(false)}
               onExit={() => {

@@ -26,6 +26,8 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 interface Props {
   userId: string;
   dayPlans: DayPlan[];
+  autoStart?: boolean;
+  onAutoStartConsumed?: () => void;
   onExit?: () => void;
   onCancel?: () => void;
   onSessionModeChange?: (active: boolean) => void;
@@ -45,7 +47,7 @@ const getMuscleIntensity = (sets: number) => sets >= 6
     ? MUSCLE_INTENSITY.medium
     : MUSCLE_INTENSITY.low;
 
-const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChange }: Props) => {
+const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const selectedDay = DAYS_ORDER[todayIndex];
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
@@ -198,6 +200,16 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       active = false;
     };
   }, [selectedDay, selectedDate, userId, currentPlanSignature, reloadLogs]);
+
+  useEffect(() => {
+    if (!autoStart || !logsReady) return;
+    if (currentPlan?.type === "gimnasio" && !workoutCompleted && !loadError) {
+      setStarted(true);
+      setExpandedExercise(0);
+      onSessionModeChange?.(true);
+    }
+    onAutoStartConsumed?.();
+  }, [autoStart, currentPlan?.type, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, workoutCompleted]);
 
   // Rest timer countdown
   useEffect(() => {
@@ -397,7 +409,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const finishWorkout = async () => {
     const allDone = Object.values(exerciseLogs).flat().every((s) => s.done) && Object.keys(exerciseLogs).length > 0;
     if (allDone) {
-      setRpeOpen(true);
+      await handleRPEConfirm(null);
       return;
     }
 
@@ -1117,6 +1129,11 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
               </span>
               <InfoHint text="Tus series se guardan automáticamente. Al terminar se guardará cualquier cambio pendiente; solo se marcará el día como completado si has hecho todas las series." />
             </div>
+            {completedSets === totalSets && totalSets > 0 && (
+              <Button type="button" variant="ghost" className="mb-1 w-full" onClick={() => setRpeOpen(true)} disabled={saving}>
+                Valorar esfuerzo antes de terminar (opcional)
+              </Button>
+            )}
             <Button
               onClick={finishWorkout}
               disabled={saving || completedSets === 0}
