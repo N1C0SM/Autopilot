@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Scale, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { parseLocalDate, toLocalDateString } from "@/lib/localDates";
 
 interface Props {
   userId: string;
@@ -24,7 +25,7 @@ const ProgressCharts = ({ userId }: Props) => {
           .from("weight_logs")
           .select("logged_at, weight")
           .eq("user_id", userId)
-          .order("logged_at", { ascending: true })
+          .order("logged_at", { ascending: false })
           .limit(90),
         supabase
           .from("day_completions")
@@ -34,16 +35,22 @@ const ProgressCharts = ({ userId }: Props) => {
           .limit(200),
       ]);
 
-      if (weights) setWeightLogs(weights.map((w: any) => ({ ...w, weight: Number(w.weight) })));
+      if (weights) {
+        setWeightLogs(
+          weights
+            .map((weight) => ({ ...weight, weight: Number(weight.weight) }))
+            .sort((a, b) => a.logged_at.localeCompare(b.logged_at)),
+        );
+      }
 
       // Group completions by week
       if (completions && completions.length > 0) {
         const weeks: Record<string, number> = {};
         completions.forEach((c: any) => {
-          const d = new Date(c.completed_at);
+          const d = parseLocalDate(c.completed_at);
           const weekStart = new Date(d);
-          weekStart.setDate(d.getDate() - d.getDay() + 1);
-          const key = weekStart.toISOString().split("T")[0];
+          weekStart.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+          const key = toLocalDateString(weekStart);
           weeks[key] = (weeks[key] || 0) + 1;
         });
         setWeeklyStats(
@@ -63,7 +70,7 @@ const ProgressCharts = ({ userId }: Props) => {
       return;
     }
     setSaving(true);
-    const today = new Date().toISOString().split("T")[0];
+    const today = toLocalDateString();
     const { error } = await supabase.from("weight_logs").upsert({
       user_id: userId,
       weight: w,
@@ -88,14 +95,14 @@ const ProgressCharts = ({ userId }: Props) => {
     : null;
 
   const chartData = weightLogs.map((w) => ({
-    date: new Date(w.logged_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
+    date: parseLocalDate(w.logged_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
     peso: w.weight,
   }));
 
   return (
     <div className="space-y-6">
       {/* Weight log input */}
-      <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+      <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-4">
           <Scale className="w-5 h-5 text-primary" />
           <h3 className="font-bold font-display">Registra tu peso</h3>
@@ -119,7 +126,7 @@ const ProgressCharts = ({ userId }: Props) => {
 
       {/* Weight chart */}
       {weightLogs.length >= 2 && (
-        <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+        <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-bold font-display">Evolución de peso</h3>
             {weightDiff !== null && (

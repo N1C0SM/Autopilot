@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plane, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { toLocalDateString } from "@/lib/localDates";
 
 interface Props {
   userId: string;
@@ -127,7 +128,7 @@ const TravelModeCard = ({ userId }: Props) => {
               type="date"
               value={until}
               onChange={(e) => setUntil(e.target.value)}
-              min={new Date().toISOString().split("T")[0]}
+              min={toLocalDateString()}
               className="mt-1"
             />
           </div>

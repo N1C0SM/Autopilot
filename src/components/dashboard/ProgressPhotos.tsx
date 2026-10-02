@@ -5,6 +5,7 @@ import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { signedUrlsFor } from "@/lib/storageSign";
+import { toLocalDateString } from "@/lib/localDates";
 
 interface Photo {
   id: string;
@@ -65,7 +66,7 @@ const ProgressPhotos = ({ userId }: Props) => {
         await supabase.from("progress_photos").insert({
           user_id: userId,
           photo_url: urlData.publicUrl,
-          taken_at: new Date().toISOString().split("T")[0],
+          taken_at: toLocalDateString(),
         });
       }
       toast.success("Foto subida correctamente 📸");
@@ -111,7 +112,7 @@ const ProgressPhotos = ({ userId }: Props) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

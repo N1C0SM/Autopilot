@@ -21,4 +21,33 @@ describe("getProgressionSuggestion", () => {
     ]);
     expect(result).toMatchObject({ label: "Repetir", weight: "60" });
   });
+
+  it("does not increase the load when the last session has fewer than the prescribed sets", () => {
+    const result = getProgressionSuggestion(exercise, [
+      { weight: "60", reps: 10, done: true },
+      { weight: "60", reps: 10, done: true },
+    ]);
+
+    expect(result).toMatchObject({ label: "Repetir", weight: "60" });
+  });
+
+  it("parses decimal-comma weights without truncating the suggested load", () => {
+    const result = getProgressionSuggestion(exercise, [
+      { weight: "60,5", reps: 8, done: true },
+      { weight: "60,5", reps: 8, done: true },
+      { weight: "60,5", reps: 8, done: true },
+    ]);
+
+    expect(result).toMatchObject({ label: "Subir", weight: "63" });
+  });
+
+  it("ignores invalid weights instead of suggesting an unsafe load", () => {
+    const result = getProgressionSuggestion(exercise, [
+      { weight: "60kg", reps: 10, done: true },
+      { weight: "60", reps: 8, done: true },
+      { weight: "60", reps: 8, done: true },
+    ]);
+
+    expect(result).toMatchObject({ label: "Repetir", weight: "60" });
+  });
 });

@@ -14,7 +14,6 @@ interface Props {
   dayPlans: DayPlan[];
   onNavigate: (section: UserSection) => void;
   profileName?: string;
-  profileCreatedAt?: string;
   macros?: Macros | null;
   completedThisWeek?: number;
   completedToday?: boolean;
@@ -29,7 +28,6 @@ const HomeOverview = ({
   dayPlans,
   onNavigate,
   profileName,
-  profileCreatedAt,
   macros,
   completedThisWeek = 0,
   completedToday = false,
@@ -45,9 +43,6 @@ const HomeOverview = ({
   const exerciseCount = todayPlan?.type === "gimnasio" ? todayPlan.exercises?.length ?? 0 : 0;
   const firstName = profileName?.trim().split(/\s+/)[0];
   const greetingDate = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric" }).format(now);
-  const activeWeek = profileCreatedAt
-    ? Math.max(1, Math.floor((now.getTime() - new Date(profileCreatedAt).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1)
-    : null;
   const sessionCount = Math.min(completedThisWeek, scheduledDays.length);
   const calorieTarget = macros
     ? Number(macros.calories) || Math.round(macros.protein * 4 + macros.carbs * 4 + macros.fats * 9)
@@ -71,7 +66,7 @@ const HomeOverview = ({
         <>
           <div className="px-1 pb-1">
             <p className="text-sm font-medium capitalize text-primary">
-              {greetingDate}{activeWeek ? ` · Semana ${activeWeek}` : ""}
+              {greetingDate}
             </p>
             <h2 className="mt-2 font-display text-3xl font-bold leading-tight tracking-tight">
               {firstName ? `Hola, ${firstName}.` : "Hola."}

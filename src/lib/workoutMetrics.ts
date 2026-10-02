@@ -1,3 +1,5 @@
+import { parsePositiveWeight } from "./weight";
+
 export interface WorkoutLogRecord {
   exercise_name: string;
   logged_at: string;
@@ -34,7 +36,7 @@ export function buildExerciseHistory(logs: WorkoutLogRecord[]): Record<string, E
     const validSets = sets.flatMap((set) => {
       const reps = parsePositiveNumber(set.reps);
       if (reps === null) return [];
-      return [{ reps, weight: parsePositiveNumber(set.weight) }];
+      return [{ reps, weight: parsePositiveWeight(set.weight) }];
     });
     if (validSets.length === 0) continue;
 

@@ -28,7 +28,7 @@ const MobileAppShell = ({
   children,
 }: Props) => {
   return (
-    <div className={`min-h-screen bg-background ${workoutMode ? "h-dvh overflow-hidden" : ""}`}>
+    <div className={`mobile-dashboard-shell min-h-dvh bg-background ${workoutMode ? "h-dvh overflow-hidden" : ""}`}>
       {!workoutMode && (
         <MobileHeader
           title={title}
@@ -40,12 +40,12 @@ const MobileAppShell = ({
       )}
 
       <main
-        className={workoutMode ? "h-dvh overflow-y-auto" : ""}
+        className={workoutMode ? "mobile-dashboard-content h-dvh overflow-y-auto" : "mobile-dashboard-content"}
         style={workoutMode ? undefined : {
           paddingTop: "calc(56px + var(--safe-top, 0px) + 12px)",
           paddingBottom: "var(--mobile-nav-content-padding)",
-          paddingLeft: "max(0.75rem, var(--safe-left, 0px))",
-          paddingRight: "max(0.75rem, var(--safe-right, 0px))",
+          paddingLeft: "max(1rem, var(--safe-left, 0px))",
+          paddingRight: "max(1rem, var(--safe-right, 0px))",
         }}
       >
         {children}

@@ -53,7 +53,7 @@ const MealsList = ({ meals, macros }: Props) => {
   // Sin comidas ni objetivos: avisamos con calma en vez de mostrar una pantalla vacía.
   if (!meals.length && kcal <= 0) {
     return (
-      <div className="rounded-3xl bg-card border border-border p-6 text-center">
+      <div className="rounded-3xl bg-card border border-border p-4 sm:p-6 text-center">
         <div className="font-semibold mb-1">Tu plan de nutrición está en preparación</div>
         <p className="text-sm text-muted-foreground">
           En cuanto tu entrenador lo cierre lo verás aquí con tus calorías, macros y comidas del día.
@@ -66,7 +66,7 @@ const MealsList = ({ meals, macros }: Props) => {
     <div className="space-y-3">
       {macros && kcal > 0 && (
         <>
-          <div className="rounded-3xl bg-card border border-border p-5 flex items-center gap-5">
+          <div className="rounded-3xl bg-card border border-border p-4 sm:p-5 flex items-center gap-4 sm:gap-5">
             <svg viewBox="0 0 100 100" className="w-24 h-24 -rotate-90 shrink-0">
               <circle cx="50" cy="50" r={R} fill="none" strokeWidth="9" className="stroke-muted" />
               <circle
@@ -81,10 +81,10 @@ const MealsList = ({ meals, macros }: Props) => {
               <div className="text-[11px] text-muted-foreground mt-1">Según las comidas que marques hoy</div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 sm:gap-3">
             {[{ l: "Proteína", v: p }, { l: "Carbos", v: c }, { l: "Grasas", v: f }].map((m) => (
-              <div key={m.l} className="rounded-2xl bg-card border border-border p-3">
-                <div className="text-xs text-muted-foreground">{m.l}</div>
+              <div key={m.l} className="rounded-2xl bg-card border border-border p-3.5 sm:p-3">
+                <div className="text-sm sm:text-xs text-muted-foreground">{m.l}</div>
                 <div className="font-bold font-display">
                   {fmt(m.v * ratio)}<span className="text-xs font-normal text-muted-foreground">/{fmt(m.v)} g</span>
                 </div>
@@ -105,11 +105,11 @@ const MealsList = ({ meals, macros }: Props) => {
               key={i}
               type="button"
               onClick={() => toggle(meal.name)}
-              className="w-full text-left flex items-center gap-3 p-4 hover:bg-muted/40 transition-colors"
+              className="w-full text-left flex items-center gap-3 p-4 sm:p-5 hover:bg-muted/40 transition-colors"
             >
               <div className="flex-1 min-w-0">
                 <div className="font-semibold">{meal.name}</div>
-                <div className="text-sm text-muted-foreground">{meal.description}</div>
+                <div className="text-sm leading-relaxed text-muted-foreground">{meal.description}</div>
               </div>
               <div className={`w-7 h-7 rounded-full border flex items-center justify-center shrink-0 transition-colors ${isDone ? "bg-primary border-primary" : "border-border"}`}>
                 {isDone && <Check className="w-4 h-4 text-primary-foreground" />}

@@ -1,4 +1,5 @@
 import type { GymExerciseEntry } from "@/types/training";
+import { parsePositiveWeight } from "./weight";
 
 interface LoggedSet {
   reps: number;
@@ -18,12 +19,18 @@ export const getProgressionSuggestion = (
   exercise: GymExerciseEntry,
   previous: LoggedSet[] | undefined,
 ): ProgressionSuggestion | null => {
-  const completed = previous?.filter((set) => set.done && Number.parseFloat(set.weight) > 0 && set.reps > 0) || [];
+  const completed = previous?.flatMap((set) => {
+    if (!set.done || !Number.isFinite(set.reps) || set.reps <= 0) return [];
+    const weight = parsePositiveWeight(set.weight);
+    return weight === null ? [] : [{ ...set, weight }];
+  }) || [];
   if (completed.length === 0) return null;
 
-  const lastWeight = Number.parseFloat(completed[completed.length - 1].weight);
-  const reachedTarget = completed.length >= exercise.series
-    && completed.every((set) => set.reps >= exercise.reps);
+  const prescribedSets = completed.slice(0, exercise.series);
+  const lastWeight = prescribedSets[prescribedSets.length - 1]?.weight;
+  if (lastWeight === undefined) return null;
+  const reachedTarget = prescribedSets.length === exercise.series
+    && prescribedSets.every((set) => set.reps >= exercise.reps);
 
   if (!reachedTarget) {
     return {

@@ -57,7 +57,7 @@ const WorkoutProgress = ({ userId }: Props) => {
   const latest = history[history.length - 1];
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-5 card-shadow sm:p-6" aria-labelledby="workout-progress-title">
+    <section className="rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6" aria-labelledby="workout-progress-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -106,21 +106,21 @@ const WorkoutProgress = ({ userId }: Props) => {
           </div>
           {latest && (
             <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl bg-secondary/40 p-3">
+              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
                 <p className="text-lg font-bold tabular-nums">{latest.completedSets}</p>
-                <p className="text-[10px] text-muted-foreground">series completadas</p>
+                <p className="text-xs text-muted-foreground">series completadas</p>
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
+              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
                 <p className="text-lg font-bold tabular-nums">{latest.reps}</p>
-                <p className="text-[10px] text-muted-foreground">repeticiones</p>
+                <p className="text-xs text-muted-foreground">repeticiones</p>
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
+              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
                 <p className="text-lg font-bold tabular-nums">{Math.round(latest.volumeKg)} kg</p>
-                <p className="text-[10px] text-muted-foreground">volumen última sesión</p>
+                <p className="text-xs text-muted-foreground">volumen última sesión</p>
               </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
+              <div className="rounded-xl bg-secondary/40 p-3.5 sm:p-3">
                 <p className="text-lg font-bold tabular-nums">{latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—"}</p>
-                <p className="text-[10px] text-muted-foreground">1RM estimado</p>
+                <p className="text-xs text-muted-foreground">1RM estimado</p>
               </div>
             </div>
           )}

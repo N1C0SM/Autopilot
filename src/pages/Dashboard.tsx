@@ -89,7 +89,6 @@ const Dashboard = () => {
     setSectionState(s);
     try { sessionStorage.setItem("autopilot_section", s); } catch { /* storage no disponible */ }
   }, []);
-  const [profileCreatedAt, setProfileCreatedAt] = useState("");
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
@@ -135,7 +134,6 @@ const Dashboard = () => {
       setNutrition(hasNutrition(profile));
       setProfileName(profile.name || "");
       setProfileAvatar(profile.avatar_url || "");
-      setProfileCreatedAt(profile.created_at || "");
 
       if (profile.plan_status === "onboarding") {
         navigate("/onboarding");
@@ -416,7 +414,6 @@ const Dashboard = () => {
             dayPlans={dayPlans}
             onNavigate={(s) => setSection(s as MobileTab)}
             profileName={profileName}
-            profileCreatedAt={profileCreatedAt}
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}

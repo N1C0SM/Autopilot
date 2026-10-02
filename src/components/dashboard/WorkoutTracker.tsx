@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
   Timer, TrendingUp, X, Video, Save, Trophy, BarChart3,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { getProgressionSuggestion } from "@/lib/workoutProgression";
+import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutReview } from "./WorkoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
 
@@ -59,6 +61,9 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [logsReady, setLogsReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadLogs, setReloadLogs] = useState(0);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [completionReady, setCompletionReady] = useState(false);
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
@@ -86,6 +91,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
   const currentPlanSignature = JSON.stringify(currentPlan || null);
   const startWorkout = (exerciseIndex = 0) => {
+    if (!logsReady || loadError) return;
     setStarted(true);
     setExpandedExercise(exerciseIndex);
     setSessionStartedAt((startedAt) => startedAt || new Date());
@@ -104,7 +110,11 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     const loadLogs = async () => {
       setLogsReady(false);
       setCompletionReady(false);
-      const [{ data }, { data: completion, error: completionError }] = await Promise.all([
+      setLoadError(false);
+      setWorkoutCompleted(false);
+      setExerciseLogs({});
+      setPreviousLogs({});
+      const [currentResult, completionResult, previousResult] = await Promise.all([
         supabase
           .from("workout_logs")
           .select("exercise_name, sets_completed")
@@ -118,17 +128,27 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
           .eq("day_label", selectedDay)
           .eq("completed_at", selectedDate)
           .maybeSingle(),
+        supabase
+          .from("workout_logs")
+          .select("exercise_name, sets_completed, logged_at")
+          .eq("user_id", userId)
+          .eq("day_label", selectedDay)
+          .lt("logged_at", selectedDate)
+          .order("logged_at", { ascending: false })
+          .limit(20),
       ]);
 
       if (!active) return;
-      if (completionError) {
-        toast.error("No se pudo comprobar el estado del entrenamiento.");
-        setWorkoutCompleted(false);
-      } else {
-        setWorkoutCompleted(Boolean(completion));
-        setSessionRpe(completion?.rpe ?? null);
+      if (currentResult.error || completionResult.error || previousResult.error) {
+        setLoadError(true);
+        setCompletionReady(true);
+        toast.error("No se pudo cargar tu sesión e historial. No se sobrescribirá ningún registro; comprueba la conexión e inténtalo de nuevo.");
+        return;
       }
+      setWorkoutCompleted(Boolean(completionResult.data));
+      setSessionRpe(completionResult.data?.rpe ?? null);
       setCompletionReady(true);
+      const data = currentResult.data;
       if (data && data.length > 0) {
         const logs: Record<string, SetLog[]> = {};
         data.forEach((row: any) => {
@@ -150,16 +170,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       }
 
       // Previous session logs (last workout on this day)
-      const { data: prevData } = await supabase
-        .from("workout_logs")
-        .select("exercise_name, sets_completed, logged_at")
-        .eq("user_id", userId)
-        .eq("day_label", selectedDay)
-        .lt("logged_at", selectedDate)
-        .order("logged_at", { ascending: false })
-        .limit(20);
-
-      if (!active) return;
+      const prevData = previousResult.data;
       if (prevData && prevData.length > 0) {
         const lastDate = prevData[0].logged_at;
         const prev: Record<string, SetLog[]> = {};
@@ -183,13 +194,19 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       } else {
         setPreviousLogs({});
       }
+      setLoadError(false);
       setLogsReady(true);
     };
-    loadLogs();
+    void loadLogs().catch(() => {
+      if (!active) return;
+      setLoadError(true);
+      setCompletionReady(true);
+      toast.error("No se pudo cargar tu sesión e historial. No se sobrescribirá ningún registro; comprueba la conexión e inténtalo de nuevo.");
+    });
     return () => {
       active = false;
     };
-  }, [selectedDay, selectedDate, userId, currentPlanSignature]);
+  }, [selectedDay, selectedDate, userId, currentPlanSignature, reloadLogs]);
 
   // Rest timer countdown
   useEffect(() => {
@@ -264,12 +281,15 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       rpe: rpe ?? sessionRpe,
     }));
 
-    if (rows.length > 0) {
+    const write = saveQueueRef.current.then(async () => {
+      if (rows.length === 0) return;
       const { error } = await supabase.from("workout_logs").upsert(rows, {
         onConflict: "user_id,day_label,logged_at,exercise_name",
       });
       if (error) throw error;
-    }
+    });
+    saveQueueRef.current = write.catch(() => undefined);
+    await write;
   };
 
   // Save each change so the session can be resumed after a connection drop or app close.
@@ -299,14 +319,19 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     }> = [];
 
     for (const [name, sets] of Object.entries(exerciseLogs)) {
-      const completed = sets.filter((s) => s.done && s.weight && parseFloat(s.weight) > 0 && s.reps > 0);
+      const completed = sets.flatMap((set) => {
+        const weight = parsePositiveWeight(set.weight);
+        return set.done && weight !== null && Number.isFinite(set.reps) && set.reps > 0
+          ? [{ ...set, parsedWeight: weight }]
+          : [];
+      });
       if (completed.length === 0) continue;
 
       // Best by estimated 1RM (Epley)
       let best = completed[0];
-      let bestE1RM = parseFloat(best.weight) * (1 + best.reps / 30);
+      let bestE1RM = best.parsedWeight * (1 + best.reps / 30);
       for (const s of completed) {
-        const e1rm = parseFloat(s.weight) * (1 + s.reps / 30);
+        const e1rm = s.parsedWeight * (1 + s.reps / 30);
         if (e1rm > bestE1RM) {
           best = s;
           bestE1RM = e1rm;
@@ -314,20 +339,21 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       }
 
       // Check if it beats existing PR
-      const { data: existing } = await supabase
+      const { data: existing, error: lookupError } = await supabase
         .from("personal_records")
         .select("estimated_1rm")
         .eq("user_id", userId)
         .eq("exercise_name", name)
         .order("estimated_1rm", { ascending: false, nullsFirst: false })
         .limit(1);
+      if (lookupError) throw lookupError;
 
       const currentBest = existing?.[0]?.estimated_1rm ?? 0;
       if (bestE1RM > Number(currentBest)) {
         prsToInsert.push({
           user_id: userId,
           exercise_name: name,
-          weight: parseFloat(best.weight),
+          weight: best.parsedWeight,
           reps: best.reps,
           estimated_1rm: Math.round(bestE1RM * 10) / 10,
           achieved_at: selectedDate,
@@ -336,9 +362,10 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     }
 
     if (prsToInsert.length > 0) {
-      await supabase.from("personal_records").upsert(prsToInsert, {
+      const { error } = await supabase.from("personal_records").upsert(prsToInsert, {
         onConflict: "user_id,exercise_name,weight,reps",
       });
+      if (error) throw error;
       setPersonalRecords(prsToInsert.map((pr) => pr.exercise_name));
       toast.success(`🏆 ¡Nuevo PR en ${prsToInsert.length} ejercicio${prsToInsert.length > 1 ? "s" : ""}!`, { duration: 4000 });
     }
@@ -402,16 +429,21 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
         rpe,
       });
       if (completionError) throw completionError;
-      await detectAndSavePRs();
       setSessionRpe(rpe);
       setWorkoutCompleted(true);
       setShowCompletionSummary(true);
       toast.success("¡Entrenamiento completado! 💪");
+      try {
+        await detectAndSavePRs();
+      } catch {
+        toast.error("El entrenamiento se ha guardado, pero no se pudieron comprobar tus récords personales.");
+      }
     } catch {
       setSaveError(true);
-      toast.error("Error al guardar");
+      toast.error("No se pudo guardar el entrenamiento. Comprueba tu conexión e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const completedSets = Object.values(exerciseLogs).flat().filter((s) => s.done).length;
@@ -420,8 +452,8 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
     sets.filter((set) => set.done).map((set) => ({ name, set })),
   );
   const totalVolume = completedLogEntries.reduce((total, { set }) => {
-    const weight = Number.parseFloat(set.weight);
-    return total + (Number.isFinite(weight) && weight > 0 ? weight * Math.max(0, set.reps) : 0);
+    const weight = parsePositiveWeight(set.weight);
+    return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
   }, 0);
   const muscleSetCounts = (currentPlan?.exercises || []).reduce<Record<string, number>>((counts, exercise) => {
     const completedSetsForExercise = (exerciseLogs[exercise.name] || []).filter((set) => set.done).length;
@@ -501,7 +533,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
       {currentPlan?.type === "gimnasio" && (
         <div className={`space-y-3 ${workoutCompleted ? "min-h-[calc(100vh-8rem)]" : ""}`}>
           {/* Today's workout summary */}
-          <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady || started ? "hidden" : ""}`}>
+          <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady || loadError || started ? "hidden" : ""}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -548,9 +580,18 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
             )}
           </div>
 
-          {!completionReady && (
+          {!completionReady && !loadError && (
             <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
               Comprobando tu entrenamiento de hoy…
+            </div>
+          )}
+          {loadError && (
+            <div role="alert" className="rounded-2xl border border-destructive/30 bg-card px-4 py-6 text-center">
+              <p className="font-semibold">No pudimos cargar tu entrenamiento</p>
+              <p className="mt-1 text-sm text-muted-foreground">No hemos cambiado ni reemplazado tus registros. Comprueba la conexión y vuelve a intentarlo.</p>
+              <Button type="button" variant="outline" className="mt-4" onClick={() => setReloadLogs((value) => value + 1)}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
+              </Button>
             </div>
           )}
 
@@ -765,7 +806,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
           </AnimatePresence>}
 
           {/* Exercise list */}
-          {!workoutCompleted && completionReady && (currentPlan.exercises || []).map((ex, i) => {
+          {!workoutCompleted && completionReady && !loadError && (currentPlan.exercises || []).map((ex, i) => {
             const isExpanded = expandedExercise === i;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
@@ -1027,7 +1068,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChang
           })}
 
           {/* Finish workout */}
-          {!workoutCompleted && completionReady && <div className="sticky bottom-3 z-20 pt-3 pb-4">
+          {!workoutCompleted && completionReady && !loadError && <div className="sticky bottom-3 z-20 pt-3 pb-4">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
               <span role="status" aria-live="polite" className={saveError ? "text-destructive" : ""}>
                 {saveError ? "Error al guardar. Comprueba tu conexión." : savedAt ? "Guardado automáticamente" : "Se guarda automáticamente"}

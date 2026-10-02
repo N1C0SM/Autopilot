@@ -55,4 +55,18 @@ describe("buildExerciseHistory", () => {
 
     expect(history).toEqual({});
   });
+
+  it("keeps decimal-comma loads consistent in workout volume and estimated 1RM", () => {
+    const history = buildExerciseHistory([{
+      exercise_name: "Sentadilla",
+      logged_at: "2026-10-02",
+      sets_completed: [{ weight: "60,5", reps: 8, done: true }],
+    }]);
+
+    expect(history.Sentadilla[0]).toMatchObject({
+      volumeKg: 484,
+      bestEstimated1RmKg: 76.6,
+      bestSetLabel: "60.5 kg × 8",
+    });
+  });
 });
