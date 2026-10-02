@@ -408,6 +408,7 @@ const Dashboard = () => {
         <div className="w-full space-y-3">
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           <HomeOverview
+            userId={user?.id}
             coaching={coaching}
             nutrition={nutrition}
             planStatus={planStatus}

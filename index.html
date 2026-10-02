@@ -8,10 +8,12 @@
     <meta name="keywords" content="entrenador personal online, plan de entrenamiento personalizado, coach fitness online, plan nutrición, transformación física, asesor deportivo online">
     <meta name="author" content="Autopilot" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#090909" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Autopilot" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="google-site-verification" content="ZWtPMOVG0JxmeZL3Qgs6eEt6T1gInizLGl3I2JL_aHU" />
     <script>
@@ -52,7 +54,12 @@
 </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div role="status" aria-label="Iniciando Autopilot" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#090909;color:#fff;font-family:Inter,system-ui,sans-serif">
+        <img src="/pwa-192.png" width="80" height="80" alt="" />
+        <span style="font-size:18px;font-weight:700;letter-spacing:.02em">Autopilot</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
     <script>if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));</script>
   </body>

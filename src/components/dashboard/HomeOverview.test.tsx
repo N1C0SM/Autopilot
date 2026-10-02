@@ -24,7 +24,7 @@ describe("dashboard home overview", () => {
     expect(onNavigate).toHaveBeenCalledWith("training");
   });
 
-  it("shows the weekly completion count and keeps paid nutrition reachable", () => {
+  it("combines the week's progress with today's workout and keeps paid nutrition reachable", () => {
     const onNavigate = vi.fn();
     render(
       <HomeOverview
@@ -40,11 +40,11 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
+    expect(screen.getByText("Tu semana · 2/3 sesiones")).toBeVisible();
     expect(screen.getByText("Incluida en Plan Completo")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    expect(nutritionCard).toHaveClass("p-5");
-    expect(nutritionCard.closest(".grid")).toHaveClass("grid-cols-1", "sm:grid-cols-2");
+    expect(nutritionCard).toHaveClass("flex", "items-center", "p-4");
+    expect(screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ })).toBeVisible();
     fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenCalledWith("nutrition");
   });
