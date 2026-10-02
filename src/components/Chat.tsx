@@ -169,21 +169,24 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
   return (
     <>
-      <div className="bg-card rounded-2xl border border-border card-shadow flex flex-col h-[calc(100vh-10rem)] min-h-[600px]">
+      <div className="flex h-[min(62dvh,38rem)] min-h-[20rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card card-shadow sm:h-[calc(100dvh-10rem)] sm:min-h-[32rem]">
         {/* Header with tabs */}
-        <div className="flex items-center gap-2 p-3 border-b border-border">
+        <div className="flex min-w-0 items-center gap-1.5 border-b border-border p-2 sm:gap-2 sm:p-3">
           <button
             onClick={() => setActiveTab("chat")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            aria-pressed={activeTab === "chat"}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
               activeTab === "chat" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <MessageCircle className="w-4 h-4" />
-            {isAdmin ? "Chat" : "Chat con tu entrenador"}
+            <span className="sm:hidden">Chat</span>
+            <span className="hidden sm:inline">{isAdmin ? "Chat" : "Chat con tu entrenador"}</span>
           </button>
           <button
-            onClick={() => setActiveTab("media")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            onClick={() => setActiveTab((current) => current === "media" ? "chat" : "media")}
+            aria-pressed={activeTab === "media"}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
               activeTab === "media" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -198,10 +201,11 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               type="button"
               size="sm"
               variant="outline"
-              className="ml-auto shrink-0 gap-1.5"
+              className="ml-auto h-9 w-9 shrink-0 gap-1.5 p-0 sm:w-auto sm:px-3"
               onClick={call.startCall}
               disabled={call.state !== "idle"}
               title="Videollamada dentro de Autopilot"
+              aria-label="Iniciar videollamada"
             >
               <Video className="w-4 h-4" />
               <span className="hidden sm:inline">Videollamada</span>
@@ -212,30 +216,28 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               type="button"
               size="sm"
               variant="outline"
-              className="ml-auto shrink-0 gap-1.5"
+              className="ml-auto h-9 w-9 shrink-0 gap-1.5 p-0 sm:w-auto sm:px-3"
               onClick={onRequestVideoCall}
+              aria-label={callLabel}
+              title={callLabel}
             >
               <Video className="w-4 h-4" />
-              {callLabel}
+              <span className="hidden sm:inline">{callLabel}</span>
             </Button>
           )}
         </div>
 
 
         {/* Content */}
-        {!isAdmin && activeTab === "chat" && (
+        {!isAdmin && (
           <div className="px-3 pt-2">
             <AIDisclaimer variant="compact" />
           </div>
         )}
-        {activeTab === "chat" ? (
-          <ChatMessages messages={messages} onViewMedia={setViewMedia} />
-        ) : (
-          <ChatMediaGallery messages={messages} onViewMedia={setViewMedia} />
-        )}
+        <ChatMessages messages={messages} onViewMedia={setViewMedia} />
 
         {/* Preview */}
-        {previewFile && activeTab === "chat" && (
+        {previewFile && (
           <div className="px-3 pt-2 flex items-center gap-2">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
               {previewFile.type === "image" ? (
@@ -259,8 +261,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
         )}
 
         {/* Input */}
-        {activeTab === "chat" && (
-          <div className="p-3 border-t border-border">
+        <div className="shrink-0 border-t border-border p-2 sm:p-3">
             {isAdmin && aiSuggestions.length > 0 && (
               <div className="mb-2 space-y-1.5">
                 {aiSuggestions.map((s, i) => (
@@ -291,6 +292,10 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
                 <Send className="w-4 h-4" />
               </Button>
             </form>
+        </div>
+        {activeTab === "media" && (
+          <div className="flex h-36 shrink-0 flex-col border-t border-border sm:h-48">
+            <ChatMediaGallery messages={messages} onViewMedia={setViewMedia} />
           </div>
         )}
       </div>

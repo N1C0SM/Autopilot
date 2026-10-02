@@ -15,7 +15,6 @@ import type { DayPlan } from "@/types/training";
 import WeeklyProgress from "@/components/WeeklyProgress";
 import HomeOverview from "@/components/dashboard/HomeOverview";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
-import MyTrainerCard from "@/components/dashboard/MyTrainerCard";
 import RenewalFlow from "@/components/dashboard/RenewalFlow";
 import UserSidebar from "@/components/UserSidebar";
 import type { UserSection } from "@/components/UserSidebar";
@@ -34,7 +33,10 @@ import { getFirstWeekJourney } from "@/lib/firstWeek";
 const Chat = lazy(() => import("@/components/Chat"));
 const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
 const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"));
+const ProgressCharts = lazy(() => import("@/components/ProgressCharts"));
 const WorkoutTracker = lazy(() => import("@/components/dashboard/WorkoutTracker"));
+const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgress"));
+const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 
 const SectionFallback = () => (
   <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
@@ -87,9 +89,8 @@ const Dashboard = () => {
     setSectionState(s);
     try { sessionStorage.setItem("autopilot_section", s); } catch { /* storage no disponible */ }
   }, []);
-  const [profileCreatedAt, setProfileCreatedAt] = useState<string>("");
-  const [completedDays, setCompletedDays] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
+  const [workoutMode, setWorkoutMode] = useState(false);
   const [firstWeek, setFirstWeek] = useState<{
     dayNumber: number;
     startDate: string;
@@ -132,7 +133,6 @@ const Dashboard = () => {
       setNutrition(hasNutrition(profile));
       setProfileName(profile.name || "");
       setProfileAvatar(profile.avatar_url || "");
-      setProfileCreatedAt(profile.created_at || "");
 
       if (profile.plan_status === "onboarding") {
         navigate("/onboarding");
@@ -162,13 +162,9 @@ const Dashboard = () => {
               .gte("completed_at", firstWeekWindow.startDate)
               .lte("completed_at", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
           : Promise.resolve({ data: [], error: null });
-        const [{ data: tp }, { data: np }, { count: completionCount }, { data: todayCompletion }, firstWeekCompletions] = await Promise.all([
+        const [{ data: tp }, { data: np }, { data: todayCompletion }, firstWeekCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
-          supabase
-            .from("day_completions")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", user.id),
           supabase
             .from("day_completions")
             .select("id")
@@ -185,7 +181,6 @@ const Dashboard = () => {
           setMacros(np.macros_json as unknown as Macros);
           setMeals(np.meals_json as unknown as Meal[]);
         }
-        setCompletedDays(completionCount ?? 0);
         setCompletedToday(Boolean(todayCompletion));
         const journey = getFirstWeekJourney(profile.created_at, plans || []);
         if (journey) {
@@ -390,12 +385,16 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "home" && (
-        <div className="w-full space-y-6">
+        <div className="w-full space-y-3">
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
-          {coaching && <MyTrainerCard onOpenChat={() => setSection("chat")} />}
-          <HomeOverview coaching={coaching} nutrition={nutrition} planStatus={planStatus} tier={subscriptionTier} dayPlans={dayPlans} macros={nutrition ? macros : null} meals={nutrition ? meals : []} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} firstWeek={firstWeek} />
+          <HomeOverview coaching={coaching} nutrition={nutrition} planStatus={planStatus} dayPlans={dayPlans} onNavigate={(s) => setSection(s as MobileTab)} completedToday={completedToday} firstWeek={firstWeek} />
+          {coaching && user && (
+            <details className="mx-auto w-full max-w-3xl rounded-xl border border-border bg-card px-4 py-3">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Más opciones de tu plan</summary>
+              <div className="pt-3"><TravelModeCard userId={user.id} /></div>
+            </details>
+          )}
           {!coaching && !firstWeek && <CoachingOffer onChoose={handleCompletePayment} compact />}
-          {coaching && user && <TravelModeCard userId={user.id} />}
         </div>
       )}
 
@@ -405,10 +404,13 @@ const Dashboard = () => {
             <WorkoutTracker
               userId={user.id}
               dayPlans={dayPlans}
+              onSessionModeChange={setWorkoutMode}
+              onCancel={() => setWorkoutMode(false)}
               onExit={() => {
+                setWorkoutMode(false);
                 setCompletedToday(true);
                 setSection("home");
-               void fetchData();
+                void fetchData();
               }}
             />
           </Suspense>
@@ -468,6 +470,11 @@ const Dashboard = () => {
           </div>
           <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
           <Suspense fallback={<SectionFallback />}>
+            <ProgressCharts userId={user.id} />
+            <WorkoutProgress userId={user.id} />
+            <PRsList userId={user.id} />
+          </Suspense>
+          <Suspense fallback={<SectionFallback />}>
             <ProgressPhotos userId={user.id} />
           </Suspense>
         </div>
@@ -498,6 +505,7 @@ const Dashboard = () => {
         userId={user?.id}
         lockedTabs={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
         onSettings={() => setSection("settings")}
+        workoutMode={workoutMode}
       >
         {pageContent}
       </MobileAppShell>
@@ -514,18 +522,20 @@ const Dashboard = () => {
         noindex
       />
       <div className="min-h-screen flex w-full">
-        <UserSidebar
-          section={section as UserSection}
-          onNavigate={(s) => setSection(s as MobileTab)}
-          onSignOut={handleSignOut}
-          profileName={profileName}
-          profileAvatar={profileAvatar}
-          lockedSections={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
-        />
+        <div className={workoutMode ? "hidden" : ""}>
+          <UserSidebar
+            section={section as UserSection}
+            onNavigate={(s) => setSection(s as MobileTab)}
+            onSignOut={handleSignOut}
+            profileName={profileName}
+            profileAvatar={profileAvatar}
+            lockedSections={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
+          />
+        </div>
 
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className={`flex min-w-0 flex-1 flex-col ${workoutMode ? "h-dvh overflow-hidden" : ""}`}>
           {/* Top bar */}
-          <header className="app-chrome h-14 border-b sticky top-0 z-50 flex items-center px-4 gap-3">
+          <header className={`app-chrome h-14 border-b sticky top-0 z-50 flex items-center px-4 gap-3 ${workoutMode ? "hidden" : ""}`}>
             <SidebarTrigger />
             <div className="flex-1 min-w-0">
               <h1 className="font-display font-bold text-sm uppercase tracking-wider text-foreground truncate">
@@ -538,8 +548,8 @@ const Dashboard = () => {
             {user && <NotificationsBell userId={user.id} />}
           </header>
 
-          <main className="flex-1 min-w-0 p-4 md:p-6 lg:p-8 overflow-y-auto">
-            <div className="max-w-7xl mx-auto w-full">
+          <main className={`min-w-0 flex-1 overflow-y-auto ${workoutMode ? "h-dvh p-0" : "p-4 md:p-6 lg:p-8"}`}>
+            <div className={`${workoutMode ? "h-full w-full" : "max-w-7xl mx-auto w-full"}`}>
               {pageContent}
             </div>
           </main>

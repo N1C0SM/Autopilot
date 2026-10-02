@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Apple, ArrowRight, Bell, Check, Dumbbell, Home, LineChart, MessageCircle,
-  RotateCcw, Send, Settings as SettingsIcon, Sparkles, Timer, Utensils,
+  RotateCcw, Send, Settings as SettingsIcon, Sparkles, Timer, Utensils, Lock, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
+import { buildExerciseHistory } from "@/lib/workoutMetrics";
+
+const ExerciseProgressChart = lazy(() => import("@/components/dashboard/ExerciseProgressChart"));
 
 const views = [
   { key: "home", label: "Hoy", icon: Home },
@@ -25,35 +28,53 @@ const titles: Record<View, string> = {
 };
 
 const exercises = [
-  { name: "Sentadilla goblet", sets: "3 × 8–10", load: "20 kg", last: "Última vez: 18 kg × 10" },
-  { name: "Remo con mancuerna", sets: "3 × 10–12", load: "16 kg", last: "Última vez: 14 kg × 12" },
-  { name: "Press con mancuernas", sets: "3 × 8–10", load: "14 kg", last: "Última vez: 14 kg × 8" },
+  { name: "Sentadilla goblet", sets: 3, reps: 9, load: "20 kg", last: "Última vez: 18 kg × 10" },
+  { name: "Remo con mancuerna", sets: 3, reps: 11, load: "16 kg", last: "Última vez: 14 kg × 12" },
+  { name: "Press con mancuernas", sets: 3, reps: 9, load: "14 kg", last: "Última vez: 14 kg × 8" },
 ];
 
 const side: Record<View, { title: string; points: string[] }> = {
   home: {
     title: "Abres la app y sabes qué toca hoy.",
-    points: ["Tu sesión del día, tu comida y tu peso en una pantalla.", "Nada de buscar entre menús: entras y entrenas.", "Tu entrenador ve tu actividad sin que tú escribas nada."],
+    points: ["Tu rutina y el progreso de tus sesiones están a mano.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "El chat con entrenador y la nutrición dependen del plan elegido."],
   },
   training: {
     title: "Sabes qué hacer al entrar al gimnasio.",
-    points: ["Series, repeticiones y peso sugerido para cada ejercicio.", "Ves lo que levantaste la última vez para progresar.", "Si la máquina está ocupada, pides una alternativa a tu entrenador."],
+    points: ["Registra por separado el peso y las repeticiones de cada serie.", "Ves lo que levantaste la última vez para progresar.", "El tracker y el progreso están incluidos en el plan Gratis."],
   },
   nutrition: {
-    title: "Comes con un objetivo claro, sin contar a ciegas.",
-    points: ["Calorías y macros del día de un vistazo.", "Comidas preparadas por tu entrenador, adaptables a tus gustos.", "Cambias una comida sin romper el plan."],
+    title: "Nutrición personalizada en el plan Completo.",
+    points: ["Calorías y macros del día de un vistazo.", "Comidas preparadas por tu entrenador, adaptables a tus gustos.", "Esta sección no está incluida en el plan Gratis."],
   },
   chat: {
     title: "Una persona real al otro lado.",
-    points: ["Dudas, molestias o cambios: se lo dices a tu entrenador.", "Te responde y ajusta tu plan, no un robot.", "También puedes enviar fotos y vídeos de técnica."],
+    points: ["Dudas, molestias o cambios: se lo dices a tu entrenador.", "Te responde y ajusta tu plan, no un robot.", "El chat está disponible en los planes con entrenador, no en Gratis."],
   },
   progress: {
-    title: "Ves que avanzas, y tu entrenador también.",
-    points: ["Peso, medidas y fotos en un mismo lugar.", "Constancia semanal sin tener que apuntarlo tú.", "Tu entrenador revisa los datos y ajusta el plan."],
+    title: "Comprueba tu evolución con datos de tus sesiones.",
+    points: ["Compara volumen y fuerza estimada por ejercicio.", "Consulta tus sesiones semanales y récords personales.", "Añade fotos para documentar tu progreso."],
   },
 };
 
-const weights = [82.4, 82.1, 81.9, 81.6, 81.7, 81.2, 80.9, 80.6];
+const demoHistory = buildExerciseHistory([
+  ["Sentadilla goblet", "2026-09-04", "18", 10],
+  ["Sentadilla goblet", "2026-09-11", "18", 11],
+  ["Sentadilla goblet", "2026-09-18", "20", 9],
+  ["Sentadilla goblet", "2026-09-25", "20", 10],
+  ["Remo con mancuerna", "2026-09-04", "14", 12],
+  ["Remo con mancuerna", "2026-09-11", "16", 10],
+  ["Remo con mancuerna", "2026-09-18", "16", 11],
+  ["Remo con mancuerna", "2026-09-25", "16", 12],
+  ["Press con mancuernas", "2026-09-04", "12", 10],
+  ["Press con mancuernas", "2026-09-11", "12", 11],
+  ["Press con mancuernas", "2026-09-18", "14", 9],
+  ["Press con mancuernas", "2026-09-25", "14", 10],
+].map(([exercise_name, logged_at, weight, reps]) => ({
+  exercise_name: String(exercise_name),
+  logged_at: String(logged_at),
+  sets_completed: Array.from({ length: 3 }, () => ({ weight, reps, done: true })),
+})));
+const demoProgressExercises = Object.keys(demoHistory);
 
 const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
   { from: "trainer", text: "¿Qué tal la sentadilla de ayer? ¿Te sobraron repeticiones?", time: "9:12" },
@@ -65,9 +86,48 @@ const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
 export default function ProductPreview({ onPlans, onFree }: { onPlans: () => void; onFree?: () => void }) {
   const [view, setView] = useState<View>("home");
   const [completed, setCompleted] = useState<string[]>([]);
-  const pct = Math.round((completed.length / exercises.length) * 100);
-  const max = Math.max(...weights), min = Math.min(...weights);
-  const path = weights.map((w, i) => `${(i / (weights.length - 1)) * 100},${((max - w) / (max - min)) * 36 + 4}`).join(" ");
+  const [started, setStarted] = useState(false);
+  const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
+  const [setValues, setSetValues] = useState<Record<string, { weight: string; reps: number }>>({});
+  const [progressExercise, setProgressExercise] = useState(demoProgressExercises[0]);
+  const [progressMetric, setProgressMetric] = useState<"volumeKg" | "bestEstimated1RmKg">("volumeKg");
+  const totalSets = exercises.reduce((total, exercise) => total + exercise.sets, 0);
+  const pct = Math.round((completed.length / totalSets) * 100);
+  const toggleSet = (exerciseName: string, setIndex: number) => {
+    const key = `${exerciseName}::${setIndex}`;
+    setCompleted((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  };
+  const resetWorkout = () => {
+    setCompleted([]);
+    setStarted(false);
+    setExpandedExercise(null);
+    setSetValues({});
+  };
+  const updateSetValue = (key: string, field: "weight" | "reps", value: string) => {
+    const exerciseName = key.slice(0, key.lastIndexOf("::"));
+    const exercise = exercises.find((item) => item.name === exerciseName);
+    if (!exercise) return;
+    setSetValues((current) => ({
+      ...current,
+      [key]: {
+        weight: current[key]?.weight ?? exercise.load.replace(/\s*kg$/, ""),
+        reps: current[key]?.reps ?? exercise.reps,
+        [field]: field === "weight" ? value : Number(value) || 0,
+      },
+    }));
+  };
+  const demoBestRecords = demoProgressExercises
+    .map((name) => ({
+      name,
+      best: demoHistory[name].reduce((best, entry) =>
+        entry.bestEstimated1RmKg !== null
+          && (best.bestEstimated1RmKg === null || entry.bestEstimated1RmKg > best.bestEstimated1RmKg)
+          ? entry
+          : best,
+      demoHistory[name][0]),
+    }))
+    .sort((a, b) => (b.best.bestEstimated1RmKg || 0) - (a.best.bestEstimated1RmKg || 0))
+    .slice(0, 2);
 
   const changeView = (key: View) => { setView(key); track("plan_preview_view", { source: "public_demo", section: key }); };
 
@@ -78,7 +138,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
           <div className="max-w-xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="font-display text-3xl font-bold sm:text-4xl">Prueba cómo sería tu día.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora un ejemplo de la app: marca ejercicios y descubre cómo se muestran el plan, la nutrición y el chat. Sin cuenta, sin tarjeta.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos. Nutrición y chat aparecen como ejemplos de planes con entrenador; no están incluidos en Gratis. Sin cuenta ni tarjeta.</p>
           </div>
           <span className="text-xs text-muted-foreground">Demo con datos ficticios · no es un plan personal</span>
         </div>
@@ -93,7 +153,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                     <li key={p} className="flex gap-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}</li>
                   ))}
                 </ul>
-                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? "Nutrición personalizada incluida en Completo · 49€/mes tras la prueba." : view === "chat" ? "Chat en los planes de pago: respuesta en 48h con Entrenamiento y en 24h con Completo." : "Gratis incluye rutina inicial y registro. Los planes de pago añaden un entrenador que prepara y revisa tu plan."}</p>
+                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? "Nutrición personalizada incluida en Completo · 49€/mes tras la prueba. No forma parte del plan Gratis." : view === "chat" ? "Chat en los planes de pago: respuesta en 48h con Entrenamiento y en 24h con Completo. No está incluido en Gratis." : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; el chat y la nutrición son funciones de los planes con entrenador."}</p>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -153,7 +213,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                                   <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-primary" strokeWidth="4" strokeLinecap="round" strokeDasharray="97.4" strokeDashoffset="38" />
                                 </svg>
                                 <div className="min-w-0">
-                                  <p className="flex items-center gap-1 text-xs font-semibold"><Utensils className="h-3 w-3 text-primary" />Nutrición</p>
+                                  <p className="flex items-center gap-1 text-xs font-semibold"><Utensils className="h-3 w-3 text-primary" />Nutrición <Lock className="h-2.5 w-2.5 text-muted-foreground" /></p>
                                   <p className="text-[10px] text-muted-foreground">1.420 / 2.300 kcal</p>
                                 </div>
                               </div>
@@ -167,16 +227,14 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                               </div>
                             </button>
                             <button type="button" onClick={() => changeView("progress")} className="rounded-2xl border border-border p-3 text-left transition-colors hover:bg-secondary">
-                              <p className="flex items-center gap-1 text-xs font-semibold"><LineChart className="h-3 w-3 text-primary" />Peso</p>
-                              <p className="text-[10px] text-muted-foreground">80,6 kg · −1,8 kg</p>
-                              <svg viewBox="0 0 100 44" preserveAspectRatio="none" aria-hidden className="mt-2 h-8 w-full">
-                                <polyline points={path} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
-                              </svg>
+                              <p className="flex items-center gap-1 text-xs font-semibold"><LineChart className="h-3 w-3 text-primary" />Tu semana</p>
+                              <p className="text-[10px] text-muted-foreground">2 de 3 sesiones</p>
+                              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full w-2/3 rounded-full bg-primary" /></div>
                             </button>
                           </div>
                           <div className="flex gap-2.5 rounded-2xl bg-secondary p-3">
                             <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                            <p className="text-xs leading-relaxed"><span className="font-semibold">Tu entrenador:</span> <span className="text-muted-foreground">sube 2 kg en la sentadilla si ayer te sobraron repeticiones.</span></p>
+                            <p className="text-xs leading-relaxed"><span className="font-semibold">En planes con entrenador:</span> <span className="text-muted-foreground">recibes seguimiento humano y ajustes de tu plan. Gratis tienes registro y progreso.</span></p>
                           </div>
                         </div>
                       )}
@@ -187,37 +245,102 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                           <p className="text-[11px] font-medium text-primary">Lunes · Semana 3 de 12</p>
                           <div className="mt-1 flex items-end justify-between">
                             <h4 className="font-display text-lg font-bold leading-tight">Fuerza cuerpo completo</h4>
-                            <p role="status" className="text-xs font-semibold">{completed.length} de {exercises.length}</p>
+                            <p role="status" className="text-xs font-semibold">{completed.length} de {totalSets} series</p>
                           </div>
                           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} /></div>
 
+                          {!started && (
+                            <Button type="button" variant="hero" className="mt-4 h-11 w-full" onClick={() => {
+                              setStarted(true);
+                              setExpandedExercise(exercises[0].name);
+                            }}>
+                              Empezar entrenamiento
+                            </Button>
+                          )}
+
                           <div className="mt-4 space-y-2">
-                            {exercises.map(({ name, sets, load, last }) => {
-                              const done = completed.includes(name);
+                            {exercises.map(({ name, sets, reps, load, last }) => {
+                              const doneSets = Array.from({ length: sets }, (_, index) => completed.includes(`${name}::${index}`)).filter(Boolean).length;
+                              const allDone = doneSets === sets;
+                              const expanded = expandedExercise === name;
                               return (
-                                <button key={name} type="button" aria-pressed={done} aria-label={`${done ? "Desmarcar" : "Completar"} ${name}`}
-                                  onClick={() => setCompleted(c => done ? c.filter(i => i !== name) : [...c, name])}
-                                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${done ? "border-primary/40 bg-primary/5" : "border-border hover:bg-secondary"}`}>
-                                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary"><Dumbbell className="h-5 w-5 text-muted-foreground" /></span>
-                                  <span className="min-w-0 flex-1">
-                                    <span className={`block truncate text-sm font-semibold ${done ? "line-through opacity-60" : ""}`}>{name}</span>
-                                    <span className="block text-xs text-muted-foreground">{sets} · {load}</span>
-                                    <span className="block text-[10px] text-muted-foreground/80">{last}</span>
-                                  </span>
-                                  <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors ${done ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{done && <Check className="h-4 w-4" />}</span>
-                                </button>
+                                <div key={name} className={`overflow-hidden rounded-2xl border ${allDone ? "border-primary/40" : "border-border"}`}>
+                                  <button
+                                    type="button"
+                                    aria-expanded={expanded}
+                                    onClick={() => {
+                                      setStarted(true);
+                                      setExpandedExercise(expanded ? null : name);
+                                    }}
+                                    className="flex w-full items-center gap-3 p-3 text-left"
+                                  >
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary"><Dumbbell className="h-5 w-5 text-muted-foreground" /></span>
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate text-sm font-semibold">{name}</span>
+                                      <span className="block text-xs text-muted-foreground">{sets} series · {reps} reps · {load}</span>
+                                      <span className="block text-[10px] text-muted-foreground/80">{last}</span>
+                                    </span>
+                                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold">{doneSets}/{sets}</span>
+                                  </button>
+                                  {started && expanded && (
+                                    <div className="space-y-1.5 border-t border-border p-2">
+                                      {Array.from({ length: sets }, (_, setIndex) => {
+                                        const setKey = `${name}::${setIndex}`;
+                                        const isDone = completed.includes(setKey);
+                                        const currentSet = setValues[setKey] || { weight: load.replace(/\s*kg$/, ""), reps };
+                                        return (
+                                          <div key={setKey} className={`grid grid-cols-[1.5rem_1fr_1fr_2.5rem] items-center gap-1 rounded-xl p-2 ${isDone ? "bg-primary/10" : "bg-secondary/40"}`}>
+                                            <span className="text-center text-xs font-semibold text-muted-foreground">{setIndex + 1}</span>
+                                            <label className="min-w-0">
+                                              <span className="sr-only">Peso de la serie {setIndex + 1} de {name}</span>
+                                              <input
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={currentSet.weight}
+                                                onChange={(event) => updateSetValue(setKey, "weight", event.target.value)}
+                                                aria-label={`Peso de la serie ${setIndex + 1} de ${name}`}
+                                                className="w-full rounded-lg border border-border bg-background px-1.5 py-2 text-center text-xs"
+                                              />
+                                            </label>
+                                            <label className="min-w-0">
+                                              <span className="sr-only">Repeticiones de la serie {setIndex + 1} de {name}</span>
+                                              <input
+                                                type="number"
+                                                inputMode="numeric"
+                                                min="0"
+                                                value={currentSet.reps}
+                                                onChange={(event) => updateSetValue(setKey, "reps", event.target.value)}
+                                                aria-label={`Repeticiones de la serie ${setIndex + 1} de ${name}`}
+                                                className="w-full rounded-lg border border-border bg-background px-1.5 py-2 text-center text-xs"
+                                              />
+                                            </label>
+                                            <button
+                                              type="button"
+                                              aria-pressed={isDone}
+                                              aria-label={`${isDone ? "Desmarcar" : "Marcar"} serie ${setIndex + 1} de ${name}`}
+                                              onClick={() => toggleSet(name, setIndex)}
+                                              className={`flex h-9 w-9 items-center justify-center rounded-lg ${isDone ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                                            >
+                                              {isDone && <Check className="h-4 w-4" />}
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
                               );
                             })}
                           </div>
 
-                          {completed.length > 0 && completed.length < exercises.length && (
+                          {completed.length > 0 && completed.length < totalSets && (
                             <div className="mt-3 flex items-center gap-2 rounded-2xl bg-primary/10 p-3 text-xs"><Timer className="h-4 w-4 text-primary" /><span className="font-semibold">Descanso 1:30</span><span className="text-muted-foreground">· siguiente ejercicio</span></div>
                           )}
-                          {completed.length === exercises.length && (
-                            <div className="mt-3 rounded-2xl bg-primary/10 p-3 text-center text-xs font-semibold">Sesión completada · tu entrenador la verá</div>
+                          {completed.length === totalSets && (
+                            <div className="mt-3 rounded-2xl bg-primary/10 p-3 text-center text-xs font-semibold">Sesión de ejemplo completada · {totalSets} series registradas</div>
                           )}
                           <div className="mt-3 text-center">
-                            <Button variant="ghost" size="sm" onClick={() => setCompleted([])}><RotateCcw className="h-3.5 w-3.5" /> Reiniciar demo</Button>
+                            <Button variant="ghost" size="sm" onClick={resetWorkout}><RotateCcw className="h-3.5 w-3.5" /> Reiniciar demo</Button>
                           </div>
                         </div>
                       )}
@@ -225,6 +348,10 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                       {view === "nutrition" && (
                         <div>
                           <p className="text-[11px] font-medium text-primary">Hoy · plan Completo</p>
+                          <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-secondary p-3">
+                            <span className="flex items-center gap-2 text-xs font-semibold"><Lock className="h-4 w-4 text-primary" />Plan Completo</span>
+                            <span className="text-[10px] text-muted-foreground">Función de pago</span>
+                          </div>
                           <div className="mt-3 flex items-center gap-4 rounded-2xl bg-secondary p-4">
                             <svg viewBox="0 0 36 36" className="h-20 w-20 -rotate-90">
                               <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3.5" />
@@ -249,17 +376,21 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                               </div>
                             ))}
                           </div>
-                          <p className="mt-3 text-[10px] text-muted-foreground">Comidas ilustrativas, sin recomendaciones para tu caso.</p>
+                          <p className="mt-3 text-[10px] text-muted-foreground">Comidas ilustrativas, sin recomendaciones para tu caso. Nutrición disponible en Completo, no en Gratis.</p>
                         </div>
                       )}
 
                       {view === "chat" && (
                         <div className="flex h-full flex-col">
+                          <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 p-2">
+                            <span className="flex items-center gap-1.5 text-[10px] font-semibold"><Lock className="h-3.5 w-3.5 text-primary" />Plan con entrenador</span>
+                            <span className="text-[9px] text-muted-foreground">No incluido en Gratis</span>
+                          </div>
                           <div className="flex items-center gap-2.5 border-b border-border pb-3">
                             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">N</span>
                             <div>
                               <p className="text-sm font-semibold">Niko · tu entrenador</p>
-                              <p className="text-[10px] text-muted-foreground">Responde normalmente en el día</p>
+                              <p className="text-[10px] text-muted-foreground">Respuesta: 48 h · Completo: 24 h</p>
                             </div>
                           </div>
                           <div className="mt-3 space-y-2.5">
@@ -282,21 +413,70 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
 
                       {view === "progress" && (
                         <div>
-                          <p className="text-[11px] font-medium text-primary">Últimas 8 semanas</p>
-                          <div className="mt-3 rounded-2xl bg-secondary p-4">
-                            <div className="flex items-end justify-between"><div><p className="text-xs text-muted-foreground">Peso corporal</p><p className="font-display text-2xl font-bold">80,6 kg</p></div><p className="text-xs font-semibold text-primary">−1,8 kg</p></div>
-                            <svg viewBox="0 0 100 44" preserveAspectRatio="none" className="mt-3 h-20 w-full"><polyline points={path} fill="none" className="stroke-primary" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" /></svg>
-                          </div>
-                          <div className="mt-3 rounded-2xl border border-border p-4">
+                          <p className="text-[11px] font-medium text-primary">Tu progreso · muestra ficticia</p>
+                          <div className="mt-3 rounded-2xl border border-border p-3">
                             <p className="text-xs text-muted-foreground">Sesiones esta semana</p>
                             <div className="mt-2 flex gap-1.5">{["L", "M", "X", "J", "V", "S", "D"].map((d, i) => <span key={d} className={`flex h-8 flex-1 items-center justify-center rounded-lg text-[10px] font-semibold ${[0, 2].includes(i) ? "bg-primary text-primary-foreground" : i === 4 ? "border border-dashed border-primary" : "bg-secondary text-muted-foreground"}`}>{d}</span>)}</div>
-                            <p className="mt-2 text-xs"><span className="font-semibold">2 de 3</span> <span className="text-muted-foreground">· próxima el viernes</span></p>
+                            <p className="mt-2 text-xs"><span className="font-semibold">2 de 3 sesiones previstas</span> <span className="text-muted-foreground">· la rutina marca tus días</span></p>
                           </div>
-                          <div className="mt-3 grid grid-cols-2 gap-2">
-                            <div className="rounded-xl border border-border p-3"><p className="text-[10px] text-muted-foreground">Sentadilla</p><p className="text-sm font-semibold">14 → 20 kg</p></div>
-                            <div className="rounded-xl border border-border p-3"><p className="text-[10px] text-muted-foreground">Cintura</p><p className="text-sm font-semibold">−3 cm</p></div>
+                          <div className="mt-3 flex items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold"><Dumbbell className="h-3.5 w-3.5 shrink-0 text-primary" /><span className="truncate">Progresión por ejercicio</span></div>
+                            <select
+                              aria-label="Ejercicio para ver progresión en demo"
+                              value={progressExercise}
+                              onChange={(event) => setProgressExercise(event.target.value)}
+                              className="min-h-9 max-w-32 rounded-lg border border-border bg-background px-2 text-[10px]"
+                            >
+                              {demoProgressExercises.map((name) => <option key={name} value={name}>{name}</option>)}
+                            </select>
                           </div>
-                          <p className="mt-3 text-[10px] text-muted-foreground">Los datos de esta demo no representan resultados de un cliente.</p>
+                          <div className="mt-2 rounded-2xl border border-border bg-card p-3">
+                            <Suspense fallback={<div className="h-36 animate-pulse rounded-xl bg-secondary/50" aria-label="Cargando gráfica" />}>
+                              <ExerciseProgressChart
+                                exerciseName={progressExercise}
+                                history={demoHistory[progressExercise]}
+                                metric={progressMetric}
+                                onMetricChange={setProgressMetric}
+                                compact
+                              />
+                            </Suspense>
+                            {demoHistory[progressExercise][demoHistory[progressExercise].length - 1] && (
+                              <div className="mt-3 grid grid-cols-2 gap-1.5">
+                                {[
+                                  ["Series", demoHistory[progressExercise][demoHistory[progressExercise].length - 1].completedSets],
+                                  ["Repeticiones", demoHistory[progressExercise][demoHistory[progressExercise].length - 1].reps],
+                                  ["Volumen", `${Math.round(demoHistory[progressExercise][demoHistory[progressExercise].length - 1].volumeKg)} kg`],
+                                  ["1RM estimado", `${demoHistory[progressExercise][demoHistory[progressExercise].length - 1].bestEstimated1RmKg ?? "—"} kg`],
+                                ].map(([label, value]) => (
+                                  <div key={label} className="rounded-lg bg-secondary/50 p-2">
+                                    <p className="text-xs font-bold">{value}</p>
+                                    <p className="text-[9px] text-muted-foreground">{label}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3 rounded-2xl border border-border p-3">
+                            <p className="flex items-center gap-1.5 text-xs font-semibold"><Sparkles className="h-3.5 w-3.5 text-primary" />Récords personales</p>
+                            <div className="mt-2 space-y-1.5">
+                              {demoBestRecords.map(({ name, best }) => (
+                                <div key={name} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/40 px-2.5 py-2">
+                                  <span className="truncate text-[10px] font-medium">{name}</span>
+                                  <span className="shrink-0 text-[10px] font-semibold text-primary">{best.bestSetLabel} · ~{best.bestEstimated1RmKg} kg</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-3 rounded-2xl border border-border p-3">
+                            <p className="flex items-center gap-1.5 text-xs font-semibold"><Camera className="h-3.5 w-3.5 text-primary" />Fotos de progreso</p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">Documenta tu evolución con fotos de frente, lateral y espalda.</p>
+                            {onFree && (
+                              <button type="button" onClick={onFree} className="mt-2 min-h-8 text-[10px] font-semibold text-primary underline underline-offset-2">
+                                Crear cuenta para subir fotos
+                              </button>
+                            )}
+                          </div>
+                          <p className="mt-3 text-[10px] text-muted-foreground">Datos ficticios de ejemplo. En tu cuenta, las gráficas se construyen con tus propias series completadas.</p>
                         </div>
                       )}
                     </motion.div>

@@ -41,7 +41,7 @@ const ChatMessages = ({ messages, onViewMedia }: Props) => {
   const resolve = (u?: string | null) => (u ? signed.get(u) || "" : "");
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
       {messages.length === 0 && (
         <div className="text-center text-sm text-muted-foreground py-10">
           ¡Hola! Escribe aquí si tienes alguna duda sobre tu plan. También puedes enviar fotos y vídeos de tu progreso 💪📸

@@ -27,6 +27,8 @@ interface Props {
   userId: string;
   dayPlans: DayPlan[];
   onExit?: () => void;
+  onCancel?: () => void;
+  onSessionModeChange?: (active: boolean) => void;
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -43,7 +45,7 @@ const getMuscleIntensity = (sets: number) => sets >= 6
     ? MUSCLE_INTENSITY.medium
     : MUSCLE_INTENSITY.low;
 
-const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
+const WorkoutTracker = ({ userId, dayPlans, onExit, onCancel, onSessionModeChange }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const selectedDay = DAYS_ORDER[todayIndex];
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
@@ -82,6 +84,12 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   })();
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
   const currentPlanSignature = JSON.stringify(currentPlan || null);
+  const startWorkout = (exerciseIndex = 0) => {
+    setStarted(true);
+    setExpandedExercise(exerciseIndex);
+    setSessionStartedAt((startedAt) => startedAt || new Date());
+    onSessionModeChange?.(true);
+  };
 
   // Start with a clean overview; the first exercise opens when the user starts.
   useEffect(() => {
@@ -352,6 +360,23 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
     setSaving(false);
   };
 
+  const saveAndExit = async () => {
+    setSaving(true);
+    try {
+      await persistLogs();
+      setRestTimer(null);
+      setStarted(false);
+      setExpandedExercise(null);
+      onSessionModeChange?.(false);
+      toast.success("Entrenamiento guardado");
+      onCancel?.();
+    } catch {
+      toast.error("No se pudo guardar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleRPEConfirm = async (rpe: number) => {
     setRpeOpen(false);
     setSaving(true);
@@ -409,10 +434,21 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
   return (
     <div className={showCompletionSummary
       ? "fixed inset-0 z-50 overflow-y-auto bg-background px-4 pb-8 pt-[calc(env(safe-area-inset-top)+1rem)]"
-      : "w-full min-w-0"
+      : `w-full min-w-0 ${started ? "min-h-dvh px-3 pb-8 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:px-5" : ""}`
     }>
-      <div className="flex items-center justify-end gap-2 mb-3 text-[11px] text-muted-foreground">
-        {!workoutCompleted && savedAt && <span className="flex items-center gap-1"><Save className="w-3 h-3" /> Guardado automático</span>}
+      <div className={`mb-3 flex items-center gap-3 text-[11px] text-muted-foreground ${started && !workoutCompleted ? "sticky top-0 z-30 -mx-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:-mx-5 sm:px-5" : "justify-end"}`}>
+        {started && !workoutCompleted && (
+          <>
+            <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2" onClick={saveAndExit} disabled={saving}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> Salir
+            </Button>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-foreground">{currentPlan?.routine_name || "Entrenamiento"}</p>
+              <p className="tabular-nums">{completedSets}/{totalSets} series</p>
+            </div>
+          </>
+        )}
+        {!workoutCompleted && savedAt && <span className="flex shrink-0 items-center gap-1"><Save className="h-3 w-3" /> Guardado</span>}
       </div>
 
       {/* Rest day */}
@@ -451,7 +487,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
       {currentPlan?.type === "gimnasio" && (
         <div className={`space-y-3 ${workoutCompleted ? "min-h-[calc(100vh-8rem)]" : ""}`}>
           {/* Today's workout summary */}
-          <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady ? "hidden" : ""}`}>
+          <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady || started ? "hidden" : ""}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
@@ -488,11 +524,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
 
             {!started && (
               <Button
-                onClick={() => {
-                  setStarted(true);
-                  setExpandedExercise(0);
-                  setSessionStartedAt((startedAt) => startedAt || new Date());
-                }}
+                onClick={() => startWorkout(0)}
                 variant="hero"
                 size="lg"
                 className="mt-4 h-12 w-full text-base"
@@ -746,9 +778,7 @@ const WorkoutTracker = ({ userId, dayPlans, onExit }: Props) => {
                 <button
                   onClick={() => {
                     if (!started) {
-                      setStarted(true);
-                      setExpandedExercise(i);
-                      setSessionStartedAt((startedAt) => startedAt || new Date());
+                      startWorkout(i);
                     } else {
                       setExpandedExercise(isExpanded ? null : i);
                     }

@@ -11,6 +11,7 @@ interface Props {
   userId?: string;
   lockedTabs?: MobileTab[];
   onSettings?: () => void;
+  workoutMode?: boolean;
   children: ReactNode;
 }
 
@@ -23,20 +24,24 @@ const MobileAppShell = ({
   userId,
   lockedTabs,
   onSettings,
+  workoutMode = false,
   children,
 }: Props) => {
   return (
-    <div className="min-h-screen bg-background">
-      <MobileHeader
-        title={title}
-        profileName={profileName}
-        profileAvatar={profileAvatar}
-        userId={userId}
-        onSettings={onSettings}
-      />
+    <div className={`min-h-screen bg-background ${workoutMode ? "h-dvh overflow-hidden" : ""}`}>
+      {!workoutMode && (
+        <MobileHeader
+          title={title}
+          profileName={profileName}
+          profileAvatar={profileAvatar}
+          userId={userId}
+          onSettings={onSettings}
+        />
+      )}
 
       <main
-        style={{
+        className={workoutMode ? "h-dvh overflow-y-auto" : ""}
+        style={workoutMode ? undefined : {
           paddingTop: "calc(56px + var(--safe-top, 0px) + 12px)",
           paddingBottom: "var(--mobile-nav-content-padding)",
           paddingLeft: "max(0.75rem, var(--safe-left, 0px))",
@@ -46,7 +51,7 @@ const MobileAppShell = ({
         {children}
       </main>
 
-      <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} />
+      {!workoutMode && <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} />}
     </div>
   );
 };

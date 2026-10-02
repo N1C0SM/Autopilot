@@ -34,7 +34,7 @@ const ChatMediaGallery = ({ messages, onViewMedia }: Props) => {
 
   if (mediaMessages.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="min-h-0 flex-1 flex items-center justify-center p-8">
         <div className="text-center">
           <ImageIcon className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
           <p className="text-sm text-muted-foreground">Aún no hay fotos ni vídeos</p>
@@ -45,7 +45,7 @@ const ChatMediaGallery = ({ messages, onViewMedia }: Props) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-3">
+    <div className="min-h-0 flex-1 overflow-y-auto p-3">
       <div className="grid grid-cols-3 gap-2">
         {mediaMessages.map((msg) => (
           <button
