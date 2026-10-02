@@ -1,3 +1,4 @@
+import TrainerReviewQueue from "@/components/tracking/TrainerReviewQueue";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -231,6 +232,7 @@ const TrainerPage = () => {
               </div>
             ) : section === "users" ? (
               <div className="space-y-2">
+                <TrainerReviewQueue clients={users} onOpen={id=>setSelected(users.find(u=>u.user_id===id)||null)} />
                 <h1 className="text-xl font-bold font-display mb-1 flex items-center gap-2">
                   Usuarios asignados ({users.length})
                   <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />

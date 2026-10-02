@@ -222,7 +222,7 @@ const ProgressPhotos = ({ userId }: Props) => {
           <div className="text-4xl mb-3">📷</div>
           <h3 className="font-display font-bold text-lg mb-1">Empieza a documentar tu progreso</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Sube fotos semanales para ver tu evolución. Frente, lateral y espalda.
+            Sube fotos cada 2 semanas, con la misma luz y a la misma hora. Frente, lateral y espalda.
           </p>
           <Button variant="outline" onClick={() => fileRef.current?.click()}>
             <Camera className="w-4 h-4 mr-1" /> Subir primera foto

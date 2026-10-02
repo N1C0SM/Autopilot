@@ -90,7 +90,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
   const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
   const [setValues, setSetValues] = useState<Record<string, { weight: string; reps: number }>>({});
   const [progressExercise, setProgressExercise] = useState(demoProgressExercises[0]);
-  const [progressMetric, setProgressMetric] = useState<"volumeKg" | "bestEstimated1RmKg">("volumeKg");
+  const [progressMetric, setProgressMetric] = useState<"volumeKg" | "bestEstimated1RmKg" | "reps">("volumeKg");
   const totalSets = exercises.reduce((total, exercise) => total + exercise.sets, 0);
   const pct = Math.round((completed.length / totalSets) * 100);
   const toggleSet = (exerciseName: string, setIndex: number) => {

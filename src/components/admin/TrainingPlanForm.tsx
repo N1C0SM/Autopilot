@@ -1,3 +1,4 @@
+import { kinds, modes, type TrackingKind, type LoadMode } from "@/lib/tracking/model";
 import { useState, useEffect, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -262,7 +263,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
   useEffect(() => {
     supabase.from("exercises")
-      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order")
+      .select("id, name, muscle_group, image_url, video_url, tracking_kind, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, skill_tag, progression_order")
       .order("muscle_group").order("recommended_order").order("name")
       .then(({ data }) => { if (data) setExercises(data as Exercise[]); });
   }, []);
@@ -296,7 +297,8 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
       const perMuscle = Math.max(1, Math.floor(count / safeMuscles.length));
       for (const ex of shuffled.slice(0, perMuscle)) {
         result.push({
-          exercise_id: ex.id, name: ex.name,
+          exercise_id: ex.id,
+        tracking_kind: ex.tracking_kind, name: ex.name,
           series: params.series, reps: params.reps,
           weight: "", rest: params.rest, image_url: ex.image_url || undefined,
           muscle_group: ex.muscle_group,
@@ -365,6 +367,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
         for (const ex of available.slice(0, take)) {
           gymExercises.push({
             exercise_id: ex.id,
+        tracking_kind: ex.tracking_kind,
             name: ex.name,
             series: params.series,
             reps: params.reps,
@@ -462,6 +465,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
     if (ex) {
       updateGymExercise(dayIdx, exIdx, {
         exercise_id: ex.id,
+        tracking_kind: ex.tracking_kind,
         name: ex.name,
         image_url: ex.image_url || undefined,
         muscle_group: ex.muscle_group,
@@ -694,47 +698,190 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-1">
-                          <span className="w-[35%]">Ejercicio</span>
-                          <span className="w-[12%]">Series</span>
-                          <span className="w-[12%]">Reps</span>
-                          <span className="w-[15%]">Peso</span>
-                          <span className="w-[12%]">Desc.</span>
-                        </div>
-
-                        {(plan.exercises || []).map((ex, exIdx) => (
-                          <div key={exIdx} className="flex items-center gap-2 bg-background/50 rounded-lg p-2.5 border border-border/50 group">
-                            {/* Exercise image thumbnail */}
-                            {ex.image_url && (
-                              <img src={ex.image_url} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
-                            )}
-                            <div className="w-[35%] shrink-0">
-                              <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs" value={ex.exercise_id} onChange={(e) => selectExerciseFromLibrary(dayIdx, exIdx, e.target.value)}>
-                                <option value="">Seleccionar...</option>
-                                {Object.entries(groupedExercises).map(([group, exs]) => (
-                                  <optgroup key={group} label={group}>
-                                    {exs.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                  </optgroup>
-                                ))}
-                              </select>
+                          {(plan.exercises || []).map((ex, exIdx) => (
+                            <div
+                              key={exIdx}
+                              className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-background/50 rounded-lg p-3 border border-border/50"
+                            >
+                              <label className="col-span-2 sm:col-span-3 text-xs">
+                                Ejercicio
+                                <select
+                                  className="flex h-11 w-full rounded-md border bg-background px-2"
+                                  value={ex.exercise_id}
+                                  onChange={(e) =>
+                                    selectExerciseFromLibrary(
+                                      dayIdx,
+                                      exIdx,
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  <option value="">Seleccionar...</option>
+                                  {Object.entries(groupedExercises).map(
+                                    ([group, items]) => (
+                                      <optgroup key={group} label={group}>
+                                        {items.map((e) => (
+                                          <option key={e.id} value={e.id}>
+                                            {e.name}
+                                          </option>
+                                        ))}
+                                      </optgroup>
+                                    ),
+                                  )}
+                                </select>
+                              </label>
+                              <label className="text-xs">
+                                Tipo de registro
+                                <select
+                                  className="h-11 w-full rounded-md border bg-background"
+                                  value={ex.tracking_kind || "weight"}
+                                  onChange={(e) =>
+                                    updateGymExercise(dayIdx, exIdx, {
+                                      tracking_kind: e.target
+                                        .value as TrackingKind,
+                                    })
+                                  }
+                                >
+                                  {Object.entries(kinds)
+                                    .filter(([k]) => k !== "legacy")
+                                    .map(([k, l]) => (
+                                      <option key={k} value={k}>
+                                        {l}
+                                      </option>
+                                    ))}
+                                </select>
+                              </label>
+                              <label className="text-xs">
+                                Variante
+                                <Input
+                                  value={ex.variant || ""}
+                                  onChange={(e) =>
+                                    updateGymExercise(dayIdx, exIdx, {
+                                      variant: e.target.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="text-xs">
+                                Carga
+                                <select
+                                  className="h-11 w-full rounded-md border bg-background"
+                                  value={
+                                    ex.load_mode ||
+                                    (ex.tracking_kind === "weight"
+                                      ? "load"
+                                      : "bodyweight")
+                                  }
+                                  onChange={(e) =>
+                                    updateGymExercise(dayIdx, exIdx, {
+                                      load_mode: e.target.value as LoadMode,
+                                    })
+                                  }
+                                >
+                                  {Object.entries(modes).map(([k, l]) => (
+                                    <option key={k} value={k}>
+                                      {l}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="text-xs">
+                                Series
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={ex.series}
+                                  onChange={(e) =>
+                                    updateGymExercise(dayIdx, exIdx, {
+                                      series: Number(e.target.value),
+                                    })
+                                  }
+                                />
+                              </label>
+                              {ex.tracking_kind === "isometric" ||
+                              ex.tracking_kind === "cardio" ? (
+                                <label className="text-xs">
+                                  Segundos previstos
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={ex.target_seconds ?? ""}
+                                    onChange={(e) =>
+                                      updateGymExercise(dayIdx, exIdx, {
+                                        target_seconds:
+                                          e.target.value === ""
+                                            ? null
+                                            : Number(e.target.value),
+                                      })
+                                    }
+                                  />
+                                </label>
+                              ) : (
+                                <label className="text-xs">
+                                  Repeticiones
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={ex.reps}
+                                    onChange={(e) =>
+                                      updateGymExercise(dayIdx, exIdx, {
+                                        reps: Number(e.target.value),
+                                      })
+                                    }
+                                  />
+                                </label>
+                              )}
+                              {ex.tracking_kind === "cardio" && (
+                                <label className="text-xs">
+                                  Distancia prevista (km)
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    value={ex.target_distance ?? ""}
+                                    onChange={(e) =>
+                                      updateGymExercise(dayIdx, exIdx, {
+                                        target_distance:
+                                          e.target.value === ""
+                                            ? null
+                                            : Number(e.target.value),
+                                      })
+                                    }
+                                  />
+                                </label>
+                              )}
+                              <label className="text-xs">
+                                Carga / lastre / asistencia (kg)
+                                <Input
+                                  value={ex.weight}
+                                  onChange={(e) =>
+                                    updateGymExercise(dayIdx, exIdx, {
+                                      weight: e.target.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label className="text-xs">
+                                Descanso
+                                <Input
+                                  value={ex.rest}
+                                  onChange={(e) =>
+                                    updateGymExercise(dayIdx, exIdx, {
+                                      rest: e.target.value,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <Button
+                                variant="ghost"
+                                onClick={() => removeGymExercise(dayIdx, exIdx)}
+                                aria-label={`Quitar ${ex.name || "ejercicio"}`}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Quitar
+                              </Button>
                             </div>
-                            <div className="w-[12%]">
-                              <Input type="number" className="h-8 text-xs text-center" value={ex.series} onChange={(e) => updateGymExercise(dayIdx, exIdx, { series: parseInt(e.target.value) || 0 })} />
-                            </div>
-                            <div className="w-[12%]">
-                              <Input type="number" className="h-8 text-xs text-center" value={ex.reps} onChange={(e) => updateGymExercise(dayIdx, exIdx, { reps: parseInt(e.target.value) || 0 })} />
-                            </div>
-                            <div className="w-[15%]">
-                              <Input className="h-8 text-xs text-center" value={ex.weight} onChange={(e) => updateGymExercise(dayIdx, exIdx, { weight: e.target.value })} placeholder="kg" />
-                            </div>
-                            <div className="w-[12%]">
-                              <Input className="h-8 text-xs text-center" value={ex.rest} onChange={(e) => updateGymExercise(dayIdx, exIdx, { rest: e.target.value })} placeholder="60s" />
-                            </div>
-                            <button onClick={() => removeGymExercise(dayIdx, exIdx)} className="text-muted-foreground hover:text-destructive shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                       <Button variant="outline" size="sm" onClick={() => addGymExercise(dayIdx)} className="h-8 text-xs">
                         <Plus className="w-3 h-3 mr-1" /> Añadir ejercicio

@@ -22,7 +22,7 @@ describe("meal check-ins", () => {
 
     expect(meal).toHaveAttribute("aria-pressed", "true");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem(`meals_done_${new Date().getFullYear()}-${new Date().getMonth() + 1}-${new Date().getDate()}`))
+    expect(localStorage.getItem(`meals_done_guest_${new Date().getFullYear()}-${new Date().getMonth() + 1}-${new Date().getDate()}`))
       .toBe(JSON.stringify(["Desayuno"]));
   });
 

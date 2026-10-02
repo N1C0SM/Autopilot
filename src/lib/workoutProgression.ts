@@ -48,7 +48,7 @@ export const getProgressionSuggestion = (
   const prescribedSets = completed.slice(0, exercise.series);
   const weights = prescribedSets.map((set) => set.weight);
   const loadedWeights = weights.filter((weight): weight is number => weight !== null);
-  const lastWeight = loadedWeights.at(-1);
+  const lastWeight = loadedWeights[loadedWeights.length - 1];
   const reachedTarget = prescribedSets.length === exercise.series
     && prescribedSets.every((set) => set.reps >= exercise.reps);
 

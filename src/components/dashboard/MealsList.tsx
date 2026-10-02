@@ -10,25 +10,26 @@ interface Meal {
 }
 
 interface Props {
+  userId?: string;
   meals: Meal[];
   macros?: MacroTargets | null;
   onOpenProfile?: () => void;
 }
 
-const todayKey = () => {
+const todayKey = (userId: string) => {
   const d = new Date();
-  return `meals_done_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  return `meals_done_${userId}_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 };
 
-const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
+const MealsList = ({ userId = "guest", meals, macros, onOpenProfile }: Props) => {
   const [done, setDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(todayKey());
-      if (raw) setDone(new Set(JSON.parse(raw)));
+      const raw = localStorage.getItem(todayKey(userId));
+      setDone(raw ? new Set(JSON.parse(raw)) : new Set());
     } catch { /* ignore */ }
-  }, []);
+  }, [userId]);
 
   const toggle = (name: string) => {
     const next = new Set(done);
@@ -39,7 +40,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
       void hapticTap();
     }
     setDone(next);
-    try { localStorage.setItem(todayKey(), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+    try { localStorage.setItem(todayKey(userId), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
   };
 
   const ratio = meals.length ? meals.filter((m) => done.has(m.name)).length / meals.length : 0;
@@ -95,9 +96,9 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
               />
             </svg>
             <div>
-              <div className="text-3xl font-bold font-display">{fmt(kcal * ratio)}</div>
-              <div className="text-sm text-muted-foreground">de {fmt(kcal)} kcal</div>
-              <div className="text-[11px] text-muted-foreground mt-1">Según las comidas que marques hoy</div>
+              <div className="text-3xl font-bold font-display">{fmt(kcal)}</div>
+              <div className="text-sm text-muted-foreground">kcal previstas</div>
+              <div className="text-[11px] text-muted-foreground mt-1">Objetivo del menú; no es consumo registrado</div>
             </div>
           </div>
           <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-2 sm:gap-3">
@@ -105,7 +106,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
               <div key={m.l} className="rounded-2xl bg-card border border-border p-3.5 sm:p-3">
                 <div className="text-sm sm:text-xs text-muted-foreground">{m.l}</div>
                 <div className="font-bold font-display">
-                  {fmt(m.v * ratio)}<span className="text-xs font-normal text-muted-foreground">/{fmt(m.v)} g</span>
+                  {fmt(m.v)}<span className="text-xs font-normal text-muted-foreground"> g previstas</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted mt-2 overflow-hidden">
                   <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: `${ratio * 100}%` }} />
@@ -116,6 +117,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
         </>
       )}
 
+      <p className="text-xs text-muted-foreground">Marcas rápidas del menú en este dispositivo: no registran cantidades ni calorías consumidas. Para compartir el consumo con tu entrenador, usa Alimentación registrada.</p>
       <div className="rounded-3xl bg-card border border-border divide-y divide-border overflow-hidden">
         {meals.map((meal, i) => {
           const isDone = done.has(meal.name);

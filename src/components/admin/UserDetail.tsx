@@ -1,3 +1,5 @@
+import FoodDiary from "@/components/tracking/FoodDiary";
+import WorkoutProgress from "@/components/dashboard/WorkoutProgress";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Chat from "@/components/Chat";
@@ -13,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_LABEL, TIERS } from "@/config/tiers";
-import UserProgressPanel from "./UserProgressPanel";
+
 import UserGoalPanel from "./UserGoalPanel";
 import TransformCyclePanel from "./TransformCyclePanel";
 import CalendarView from "@/components/dashboard/CalendarView";
@@ -882,7 +884,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Progress */}
         <TabsContent value="progress">
-          <UserProgressPanel userId={profile.user_id} travelModeUntil={profile.travel_mode_until} travelEquipment={profile.travel_equipment} />
+          <WorkoutProgress userId={profile.user_id} trainer />
+          <FoodDiary userId={profile.user_id} meals={[]} readOnly />
+          {profile.travel_mode_until && <p className="text-sm">Modo viaje hasta {profile.travel_mode_until} · {profile.travel_equipment || "Material sin indicar"}</p>}
         </TabsContent>
 
         {/* Tab: Training */}
