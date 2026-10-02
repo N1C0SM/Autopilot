@@ -6,6 +6,7 @@ import { Dumbbell, Apple, MessageCircle, ArrowRight, Flame, Clock, Calendar } fr
 import type { DayPlan } from "@/types/training";
 import type { UserSection } from "@/components/UserSidebar";
 import InfoHint from "@/components/InfoHint";
+import type { FirstWeekJourney } from "@/lib/firstWeek";
 
 interface Macros {
   protein: number;
@@ -26,6 +27,7 @@ interface Props {
   weeksActive?: number;
   completedDays?: number;
   completedToday?: boolean;
+  firstWeek?: FirstWeekJourney | null;
   coaching?: boolean;
   nutrition?: boolean;
   planStatus?: string;
@@ -40,7 +42,7 @@ const TIER_LABEL: Record<string, string> = {
   full: "Plan Completo",
 };
 
-const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false, coaching = true, nutrition = true, planStatus, tier }: Props) => {
+const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, completedDays, completedToday = false, firstWeek, coaching = true, nutrition = true, planStatus, tier }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
   const todayPlan = dayPlans.find((p) => p.day === todayName);
@@ -82,8 +84,53 @@ const HomeOverview = ({ dayPlans, macros, meals, onNavigate, weeksActive, comple
       )}
 
 
-      {/* Primeros pasos — solo hasta que complete su primer día */}
-      {(completedDays ?? 0) === 0 && (
+      {firstWeek && planReady && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="sm:col-span-2 lg:col-span-3 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-5"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-display text-sm font-bold">Tu primera semana · Día {firstWeek.dayNumber} de 7</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {firstWeek.target > 0
+                  ? firstWeek.completed >= firstWeek.target
+                    ? `Has completado las ${firstWeek.target} sesiones previstas. Ahora toca recuperar y volver según tu plan.`
+                    : `${firstWeek.completed} de ${firstWeek.target} sesiones previstas. No hace falta entrenar todos los días: sigue tu rutina.`
+                  : "Tu rutina se está preparando. Cuando esté lista, verás aquí tus sesiones de la semana."}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full border border-primary/20 bg-background/60 px-3 py-1 text-xs font-semibold text-primary">
+              {firstWeek.completed}/{firstWeek.target}
+            </span>
+          </div>
+          {firstWeek.target > 0 && (
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-secondary"
+              role="progressbar"
+              aria-label="Sesiones de entrenamiento completadas esta primera semana"
+              aria-valuemin={0}
+              aria-valuemax={firstWeek.target}
+              aria-valuenow={Math.min(firstWeek.completed, firstWeek.target)}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${Math.min((firstWeek.completed / firstWeek.target) * 100, 100)}%` }}
+              />
+            </div>
+          )}
+          <button
+            onClick={() => onNavigate(firstWeek.target > 0 && firstWeek.completed >= firstWeek.target ? "progress" : "training")}
+            className="mt-3 text-xs font-semibold text-primary hover:underline"
+          >
+            {firstWeek.target > 0 && firstWeek.completed >= firstWeek.target ? "Ver mi progreso" : "Ir a mi entrenamiento"}
+          </button>
+        </motion.div>
+      )}
+
+      {/* Primeros pasos para cuentas antiguas que aún no han entrenado */}
+      {!firstWeek && (completedDays ?? 0) === 0 && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}

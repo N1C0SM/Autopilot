@@ -179,10 +179,10 @@ const Welcome = () => {
         <motion.button
           whileTap={{ scale: 0.98 }}
           type="button"
-          onClick={() => navigate("/signup")}
+          onClick={() => navigate("/signup?free=true")}
           className="group relative w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.6)] overflow-hidden"
         >
-          <span className="relative z-10">Empezar 7 días gratis</span>
+          <span className="relative z-10">Crear cuenta gratis</span>
           <ArrowRight className="relative z-10 w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           <span
             aria-hidden
@@ -204,7 +204,7 @@ const Welcome = () => {
         <div className="flex items-center justify-center gap-1.5 pt-1">
           <ShieldCheck className="w-3 h-3 text-muted-foreground" />
           <p className="text-[10.5px] text-muted-foreground text-center leading-relaxed">
-            Cancela cuando quieras · Acepta{" "}
+            Plan gratis sin tarjeta · Entrenador opcional · Acepta{" "}
             <Link to="/legal/terminos" className="underline underline-offset-2">
               términos
             </Link>{" "}

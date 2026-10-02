@@ -29,6 +29,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
 import { TIERS } from "@/config/tiers";
+import { getFirstWeekJourney } from "@/lib/firstWeek";
 
 const Chat = lazy(() => import("@/components/Chat"));
 const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
@@ -89,6 +90,13 @@ const Dashboard = () => {
   const [profileCreatedAt, setProfileCreatedAt] = useState<string>("");
   const [completedDays, setCompletedDays] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
+  const [firstWeek, setFirstWeek] = useState<{
+    dayNumber: number;
+    startDate: string;
+    endDate: string;
+    target: number;
+    completed: number;
+  } | null>(null);
 
   const fetchData = useCallback(async ({
     syncSubscription = false,
@@ -145,7 +153,16 @@ const Dashboard = () => {
       if (profile.plan_status === "plan_ready") {
         const today = new Date();
         const todayDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-        const [{ data: tp }, { data: np }, { count: completionCount }, { data: todayCompletion }] = await Promise.all([
+        const firstWeekWindow = getFirstWeekJourney(profile.created_at, []);
+        const firstWeekCompletionsRequest = firstWeekWindow
+          ? supabase
+              .from("day_completions")
+              .select("completed_at")
+              .eq("user_id", user.id)
+              .gte("completed_at", firstWeekWindow.startDate)
+              .lte("completed_at", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
+          : Promise.resolve({ data: [], error: null });
+        const [{ data: tp }, { data: np }, { count: completionCount }, { data: todayCompletion }, firstWeekCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
           supabase
@@ -159,15 +176,29 @@ const Dashboard = () => {
             .eq("completed_at", todayDate)
             .limit(1)
             .maybeSingle(),
+          firstWeekCompletionsRequest,
         ]);
 
-        if (tp) setDayPlans(tp.workouts_json as unknown as DayPlan[]);
+        const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
+        if (plans) setDayPlans(plans);
         if (np) {
           setMacros(np.macros_json as unknown as Macros);
           setMeals(np.meals_json as unknown as Meal[]);
         }
         setCompletedDays(completionCount ?? 0);
         setCompletedToday(Boolean(todayCompletion));
+        const journey = getFirstWeekJourney(profile.created_at, plans || []);
+        if (journey) {
+          if (firstWeekCompletions.error) {
+            toast.error("No se pudo cargar el progreso de tu primera semana.");
+          }
+          setFirstWeek({
+            ...journey,
+            completed: new Set((firstWeekCompletions.data || []).map((row) => row.completed_at)).size,
+          });
+        } else {
+          setFirstWeek(null);
+        }
       }
     }
     setLoading(false);
@@ -362,8 +393,8 @@ const Dashboard = () => {
         <div className="w-full space-y-6">
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {coaching && <MyTrainerCard onOpenChat={() => setSection("chat")} />}
-          <HomeOverview coaching={coaching} nutrition={nutrition} planStatus={planStatus} tier={subscriptionTier} dayPlans={dayPlans} macros={nutrition ? macros : null} meals={nutrition ? meals : []} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} />
-          {!coaching && <CoachingOffer onChoose={handleCompletePayment} compact />}
+          <HomeOverview coaching={coaching} nutrition={nutrition} planStatus={planStatus} tier={subscriptionTier} dayPlans={dayPlans} macros={nutrition ? macros : null} meals={nutrition ? meals : []} onNavigate={(s) => setSection(s as MobileTab)} weeksActive={profileCreatedAt ? Math.floor((Date.now() - new Date(profileCreatedAt).getTime()) / (1000 * 60 * 60 * 24 * 7)) : 0} completedDays={completedDays} completedToday={completedToday} firstWeek={firstWeek} />
+          {!coaching && !firstWeek && <CoachingOffer onChoose={handleCompletePayment} compact />}
           {coaching && user && <TravelModeCard userId={user.id} />}
         </div>
       )}
@@ -377,6 +408,7 @@ const Dashboard = () => {
               onExit={() => {
                 setCompletedToday(true);
                 setSection("home");
+               void fetchData();
               }}
             />
           </Suspense>
