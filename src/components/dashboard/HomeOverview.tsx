@@ -139,7 +139,7 @@ const HomeOverview = ({
   }, [userId, coaching]);
 
   return (
-    <div className="mx-auto w-full max-w-none space-y-3 sm:space-y-4 lg:max-w-3xl">
+    <div className="mx-auto w-full max-w-none space-y-2.5 sm:space-y-4 lg:max-w-3xl">
       {planStatus === "plan_pending" ? (
         <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm">
           <p className="font-semibold">Tu entrenador está preparando tu plan</p>
@@ -147,11 +147,11 @@ const HomeOverview = ({
         </div>
       ) : (
         <>
-          <div className="px-1 pb-1">
+          <div className="px-1">
             <p className="text-xs font-semibold capitalize text-primary">
               {greetingDate}
             </p>
-            <h2 className="mt-1 font-display text-2xl font-bold leading-tight tracking-tight">
+            <h2 className="mt-0.5 font-display text-xl sm:text-2xl font-bold leading-tight tracking-tight">
               {firstName ? `Hola, ${firstName}.` : "Hola."}
               <span className="block">
                 {completedToday
@@ -171,7 +171,7 @@ const HomeOverview = ({
               void hapticTap();
               onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress");
             }}
-            className="group flex min-h-[5.5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
+            className="group flex min-h-[4.5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-4 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
             aria-label={completedToday ? "Ver progreso de la sesión" : `Empezar ${sessionTitle}`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
@@ -196,7 +196,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("nutrition")}
-              className="flex min-h-40 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
+              className="flex min-h-32 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
             >
               <span className="flex min-w-0 items-center gap-3">
                 <span className="relative h-11 w-11 shrink-0">
@@ -255,7 +255,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("progress")}
-              className="flex min-h-40 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
+              className="flex min-h-32 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
             >
               <span className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
