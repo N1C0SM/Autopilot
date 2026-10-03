@@ -63,7 +63,7 @@ const uploadImage = async (file: File, folder: string) => {
 const SiteContentEditor = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "" });
+  const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "", contact_phone: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
   const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
   const [transformationSlots, setTransformationSlots] = useState(10);
@@ -102,7 +102,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -111,6 +111,7 @@ const SiteContentEditor = () => {
         trainer_name: s.trainer_name || "Nicolás",
         trainer_photo_url: s.trainer_photo_url || "",
         trainer_bio: s.trainer_bio || "",
+        contact_phone: (s as any).contact_phone || "",
       });
       setHero({
         hero_video_url: (s as any).hero_video_url || "",
@@ -749,6 +750,11 @@ const SiteContentEditor = () => {
         <div>
           <Label className="text-xs">Bio</Label>
           <Textarea rows={4} value={trainer.trainer_bio} onChange={(e) => setTrainer((t) => ({ ...t, trainer_bio: e.target.value }))} placeholder="Llevo años ayudando a personas a..." />
+        </div>
+        <div>
+          <Label className="text-xs">Teléfono / WhatsApp de contacto</Label>
+          <Input value={trainer.contact_phone} onChange={(e) => setTrainer((t) => ({ ...t, contact_phone: e.target.value }))} placeholder="+34 600 000 000" />
+          <p className="text-xs text-muted-foreground mt-1">Se usa en el botón «Hablar por WhatsApp» de la solicitud de entrenadores.</p>
         </div>
         <Button onClick={saveTrainer} disabled={saving}>{saving ? "Guardando..." : "Guardar entrenador"}</Button>
       </div>
