@@ -217,12 +217,8 @@ function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: num
     x += widths[i] + 16;
   });
   const s = drawBigKg(ctx, fmt(p.volumeKg), W / 2, 1620, W - 240, 230);
-  const eq = tonnageEquivalence(p.volumeKg);
-  ctx.textAlign = "center"; ctx.fillStyle = "#fafaf9"; ctx.font = `700 52px ${F}`;
-  const eqText = eq ? eq.text.replace(/^Como levantar /, "Como levantar ") : `${p.sets} series completadas`;
-  wrap(ctx, eqText, W / 2, 1620 + Math.min(96, s * 0.4), W - 160, 60, 1);
-  ctx.fillStyle = "#bdb6a8"; ctx.font = `500 38px ${F}`;
-  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4) + 62);
+  ctx.textAlign = "center"; ctx.fillStyle = "#8e8e93"; ctx.font = `500 38px ${F}`;
+  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4));
 }
 
 export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
