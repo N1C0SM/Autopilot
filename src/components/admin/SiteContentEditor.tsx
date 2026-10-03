@@ -43,7 +43,7 @@ interface Recommendation {
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 const AI_KEYS = [
-  { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Genera las imágenes y vídeos de los ejercicios con tu cuenta de OpenAI.", placeholder: "sk-..." },
+  { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Vídeos, imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI.", placeholder: "sk-..." },
   { key: "ANTHROPIC_API_KEY", label: "Claude (Anthropic)", desc: "Reservada para futuras funciones de texto con Claude.", placeholder: "sk-ant-..." },
 ] as const;
 
@@ -421,8 +421,38 @@ const SiteContentEditor = () => {
           <h2 className="font-display font-bold">Claves de IA</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Pega aquí tus claves para que las imágenes y vídeos de ejercicios se generen con tu cuenta. Si las dejas vacías, se usan los créditos internos de la plataforma.
+          Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI.
         </p>
+        <div className="p-3 rounded-lg border border-border space-y-2">
+          <p className="text-sm font-medium">¿Qué IA usar?</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {([
+              ["auto", "Automático", "Tu clave primero; si no tiene saldo, Lovable"],
+              ["openai", "Solo mi clave", "Siempre tu cuenta de OpenAI"],
+              ["lovable", "Solo Lovable", "Siempre los créditos de Lovable"],
+            ] as const).map(([v, label, desc]) => {
+              const active = (aiKeys.AI_PROVIDER || "auto") === v;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={async () => {
+                    setAiKeys((p) => ({ ...p, AI_PROVIDER: v }));
+                    const { error } = await supabase.from("app_secrets").upsert({ key: "AI_PROVIDER", value: v, updated_at: new Date().toISOString() } as any);
+                    if (error) toast.error("No se pudo guardar"); else toast.success(`IA: ${label}`);
+                  }}
+                  className={`text-left p-3 rounded-lg border transition-colors ${active ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}
+                >
+                  <p className="text-sm font-medium">{label}</p>
+                  <p className="text-xs text-muted-foreground">{desc}</p>
+                </button>
+              );
+            })}
+          </div>
+          {(aiKeys.AI_PROVIDER === "openai") && !aiKeys.OPENAI_API_KEY && (
+            <p className="text-xs text-muted-foreground">Aún no has puesto tu clave de OpenAI: mientras tanto se usa Lovable.</p>
+          )}
+        </div>
         <div className="space-y-3">
           {AI_KEYS.map((k) => (
             <div key={k.key} className="p-3 rounded-lg border border-border space-y-2">
