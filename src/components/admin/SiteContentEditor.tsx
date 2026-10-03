@@ -479,6 +479,46 @@ const SiteContentEditor = () => {
             </div>
           ))}
         </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 pt-2">
+          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Libros en la landing</p>
+              <p className="text-[11px] text-muted-foreground">Cuántas guías se muestran en la portada (0 = ninguna).</p>
+            </div>
+            <Input
+              type="number" min={0} max={24}
+              className="w-20 text-center"
+              value={landingCounts.landing_ebooks_count}
+              onChange={(e) => setLandingCounts({ ...landingCounts, landing_ebooks_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
+              onBlur={() => saveLandingCounts(landingCounts)}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Recomendaciones en la landing</p>
+              <p className="text-[11px] text-muted-foreground">Cuántos productos recomendados se muestran en la portada.</p>
+            </div>
+            <Input
+              type="number" min={0} max={24}
+              className="w-20 text-center"
+              value={landingCounts.landing_recommendations_count}
+              onChange={(e) => setLandingCounts({ ...landingCounts, landing_recommendations_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
+              onBlur={() => saveLandingCounts(landingCounts)}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-primary/30 bg-primary/5">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Ordenar con IA</p>
+            <p className="text-[11px] text-muted-foreground">La IA analiza libros y recomendaciones y pone primero los que más venden. En la landing se mostrarán los primeros según las cantidades de arriba.</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" disabled={ranking} onClick={rankWithAi} className="shrink-0">
+            {ranking ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+            Ordenar con IA
+          </Button>
+        </div>
       </div>
 
 
