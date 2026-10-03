@@ -453,8 +453,8 @@ const Index = () => {
                       Ver todas <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
-                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    {ebooks.slice(0, 3).map((e, i) => (
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                    {ebooks.slice(0, 4).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
                         <button
                           type="button"
@@ -468,7 +468,9 @@ const Index = () => {
                           <div className="p-5 flex-1 flex flex-col">
                             <h4 className="font-display font-bold leading-snug group-hover:text-primary transition-colors">{e.title}</h4>
                             {e.description && (
-                              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed flex-1">{e.description}</p>
+                              <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed flex-1 line-clamp-3">
+                                {e.description.split(/\n+/).map((l) => l.trim()).filter((l) => l && !/^[-•*·]\s*/.test(l)).join(" ")}
+                              </p>
                             )}
                             <div className="flex items-center justify-between mt-4 pt-3 border-t border-border">
                               <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
