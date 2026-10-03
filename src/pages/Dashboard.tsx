@@ -93,6 +93,11 @@ const Dashboard = () => {
     setSectionState(s);
     try { sessionStorage.setItem("autopilot_section", s); } catch { /* storage no disponible */ }
   }, []);
+  const [visited, setVisited] = useState<MobileTab[]>(() => [section]);
+  useEffect(() => {
+    setVisited((v) => (v.includes(section) ? v : [...v, section]));
+  }, [section]);
+  const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records">("evolution");
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
@@ -376,7 +381,7 @@ const Dashboard = () => {
     resources: "Biblioteca, guías y recomendaciones",
   };
 
-  const pageContent = (
+  const renderContent = (section: MobileTab) => (
     <>
       {!coaching && section === "home" && (
         <div className="space-y-4 mb-6">
@@ -512,38 +517,60 @@ const Dashboard = () => {
 
       {hasPlan && section === "progress" && user && (
         <div className="w-full space-y-4">
-          {!isMobile && <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-bold font-display">Tu progreso</h2>
-              <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
-            </div>
-            <Button size="sm" variant="outline" onClick={() => navigate(`/scan/user/${user.id}`)}>
+          <div className="flex items-center justify-between gap-2">
+            {!isMobile && (
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <h2 className="text-xl font-bold font-display">Tu progreso</h2>
+                <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
+              </div>
+            )}
+            <Button size="sm" variant="outline" className="ml-auto" onClick={() => navigate(`/scan/user/${user.id}`)}>
               AI Scan
             </Button>
-          </div>}
-          <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
+          </div>
+          <div role="tablist" className="sticky top-0 z-10 grid grid-cols-3 gap-1 rounded-full border border-border/60 bg-card/90 p-1 backdrop-blur-xl">
+            {([
+              ["evolution", "Evolución"],
+              ["photos", "Fotos"],
+              ["records", "Récords"],
+            ] as const).map(([k, label]) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={progressTab === k}
+                onClick={() => setProgressTab(k)}
+                className={`h-9 rounded-full text-sm font-medium transition-colors ${progressTab === k ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <Suspense fallback={<SectionFallback />}>
-            <WorkoutProgress userId={user.id} />
-            <ProgressCharts userId={user.id} />
-            <PRsList userId={user.id} />
-          </Suspense>
-          <Suspense fallback={<SectionFallback />}>
-            <ProgressPhotos userId={user.id} />
-          </Suspense>
-          {isMobile && (
-            <div className="flex justify-end">
-              <Button size="sm" variant="outline" onClick={() => navigate(`/scan/user/${user.id}`)}>
-                AI Scan
-              </Button>
+            <div className={progressTab === "evolution" ? "space-y-4" : "hidden"}>
+              <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
+              <WorkoutProgress userId={user.id} />
+              <ProgressCharts userId={user.id} />
             </div>
-          )}
+            {progressTab === "photos" && <ProgressPhotos userId={user.id} />}
+            {progressTab === "records" && <PRsList userId={user.id} />}
+          </Suspense>
         </div>
       )}
 
       {section === "settings" && (
         <div className="w-full"><SettingsPanel /></div>
       )}
+    </>
+  );
+
+  const pageContent = (
+    <>
+      {visited.map((s) => (
+        <div key={s} hidden={s !== section} className="min-w-0">
+          {renderContent(s)}
+        </div>
+      ))}
     </>
   );
 
