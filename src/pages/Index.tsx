@@ -630,6 +630,7 @@ const Index = () => {
             <Link to="/signup" className="hover:text-foreground transition-colors">Registro</Link>
             <Link to="/connect" className="hover:text-foreground transition-colors">Conectar con IA</Link>
             <Link to="/recursos" className="hover:text-foreground transition-colors">Recursos</Link>
+            <Link to="/para-entrenadores" className="hover:text-foreground transition-colors">Para entrenadores</Link>
             <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
             <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
             <Link to="/legal/privacidad" className="hover:text-foreground transition-colors">Privacidad</Link>

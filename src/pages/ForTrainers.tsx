@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { TrainerApplyModal } from "@/components/TrainerOffer";
 
 type PublicPlan = { name: string; description: string; price: number; currency: string; billing_interval: string; max_clients: number; features: unknown; accepting_new_subscriptions: boolean };
 
@@ -16,6 +17,7 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
 /** Landing B2B. Solo existe si el admin lo activó y lo hizo visible (validado en servidor). */
 export default function ForTrainers() {
   const [plan, setPlan] = useState<PublicPlan | null | undefined>(undefined);
+  const [open, setOpen] = useState(false);
   useEffect(() => { void supabase.rpc("get_trainer_plan_public").then(({ data }) => setPlan(data?.[0] ?? null)); }, []);
   if (plan === undefined) return <Shell><Loader2 className="mx-auto w-6 h-6 animate-spin text-primary" /></Shell>;
   if (!plan) return <Shell><h1 className="font-display text-xl font-bold">Página no disponible</h1><Button asChild variant="outline"><Link to="/">Volver al inicio</Link></Button></Shell>;
@@ -24,12 +26,12 @@ export default function ForTrainers() {
       <p className="text-xs font-semibold uppercase tracking-widest text-primary">Autopilot para entrenadores</p>
       <h1 className="font-display text-2xl font-bold">Gestiona a tus clientes con Autopilot.</h1>
       <p className="text-sm text-muted-foreground">{plan.description}</p>
-      <p className="text-3xl font-bold font-display">{plan.price} {plan.currency === "EUR" ? "€" : plan.currency}<span className="text-sm text-muted-foreground">/{plan.billing_interval === "year" ? "año" : "mes"}</span></p>
-      <p className="text-xs text-muted-foreground">Hasta {plan.max_clients} clientes</p>
-      <ul className="text-sm text-left space-y-1">{(Array.isArray(plan.features) ? plan.features as string[] : []).map((f) => <li key={f}>· {f}</li>)}</ul>
+      <p className="text-sm font-semibold">Plan a medida de tu número de clientes y tu forma de trabajar.</p>
+      <ul className="text-sm text-left space-y-1">{(Array.isArray(plan.features) ? plan.features as string[] : []).filter((f) => !/cliente/i.test(f) || !/\d/.test(f)).map((f) => <li key={f}>· {f}</li>)}</ul>
       {plan.accepting_new_subscriptions
-        ? <Button asChild variant="hero" className="w-full"><a href="mailto:hola@autopilotplan.com?subject=Autopilot%20para%20entrenadores">Quiero empezar</a></Button>
+        ? <Button variant="hero" className="w-full" onClick={() => setOpen(true)}>Personalizar mi acceso</Button>
         : <p className="text-sm text-muted-foreground">Ahora mismo no aceptamos nuevas altas.</p>}
+      <TrainerApplyModal plan={plan} open={open} onClose={() => setOpen(false)} />
     </Shell>
   );
 }
