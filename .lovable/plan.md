@@ -1,23 +1,26 @@
-# Panel de admin de usuario: navegación limpia
+# Panel de admin de usuario: minimalismo total
 
 ## Problema
-La ficha de usuario en Admin está saturada: 6 pestañas con icono + texto que ocupan todo el ancho, sub-pestañas dentro de Entreno, y etiquetas redundantes en la cabecera («Coach · 49€/mes», «Plan listo») que roban espacio sin aportar nada que no se vea ya en la pestaña Plan y acceso.
+La ficha de usuario en Admin está saturada: cabecera con etiquetas redundantes («Coach · 49€/mes», «Plan listo»), 6 pestañas apretadas con icono + texto, sub-pestañas dentro de Entreno, y demasiados elementos compitiendo por atención.
 
-## Solución
+## Solución: solo lo esencial
 
-### Cabecera compacta
-- Se eliminan las etiquetas «Coach · 49€/mes» y «Plan listo» bajo el nombre. El plan se gestiona y se ve en la pestaña Plan y acceso.
-- Avatar, nombre y acciones (Auto-generar, Guardar, Ver como, borrar) en una fila que se adapta; en pantallas estrechas las acciones secundarias van a un menú de tres puntos.
+### Cabecera mínima
+- Una sola fila: flecha atrás, nombre, y acciones. Nada más.
+- Fuera etiquetas de plan/estado bajo el nombre (eso vive en Plan y acceso).
+- Acciones secundarias (Ver como, borrar) en un menú de tres puntos; solo Guardar visible como botón.
 
-### Navegación principal
-- Las 6 pestañas (Cliente, Plan y acceso, Progreso, Entreno, Nutrición, Chat) pasan a un control segmentado compacto: espaciado uniforme, pestaña activa con fondo dorado suave, resto en gris silencioso.
-- En pantallas estrechas: iconos con etiqueta en miniatura o scroll horizontal elegante, sin deformarse.
+### Navegación mínima
+- Las 6 secciones pasan a una fila de iconos limpios con etiqueta solo en la activa (o etiquetas cortas sin icono en escritorio). Activada = dorado suave; resto = gris silencioso.
+- Cero sub-pestañas: Entreno muestra calendario y plan en una sola vista continua.
 
-### Entreno sin sub-pestañas
-- Fuera la segunda fila de pestañas (Plan / Calendario): una sola vista con calendario compacto arriba y plan debajo, o un selector pequeño integrado en la cabecera de sección.
+### Contenido mínimo
+- Cada sección se revisa con la regla: si un dato no se usa para decidir o actuar, se quita.
+- Tarjetas planas: una superficie por bloque, sin cajas dentro de cajas; separación por aire y líneas finas.
+- Textos auxiliares y avisos redundantes fuera.
 
 ## Resultado
-Una cabecera limpia sin etiquetas redundantes, una sola barra de navegación clara, sin barras anidadas. Todo se encuentra de un vistazo.
+El panel se lee de un vistazo: nombre arriba, iconos de sección, y solo los datos que importan. Nada decorativo.
 
 ## Verificación
-- Typecheck limpio y revisión visual a varios anchos (móvil y escritorio).
+- Typecheck limpio y revisión visual en móvil y escritorio.
