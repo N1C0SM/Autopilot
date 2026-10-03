@@ -118,7 +118,7 @@ export default function ProductsAdmin() {
               </select>
             </label>
             <label className="text-sm space-y-1">Máximo de clientes (interno, no se muestra)<Input type="number" defaultValue={cfg.max_clients} onBlur={(e) => void save({ max_clients: Number(e.target.value) })} /></label>
-            <label className="text-sm space-y-1">Price ID Stripe (live)<Input defaultValue={cfg.stripe_price_id_live || ""} onBlur={(e) => void save({ stripe_price_id_live: e.target.value || null })} /></label>
+            <label className="text-sm space-y-1">Enlace de pago Stripe (Payment Link)<Input type="url" placeholder="https://buy.stripe.com/..." defaultValue={cfg.stripe_price_id_live || ""} onBlur={(e) => void save({ stripe_price_id_live: e.target.value || null })} /></label>
           </div>
           <label className="text-sm space-y-1 block">Descripción<Textarea defaultValue={cfg.description} onBlur={(e) => void save({ description: e.target.value })} /></label>
           <label className="text-sm space-y-1 block">Funciones incluidas (una por línea)
