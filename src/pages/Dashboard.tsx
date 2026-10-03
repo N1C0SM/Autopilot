@@ -491,9 +491,6 @@ const Dashboard = () => {
           <Suspense fallback={<SectionFallback />}>
             <MealsList meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
           </Suspense>
-          <div className="text-center pt-2">
-            <Button variant="ghost" size="sm" onClick={handleManageSubscription} className="text-muted-foreground">Gestionar suscripción</Button>
-          </div>
         </div>
       )}
 
