@@ -44,7 +44,7 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 const AI_KEYS = [
   { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Vídeos, imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI.", placeholder: "sk-..." },
-  { key: "ANTHROPIC_API_KEY", label: "Claude (Anthropic)", desc: "Reservada para futuras funciones de texto con Claude.", placeholder: "sk-ant-..." },
+  { key: "ANTHROPIC_API_KEY", label: "Claude (Anthropic)", desc: "Segunda opción para el texto si OpenAI se queda sin saldo.", placeholder: "sk-ant-..." },
 ] as const;
 
 
@@ -425,13 +425,12 @@ const SiteContentEditor = () => {
         </p>
         <div className="p-3 rounded-lg border border-border space-y-2">
           <p className="text-sm font-medium">¿Qué IA usar?</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {([
-              ["auto", "Automático", "Tu clave primero; si no tiene saldo, Lovable"],
-              ["openai", "Solo mi clave", "Siempre tu cuenta de OpenAI"],
+              ["auto", "En cadena", "1º OpenAI → si no tiene saldo, 2º Claude → si tampoco, 3º Lovable"],
               ["lovable", "Solo Lovable", "Siempre los créditos de Lovable"],
             ] as const).map(([v, label, desc]) => {
-              const active = (aiKeys.AI_PROVIDER || "auto") === v;
+              const active = (aiKeys.AI_PROVIDER === "lovable" ? "lovable" : "auto") === v;
               return (
                 <button
                   key={v}
@@ -449,9 +448,9 @@ const SiteContentEditor = () => {
               );
             })}
           </div>
-          {(aiKeys.AI_PROVIDER === "openai") && !aiKeys.OPENAI_API_KEY && (
-            <p className="text-xs text-muted-foreground">Aún no has puesto tu clave de OpenAI: mientras tanto se usa Lovable.</p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            Lovable no necesita clave: va incluida y siempre queda como último recurso. Si no pones una clave, ese paso se salta. Claude solo hace texto (blog, comidas, sugerencias…); las imágenes y vídeos pasan de OpenAI directamente a Lovable.
+          </p>
         </div>
         <div className="space-y-3">
           {AI_KEYS.map((k) => (
