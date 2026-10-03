@@ -39,8 +39,7 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 
   useEffect(() => { if (open) { setStep(-1); setAnswers({}); setError(""); } }, [open]);
   useEffect(() => {
-    void supabase.from("settings").select("contact_phone").limit(1).maybeSingle()
-      .then(({ data }) => setPhone((data as { contact_phone?: string } | null)?.contact_phone || ""));
+    void supabase.rpc("get_contact_phone_public").then(({ data }) => setPhone((data as string) || ""));
   }, []);
   const waDigits = phone.replace(/\D/g, "");
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent("Hola, acabo de enviar mi solicitud de Autopilot para entrenadores.")}` : "";
