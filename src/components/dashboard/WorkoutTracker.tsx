@@ -640,124 +640,31 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               <DialogContent className="flex h-[min(80dvh,38rem)] w-[calc(100%-1.5rem)] max-w-md flex-col overflow-hidden rounded-[2rem] border border-primary/20 bg-card/95 p-0 pb-4 pt-5 shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.35)] ring-1 ring-foreground/5 backdrop-blur-2xl sm:rounded-[2rem] [&>button]:top-4 [&_*]:min-w-0">
               <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/15 to-transparent" />
               <div className="mx-auto flex min-h-0 w-full flex-1 flex-col">
-              <WorkoutStudyCards
-                immersive
-                onFinish={() => setShowCompletionSummary(false)}
-                muscles={musclesWorked}
-                muscleSetCounts={muscleSetCounts}
-                intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
-                current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
-                previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
-                rpe={sessionRpe}
-                intro={
-                  <div className="flex h-full flex-col gap-5">
-                    <header className="flex items-center gap-3 pt-2 text-left">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary shadow-[0_0_30px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30">
-                        <Trophy className="h-5 w-5" />
-                      </div>
-                      <div className="w-full">
-                        <DialogTitle className="text-lg font-semibold leading-tight tracking-tight">Entrenamiento completado</DialogTitle>
-                        <DialogDescription className="truncate text-xs text-muted-foreground">
-                          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })} · {trainingTitle || sessionMessage}
-                        </DialogDescription>
-                      </div>
-                    </header>
-                    {personalRecords.length > 0 && (
-                      <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
-                        <Trophy className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
-                      </p>
-                    )}
-                    <div className="grid grid-cols-4 divide-x divide-border/60 border-y border-border/60 py-3">
-                      {[
-                        { label: "Ejercicios", value: `${completedExercises}/${currentPlan.exercises?.length || 0}` },
-                        { label: "Series", value: String(completedSets) },
-                        { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)}` : "—", unit: totalVolume > 0 ? "kg" : "" },
-                        { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}` : "—", unit: sessionRpe !== null ? "/10" : "" },
-                      ].map((item) => (
-                        <div key={item.label} className="px-2 text-center">
-                          <p className="truncate text-lg font-semibold tabular-nums tracking-tight">
-                            {item.value}{item.unit && <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">{item.unit}</span>}
-                          </p>
-                          <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-muted-foreground">{item.label}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-auto">
-                      <WorkoutStoryShare
-                        title={trainingTitle || "Sesión de hoy"}
-                        date={new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
-                        volumeKg={totalVolume}
-                        sets={completedSets}
-                        exercises={completedExercises}
-                        records={personalRecords}
-                        muscles={musclesWorked}
-                      />
-                    </div>
-                  </div>
-                }
-              />
+              {renderStudyCards(true)}
               </div>
               </DialogContent>
             )}
           </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
-            <div className="flex min-h-[calc(100dvh-12rem)] flex-col justify-center rounded-[2rem] border border-primary/25 bg-gradient-to-b from-primary/10 via-card to-card p-5 sm:p-8">
-              <div className="mx-auto w-full max-w-lg text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
-                  <Check className="h-8 w-8 text-primary" />
-                </div>
-                <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Entrenamiento de hoy</p>
-                <h2 className="mt-1 font-display text-3xl font-bold">Hecho por hoy</h2>
-                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
-                  Ya completaste {trainingTitle || selectedDay}. Ahora toca recuperar: mañana podrás volver a entrenar.
-                </p>
-
-                <div className="mt-7 grid grid-cols-3 gap-2 text-left">
-                  <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
-                    <p className="text-xl font-bold tabular-nums">{completedExercises}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">ejercicios</p>
+            <div className="flex flex-col">
+              <div className="mx-auto w-full max-w-lg">
+                <div className="mb-3 flex items-center gap-3 px-1">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30">
+                    <Check className="h-5 w-5" />
                   </div>
-                  <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
-                    <p className="text-xl font-bold tabular-nums">{completedSets}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">series hechas</p>
-                  </div>
-                  <div className="rounded-2xl border border-border/70 bg-background/60 p-3">
-                    <p className="text-xl font-bold tabular-nums">{totalVolume > 0 ? `${Math.round(totalVolume)}` : "—"}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">{totalVolume > 0 ? "kg de volumen" : "volumen"}</p>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">Hecho por hoy</p>
+                    <h2 className="truncate font-display text-lg font-bold">{trainingTitle || selectedDay}</h2>
                   </div>
                 </div>
-
-                {musclesWorked.length > 0 && (
-                  <div className="mt-3 rounded-2xl border border-border/70 bg-background/60 p-4 text-left">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grupos trabajados</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {musclesWorked.map((muscle) => (
-                        <span key={muscle} className="rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[10px] font-medium text-primary">
-                          {muscle}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
+                {renderStudyCards(false)}
                 <div className="mt-3 flex items-start gap-3 rounded-2xl bg-secondary/50 p-4 text-left">
                   <Flame className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <div>
-                    <p className="text-xs font-semibold">Prioriza la recuperación</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Hidrátate, come bien y deja que el cuerpo asimile el trabajo. Tu plan semanal sigue aquí cuando lo necesites.
-                    </p>
-                  </div>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Toca recuperar: hidrátate, come bien y mañana vuelves más fuerte.
+                  </p>
                 </div>
-                <button
-                  type="button"
-                  className="mt-5 text-sm font-semibold text-primary underline-offset-4 hover:underline"
-                  onClick={() => setShowCompletionSummary(true)}
-                >
-                  Ver análisis de hoy
-                </button>
                 <Button type="button" variant="hero" className="mt-3 h-12 w-full rounded-2xl" onClick={onExit}>
                   Volver al inicio
                 </Button>
@@ -765,31 +672,40 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             </div>
           )}
 
-          {/* Rest timer floating */}
+          {/* Rest island floating */}
           {!workoutCompleted && completionReady && <AnimatePresence>
             {restTimer !== null && (
               <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-primary/10 border border-primary/30 rounded-xl p-3 flex items-center justify-between"
+                initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 24, scale: 0.96 }}
+                className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-50 mx-auto flex w-[calc(100%-1.5rem)] max-w-sm items-center gap-3 rounded-full border border-primary/25 bg-card/95 p-2 pr-3 shadow-[0_20px_50px_-15px_hsl(var(--primary)/0.45)] backdrop-blur-xl md:bottom-6"
+                role="timer"
+                aria-label="Descanso entre series"
               >
-                <div className="flex items-center gap-2">
-                  <Timer className="w-4 h-4 text-primary animate-pulse" />
-                  <span className="text-sm font-medium">Descanso · siguiente serie</span>
-                  <InfoHint text={`Cuenta atrás automática al marcar una serie (${restTarget}s según tu plan). Puedes reiniciarla o saltarla con el icono de la derecha.`} />
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold font-mono text-primary">
+                <div className="relative h-14 w-14 shrink-0">
+                  <svg viewBox="0 0 56 56" className="h-14 w-14 -rotate-90">
+                    <circle cx="28" cy="28" r="24" fill="none" stroke="hsl(var(--border))" strokeWidth="4" />
+                    <circle
+                      cx="28" cy="28" r="24" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 24}
+                      strokeDashoffset={2 * Math.PI * 24 * (1 - restTimer / Math.max(restTarget, 1))}
+                      style={{ transition: "stroke-dashoffset 1s linear" }}
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums">
                     {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                   </span>
-                  <button
-                    onClick={() => setRestTimer(null)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">Descanso</p>
+                  <p className="truncate text-xs text-muted-foreground">Siguiente serie</p>
+                </div>
+                <button type="button" aria-label="Restar 30 segundos" onClick={() => adjustRest(-30)} className="h-10 rounded-full bg-secondary px-3 text-xs font-semibold tabular-nums">−30</button>
+                <button type="button" aria-label="Sumar 30 segundos" onClick={() => adjustRest(30)} className="h-10 rounded-full bg-secondary px-3 text-xs font-semibold tabular-nums">+30</button>
+                <button type="button" aria-label="Saltar descanso" onClick={() => setRestTimer(null)} className="flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground">
+                  <X className="h-4 w-4" />
+                </button>
               </motion.div>
             )}
           </AnimatePresence>}
@@ -1004,12 +920,19 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                           return (
                           <div
                             key={si}
-                            className={`grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center p-2 rounded-lg transition-all ${
-                              set.done
+                            className={`relative grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center p-2 rounded-lg transition-all ${
+                              livePRs[`${ex.name}#${si}`]
+                                ? "bg-accent/15 border border-accent/60 shadow-[0_0_24px_hsl(var(--accent)/0.35)]"
+                                : set.done
                                 ? "bg-primary/10 border border-primary/20"
                                 : "bg-secondary/30"
                             }`}
                           >
+                            {livePRs[`${ex.name}#${si}`] && (
+                              <span className="absolute -top-2 right-14 rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-accent-foreground">
+                                Récord · {livePRs[`${ex.name}#${si}`]}
+                              </span>
+                            )}
                             {/* Set number */}
                             <span className={`text-xs font-bold text-center ${
                               set.done ? "text-primary" : "text-muted-foreground"
