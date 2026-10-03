@@ -167,43 +167,29 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
   ctx.fillText("CARGA TOTAL", 104, panelY + 86);
   drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, panelY + 300, W - 190, 210);
 
-  const ringX = 270, ringY = panelY + 545;
-  const ringData = [
-    { radius: 144, width: 33, color: "#ff375f", progress: Math.min(0.93, 0.45 + p.sets / 45) },
-    { radius: 101, width: 33, color: "#a8f000", progress: Math.min(0.92, 0.4 + p.exercises / 15) },
-    { radius: 58, width: 33, color: "#32ade6", progress: Math.min(0.9, 0.42 + p.muscles.length / 18) },
+  // Autopilot gold hairline under the hero
+  const gold = ctx.createLinearGradient(104, 0, W - 104, 0);
+  gold.addColorStop(0, "rgba(245,166,35,0)"); gold.addColorStop(0.5, "#f5a623"); gold.addColorStop(1, "rgba(245,166,35,0)");
+  ctx.fillStyle = gold; ctx.fillRect(104, panelY + 360, W - 208, 3);
+
+  // Bento telemetry modules (own identity, no rings)
+  const stats: [string, string, number][] = [
+    [String(p.sets), "Series", Math.min(1, p.sets / 30)],
+    [String(p.exercises), "Ejercicios", Math.min(1, p.exercises / 10)],
+    [String(p.muscles.length), "Grupos", Math.min(1, p.muscles.length / 8)],
   ];
-  ctx.lineCap = "round";
-  ringData.forEach(({ radius, width, color, progress }) => {
-    ctx.lineWidth = width;
-    ctx.strokeStyle = `${color}26`;
-    ctx.beginPath(); ctx.arc(ringX, ringY, radius, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = color;
-    ctx.shadowColor = `${color}66`; ctx.shadowBlur = 16;
-    ctx.beginPath(); ctx.arc(ringX, ringY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); ctx.stroke();
-    ctx.shadowBlur = 0;
+  const gap = 24, mw = (W - 104 - 96 - gap * 2) / 3, my = panelY + 420, mh = 300;
+  stats.forEach(([value, label, prog], i) => {
+    const x = 100 + i * (mw + gap);
+    roundedPanel(ctx, x, my, mw, mh, 40, "rgba(255,255,255,0.05)");
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#f5f5f7"; ctx.font = `700 92px ${F}`; ctx.fillText(value, x + 30, my + 150);
+    ctx.fillStyle = "#8e8e93"; ctx.font = `600 26px ${F}`; ctx.fillText(label.toUpperCase(), x + 30, my + 200);
+    ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, mw - 60, 8, 4); ctx.fill();
+    const g = ctx.createLinearGradient(x + 30, 0, x + mw - 30, 0);
+    g.addColorStop(0, "#ffd166"); g.addColorStop(1, "#f5a623");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, Math.max(16, (mw - 60) * prog), 8, 4); ctx.fill();
   });
-
-  const stats = [[String(p.sets), "Series", "#ff375f"], [String(p.exercises), "Ejercicios", "#a8f000"], [String(p.muscles.length), "Grupos", "#32ade6"]];
-  stats.forEach(([value, label, color], i) => {
-    const y = panelY + 440 + i * 116;
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(525, y - 10, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#f5f5f7"; ctx.font = `700 56px ${F}`; ctx.textAlign = "left"; ctx.fillText(value, 555, y);
-    ctx.fillStyle = "#8e8e93"; ctx.font = `500 28px ${F}`; ctx.fillText(label, 555, y + 38);
-  });
-
-  const eq = tonnageEquivalence(p.volumeKg);
-  if (eq) {
-    roundedPanel(ctx, 52, panelY + 830, W - 104, 190, 54, "rgba(255,159,10,0.09)");
-    ctx.fillStyle = "#ff9f0a";
-    ctx.beginPath(); ctx.roundRect(92, panelY + 874, 102, 102, 28); ctx.fill();
-    ctx.strokeStyle = "#111113"; ctx.lineWidth = 9;
-    ctx.beginPath(); ctx.arc(143, panelY + 925, 25, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(108, panelY + 925); ctx.lineTo(178, panelY + 925); ctx.stroke();
-    ctx.fillStyle = "#8e8e93"; ctx.font = `600 25px ${F}`; ctx.textAlign = "left"; ctx.fillText("EQUIVALENCIA", 230, panelY + 895);
-    ctx.fillStyle = "#f5f5f7"; ctx.font = `600 35px ${F}`;
-    wrap(ctx, eq.text, 230, panelY + 945, W - 330, 42, 2);
-  }
 
   ctx.textAlign = "center"; ctx.fillStyle = "#636366"; ctx.font = `500 27px ${F}`;
   ctx.fillText("Entrenamiento completado", W / 2, H - 88);
