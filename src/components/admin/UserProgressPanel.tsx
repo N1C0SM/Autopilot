@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Trophy, Activity, ClipboardCheck, Plane, Dumbbell, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -61,6 +62,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [realtimeError, setRealtimeError] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -167,8 +169,10 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
     0,
   );
 
+  const latestDate = latestSessionDate ? new Date(`${latestSessionDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" }) : "—";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {loadError && (
         <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-start gap-3 text-sm">
           <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
@@ -178,49 +182,59 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           </div>
         </div>
       )}
-      {!realtimeConnected && (
-        <div className="text-xs text-amber-500" role="status">
-          {realtimeError ? "No se pudo conectar con las actualizaciones en directo." : "Conectando con las actualizaciones en directo…"}
-        </div>
+      {realtimeError && (
+        <div className="text-xs text-amber-500" role="status">No se pudo conectar con las actualizaciones en directo.</div>
       )}
 
-      {/* Immediate coach view: what the user actually did most recently */}
+      {/* Immediate coach view: one compact row, full detail on demand */}
       {latestSession.length > 0 && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-            <div>
+        <>
+          <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-wider text-primary font-bold">
-                Último entreno realizado · {realtimeConnected ? "En directo" : "conectando"}
+                Último entreno{realtimeConnected ? " · en directo" : ""}
               </div>
-              <h2 className="font-bold font-display text-lg mt-1">
-                {latestSession[0].day_label} · {latestSessionDate ? new Date(`${latestSessionDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" }) : "—"}
-              </h2>
+              <div className="text-sm font-semibold truncate mt-0.5">
+                {latestSession[0].day_label} · {latestDate}
+              </div>
             </div>
-            <div className="text-right text-xs text-muted-foreground">
+            <div className="text-right text-xs text-muted-foreground shrink-0">
               <div><span className="font-bold text-foreground">{latestSessionDone}/{latestSessionTotal}</span> series</div>
-              <div>{latestSessionVolume.toLocaleString("es-ES")} kg de volumen</div>
+              <div>{latestSessionVolume.toLocaleString("es-ES")} kg</div>
             </div>
+            <Button size="sm" variant="outline" className="shrink-0" onClick={() => setReviewOpen(true)}>
+              Ver
+            </Button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {latestSession.map((log) => (
-              <div key={log.id} className="bg-card/70 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
-                <span className="text-sm font-medium truncate">{log.exercise_name}</span>
-                <span className="text-xs text-muted-foreground text-right shrink-0">
-                  {log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || "No completado"}
-                </span>
+          <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+            <DialogContent className="max-w-2xl max-h-[85dvh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{latestSession[0].day_label} · {latestDate}</DialogTitle>
+                <DialogDescription>
+                  {latestSessionDone}/{latestSessionTotal} series · {latestSessionVolume.toLocaleString("es-ES")} kg de volumen
+                </DialogDescription>
+              </DialogHeader>
+              {completedReviewSession && (
+                <WorkoutReview
+                  coach
+                  current={completedReviewSession[1].map(log => ({ name: log.exercise_name, sets: log.sets_completed }))}
+                  previous={(reviewPrevious?.[1] || []).map(log => ({ name: log.exercise_name, sets: log.sets_completed }))}
+                  rpe={completedReviewSession[1].find(log => log.rpe != null)?.rpe}
+                />
+              )}
+              <div className="space-y-1.5">
+                {latestSession.map((log) => (
+                  <div key={log.id} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="font-medium truncate">{log.exercise_name}</span>
+                    <span className="text-muted-foreground text-right shrink-0">
+                      {log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || "Sin series"}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!loadError && completedReviewSession && (
-        <WorkoutReview
-          coach
-          current={completedReviewSession[1].map(log => ({ name: log.exercise_name, sets: log.sets_completed }))}
-          previous={(reviewPrevious?.[1] || []).map(log => ({ name: log.exercise_name, sets: log.sets_completed }))}
-          rpe={completedReviewSession[1].find(log => log.rpe != null)?.rpe}
-        />
+            </DialogContent>
+          </Dialog>
+        </>
       )}
 
       {/* Travel mode banner */}
@@ -237,7 +251,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       )}
 
       {/* Initial tests */}
-      <div className="bg-card rounded-xl p-6 border border-border">
+      <div className="bg-card rounded-xl p-5 border border-border">
         <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <ClipboardCheck className="w-4 h-4 text-primary" />
           Tests de nivel iniciales
@@ -260,7 +274,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       </div>
 
       {/* RPE evolution */}
-      <div className="bg-card rounded-xl p-6 border border-border">
+      <div className="bg-card rounded-xl p-5 border border-border">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
@@ -271,7 +285,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           </div>
         </div>
         {rpeData.length > 0 ? (
-          <div className="h-56">
+          <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rpeData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -296,7 +310,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       </div>
 
       {/* Sesiones ejecutadas: lo que el cliente hizo realmente, serie a serie */}
-      <div className="bg-card rounded-xl p-4 sm:p-6 border border-border">
+      <div className="bg-card rounded-xl p-4 sm:p-5 border border-border">
         <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Dumbbell className="w-4 h-4 text-primary" />
           Últimas sesiones ({sessions.length})
@@ -345,7 +359,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       </div>
 
       {/* Personal Records */}
-      <div className="bg-card rounded-xl p-6 border border-border">
+      <div className="bg-card rounded-xl p-5 border border-border">
         <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Trophy className="w-4 h-4 text-primary" />
           Récords personales ({prs.length})

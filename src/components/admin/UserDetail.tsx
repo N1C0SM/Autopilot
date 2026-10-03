@@ -481,26 +481,29 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
       {/* Tabs */}
       <Tabs defaultValue="info" className="space-y-6">
-        <TabsList className="bg-secondary/50 w-full max-w-full flex overflow-x-auto no-scrollbar justify-start h-auto">
-          <TabsTrigger value="info" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
-            <User2 className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Cliente</span>
+        <TabsList className="bg-secondary/50 w-full max-w-full flex overflow-x-auto no-scrollbar h-auto">
+          <TabsTrigger value="info" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+            <Target className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Plan</span>
+           </TabsTrigger>
+          <TabsTrigger value="perfil" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Perfil</span>
            </TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <TrendingUp className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Progreso</span>
+              <TabsTrigger value="progress" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                <TrendingUp className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Progreso</span>
                </TabsTrigger>
-              <TabsTrigger value="training" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <Dumbbell className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Entreno</span>
+              <TabsTrigger value="training" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                <Dumbbell className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Entreno</span>
               </TabsTrigger>
               {!trainingOnly && (
-                <TabsTrigger value="nutrition" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                  <Apple className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Nutrición</span>
+                <TabsTrigger value="nutrition" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                  <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Nutrición</span>
                 </TabsTrigger>
               )}
               {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
-                <TabsTrigger value="chat" className="group text-xs gap-1.5 flex-1 whitespace-nowrap">
-                  <MessageCircle className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Chat</span>
+                <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                  <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
                 </TabsTrigger>
               )}
             </>
@@ -510,7 +513,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         {/* Tab: Info (incluye Plan y acceso) */}
         <TabsContent value="info" className="space-y-6">
         {!restricted && (
-          <>
             <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
                 <div className="font-semibold text-base">Plan</div>
@@ -571,71 +573,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               {tierSaving && <Loader2 className="w-4 h-4 animate-spin text-primary mx-auto" />}
             </div>
-
-            <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
-              <div>
-                <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
-                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
-              </div>
-
-              <div className="divide-y divide-border rounded-lg border border-border">
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-sm">Administrador</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Puede gestionar la administración de Autopilot.</div>
-                    </div>
-                  </div>
-                  <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />
-                </div>
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <Dumbbell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-sm">Entrenador</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Puede entrar al panel de entrenador y gestionar clientes asignados.</div>
-                    </div>
-                  </div>
-                  <Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />
-                </div>
-              </div>
-
-              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
-              <div className="rounded-lg bg-secondary/30 p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <User2 className="w-5 h-5 text-primary shrink-0" />
-                  <div>
-                    <div className="font-medium text-sm">Entrenador responsable</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {trainers.length === 0
-                        ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
-                        : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
-                    </div>
-                  </div>
-                </div>
-                {trainers.length > 0 && (
-                  <Select
-                    value={assignedTrainerId || "__none__"}
-                    onValueChange={assignTrainer}
-                    disabled={trainerSaving}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin entrenador asignado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Sin entrenador asignado</SelectItem>
-                      {trainers.map((t) => (
-                        <SelectItem key={t.user_id} value={t.user_id}>{t.email}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              )}
-            </div>
-          </>
-        )}
+          )}
 
           {(profile as any).subscription_tier === "transform" && (
             <TransformCyclePanel
@@ -645,7 +583,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               disabled={restricted}
             />
           )}
+        </TabsContent>
 
+        {/* Tab: Perfil (roles, entrenador responsable y datos del cliente) */}
+        <TabsContent value="perfil" className="space-y-6">
 
           {editingOnboarding && !restricted ? (
             <OnboardingEditor
@@ -768,7 +709,72 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               )}
             </details>
           )}
+        {!restricted && (
+          <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
+              <div>
+                <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
+                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
+              </div>
+
+              <div className="divide-y divide-border rounded-lg border border-border">
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">Administrador</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Puede gestionar la administración de Autopilot.</div>
+                    </div>
+                  </div>
+                  <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />
+                </div>
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Dumbbell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">Entrenador</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Puede entrar al panel de entrenador y gestionar clientes asignados.</div>
+                    </div>
+                  </div>
+                  <Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />
+                </div>
+              </div>
+
+              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
+              <div className="rounded-lg bg-secondary/30 p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <User2 className="w-5 h-5 text-primary shrink-0" />
+                  <div>
+                    <div className="font-medium text-sm">Entrenador responsable</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {trainers.length === 0
+                        ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
+                        : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
+                    </div>
+                  </div>
+                </div>
+                {trainers.length > 0 && (
+                  <Select
+                    value={assignedTrainerId || "__none__"}
+                    onValueChange={assignTrainer}
+                    disabled={trainerSaving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin entrenador asignado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sin entrenador asignado</SelectItem>
+                      {trainers.map((t) => (
+                        <SelectItem key={t.user_id} value={t.user_id}>{t.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              )}
+            </div>
+          )}
         </TabsContent>
+
 
         {/* Tab: Progress */}
         <TabsContent value="progress">
