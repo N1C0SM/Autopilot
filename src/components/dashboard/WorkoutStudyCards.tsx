@@ -43,7 +43,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
 
   const cardClass = immersive
     ? "flex h-full w-full shrink-0 snap-center flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
-    : "h-[18.5rem] w-[88%] shrink-0 snap-center overflow-hidden rounded-2xl border border-border/80 bg-card p-4 text-left first:snap-start last:snap-end";
+    : "h-[18.5rem] w-full shrink-0 snap-center overflow-hidden rounded-2xl border border-border/80 bg-card p-4 text-left";
   const isLast = activeCard === total - 1;
 
   return (

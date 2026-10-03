@@ -384,12 +384,9 @@ const Dashboard = () => {
   const renderContent = (section: MobileTab) => (
     <>
       {!coaching && section === "home" && (
-        <div className="space-y-4 mb-6">
-          <div>
-            <p className="text-xs font-semibold text-primary">Plan Gratis · Sin tarjeta</p>
-            <h2 className="mt-1 text-xl font-bold font-display">Tu rutina y tu progreso, a tu ritmo.</h2>
-            <p className="mt-2 text-sm text-muted-foreground">La rutina inicial se prepara automáticamente con tus datos. El seguimiento de un entrenador es opcional.</p>
-          </div>
+        <div className="mb-4 flex items-center justify-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2">
+          <p className="text-xs font-semibold text-primary">Plan Gratis · Sin tarjeta</p>
+          <span className="hidden text-xs text-muted-foreground sm:inline">· Tu rutina y tu progreso, a tu ritmo</span>
         </div>
       )}
       {!coaching && !hasPlan && (section === "home" || section === "training") && (
@@ -407,7 +404,10 @@ const Dashboard = () => {
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
         </div>
       )}
-      {!coaching && (section === "chat" || section === "nutrition") && (
+      {!coaching && section === "nutrition" && (
+        <PlanPaywall plan="plus" allowCoach onChoose={(tier) => handleCompletePayment(tier)} />
+      )}
+      {!coaching && section === "chat" && (
         <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
       )}
 
@@ -565,7 +565,7 @@ const Dashboard = () => {
   const pageContent = (
     <>
       {visited.map((s) => (
-        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col [&>*]:my-auto" : "hidden"}>
+        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col" : "hidden"}>
           {renderContent(s)}
         </div>
       ))}

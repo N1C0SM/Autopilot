@@ -85,7 +85,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
               formatter={(value: number) => [`${round(value)} ${unit}`, ""]}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ""}
             />
-            <Bar dataKey="metricValue" radius={[10, 10, 4, 4]} maxBarSize={56} isAnimationActive={false}>
+            <Bar dataKey="metricValue" radius={[10, 10, 4, 4]} maxBarSize={chartData.length <= 3 ? 120 : 56} isAnimationActive={false}>
               {chartData.map((_, i) => (
                 <Cell key={i} fill={`url(#${gid})`} fillOpacity={i === chartData.length - 1 ? 1 : 0.4} />
               ))}
