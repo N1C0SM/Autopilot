@@ -128,16 +128,12 @@ const PlanPreview = ({ focus, goal, weight, sex, days = 4, registered = false }:
             </div>
           )}
           <div className="space-y-1.5">
-            <div className="text-xs bg-secondary/30 px-2.5 py-1.5 rounded-lg flex items-center justify-between">
-              <span>Desayuno · Tortilla + avena</span>
-              <span className="text-muted-foreground">~520 kcal</span>
-            </div>
             <div className="text-xs bg-secondary/30 px-2.5 py-1.5 rounded-lg flex items-center justify-between text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Lock className="w-3 h-3" />
-                Comida, cena y snacks
+                Menús y cantidades
               </span>
-              <span>bloqueado</span>
+              <span>al generar</span>
             </div>
           </div>
         </div>
