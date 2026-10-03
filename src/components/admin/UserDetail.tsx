@@ -574,8 +574,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
             <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
-                <h2 className="font-semibold text-base">Roles y entrenador responsable</h2>
-                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta y quién acompaña al cliente.</p>
+                <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
+                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
               </div>
 
               <div className="divide-y divide-border rounded-lg border border-border">
@@ -601,6 +601,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </div>
               </div>
 
+              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
               <div className="rounded-lg bg-secondary/30 p-4">
                 <div className="flex items-start gap-3 mb-3">
                   <User2 className="w-5 h-5 text-primary shrink-0" />
@@ -631,6 +632,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   </Select>
                 )}
               </div>
+              )}
             </div>
           </>
         )}
