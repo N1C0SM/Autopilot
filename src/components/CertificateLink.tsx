@@ -10,8 +10,8 @@ export default function CertificateLink({ path, title }: { path: string; title: 
     if (tab) tab.opener = null;
     setBusy(true);
     try {
-      const { data, error } = await supabase.storage.from("trainer-certificates").createSignedUrl(path, 60);
-      if (error || !data) throw error;
+      const { data, error } = await supabase.functions.invoke("certificate-link", { body: { path } });
+      if (error || !data?.signedUrl) throw error ?? new Error("sin enlace");
       if (tab) tab.location.href = data.signedUrl;
       else window.location.assign(data.signedUrl);
     } catch {
