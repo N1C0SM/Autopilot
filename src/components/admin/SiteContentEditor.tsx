@@ -72,6 +72,8 @@ const SiteContentEditor = () => {
   const [settingsId, setSettingsId] = useState<string>("");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [landingCounts, setLandingCounts] = useState({ landing_ebooks_count: 4, landing_recommendations_count: 3 });
+  const [ranking, setRanking] = useState(false);
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [guideEbookUrl, setGuideEbookUrl] = useState<string>("");
@@ -100,7 +102,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
