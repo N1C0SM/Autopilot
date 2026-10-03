@@ -146,7 +146,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           </Button>
         </div>
       ) : (
-        <div className="mt-5 flex justify-center gap-1.5" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
+        <div className="mt-3 flex shrink-0 justify-center gap-1.5" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
           {Array.from({ length: total }, (_, i) => i).map((index) => (
             <span key={index} className={`h-1.5 rounded-full transition-all ${activeCard === index ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/35"}`} />
           ))}
