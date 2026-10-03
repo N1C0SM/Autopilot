@@ -513,7 +513,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         {/* Tab: Info (incluye Plan y acceso) */}
         <TabsContent value="info" className="space-y-6">
         {!restricted && (
-          <>
             <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
                 <div className="font-semibold text-base">Plan</div>
