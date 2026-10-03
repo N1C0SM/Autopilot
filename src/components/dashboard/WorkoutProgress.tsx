@@ -61,24 +61,17 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     : metric;
 
   return (
-    <section className={compact ? "flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card p-3 card-shadow sm:p-4" : "rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6"} aria-labelledby="workout-progress-title">
-      <div>
-        <div className="flex min-w-0 items-center gap-2">
-          <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
-          <h3 id="workout-progress-title" className="min-w-0 flex-1 truncate font-display text-sm font-bold sm:text-lg">Progresión por ejercicio</h3>
-          {exercises.length > 0 && (
-            <select
-              aria-label="Ejercicio para ver progresión"
-              value={selectedExercise}
-              onChange={(event) => setSelectedExercise(event.target.value)}
-              className="min-h-9 w-[42%] min-w-0 shrink-0 rounded-xl border border-border bg-background px-2 text-xs sm:min-h-10 sm:w-auto sm:max-w-[45%] sm:px-3 sm:text-sm"
-            >
-              {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise}</option>)}
-            </select>
-          )}
-        </div>
-        {!compact && <p className="mt-1 text-xs text-muted-foreground">Compara tus sesiones con series registradas como completadas.</p>}
-      </div>
+    <section className={compact ? "flex min-h-0 flex-1 flex-col rounded-3xl border border-border bg-card p-4 card-shadow" : "rounded-3xl border border-border bg-card p-5 card-shadow sm:p-6"} aria-label="Progresión por ejercicio">
+      {exercises.length > 0 && (
+        <select
+          aria-label="Ejercicio"
+          value={selectedExercise}
+          onChange={(event) => setSelectedExercise(event.target.value)}
+          className="-ml-1 w-full min-w-0 truncate bg-transparent font-display text-base font-bold focus:outline-none"
+        >
+          {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise}</option>)}
+        </select>
+      )}
 
       {loading ? (
         <div className="mt-6 h-52 animate-pulse rounded-xl bg-secondary/50" aria-label="Cargando historial" />

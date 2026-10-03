@@ -1,126 +1,104 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { motion } from "framer-motion";
 import type { ExerciseHistoryEntry } from "@/lib/workoutMetrics";
+
+type Metric = "volumeKg" | "reps" | "bestEstimated1RmKg";
 
 interface Props {
   exerciseName: string;
   history: ExerciseHistoryEntry[];
-  metric: "volumeKg" | "reps" | "bestEstimated1RmKg";
-  onMetricChange: (metric: "volumeKg" | "reps" | "bestEstimated1RmKg") => void;
+  metric: Metric;
+  onMetricChange: (metric: Metric) => void;
   compact?: boolean;
 }
 
+const METRICS: [Metric, string][] = [
+  ["bestEstimated1RmKg", "Fuerza"],
+  ["volumeKg", "Volumen"],
+  ["reps", "Reps"],
+];
+
 const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, compact = false }: Props) => {
-  const chartData = history.slice(-12).map((entry) => ({
-    ...entry,
-    metricValue: metric === "volumeKg"
-      ? entry.loadedSets > 0 ? Math.round(entry.volumeKg) : null
-      : metric === "reps" ? entry.reps : entry.bestEstimated1RmKg,
-  }));
-  const latest = history[history.length - 1];
-  const previous = history[history.length - 2];
-  const metricValue = (entry: ExerciseHistoryEntry | undefined) => {
+  const valueOf = (entry: ExerciseHistoryEntry | undefined) => {
     if (!entry) return null;
-    if (metric === "volumeKg") return entry.loadedSets > 0 ? entry.volumeKg : null;
+    if (metric === "volumeKg") return entry.loadedSets > 0 ? Math.round(entry.volumeKg) : null;
     if (metric === "reps") return entry.reps;
     return entry.bestEstimated1RmKg;
   };
-  const latestMetric = metricValue(latest);
-  const previousMetric = metricValue(previous);
-  const change = latestMetric !== null && previousMetric !== null ? latestMetric - previousMetric : null;
-  const unit = metric === "reps" ? " reps" : " kg";
-  const metricName = metric === "volumeKg" ? "volumen" : metric === "reps" ? "repeticiones" : "fuerza estimada";
-  const metricLabel = metric === "volumeKg" ? "Volumen (kg)" : metric === "reps" ? "Repeticiones" : "Fuerza estimada";
-  const formatValue = (value: number) => `${Math.round(value * 10) / 10}${unit}`;
+  const chartData = history.slice(-12).map((entry) => ({ ...entry, metricValue: valueOf(entry) }));
+  const latest = valueOf(history[history.length - 1]);
+  const previous = valueOf(history[history.length - 2]);
+  const change = latest !== null && previous !== null ? latest - previous : null;
+  const unit = metric === "reps" ? "reps" : "kg";
+  const round = (v: number) => Math.round(v * 10) / 10;
+  const gid = `grad-${metric}`;
 
   return (
-    <div className={compact ? "flex h-full min-h-0 flex-col" : undefined}>
-      {compact ? (
-        <div className="flex items-center justify-between gap-2">
-          <select
-            aria-label="Métrica de progresión"
-            value={metric}
-            onChange={(e) => onMetricChange(e.target.value as Props["metric"])}
-            className="h-8 rounded-lg border border-border bg-background px-2 text-xs font-semibold"
-          >
-            <option value="volumeKg">Volumen (kg)</option>
-            <option value="reps">Repeticiones</option>
-            <option value="bestEstimated1RmKg">Fuerza estimada</option>
-          </select>
+    <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col"}>
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-display text-4xl font-bold leading-none tabular-nums tracking-tight sm:text-5xl">
+            {latest !== null ? round(latest) : "—"}
+            <span className="ml-1 text-base font-semibold text-muted-foreground">{unit}</span>
+          </p>
           {change !== null && (
-            <span className="text-right text-[11px] font-semibold tabular-nums text-muted-foreground">
-              {change > 0 ? "+" : ""}{Math.round(change * 10) / 10}{unit} vs. anterior
+            <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${change >= 0 ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
+              {change > 0 ? "+" : ""}{round(change)} {unit} vs. anterior
             </span>
           )}
         </div>
-      ) : (
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" role="group" aria-label="Métrica de progresión">
-        <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-          <button
-            type="button"
-            aria-pressed={metric === "volumeKg"}
-            onClick={() => onMetricChange("volumeKg")}
-            className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "volumeKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-          >
-            Volumen (kg)
-          </button>
-          <button
-            type="button"
-            aria-pressed={metric === "reps"}
-            onClick={() => onMetricChange("reps")}
-            className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "reps" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-          >
-            Repeticiones
-          </button>
-          <button
-            type="button"
-            aria-pressed={metric === "bestEstimated1RmKg"}
-            onClick={() => onMetricChange("bestEstimated1RmKg")}
-            className={`min-h-9 shrink-0 whitespace-nowrap rounded-full px-2.5 text-[11px] font-semibold sm:px-3 sm:text-xs ${metric === "bestEstimated1RmKg" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-          >
-            Fuerza estimada
-          </button>
+        <div role="tablist" aria-label="Métrica" className="flex shrink-0 rounded-full bg-secondary/60 p-0.5">
+          {METRICS.map(([k, label]) => (
+            <button
+              key={k}
+              role="tab"
+              aria-selected={metric === k}
+              onClick={() => onMetricChange(k)}
+              className={`relative h-8 rounded-full px-3 text-xs font-semibold transition-colors ${metric === k ? "text-primary-foreground" : "text-muted-foreground"}`}
+            >
+              {metric === k && <motion.span layoutId="metric-pill" className="absolute inset-0 rounded-full bg-primary" transition={{ type: "spring", stiffness: 600, damping: 40 }} />}
+              <span className="relative">{label}</span>
+            </button>
+          ))}
         </div>
-        {change !== null && (
-          <span className="text-right text-xs font-semibold text-muted-foreground sm:ml-auto">
-            {change > 0 ? "+" : ""}{Math.round(change * 10) / 10}{unit} vs. sesión anterior
-          </span>
-        )}
       </div>
-      )}
 
       <div
-        className={`mt-2 w-full ${compact ? "min-h-0 flex-1" : "h-56"}`}
+        className={`mt-4 w-full ${compact ? "min-h-[220px] flex-1" : "h-64"}`}
         role="img"
-        aria-label={`Gráfica de ${metricName} para ${exerciseName}`}
+        aria-label={`Gráfica de ${exerciseName}`}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis dataKey="sessionLabel" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-            <YAxis
-              width={48}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value: number) => `${Math.round(value)}${metric === "reps" ? "" : " kg"}`}
-              domain={metric === "reps" ? ["dataMin - 1", "dataMax + 1"] : ["dataMin - 5", "dataMax + 5"]}
-            />
+          <AreaChart data={chartData} margin={{ top: 10, right: 6, left: 6, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="sessionLabel" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+            <YAxis hide domain={["dataMin - 5", "dataMax + 5"]} />
             <Tooltip
-              cursor={{ fill: "hsl(var(--secondary) / .5)" }}
+              cursor={{ stroke: "hsl(var(--primary) / .4)", strokeDasharray: "3 3" }}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }}
               labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-              formatter={(value: number) => [formatValue(value), metricLabel]}
+              formatter={(value: number) => [`${round(value)} ${unit}`, ""]}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ""}
             />
-            <Bar dataKey="metricValue" name={metricLabel} fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} maxBarSize={38} />
-          </BarChart>
+            <Area
+              type="monotone"
+              dataKey="metricValue"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2.5}
+              fill={`url(#${gid})`}
+              connectNulls
+              dot={false}
+              activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+              style={{ filter: "drop-shadow(0 4px 12px hsl(var(--primary) / .35))" }}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
-      {!compact && <p className="mt-1 text-[10px] text-muted-foreground">
-        {metric === "volumeKg"
-          ? "Volumen = suma de peso × repeticiones de las series completadas con carga."
-          : metric === "reps"
-            ? "Repeticiones totales de las series completadas; compara también cuántas series hiciste."
-            : "1RM estimado (Epley) a partir de la mejor serie completada con carga; no es una prueba máxima."}
-      </p>}
     </div>
   );
 };
