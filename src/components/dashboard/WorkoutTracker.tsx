@@ -74,6 +74,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [showCompletionSummary, setShowCompletionSummary] = useState(false);
+  const [showSummaryDetails, setShowSummaryDetails] = useState(false);
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
@@ -637,34 +638,37 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
               <DialogContent className="max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-xl min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-[1.5rem] border-border bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:p-6 [&_*]:min-w-0">
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4 pb-1">
-              <header className="rounded-[1.75rem] border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-5 text-center shadow-sm sm:p-6">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-                  <Trophy className="h-7 w-7" />
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3 pb-1">
+              <header className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-3 text-left shadow-sm">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                  <Trophy className="h-5 w-5" />
                 </div>
-                <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-                  Sesión guardada · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
-                </p>
-                <DialogTitle className="mt-1 font-display text-2xl font-bold tracking-tight">Entrenamiento completado</DialogTitle>
-                <DialogDescription className="mt-1 text-sm text-muted-foreground">{trainingTitle || sessionMessage}</DialogDescription>
-                {personalRecords.length > 0 && (
-                  <div className="mx-auto mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-left text-xs font-semibold text-primary">
-                    <Trophy className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">Nuevo récord · {personalRecords.join(" · ")}</span>
-                  </div>
-                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-primary">
+                    Sesión guardada · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+                  </p>
+                  <DialogTitle className="truncate font-display text-lg font-bold tracking-tight">Entrenamiento completado</DialogTitle>
+                  <DialogDescription className="truncate text-xs text-muted-foreground">{trainingTitle || sessionMessage}</DialogDescription>
+                </div>
               </header>
 
-              <section aria-label="Resumen de la sesión" className="grid grid-cols-2 gap-2">
+              {personalRecords.length > 0 && (
+                <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-left text-xs font-semibold text-primary">
+                  <Trophy className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Nuevo récord · {personalRecords.join(" · ")}</span>
+                </div>
+              )}
+
+              <section aria-label="Resumen de la sesión" className="grid grid-cols-4 gap-1.5">
                 {[
                   { label: "Ejercicios", value: `${completedExercises}/${currentPlan.exercises?.length || 0}` },
-                  { label: "Series completadas", value: String(completedSets) },
-                  { label: "Volumen con carga", value: totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—" },
-                  { label: "Esfuerzo percibido", value: sessionRpe !== null ? `${sessionRpe}/10` : "—" },
+                  { label: "Series", value: String(completedSets) },
+                  { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—" },
+                  { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}/10` : "—" },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-border/80 bg-card px-3.5 py-3">
-                    <p className="text-lg font-bold tabular-nums">{item.value}</p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">{item.label}</p>
+                  <div key={item.label} className="rounded-xl border border-border/80 bg-card px-2 py-2 text-center">
+                    <p className="truncate text-sm font-bold tabular-nums">{item.value}</p>
+                    <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{item.label}</p>
                   </div>
                 ))}
               </section>
@@ -679,6 +683,18 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 muscles={musclesWorked}
               />
 
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 w-full rounded-xl text-xs"
+                onClick={() => setShowSummaryDetails((v) => !v)}
+                aria-expanded={showSummaryDetails}
+              >
+                {showSummaryDetails ? "Ocultar análisis y mapa muscular" : "Ver análisis y mapa muscular"}
+              </Button>
+
+              {showSummaryDetails && (
+                <>
               <section className="rounded-[1.75rem] border border-border/80 bg-card p-4 sm:p-5" aria-labelledby="workout-muscle-map-title">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -748,6 +764,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
                 rpe={sessionRpe}
               />
+                </>
+              )}
               <p className="text-center text-[11px] text-muted-foreground">Tu sesión y los datos del resumen están guardados.</p>
               <Button
                 type="button"
