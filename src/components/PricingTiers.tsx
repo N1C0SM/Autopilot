@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { TIERS, type PlanKey } from "@/config/tiers";
 import { CheckCircle2, X, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,13 +13,27 @@ interface PricingTiersProps {
 
 const ORDER: PlanKey[] = ["free", "training", "full"];
 
+const COUPLE: Record<string, number> = { training: 44, full: 74 };
+
 const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => {
+  const [couple, setCouple] = useState(false);
   return (
     <div className="max-w-6xl mx-auto">
+      <div className="flex justify-center mb-6">
+        <div className="inline-flex rounded-full border border-border bg-card p-1 text-sm">
+          {[["Individual", false], ["En pareja · ahorra ~25%", true]].map(([l, v]) => (
+            <button key={String(v)} type="button" onClick={() => setCouple(v as boolean)}
+              className={`px-4 py-1.5 rounded-full transition-colors ${couple === v ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              {l as string}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-stretch max-w-6xl mx-auto">
         {ORDER.map((key) => {
           const t = TIERS[key];
           const isRec = key === recommended;
+          const price = couple && COUPLE[key] ? COUPLE[key] : t.price;
           return (
             <motion.div
               key={key}
@@ -52,12 +67,15 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
                     isRec ? "text-gradient" : "text-foreground"
                   }`}
                 >
-                  {t.price === 0 ? "Gratis" : `€${t.price}`}
+                  {price === 0 ? "Gratis" : `€${price}`}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  {t.price === 0 ? "" : " al mes"}
+                  {price === 0 ? "" : couple ? " al mes, los dos" : " al mes"}
                 </span>
               </div>
+              {couple && price > 0 && (
+                <p className="text-xs text-muted-foreground mb-1">{price / 2}€ por persona · ahorráis {t.price * 2 - price}€/mes</p>
+              )}
                  <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
                   {t.price === 0 ? "Sin tarjeta ni prueba que cancelar" : <><Sparkles className="w-3 h-3" /> 7 días de prueba</>}
                </div>
