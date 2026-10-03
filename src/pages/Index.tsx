@@ -58,6 +58,7 @@ const Index = () => {
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [landingCounts, setLandingCounts] = useState({ ebooks: 4, recommendations: 3 });
   const [ebooks, setEbooks] = useState<PreviewBook[]>([]);
   const [previewBook, setPreviewBook] = useState<PreviewBook | null>(null);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
@@ -91,6 +92,10 @@ const Index = () => {
           show_blog: (s as any).show_blog ?? true,
           show_ebooks: (s as any).show_ebooks ?? false,
           show_recommendations: (s as any).show_recommendations ?? false,
+        });
+        setLandingCounts({
+          ebooks: Math.max(0, Number((s as any).landing_ebooks_count ?? 4)),
+          recommendations: Math.max(0, Number((s as any).landing_recommendations_count ?? 3)),
         });
         Promise.all([
           (supabase.rpc as any)("get_payment_mode"),
