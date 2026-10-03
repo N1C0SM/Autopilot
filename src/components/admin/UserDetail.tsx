@@ -573,7 +573,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               {tierSaving && <Loader2 className="w-4 h-4 animate-spin text-primary mx-auto" />}
             </div>
+          )}
 
+          {/* Tab: Perfil (roles, entrenador responsable y datos del cliente) */}
+          <TabsContent value="perfil" className="space-y-6">
+          {!restricted && (
             <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
                 <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
