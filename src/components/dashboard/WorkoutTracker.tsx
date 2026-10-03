@@ -74,6 +74,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [showCompletionSummary, setShowCompletionSummary] = useState(false);
+  const [showSummaryDetails, setShowSummaryDetails] = useState(false);
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
