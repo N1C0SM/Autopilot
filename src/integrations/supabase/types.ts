@@ -1213,6 +1213,8 @@ export type Database = {
           hero_video_poster_url: string | null
           hero_video_url: string | null
           id: string
+          landing_ebooks_count: number
+          landing_recommendations_count: number
           payment_link_full_live: string | null
           payment_link_full_test: string | null
           payment_link_live: string | null
@@ -1257,6 +1259,8 @@ export type Database = {
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
           id?: string
+          landing_ebooks_count?: number
+          landing_recommendations_count?: number
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
           payment_link_live?: string | null
@@ -1301,6 +1305,8 @@ export type Database = {
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
           id?: string
+          landing_ebooks_count?: number
+          landing_recommendations_count?: number
           payment_link_full_live?: string | null
           payment_link_full_test?: string | null
           payment_link_live?: string | null
@@ -1976,6 +1982,8 @@ export type Database = {
           guide_ebook_url: string
           hero_video_poster_url: string
           hero_video_url: string
+          landing_ebooks_count: number
+          landing_recommendations_count: number
           play_store_url: string
           recommendations: Json
           show_blog: boolean
