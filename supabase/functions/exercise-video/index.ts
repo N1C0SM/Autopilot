@@ -53,8 +53,13 @@ Deno.serve(async (req) => {
     const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, video_url, video_job_id").eq("id", exerciseId).single();
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
 
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    // Si hay clave propia de OpenAI se usa (gasta tu saldo de OpenAI); si no, la del proyecto.
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const apiKey = openaiKey || Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);
+    const BASE = openaiKey ? "https://api.openai.com" : GATEWAY;
+    const IMG_MODEL = openaiKey ? "gpt-image-1" : IMAGE_MODEL;
+    const noCredit = openaiKey ? "Sin saldo en tu cuenta de OpenAI" : "Sin créditos de IA suficientes";
 
     const name = exercise.name || "un ejercicio";
     const group = exercise.muscle_group || "full body";
@@ -62,16 +67,16 @@ Deno.serve(async (req) => {
 
     if (action === "image") {
       const prompt = `Professional exercise technique reference photograph of the exercise "${name}" (${group}). The athlete is captured at the key contracted position of the movement with perfect biomechanical form. ${angle} ${STYLE}`;
-      const r = await fetch(`${GATEWAY}/v1/images/generations`, {
+      const r = await fetch(`${BASE}/v1/images/generations`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-        body: JSON.stringify({ model: IMAGE_MODEL, prompt, n: 1, size: "1536x1024" }),
+        body: JSON.stringify({ model: IMG_MODEL, prompt, n: 1, size: "1536x1024" }),
       });
       if (!r.ok) {
         const body = await r.json().catch(() => null);
-        const msg = (body as any)?.message || `Error de IA (${r.status})`;
+        const msg = (body as any)?.message || (body as any)?.error?.message || `Error de IA (${r.status})`;
         console.error(`image create failed [${r.status}]: ${msg}`);
-        return json({ error: r.status === 429 ? "Demasiadas peticiones, espera unos segundos" : r.status === 402 ? "Sin créditos de IA suficientes" : msg }, r.status);
+        return json({ error: r.status === 429 ? "Demasiadas peticiones, espera unos segundos" : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota") ? noCredit : msg }, r.status);
       }
       const out = await r.json();
       const b64 = out?.data?.[0]?.b64_json;
@@ -100,10 +105,10 @@ Deno.serve(async (req) => {
         return json({ jobId: exercise.video_job_id, status: "in_progress", resumed: true });
       }
       const prompt = `Professional exercise technique demonstration video of the exercise "${name}" (${group}). The athlete performs exactly 2 smooth controlled repetitions with perfect biomechanical form, cadence 2 seconds eccentric, 1 second pause, 2 seconds concentric, full range of motion, ending back at the exact starting position so the clip loops seamlessly. ${angle} ${STYLE}`;
-      const r = await fetch(`${GATEWAY}/v1/videos`, {
+      const r = await fetch(`${BASE}/v1/videos`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-        body: JSON.stringify({
+        body: JSON.stringify(openaiKey ? { model: "sora-2", prompt, seconds: "8", size: "1280x720" } : {
           model: MODEL,
           input: prompt,
           response_format: { type: "video", resolution: "720p", duration: "8s", aspect_ratio: "16:9" },
@@ -111,9 +116,9 @@ Deno.serve(async (req) => {
       });
       if (!r.ok) {
         const body = await r.json().catch(() => null);
-        const msg = (body as any)?.message || `Error de IA (${r.status})`;
+        const msg = (body as any)?.message || (body as any)?.error?.message || `Error de IA (${r.status})`;
         console.error(`video create failed [${r.status}]: ${msg}`);
-        return json({ error: r.status === 429 ? "Ya hay un vídeo generándose, espera unos segundos" : r.status === 402 ? "Sin créditos de IA suficientes" : msg }, r.status);
+        return json({ error: r.status === 429 ? "Ya hay un vídeo generándose, espera unos segundos" : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota") ? noCredit : msg }, r.status);
       }
       const job = (await r.json()) as Job;
       await svc.from("exercises").update({ video_job_id: job.id }).eq("id", exerciseId);
@@ -127,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
 
-    const poll = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(exercise.video_job_id)}`, {
+    const poll = await fetch(`${BASE}/v1/videos/${encodeURIComponent(exercise.video_job_id)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!poll.ok) {
@@ -145,7 +150,7 @@ Deno.serve(async (req) => {
     }
 
     // Download MP4 and store it (the gateway URL expires)
-    const dl = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(job.id)}/content`, {
+    const dl = await fetch(`${BASE}/v1/videos/${encodeURIComponent(job.id)}/content`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!dl.ok || !dl.body) return json({ error: "No se pudo descargar el vídeo generado" }, 502);
