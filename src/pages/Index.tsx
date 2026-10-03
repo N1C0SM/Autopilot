@@ -57,7 +57,8 @@ const Index = () => {
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
-  const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
+  const [ebooks, setEbooks] = useState<PreviewBook[]>([]);
+  const [previewBook, setPreviewBook] = useState<PreviewBook | null>(null);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
   const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
   const [showAllFaqs, setShowAllFaqs] = useState(false);
@@ -475,10 +476,15 @@ const Index = () => {
                               </span>
                             </div>
                           </div>
-                        </a>
+                        </button>
                       </ScrollReveal>
                     ))}
                   </div>
+                  <BookPreviewModal
+                    book={previewBook}
+                    pack={ebooks.find((b) => b.is_pack && b.url) || null}
+                    onClose={() => setPreviewBook(null)}
+                  />
                 </div>
               )}
 
