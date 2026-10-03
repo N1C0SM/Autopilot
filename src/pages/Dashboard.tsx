@@ -550,9 +550,7 @@ const Dashboard = () => {
             ))}
           </div>
           <Suspense fallback={<SectionFallback />}>
-            <div className={progressTab === "evolution" ? "flex h-[calc(100dvh-18.5rem)] min-h-[400px] flex-col gap-2 overflow-hidden md:h-[calc(100dvh-12rem)]" : "hidden"}>
-              <WeeklyProgress userId={user.id} dayPlans={dayPlans} compact />
-              <ProgressCharts userId={user.id} compact />
+            <div className={progressTab === "evolution" ? "flex h-[calc(100dvh-18.5rem)] min-h-[420px] flex-col overflow-hidden md:h-[calc(100dvh-12rem)]" : "hidden"}>
               <WorkoutProgress userId={user.id} compact />
             </div>
             <div className={progressTab === "photos" ? "" : "hidden"}><ProgressPhotos userId={user.id} /></div>
