@@ -212,6 +212,12 @@ serve(async (req) => {
         }
         for (const profile of profiles || []) {
           if (!active && profile.stripe_payment_id && hasCoaching(profile)) continue;
+          // A plan granted manually from Admin is never revoked by Stripe events.
+          if (!active && hasCoaching(profile)) {
+            const { data: manualEnt } = await supabaseAdmin.from("entitlements").select("plan")
+              .eq("user_id", profile.user_id).eq("source", "manual").in("status", ["active", "trialing"]).limit(1).maybeSingle();
+            if (manualEnt) continue;
+          }
           const end = active && ((active as any).current_period_end ?? active.items.data[0]?.current_period_end);
           const updates: Record<string, unknown> = {
             subscription_status: active?.status || "inactive", subscription_end: end ? new Date(end * 1000).toISOString() : null,
