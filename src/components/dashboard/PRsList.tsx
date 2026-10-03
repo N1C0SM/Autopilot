@@ -55,11 +55,13 @@ const PRsList = ({ userId }: Props) => {
 
   if (prs.length === 0) {
     return (
-      <div className="bg-card rounded-2xl p-6 border border-border text-center">
-        <Trophy className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-        <h3 className="font-display font-bold text-base mb-1">Sin récords aún</h3>
+      <div className="flex min-h-[55dvh] flex-col items-center justify-center rounded-[1.75rem] border border-border bg-card p-10 text-center">
+        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <Trophy className="h-7 w-7 text-primary" />
+        </div>
+        <h3 className="font-display font-bold text-lg mb-1">Sin récords aún</h3>
         <p className="text-sm text-muted-foreground">
-          Registra tus entrenos con peso y rompe tu primer PR 💪
+          Registra tus entrenos con peso y rompe tu primer récord personal.
         </p>
       </div>
     );
