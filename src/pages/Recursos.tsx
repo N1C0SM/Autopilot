@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import BookCover from "@/components/BookCover";
 import BookPreviewModal from "@/components/BookPreviewModal";
+import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/components/ItemPreviewModal";
 import { useAuth } from "@/contexts/AuthContext";
 import UserSidebar from "@/components/UserSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -63,6 +64,7 @@ const Recursos = () => {
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>(FALLBACK_EBOOKS);
   const [previewBook, setPreviewBook] = useState<Ebook | null>(null);
+  const [previewReco, setPreviewReco] = useState<PreviewItem | null>(null);
   const [recos, setRecos] = useState<Reco[]>(FALLBACK_RECOS);
   const [posts, setPosts] = useState<Post[]>([]);
   const [flags, setFlags] = useState({ blog: true, ebooks: true, recos: true });
@@ -178,12 +180,11 @@ const Recursos = () => {
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {recos.map((r, i) => (
-                <a
+                <button
+                  type="button"
                   key={r.id || i}
-                  href={r.url || "#"}
-                  target={r.url ? "_blank" : undefined}
-                  rel={r.url ? "noreferrer sponsored" : undefined}
-                  className="group block bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
+                  onClick={() => setPreviewReco(r)}
+                  className="group text-left w-full block bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
                 >
                   <div className="flex items-start gap-3">
                     {r.image_url ? (
@@ -198,12 +199,13 @@ const Recursos = () => {
                         </span>
                       )}
                       <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{r.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{r.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{previewIntro(r.description)}</p>
                     </div>
                   </div>
-                </a>
+                </button>
               ))}
             </div>
+            <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
           </section>
         )}
 
