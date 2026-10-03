@@ -2,7 +2,9 @@ export interface ReviewSet { reps: number; weight: string; done: boolean }
 export interface ReviewExercise { name: string; sets: ReviewSet[] }
 export interface WorkoutReviewItem { name: string; observation: string; proposal: string }
 
-// Compare like-for-like work only. A heavier or longer session is not a performance percentage.
+const fmt = (n: number) => (Math.round(n * 10) / 10).toLocaleString("es-ES");
+
+// Compare against the previous session with real numbers: top load, reps at equal load, then volume.
 export function buildWorkoutReview(current: ReviewExercise[], previous: ReviewExercise[], rpe?: number | null): WorkoutReviewItem[] {
   const valid = (sets: ReviewSet[]) => sets.filter(s => s.done && Number.isFinite(s.reps) && s.reps > 0);
   const weight = (s: ReviewSet) => {
@@ -13,14 +15,30 @@ export function buildWorkoutReview(current: ReviewExercise[], previous: ReviewEx
     const now = valid(ex.sets);
     if (!now.length) return [];
     const before = valid(previous.find(p => p.name === ex.name)?.sets || []);
-    const comparable = before.length === now.length && now.every((s, i) => weight(s) !== null && weight(s) === weight(before[i]));
-    const reps = now.reduce((n, s) => n + s.reps, 0);
-    const delta = comparable ? reps - before.reduce((n, s) => n + s.reps, 0) : null;
-    const observation = !before.length
-      ? `${now.length} series completadas. Primera referencia disponible para este ejercicio.`
-      : delta === null
-      ? "Las cargas o las series no son comparables; no calculamos una mejora de rendimiento."
-      : `${delta > 0 ? "+" : ""}${delta} repeticiones totales con las mismas cargas y el mismo número de series.`;
+    const weighted = (sets: ReviewSet[]) => sets.length > 0 && sets.every(s => weight(s) !== null);
+    const top = (sets: ReviewSet[]) => Math.max(...sets.map(s => weight(s) || 0));
+    const vol = (sets: ReviewSet[]) => sets.reduce((t, s) => t + (weight(s) || 0) * s.reps, 0);
+    const reps = (sets: ReviewSet[]) => sets.reduce((n, s) => n + s.reps, 0);
+    let observation: string;
+    let delta: number | null = null;
+    if (!before.length) {
+      observation = `${now.length} series completadas. Primera referencia disponible para este ejercicio.`;
+    } else if (!weighted(now) || !weighted(before)) {
+      delta = reps(now) - reps(before);
+      observation = `${delta > 0 ? "+" : ""}${delta} repeticiones totales frente a la sesión anterior.`;
+    } else if (top(now) !== top(before)) {
+      const d = top(now) - top(before);
+      delta = d;
+      observation = `${d > 0 ? "+" : "−"}${fmt(Math.abs(d))} kg de carga máxima (${fmt(top(now))} kg vs ${fmt(top(before))} kg).`;
+    } else if (now.length === before.length && now.every((s, i) => weight(s) === weight(before[i]))) {
+      delta = reps(now) - reps(before);
+      observation = `${delta > 0 ? "+" : ""}${delta} repeticiones totales con las mismas cargas y el mismo número de series.`;
+    } else {
+      const d = vol(now) - vol(before);
+      delta = d;
+      const pct = vol(before) > 0 ? Math.round((d / vol(before)) * 100) : 0;
+      observation = `${d > 0 ? "+" : "−"}${fmt(Math.abs(d))} kg de volumen (${pct > 0 ? "+" : ""}${pct} %) frente a la sesión anterior.`;
+    }
     const proposal = rpe != null && rpe >= 9
       ? "Revisar esfuerzo y recuperación antes de aumentar la carga."
       : delta !== null && delta < 0
