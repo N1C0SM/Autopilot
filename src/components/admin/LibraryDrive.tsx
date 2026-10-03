@@ -533,6 +533,15 @@ const LibraryDrive = () => {
               </div>
             )}
 
+            {isBook && open.file_path && (
+              <div>
+                <Button size="sm" variant="hero" onClick={() => shareOnce(open.id)}>
+                  <LinkIcon className="w-4 h-4 mr-2" /> Copiar enlace de 1 descarga
+                </Button>
+                <p className="text-[11px] text-muted-foreground mt-1">El cliente podrá descargarlo una sola vez. Caduca en 7 días.</p>
+              </div>
+            )}
+
             {(isBook || isPack) && (
               <p className="text-[11px] text-muted-foreground">
                 Los enlaces de compra se gestionan en Ajustes → Pagos.
