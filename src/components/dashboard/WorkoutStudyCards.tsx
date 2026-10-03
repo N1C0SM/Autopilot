@@ -43,11 +43,11 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
 
   const cardClass = immersive
     ? "flex h-full w-full shrink-0 snap-center flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
-    : "flex min-h-[19rem] w-full shrink-0 snap-center flex-col overflow-hidden rounded-3xl border border-border/60 bg-card p-5 text-left";
+    : "flex h-full w-full shrink-0 snap-center flex-col overflow-y-auto overscroll-contain rounded-3xl border border-border/60 bg-card p-[clamp(0.875rem,2.2dvh,1.25rem)] text-left [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
   const isLast = activeCard === total - 1;
 
   return (
-    <section aria-label="Análisis de la sesión" className={immersive ? "flex h-full min-w-0 flex-col" : "min-w-0"}>
+    <section aria-label="Análisis de la sesión" className={immersive ? "flex h-full min-w-0 flex-col" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
       {immersive && (
         <div className="flex gap-1.5 px-5 pb-3 pr-14" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
           {Array.from({ length: total }, (_, i) => (
@@ -66,7 +66,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "gap-3"}`}
+        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "min-h-0 flex-1 gap-3"}`}
       >
         {intro && <article className={immersive ? cardClass : `${cardClass} border-primary/20 bg-gradient-to-b from-primary/10 to-card`}>{intro}</article>}
         <article className={cardClass}>

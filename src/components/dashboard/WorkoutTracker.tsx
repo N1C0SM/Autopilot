@@ -589,7 +589,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
         rpe={sessionRpe}
         intro={
-          <div className="flex h-full flex-col gap-5">
+          <div className="flex h-full flex-col gap-[clamp(0.5rem,2dvh,1.25rem)]">
             <header className="flex items-center gap-3 pt-1 text-left">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary shadow-[0_0_30px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30">
                 <Trophy className="h-5 w-5" />
@@ -631,7 +631,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 </div>
               );
             })()}
-            <div className="grid grid-cols-4 divide-x divide-border/50 border-y border-border/50 py-4">
+            <div className="grid grid-cols-4 divide-x divide-border/50 border-y border-border/50 py-[clamp(0.5rem,1.6dvh,1rem)]">
               {[
                 { label: "Ejercicios", value: `${completedExercises}/${currentPlan?.exercises?.length || 0}` },
                 { label: "Series", value: String(completedSets) },
@@ -786,9 +786,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
-            <div className="flex min-h-[calc(100dvh-56px-var(--safe-top,0px)-12px-var(--mobile-nav-content-padding,6rem))] flex-col md:min-h-0">
-              <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
-                <div className="mb-5 flex items-center gap-3 px-1">
+            <div className="flex h-[calc(100dvh-56px-var(--safe-top,0px)-12px-var(--mobile-nav-content-padding,6rem))] flex-col overflow-hidden md:h-auto md:overflow-visible">
+              <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
+                <div className="mb-3 flex shrink-0 items-center gap-3 px-1">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30">
                     <Check className="h-5 w-5" />
                   </div>
@@ -798,13 +798,13 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   </div>
                 </div>
                 {renderStudyCards(false)}
-                <div className="mt-auto flex items-start gap-3 px-1 pt-6 text-left">
+                <div className="flex shrink-0 items-start gap-3 px-1 pt-3 text-left">
                   <Flame className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     Toca recuperar: hidrátate, come bien y mañana vuelves más fuerte.
                   </p>
                 </div>
-                <Button type="button" variant="hero" className="mt-4 h-12 w-full rounded-2xl" onClick={onExit}>
+                <Button type="button" variant="hero" className="mt-3 h-12 w-full shrink-0 rounded-2xl" onClick={onExit}>
                   Volver al inicio
                 </Button>
               </div>
