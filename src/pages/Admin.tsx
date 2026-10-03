@@ -178,7 +178,7 @@ const Admin = () => {
                 <AdminStats users={users} />
 
                 {/* Quick actions */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <QuickAction
                     label="Planes pendientes"
                     value={users.filter(u => u.plan_status === "plan_pending").length}
