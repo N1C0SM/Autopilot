@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight, RefreshCw, Columns2 } from "lucide-react";
+import BeforeAfterCompare from "./BeforeAfterCompare";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -37,6 +38,7 @@ const ProgressPhotos = ({ userId }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [comparing, setComparing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadPhotos = useCallback(async () => {
@@ -228,6 +230,15 @@ const ProgressPhotos = ({ userId }: Props) => {
             <Camera className="w-4 h-4 mr-1" /> Subir primera foto
           </Button>
         </motion.div>
+      )}
+
+      {!loading && !loadError && photos.length >= 2 && (
+        <Button variant="outline" className="w-full" onClick={() => setComparing(true)}>
+          <Columns2 className="w-4 h-4 mr-1" /> Comparar Antes / Después
+        </Button>
+      )}
+      {comparing && photos.length >= 2 && (
+        <BeforeAfterCompare photos={photos} signed={signed} onClose={() => setComparing(false)} />
       )}
 
       {/* Photo grid by month */}
