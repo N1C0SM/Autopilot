@@ -77,6 +77,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
+  const [livePRs, setLivePRs] = useState<Record<string, string>>({});
   const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const formatLocalDate = (date: Date) => {
@@ -215,14 +216,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     onAutoStartConsumed?.();
   }, [autoStart, currentPlan?.type, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, workoutCompleted]);
 
-  // Rest timer countdown
+  // Rest timer countdown (sin avisos de texto: vibración al terminar)
   useEffect(() => {
     if (restTimer === null || restTimer <= 0) return;
     const interval = setInterval(() => {
       setRestTimer((prev) => {
         if (prev === null || prev <= 1) {
           clearInterval(interval);
-          toast("⏰ ¡Descanso terminado!", { duration: 3000 });
+          try { navigator.vibrate?.([200, 100, 200]); } catch { /* noop */ }
+          void hapticTap();
           return null;
         }
         return prev - 1;
@@ -230,6 +232,33 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     }, 1000);
     return () => clearInterval(interval);
   }, [restTimer !== null]);
+
+  const adjustRest = (delta: number) => {
+    setRestTimer((prev) => {
+      if (prev === null) return prev;
+      const next = Math.max(5, prev + delta);
+      if (next > restTarget) setRestTarget(next);
+      return next;
+    });
+  };
+
+  // Pantalla siempre encendida durante la sesión
+  useEffect(() => {
+    if (!started || workoutCompleted) return;
+    type WakeLock = { release: () => Promise<void> };
+    let lock: WakeLock | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<WakeLock> } };
+    const request = async () => {
+      try { lock = (await nav.wakeLock?.request("screen")) ?? null; } catch { /* noop */ }
+    };
+    void request();
+    const onVisible = () => { if (document.visibilityState === "visible") void request(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      void lock?.release().catch(() => undefined);
+    };
+  }, [started, workoutCompleted]);
 
   const updateSet = <Field extends keyof WorkoutSetLog>(
     exerciseName: string,
@@ -273,6 +302,20 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
       const effectiveRest = configuredRest || restSeconds || 60;
       setRestTarget(effectiveRest);
       setRestTimer(effectiveRest);
+      // Récord en directo: supera el mejor peso de la sesión anterior
+      const w = parsePositiveWeight(set.weight);
+      const prevBest = Math.max(0, ...(previousLogs[exerciseName] || []).filter((s) => s.done).map((s) => parsePositiveWeight(s.weight) || 0));
+      if (w && prevBest > 0 && w > prevBest) {
+        const diff = Math.round((w - prevBest) * 10) / 10;
+        setLivePRs((prev) => ({ ...prev, [`${exerciseName}#${setIndex}`]: `+${diff} kg` }));
+        try { navigator.vibrate?.([30, 60, 30]); } catch { /* noop */ }
+      }
+    } else {
+      setLivePRs((prev) => {
+        const next = { ...prev };
+        delete next[`${exerciseName}#${setIndex}`];
+        return next;
+      });
     }
 
     const exerciseIndex = currentPlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
@@ -525,6 +568,71 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     : totalVolume > 0
     ? "Trabajo hecho. La próxima sesión tendrás una referencia clara para progresar."
     : "Trabajo hecho. La próxima sesión quedará registrada para que puedas progresar.";
+
+  const completedDateLabel = new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+  const renderStudyCards = (inDialog: boolean) => {
+    const Title = inDialog ? DialogTitle : "h3";
+    const Desc = inDialog ? DialogDescription : "p";
+    return (
+      <WorkoutStudyCards
+        immersive={inDialog}
+        onFinish={inDialog ? () => setShowCompletionSummary(false) : undefined}
+        muscles={musclesWorked}
+        muscleSetCounts={muscleSetCounts}
+        intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
+        current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
+        previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
+        rpe={sessionRpe}
+        intro={
+          <div className="flex h-full flex-col gap-4">
+            <header className="flex items-center gap-3 pt-1 text-left">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary shadow-[0_0_30px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30">
+                <Trophy className="h-5 w-5" />
+              </div>
+              <div className="w-full">
+                <Title className="text-lg font-semibold leading-tight tracking-tight">Entrenamiento completado</Title>
+                <Desc className="truncate text-xs text-muted-foreground">
+                  {completedDateLabel} · {trainingTitle || sessionMessage}
+                </Desc>
+              </div>
+            </header>
+            {personalRecords.length > 0 && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                <Trophy className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
+              </p>
+            )}
+            <div className="grid grid-cols-4 divide-x divide-border/60 border-y border-border/60 py-3">
+              {[
+                { label: "Ejercicios", value: `${completedExercises}/${currentPlan?.exercises?.length || 0}` },
+                { label: "Series", value: String(completedSets) },
+                { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)}` : "—", unit: totalVolume > 0 ? "kg" : "" },
+                { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}` : "—", unit: sessionRpe !== null ? "/10" : "" },
+              ].map((item) => (
+                <div key={item.label} className="px-2 text-center">
+                  <p className="truncate text-lg font-semibold tabular-nums tracking-tight">
+                    {item.value}{item.unit && <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">{item.unit}</span>}
+                  </p>
+                  <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-auto">
+              <WorkoutStoryShare
+                title={trainingTitle || "Sesión de hoy"}
+                date={completedDateLabel}
+                volumeKg={totalVolume}
+                sets={completedSets}
+                exercises={completedExercises}
+                records={personalRecords}
+                muscles={musclesWorked}
+              />
+            </div>
+          </div>
+        }
+      />
+    );
+  };
 
   return (
     <div className={`w-full min-w-0 ${started ? "min-h-dvh px-3 pb-8 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:px-5" : ""}`}>
