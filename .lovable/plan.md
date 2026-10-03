@@ -1,23 +1,26 @@
-# Panel de admin de usuario: navegación limpia
+# Panel de admin de usuario: minimalismo total
 
 ## Problema
-La ficha de usuario en Admin tiene 6 pestañas con icono + texto (Cliente, Plan y acceso, Progreso, Entreno, Nutrición, Chat) que ocupan todo el ancho y se ven apretadas, y dentro de Entreno hay otra fila de sub-pestañas (Plan / Calendario). Es un lío visual.
+La ficha de usuario en Admin está saturada: cabecera con etiquetas redundantes («Coach · 49€/mes», «Plan listo»), 6 pestañas apretadas con icono + texto, sub-pestañas dentro de Entreno, y demasiados elementos compitiendo por atención.
 
-## Solución
+## Solución: solo lo esencial
 
-### Navegación principal
-- Las 6 pestañas pasan a un control segmentado compacto y limpio: icono + etiqueta corta, espaciado uniforme, sin que cada una luche por el ancho.
-- En pantallas estrechas: solo iconos con etiqueta debajo en miniatura (o scroll horizontal elegante), sin deformarse.
-- La pestaña activa se marca con fondo dorado suave, el resto en gris silencioso.
+### Cabecera mínima
+- Una sola fila: flecha atrás, nombre, y acciones. Nada más.
+- Fuera etiquetas de plan/estado bajo el nombre (eso vive en Plan y acceso).
+- Acciones secundarias (Ver como, borrar) en un menú de tres puntos; solo Guardar visible como botón.
 
-### Entreno sin sub-pestañas
-- Se elimina la segunda fila de pestañas dentro de Entreno: Plan y Calendario se muestran en una sola vista (calendario arriba compacto, plan debajo) o con un selector pequeño integrado en la cabecera de la sección, no otra barra.
+### Navegación mínima
+- Las 6 secciones pasan a una fila de iconos limpios con etiqueta solo en la activa (o etiquetas cortas sin icono en escritorio). Activada = dorado suave; resto = gris silencioso.
+- Cero sub-pestañas: Entreno muestra calendario y plan en una sola vista continua.
 
-### Cabecera de usuario
-- Se compacta: avatar, nombre, plan y botones de acción (Auto-generar, Guardar, Ver como, borrar) en una sola fila que se adapta; en pantallas pequeñas las acciones pasan a un menú de tres puntos.
+### Contenido mínimo
+- Cada sección se revisa con la regla: si un dato no se usa para decidir o actuar, se quita.
+- Tarjetas planas: una superficie por bloque, sin cajas dentro de cajas; separación por aire y líneas finas.
+- Textos auxiliares y avisos redundantes fuera.
 
 ## Resultado
-Una sola barra de navegación clara, sin barras anidadas, con aire y jerarquía. El admin encuentra todo de un vistazo.
+El panel se lee de un vistazo: nombre arriba, iconos de sección, y solo los datos que importan. Nada decorativo.
 
 ## Verificación
-- Typecheck limpio y revisión visual a varios anchos (móvil y escritorio).
+- Typecheck limpio y revisión visual en móvil y escritorio.
