@@ -1026,7 +1026,10 @@ serve(async (req) => {
     );
     if (trainingError) throw trainingError;
     if (includeNutrition) {
-      const { error } = await supabase.from("nutrition_plan").upsert({ user_id: targetUserId, macros_json: macros ?? {}, meals_json: meals });
+      const { error } = await supabase.from("nutrition_plan").upsert(
+        { user_id: targetUserId, macros_json: macros ?? {}, meals_json: meals, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      );
       if (error) throw error;
     }
     const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
