@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const cfg = await getAiConfig();
     const jobRaw = String(exercise.video_job_id || "");
     const jobIsOpenai = jobRaw.startsWith("openai:");
-    const useOpenai = action === "check" && jobRaw ? jobIsOpenai : cfg.order[0] === "openai";
+    const useOpenai = action === "check" && jobRaw ? jobIsOpenai : cfg.order.includes("openai");
     const openaiKey = useOpenai ? cfg.openaiKey : "";
     const apiKey = openaiKey || cfg.lovableKey;
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);

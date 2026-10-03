@@ -4,21 +4,25 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 const LOVABLE = "https://ai.gateway.lovable.dev";
 const OPENAI = "https://api.openai.com";
-const FALLBACK_STATUS = new Set([401, 402, 403, 429]);
+const FALLBACK_STATUS = new Set([400, 401, 402, 403, 404, 429, 500, 502, 503]);
 
-export type AiMode = "auto" | "openai" | "lovable";
+export type AiMode = "auto" | "lovable";
 
 export async function getAiConfig() {
   const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "AI_PROVIDER"]);
+  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "AI_PROVIDER"]);
   const get = (k: string) => (data || []).find((r: any) => r.key === k)?.value?.trim() || "";
   const openaiKey = get("OPENAI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
-  const raw = get("AI_PROVIDER");
-  const mode: AiMode = raw === "openai" || raw === "lovable" ? raw : "auto";
+  const anthropicKey = get("ANTHROPIC_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || "";
+  const mode: AiMode = get("AI_PROVIDER") === "lovable" ? "lovable" : "auto";
   const lovableKey = Deno.env.get("LOVABLE_API_KEY") || "";
-  const order: ("openai" | "lovable")[] =
-    mode === "lovable" ? ["lovable"] : mode === "openai" ? (openaiKey ? ["openai"] : ["lovable"]) : openaiKey ? ["openai", "lovable"] : ["lovable"];
-  return { mode, openaiKey, lovableKey, order };
+  // Cadena: OpenAI -> Claude -> Lovable (cada uno solo si tiene clave).
+  const order: ("openai" | "anthropic" | "lovable")[] = mode === "lovable" ? ["lovable"] : [
+    ...(openaiKey ? ["openai" as const] : []),
+    ...(anthropicKey ? ["anthropic" as const] : []),
+    "lovable",
+  ];
+  return { mode, openaiKey, anthropicKey, lovableKey, order };
 }
 
 function toOpenAiModel(model: string, path: string): string | null {
@@ -48,6 +52,18 @@ export async function aiFetch(url: string, init: RequestInit = {}): Promise<Resp
       reqBody = JSON.stringify(b);
       target = OPENAI + path;
       headers.set("Authorization", `Bearer ${cfg.openaiKey}`);
+      headers.delete("X-Lovable-AIG-SDK");
+    } else if (p === "anthropic") {
+      // Claude solo para texto vía su endpoint compatible con chat/completions.
+      if (!path.includes("/chat/completions") || !body || /image/.test(String(body.model || ""))) continue;
+      const b = { ...body, model: /pro|gpt-6|gpt-5/.test(String(body.model)) ? "claude-sonnet-4-5" : "claude-haiku-4-5" };
+      delete b.reasoning_effort; delete b.reasoning; delete b.include; delete b.modalities; delete b.response_format;
+      if (!b.max_tokens && !b.max_completion_tokens) b.max_tokens = 8000;
+      reqBody = JSON.stringify(b);
+      target = "https://api.anthropic.com" + path;
+      headers.set("Authorization", `Bearer ${cfg.anthropicKey}`);
+      headers.set("x-api-key", cfg.anthropicKey);
+      headers.set("anthropic-version", "2023-06-01");
       headers.delete("X-Lovable-AIG-SDK");
     } else {
       headers.set("Authorization", `Bearer ${cfg.lovableKey}`);
