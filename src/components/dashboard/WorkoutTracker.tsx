@@ -24,6 +24,7 @@ import { hapticTap } from "@/lib/native";
 import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
 import { getExerciseTrackingConfig } from "@/lib/exerciseTrackingConfig";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { addExerciseLoad, tonnageEquivalence } from "@/lib/muscleMapping";
 
 interface Props {
   userId: string;
@@ -553,10 +554,14 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     if (completedSetsForExercise === 0) return counts;
 
     const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
-    const muscle = exercise.muscle_group || metadata?.muscle_group;
-    if (muscle) counts[muscle] = (counts[muscle] || 0) + completedSetsForExercise;
+    // Uses the swapped exercise name when the athlete replaced it, so synergists match what was really done.
+    addExerciseLoad(counts, swaps[exercise.name] || exercise.name, exercise.muscle_group || metadata?.muscle_group, completedSetsForExercise);
     return counts;
   }, {});
+  const previousVolume = Object.values(previousLogs).flat().reduce((total, set) => {
+    const weight = set.done ? parsePositiveWeight(set.weight) : null;
+    return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
+  }, 0);
   const musclesWorked = Object.keys(muscleSetCounts);
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
   const completedExercises = currentPlan?.exercises?.filter((exercise) => {
