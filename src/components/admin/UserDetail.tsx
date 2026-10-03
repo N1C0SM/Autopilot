@@ -575,10 +575,20 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
           )}
 
-          {/* Tab: Perfil (roles, entrenador responsable y datos del cliente) */}
-          <TabsContent value="perfil" className="space-y-6">
-          {!restricted && (
-            <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
+          {(profile as any).subscription_tier === "transform" && (
+            <TransformCyclePanel
+              userId={profile.user_id}
+              cycleStartDate={((profile as any).cycle_start_date as string) || null}
+              renewalDecision={((profile as any).renewal_decision as string) || null}
+              disabled={restricted}
+            />
+          )}
+        </TabsContent>
+
+        {/* Tab: Perfil (roles, entrenador responsable y datos del cliente) */}
+        <TabsContent value="perfil" className="space-y-6">
+        {!restricted && (
+          <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
                 <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
                 <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
