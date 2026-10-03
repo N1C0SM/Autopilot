@@ -40,7 +40,7 @@ const MobileAppShell = ({
       )}
 
       <main
-        className={workoutMode ? "mobile-dashboard-content h-dvh overflow-y-auto" : "mobile-dashboard-content"}
+        className={workoutMode ? "mobile-dashboard-content h-dvh overflow-y-auto" : "mobile-dashboard-content flex min-h-dvh flex-col"}
         style={workoutMode ? undefined : {
           paddingTop: "calc(56px + var(--safe-top, 0px) + 12px)",
           paddingBottom: "var(--mobile-nav-content-padding)",
