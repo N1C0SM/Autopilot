@@ -587,70 +587,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Perfil (roles, entrenador responsable y datos del cliente) */}
         <TabsContent value="perfil" className="space-y-6">
-        {!restricted && (
-          <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
-              <div>
-                <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
-                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
-              </div>
-
-              <div className="divide-y divide-border rounded-lg border border-border">
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-sm">Administrador</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Puede gestionar la administración de Autopilot.</div>
-                    </div>
-                  </div>
-                  <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />
-                </div>
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <Dumbbell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-sm">Entrenador</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Puede entrar al panel de entrenador y gestionar clientes asignados.</div>
-                    </div>
-                  </div>
-                  <Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />
-                </div>
-              </div>
-
-              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
-              <div className="rounded-lg bg-secondary/30 p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <User2 className="w-5 h-5 text-primary shrink-0" />
-                  <div>
-                    <div className="font-medium text-sm">Entrenador responsable</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {trainers.length === 0
-                        ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
-                        : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
-                    </div>
-                  </div>
-                </div>
-                {trainers.length > 0 && (
-                  <Select
-                    value={assignedTrainerId || "__none__"}
-                    onValueChange={assignTrainer}
-                    disabled={trainerSaving}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin entrenador asignado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Sin entrenador asignado</SelectItem>
-                      {trainers.map((t) => (
-                        <SelectItem key={t.user_id} value={t.user_id}>{t.email}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-              )}
-            </div>
-          )}
 
           {editingOnboarding && !restricted ? (
             <OnboardingEditor
@@ -775,6 +711,71 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
         </TabsContent>
 
+
+        {!restricted && (
+          <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
+              <div>
+                <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
+                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
+              </div>
+
+              <div className="divide-y divide-border rounded-lg border border-border">
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">Administrador</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Puede gestionar la administración de Autopilot.</div>
+                    </div>
+                  </div>
+                  <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />
+                </div>
+                <div className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <Dumbbell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-medium text-sm">Entrenador</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Puede entrar al panel de entrenador y gestionar clientes asignados.</div>
+                    </div>
+                  </div>
+                  <Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />
+                </div>
+              </div>
+
+              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
+              <div className="rounded-lg bg-secondary/30 p-4">
+                <div className="flex items-start gap-3 mb-3">
+                  <User2 className="w-5 h-5 text-primary shrink-0" />
+                  <div>
+                    <div className="font-medium text-sm">Entrenador responsable</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {trainers.length === 0
+                        ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
+                        : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
+                    </div>
+                  </div>
+                </div>
+                {trainers.length > 0 && (
+                  <Select
+                    value={assignedTrainerId || "__none__"}
+                    onValueChange={assignTrainer}
+                    disabled={trainerSaving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin entrenador asignado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sin entrenador asignado</SelectItem>
+                      {trainers.map((t) => (
+                        <SelectItem key={t.user_id} value={t.user_id}>{t.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+              )}
+            </div>
+          )}
         {/* Tab: Progress */}
         <TabsContent value="progress">
           <UserProgressPanel userId={profile.user_id} travelModeUntil={profile.travel_mode_until} travelEquipment={profile.travel_equipment} />
