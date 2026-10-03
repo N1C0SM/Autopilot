@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
 import { FRONT_REGIONS, BACK_REGIONS, FRONT_SILHOUETTE, BACK_SILHOUETTE } from "./MuscleMapFigure";
-import { tonnageEquivalence } from "@/lib/muscleMapping";
+
 
 interface Props {
   title: string;

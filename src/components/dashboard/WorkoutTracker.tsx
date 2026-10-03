@@ -24,7 +24,7 @@ import { hapticTap } from "@/lib/native";
 import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
 import { getExerciseTrackingConfig } from "@/lib/exerciseTrackingConfig";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { addExerciseLoad, tonnageEquivalence } from "@/lib/muscleMapping";
+import { addExerciseLoad } from "@/lib/muscleMapping";
 
 interface Props {
   userId: string;
