@@ -459,7 +459,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    {ebooks.slice(0, 4).map((e, i) => (
+                    {ebooks.slice(0, landingCounts.ebooks).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
                         <button
                           type="button"
@@ -507,7 +507,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {recommendations.slice(0, 3).map((r, i) => (
+                    {recommendations.slice(0, landingCounts.recommendations).map((r, i) => (
                       <ScrollReveal key={r.id || i} delay={i * 0.05}>
                         <a
                           href={r.url || "/recursos"}
