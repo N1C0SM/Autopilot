@@ -16,9 +16,8 @@ import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
-import { WorkoutReview } from "./WorkoutReview";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
-import { MuscleMapFigure } from "./MuscleMapFigure";
+import { WorkoutStudyCards } from "./WorkoutStudyCards";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
 import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
@@ -637,7 +636,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-xl min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-[1.5rem] border-border bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:p-6 [&_*]:min-w-0">
+              <DialogContent className="max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-xl min-w-0 overflow-x-hidden overflow-y-hidden rounded-[1.5rem] border-border bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:p-6 [&_*]:min-w-0">
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3 pb-1">
               <header className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-3 text-left shadow-sm">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -690,81 +689,18 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 onClick={() => setShowSummaryDetails((v) => !v)}
                 aria-expanded={showSummaryDetails}
               >
-                {showSummaryDetails ? "Ocultar análisis y mapa muscular" : "Ver análisis y mapa muscular"}
+                {showSummaryDetails ? "Ocultar fichas de la sesión" : "Ver fichas de la sesión"}
               </Button>
 
               {showSummaryDetails && (
-                <>
-              <section className="rounded-[1.75rem] border border-border/80 bg-card p-4 sm:p-5" aria-labelledby="workout-muscle-map-title">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 id="workout-muscle-map-title" className="font-display text-base font-bold">Así trabajaste hoy</h3>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Mapa estimado a partir de las series que marcaste.</p>
-                  </div>
-                  {musclesWorked.length > 0 && (
-                    <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
-                      {musclesWorked.length} {musclesWorked.length === 1 ? "grupo" : "grupos"}
-                    </span>
-                  )}
-                </div>
-
-                {musclesWorked.length > 0 ? (
-                  <>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      {(["front", "back"] as const).map((side) => (
-                        <div
-                          key={side}
-                          className="relative mx-auto aspect-[399/698] w-full max-w-[9rem] overflow-hidden rounded-2xl border border-border/70 bg-[radial-gradient(ellipse_at_50%_38%,hsl(var(--primary)/.09),transparent_68%),linear-gradient(180deg,hsl(var(--secondary)/.25),hsl(var(--background)/.65))]"
-                        >
-                          <MuscleMapFigure
-                            side={side}
-                            muscles={musclesWorked}
-                            intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
-                          />
-                          <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-border/70 bg-background/85 px-2.5 py-1 text-[9px] font-semibold text-muted-foreground backdrop-blur-sm">
-                            {side === "front" ? "Frontal" : "Posterior"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                      {musclesWorked.map((muscle) => (
-                        <span
-                          key={muscle}
-                          className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-medium"
-                          style={{
-                            borderColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 33%, transparent)`,
-                            backgroundColor: `color-mix(in srgb, ${getMuscleIntensity(muscleSetCounts[muscle]).fill} 7%, transparent)`,
-                          }}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: getMuscleIntensity(muscleSetCounts[muscle]).fill }} />
-                          {muscle}
-                          <span className="text-muted-foreground">{muscleSetCounts[muscle]} series</span>
-                        </span>
-                      ))}
-                    </div>
-                    <div className="mt-3 flex items-center justify-center gap-3 text-[9px] text-muted-foreground">
-                      {Object.entries(MUSCLE_INTENSITY).map(([level, intensity]) => (
-                        <span key={level} className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: intensity.fill }} />
-                          {intensity.label}
-                        </span>
-                      ))}
-                    </div>
-                  </>
-                ) : (
-                  <p className="mt-4 rounded-xl bg-secondary/40 p-4 text-center text-xs text-muted-foreground">
-                    Este plan no tiene grupos musculares asociados, así que no mostramos un mapa estimado.
-                  </p>
-                )}
-              </section>
-
-              <WorkoutReview
-                current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
-                previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
-                rpe={sessionRpe}
-              />
-                </>
+                <WorkoutStudyCards
+                  muscles={musclesWorked}
+                  muscleSetCounts={muscleSetCounts}
+                  intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
+                  current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
+                  previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
+                  rpe={sessionRpe}
+                />
               )}
               <p className="text-center text-[11px] text-muted-foreground">Tu sesión y los datos del resumen están guardados.</p>
               <Button

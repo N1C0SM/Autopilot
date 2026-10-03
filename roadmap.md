@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Convertir el análisis final del entrenamiento en fichas horizontales compactas.
+- [x] Mostrar una revelación visual de rutina y macros al terminar el cuestionario antes del registro.
+
 - [x] Eliminar Transformación de la comparativa superior y conservarla solo en su bloque premium.
 - [x] Hacer editable desde administración el número de plazas mensuales de Transformación.
 - [x] Conectar esa cifra real con la landing y su mensaje de disponibilidad.

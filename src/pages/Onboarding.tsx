@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Link } from "react-router-dom";
 import { logConsent } from "@/lib/consents";
 import AIDisclaimer from "@/components/AIDisclaimer";
+import PlanPreview from "@/components/PlanPreview";
 import { signedUrlFor } from "@/lib/storageSign";
 import {
   canSkipOnboardingStep,
@@ -911,47 +912,29 @@ const Onboarding = () => {
           {currentKey === "summary" && (
             <div className="space-y-5">
               <div className="text-center mb-2">
-                <div className="text-4xl mb-2">🎯</div>
-                <h2 className="text-xl font-bold font-display">Tu plan de arranque</h2>
+                <p className="text-[10px] font-semibold uppercase text-primary">Cuestionario completado</p>
+                <h2 className="mt-1 text-2xl font-bold font-display">Así empieza tu plan</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {user
-                    ? "Tu rutina se prepara con este enfoque. Si tienes entrenador, la coordina contigo; si no, generamos tu plan inicial."
-                    : "Al crear tu cuenta y verificar el correo, prepararemos tu rutina inicial con este enfoque."}
+                    ? "Revisa la muestra y confirma para generar tu plan completo."
+                    : "Esta muestra usa tus respuestas. Crea tu cuenta después para guardar y generar el plan completo."}
                 </p>
               </div>
 
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                  <span className="text-xl">🏋️</span>
-                  <div>
-                    <p className="font-semibold text-sm">
-                      Rutina para {GOALS.find((g) => g.value === data.goal)?.label?.toLowerCase() || "tu objetivo"} · {PRIMARY_FOCUS_OPTIONS.find((p) => p.value === data.primary_focus)?.label || "Mixto"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {data.sports.length > 0
-                        ? SPORTS.filter((s) => data.sports.includes(s.value)).map((s) => s.label).join(", ")
-                        : "Puedes ajustar días y ejercicios después"}
-                    </p>
-                  </div>
-                </div>
+              <PlanPreview
+                focus={data.primary_focus}
+                goal={data.goal}
+                weight={Number(data.weight) || undefined}
+                sex={data.sex}
+                days={Math.max(3, Math.min(5, 7 - new Set([
+                  ...Object.values(data.sport_schedules),
+                  ...data.custom_activities,
+                ].filter((item) => Number((item.start || "00:00").split(":")[0]) >= 17 && Number((item.start || "00:00").split(":")[0]) <= 21).map((item) => item.dow)).size))}
+                registered={Boolean(user)}
+              />
 
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                  <span className="text-xl">🍽️</span>
-                  <div>
-                    <p className="font-semibold text-sm">
-                      Nutrición según tu plan
-                    </p>
-                    <p className="text-xs text-muted-foreground">Sin estimaciones inventadas; se muestra si está incluida.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                  <span className="text-xl">💬</span>
-                  <div>
-                    <p className="font-semibold text-sm">Tú marcas el ritmo</p>
-                    <p className="text-xs text-muted-foreground">Empieza gratis; añade seguimiento de entrenador cuando lo necesites.</p>
-                  </div>
-                </div>
+              <div className="rounded-xl border border-border bg-secondary/25 p-3 text-center">
+                <p className="text-xs font-semibold">Empieza gratis y añade seguimiento humano cuando lo necesites.</p>
               </div>
 
               {/* Optional: Google Calendar */}
