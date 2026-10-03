@@ -126,6 +126,10 @@ const SiteContentEditor = () => {
         show_ebooks: (s as any).show_ebooks ?? false,
         show_recommendations: (s as any).show_recommendations ?? false,
       });
+      setLandingCounts({
+        landing_ebooks_count: Math.max(0, Number((s as any).landing_ebooks_count ?? 4)),
+        landing_recommendations_count: Math.max(0, Number((s as any).landing_recommendations_count ?? 3)),
+      });
       const rawEbooks = Array.isArray((s as any).ebooks) ? (s as any).ebooks : [];
       setEbooks(rawEbooks.map((e: any) => ({
         id: e.id || uid(),
@@ -155,6 +159,48 @@ const SiteContentEditor = () => {
     setSections(next);
     const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Secciones actualizadas");
+  };
+
+  const saveLandingCounts = async (next: typeof landingCounts) => {
+    setLandingCounts(next);
+    const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Cantidades actualizadas");
+  };
+
+  const rankWithAi = async () => {
+    setRanking(true);
+    try {
+      const { data: books } = await (supabase as any)
+        .from("library_books")
+        .select("id, title, description, price, is_pack")
+        .eq("published", true)
+        .eq("is_folder", false)
+        .order("sort_order", { ascending: true });
+      const { data, error } = await supabase.functions.invoke("rank-library", {
+        body: { books: books || [], recommendations },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const bookIds: string[] = data.book_ids || [];
+      await Promise.all(bookIds.map((id, i) =>
+        (supabase as any).from("library_books").update({ sort_order: i + 1 }).eq("id", id)
+      ));
+
+      const recoIds: string[] = data.recommendation_ids || [];
+      if (recoIds.length > 0) {
+        const byId = new Map(recommendations.map((r) => [r.id, r]));
+        const ordered = recoIds.map((id) => byId.get(id)).filter(Boolean) as Recommendation[];
+        const rest = recommendations.filter((r) => !recoIds.includes(r.id));
+        const next = [...ordered, ...rest];
+        setRecommendations(next);
+        await supabase.from("settings").update({ recommendations: next as any } as any).eq("id", settingsId);
+      }
+      toast.success(data.reason ? `Ordenado: ${data.reason}` : "Orden actualizado con IA");
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo ordenar con IA");
+    }
+    setRanking(false);
   };
 
   const saveEbooks = async () => {
