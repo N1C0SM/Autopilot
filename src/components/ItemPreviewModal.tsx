@@ -1,7 +1,7 @@
 import { Check, ArrowRight, ShoppingBag } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { track } from "@/lib/analytics";
+import { track, type EventName } from "@/lib/analytics";
 
 /**
  * Ficha de vista previa genérica para cualquier sección de la landing (recomendaciones y futuras).
@@ -22,7 +22,7 @@ export interface PreviewVariant {
   bulletsTitle: string; // p. ej. «Por qué lo recomiendo»
   cta: string;          // p. ej. «Ver producto»
   note?: string;        // texto pequeño bajo el botón
-  event: string;        // evento de analítica al pulsar el botón
+  event: EventName;     // evento de analítica al pulsar el botón
 }
 
 export const RECOMMENDATION_VARIANT: PreviewVariant = {
