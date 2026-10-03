@@ -23,6 +23,7 @@ const BlogPostsEditor = lazy(() => import("@/components/admin/BlogPostsEditor"))
 const TrainerManagement = lazy(() => import("@/components/admin/TrainerManagement"));
 const EmailTemplatesEditor = lazy(() => import("@/components/admin/EmailTemplatesEditor"));
 const GoalPhysiquesEditor = lazy(() => import("@/components/admin/GoalPhysiquesEditor"));
+const ProductsAdmin = lazy(() => import("@/components/admin/ProductsAdmin"));
 const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
 
 export interface Profile {
@@ -38,7 +39,7 @@ export interface Profile {
   subscription_tier?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -134,6 +135,7 @@ const Admin = () => {
     section === "blog" ? "Blog · Artículos SEO" :
     section === "physiques" ? "Físicos objetivo · AI Scan" :
     section === "payments" ? "Pagos · Stripe" :
+    section === "products" ? "Planes y productos" :
     section === "metrics" ? "Métricas" : "";
 
   const handleSignOut = async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); };
@@ -321,6 +323,8 @@ const Admin = () => {
                 <PaymentModeToggle />
               </div>
             )}
+
+            {section === "products" && <ProductsAdmin />}
 
             {section === "emails" && (
               <div className="max-w-4xl">
