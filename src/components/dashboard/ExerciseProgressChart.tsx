@@ -33,7 +33,26 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
   const formatValue = (value: number) => `${Math.round(value * 10) / 10}${unit}`;
 
   return (
-    <div>
+    <div className={compact ? "flex h-full min-h-0 flex-col" : undefined}>
+      {compact ? (
+        <div className="flex items-center justify-between gap-2">
+          <select
+            aria-label="Métrica de progresión"
+            value={metric}
+            onChange={(e) => onMetricChange(e.target.value as Props["metric"])}
+            className="h-8 rounded-lg border border-border bg-background px-2 text-xs font-semibold"
+          >
+            <option value="volumeKg">Volumen (kg)</option>
+            <option value="reps">Repeticiones</option>
+            <option value="bestEstimated1RmKg">Fuerza estimada</option>
+          </select>
+          {change !== null && (
+            <span className="text-right text-[11px] font-semibold tabular-nums text-muted-foreground">
+              {change > 0 ? "+" : ""}{Math.round(change * 10) / 10}{unit} vs. anterior
+            </span>
+          )}
+        </div>
+      ) : (
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" role="group" aria-label="Métrica de progresión">
         <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
           <button
@@ -67,9 +86,10 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
           </span>
         )}
       </div>
+      )}
 
       <div
-        className={`mt-3 w-full ${compact ? "h-36" : "h-56"}`}
+        className={`mt-2 w-full ${compact ? "min-h-0 flex-1" : "h-56"}`}
         role="img"
         aria-label={`Gráfica de ${metricName} para ${exerciseName}`}
       >
@@ -94,13 +114,13 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-1 text-[10px] text-muted-foreground">
+      {!compact && <p className="mt-1 text-[10px] text-muted-foreground">
         {metric === "volumeKg"
           ? "Volumen = suma de peso × repeticiones de las series completadas con carga."
           : metric === "reps"
             ? "Repeticiones totales de las series completadas; compara también cuántas series hiciste."
             : "1RM estimado (Epley) a partir de la mejor serie completada con carga; no es una prueba máxima."}
-      </p>
+      </p>}
     </div>
   );
 };

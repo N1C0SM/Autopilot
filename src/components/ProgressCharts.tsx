@@ -10,9 +10,10 @@ import { parsePositiveWeight } from "@/lib/weight";
 
 interface Props {
   userId: string;
+  compact?: boolean;
 }
 
-const ProgressCharts = ({ userId }: Props) => {
+const ProgressCharts = ({ userId, compact = false }: Props) => {
   const [weightLogs, setWeightLogs] = useState<{ logged_at: string; weight: number }[]>([]);
   const [newWeight, setNewWeight] = useState("");
   const [saving, setSaving] = useState(false);
@@ -97,6 +98,48 @@ const ProgressCharts = ({ userId }: Props) => {
     date: parseLocalDate(w.logged_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
     peso: w.weight,
   }));
+
+  if (compact) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-3 card-shadow">
+        <div className="flex items-center gap-3">
+          <Scale className="h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <p className="font-display text-lg font-bold leading-none tabular-nums">{latestWeight ? `${latestWeight.weight} kg` : "—"}</p>
+            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
+              {weightDiff === null ? "Peso actual" : <>{weightDiff < 0 ? <TrendingDown className="h-3 w-3" /> : weightDiff > 0 ? <TrendingUp className="h-3 w-3" /> : <Minus className="h-3 w-3" />}{weightDiff > 0 ? "+" : ""}{weightDiff.toFixed(1)} kg desde el inicio</>}
+            </p>
+          </div>
+          {chartData.length >= 2 && (
+            <div className="h-9 min-w-0 flex-1" aria-hidden>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
+                  <Line type="monotone" dataKey="peso" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} isAnimationActive={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="ml-auto flex shrink-0 gap-1.5">
+            <Input
+              aria-label="Peso en kilogramos"
+              disabled={saving || loading}
+              type="text"
+              inputMode="decimal"
+              value={newWeight}
+              onChange={(e) => setNewWeight(e.target.value)}
+              placeholder="kg"
+              className="h-8 w-16 px-2 text-xs"
+              onKeyDown={(e) => e.key === "Enter" && logWeight()}
+            />
+            <Button size="sm" className="h-8 px-2.5 text-xs" onClick={logWeight} disabled={saving || loading}>
+              {saving ? "…" : "Guardar"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

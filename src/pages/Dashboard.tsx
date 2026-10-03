@@ -98,7 +98,6 @@ const Dashboard = () => {
     setVisited((v) => (v.includes(section) ? v : [...v, section]));
   }, [section]);
   const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records">("evolution");
-  const [evolutionView, setEvolutionView] = useState<"week" | "exercise" | "weight">("week");
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
@@ -541,37 +540,23 @@ const Dashboard = () => {
                 role="tab"
                 aria-selected={progressTab === k}
                 onClick={() => setProgressTab(k)}
-                className={`h-9 rounded-full text-sm font-medium transition-colors ${progressTab === k ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"}`}
+                className={`relative h-9 rounded-full text-sm font-medium transition-colors duration-150 ${progressTab === k ? "text-primary-foreground" : "text-muted-foreground"}`}
               >
-                {label}
+                {progressTab === k && (
+                  <motion.span layoutId="progress-pill" className="absolute inset-0 rounded-full bg-primary shadow-sm" transition={{ type: "spring", stiffness: 600, damping: 40 }} />
+                )}
+                <span className="relative">{label}</span>
               </button>
             ))}
           </div>
           <Suspense fallback={<SectionFallback />}>
-            <div className={progressTab === "evolution" ? "space-y-3" : "hidden"}>
-              <div role="tablist" className="grid grid-cols-3 gap-1 rounded-full border border-border/50 bg-secondary/40 p-1">
-                {([
-                  ["week", "Semana"],
-                  ["exercise", "Ejercicios"],
-                  ["weight", "Peso"],
-                ] as const).map(([k, label]) => (
-                  <button
-                    key={k}
-                    role="tab"
-                    aria-selected={evolutionView === k}
-                    onClick={() => setEvolutionView(k)}
-                    className={`h-8 rounded-full text-xs font-medium transition-colors ${evolutionView === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {evolutionView === "week" && <WeeklyProgress userId={user.id} dayPlans={dayPlans} />}
-              {evolutionView === "exercise" && <WorkoutProgress userId={user.id} />}
-              {evolutionView === "weight" && <ProgressCharts userId={user.id} />}
+            <div className={progressTab === "evolution" ? "flex h-[calc(100dvh-18.5rem)] min-h-[400px] flex-col gap-2 overflow-hidden md:h-[calc(100dvh-12rem)]" : "hidden"}>
+              <WeeklyProgress userId={user.id} dayPlans={dayPlans} compact />
+              <ProgressCharts userId={user.id} compact />
+              <WorkoutProgress userId={user.id} compact />
             </div>
-            {progressTab === "photos" && <ProgressPhotos userId={user.id} />}
-            {progressTab === "records" && <PRsList userId={user.id} />}
+            <div className={progressTab === "photos" ? "" : "hidden"}><ProgressPhotos userId={user.id} /></div>
+            <div className={progressTab === "records" ? "" : "hidden"}><PRsList userId={user.id} /></div>
           </Suspense>
         </div>
       )}

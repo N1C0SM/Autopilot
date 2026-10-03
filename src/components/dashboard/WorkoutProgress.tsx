@@ -8,9 +8,10 @@ import ExerciseProgressChart from "@/components/dashboard/ExerciseProgressChart"
 
 interface Props {
   userId: string;
+  compact?: boolean;
 }
 
-const WorkoutProgress = ({ userId }: Props) => {
+const WorkoutProgress = ({ userId, compact = false }: Props) => {
   const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
   const [selectedExercise, setSelectedExercise] = useState("");
   const [metric, setMetric] = useState<"volumeKg" | "reps" | "bestEstimated1RmKg">("volumeKg");
@@ -60,7 +61,7 @@ const WorkoutProgress = ({ userId }: Props) => {
     : metric;
 
   return (
-    <section className="rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6" aria-labelledby="workout-progress-title">
+    <section className={compact ? "flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card p-3 card-shadow sm:p-4" : "rounded-2xl border border-border bg-card p-4 card-shadow sm:p-6"} aria-labelledby="workout-progress-title">
       <div>
         <div className="flex min-w-0 items-center gap-2">
           <BarChart3 className="h-5 w-5 shrink-0 text-primary" />
@@ -76,7 +77,7 @@ const WorkoutProgress = ({ userId }: Props) => {
             </select>
           )}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">Compara tus sesiones con series registradas como completadas.</p>
+        {!compact && <p className="mt-1 text-xs text-muted-foreground">Compara tus sesiones con series registradas como completadas.</p>}
       </div>
 
       {loading ? (
@@ -97,8 +98,9 @@ const WorkoutProgress = ({ userId }: Props) => {
         </div>
       ) : (
         <>
-          <div className="mt-4">
+          <div className={compact ? "mt-2 min-h-0 flex-1" : "mt-4"}>
             <ExerciseProgressChart
+              compact={compact}
               exerciseName={selectedExercise}
               history={history}
               metric={selectedMetric}
@@ -106,7 +108,7 @@ const WorkoutProgress = ({ userId }: Props) => {
             />
           </div>
           {latest && (
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className={compact ? "mt-2 grid grid-cols-4 gap-1.5 [&>div]:p-2 [&_p:first-child]:text-sm [&_p:last-child]:text-[10px] [&_p:last-child]:leading-tight" : "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"}>
               <div className="rounded-xl bg-secondary/40 p-3">
                 <p className="text-base font-bold tabular-nums sm:text-lg">{latest.completedSets}</p>
                 <p className="text-[11px] text-muted-foreground sm:text-xs">series completadas</p>
