@@ -18,6 +18,7 @@ import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/w
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
 import { WorkoutStudyCards } from "./WorkoutStudyCards";
+import { ExerciseSwap } from "./ExerciseSwap";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
 import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
@@ -73,7 +74,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [started, setStarted] = useState(false);
   const [workoutCompleted, setWorkoutCompleted] = useState(false);
   const [showCompletionSummary, setShowCompletionSummary] = useState(false);
-  const [showSummaryDetails, setShowSummaryDetails] = useState(false);
+  const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
@@ -864,9 +865,21 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                     </div>
                   )}
                   <div className="flex-1 text-left min-w-0">
-                    <div className={`truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
-                      {ex.name}
+                    <div className="flex items-center gap-1">
+                      <div className={`min-w-0 flex-1 truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
+                        {swaps[ex.name] || ex.name}
+                      </div>
+                      {!allDone && (
+                        <ExerciseSwap
+                          original={ex.name}
+                          current={swaps[ex.name]}
+                          movementPattern={metadata?.movement_pattern}
+                          muscleGroup={metadata?.muscle_group}
+                          onSelect={(name) => setSwaps((s) => { const next = { ...s }; if (name) next[ex.name] = name; else delete next[ex.name]; return next; })}
+                        />
+                      )}
                     </div>
+                    {swaps[ex.name] && <div className="truncate text-[10px] text-primary">En lugar de {ex.name}</div>}
                     <div className="mt-0.5 text-[11px] text-muted-foreground">
                       {ex.series} series <span className="px-0.5 text-border">·</span> {ex.reps} reps <span className="px-0.5 text-border">·</span> {ex.rest}
                     </div>
