@@ -99,7 +99,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
               strokeWidth={2.5}
               fill={`url(#${gid})`}
               connectNulls
-              dot={false}
+              dot={showDots ? { r: 4, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 } : false}
               activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
               style={{ filter: "drop-shadow(0 4px 12px hsl(var(--primary) / .35))" }}
             />
