@@ -42,6 +42,12 @@ interface Recommendation {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
+const AI_KEYS = [
+  { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Genera las imágenes y vídeos de los ejercicios con tu cuenta de OpenAI.", placeholder: "sk-..." },
+  { key: "ANTHROPIC_API_KEY", label: "Claude (Anthropic)", desc: "Reservada para futuras funciones de texto con Claude.", placeholder: "sk-ant-..." },
+] as const;
+
+
 const uploadImage = async (file: File, folder: string) => {
   const optimized = await toOptimizedWebp(file);
   const ext = optimized.name.split(".").pop() || "webp";
@@ -339,6 +345,46 @@ const SiteContentEditor = () => {
 
   return (
     <div className="space-y-8">
+      {/* Claves de IA */}
+      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="w-5 h-5 text-primary" />
+          <h2 className="font-display font-bold">Claves de IA</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Pega aquí tus claves para que las imágenes y vídeos de ejercicios se generen con tu cuenta. Si las dejas vacías, se usan los créditos internos de la plataforma.
+        </p>
+        <div className="space-y-3">
+          {AI_KEYS.map((k) => (
+            <div key={k.key} className="p-3 rounded-lg border border-border space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">{k.label}</p>
+                  <p className="text-[11px] text-muted-foreground">{k.desc}</p>
+                </div>
+                {aiKeys[k.key] && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => removeAiKey(k.key)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={aiKeys[k.key] || ""}
+                  onChange={(e) => setAiKeys((p) => ({ ...p, [k.key]: e.target.value }))}
+                  placeholder={k.placeholder}
+                  autoComplete="off"
+                />
+                <Button type="button" variant="outline" disabled={saving} onClick={() => saveAiKey(k.key)}>
+                  Guardar
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Secciones de la landing */}
       <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
