@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { track } from "@/lib/analytics";
 import { Link } from "react-router-dom";
+import TrainerOffer from "@/components/TrainerOffer";
 
 interface PricingTiersProps {
   onSelect: (plan: PlanKey) => void;
@@ -116,6 +117,8 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
           );
         })}
       </div>
+
+      <TrainerOffer />
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
         Puedes quedarte en Free sin límite. Plus ({TIERS.training.price}€/mes) adapta Autopilot a ti; Coach ({TIERS.full.price}€/mes) añade una persona real. Sin permanencia. Cancela desde Ajustes → Suscripción.
