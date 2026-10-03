@@ -480,7 +480,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
 
       {/* Tabs */}
-      <Tabs defaultValue={!hasAccess && !restricted ? "access" : "info"} className="space-y-6">
+      <Tabs defaultValue="info" className="space-y-6">
         <TabsList className="bg-secondary/50 w-full max-w-full flex overflow-x-auto no-scrollbar justify-start h-auto">
           <TabsTrigger value="info" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
             <User2 className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Cliente</span>
