@@ -94,7 +94,7 @@ const Index = () => {
           (supabase.rpc as any)("get_payment_mode"),
           (supabase as any)
             .from("library_books")
-            .select("id, title, description, price, cover_path, buy_url, buy_url_test, buy_url_live")
+            .select("id, title, description, price, cover_path, buy_url, buy_url_test, buy_url_live, is_pack")
             .eq("published", true)
             .eq("is_folder", false)
             .order("sort_order", { ascending: true }),
@@ -106,8 +106,9 @@ const Index = () => {
               title: b.title,
               description: b.description || "",
               cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
-              url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || "/recursos", b.id),
+              url: (live ? b.buy_url_live : b.buy_url_test) ? withBookRef(live ? b.buy_url_live : b.buy_url_test, b.id) : "",
               price: b.price || "",
+              is_pack: !!b.is_pack,
             })),
           );
         });
@@ -453,12 +454,10 @@ const Index = () => {
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     {ebooks.slice(0, 3).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
-                        <a
-                          href={e.url || "/recursos"}
-                          target={e.url ? "_blank" : undefined}
-                          rel={e.url ? "noreferrer" : undefined}
-                          onClick={() => rememberBookPurchase(e.id)}
-                          className="group flex flex-col h-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => { setPreviewBook(e); track("book_preview_open", { book: e.title, source: "home" }); }}
+                          className="group flex flex-col h-full w-full text-left bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
                         >
 
                           <div className="px-5 pt-5">
