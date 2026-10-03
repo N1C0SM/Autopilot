@@ -310,7 +310,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       </div>
 
       {/* Sesiones ejecutadas: lo que el cliente hizo realmente, serie a serie */}
-      <div className="bg-card rounded-xl p-4 sm:p-6 border border-border">
+      <div className="bg-card rounded-xl p-4 sm:p-5 border border-border">
         <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Dumbbell className="w-4 h-4 text-primary" />
           Últimas sesiones ({sessions.length})
