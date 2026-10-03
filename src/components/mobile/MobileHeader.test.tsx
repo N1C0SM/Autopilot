@@ -9,7 +9,7 @@ vi.mock("@/components/NotificationsBell", () => ({
 afterEach(cleanup);
 
 describe("mobile header", () => {
-  it("keeps the profile photo informational and uses the settings control for navigation", () => {
+  it("uses the profile photo as the single entry to profile and settings", () => {
     const onSettings = vi.fn();
     render(
       <MobileHeader
@@ -20,10 +20,8 @@ describe("mobile header", () => {
       />,
     );
 
-    expect(screen.getByRole("img", { name: "Foto de perfil de Ana" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Foto de perfil de Ana" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Ajustes" }));
+    expect(screen.queryByRole("button", { name: "Ajustes" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Perfil y ajustes" }));
     expect(onSettings).toHaveBeenCalledTimes(1);
   });
 });

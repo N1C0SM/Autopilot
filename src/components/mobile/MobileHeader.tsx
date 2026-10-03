@@ -1,4 +1,3 @@
-import { Settings as SettingsIcon } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 
 interface Props {
@@ -20,10 +19,11 @@ const MobileHeader = ({ title, profileName, profileAvatar, userId, onSettings }:
       }}
     >
       <div className="h-14 px-3 flex items-center gap-3">
-        <div
-          role="img"
-          aria-label={`Foto de perfil de ${profileName || "usuario"}`}
-          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-border"
+        <button
+          type="button"
+          onClick={onSettings}
+          aria-label="Perfil y ajustes"
+          className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-border active:scale-95 active:opacity-80 transition-transform"
         >
           {profileAvatar ? (
             <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
@@ -32,20 +32,12 @@ const MobileHeader = ({ title, profileName, profileAvatar, userId, onSettings }:
               {(profileName || "?").charAt(0).toUpperCase()}
             </span>
           )}
-        </div>
+        </button>
         <h1 className="flex-1 text-center font-display font-bold text-base truncate">
           {title}
         </h1>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="w-9 flex items-center justify-end shrink-0">
           {userId && <NotificationsBell userId={userId} />}
-          <button
-            type="button"
-            onClick={onSettings}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground active:bg-secondary"
-            aria-label="Ajustes"
-          >
-            <SettingsIcon className="w-5 h-5" />
-          </button>
         </div>
       </div>
     </header>
