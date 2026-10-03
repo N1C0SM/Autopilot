@@ -60,7 +60,7 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6">
         <DialogTitle className="sr-only">Autopilot para entrenadores</DialogTitle>
         {step >= 0 && step < 4 && (
           <div className="flex items-center gap-3">
@@ -71,12 +71,12 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
         )}
 
         {step === -1 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">Para entrenadores</span>
-            <h3 className="font-display text-2xl font-bold">{plan.name || "Autopilot para entrenadores"}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{plan.description}</p>
+            <h3 className="font-display text-xl font-bold">{plan.name || "Autopilot para entrenadores"}</h3>
+            <p className="text-sm text-muted-foreground leading-snug line-clamp-3">{plan.description}</p>
             {features.length > 0 && (
-              <ul className="space-y-2">{features.map((f) => <li key={f} className="flex gap-2 text-sm"><CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />{f}</li>)}</ul>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">{features.map((f) => <li key={f} className="flex gap-2 text-xs sm:text-sm"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />{f}</li>)}</ul>
             )}
             <div className="rounded-xl border border-border bg-secondary/40 p-3 text-sm"><span className="font-semibold">Plan a medida.</span> <span className="text-muted-foreground">Se adapta a tu número de clientes y a tu forma de trabajar.</span></div>
             {plan.accepting_new_subscriptions
