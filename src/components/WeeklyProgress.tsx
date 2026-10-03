@@ -8,6 +8,7 @@ import type { DayPlan } from "@/types/training";
 import { toLocalDateString } from "@/lib/localDates";
 
 interface Props {
+  compact?: boolean;
   userId: string;
   dayPlans: DayPlan[];
 }
