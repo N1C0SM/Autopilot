@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
@@ -36,7 +37,7 @@ ${fmt(recoList) || "ninguna"}
 
 Devuelve los IDs ordenados usando la herramienta.`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+    const r = await aiFetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
@@ -26,7 +27,7 @@ Es pack de varios libros: ${is_pack ? "sí" : "no"}
 Otros libros de la tienda y sus precios: ${Array.isArray(others) && others.length ? others.slice(0, 20).join("; ") : "ninguno"}
 Sé coherente con los otros precios (un pack debe salir más barato que comprarlos sueltos). Usa precios psicológicos (ej. 9,90 €).`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
       body: JSON.stringify({

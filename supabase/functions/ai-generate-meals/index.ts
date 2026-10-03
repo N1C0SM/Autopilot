@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
 import { hasNutrition } from "../_shared/entitlements.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -47,7 +48,7 @@ Alergias / intolerancias: ${allergies || "ninguna"}
 
 Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos coherentes con sus preferencias. Cada comida debe tener nombre y descripción específica con cantidades aproximadas (gramos o medidas caseras). NO uses ningún alimento que el usuario haya marcado como alergia.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

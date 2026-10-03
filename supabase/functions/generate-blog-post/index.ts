@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
@@ -37,7 +38,7 @@ Reglas estrictas:
 Devuelve SOLO un objeto JSON válido, sin texto alrededor y sin bloques de código, con estas claves exactas:
 {"title": "...", "excerpt": "...", "body_markdown": "...", "seo_title": "máx 60 caracteres", "seo_description": "máx 160 caracteres"}`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`,

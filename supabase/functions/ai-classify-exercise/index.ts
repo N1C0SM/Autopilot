@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -32,7 +33,7 @@ Deno.serve(async (req) => {
 
     const sys = `Eres un experto en biomecánica y entrenamiento (gimnasio + calistenia). Clasificas ejercicios en metadatos estructurados. Responde SIEMPRE llamando la función classify_exercise con valores EXACTOS de los enums. Si no estás seguro de skill_tag o progression_order, devuélvelos como null.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({

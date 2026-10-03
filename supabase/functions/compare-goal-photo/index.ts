@@ -1,3 +1,4 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -24,7 +25,7 @@ Deno.serve(async (req) => {
 
     const sys = `Eres un coach de fitness experto. Comparas dos fotos de un físico: una es el objetivo, la otra es el estado actual del usuario. Estima en porcentaje (0-100) cuánto se parece el actual al objetivo en términos de composición corporal (definición muscular, masa, simetría, % grasa estimado). Sé honesto pero motivador. Responde SIEMPRE llamando a la función compare_physique.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
