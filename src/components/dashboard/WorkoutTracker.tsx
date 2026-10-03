@@ -1012,7 +1012,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                         {prevSets?.some((set) => set.done) && (
                           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-2 px-1">
                             <TrendingUp className="w-3 h-3" />
-                            <span>Precargado de la última vez: {prevSets.filter((set) => set.done).map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
+                            <span>Toca ✓ para repetir lo de la última vez: {prevSets.filter((set) => set.done).map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
                             <InfoHint text="Los pesos y repeticiones de las series completadas la última vez ya están puestos. Ajusta solo lo que cambie hoy." />
                           </div>
                         )}
@@ -1073,9 +1073,10 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 value={set.weight}
                                 onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
                                 placeholder={ex.weight || "kg"}
+                                onFocus={(e) => e.currentTarget.select()}
                                 aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                 aria-invalid={Boolean(inputError && set.weight.trim())}
-                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && set.weight.trim() ? "border-destructive" : "border-border"}`}
+                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${inputError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1099,9 +1100,10 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                   const val = parseInt(e.target.value);
                                   if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
                                 }}
+                                onFocus={(e) => e.currentTarget.select()}
                                 aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
                                 aria-invalid={Boolean(inputError && (!Number.isInteger(set.reps) || set.reps <= 0))}
-                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${inputError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${inputError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
                               />
                               {prevSets?.[si] && (
                                 <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1119,7 +1121,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                               className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all mx-auto ${
                                 set.done
                                   ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                                  : "bg-secondary hover:bg-secondary/80 text-muted-foreground"
+                                  : inputError
+                                    ? "bg-secondary text-muted-foreground"
+                                    : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
                               }`}
                             >
                               <Check className="w-5 h-5" />
