@@ -132,9 +132,9 @@ export function WorkoutStoryShare(props: Props) {
     } finally { setBusy(false); }
   };
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-2">
-      <Button type="button" variant="hero" disabled={busy} onClick={() => run("share")} className="h-12">
-        <Share2 className="mr-2 h-4 w-4" /> Compartir en historias
+    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_3rem] gap-2">
+      <Button type="button" variant="hero" disabled={busy} onClick={() => run("share")} className="h-12 min-w-0 px-3 text-sm">
+        <Share2 className="h-4 w-4" /> <span className="truncate">Compartir en historias</span>
       </Button>
       <Button type="button" variant="outline" disabled={busy} onClick={() => run("download")} className="h-12" aria-label="Descargar imagen">
         <Download className="h-4 w-4" />
