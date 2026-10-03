@@ -6,6 +6,10 @@ import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
 import { FRONT_REGIONS, BACK_REGIONS, FRONT_SILHOUETTE, BACK_SILHOUETTE } from "./MuscleMapFigure";
 import { tonnageEquivalence } from "@/lib/muscleMapping";
+import displayFontUrl from "@/assets/fonts/BigShoulders-Bold.ttf";
+
+let fontReady: Promise<void> | null = null;
+const ensureFont = () => (fontReady ??= new FontFace("AutopilotDisplay", `url(${displayFontUrl})`).load().then((f) => { document.fonts.add(f); }).catch(() => {}));
 
 interface Props {
   title: string;
@@ -67,7 +71,7 @@ function drawFigure(ctx: CanvasRenderingContext2D, img: HTMLImageElement, side: 
 type Variant = "resumen" | "musculos";
 
 const GOLD_STOPS: [number, string][] = [[0, "#fff1c2"], [0.35, "#f3c969"], [0.7, "#c8902f"], [1, "#7a5418"]];
-const DISPLAY = "Impact, 'Haettenschweiler', 'Arial Narrow Bold', 'SF Pro Display', system-ui, sans-serif";
+const DISPLAY = "AutopilotDisplay, Impact, 'Haettenschweiler', 'Arial Narrow Bold', 'SF Pro Display', system-ui, sans-serif";
 const F = "system-ui, -apple-system, 'SF Pro Display', sans-serif";
 const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
@@ -191,7 +195,7 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
   });
   if (p.records.length) {
     ctx.textAlign = "center"; ctx.font = `700 30px ${F}`; ctx.fillStyle = "#ff9d3c";
-    ctx.fillText(`RÉCORD · ${p.records.slice(0, 2).join(" · ").toUpperCase()}`, cx, 1500);
+    ctx.fillText(`RÉCORD · ${p.records.slice(0, 2).join(" · ").toUpperCase()}`, cx, 1268);
   }
   ctx.textAlign = "center"; ctx.fillStyle = "#a8a29e"; ctx.font = `500 36px ${F}`;
   ctx.fillText("autopilotplan.com", cx, H - 110);
@@ -218,15 +222,15 @@ function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: num
     ctx.fillStyle = hot ? "#f3c969" : "#fafaf9"; ctx.textAlign = "center"; ctx.fillText(m, x + widths[i] / 2, y + 50);
     x += widths[i] + 16;
   });
-  const s = drawBigKg(ctx, fmt(p.volumeKg), W / 2, 1640, W - 240, 250);
+  const s = drawBigKg(ctx, fmt(p.volumeKg), W / 2, 1620, W - 240, 230);
   const eq = tonnageEquivalence(p.volumeKg);
   ctx.textAlign = "center"; ctx.fillStyle = "#fafaf9"; ctx.font = `700 52px ${F}`;
   const eqText = eq ? eq.text.replace(/^Como levantar /, "Como levantar ") : `${p.sets} series completadas`;
-  wrap(ctx, eqText, W / 2, 1640 + Math.min(110, s * 0.4), W - 160, 60, 1);
+  wrap(ctx, eqText, W / 2, 1620 + Math.min(96, s * 0.4), W - 160, 60, 1);
   ctx.fillStyle = "#bdb6a8"; ctx.font = `500 38px ${F}`;
-  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1640 + Math.min(110, s * 0.4) + 64);
+  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4) + 62);
   ctx.fillStyle = "#a8a29e"; ctx.font = `500 36px ${F}`;
-  ctx.fillText("autopilotplan.com", W / 2, H - 70);
+  ctx.fillText("autopilotplan.com", W / 2, H - 56);
 }
 
 export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
@@ -234,6 +238,7 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
+  await ensureFont();
   if (variant === "resumen") drawResumen(ctx, p, W, H);
   else {
     const [front, back] = await Promise.all([loadImage(frontAnatomy), loadImage(backAnatomy)]);
