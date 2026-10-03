@@ -1,11 +1,13 @@
-# Plan: Clarificar que el entrenador dirige Autopilot
+# Plan: Revelación del plan y fichas de fin de entreno
 
 ## Cambios
-- Reescribir el mensaje principal, textos de apoyo y llamadas a la acción de la landing para situar al entrenador real como responsable del plan y seguimiento.
-- Aclarar en el análisis inicial que la IA solo ayuda a detectar información y nunca diseña, reorganiza ni atiende al cliente.
-- Revisar pasos, comparación, planes, Transformación, entrenadores, preguntas frecuentes, barras móviles/fijas y metadatos sin cambiar precios, rutas ni comportamiento.
-- Validar la compilación y revisar la landing en móvil y escritorio.
+- Sustituir el análisis largo del entrenamiento por un carrusel horizontal de tres fichas compactas: foco muscular, progreso y próximo paso.
+- Mantener el mapa muscular, pero reducido dentro de su ficha; limitar textos para evitar desplazamiento vertical dentro del resumen.
+- Convertir el último paso del cuestionario en una revelación visual del plan antes del registro, mostrando rutina de ejemplo y macros personalizados cuando haya peso.
+- Conservar consentimientos, opciones de calendario/foto y el flujo actual de registro y generación del plan.
+- Validar la compilación y revisar ambas pantallas en móvil.
 
 ## Detalles técnicos
-- Conservar la estructura visual, analítica y navegación actuales.
-- Limitar los cambios a textos y presentación de la landing y sus componentes visibles.
+- Crear un componente reutilizable para las fichas del entrenamiento con desplazamiento táctil, ajuste por tarjeta e indicadores de posición.
+- Reutilizar el cálculo existente de nutrición y adaptar la vista previa para no prometer resultados ni datos que no se hayan calculado.
+- No cambiar precios, permisos, almacenamiento ni lógica del plan generado.
