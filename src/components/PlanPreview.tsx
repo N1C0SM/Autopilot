@@ -1,5 +1,4 @@
-import { motion } from "framer-motion";
-import { Dumbbell, Utensils, Lock, Sparkles, Flame } from "lucide-react";
+import { Dumbbell, Utensils, Lock, Sparkles, Flame, Check } from "lucide-react";
 import { resolveNutritionPreview } from "@/lib/nutrition";
 
 interface Props {
@@ -8,6 +7,7 @@ interface Props {
   weight?: number;
   sex?: string;
   days?: number;
+  registered?: boolean;
 }
 
 function sampleWorkout(focus?: string) {
@@ -47,20 +47,21 @@ function sampleWorkout(focus?: string) {
   };
 }
 
-const PlanPreview = ({ focus, goal, weight, sex, days = 4 }: Props) => {
+const PlanPreview = ({ focus, goal, weight, sex, days = 4, registered = false }: Props) => {
   const workout = sampleWorkout(focus);
   const nutritionPreview = resolveNutritionPreview({ weight, sex, goal });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="mb-8 space-y-3"
-    >
-      <div className="flex items-center justify-center gap-2 text-sm text-primary font-medium">
-        <Sparkles className="w-4 h-4" />
-        Tu plan está listo — vista previa
+    <div className="mb-5 space-y-3">
+      <div className="rounded-2xl border border-primary/25 bg-primary/5 px-4 py-4 text-center">
+        <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Check className="h-4 w-4" />
+        </div>
+        <div className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-primary">
+          <Sparkles className="h-4 w-4" />
+          Tu plan de arranque está definido
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">Esta es una muestra basada en tus respuestas.</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-3">
@@ -87,7 +88,7 @@ const PlanPreview = ({ focus, goal, weight, sex, days = 4 }: Props) => {
             ))}
           </ul>
           <p className="text-[11px] text-muted-foreground mt-3">
-            +{Math.max(days - 1, 2)} días más bloqueados
+            +{Math.max(days - 1, 2)} sesiones que se completarán al crear el plan
           </p>
         </div>
 
@@ -143,9 +144,9 @@ const PlanPreview = ({ focus, goal, weight, sex, days = 4 }: Props) => {
       </div>
 
       <p className="text-center text-[11px] text-muted-foreground">
-        Desbloquea el plan completo con tu prueba de 7 días gratis
+        {registered ? "Confirma para generar y guardar tu plan completo." : "Crea tu cuenta para generar y guardar el plan completo."}
       </p>
-    </motion.div>
+    </div>
   );
 };
 
