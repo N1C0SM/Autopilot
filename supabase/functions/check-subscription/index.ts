@@ -1,3 +1,4 @@
+import { syncStripeEntitlement } from "../_shared/sync-entitlement.ts";
 import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
@@ -55,6 +56,7 @@ serve(async (req) => {
       if (!hasCoaching(profile)) updates.plan_status = "plan_pending";
       const { error } = await db.from("profiles").update(updates).eq("user_id", user.id);
       if (error) throw error;
+      await syncStripeEntitlement(db, user.id, tier, sub.status, subscriptionEnd, sub.id);
       return json({ subscribed: true, tier, subscription_end: subscriptionEnd,
         plan: sub.items.data[0]?.price.recurring?.interval === "year" ? "yearly" : "monthly" });
     }
@@ -66,6 +68,7 @@ serve(async (req) => {
       payment_status: "unpaid", subscription_tier: "free", subscription_status: "inactive", subscription_end: null,
     }).eq("user_id", user.id);
     if (error) throw error;
+    await syncStripeEntitlement(db, user.id, "free", "inactive", null);
     return json({ subscribed: false, tier: "free", subscription_end: null, plan: null });
   } catch (error) {
     console.error("check-subscription failed", error);

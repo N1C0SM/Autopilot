@@ -1,5 +1,6 @@
 import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
 import { hasCoaching, resolvePaidTier, subscriptionAllowsCoaching } from "../_shared/entitlements.ts";
+import { syncStripeEntitlement } from "../_shared/sync-entitlement.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -163,6 +164,7 @@ serve(async (req) => {
             plan_status: hasCoaching(profile) ? profile.plan_status : "plan_pending",
           }).eq("user_id", profile.user_id);
           if (error) throw error;
+          await syncStripeEntitlement(supabaseAdmin, profile.user_id, tier, sub.status, periodEnd ? new Date(periodEnd * 1000).toISOString() : null, sub.id);
           // Preserve the existing welcome email, idempotent per verified checkout.
           try {
             await supabaseAdmin.functions.invoke("send-transactional-email", { body: {
@@ -219,6 +221,7 @@ serve(async (req) => {
           if (active && !hasCoaching(profile)) updates.plan_status = "plan_pending";
           const { error } = await supabaseAdmin.from("profiles").update(updates).eq("user_id", profile.user_id);
           if (error) throw error;
+          await syncStripeEntitlement(supabaseAdmin, profile.user_id, updates.subscription_tier as string, (updates.subscription_status as string), updates.subscription_end as string | null, active?.id);
         }
       }
     }

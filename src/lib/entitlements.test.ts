@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasCoaching, hasNutrition, resolvePaidTier, subscriptionAllowsCoaching } from "../../supabase/functions/_shared/entitlements";
+import { hasCoaching, hasNutrition, getConsumerPlan, resolveFeatures, requiredPlan, resolvePaidTier, subscriptionAllowsCoaching } from "../../supabase/functions/_shared/entitlements";
 const active = { payment_status: "paid", subscription_tier: "training", subscription_status: "active", subscription_end: "2030-01-01T00:00:00Z" };
 describe("free to paid entitlements", () => {
   it("never treats free metadata, a selected plan or a legacy paid flag as a purchase", () => {
@@ -8,9 +8,20 @@ describe("free to paid entitlements", () => {
     expect(hasCoaching({ payment_status: "paid", subscription_tier: "personal", subscription_status: "inactive" })).toBe(false);
     expect(hasCoaching(null)).toBe(false);
   });
-  it("grants training but not nutrition after verified payment", () => {
+  it("Plus grants software + nutrition but never a human coach", () => {
     expect(hasCoaching(active)).toBe(true);
-    expect(hasNutrition(active)).toBe(false);
+    expect(hasNutrition(active)).toBe(true);
+    expect(getConsumerPlan(active)).toBe("plus");
+    expect(resolveFeatures("plus").has("humanCoach")).toBe(false);
+    expect(resolveFeatures("coach").has("humanCoach")).toBe(true);
+    expect(getConsumerPlan({ ...active, subscription_tier: "full" })).toBe("coach");
+    expect(getConsumerPlan({ payment_status: "unpaid" })).toBe("free");
+    expect(requiredPlan("advancedAI")).toBe("plus");
+    expect(requiredPlan("coachMessaging")).toBe("coach");
+    // A trainer role is not a Coach plan.
+    expect(resolveFeatures("free", ["trainer"]).has("humanCoach")).toBe(false);
+    expect(resolveFeatures("free", ["trainer"]).has("trainerDashboard")).toBe(true);
+    expect(resolveFeatures("free", ["trainer"]).has("trainerInvitations")).toBe(false);
     expect(hasNutrition({ ...active, subscription_tier: "full" })).toBe(true);
     expect(hasCoaching({ ...active, subscription_status: "trialing" })).toBe(true);
   });

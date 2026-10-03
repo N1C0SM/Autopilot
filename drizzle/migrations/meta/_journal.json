@@ -8,6 +8,13 @@
       "when": 1791017531440,
       "tag": "0000_secure_certificates_and_app_secrets",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791017852580,
+      "tag": "0001_business_model_plans_b2b",
+      "breakpoints": true
     }
   ]
 }

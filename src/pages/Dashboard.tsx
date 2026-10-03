@@ -1,4 +1,5 @@
-import { hasCoaching, hasNutrition } from "@/lib/entitlements";
+import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
+import { PlanPaywall, CoachPendingAssignment } from "@/components/dashboard/PlanPaywall";
 import { parseMacroTargets } from "@/lib/nutrition";
 import CoachingOffer from "@/components/dashboard/CoachingOffer";
 import { track } from "@/lib/analytics";
@@ -72,6 +73,8 @@ const Dashboard = () => {
   const [planStatus, setPlanStatus] = useState<string>("onboarding");
   const [paymentStatus, setPaymentStatus] = useState<string>("unpaid");
   const [coaching, setCoaching] = useState(false);
+  const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
+  const [coachAssigned, setCoachAssigned] = useState(true);
   const [nutrition, setNutrition] = useState(false);
   const [preparingRoutine, setPreparingRoutine] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<string>("full");
@@ -134,6 +137,12 @@ const Dashboard = () => {
       setSubscriptionTier(profile.subscription_tier || "free");
       setCoaching(hasCoaching(profile));
       setNutrition(hasNutrition(profile));
+      const plan = getConsumerPlan(profile);
+      setConsumerPlan(plan);
+      if (plan === "coach") {
+        const { data: cp } = await supabase.rpc("get_my_consumer_plan");
+        setCoachAssigned(Boolean(cp?.[0]?.coach_assigned));
+      }
       setProfileName(profile.name || "");
       setProfileAvatar(profile.avatar_url || "");
 
@@ -461,7 +470,7 @@ const Dashboard = () => {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
           <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
-          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Mejorar a Completo — {TIERS.full.price}€/mes</Button>
+          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Elegir Coach — {TIERS.full.price}€/mes</Button>
         </div>
       )}
 
@@ -483,7 +492,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      {coaching && section === "chat" && (
+      {coaching && consumerPlan === "plus" && section === "chat" && (
+        <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
+      )}
+      {consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
+      {consumerPlan === "coach" && coachAssigned && section === "chat" && (
         <div className="w-full">
           {user && (
             <Suspense fallback={<SectionFallback />}>
@@ -551,7 +564,7 @@ const Dashboard = () => {
         profileName={profileName}
         profileAvatar={profileAvatar}
         userId={user?.id}
-        lockedTabs={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
+        lockedTabs={!coaching ? ["nutrition", "chat"] : consumerPlan !== "coach" ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         workoutMode={workoutMode}
       >
@@ -577,7 +590,7 @@ const Dashboard = () => {
             onSignOut={handleSignOut}
             profileName={profileName}
             profileAvatar={profileAvatar}
-            lockedSections={!coaching ? ["nutrition", "chat"] : isTrainingOnly ? ["nutrition"] : []}
+            lockedSections={!coaching ? ["nutrition", "chat"] : consumerPlan !== "coach" ? ["chat"] : []}
           />
         </div>
 

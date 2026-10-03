@@ -402,7 +402,7 @@ const Index = () => {
 
             <ScrollReveal delay={0.1}>
               <Suspense fallback={<SectionFallback />}>
-                <PricingTiers onSelect={selectPlan} recommended="free" />
+                <PricingTiers onSelect={selectPlan} recommended="training" />
               </Suspense>
             </ScrollReveal>
 

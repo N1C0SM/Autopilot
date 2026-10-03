@@ -7,61 +7,61 @@ export type PlanKey = "free" | "training" | "full";
 export const TIERS = {
   free: {
     key: "free" as const,
-    name: "Gratis",
+    name: "Free",
     price: 0,
     interval: "month" as const,
     trial_days: 0,
-    tagline: "Para entrenar por tu cuenta y guardar tu progreso, sin tarjeta.",
+    tagline: "Empieza con Autopilot.",
     features: [
-      "Perfil y objetivo de entrenamiento",
-      "Rutina inicial para empezar",
-      "Registro de series, peso y repeticiones",
-      "Progreso, fotos y racha semanal",
+      "Onboarding, objetivos y rutina inicial",
+      "Registro de entrenamientos, peso y progreso",
+      "Historial y seguimiento básico",
+      "IA básica",
     ],
-    notIncluded: ["Chat con entrenador", "Nutrición personalizada"],
-    cta: "Crear cuenta gratis",
+    notIncluded: ["Adaptación automática y nutrición", "Entrenador asignado"],
+    cta: "Empezar gratis",
   },
   training: {
     key: "training" as const,
-    name: "Entrenamiento",
+    name: "Plus",
     price: 29,
     interval: "month" as const,
     trial_days: 7,
-    tagline: "Para tener una rutina adaptada y un entrenador que revise cómo vas.",
+    recommended: true,
+    tagline: "Autopilot se adapta a ti.",
     features: [
-      "Plan preparado por un entrenador real",
-      "Adaptado a gimnasio, casa o material disponible",
-      "Revisión cada 2 semanas",
-      "Chat con entrenador",
-      "Respuesta en 48h",
-      "Revisión de progreso",
+      "Todo Free",
+      "IA avanzada y adaptación automática",
+      "Plan de nutrición",
+      "Seguimiento y estadísticas avanzadas",
+      "Análisis corporal y evolución",
     ],
-    notIncluded: ["Nutrición personalizada"],
-    cta: "Probar Entrenamiento gratis",
+    notIncluded: ["Entrenador asignado"],
+    cta: "Elegir Plus",
   },
   full: {
     key: "full" as const,
-    name: "Completo",
+    name: "Coach",
     price: 49,
     interval: "month" as const,
     trial_days: 7,
-    recommended: true,
-    tagline:
-      "Para trabajar entrenamiento y alimentación con seguimiento semanal.",
+    tagline: "Autopilot + una persona real detrás.",
     features: [
-      "Entrenamiento preparado por un entrenador real",
-      "Nutrición personalizada por tu entrenador",
-      "Ajustes de entrenamiento hechos por tu entrenador",
-      "Ajustes nutricionales hechos por tu entrenador",
-      "Revisión de progreso",
-      "Chat con entrenador",
-      "Revisión semanal",
-      "Respuesta en 24h",
+      "Todo Plus",
+      "Entrenador asignado",
+      "Revisiones y check-ins",
+      "Feedback y ajustes humanos",
+      "Chat con tu entrenador",
     ],
     notIncluded: [],
-    cta: "Probar Completo gratis",
+    cta: "Elegir Coach",
   },
 } as const;
+
+/** Precios centralizados por plan de consumidor. */
+export const PLAN_PRICE = { free: TIERS.free.price, plus: TIERS.training.price, coach: TIERS.full.price } as const;
+/** Clave de checkout (slot de precio en settings) para cada plan. */
+export const PLAN_CHECKOUT_KEY = { plus: "training", coach: "full" } as const;
 
 // Alias legacy (algunos componentes antiguos lo siguen importando)
 export const TIER = TIERS.full;
@@ -75,7 +75,11 @@ export function getTierByProductId(_productId: string): TierKey | null {
 
 // Etiquetas cortas del plan para el panel de administración.
 export const PLAN_LABEL: Record<string, string> = {
-  free: "Gratis",
-  training: "Entrenamiento · 29€/mes",
-  full: "Completo · 49€/mes",
+  free: "Free",
+  training: `Plus · ${TIERS.training.price}€/mes`,
+  plus: `Plus · ${TIERS.training.price}€/mes`,
+  full: `Coach · ${TIERS.full.price}€/mes`,
+  coach: `Coach · ${TIERS.full.price}€/mes`,
+  transform: "Coach · Transformación",
+  personal: `Coach · ${TIERS.full.price}€/mes`,
 };

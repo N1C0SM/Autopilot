@@ -15,7 +15,7 @@ const ORDER: PlanKey[] = ["free", "training", "full"];
 
 const COUPLE: Record<string, number> = { training: 44, full: 74 };
 
-const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => {
+const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
   const [couple, setCouple] = useState(false);
   return (
     <div className="max-w-6xl mx-auto">
@@ -50,7 +50,7 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
             >
               {isRec && (
                 <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
-                  {key === "full" ? "Incluye nutrición" : key === "training" ? "Con entrenador" : "Sin tarjeta"}
+                  Más popular
                 </div>
               )}
 
@@ -111,18 +111,17 @@ const PricingTiers = ({ onSelect, recommended = "full" }: PricingTiersProps) => 
               >
                 {key === "free" ? "Empezar gratis" : t.cta}
               </Button>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y decide más adelante si quieres seguimiento humano." : `Tras 7 días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y pasa a Plus o Coach cuando tenga sentido." : `Tras 7 días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
             </motion.div>
           );
         })}
       </div>
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
-        Puedes quedarte en Gratis sin límite de prueba. Si necesitas seguimiento, elige <span className="text-foreground font-semibold">29€/mes</span> o{" "}
-        <span className="text-foreground font-semibold">49€/mes</span> según el plan. Sin permanencia. Cancela desde Ajustes → Suscripción.
+        Puedes quedarte en Free sin límite. Plus ({TIERS.training.price}€/mes) adapta Autopilot a ti; Coach ({TIERS.full.price}€/mes) añade una persona real. Sin permanencia. Cancela desde Ajustes → Suscripción.
       </p>
       <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
-        En ambos planes de pago, un entrenador real prepara tu entrenamiento y atiende tu seguimiento. La nutrición personalizada está incluida en Completo.
+        Plus funciona solo, sin entrenador humano. Coach incluye todo Plus y un entrenador asignado.
       </p>
       <p className="text-center text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía de devolución de 30 días en planes mensuales
