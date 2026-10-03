@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, UserRound } from "lucide-react";
+import { Check, Clock, UserRound } from "lucide-react";
 import { hapticTap } from "@/lib/native";
 import { Button } from "@/components/ui/button";
 import type { MacroTargets } from "@/lib/nutrition";
@@ -54,10 +54,15 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
   // Sin comidas ni objetivos: avisamos con calma en vez de mostrar una pantalla vacía.
   if (!meals.length && kcal <= 0) {
     return (
-      <div className="rounded-3xl bg-card border border-border p-4 sm:p-6 text-center">
-        <div className="font-semibold mb-1">Tu plan de nutrición está en preparación</div>
-        <p className="text-sm text-muted-foreground">
-          En cuanto tu entrenador lo cierre lo verás aquí con tus calorías, macros y comidas del día.
+      <div className="relative overflow-hidden rounded-[2rem] bg-card border border-border px-6 py-14 sm:py-20 text-center min-h-[60dvh] flex flex-col items-center justify-center">
+        <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+        <div className="relative mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/30">
+          <Clock className="h-9 w-9 text-primary" />
+        </div>
+        <p className="relative text-xs font-semibold uppercase tracking-[0.2em] text-primary">Nutrición</p>
+        <h2 className="relative mt-3 font-display text-2xl sm:text-3xl font-bold">Tu plan está en preparación</h2>
+        <p className="relative mt-3 max-w-sm text-sm sm:text-base text-muted-foreground">
+          En cuanto tu entrenador lo cierre verás aquí tus calorías, macros y comidas del día.
         </p>
       </div>
     );
