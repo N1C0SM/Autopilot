@@ -1207,6 +1207,7 @@ export type Database = {
           app_store_url: string
           booking_url: string
           contact_email: string | null
+          contact_phone: string | null
           created_at: string
           ebooks: Json
           guide_ebook_url: string | null
@@ -1253,6 +1254,7 @@ export type Database = {
           app_store_url?: string
           booking_url?: string
           contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           ebooks?: Json
           guide_ebook_url?: string | null
@@ -1299,6 +1301,7 @@ export type Database = {
           app_store_url?: string
           booking_url?: string
           contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           ebooks?: Json
           guide_ebook_url?: string | null
