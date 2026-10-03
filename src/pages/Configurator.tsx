@@ -263,7 +263,7 @@ const Configurator = () => {
         )}
 
         <div className="flex justify-between mt-8">
-          <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0 || saving}>
+          <Button variant="ghost" onClick={() => (step === 0 ? navigate("/") : setStep((s) => s - 1))} disabled={saving}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Atrás
           </Button>
           {step < 4 ? (
