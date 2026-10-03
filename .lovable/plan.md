@@ -1,23 +1,23 @@
-# Tarjetas planas: fuera tarjeta dentro de tarjeta
+# Panel de admin de usuario: navegación limpia
 
 ## Problema
-Las fichas de fin de entreno tienen superficies anidadas: una tarjeta grande con borde y fondo, y dentro más cajas con fondo y borde (mapas musculares en cajas grises, comparaciones en cajas, próximo paso en otra caja). Eso da sensación "bootstrap", no premium.
+La ficha de usuario en Admin tiene 6 pestañas con icono + texto (Cliente, Plan y acceso, Progreso, Entreno, Nutrición, Chat) que ocupan todo el ancho y se ven apretadas, y dentro de Entreno hay otra fila de sub-pestañas (Plan / Calendario). Es un lío visual.
 
-## Solución: una sola superficie, contenido plano
+## Solución
 
-### WorkoutStudyCards.tsx
-- Cada ficha es UNA tarjeta (borde + fondo + radio). Dentro, cero cajas.
-- **Ficha Músculos**: los mapas front/back van directos sobre la tarjeta, sin caja gris `bg-secondary/30` alrededor; las siluetas ya tienen su propia figura.
-- **Ficha Comparación**: los ejercicios pasan de cajas `rounded-xl bg-secondary/35` a filas planas separadas por una línea fina (`divide-y divide-border/50`), nombre en semibold y observación debajo.
-- **Ficha Próximo paso**: fuera la caja `border-primary/20 bg-primary/5`; el texto va plano con un acento de línea dorada a la izquierda (como la comparación de volumen de la primera ficha).
-- Estados vacíos: texto centrado plano, sin caja.
+### Navegación principal
+- Las 6 pestañas pasan a un control segmentado compacto y limpio: icono + etiqueta corta, espaciado uniforme, sin que cada una luche por el ancho.
+- En pantallas estrechas: solo iconos con etiqueta debajo en miniatura (o scroll horizontal elegante), sin deformarse.
+- La pestaña activa se marca con fondo dorado suave, el resto en gris silencioso.
 
-### WorkoutTracker.tsx (pantalla final)
-- La primera ficha (intro) mantiene su estilo pero sin doble superficie: el bloque de métricas ya es plano con divisores, se mantiene; se elimina cualquier fondo extra del contenedor de compartir.
+### Entreno sin sub-pestañas
+- Se elimina la segunda fila de pestañas dentro de Entreno: Plan y Calendario se muestran en una sola vista (calendario arriba compacto, plan debajo) o con un selector pequeño integrado en la cabecera de la sección, no otra barra.
 
-### Resultado
-Una tarjeta = una superficie. Todo lo interno es tipografía, divisores finos y aire. Estilo editorial premium, coherente con la tarjeta de Stories.
+### Cabecera de usuario
+- Se compacta: avatar, nombre, plan y botones de acción (Auto-generar, Guardar, Ver como, borrar) en una sola fila que se adapta; en pantallas pequeñas las acciones pasan a un menú de tres puntos.
+
+## Resultado
+Una sola barra de navegación clara, sin barras anidadas, con aire y jerarquía. El admin encuentra todo de un vistazo.
 
 ## Verificación
-- Typecheck limpio.
-- Revisión visual con Playwright a 390×844 de la pantalla de fin de entreno: sin cajas anidadas, sin scroll.
+- Typecheck limpio y revisión visual a varios anchos (móvil y escritorio).
