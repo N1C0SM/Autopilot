@@ -98,6 +98,7 @@ const Dashboard = () => {
     setVisited((v) => (v.includes(section) ? v : [...v, section]));
   }, [section]);
   const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records">("evolution");
+  const [evolutionView, setEvolutionView] = useState<"week" | "exercise" | "weight">("week");
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
@@ -547,10 +548,27 @@ const Dashboard = () => {
             ))}
           </div>
           <Suspense fallback={<SectionFallback />}>
-            <div className={progressTab === "evolution" ? "space-y-4" : "hidden"}>
-              <WeeklyProgress userId={user.id} dayPlans={dayPlans} />
-              <WorkoutProgress userId={user.id} />
-              <ProgressCharts userId={user.id} />
+            <div className={progressTab === "evolution" ? "space-y-3" : "hidden"}>
+              <div role="tablist" className="grid grid-cols-3 gap-1 rounded-full border border-border/50 bg-secondary/40 p-1">
+                {([
+                  ["week", "Semana"],
+                  ["exercise", "Ejercicios"],
+                  ["weight", "Peso"],
+                ] as const).map(([k, label]) => (
+                  <button
+                    key={k}
+                    role="tab"
+                    aria-selected={evolutionView === k}
+                    onClick={() => setEvolutionView(k)}
+                    className={`h-8 rounded-full text-xs font-medium transition-colors ${evolutionView === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {evolutionView === "week" && <WeeklyProgress userId={user.id} dayPlans={dayPlans} />}
+              {evolutionView === "exercise" && <WorkoutProgress userId={user.id} />}
+              {evolutionView === "weight" && <ProgressCharts userId={user.id} />}
             </div>
             {progressTab === "photos" && <ProgressPhotos userId={user.id} />}
             {progressTab === "records" && <PRsList userId={user.id} />}
