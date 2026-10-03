@@ -1,7 +1,8 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Dumbbell, Target, TrendingUp } from "lucide-react";
+import { ArrowRight, Check, Dumbbell, Target, TrendingUp } from "lucide-react";
 import { buildWorkoutReview, type ReviewExercise } from "@/lib/workoutReview";
 import { MuscleMapFigure } from "./MuscleMapFigure";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   muscles: string[];
@@ -11,9 +12,12 @@ interface Props {
   previous: ReviewExercise[];
   rpe?: number | null;
   intro?: ReactNode;
+  /** Modo pantalla completa estilo Stories: barras arriba y botón integrado abajo. */
+  immersive?: boolean;
+  onFinish?: () => void;
 }
 
-export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, current, previous, rpe, intro }: Props) {
+export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, current, previous, rpe, intro, immersive, onFinish }: Props) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [activeCard, setActiveCard] = useState(0);
   const review = buildWorkoutReview(current, previous, rpe);
@@ -25,40 +29,64 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
   const nextStep = review[0]?.proposal || "Mantén tu plan como referencia para la próxima sesión.";
 
   const total = intro ? 4 : 3;
+  const step = () => (scrollerRef.current?.clientWidth || 0) * (immersive ? 1 : 0.88);
   const handleScroll = () => {
     const scroller = scrollerRef.current;
     if (!scroller || scroller.clientWidth === 0) return;
-    setActiveCard(Math.min(total - 1, Math.max(0, Math.round(scroller.scrollLeft / (scroller.clientWidth * 0.88)))));
+    setActiveCard(Math.min(total - 1, Math.max(0, Math.round(scroller.scrollLeft / step()))));
+  };
+  const goTo = (index: number) => {
+    const target = Math.min(total - 1, Math.max(0, index));
+    scrollerRef.current?.scrollTo({ left: target * step(), behavior: "smooth" });
+    setActiveCard(target);
   };
 
-  const cardClass = "h-[18.5rem] w-[88%] shrink-0 snap-center overflow-hidden rounded-2xl border border-border/80 bg-card p-4 text-left first:snap-start last:snap-end";
+  const cardClass = immersive
+    ? "flex h-full w-full shrink-0 snap-center flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
+    : "h-[18.5rem] w-[88%] shrink-0 snap-center overflow-hidden rounded-2xl border border-border/80 bg-card p-4 text-left first:snap-start last:snap-end";
+  const isLast = activeCard === total - 1;
 
   return (
-    <section aria-label="Análisis de la sesión" className="min-w-0">
+    <section aria-label="Análisis de la sesión" className={immersive ? "flex h-full min-w-0 flex-col" : "min-w-0"}>
+      {immersive && (
+        <div className="flex gap-1.5 px-5 pb-3 pr-14" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
+          {Array.from({ length: total }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Ir a la ficha ${i + 1}`}
+              onClick={() => goTo(i)}
+              className="h-1 flex-1 overflow-hidden rounded-full bg-foreground/15"
+            >
+              <span className={`block h-full rounded-full bg-primary transition-all duration-300 ${i <= activeCard ? "w-full" : "w-0"}`} />
+            </button>
+          ))}
+        </div>
+      )}
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className="flex w-full snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "gap-2.5 pb-1"}`}
       >
-        {intro && <article className={`${cardClass} border-primary/25 bg-gradient-to-b from-primary/10 to-card`}>{intro}</article>}
+        {intro && <article className={immersive ? cardClass : `${cardClass} border-primary/25 bg-gradient-to-b from-primary/10 to-card`}>{intro}</article>}
         <article className={cardClass}>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase text-primary">Foco</p>
-              <h3 className="mt-0.5 text-base font-bold">Músculos de hoy</h3>
+              <h3 className={`mt-0.5 font-bold ${immersive ? "font-display text-2xl" : "text-base"}`}>Músculos de hoy</h3>
             </div>
             <Dumbbell className="h-4 w-4 text-primary" />
           </div>
           {muscles.length ? (
-            <div className="mt-3 grid h-[10.5rem] grid-cols-[1fr_1fr] gap-2">
+            <div className={`mt-3 grid grid-cols-[1fr_1fr] gap-2 ${immersive ? "study-panel min-h-0" : "h-[10.5rem]"}`}>
               {(["front", "back"] as const).map((side) => (
-                <div key={side} className="mx-auto h-full max-w-[6.25rem] overflow-hidden rounded-xl bg-secondary/30">
+                <div key={side} className={`mx-auto h-full overflow-hidden rounded-xl bg-secondary/30 ${immersive ? "w-full max-w-[10rem]" : "max-w-[6.25rem]"}`}>
                   <MuscleMapFigure side={side} muscles={muscles} intensityFor={intensityFor} />
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-3 flex h-[10.5rem] items-center justify-center rounded-xl bg-secondary/30 px-5 text-center text-xs text-muted-foreground">
+            <div className={`study-panel mt-3 flex items-center justify-center rounded-xl bg-secondary/30 px-5 text-center text-xs text-muted-foreground ${immersive ? "" : "h-[10.5rem]"}`}>
               No hay grupos musculares asociados a esta sesión.
             </div>
           )}
@@ -71,7 +99,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase text-primary">Progreso</p>
-              <h3 className="mt-0.5 text-base font-bold">Comparación anterior</h3>
+              <h3 className={`mt-0.5 font-bold ${immersive ? "font-display text-2xl" : "text-base"}`}>Comparación anterior</h3>
             </div>
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
@@ -79,7 +107,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
             {reviewItems.length ? reviewItems.map((item) => (
               <div key={item.name} className="rounded-xl bg-secondary/35 p-3">
                 <p className="truncate text-sm font-semibold">{item.name}</p>
-                <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.observation}</p>
+                <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-muted-foreground">{item.observation}</p>
               </div>
             )) : (
               <div className="flex h-[10rem] items-center justify-center rounded-xl bg-secondary/35 px-5 text-center text-xs leading-relaxed text-muted-foreground">
@@ -93,11 +121,11 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase text-primary">Siguiente</p>
-              <h3 className="mt-0.5 text-base font-bold">Próximo paso</h3>
+              <h3 className={`mt-0.5 font-bold ${immersive ? "font-display text-2xl" : "text-base"}`}>Próximo paso</h3>
             </div>
             <Target className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-4 flex h-[9.5rem] flex-col justify-between rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className={`mt-4 flex flex-col justify-between rounded-xl border border-primary/20 bg-primary/5 p-4 ${immersive ? "min-h-[11rem]" : "h-[9.5rem]"}`}>
             <p className="text-sm font-semibold leading-relaxed">{nextStep}</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {rpe != null ? `Esfuerzo registrado: ${rpe}/10.` : "Registra tu esfuerzo la próxima vez para afinar esta recomendación."}
@@ -106,11 +134,24 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           <p className="mt-3 text-xs text-muted-foreground">Tu plan no se modifica sin revisión.</p>
         </article>
       </div>
-      <div className="mt-2 flex justify-center gap-1.5" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
-        {Array.from({ length: total }, (_, i) => i).map((index) => (
-          <span key={index} className={`h-1.5 rounded-full transition-all ${activeCard === index ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/35"}`} />
-        ))}
-      </div>
+      {immersive ? (
+        <div className="px-5 pt-3">
+          <Button
+            type="button"
+            variant={isLast ? "hero" : "secondary"}
+            className="h-12 w-full rounded-2xl text-base"
+            onClick={() => (isLast ? onFinish?.() : goTo(activeCard + 1))}
+          >
+            {isLast ? (<><Check className="mr-2 h-4 w-4" /> Finalizar sesión</>) : (<>Siguiente <ArrowRight className="ml-2 h-4 w-4" /></>)}
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-2 flex justify-center gap-1.5" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
+          {Array.from({ length: total }, (_, i) => i).map((index) => (
+            <span key={index} className={`h-1.5 rounded-full transition-all ${activeCard === index ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/35"}`} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

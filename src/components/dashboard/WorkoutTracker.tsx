@@ -156,7 +156,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         return;
       }
       setWorkoutCompleted(Boolean(completionResult.data));
-      setShowCompletionSummary(Boolean(completionResult.data));
+      // La pantalla de victoria solo aparece al terminar, nunca al volver a la pestaña.
+      setShowCompletionSummary(false);
       setSessionRpe(completionResult.data?.rpe ?? null);
       setCompletionReady(true);
       const data = currentResult.data;
@@ -637,9 +638,11 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-xl min-w-0 overflow-x-hidden overflow-y-hidden rounded-[1.5rem] border-border bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:p-6 [&_*]:min-w-0">
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-3 pb-1">
+              <DialogContent className="left-0 top-0 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-gradient-to-b from-primary/10 via-background to-background p-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-none sm:rounded-none [&_*]:min-w-0">
+              <div className="mx-auto flex h-full w-full max-w-md flex-col">
               <WorkoutStudyCards
+                immersive
+                onFinish={() => setShowCompletionSummary(false)}
                 muscles={musclesWorked}
                 muscleSetCounts={muscleSetCounts}
                 intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
@@ -647,35 +650,35 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
                 rpe={sessionRpe}
                 intro={
-                  <div className="flex h-full flex-col gap-2.5">
-                    <header className="flex items-center gap-3 text-left">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                        <Trophy className="h-5 w-5" />
+                  <div className="flex h-full flex-col gap-4">
+                    <header className="flex flex-col items-start gap-3 pt-4 text-left">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
+                        <Trophy className="h-7 w-7" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-primary">
+                      <div className="w-full">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
                           {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
                         </p>
-                        <DialogTitle className="truncate font-display text-base font-bold">Entrenamiento completado</DialogTitle>
-                        <DialogDescription className="truncate text-xs text-muted-foreground">{trainingTitle || sessionMessage}</DialogDescription>
+                        <DialogTitle className="mt-1 font-display text-3xl font-bold leading-tight">Entrenamiento completado</DialogTitle>
+                        <DialogDescription className="mt-1 truncate text-sm text-muted-foreground">{trainingTitle || sessionMessage}</DialogDescription>
                       </div>
                     </header>
                     {personalRecords.length > 0 && (
-                      <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
                         <Trophy className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
                       </div>
                     )}
-                    <div className="grid grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-2 gap-2">
                       {[
                         { label: "Ejercicios", value: `${completedExercises}/${currentPlan.exercises?.length || 0}` },
                         { label: "Series", value: String(completedSets) },
                         { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—" },
                         { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}/10` : "—" },
                       ].map((item) => (
-                        <div key={item.label} className="rounded-xl bg-secondary/40 px-1 py-2 text-center">
-                          <p className="truncate text-sm font-bold tabular-nums">{item.value}</p>
-                          <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{item.label}</p>
+                        <div key={item.label} className="rounded-2xl bg-secondary/40 px-3 py-3">
+                          <p className="truncate text-2xl font-bold tabular-nums">{item.value}</p>
+                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.label}</p>
                         </div>
                       ))}
                     </div>
@@ -693,16 +696,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   </div>
                 }
               />
-              <p className="text-center text-[11px] text-muted-foreground">Desliza para ver tu análisis →</p>
-              <Button
-                type="button"
-                variant="hero"
-                className="sticky bottom-2 h-12 w-full rounded-2xl text-base shadow-lg"
-                onClick={onExit}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" /> Volver al inicio
-              </Button>
-              </motion.div>
+              </div>
               </DialogContent>
             )}
           </Dialog>
@@ -761,7 +755,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   className="mt-5 text-sm font-semibold text-primary underline-offset-4 hover:underline"
                   onClick={() => setShowCompletionSummary(true)}
                 >
-                  Ver mapa muscular
+                  Ver análisis de hoy
                 </button>
                 <Button type="button" variant="hero" className="mt-3 h-12 w-full rounded-2xl" onClick={onExit}>
                   Volver al inicio
