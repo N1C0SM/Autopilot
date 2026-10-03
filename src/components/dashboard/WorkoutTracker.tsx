@@ -637,8 +637,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="bottom-0 left-1/2 top-auto flex h-[min(78dvh,40rem)] w-full max-w-md -translate-x-1/2 translate-y-0 flex-col overflow-hidden rounded-b-none rounded-t-[1.75rem] border-x-0 border-b-0 border-t border-border/60 bg-card p-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:rounded-b-none sm:rounded-t-[1.75rem] [&>button]:top-5 [&_*]:min-w-0">
-              <div aria-hidden className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-muted-foreground/30" />
+              <DialogContent className="flex h-[min(80dvh,38rem)] w-[calc(100%-1.5rem)] max-w-md flex-col overflow-hidden rounded-[2rem] border border-primary/20 bg-card/95 p-0 pb-4 pt-5 shadow-[0_30px_80px_-20px_hsl(var(--primary)/0.35)] ring-1 ring-foreground/5 backdrop-blur-2xl sm:rounded-[2rem] [&>button]:top-4 [&_*]:min-w-0">
+              <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-primary/15 to-transparent" />
               <div className="mx-auto flex min-h-0 w-full flex-1 flex-col">
               <WorkoutStudyCards
                 immersive
@@ -652,7 +652,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 intro={
                   <div className="flex h-full flex-col gap-5">
                     <header className="flex items-center gap-3 pt-2 text-left">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary ring-1 ring-primary/25">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary shadow-[0_0_30px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30">
                         <Trophy className="h-5 w-5" />
                       </div>
                       <div className="w-full">
