@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,7 @@ import { hasCoaching } from "@/lib/entitlements";
 import { logConsent } from "@/lib/consents";
 import { track } from "@/lib/analytics";
 import PageHead from "@/components/PageHead";
+import PlanPreview from "@/components/PlanPreview";
 
 const KEY = "autopilot_config";
 const DOW = [
@@ -46,11 +47,11 @@ const TIMES = Array.from({ length: 32 }, (_, i) => {
 
 type Cfg = {
   mode: string; partner_email: string; goal: string; focus: string; days: number[]; minutes: number; structure: string;
-  meals: number; avoid: string; cooking: string; checkin_dow: number; checkin_time: string; style: string;
+  meals: number; avoid: string; cooking: string; weight: string; checkin_dow: number; checkin_time: string; style: string;
 };
 const initial: Cfg = {
   mode: "individual", partner_email: "", goal: "", focus: "", days: [], minutes: 55, structure: "coach",
-  meals: 3, avoid: "", cooking: "normal", checkin_dow: 0, checkin_time: "19:30", style: "flexible",
+  meals: 3, avoid: "", cooking: "normal", weight: "", checkin_dow: 0, checkin_time: "19:30", style: "flexible",
 };
 
 const label = (arr: { v: any; l: string }[], v: any) => arr.find((x) => x.v === v)?.l ?? "—";
@@ -108,6 +109,7 @@ const Configurator = () => {
       equipment_type: c.focus === "gimnasio" ? "Gimnasio" : c.focus === "calistenia" ? "Calistenia" : "Mixto",
       intensity_level: 7,
       nutrition_preferences: nutrition,
+      weight: Number(c.weight) > 30 ? Number(c.weight) : null,
       availability: {
         days: String(c.days.length), hours: String(+(c.minutes / 60).toFixed(2)),
         training_days: c.days, session_minutes: c.minutes, structure: c.structure,
@@ -206,6 +208,10 @@ const Configurator = () => {
               <p className="text-sm font-medium mb-2">¿Algo que no quieras ver en tu plan? <span className="text-muted-foreground">(opcional)</span></p>
               <Input placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </div>
+            <div>
+              <p className="text-sm font-medium mb-2">Tu peso para calcular la nutrición <span className="text-muted-foreground">(opcional)</span></p>
+              <Input type="number" inputMode="decimal" min="30" max="350" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} />
+            </div>
           </div>
         )}
 
@@ -238,23 +244,15 @@ const Configurator = () => {
 
         {step === 4 && (
           <div className="space-y-5">
-            <div className="rounded-2xl border border-primary/40 bg-card p-5 space-y-3">
-              {[
-                ["Modalidad", c.mode === "pareja" ? `En pareja con ${c.partner_email}` : "Individual"],
-                ["Objetivo", `${label(GOALS, c.goal)} · ${label(FOCUS, c.focus)}`],
-                ["Entrenamiento", `${c.days.length} días (${dayNames}) · ${label(DURATION, c.minutes)} · ${label(STRUCTURE, c.structure)}`],
-                ["Nutrición", `${c.meals} comidas · ${label(COOKING, c.cooking)}${c.avoid ? ` · sin ${c.avoid}` : ""}`],
-                ["Revisión preferida", `${DOW.find((d) => d.v === c.checkin_dow)?.l} a las ${c.checkin_time} · ${label(STYLE, c.style)}`],
-              ].map(([k, v]) => (
-                <div key={k} className="flex gap-3 text-sm">
-                  <Check className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  <div><span className="text-muted-foreground">{k}: </span>{v}</div>
-                </div>
-              ))}
+            <div className="text-center">
+              <p className="text-[10px] font-semibold uppercase text-primary">Cuestionario completado</p>
+              <p className="mt-1 text-sm text-muted-foreground">Esta muestra usa tus respuestas; el plan completo se genera al guardarlo.</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Tu entrenador tendrá en cuenta tu preferencia de revisión. Peso, lesiones y otros detalles se completan después, dentro de la app.
-            </p>
+            <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} />
+            <div className="rounded-xl border border-border bg-secondary/25 p-3 text-xs text-muted-foreground">
+              <p><span className="font-semibold text-foreground">Tu semana:</span> {c.days.length} días ({dayNames}) · {label(DURATION, c.minutes)} · {label(STRUCTURE, c.structure)}.</p>
+              <p className="mt-1"><span className="font-semibold text-foreground">Tu revisión:</span> {DOW.find((d) => d.v === c.checkin_dow)?.l} a las {c.checkin_time} · {label(STYLE, c.style)}.</p>
+            </div>
             <label className="flex items-start gap-2 text-xs text-muted-foreground">
               <Checkbox checked={accept} onCheckedChange={(v) => setAccept(!!v)} className="mt-0.5" />
               <span>Acepto los <Link to="/legal/terminos" className="underline">términos</Link>, la <Link to="/legal/privacidad" className="underline">privacidad</Link> y el tratamiento de mis datos de salud para preparar mi plan.</span>
