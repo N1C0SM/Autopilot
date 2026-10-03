@@ -34,9 +34,16 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
+  const [phone, setPhone] = useState("");
   const features = Array.isArray(plan.features) ? (plan.features as string[]).filter((f) => !/cliente/i.test(f) || !/\d/.test(f)) : [];
 
   useEffect(() => { if (open) { setStep(-1); setAnswers({}); setError(""); } }, [open]);
+  useEffect(() => {
+    void supabase.from("settings").select("contact_phone").limit(1).maybeSingle()
+      .then(({ data }) => setPhone((data as { contact_phone?: string } | null)?.contact_phone || ""));
+  }, []);
+  const waDigits = phone.replace(/\D/g, "");
+  const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent("Hola, acabo de enviar mi solicitud de Autopilot para entrenadores.")}` : "";
 
   const submit = async () => {
     const r = contact.safeParse(form);
@@ -107,6 +114,11 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
             <CheckCircle2 className="w-10 h-10 text-primary mx-auto" />
             <h3 className="font-display text-xl font-bold">Solicitud recibida</h3>
             <p className="text-sm text-muted-foreground">Revisaremos tus respuestas ({answers.clients} clientes) y te escribiremos con tu propuesta a medida.</p>
+            {waUrl && (
+              <Button variant="hero" size="lg" className="w-full" asChild>
+                <a href={waUrl} target="_blank" rel="noopener noreferrer">Hablar por WhatsApp para activar hoy</a>
+              </Button>
+            )}
             <Button variant="outline" onClick={onClose}>Cerrar</Button>
           </div>
         )}
