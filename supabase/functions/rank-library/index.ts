@@ -36,28 +36,26 @@ ${fmt(recoList) || "ninguna"}
 
 Devuelve los IDs ordenados usando la herramienta.`;
 
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${Deno.env.get("LOVABLE_API_KEY")}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [{ role: "user", content: prompt }],
+        model: "openai/gpt-6-astra",
+        input: [{ role: "user", content: prompt }],
         tools: [{
           type: "function",
-          function: {
-            name: "rank_items",
-            parameters: {
-              type: "object",
-              properties: {
-                book_ids: { type: "array", items: { type: "string" }, description: "IDs de libros ordenados de mayor a menor importancia" },
-                recommendation_ids: { type: "array", items: { type: "string" }, description: "IDs de recomendaciones ordenadas" },
-                reason: { type: "string", description: "Una frase breve explicando el orden elegido" },
-              },
-              required: ["book_ids", "recommendation_ids", "reason"],
+          name: "rank_items",
+          parameters: {
+            type: "object",
+            properties: {
+              book_ids: { type: "array", items: { type: "string" }, description: "IDs de libros ordenados de mayor a menor importancia" },
+              recommendation_ids: { type: "array", items: { type: "string" }, description: "IDs de recomendaciones ordenadas" },
+              reason: { type: "string", description: "Una frase breve explicando el orden elegido" },
             },
+            required: ["book_ids", "recommendation_ids", "reason"],
           },
         }],
-        tool_choice: { type: "function", function: { name: "rank_items" } },
+        tool_choice: { type: "function", name: "rank_items" },
       }),
     });
     if (!r.ok) {
@@ -66,7 +64,8 @@ Devuelve los IDs ordenados usando la herramienta.`;
       return json({ error: r.status === 429 ? "Demasiadas peticiones" : r.status === 402 ? "Sin créditos de IA" : "AI error" }, r.status);
     }
     const d = await r.json();
-    const args = JSON.parse(d.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || "{}");
+    const call = (d.output || []).find((o: any) => o.type === "function_call" && o.name === "rank_items");
+    const args = JSON.parse(call?.arguments || "{}");
 
     // Validar: solo IDs conocidos, sin duplicados; los que falten van al final en su orden original.
     const clean = (ids: unknown, originals: any[]) => {
