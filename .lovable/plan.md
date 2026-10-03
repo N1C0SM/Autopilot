@@ -1,36 +1,26 @@
-# Rediseño total estilo Apple (todo en un solo pase)
+# Pase único: app ultra premium estilo Apple (los 7 fallos + pulido total)
 
-Objetivo: que toda la app se vea y se sienta como una app de Apple — márgenes limpios, tarjetas que siempre caben, todo alineado a la misma altura, nada se abre de golpe, cero elementos que no se puedan tocar.
+Todo en una sola instrucción para gastar los mínimos créditos.
 
-## 1. Pagos: confirmación antes de Stripe
-- Nutrición y Chat: al tocar «Elegir Coach» / «Mejorar a Plus» se abre una **hoja de confirmación estilo Apple** (fondo difuminado, tarjeta centrada) con el plan, el precio, 3-4 puntos de lo que incluye y el botón «Continuar al pago». Solo ahí se abre Stripe.
-- En Nutrición la hoja deja elegir entre Plus (29 €) y Coach (49 €); en Chat solo Coach.
-- Enlace discreto «Ahora no» para cerrar sin pagar.
+## Los 7 fallos de las capturas
+1. **Pestañas a distinta altura** — Inicio, Plan, Nutrición, Chat y Progreso empiezan el contenido siempre a la misma distancia del techo, con el mismo padding lateral.
+2. **Entrenamiento «Hecho por hoy»: tarjetas anidadas** — se aplana la jerarquía: un solo contenedor, elementos sueltos dentro, y las fichas dejan de cortarse por el borde derecho («FO… M… Gl…»).
+3. **Espaciado irregular** — el mismo ritmo de separación entre título, tarjeta, cifras y botones en todas las pantallas.
+4. **Evolución con una sesión** — la barra solitaria se ve más ancha y con presencia (ancho mínimo, centrada, brillo dorado), no un palito flaco.
+5. **Fotos y Récords con hueco negro** — el contenido se centra verticalmente y aprovecha la pantalla; estados vacíos con tarjeta grande cuidada.
+6. **Inicio: banner «Plan Gratis» enorme** — pasa a franja fina de una línea (o se oculta tras la primera visita); deja de empujar todo hacia abajo.
+7. **Nutrición/Chat abren Stripe de golpe** — hoja de confirmación estilo Apple antes del pago: plan, precio, 3-4 puntos de lo que incluye, botón «Continuar al pago» y «Ahora no». Nutrición ofrece Plus (29 €) y Coach (49 €); Chat solo Coach.
 
-## 2. Todas las pestañas a la misma altura
-- Ahora mismo cada pestaña (Inicio, Plan, Nutrición, Chat, Progreso) sienta su contenido a una altura distinta — se ve en las capturas.
-- Se fija una estructura única: cabecera, luego contenido empezando siempre a la misma distancia del techo, con el mismo padding lateral en todas.
-
-## 3. Entrenamiento «Hecho por hoy»: sin tarjetas anidadas
-- La tarjeta de «Entrenamiento completado» aparece metida dentro de otra tarjeta y queda mal.
-- Se aplana la jerarquía: un solo contenedor con fondo uniforme y dentro los elementos sueltos (título, sello de telemetría, cifras, botones) con **el mismo espacio entre todos**, no huecos distintos entre título y tarjeta que entre tarjeta y botones.
-
-## 4. Márgenes y tarjetas que siempre caben (todos los dispositivos)
-- Padding lateral uniforme de 16-20 px en todas las pantallas móviles, respetando las zonas seguras del iPhone.
-- Ninguna tarjeta supera el ancho: textos largos con puntos suspensivos, botones y precios que no se salen en iPhone SE (375 px) ni en Pro Max (430 px).
-- Contenido centrado verticalmente cuando sobra espacio (nada de hueco negro abajo en pantallas altas).
-
-## 5. Cero elementos zombi
-- Todo lo que parece un botón responde al dedo; lo que es solo información no parece botón.
-
-## 6. Jerarquía visual estilo Apple
-- Títulos grandes en negrita, subtítulos en gris suave, una sola acción principal por pantalla (botón dorado), el resto discreto.
-- Tarjetas con esquinas muy redondeadas, fondos suaves, sin bordes duros.
-- Respuesta táctil inmediata: todo botón se hunde ligeramente al tocarlo.
+## Pulido ultra premium (transversal)
+- Márgenes laterales uniformes (16-20 px) respetando zonas seguras del iPhone; nada se sale en 375 px ni en 430 px.
+- Tarjetas con esquinas muy redondeadas, fondos suaves, sin bordes duros; una sola acción principal dorada por pantalla.
+- Todo botón se hunde al tocarlo (`active:scale`); transiciones cortas y suaves entre pestañas.
+- Cero elementos zombi: lo que parece botón responde; lo que es información no parece botón.
+- Tipografía: títulos grandes en negrita, subtítulos en gris suave, cifras con números tabulares.
 
 ## Archivos principales
-- `src/pages/Dashboard.tsx`, `src/components/dashboard/PlanPaywall.tsx` (hoja de confirmación), `src/components/mobile/MobileAppShell.tsx`, `src/components/dashboard/HomeOverview.tsx`, `src/components/dashboard/WorkoutTracker.tsx` / `WorkoutStudyCards.tsx` (fin de entreno), `src/components/dashboard/MealsList.tsx`.
+- `src/components/mobile/MobileAppShell.tsx` (estructura y alturas), `src/pages/Dashboard.tsx`, `src/components/dashboard/PlanPaywall.tsx` (hoja de confirmación), `HomeOverview.tsx` (banner fino), `WorkoutTracker.tsx` / `WorkoutStudyCards.tsx` (fin de entreno plano), `ExerciseProgressChart.tsx` (barra con presencia), `ProgressPhotos.tsx` / `PRsList.tsx` (estados vacíos centrados), `MealsList.tsx`.
 
 ## Verificación (en el mismo pase)
 - Typecheck limpio.
-- Prueba en pantalla con móvil simulado (390×844 y 375×667): la hoja aparece antes de Stripe, todas las pestañas empiezan a la misma altura, ninguna tarjeta se sale ni se anida.
+- Prueba en pantalla con móvil simulado (390×844 y 375×667): pestañas alineadas, hoja antes de Stripe, nada se sale ni se anida, sin huecos negros.
