@@ -10,6 +10,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import BookCover from "@/components/BookCover";
+import BookPreviewModal, { type PreviewBook } from "@/components/BookPreviewModal";
 import TrainersSection from "@/components/TrainersSection";
 import ProductPreview from "@/components/ProductPreview";
 import { TIERS } from "@/config/tiers";
