@@ -53,8 +53,10 @@ Deno.serve(async (req) => {
     const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, video_url, video_job_id").eq("id", exerciseId).single();
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
 
-    // Si hay clave propia de OpenAI se usa (gasta tu saldo de OpenAI); si no, la del proyecto.
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    // Prioridad de clave de IA: 1) la que el admin guardó en Ajustes (app_secrets),
+    // 2) variable de entorno OPENAI_API_KEY, 3) la del proyecto (créditos Lovable).
+    const { data: secretRow } = await svc.from("app_secrets").select("value").eq("key", "OPENAI_API_KEY").maybeSingle();
+    const openaiKey = (secretRow?.value || "").trim() || Deno.env.get("OPENAI_API_KEY");
     const apiKey = openaiKey || Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);
     const BASE = openaiKey ? "https://api.openai.com" : GATEWAY;
