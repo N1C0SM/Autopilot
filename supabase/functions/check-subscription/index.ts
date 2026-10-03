@@ -64,6 +64,10 @@ serve(async (req) => {
     if (profile.stripe_payment_id && hasCoaching(profile)) {
       return json({ subscribed: true, tier: profile.subscription_tier, subscription_end: null, plan: null });
     }
+    // Plans granted by an admin (no Stripe customer on the account) are not Stripe-managed: never auto-downgrade them.
+    if (!profile.stripe_customer_id && hasCoaching(profile)) {
+      return json({ subscribed: true, tier: profile.subscription_tier, subscription_end: profile.subscription_end, plan: null, source: "manual" });
+    }
     const { error } = await db.from("profiles").update({
       payment_status: "unpaid", subscription_tier: "free", subscription_status: "inactive", subscription_end: null,
     }).eq("user_id", user.id);
