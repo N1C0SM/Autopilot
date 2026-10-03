@@ -508,19 +508,14 @@ const Dashboard = () => {
 
       {hasPlan && section === "progress" && user && (
         <div className="w-full space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            {!isMobile && (
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h2 className="text-xl font-bold font-display">Tu progreso</h2>
-                <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
-              </div>
-            )}
-            <Button size="sm" variant="outline" className="ml-auto" onClick={() => navigate(`/scan/user/${user.id}`)}>
-              AI Scan
-            </Button>
-          </div>
-          <div role="tablist" className="sticky top-0 z-10 grid grid-cols-3 gap-1 rounded-full border border-border/60 bg-card/90 p-1 backdrop-blur-xl">
+          {!isMobile && (
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-bold font-display">Tu progreso</h2>
+              <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
+            </div>
+          )}
+          <div role="tablist" className="sticky top-0 z-10 grid grid-cols-4 gap-1 rounded-full border border-border/60 bg-card/90 p-1 backdrop-blur-xl">
             {([
               ["evolution", "Evolución"],
               ["photos", "Fotos"],
@@ -539,6 +534,13 @@ const Dashboard = () => {
                 <span className="relative">{label}</span>
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => navigate(`/scan/user/${user.id}`)}
+              className="flex h-9 items-center justify-center gap-1 rounded-full text-sm font-medium text-primary transition-transform active:scale-95"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Scan
+            </button>
           </div>
           <Suspense fallback={<SectionFallback />}>
             <div className={progressTab === "evolution" ? "flex h-[calc(100dvh-18.5rem)] min-h-[420px] flex-col overflow-hidden md:h-[calc(100dvh-12rem)]" : "hidden"}>

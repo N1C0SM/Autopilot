@@ -589,7 +589,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
         rpe={sessionRpe}
         intro={
-          <div className="flex h-full flex-col gap-4">
+          <div className="flex h-full flex-col gap-5">
             <header className="flex items-center gap-3 pt-1 text-left">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary shadow-[0_0_30px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30">
                 <Trophy className="h-5 w-5" />
@@ -613,7 +613,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               const pct = previousVolume > 0 ? Math.round((diff / previousVolume) * 100) : null;
               if (!eq && pct === null) return null;
               return (
-                <div className="rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+                <div className="border-l-2 border-primary/60 pl-3">
                   {eq && (
                     <>
                       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
@@ -631,18 +631,18 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 </div>
               );
             })()}
-            <div className="grid grid-cols-4 divide-x divide-border/60 border-y border-border/60 py-3">
+            <div className="grid grid-cols-4 divide-x divide-border/50 border-y border-border/50 py-4">
               {[
                 { label: "Ejercicios", value: `${completedExercises}/${currentPlan?.exercises?.length || 0}` },
                 { label: "Series", value: String(completedSets) },
                 { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)}` : "—", unit: totalVolume > 0 ? "kg" : "" },
                 { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}` : "—", unit: sessionRpe !== null ? "/10" : "" },
               ].map((item) => (
-                <div key={item.label} className="px-2 text-center">
+                <div key={item.label} className="px-1 text-center">
                   <p className="truncate text-lg font-semibold tabular-nums tracking-tight">
                     {item.value}{item.unit && <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">{item.unit}</span>}
                   </p>
-                  <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                  <p className="mt-1 text-[9px] uppercase tracking-normal text-muted-foreground">{item.label}</p>
                 </div>
               ))}
             </div>
@@ -786,9 +786,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
-            <div className="flex flex-col">
-              <div className="mx-auto w-full max-w-lg">
-                <div className="mb-3 flex items-center gap-3 px-1">
+            <div className="flex min-h-[calc(100dvh-56px-var(--safe-top,0px)-12px-var(--mobile-nav-content-padding,6rem))] flex-col md:min-h-0">
+              <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
+                <div className="mb-5 flex items-center gap-3 px-1">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30">
                     <Check className="h-5 w-5" />
                   </div>
@@ -798,13 +798,13 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   </div>
                 </div>
                 {renderStudyCards(false)}
-                <div className="mt-3 flex items-start gap-3 rounded-2xl bg-secondary/50 p-4 text-left">
+                <div className="mt-auto flex items-start gap-3 px-1 pt-6 text-left">
                   <Flame className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <p className="text-xs leading-relaxed text-muted-foreground">
                     Toca recuperar: hidrátate, come bien y mañana vuelves más fuerte.
                   </p>
                 </div>
-                <Button type="button" variant="hero" className="mt-3 h-12 w-full rounded-2xl" onClick={onExit}>
+                <Button type="button" variant="hero" className="mt-4 h-12 w-full rounded-2xl" onClick={onExit}>
                   Volver al inicio
                 </Button>
               </div>
