@@ -3,6 +3,8 @@
 // and logs to console in dev. Easy to wire to Plausible/PostHog later.
 
 type EventName =
+  | "book_preview_open"
+  | "book_buy_click"
   | "register"
   | "verify_email"
   | "onboarding_start"
