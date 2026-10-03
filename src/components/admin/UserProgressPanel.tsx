@@ -251,7 +251,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       )}
 
       {/* Initial tests */}
-      <div className="bg-card rounded-xl p-6 border border-border">
+      <div className="bg-card rounded-xl p-5 border border-border">
         <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <ClipboardCheck className="w-4 h-4 text-primary" />
           Tests de nivel iniciales
@@ -274,7 +274,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       </div>
 
       {/* RPE evolution */}
-      <div className="bg-card rounded-xl p-6 border border-border">
+      <div className="bg-card rounded-xl p-5 border border-border">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary" />
@@ -285,7 +285,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
           </div>
         </div>
         {rpeData.length > 0 ? (
-          <div className="h-56">
+          <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rpeData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -359,7 +359,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       </div>
 
       {/* Personal Records */}
-      <div className="bg-card rounded-xl p-6 border border-border">
+      <div className="bg-card rounded-xl p-5 border border-border">
         <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
           <Trophy className="w-4 h-4 text-primary" />
           Récords personales ({prs.length})
