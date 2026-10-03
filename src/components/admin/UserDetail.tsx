@@ -640,8 +640,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               )}
             </div>
-          </>
-        )}
+          )}
+          </TabsContent>
 
           {(profile as any).subscription_tier === "transform" && (
             <TransformCyclePanel
@@ -651,8 +651,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               disabled={restricted}
             />
           )}
+        </TabsContent>
 
-
+        {/* Tab: Perfil — los datos del cliente */}
+        <TabsContent value="perfil" className="space-y-6">
           {editingOnboarding && !restricted ? (
             <OnboardingEditor
               userId={profile.user_id}
