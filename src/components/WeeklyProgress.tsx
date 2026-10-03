@@ -25,7 +25,7 @@ const getMonday = (date: Date) => {
   return monday;
 };
 
-const WeeklyProgress = ({ userId, dayPlans }: Props) => {
+const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
   const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -166,7 +166,7 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
   if (loading) return null;
 
   return (
-    <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow mb-5 sm:mb-8">
+    <div className={compact ? "bg-card rounded-2xl p-3 border border-border card-shadow" : "bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow mb-5 sm:mb-8"}>
       {loadError ? (
         <div role="alert" className="py-3 text-center">
           <p className="text-sm font-semibold">No se ha podido cargar tu semana</p>
@@ -176,6 +176,12 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
           </Button>
         </div>
       ) : <>
+      {compact ? (
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h2 className="font-bold font-display text-sm">Esta semana</h2>
+          <p className="text-xs tabular-nums text-muted-foreground">{completedCount}/{totalDays} sesiones{streak > 0 ? ` · ${streak} d racha` : ""}</p>
+        </div>
+      ) : (
       <div className="mb-3">
         <div>
           <h2 className="font-bold font-display text-sm">Sesiones esta semana</h2>
@@ -185,6 +191,7 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
           </p>
         </div>
       </div>
+      )}
 
       <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
         {DAYS_ORDER.map((day, index) => {
@@ -207,7 +214,7 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
               disabled={!canSelfReport}
               aria-pressed={isCompleted}
               aria-label={label}
-              className={`flex h-10 items-center justify-center rounded-xl text-xs font-semibold transition-all duration-200 ${
+              className={`flex ${compact ? "h-8" : "h-10"} items-center justify-center rounded-xl text-xs font-semibold transition-all duration-200 ${
                 isCompleted
                   ? "bg-primary text-primary-foreground"
                   : hasPlan
@@ -224,7 +231,7 @@ const WeeklyProgress = ({ userId, dayPlans }: Props) => {
       </div>
 
       {/* Celebration */}
-      {completedCount === totalDays && totalDays > 0 && (
+      {!compact && completedCount === totalDays && totalDays > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
