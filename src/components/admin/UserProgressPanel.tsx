@@ -62,6 +62,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [realtimeError, setRealtimeError] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
