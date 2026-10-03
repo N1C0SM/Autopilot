@@ -16,18 +16,18 @@ export default function CoachingOffer({ onChoose, nutrition = false, compact = f
   };
   return (
     <section className="rounded-xl border border-primary/25 bg-card p-5 sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-wider text-primary">Seguimiento opcional</p>
-      <h2 className="mt-2 font-display text-xl font-bold">{nutrition ? "Añade nutrición personalizada" : "¿Necesitas que alguien adapte tu rutina?"}</h2>
+      <p className="text-xs font-semibold uppercase tracking-wider text-primary">Autopilot Plus · {TIERS.training.price} €/mes</p>
+      <h2 className="mt-2 font-display text-xl font-bold">Autopilot se adapta a ti.</h2>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">{nutrition
-        ? "Completo incluye entrenamiento, nutrición y revisión semanal con tu entrenador."
-        : "Un entrenador prepara tu plan, revisa tu progreso cada 2 semanas y responde a tus dudas por chat en 48h."}</p>
+        ? "Plus incluye tu plan de nutrición, adaptación automática y estadísticas avanzadas."
+        : "Plus adapta tu entrenamiento automáticamente. Coach añade una persona real detrás."}</p>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <Button disabled={pending} onClick={() => void choose(nutrition ? "full" : "training")}>
-          {pending ? "Abriendo pago…" : `Probar ${nutrition ? "Completo" : "Entrenamiento"} · 7 días`}
+        <Button disabled={pending} onClick={() => void choose("training")}>
+          {pending ? "Abriendo pago…" : "Mejorar a Plus"}
         </Button>
-        {!nutrition && !compact && <Button disabled={pending} variant="outline" onClick={() => void choose("full")}>Añadir nutrición · {TIERS.full.price}€/mes</Button>}
+        {!nutrition && !compact && <Button disabled={pending} variant="outline" onClick={() => void choose("full")}>Elegir Coach · {TIERS.full.price}€/mes</Button>}
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Después de la prueba: {nutrition ? TIERS.full.price : TIERS.training.price}€/mes{!nutrition && !compact ? ` (${TIERS.full.price}€/mes con Completo)` : ""}. Renovación automática. Cancela desde Ajustes → Suscripción antes de terminar la prueba para evitar el primer cobro.</p>
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">7 días de prueba y después {TIERS.training.price}€/mes (Coach {TIERS.full.price}€/mes). Renovación automática. Cancela desde Ajustes → Suscripción antes de terminar la prueba para evitar el primer cobro.</p>
       <p className="mt-2 text-xs text-muted-foreground">Puedes seguir entrenando y guardando tu progreso gratis.</p>
     </section>
   );
