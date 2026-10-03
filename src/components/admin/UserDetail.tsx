@@ -549,8 +549,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                             };
                         setTierSaving(true);
                         const { error } = await supabase.from("profiles").update(updates).eq("user_id", profile.user_id);
+                        if (error) { setTierSaving(false); return toast.error("No se pudo cambiar el plan"); }
+                        // Mark the plan as manually granted so automated checks never downgrade it.
+                        await supabase.from("entitlements").update({ status: "canceled" })
+                          .eq("user_id", profile.user_id).eq("source", "manual");
+                        if (opt.value !== "free") {
+                          const plan = opt.value === "training" ? "plus" : "coach";
+                          await supabase.from("entitlements").upsert({
+                            user_id: profile.user_id, plan, source: "manual", status: "active", expires_at: null,
+                          }, { onConflict: "user_id,plan,source" });
+                        }
                         setTierSaving(false);
-                        if (error) return toast.error("No se pudo cambiar el plan");
                         onUpdate(profile.user_id, updates);
                         toast.success(`Plan: ${opt.name}`);
                       }}
