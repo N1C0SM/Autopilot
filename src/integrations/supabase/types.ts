@@ -1957,6 +1957,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_contact_phone_public: { Args: never; Returns: string }
       get_my_consumer_plan: {
         Args: never
         Returns: {
