@@ -26,6 +26,13 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
     return entry.bestEstimated1RmKg;
   };
   const chartData = history.slice(-12).map((entry) => ({ ...entry, metricValue: valueOf(entry) }));
+  // Con una sola sesión, la curva se colapsa en un punto: añadimos una línea base
+  // sintética al inicio para que se dibuje una trayectoria plana legible.
+  if (chartData.length === 1) {
+    const only = chartData[0];
+    chartData.unshift({ ...only, sessionLabel: "Inicio", date: "" });
+  }
+  const showDots = chartData.length <= 3;
   const latest = valueOf(history[history.length - 1]);
   const previous = valueOf(history[history.length - 2]);
   const change = latest !== null && previous !== null ? latest - previous : null;
@@ -92,7 +99,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
               strokeWidth={2.5}
               fill={`url(#${gid})`}
               connectNulls
-              dot={false}
+              dot={showDots ? { r: 4, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 } : false}
               activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
               style={{ filter: "drop-shadow(0 4px 12px hsl(var(--primary) / .35))" }}
             />
