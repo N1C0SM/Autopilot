@@ -40,6 +40,12 @@ export default function ProductsAdmin() {
     setTrainers((roles || []).map((r) => ({ user_id: r.user_id, email: emailOf.get(r.user_id) || r.user_id })));
   };
   useEffect(() => { void load(); }, []);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [apps, setApps] = useState<any[]>([]);
+  useEffect(() => {
+    void supabase.from("leads").select("id, email, quiz_answers, created_at").eq("source", "trainer_application")
+      .order("created_at", { ascending: false }).then(({ data }) => setApps(data || []));
+  }, []);
 
   const save = async (patch: Partial<Config>) => {
     if (!cfg) return;
@@ -111,7 +117,7 @@ export default function ProductsAdmin() {
                 <option value="month">Mensual</option><option value="year">Anual</option>
               </select>
             </label>
-            <label className="text-sm space-y-1">Máximo de clientes<Input type="number" defaultValue={cfg.max_clients} onBlur={(e) => void save({ max_clients: Number(e.target.value) })} /></label>
+            <label className="text-sm space-y-1">Máximo de clientes (interno, no se muestra)<Input type="number" defaultValue={cfg.max_clients} onBlur={(e) => void save({ max_clients: Number(e.target.value) })} /></label>
             <label className="text-sm space-y-1">Price ID Stripe (live)<Input defaultValue={cfg.stripe_price_id_live || ""} onBlur={(e) => void save({ stripe_price_id_live: e.target.value || null })} /></label>
           </div>
           <label className="text-sm space-y-1 block">Descripción<Textarea defaultValue={cfg.description} onBlur={(e) => void save({ description: e.target.value })} /></label>
@@ -124,6 +130,22 @@ export default function ProductsAdmin() {
           </div>
         </section>
       )}
+
+      <section className="rounded-xl border border-border bg-card p-5 space-y-3">
+        <h2 className="font-display text-lg font-bold">Solicitudes de entrenadores ({apps.length})</h2>
+        {apps.length === 0 && <p className="text-sm text-muted-foreground">Aún no hay solicitudes.</p>}
+        <div className="divide-y divide-border">
+          {apps.map((a) => (
+            <div key={a.id} className="py-2 text-sm flex flex-wrap gap-x-4 gap-y-1">
+              <span className="font-semibold">{a.quiz_answers?.name || "—"}</span>
+              <a className="text-primary" href={`mailto:${a.email}`}>{a.email}</a>
+              {a.quiz_answers?.phone && <span>{a.quiz_answers.phone}</span>}
+              <span className="text-muted-foreground">{a.quiz_answers?.clients} clientes · {a.quiz_answers?.tools} · {a.quiz_answers?.goal}</span>
+              <span className="text-xs text-muted-foreground ml-auto">{new Date(a.created_at).toLocaleDateString("es-ES")}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <AlertDialog open={confirm} onOpenChange={setConfirm}>
         <AlertDialogContent>
