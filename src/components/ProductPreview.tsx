@@ -436,7 +436,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                                 exerciseName={progressExercise}
                                 history={demoHistory[progressExercise]}
                                 metric={progressMetric}
-                                onMetricChange={setProgressMetric}
+                                onMetricChange={(m) => { if (m !== "reps") setProgressMetric(m); }}
                                 compact
                               />
                             </Suspense>
