@@ -10,6 +10,7 @@ import ScrollReveal from "@/components/ScrollReveal";
 import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import BookCover from "@/components/BookCover";
+import BookPreviewModal, { type PreviewBook } from "@/components/BookPreviewModal";
 import TrainersSection from "@/components/TrainersSection";
 import ProductPreview from "@/components/ProductPreview";
 import { TIERS } from "@/config/tiers";
@@ -57,7 +58,8 @@ const Index = () => {
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
-  const [ebooks, setEbooks] = useState<Array<{ id?: string; title: string; description: string; cover_url: string; url: string; price: string }>>([]);
+  const [ebooks, setEbooks] = useState<PreviewBook[]>([]);
+  const [previewBook, setPreviewBook] = useState<PreviewBook | null>(null);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
   const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
   const [showAllFaqs, setShowAllFaqs] = useState(false);
@@ -94,7 +96,7 @@ const Index = () => {
           (supabase.rpc as any)("get_payment_mode"),
           (supabase as any)
             .from("library_books")
-            .select("id, title, description, price, cover_path, buy_url, buy_url_test, buy_url_live")
+            .select("id, title, description, price, cover_path, buy_url, buy_url_test, buy_url_live, is_pack")
             .eq("published", true)
             .eq("is_folder", false)
             .order("sort_order", { ascending: true }),
@@ -106,8 +108,9 @@ const Index = () => {
               title: b.title,
               description: b.description || "",
               cover_url: b.cover_path?.startsWith("http") ? b.cover_path : "",
-              url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || "/recursos", b.id),
+              url: (live ? b.buy_url_live : b.buy_url_test) ? withBookRef(live ? b.buy_url_live : b.buy_url_test, b.id) : "",
               price: b.price || "",
+              is_pack: !!b.is_pack,
             })),
           );
         });
@@ -453,12 +456,10 @@ const Index = () => {
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     {ebooks.slice(0, 3).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
-                        <a
-                          href={e.url || "/recursos"}
-                          target={e.url ? "_blank" : undefined}
-                          rel={e.url ? "noreferrer" : undefined}
-                          onClick={() => rememberBookPurchase(e.id)}
-                          className="group flex flex-col h-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => { setPreviewBook(e); track("book_preview_open", { book: e.title, source: "home" }); }}
+                          className="group flex flex-col h-full w-full text-left bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors"
                         >
 
                           <div className="px-5 pt-5">
@@ -476,10 +477,15 @@ const Index = () => {
                               </span>
                             </div>
                           </div>
-                        </a>
+                        </button>
                       </ScrollReveal>
                     ))}
                   </div>
+                  <BookPreviewModal
+                    book={previewBook}
+                    pack={ebooks.find((b) => b.is_pack && b.url) || null}
+                    onClose={() => setPreviewBook(null)}
+                  />
                 </div>
               )}
 

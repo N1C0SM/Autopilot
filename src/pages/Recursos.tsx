@@ -6,11 +6,12 @@ import { ArrowLeft, BookOpen, Sparkles, Newspaper, ExternalLink, ArrowRight } fr
 import { Button } from "@/components/ui/button";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import BookCover from "@/components/BookCover";
+import BookPreviewModal from "@/components/BookPreviewModal";
 import { useAuth } from "@/contexts/AuthContext";
 import UserSidebar from "@/components/UserSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
-interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string }
+interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string; is_pack?: boolean }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
 interface Post { slug: string; title: string; excerpt: string | null; cover_url: string | null }
 
@@ -61,6 +62,7 @@ const Recursos = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>(FALLBACK_EBOOKS);
+  const [previewBook, setPreviewBook] = useState<Ebook | null>(null);
   const [recos, setRecos] = useState<Reco[]>(FALLBACK_RECOS);
   const [posts, setPosts] = useState<Post[]>([]);
   const [flags, setFlags] = useState({ blog: true, ebooks: true, recos: true });
@@ -76,7 +78,7 @@ const Recursos = () => {
       const live = modeRes?.data === "live";
       const { data: libraryBooks } = await (supabase as any)
         .from("library_books")
-        .select("id, title, description, price, cover_path, buy_url_test, buy_url_live")
+        .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack")
         .eq("published", true)
         .eq("is_folder", false)
         .order("sort_order", { ascending: true });
@@ -96,6 +98,7 @@ const Recursos = () => {
           cover_url: cover,
           url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""), b.id),
           price: b.price || "",
+          is_pack: !!b.is_pack,
         });
       }
 
@@ -219,13 +222,11 @@ const Recursos = () => {
 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {ebooks.map((e, i) => (
-                <a
+                <button
+                  type="button"
                   key={e.id || i}
-                  href={e.url || "#"}
-                  target={e.url ? "_blank" : undefined}
-                  rel={e.url ? "noreferrer" : undefined}
-                  onClick={() => rememberBookPurchase(e.id)}
-                  className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors flex flex-col"
+                  onClick={() => setPreviewBook(e)}
+                  className="group text-left w-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors flex flex-col"
                 >
 
                   <div className="px-4 pt-4">
@@ -241,13 +242,18 @@ const Recursos = () => {
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                       <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
                       <span className="text-xs text-muted-foreground inline-flex items-center gap-1 group-hover:text-primary transition-colors">
-                        Ver <ExternalLink className="w-3 h-3" />
+                        Vista previa <ExternalLink className="w-3 h-3" />
                       </span>
                     </div>
                   </div>
-                </a>
+                </button>
               ))}
             </div>
+            <BookPreviewModal
+              book={previewBook}
+              pack={ebooks.find((b) => b.is_pack && b.url) || null}
+              onClose={() => setPreviewBook(null)}
+            />
           </section>
         )}
 
