@@ -24,6 +24,7 @@ import { hapticTap } from "@/lib/native";
 import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
 import { getExerciseTrackingConfig } from "@/lib/exerciseTrackingConfig";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { addExerciseLoad, tonnageEquivalence } from "@/lib/muscleMapping";
 
 interface Props {
   userId: string;
@@ -553,10 +554,14 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     if (completedSetsForExercise === 0) return counts;
 
     const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
-    const muscle = exercise.muscle_group || metadata?.muscle_group;
-    if (muscle) counts[muscle] = (counts[muscle] || 0) + completedSetsForExercise;
+    // Uses the swapped exercise name when the athlete replaced it, so synergists match what was really done.
+    addExerciseLoad(counts, swaps[exercise.name] || exercise.name, exercise.muscle_group || metadata?.muscle_group, completedSetsForExercise);
     return counts;
   }, {});
+  const previousVolume = Object.values(previousLogs).flat().reduce((total, set) => {
+    const weight = set.done ? parsePositiveWeight(set.weight) : null;
+    return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
+  }, 0);
   const musclesWorked = Object.keys(muscleSetCounts);
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
   const completedExercises = currentPlan?.exercises?.filter((exercise) => {
@@ -602,6 +607,22 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
               </p>
             )}
+            {(() => {
+              const eq = tonnageEquivalence(totalVolume);
+              const diff = totalVolume - previousVolume;
+              const pct = previousVolume > 0 ? Math.round((diff / previousVolume) * 100) : null;
+              if (!eq && pct === null) return null;
+              return (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2.5">
+                  {eq && <p className="truncate text-sm font-semibold">{eq.emoji} {eq.text}</p>}
+                  {pct !== null && totalVolume > 0 && (
+                    <p className={`mt-0.5 truncate text-xs font-medium ${diff >= 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {diff >= 0 ? "+" : "−"}{Math.abs(Math.round(diff)).toLocaleString("es-ES")} kg ({pct > 0 ? "+" : ""}{pct} %) frente a tu sesión anterior
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-4 divide-x divide-border/60 border-y border-border/60 py-3">
               {[
                 { label: "Ejercicios", value: `${completedExercises}/${currentPlan?.exercises?.length || 0}` },
@@ -626,6 +647,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 exercises={completedExercises}
                 records={personalRecords}
                 muscles={musclesWorked}
+                muscleSetCounts={muscleSetCounts}
+                previousVolumeKg={previousVolume}
               />
             </div>
           </div>

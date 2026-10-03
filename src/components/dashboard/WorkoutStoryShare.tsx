@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Share2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import frontAnatomy from "@/assets/muscle-map-front.png";
+import backAnatomy from "@/assets/muscle-map-back.png";
+import { FRONT_REGIONS, BACK_REGIONS, FRONT_SILHOUETTE, BACK_SILHOUETTE } from "./MuscleMapFigure";
+import { tonnageEquivalence } from "@/lib/muscleMapping";
 
 interface Props {
   title: string;
@@ -11,12 +15,14 @@ interface Props {
   exercises: number;
   records: string[];
   muscles: string[];
+  muscleSetCounts?: Record<string, number>;
+  previousVolumeKg?: number;
 }
 
-const css = (name: string, fallback: string) => {
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v ? `hsl(${v})` : fallback;
-};
+const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
+  const img = new Image();
+  img.onload = () => res(img); img.onerror = rej; img.src = src;
+});
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number, maxLines = 2) {
   const words = text.split(" ");
@@ -34,104 +40,115 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
   return y + lh;
 }
 
+// Draws the same anatomy + regions as the in-app map, heat-colored by set load.
+function drawFigure(ctx: CanvasRenderingContext2D, img: HTMLImageElement, side: "front" | "back", p: Props, x: number, y: number, scale: number) {
+  const regions = side === "front" ? FRONT_REGIONS : BACK_REGIONS;
+  const sil = new Path2D(side === "front" ? FRONT_SILHOUETTE : BACK_SILHOUETTE);
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(scale, scale);
+  ctx.globalAlpha = 0.55;
+  ctx.drawImage(img, 0, 0, 399, 698);
+  ctx.globalAlpha = 1;
+  ctx.clip(sil);
+  const counts = p.muscleSetCounts || {};
+  for (const r of regions) {
+    if (!p.muscles.includes(r.muscle)) continue;
+    if (r.muscle === "Piernas" && side === "back" && p.muscles.includes("Isquiotibiales")) continue;
+    const n = counts[r.muscle] || 1;
+    const alpha = n >= 6 ? 0.95 : n >= 3 ? 0.75 : 0.45;
+    const path = new Path2D((r.details ?? [r.d]).join(" "));
+    ctx.shadowColor = "rgba(255,170,60,0.9)"; ctx.shadowBlur = n >= 3 ? 18 : 8;
+    ctx.fillStyle = n >= 6 ? `rgba(255,120,40,${alpha})` : `rgba(240,190,90,${alpha})`;
+    ctx.fill(path);
+  }
+  ctx.restore();
+}
+
 async function renderStory(p: Props): Promise<Blob> {
   const W = 1080, H = 1920;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const ctx = c.getContext("2d")!;
-  const primary = css("--primary", "#d4a64a");
   const gold = "#e8c27a";
   const fg = "#fafaf9", muted = "#a1a1aa";
   const F = "system-ui, -apple-system, 'SF Pro Display', sans-serif";
+  const [front, back] = await Promise.all([loadImage(frontAnatomy), loadImage(backAnatomy)]);
 
   ctx.fillStyle = "#09090b"; ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, 760, 40, W / 2, 760, 900);
-  glow.addColorStop(0, "rgba(232,194,122,0.28)");
-  glow.addColorStop(0.5, "rgba(232,194,122,0.06)");
+  const glow = ctx.createRadialGradient(W / 2, 760, 40, W / 2, 760, 820);
+  glow.addColorStop(0, "rgba(232,194,122,0.22)");
   glow.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-  // fine grid lines for telemetry feel
-  ctx.strokeStyle = "rgba(255,255,255,0.035)"; ctx.lineWidth = 1;
-  for (let gx = 0; gx < W; gx += 90) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
 
-  // header pill
+  // header
   ctx.textAlign = "left";
-  ctx.font = `700 28px ${F}`;
+  ctx.font = `700 26px ${F}`;
   const pill = "SESIÓN VERIFICADA · AUTOPILOT";
-  const pw = ctx.measureText(pill).width + 110;
+  const pw = ctx.measureText(pill).width + 100;
   ctx.fillStyle = "rgba(255,255,255,0.06)";
   ctx.strokeStyle = "rgba(232,194,122,0.35)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.roundRect(96, 120, pw, 72, 36); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = gold; ctx.beginPath(); ctx.arc(136, 156, 9, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = fg; ctx.fillText(pill, 162, 166);
+  ctx.beginPath(); ctx.roundRect(80, 100, pw, 64, 32); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = gold; ctx.beginPath(); ctx.arc(116, 132, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = fg; ctx.fillText(pill, 140, 141);
+  ctx.fillStyle = muted; ctx.font = `500 32px ${F}`;
+  ctx.fillText(p.date.toUpperCase(), 80, 240);
+  ctx.fillStyle = fg; ctx.font = `800 72px ${F}`;
+  wrap(ctx, p.title || "Sesión de hoy", 80, 325, W - 160, 80, 1);
 
-  ctx.fillStyle = muted; ctx.font = `500 34px ${F}`;
-  ctx.fillText(p.date.toUpperCase(), 96, 290);
-  ctx.fillStyle = fg; ctx.font = `800 84px ${F}`;
-  let y = wrap(ctx, p.title || "Sesión de hoy", 96, 390, W - 192, 96);
+  // muscle map (front + back)
+  const scale = 0.92, fw = 399 * scale;
+  drawFigure(ctx, front, "front", p, W / 2 - fw - 10, 400, scale);
+  drawFigure(ctx, back, "back", p, W / 2 + 10, 400, scale);
+  const mapBottom = 400 + 698 * scale;
 
-  // monumental number
-  y = Math.max(y + 260, 900);
-  const big = p.volumeKg > 0 ? Math.round(p.volumeKg).toLocaleString("es-ES") : String(p.sets);
-  const g = ctx.createLinearGradient(0, y - 220, 0, y);
-  g.addColorStop(0, "#fff7e6"); g.addColorStop(1, gold);
-  ctx.fillStyle = g; ctx.font = `900 250px ${F}`;
-  ctx.fillText(big, 84, y);
-  ctx.fillStyle = muted; ctx.font = `600 38px ${F}`;
-  ctx.fillText(p.volumeKg > 0 ? "KG LEVANTADOS HOY" : "SERIES COMPLETADAS", 100, y + 70);
-
-  // glass stats
-  y += 150;
-  const stats = [
-    { v: String(p.sets), l: "Series" },
-    { v: String(p.exercises), l: "Ejercicios" },
-    { v: String(p.records.length), l: "Récords" },
-  ];
-  const bw = (W - 192 - 48) / 3;
-  stats.forEach((s, i) => {
-    const x = 96 + i * (bw + 24);
-    ctx.fillStyle = "rgba(255,255,255,0.05)";
-    ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(x, y, bw, 210, 40); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = fg; ctx.font = `800 86px ${F}`;
-    ctx.fillText(s.v, x + 40, y + 118);
-    ctx.fillStyle = muted; ctx.font = `500 30px ${F}`;
-    ctx.fillText(s.l.toUpperCase(), x + 40, y + 172);
+  // muscle chips
+  let y = mapBottom + 30;
+  ctx.font = `600 28px ${F}`;
+  const top = [...p.muscles].sort((a, b) => (p.muscleSetCounts?.[b] || 0) - (p.muscleSetCounts?.[a] || 0)).slice(0, 4);
+  const widths = top.map((m) => ctx.measureText(m).width + 52);
+  let x = (W - (widths.reduce((a, b) => a + b, 0) + 14 * Math.max(0, top.length - 1))) / 2;
+  top.forEach((m, i) => {
+    ctx.fillStyle = "rgba(232,194,122,0.10)"; ctx.strokeStyle = "rgba(232,194,122,0.35)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(x, y, widths[i], 60, 30); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = fg; ctx.fillText(m, x + 26, y + 40);
+    x += widths[i] + 14;
   });
-  y += 290;
 
-  if (p.records.length) {
-    const rg = ctx.createLinearGradient(96, y, W - 96, y);
-    rg.addColorStop(0, "rgba(232,194,122,0.30)"); rg.addColorStop(1, "rgba(232,194,122,0.08)");
-    ctx.fillStyle = rg; ctx.strokeStyle = "rgba(232,194,122,0.7)"; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(96, y, W - 192, 150, 40); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = gold; ctx.font = `800 34px ${F}`;
-    ctx.fillText("🏆  NUEVO RÉCORD PERSONAL", 140, y + 62);
-    ctx.fillStyle = fg; ctx.font = `600 32px ${F}`;
-    wrap(ctx, p.records.slice(0, 2).join(" · "), 140, y + 112, W - 280, 40, 1);
-    y += 200;
-  }
-
-  if (p.muscles.length) {
-    ctx.font = `600 32px ${F}`;
-    let x = 96;
-    for (const m of p.muscles.slice(0, 6)) {
-      const w = ctx.measureText(m).width + 64;
-      if (x + w > W - 96) { x = 96; y += 92; }
-      if (y > H - 300) break;
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
-      ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.roundRect(x, y, w, 70, 35); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = fg; ctx.fillText(m, x + 32, y + 46);
-      x += w + 16;
-    }
-  }
-
+  // monumental number + equivalence
   ctx.textAlign = "center";
-  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(W / 2 - 60, H - 190, 120, 2);
+  y += 250;
+  const big = p.volumeKg > 0 ? `${Math.round(p.volumeKg).toLocaleString("es-ES")} kg` : `${p.sets} series`;
+  const g = ctx.createLinearGradient(0, y - 170, 0, y);
+  g.addColorStop(0, "#fff7e6"); g.addColorStop(1, gold);
+  ctx.fillStyle = g; ctx.font = `900 170px ${F}`;
+  ctx.fillText(big, W / 2, y);
+  const eq = tonnageEquivalence(p.volumeKg);
+  ctx.fillStyle = fg; ctx.font = `700 44px ${F}`;
+  ctx.fillText(eq ? `${eq.emoji} ${eq.text}` : `${p.exercises} ejercicios completados`, W / 2, y + 80);
+
+  // comparison vs previous
+  y += 140;
+  const prev = p.previousVolumeKg || 0;
+  const lines: string[] = [];
+  if (prev > 0 && p.volumeKg > 0) {
+    const d = p.volumeKg - prev;
+    const pct = Math.round((d / prev) * 100);
+    lines.push(`${d >= 0 ? "🔥 +" : "−"}${Math.abs(Math.round(d)).toLocaleString("es-ES")} kg (${pct > 0 ? "+" : ""}${pct} %) vs tu última sesión`);
+  }
+  if (p.records.length) lines.push(`🏆 Récord · ${p.records[0]}`);
+  if (!lines.length) lines.push(`${p.sets} series · ${p.exercises} ejercicios`);
+  ctx.font = `700 34px ${F}`;
+  for (const line of lines.slice(0, 2)) {
+    const lw = Math.min(W - 160, ctx.measureText(line).width + 80);
+    ctx.fillStyle = "rgba(232,194,122,0.14)"; ctx.strokeStyle = "rgba(232,194,122,0.6)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect((W - lw) / 2, y, lw, 76, 38); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = gold; ctx.fillText(line, W / 2, y + 50, W - 220);
+    y += 96;
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(W / 2 - 60, H - 150, 120, 2);
   ctx.fillStyle = muted; ctx.font = `600 30px ${F}`;
-  ctx.fillText("autopilotplan.com", W / 2, H - 120);
-  void primary;
+  ctx.fillText("autopilotplan.com", W / 2, H - 90);
 
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("no blob"))), "image/png"));
 }
