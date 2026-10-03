@@ -11,6 +11,7 @@ import { track } from "@/lib/analytics";
 import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
 import BookCover from "@/components/BookCover";
 import BookPreviewModal, { type PreviewBook } from "@/components/BookPreviewModal";
+import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/components/ItemPreviewModal";
 import TrainersSection from "@/components/TrainersSection";
 import ProductPreview from "@/components/ProductPreview";
 import { TIERS } from "@/config/tiers";
@@ -61,6 +62,7 @@ const Index = () => {
   const [landingCounts, setLandingCounts] = useState({ ebooks: 4, recommendations: 3 });
   const [ebooks, setEbooks] = useState<PreviewBook[]>([]);
   const [previewBook, setPreviewBook] = useState<PreviewBook | null>(null);
+  const [previewReco, setPreviewReco] = useState<PreviewItem | null>(null);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
   const [latestPosts, setLatestPosts] = useState<Array<{ slug: string; title: string; excerpt: string | null; cover_url: string | null; published_at: string | null }>>([]);
   const [showAllFaqs, setShowAllFaqs] = useState(false);
@@ -509,11 +511,10 @@ const Index = () => {
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {recommendations.slice(0, landingCounts.recommendations).map((r, i) => (
                       <ScrollReveal key={r.id || i} delay={i * 0.05}>
-                        <a
-                          href={r.url || "/recursos"}
-                          target={r.url ? "_blank" : undefined}
-                          rel={r.url ? "noreferrer sponsored" : undefined}
-                          className="group flex items-start gap-3 h-full bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => { setPreviewReco(r); track("reco_preview_open", { item: r.title, source: "home" }); }}
+                          className="group text-left w-full flex items-start gap-3 h-full bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
                         >
                           {r.image_url ? (
                             <img
@@ -535,13 +536,15 @@ const Index = () => {
                             )}
                             <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">{r.title}</h4>
                             {r.description && (
-                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3">{r.description}</p>
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-3">{previewIntro(r.description)}</p>
                             )}
+                            <span className="text-xs text-primary font-semibold mt-2 inline-flex items-center gap-1">Ver detalles <ArrowRight className="w-3 h-3" /></span>
                           </div>
-                        </a>
+                        </button>
                       </ScrollReveal>
                     ))}
                   </div>
+                  <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
                 </div>
               )}
             </div>

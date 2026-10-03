@@ -5,3 +5,4 @@
 - Stored tier "training" = Plus, "full"/"transform"/"personal" = Coach; Stripe sync mirrors into `entitlements` (source column) so other payment sources can be added later.
 - B2B trainer product lives in `product_configs` (key trainer_plan), off by default; flags are enforced server-side in SQL functions/RLS, never only in UI.
 - Edge functions call AI only through `supabase/functions/_shared/ai-provider.ts` (aiFetch/getAiConfig), which chains admin OpenAI key -> admin Claude key -> Lovable AI (or Lovable only per `app_secrets.AI_PROVIDER`) — one switch for every AI feature.
+- Every product-like landing section (books, recommendations, future ones) opens a preview modal before any external link: books use BookPreviewModal, everything else ItemPreviewModal with a PreviewVariant — keeps conversion UX consistent.

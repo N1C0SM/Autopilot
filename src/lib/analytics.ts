@@ -2,8 +2,10 @@
 // Pushes events to window.dataLayer (GTM-compatible), gtag if present,
 // and logs to console in dev. Easy to wire to Plausible/PostHog later.
 
-type EventName =
+export type EventName =
   | "book_preview_open"
+  | "reco_preview_open"
+  | "reco_buy_click"
   | "book_buy_click"
   | "register"
   | "verify_email"
