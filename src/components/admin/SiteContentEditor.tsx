@@ -75,6 +75,27 @@ const SiteContentEditor = () => {
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [guideEbookUrl, setGuideEbookUrl] = useState<string>("");
+  const [aiKeys, setAiKeys] = useState<Record<string, string>>({});
+
+  const loadAiKeys = async () => {
+    const { data } = await supabase.from("app_secrets").select("key, value");
+    if (data) setAiKeys(Object.fromEntries(data.map((r: any) => [r.key, r.value])));
+  };
+
+  const saveAiKey = async (key: string) => {
+    const value = (aiKeys[key] || "").trim();
+    if (!value) { toast.error("Pega la clave primero"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() } as any);
+    if (error) toast.error("Error al guardar la clave"); else toast.success("Clave guardada");
+    setSaving(false);
+  };
+
+  const removeAiKey = async (key: string) => {
+    const { error } = await supabase.from("app_secrets").delete().eq("key", key);
+    if (error) toast.error("Error al borrar"); else { setAiKeys((p) => ({ ...p, [key]: "" })); toast.success("Clave eliminada"); }
+  };
+
 
   const load = async () => {
     setLoading(true);
@@ -126,7 +147,7 @@ const SiteContentEditor = () => {
     if (t) setTestimonials(t as Testimonial[]);
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadAiKeys(); }, []);
 
   const saveSectionsToggles = async (next: typeof sections) => {
     setSections(next);
