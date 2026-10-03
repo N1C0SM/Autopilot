@@ -68,6 +68,12 @@ serve(async (req) => {
     if (!profile.stripe_customer_id && hasCoaching(profile)) {
       return json({ subscribed: true, tier: profile.subscription_tier, subscription_end: profile.subscription_end, plan: null, source: "manual" });
     }
+    // An active manual entitlement (granted from Admin) always wins over Stripe: never downgrade it.
+    const { data: manualEnt } = await db.from("entitlements").select("plan")
+      .eq("user_id", user.id).eq("source", "manual").in("status", ["active", "trialing"]).limit(1).maybeSingle();
+    if (manualEnt && hasCoaching(profile)) {
+      return json({ subscribed: true, tier: profile.subscription_tier, subscription_end: profile.subscription_end, plan: null, source: "manual" });
+    }
     const { error } = await db.from("profiles").update({
       payment_status: "unpaid", subscription_tier: "free", subscription_status: "inactive", subscription_end: null,
     }).eq("user_id", user.id);
