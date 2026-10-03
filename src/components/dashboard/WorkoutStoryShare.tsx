@@ -194,8 +194,8 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
     ctx.font = `500 34px ${F}`; ctx.fillStyle = "#bdb6a8"; ctx.fillText(l, x, 1712);
   });
   if (p.records.length) {
-    ctx.textAlign = "center"; ctx.font = `700 30px ${F}`; ctx.fillStyle = "#ff9d3c";
-    ctx.fillText(`RÉCORD · ${p.records.slice(0, 2).join(" · ").toUpperCase()}`, cx, 1268);
+    ctx.textAlign = "left"; ctx.font = `700 30px ${F}`; ctx.fillStyle = "#ff9d3c";
+    ctx.fillText(`RÉCORD · ${p.records.slice(0, 2).join(" · ").toUpperCase()}`, 96, 1250);
   }
   ctx.textAlign = "center"; ctx.fillStyle = "#a8a29e"; ctx.font = `500 36px ${F}`;
   ctx.fillText("autopilotplan.com", cx, H - 110);
