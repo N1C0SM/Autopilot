@@ -482,7 +482,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
       setSessionRpe(rpe);
       setWorkoutCompleted(true);
       setShowCompletionSummary(true);
-      toast.success("¡Entrenamiento completado! 💪");
       try {
         await detectAndSavePRs();
       } catch {
@@ -638,8 +637,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="left-0 top-0 flex h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 bg-gradient-to-b from-primary/10 via-background to-background p-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] shadow-none sm:rounded-none [&_*]:min-w-0">
-              <div className="mx-auto flex h-full w-full max-w-md flex-col">
+              <DialogContent className="bottom-0 left-1/2 top-auto flex h-[min(78dvh,40rem)] w-full max-w-md -translate-x-1/2 translate-y-0 flex-col overflow-hidden rounded-b-none rounded-t-[1.75rem] border-x-0 border-b-0 border-t border-border/60 bg-card p-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-2xl data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom sm:rounded-b-none sm:rounded-t-[1.75rem] [&>button]:top-5 [&_*]:min-w-0">
+              <div aria-hidden className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-muted-foreground/30" />
+              <div className="mx-auto flex min-h-0 w-full flex-1 flex-col">
               <WorkoutStudyCards
                 immersive
                 onFinish={() => setShowCompletionSummary(false)}
@@ -650,35 +650,36 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
                 rpe={sessionRpe}
                 intro={
-                  <div className="flex h-full flex-col gap-4">
-                    <header className="flex flex-col items-start gap-3 pt-4 text-left">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-                        <Trophy className="h-7 w-7" />
+                  <div className="flex h-full flex-col gap-5">
+                    <header className="flex items-center gap-3 pt-2 text-left">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary ring-1 ring-primary/25">
+                        <Trophy className="h-5 w-5" />
                       </div>
                       <div className="w-full">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-                          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
-                        </p>
-                        <DialogTitle className="mt-1 font-display text-3xl font-bold leading-tight">Entrenamiento completado</DialogTitle>
-                        <DialogDescription className="mt-1 truncate text-sm text-muted-foreground">{trainingTitle || sessionMessage}</DialogDescription>
+                        <DialogTitle className="text-lg font-semibold leading-tight tracking-tight">Entrenamiento completado</DialogTitle>
+                        <DialogDescription className="truncate text-xs text-muted-foreground">
+                          {new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })} · {trainingTitle || sessionMessage}
+                        </DialogDescription>
                       </div>
                     </header>
                     {personalRecords.length > 0 && (
-                      <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
                         <Trophy className="h-3.5 w-3.5 shrink-0" />
                         <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
-                      </div>
+                      </p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-4 divide-x divide-border/60 border-y border-border/60 py-3">
                       {[
                         { label: "Ejercicios", value: `${completedExercises}/${currentPlan.exercises?.length || 0}` },
                         { label: "Series", value: String(completedSets) },
-                        { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)} kg` : "—" },
-                        { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}/10` : "—" },
+                        { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)}` : "—", unit: totalVolume > 0 ? "kg" : "" },
+                        { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}` : "—", unit: sessionRpe !== null ? "/10" : "" },
                       ].map((item) => (
-                        <div key={item.label} className="rounded-2xl bg-secondary/40 px-3 py-3">
-                          <p className="truncate text-2xl font-bold tabular-nums">{item.value}</p>
-                          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.label}</p>
+                        <div key={item.label} className="px-2 text-center">
+                          <p className="truncate text-lg font-semibold tabular-nums tracking-tight">
+                            {item.value}{item.unit && <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">{item.unit}</span>}
+                          </p>
+                          <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-muted-foreground">{item.label}</p>
                         </div>
                       ))}
                     </div>
