@@ -139,7 +139,7 @@ const HomeOverview = ({
   }, [userId, coaching]);
 
   return (
-    <div className="mx-auto w-full max-w-none space-y-2.5 sm:space-y-4 lg:max-w-3xl">
+    <div className="mx-auto w-full max-w-none space-y-5 sm:space-y-6 lg:max-w-3xl">
       {planStatus === "plan_pending" ? (
         <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm">
           <p className="font-semibold">Tu entrenador está preparando tu plan</p>
@@ -151,7 +151,7 @@ const HomeOverview = ({
             <p className="text-xs font-semibold capitalize text-primary">
               {greetingDate}
             </p>
-            <h2 className="mt-0.5 font-display text-xl sm:text-2xl font-bold leading-tight tracking-tight">
+            <h2 className="mt-1.5 font-display text-xl sm:text-2xl font-bold leading-tight tracking-tight">
               {firstName ? `Hola, ${firstName}.` : "Hola."}
               <span className="block">
                 {completedToday
@@ -171,7 +171,7 @@ const HomeOverview = ({
               void hapticTap();
               onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress");
             }}
-            className="group flex min-h-[4.5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-4 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
+            className="group flex min-h-[5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
             aria-label={completedToday ? "Ver progreso de la sesión" : `Empezar ${sessionTitle}`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
@@ -192,11 +192,11 @@ const HomeOverview = ({
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          <div className="flex items-stretch gap-3">
+          <div className="flex items-stretch gap-4">
             <button
               type="button"
               onClick={() => onNavigate("nutrition")}
-              className="flex min-h-32 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
+              className="flex min-h-36 min-w-0 flex-1 flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
             >
               <span className="flex min-w-0 items-center gap-3">
                 <span className="relative h-11 w-11 shrink-0">
@@ -255,7 +255,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("progress")}
-              className="flex min-h-32 min-w-0 flex-1 flex-col justify-between rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
+              className="flex min-h-36 min-w-0 flex-1 flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
             >
               <span className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
@@ -278,7 +278,7 @@ const HomeOverview = ({
           <button
             type="button"
             onClick={() => onNavigate(coaching ? "chat" : "progress")}
-            className="flex w-full items-start gap-2.5 rounded-2xl bg-secondary p-4 text-left transition-colors hover:bg-secondary/80"
+            className="flex w-full items-start gap-3 rounded-2xl bg-secondary p-5 text-left transition-colors hover:bg-secondary/80"
           >
             {coaching ? <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
             <span className="min-w-0 flex-1 text-sm leading-relaxed">

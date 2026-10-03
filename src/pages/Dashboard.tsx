@@ -383,12 +383,6 @@ const Dashboard = () => {
 
   const renderContent = (section: MobileTab) => (
     <>
-      {!coaching && section === "home" && (
-        <div className="mb-4 flex items-center justify-center gap-2 rounded-full border border-border/60 bg-card/60 px-4 py-2">
-          <p className="text-xs font-semibold text-primary">Plan Gratis · Sin tarjeta</p>
-          <span className="hidden text-xs text-muted-foreground sm:inline">· Tu rutina y tu progreso, a tu ritmo</span>
-        </div>
-      )}
       {!coaching && !hasPlan && (section === "home" || section === "training") && (
         <div className="rounded-xl border border-border p-6">
           <h2 className="font-display text-xl font-bold">Prepara tu rutina inicial gratis</h2>
@@ -565,7 +559,7 @@ const Dashboard = () => {
   const pageContent = (
     <>
       {visited.map((s) => (
-        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col justify-center" : "hidden"}>
+        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col justify-start pt-2" : "hidden"}>
           {renderContent(s)}
         </div>
       ))}
