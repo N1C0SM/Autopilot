@@ -636,7 +636,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="max-h-[92dvh] w-[calc(100%-1rem)] max-w-xl overflow-y-auto rounded-[2rem] border-border bg-background p-4 shadow-2xl sm:p-6">
+              <DialogContent className="max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)-1.5rem)] w-[calc(100vw-1rem)] max-w-xl min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-[1.5rem] border-border bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl sm:p-6 [&_*]:min-w-0">
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4 pb-1">
               <header className="rounded-[1.75rem] border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card p-5 text-center shadow-sm sm:p-6">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
