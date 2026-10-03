@@ -1,23 +1,23 @@
 # Panel de admin de usuario: navegación limpia
 
 ## Problema
-La ficha de usuario en Admin tiene 6 pestañas con icono + texto (Cliente, Plan y acceso, Progreso, Entreno, Nutrición, Chat) que ocupan todo el ancho y se ven apretadas, y dentro de Entreno hay otra fila de sub-pestañas (Plan / Calendario). Es un lío visual.
+La ficha de usuario en Admin está saturada: 6 pestañas con icono + texto que ocupan todo el ancho, sub-pestañas dentro de Entreno, y etiquetas redundantes en la cabecera («Coach · 49€/mes», «Plan listo») que roban espacio sin aportar nada que no se vea ya en la pestaña Plan y acceso.
 
 ## Solución
 
+### Cabecera compacta
+- Se eliminan las etiquetas «Coach · 49€/mes» y «Plan listo» bajo el nombre. El plan se gestiona y se ve en la pestaña Plan y acceso.
+- Avatar, nombre y acciones (Auto-generar, Guardar, Ver como, borrar) en una fila que se adapta; en pantallas estrechas las acciones secundarias van a un menú de tres puntos.
+
 ### Navegación principal
-- Las 6 pestañas pasan a un control segmentado compacto y limpio: icono + etiqueta corta, espaciado uniforme, sin que cada una luche por el ancho.
-- En pantallas estrechas: solo iconos con etiqueta debajo en miniatura (o scroll horizontal elegante), sin deformarse.
-- La pestaña activa se marca con fondo dorado suave, el resto en gris silencioso.
+- Las 6 pestañas (Cliente, Plan y acceso, Progreso, Entreno, Nutrición, Chat) pasan a un control segmentado compacto: espaciado uniforme, pestaña activa con fondo dorado suave, resto en gris silencioso.
+- En pantallas estrechas: iconos con etiqueta en miniatura o scroll horizontal elegante, sin deformarse.
 
 ### Entreno sin sub-pestañas
-- Se elimina la segunda fila de pestañas dentro de Entreno: Plan y Calendario se muestran en una sola vista (calendario arriba compacto, plan debajo) o con un selector pequeño integrado en la cabecera de la sección, no otra barra.
-
-### Cabecera de usuario
-- Se compacta: avatar, nombre, plan y botones de acción (Auto-generar, Guardar, Ver como, borrar) en una sola fila que se adapta; en pantallas pequeñas las acciones pasan a un menú de tres puntos.
+- Fuera la segunda fila de pestañas (Plan / Calendario): una sola vista con calendario compacto arriba y plan debajo, o un selector pequeño integrado en la cabecera de sección.
 
 ## Resultado
-Una sola barra de navegación clara, sin barras anidadas, con aire y jerarquía. El admin encuentra todo de un vistazo.
+Una cabecera limpia sin etiquetas redundantes, una sola barra de navegación clara, sin barras anidadas. Todo se encuentra de un vistazo.
 
 ## Verificación
 - Typecheck limpio y revisión visual a varios anchos (móvil y escritorio).
