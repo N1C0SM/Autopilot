@@ -93,7 +93,7 @@ const Dashboard = () => {
     setSectionState(s);
     try { sessionStorage.setItem("autopilot_section", s); } catch { /* storage no disponible */ }
   }, []);
-  const [visited, setVisited] = useState<MobileTab[]>([]);
+  const [visited, setVisited] = useState<MobileTab[]>(() => [section]);
   useEffect(() => {
     setVisited((v) => (v.includes(section) ? v : [...v, section]));
   }, [section]);
@@ -567,7 +567,7 @@ const Dashboard = () => {
   const pageContent = (
     <>
       {visited.map((s) => (
-        <div key={s} hidden={s !== section} className="min-w-0" style={{ contain: "content" }}>
+        <div key={s} hidden={s !== section} className="min-w-0">
           {renderContent(s)}
         </div>
       ))}
