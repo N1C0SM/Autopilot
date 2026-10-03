@@ -565,7 +565,7 @@ const Dashboard = () => {
   const pageContent = (
     <>
       {visited.map((s) => (
-        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col" : "hidden"}>
+        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col justify-center" : "hidden"}>
           {renderContent(s)}
         </div>
       ))}
