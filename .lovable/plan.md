@@ -1,33 +1,40 @@
-# Paywall estilo Apple: paso de elección antes de Stripe + tarjetas que siempre caben
+# Rediseño total estilo Apple (todo en un solo pase)
 
-## Problema
-1. En Nutrición y Chat, al tocar «Elegir Coach» se abre Stripe directamente (`handleCompletePayment` → `create-checkout` → `window.location.href`). No hay paso intermedio donde el usuario vea y confirme qué está comprando.
-2. Algunas tarjetas no caben en pantalla: se pegan o se salen por los lados en móvil, sin los márgenes laterales limpios estilo Apple.
+Objetivo: que toda la app se vea y se sienta como una app de Apple — márgenes limpios, tarjetas que siempre caben, nada se abre de golpe, cero elementos que no se puedan tocar.
 
-## Solución
+## 1. Pagos: confirmación antes de Stripe
+- Nutrición y Chat: al tocar «Elegir Coach» / «Mejorar a Plus» se abre una **hoja de confirmación estilo Apple** (fondo difuminado, tarjeta centrada) con el plan, el precio, 3-4 puntos de lo que incluye y el botón «Continuar al pago». Solo ahí se abre Stripe.
+- En Nutrición la hoja deja elegir entre Plus (29 €) y Coach (49 €); en Chat solo Coach.
+- Enlace discreto «Ahora no» para cerrar sin pagar.
 
-### 1. Paso intermedio de elección de plan (antes de Stripe)
-- Al tocar «Elegir Coach» o «Mejorar a Plus» en Nutrición/Chat, se abre una **hoja de confirmación estilo Apple** (sheet centrado con fondo difuminado) en vez de ir directo a Stripe.
-- La hoja muestra:
-  - Nombre del plan y precio (Coach 49 €/mes o Plus 29 €/mes).
-  - 3-4 puntos de lo que incluye, en una línea cada uno.
-  - Botón principal «Continuar al pago» → ahí sí se abre Stripe.
-  - Enlace discreto «Ahora no» para cerrar.
-- En Nutrición, la hoja ofrece las dos opciones (Plus y Coach) para elegir antes de pagar; en Chat solo Coach.
-- Nada se cobra ni se abre Stripe hasta que el usuario pulsa «Continuar al pago».
+## 2. Márgenes y tarjetas que siempre caben (todos los dispositivos)
+- Padding lateral uniforme de 16-20 px en todas las pantallas móviles, respetando las zonas seguras del iPhone (notch y barra inferior).
+- Ninguna tarjeta supera el ancho: `max-w-full`, textos largos con puntos suspensivos, botones y precios que no se salen en iPhone SE (375 px) ni en iPhone Pro Max (430 px).
+- Contenido centrado verticalmente cuando sobra espacio (nada de hueco negro abajo en pantallas altas).
 
-### 2. Tarjetas que siempre caben (márgenes estilo Apple)
-- Revisar las tarjetas del dashboard móvil (paywall, «plan en preparación», fichas de fin de entreno, tarjeta de Coach) para que:
-  - Nunca superen el ancho disponible: `max-w-full` con márgenes laterales de 16 px mínimo respetando las zonas seguras del iPhone.
-  - Textos largos se cortan con puntos suspensivos en vez de desbordar.
-  - Botones y precios no se salen en pantallas estrechas (iPhone SE 375 px).
-- Mismo aire lateral en todas: padding lateral uniforme en cada pantalla móvil.
+## 3. Cero elementos zombi
+- Todo lo que parece un botón responde al dedo; lo que es solo información no parece botón.
+- La fila de días de la semana (donde quede) se convierte en acceso directo al entreno de ese día o se quita.
 
-## Archivos a tocar
-- `src/pages/Dashboard.tsx` — el paywall deja de llamar a Stripe directamente; abre la hoja de confirmación.
-- `src/components/dashboard/PlanPaywall.tsx` — nueva hoja de confirmación de plan (Plus/Coach) con botón «Continuar al pago».
-- `src/components/mobile/MobileAppShell.tsx` y tarjetas afectadas — márgenes laterales y `max-w-full` para que nada se salga.
+## 4. Jerarquía visual estilo Apple
+- Títulos grandes en negrita, subtítulos en gris suave, una sola acción principal por pantalla (botón dorado), el resto en botones discretos.
+- Tarjetas con esquinas muy redondeadas (20-28 px), fondos suaves, sin bordes duros ni sombras pesadas.
+- Iconos en círculos o cuadrados redondeados con fondo tenue, como en Ajustes de iOS.
 
-## Verificación
+## 5. Movimiento suave
+- Transiciones cortas y suaves entre pestañas y al abrir hojas (sin animaciones de entrada llamativas ni rebotes).
+- Respuesta táctil inmediata: todo botón se hunde ligeramente al tocarlo (`active:scale`).
+
+## 6. Limpieza de pantallas concretas
+- **Inicio:** compacto, cabe entero sin bajar, saludo + sesión de hoy + nutrición + semana.
+- **Nutrición:** ficha grande «en preparación» o anillo de calorías + comidas; sin botón «Gestionar suscripción» (eso vive en Perfil).
+- **Progreso:** una fila de píldoras (Evolución | Fotos | Récords), gráfico de barras grande, sin scroll.
+- **Chat:** paywall directo a Coach con la hoja de confirmación.
+- **Admin:** selector de plan a 1 toque (Free / Plus / Coach), sin «Activar» redundante.
+
+## Archivos principales
+- `src/pages/Dashboard.tsx`, `src/components/dashboard/PlanPaywall.tsx` (hoja de confirmación), `src/components/mobile/MobileAppShell.tsx`, `src/components/dashboard/HomeOverview.tsx`, `src/components/dashboard/MealsList.tsx`, `src/components/admin/UserDetail.tsx`.
+
+## Verificación (en el mismo pase)
 - Typecheck limpio.
-- Probar en pantalla con móvil simulado (390×844 y 375×667): tocar «Elegir Coach» en Chat muestra la hoja primero, y Stripe solo se abre al pulsar «Continuar al pago». Ninguna tarjeta se sale por los lados.
+- Prueba en pantalla con móvil simulado (390×844 y 375×667): la hoja de confirmación aparece antes de Stripe, ninguna tarjeta se sale, todo cabe sin scroll.
