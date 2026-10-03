@@ -43,7 +43,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
 
   const cardClass = immersive
     ? "flex h-full w-full shrink-0 snap-center flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
-    : "h-[18.5rem] w-full shrink-0 snap-center overflow-hidden rounded-2xl border border-border/80 bg-card p-4 text-left";
+    : "flex min-h-[19rem] w-full shrink-0 snap-center flex-col overflow-hidden rounded-3xl border border-border/60 bg-card p-5 text-left";
   const isLast = activeCard === total - 1;
 
   return (
@@ -66,9 +66,9 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "gap-2.5 pb-1"}`}
+        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "gap-3"}`}
       >
-        {intro && <article className={immersive ? cardClass : `${cardClass} border-primary/25 bg-gradient-to-b from-primary/10 to-card`}>{intro}</article>}
+        {intro && <article className={immersive ? cardClass : `${cardClass} border-primary/20 bg-gradient-to-b from-primary/10 to-card`}>{intro}</article>}
         <article className={cardClass}>
           <div className="flex items-center justify-between">
             <div>
@@ -146,7 +146,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           </Button>
         </div>
       ) : (
-        <div className="mt-2 flex justify-center gap-1.5" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
+        <div className="mt-5 flex justify-center gap-1.5" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
           {Array.from({ length: total }, (_, i) => i).map((index) => (
             <span key={index} className={`h-1.5 rounded-full transition-all ${activeCard === index ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/35"}`} />
           ))}
