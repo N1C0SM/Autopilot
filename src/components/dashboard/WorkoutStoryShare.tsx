@@ -229,7 +229,7 @@ function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: num
   ctx.fillText("autopilotplan.com", W / 2, H - 70);
 }
 
-async function renderStory(p: Props, variant: Variant): Promise<Blob> {
+export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
   const W = 1080, H = 1920;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
