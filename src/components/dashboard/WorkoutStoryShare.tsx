@@ -136,7 +136,7 @@ export function WorkoutStoryShare(props: Props) {
       <Button type="button" variant="hero" disabled={busy} onClick={() => run("share")} className="h-12 min-w-0 px-3 text-sm">
         <Share2 className="h-4 w-4" /> <span className="truncate">Compartir en historias</span>
       </Button>
-      <Button type="button" variant="outline" disabled={busy} onClick={() => run("download")} className="h-12" aria-label="Descargar imagen">
+      <Button type="button" variant="outline" disabled={busy} onClick={() => run("download")} className="h-12 w-12 px-0" aria-label="Descargar imagen">
         <Download className="h-4 w-4" />
       </Button>
     </div>
