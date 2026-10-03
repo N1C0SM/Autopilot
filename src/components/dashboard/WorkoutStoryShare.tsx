@@ -6,10 +6,6 @@ import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
 import { FRONT_REGIONS, BACK_REGIONS, FRONT_SILHOUETTE, BACK_SILHOUETTE } from "./MuscleMapFigure";
 import { tonnageEquivalence } from "@/lib/muscleMapping";
-import displayFontUrl from "@/assets/fonts/BigShoulders-Bold.ttf";
-
-let fontReady: Promise<void> | null = null;
-const ensureFont = () => (fontReady ??= new FontFace("AutopilotDisplay", `url(${displayFontUrl})`).load().then((f) => { document.fonts.add(f); }).catch(() => {}));
 
 interface Props {
   title: string;
@@ -70,44 +66,32 @@ function drawFigure(ctx: CanvasRenderingContext2D, img: HTMLImageElement, side: 
 
 type Variant = "resumen" | "musculos";
 
-const GOLD_STOPS: [number, string][] = [[0, "#fff1c2"], [0.35, "#f3c969"], [0.7, "#c8902f"], [1, "#7a5418"]];
-const DISPLAY = "AutopilotDisplay, Impact, 'Haettenschweiler', 'Arial Narrow Bold', 'SF Pro Display', system-ui, sans-serif";
-const F = "system-ui, -apple-system, 'SF Pro Display', sans-serif";
+const F = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif";
 const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
-function goldFill(ctx: CanvasRenderingContext2D, y0: number, y1: number) {
-  const g = ctx.createLinearGradient(0, y0, 0, y1);
-  GOLD_STOPS.forEach(([o, c]) => g.addColorStop(o, c));
-  return g;
+function roundedPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number, fill = "rgba(255,255,255,0.055)") {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, radius);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.09)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
-// Seeded so the same session always renders the same sparkles.
-function rng(seed: number) { return () => ((seed = (seed * 16807) % 2147483647) / 2147483647); }
+function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#191919");
+  bg.addColorStop(0.48, "#0d0d0f");
+  bg.addColorStop(1, "#050506");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
 
-function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number, cy: number, seed: number) {
-  ctx.fillStyle = "#070605"; ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, cy, 20, W / 2, cy, 900);
-  glow.addColorStop(0, "rgba(243,180,80,0.38)"); glow.addColorStop(0.45, "rgba(160,95,25,0.12)"); glow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-  ctx.save(); ctx.translate(W / 2, cy);
-  for (let i = 0; i < 48; i++) {
-    ctx.rotate((Math.PI * 2) / 48);
-    const ray = ctx.createLinearGradient(0, 0, 0, -1100);
-    ray.addColorStop(0, "rgba(255,200,110,0.10)"); ray.addColorStop(1, "rgba(255,200,110,0)");
-    ctx.fillStyle = ray; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-28, -1100); ctx.lineTo(28, -1100); ctx.lineTo(6, 0); ctx.fill();
-  }
-  ctx.restore();
-  const r = rng(seed || 7);
-  for (let i = 0; i < 140; i++) {
-    const x = r() * W, y = r() * H, s = r() * 3 + 0.6;
-    ctx.fillStyle = `rgba(255,${190 + Math.floor(r() * 50)},120,${0.25 + r() * 0.6})`;
-    ctx.shadowColor = "rgba(255,190,90,0.9)"; ctx.shadowBlur = s * 4;
-    ctx.beginPath(); ctx.arc(x, y, s, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.shadowBlur = 0;
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
-  vig.addColorStop(0, "rgba(0,0,0,0)"); vig.addColorStop(1, "rgba(0,0,0,0.75)");
-  ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
+  const light = ctx.createLinearGradient(0, 0, W, H * 0.65);
+  light.addColorStop(0, "rgba(255,255,255,0.055)");
+  light.addColorStop(0.42, "rgba(255,255,255,0)");
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, W, H);
 }
 
 // The most share-worthy fact of this session: PR > progress vs last time > nothing.
@@ -120,39 +104,35 @@ function highlight(p: Props): string | null {
 
 function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props) {
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = "#fafaf9"; ctx.font = `76px ${DISPLAY}`;
-  if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "6px";
-  ctx.fillText("AUTOPILOT", 96, 210);
-  if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "0px";
-  ctx.textAlign = "right"; ctx.font = `700 34px ${F}`; ctx.fillStyle = "#d6c7a8";
-  ctx.fillText(p.date.toUpperCase(), W - 96, 200);
+  ctx.fillStyle = "#f5f5f7"; ctx.font = `700 50px ${F}`;
+  ctx.fillText("Autopilot", 76, 128);
+  ctx.textAlign = "right"; ctx.font = `500 29px ${F}`; ctx.fillStyle = "#8e8e93";
+  ctx.fillText(p.date, W - 76, 123);
   const label = highlight(p);
   if (!label) return;
-  ctx.textAlign = "left"; let fs = 32; ctx.font = `800 ${fs}px ${F}`;
-  while (ctx.measureText(label).width + 104 > W - 192 && fs > 20) { fs -= 2; ctx.font = `800 ${fs}px ${F}`; }
-  const w = ctx.measureText(label).width + 104;
-  ctx.fillStyle = "rgba(255,150,40,0.10)"; ctx.strokeStyle = "rgba(243,180,80,0.6)"; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.roundRect(96, 250, w, 72, 36); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = "#ff8a1f"; ctx.shadowColor = "#ff8a1f"; ctx.shadowBlur = 14;
-  ctx.beginPath(); ctx.arc(136, 286, 9, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-  ctx.fillStyle = "#f3c969"; ctx.fillText(label, 164, 286 + fs * 0.36);
+  ctx.textAlign = "left"; let fs = 29; ctx.font = `700 ${fs}px ${F}`;
+  while (ctx.measureText(label).width + 100 > W - 152 && fs > 22) { fs -= 1; ctx.font = `700 ${fs}px ${F}`; }
+  const w = ctx.measureText(label).width + 92;
+  ctx.fillStyle = "rgba(255,159,10,0.13)";
+  ctx.beginPath(); ctx.roundRect(76, 170, w, 66, 33); ctx.fill();
+  ctx.fillStyle = "#ff9f0a";
+  ctx.beginPath(); ctx.arc(108, 203, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillText(label, 132, 213);
 }
 
-// Huge gold number with a small "kg" suffix, auto-fitted to maxW.
 function drawBigKg(ctx: CanvasRenderingContext2D, value: string, cx: number, baseline: number, maxW: number, size: number) {
   ctx.textBaseline = "alphabetic";
   let s = size;
-  const measure = () => { ctx.font = `${s}px ${DISPLAY}`; const a = ctx.measureText(value).width; ctx.font = `${s * 0.32}px ${DISPLAY}`; return a + ctx.measureText("kg").width + 12; };
+  const measure = () => { ctx.font = `700 ${s}px ${F}`; const a = ctx.measureText(value).width; ctx.font = `600 ${s * 0.27}px ${F}`; return a + ctx.measureText("kg").width + 18; };
   while (measure() > maxW && s > 80) s -= 8;
-  ctx.font = `${s}px ${DISPLAY}`; const nw = ctx.measureText(value).width;
-  ctx.font = `${s * 0.32}px ${DISPLAY}`; const kw = ctx.measureText("kg").width;
-  const x0 = cx - (nw + kw + 12) / 2;
+  ctx.font = `700 ${s}px ${F}`; const nw = ctx.measureText(value).width;
+  ctx.font = `600 ${s * 0.27}px ${F}`; const kw = ctx.measureText("kg").width;
+  const x0 = cx - (nw + kw + 18) / 2;
   ctx.textAlign = "left";
-  ctx.shadowColor = "rgba(255,180,70,0.55)"; ctx.shadowBlur = 50;
-  ctx.font = `${s}px ${DISPLAY}`; ctx.fillStyle = goldFill(ctx, baseline - s * 0.75, baseline);
+  ctx.font = `700 ${s}px ${F}`; ctx.fillStyle = "#f5f5f7";
   ctx.fillText(value, x0, baseline);
-  ctx.font = `${s * 0.32}px ${DISPLAY}`; ctx.fillText("kg", x0 + nw + 12, baseline);
-  ctx.shadowBlur = 0;
+  ctx.font = `600 ${s * 0.27}px ${F}`; ctx.fillStyle = "#8e8e93";
+  ctx.fillText("kg", x0 + nw + 18, baseline);
   return s;
 }
 
@@ -164,54 +144,73 @@ function muscleSubtitle(p: Props) {
 }
 
 function drawTitle(ctx: CanvasRenderingContext2D, p: Props, y: number, W: number) {
-  ctx.textAlign = "left"; ctx.fillStyle = "#fafaf9";
-  let s = 150; const t = (p.title || "Sesión de hoy").toUpperCase();
-  ctx.font = `${s}px ${DISPLAY}`;
-  while (ctx.measureText(t).width > W - 192 && s > 70) { s -= 6; ctx.font = `${s}px ${DISPLAY}`; }
-  ctx.fillText(t, 96, y);
-  ctx.fillStyle = "#d9d4ca"; ctx.font = `500 48px ${F}`;
-  wrap(ctx, muscleSubtitle(p), 96, y + 80, W - 192, 56, 1);
+  ctx.textAlign = "left"; ctx.fillStyle = "#f5f5f7";
+  let s = 68; const t = p.title || "Sesión de hoy";
+  ctx.font = `700 ${s}px ${F}`;
+  while (ctx.measureText(t).width > W - 152 && s > 42) { s -= 2; ctx.font = `700 ${s}px ${F}`; }
+  ctx.fillText(t, 76, y);
+  ctx.fillStyle = "#8e8e93"; ctx.font = `500 34px ${F}`;
+  wrap(ctx, muscleSubtitle(p), 76, y + 58, W - 152, 42, 1);
 }
 
 function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number) {
-  const cx = W / 2, cy = 820, R = 400;
-  drawBackdrop(ctx, W, H, cy, Math.round(p.volumeKg) + p.sets);
+  drawBackdrop(ctx, W, H);
   drawHeader(ctx, W, p);
-  // Segmented ring: one segment per set (capped for legibility).
-  const n = Math.max(1, Math.min(p.sets || 1, 40)), gap = n > 1 ? 0.06 : 0;
-  ctx.lineCap = "round"; ctx.lineWidth = 22;
-  ctx.shadowColor = "rgba(255,180,70,0.8)"; ctx.shadowBlur = 30;
-  for (let i = 0; i < n; i++) {
-    const a0 = -Math.PI / 2 + (i * Math.PI * 2) / n + gap / 2, a1 = a0 + (Math.PI * 2) / n - gap;
-    ctx.strokeStyle = goldFill(ctx, cy - R, cy + R);
-    ctx.beginPath(); ctx.arc(cx, cy, R, a0, a1); ctx.stroke();
-  }
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = "rgba(243,201,105,0.18)"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(cx, cy, R - 46, 0, Math.PI * 2); ctx.stroke();
-  drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), cx, cy + 110, 2 * R - 90, 330);
-  ctx.textAlign = "center"; ctx.fillStyle = "#f3c969"; ctx.font = `800 40px ${F}`;
-  if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "4px";
-  ctx.fillText(`${p.sets} SERIES`, cx, cy + 200);
-  if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "0px";
+  drawTitle(ctx, p, highlight(p) ? 340 : 270, W);
+
+  const panelY = highlight(p) ? 475 : 405;
+  roundedPanel(ctx, 52, panelY, W - 104, 790, 68, "rgba(255,255,255,0.048)");
+
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#8e8e93";
+  ctx.font = `600 29px ${F}`;
+  ctx.fillText("CARGA TOTAL", 104, panelY + 86);
+  drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, panelY + 300, W - 190, 210);
+
+  const ringX = 270, ringY = panelY + 545;
+  const ringData = [
+    { radius: 144, width: 33, color: "#ff375f", progress: Math.min(0.93, 0.45 + p.sets / 45) },
+    { radius: 101, width: 33, color: "#a8f000", progress: Math.min(0.92, 0.4 + p.exercises / 15) },
+    { radius: 58, width: 33, color: "#32ade6", progress: Math.min(0.9, 0.42 + p.muscles.length / 18) },
+  ];
+  ctx.lineCap = "round";
+  ringData.forEach(({ radius, width, color, progress }) => {
+    ctx.lineWidth = width;
+    ctx.strokeStyle = `${color}26`;
+    ctx.beginPath(); ctx.arc(ringX, ringY, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.shadowColor = `${color}66`; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(ringX, ringY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress); ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  const stats = [[String(p.sets), "Series", "#ff375f"], [String(p.exercises), "Ejercicios", "#a8f000"], [String(p.muscles.length), "Grupos", "#32ade6"]];
+  stats.forEach(([value, label, color], i) => {
+    const y = panelY + 440 + i * 116;
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(525, y - 10, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f5f5f7"; ctx.font = `700 56px ${F}`; ctx.textAlign = "left"; ctx.fillText(value, 555, y);
+    ctx.fillStyle = "#8e8e93"; ctx.font = `500 28px ${F}`; ctx.fillText(label, 555, y + 38);
+  });
+
   const eq = tonnageEquivalence(p.volumeKg);
   if (eq) {
-    ctx.textAlign = "center"; ctx.fillStyle = "#fafaf9"; ctx.font = `700 46px ${F}`;
-    wrap(ctx, eq.text, cx, 1300, W - 192, 54, 1);
+    roundedPanel(ctx, 52, panelY + 830, W - 104, 190, 54, "rgba(255,159,10,0.09)");
+    ctx.fillStyle = "#ff9f0a";
+    ctx.beginPath(); ctx.roundRect(92, panelY + 874, 102, 102, 28); ctx.fill();
+    ctx.strokeStyle = "#111113"; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.arc(143, panelY + 925, 25, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(108, panelY + 925); ctx.lineTo(178, panelY + 925); ctx.stroke();
+    ctx.fillStyle = "#8e8e93"; ctx.font = `600 25px ${F}`; ctx.textAlign = "left"; ctx.fillText("EQUIVALENCIA", 230, panelY + 895);
+    ctx.fillStyle = "#f5f5f7"; ctx.font = `600 35px ${F}`;
+    wrap(ctx, eq.text, 230, panelY + 945, W - 330, 42, 2);
   }
-  drawTitle(ctx, p, 1470, W);
-  ctx.fillStyle = "rgba(243,201,105,0.25)"; ctx.fillRect(96, 1610, W - 192, 2);
-  const stats = [[String(p.sets), "series"], [String(p.exercises), "ejercicios"], [fmt(p.volumeKg), "kg movidos"]];
-  stats.forEach(([v, l], i) => {
-    const x = 96 + i * ((W - 192) / 3);
-    ctx.textAlign = "left"; ctx.font = `110px ${DISPLAY}`; ctx.fillStyle = goldFill(ctx, 1640, 1740);
-    ctx.fillText(v, x, 1740);
-    ctx.font = `500 34px ${F}`; ctx.fillStyle = "#bdb6a8"; ctx.fillText(l, x, 1792);
-  });
+
+  ctx.textAlign = "center"; ctx.fillStyle = "#636366"; ctx.font = `500 27px ${F}`;
+  ctx.fillText("Entrenamiento completado", W / 2, H - 88);
 }
 
 function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement) {
-  drawBackdrop(ctx, W, H, 820, Math.round(p.volumeKg) + 3);
+  drawBackdrop(ctx, W, H);
   drawHeader(ctx, W, p);
   drawTitle(ctx, p, 500, W);
   const scale = 0.98, fw = 399 * scale;
@@ -244,8 +243,8 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
   const W = 1080, H = 1920;
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
-  const ctx = c.getContext("2d")!;
-  await ensureFont();
+  const ctx = c.getContext("2d");
+  if (!ctx) throw new Error("canvas unavailable");
   if (variant === "resumen") drawResumen(ctx, p, W, H);
   else {
     const [front, back] = await Promise.all([loadImage(frontAnatomy), loadImage(backAnatomy)]);
