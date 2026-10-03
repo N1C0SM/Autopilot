@@ -78,7 +78,7 @@ const Recursos = () => {
       const live = modeRes?.data === "live";
       const { data: libraryBooks } = await (supabase as any)
         .from("library_books")
-        .select("id, title, description, price, cover_path, buy_url_test, buy_url_live")
+        .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack")
         .eq("published", true)
         .eq("is_folder", false)
         .order("sort_order", { ascending: true });
@@ -98,6 +98,7 @@ const Recursos = () => {
           cover_url: cover,
           url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""), b.id),
           price: b.price || "",
+          is_pack: !!b.is_pack,
         });
       }
 
