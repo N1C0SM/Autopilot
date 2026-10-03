@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import ForTrainers, { AcceptInvitation } from "./pages/ForTrainers";
+import ForTrainers, { AcceptInvitation } from "@/pages/ForTrainers";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
