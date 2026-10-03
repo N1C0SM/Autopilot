@@ -408,7 +408,7 @@ const Dashboard = () => {
         </div>
       )}
       {!coaching && (section === "chat" || section === "nutrition") && (
-        <CoachingOffer onChoose={handleCompletePayment} nutrition={section === "nutrition"} />
+        <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
       )}
 
       {coaching && planStatus === "plan_pending" && (section === "home" || section === "training") && (

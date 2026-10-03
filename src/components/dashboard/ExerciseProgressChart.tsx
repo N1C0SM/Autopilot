@@ -1,4 +1,4 @@
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { motion } from "framer-motion";
 import type { ExerciseHistoryEntry } from "@/lib/workoutMetrics";
 
@@ -26,13 +26,6 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
     return entry.bestEstimated1RmKg;
   };
   const chartData = history.slice(-12).map((entry) => ({ ...entry, metricValue: valueOf(entry) }));
-  // Con una sola sesión, la curva se colapsa en un punto: añadimos una línea base
-  // sintética al inicio para que se dibuje una trayectoria plana legible.
-  if (chartData.length === 1) {
-    const only = chartData[0];
-    chartData.unshift({ ...only, sessionLabel: "Inicio", date: "" });
-  }
-  const showDots = chartData.length <= 3;
   const latest = valueOf(history[history.length - 1]);
   const previous = valueOf(history[history.length - 2]);
   const change = latest !== null && previous !== null ? latest - previous : null;
@@ -76,34 +69,28 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
         aria-label={`Gráfica de ${exerciseName}`}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 10, right: 6, left: 6, bottom: 0 }}>
+          <BarChart data={chartData} margin={{ top: 10, right: 6, left: 6, bottom: 0 }} barCategoryGap="22%">
             <defs>
               <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
               </linearGradient>
             </defs>
             <XAxis dataKey="sessionLabel" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-            <YAxis hide domain={["dataMin - 5", "dataMax + 5"]} />
+            <YAxis hide domain={[0, "dataMax"]} />
             <Tooltip
-              cursor={{ stroke: "hsl(var(--primary) / .4)", strokeDasharray: "3 3" }}
+              cursor={{ fill: "hsl(var(--primary) / .08)" }}
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }}
               labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
               formatter={(value: number) => [`${round(value)} ${unit}`, ""]}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ""}
             />
-            <Area
-              type="monotone"
-              dataKey="metricValue"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2.5}
-              fill={`url(#${gid})`}
-              connectNulls
-              dot={showDots ? { r: 4, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 } : false}
-              activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
-              style={{ filter: "drop-shadow(0 4px 12px hsl(var(--primary) / .35))" }}
-            />
-          </AreaChart>
+            <Bar dataKey="metricValue" radius={[10, 10, 4, 4]} maxBarSize={56} isAnimationActive={false}>
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={`url(#${gid})`} fillOpacity={i === chartData.length - 1 ? 1 : 0.4} />
+              ))}
+            </Bar>
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
