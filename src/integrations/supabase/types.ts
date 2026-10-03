@@ -346,6 +346,45 @@ export type Database = {
         }
         Relationships: []
       }
+      entitlements: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          external_id: string | null
+          id: string
+          plan: string
+          source: string
+          starts_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          plan: string
+          source: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string | null
+          id?: string
+          plan?: string
+          source?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           alternative_id: string | null
@@ -842,6 +881,60 @@ export type Database = {
         }
         Relationships: []
       }
+      product_configs: {
+        Row: {
+          accepting_new_subscriptions: boolean
+          billing_interval: string
+          created_at: string
+          currency: string
+          description: string
+          enabled: boolean
+          features: Json
+          key: string
+          max_clients: number
+          name: string
+          price: number
+          publicly_visible: boolean
+          stripe_price_id_live: string | null
+          stripe_price_id_test: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepting_new_subscriptions?: boolean
+          billing_interval?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          enabled?: boolean
+          features?: Json
+          key: string
+          max_clients?: number
+          name: string
+          price?: number
+          publicly_visible?: boolean
+          stripe_price_id_live?: string | null
+          stripe_price_id_test?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepting_new_subscriptions?: boolean
+          billing_interval?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          enabled?: boolean
+          features?: Json
+          key?: string
+          max_clients?: number
+          name?: string
+          price?: number
+          publicly_visible?: boolean
+          stripe_price_id_live?: string | null
+          stripe_price_id_test?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_public: boolean
@@ -1318,6 +1411,8 @@ export type Database = {
           assigned_at: string
           assigned_by: string | null
           id: string
+          relationship_type: string
+          status: string
           trainer_id: string
           user_id: string
         }
@@ -1325,6 +1420,8 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
+          relationship_type?: string
+          status?: string
           trainer_id: string
           user_id: string
         }
@@ -1332,6 +1429,8 @@ export type Database = {
           assigned_at?: string
           assigned_by?: string | null
           id?: string
+          relationship_type?: string
+          status?: string
           trainer_id?: string
           user_id?: string
         }
@@ -1378,6 +1477,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trainer_invitations: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          status: string
+          token: string
+          trainer_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          status?: string
+          token?: string
+          trainer_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          token?: string
+          trainer_id?: string
+        }
+        Relationships: []
       }
       trainer_profiles: {
         Row: {
@@ -1791,6 +1920,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_trainer_invitation: { Args: { _token: string }; Returns: string }
       admin_assign_user_to_trainer: {
         Args: { _email: string; _trainer_id: string }
         Returns: string
@@ -1817,6 +1947,13 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_my_consumer_plan: {
+        Args: never
+        Returns: {
+          coach_assigned: boolean
+          plan: string
+        }[]
       }
       get_my_trainer: {
         Args: never
@@ -1876,6 +2013,19 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_trainer_plan_public: {
+        Args: never
+        Returns: {
+          accepting_new_subscriptions: boolean
+          billing_interval: string
+          currency: string
+          description: string
+          features: Json
+          max_clients: number
+          name: string
+          price: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1908,6 +2058,8 @@ export type Database = {
         Args: { _email: string }
         Returns: string
       }
+      trainer_plan_enabled: { Args: never; Returns: boolean }
+      trainer_plan_open: { Args: never; Returns: boolean }
       trainer_resign: { Args: never; Returns: undefined }
       trainer_unassign_user: { Args: { _user_id: string }; Returns: undefined }
       trainer_update_own_profile: {
