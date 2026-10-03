@@ -22,3 +22,5 @@
 - [x] Sin avisos rojos falsos por cortes momentáneos de conexión en tiempo real
 - [x] Foto con IA verificada (funciona con cuenta admin) + miniatura junto al nombre en la lista admin
 - [x] No repetir el vídeo debajo si ya está en el hero; al pasar el ratón sobre la portada, reproducir el vídeo
+- [ ] Claves de IA (OpenAI, Claude…) editables desde ajustes de admin; exercise-video las usa con prioridad
+- [ ] Cerrar aviso de seguridad de certificados: enlace firmado vía función certificate-link y quitar regla pública
