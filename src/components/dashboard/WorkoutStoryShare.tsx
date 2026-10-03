@@ -212,7 +212,7 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
 
 function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement) {
   drawBackdrop(ctx, W, H, 820, Math.round(p.volumeKg) + 3);
-  drawHeader(ctx, W, p.date);
+  drawHeader(ctx, W, p);
   drawTitle(ctx, p, 500, W);
   const scale = 0.98, fw = 399 * scale;
   drawFigure(ctx, front, "front", p, W / 2 - fw - 6, 640, scale);
@@ -238,8 +238,6 @@ function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: num
   wrap(ctx, eqText, W / 2, 1620 + Math.min(96, s * 0.4), W - 160, 60, 1);
   ctx.fillStyle = "#bdb6a8"; ctx.font = `500 38px ${F}`;
   ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4) + 62);
-  ctx.fillStyle = "#a8a29e"; ctx.font = `500 36px ${F}`;
-  ctx.fillText("autopilotplan.com", W / 2, H - 56);
 }
 
 export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
@@ -258,7 +256,7 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
 
 export function WorkoutStoryShare(props: Props) {
   const [busy, setBusy] = useState(false);
-  const [variant, setVariant] = useState<Variant>("resumen");
+  const variant: Variant = "resumen";
   const download = (blob: Blob) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -282,14 +280,6 @@ export function WorkoutStoryShare(props: Props) {
   };
   return (
     <div className="w-full min-w-0 space-y-2">
-    <div role="radiogroup" aria-label="Estilo de la imagen" className="grid grid-cols-2 gap-1 rounded-full border border-border/60 bg-card/60 p-1">
-      {(["resumen", "musculos"] as const).map((v) => (
-        <button key={v} type="button" role="radio" aria-checked={variant === v} onClick={() => setVariant(v)}
-          className={`h-8 rounded-full text-xs font-semibold transition-colors active:scale-95 ${variant === v ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-          {v === "resumen" ? "Resumen" : "Músculos"}
-        </button>
-      ))}
-    </div>
     <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_3rem] gap-2">
       <Button type="button" variant="hero" disabled={busy} onClick={() => run("share")} className="h-12 min-w-0 px-3 text-sm">
         <Share2 className="h-4 w-4" /> <span className="truncate">Compartir en historias</span>

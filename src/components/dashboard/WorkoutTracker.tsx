@@ -667,7 +667,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
   return (
     <div className={`w-full min-w-0 ${started ? "min-h-dvh px-3 pb-8 pt-[calc(env(safe-area-inset-top)+0.5rem)] sm:px-5" : ""}`}>
-      <div className={`mb-3 flex items-center gap-3 text-[11px] text-muted-foreground ${started && !workoutCompleted ? "sticky top-0 z-30 -mx-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:-mx-5 sm:px-5" : "justify-end"}`}>
+      <div className={`mb-3 flex items-center gap-3 text-[11px] text-muted-foreground ${workoutCompleted ? "hidden" : started ? "sticky top-0 z-30 -mx-3 border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:-mx-5 sm:px-5" : "justify-end"}`}>
         {started && !workoutCompleted && (
           <>
             <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2" onClick={saveAndExit} disabled={saving}>
@@ -724,7 +724,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
       {/* Gym day */}
       {currentPlan?.type === "gimnasio" && (
-        <div className={`space-y-3 ${workoutCompleted ? "min-h-[calc(100vh-8rem)]" : ""}`}>
+        <div className={`space-y-3`}>
           {/* Today's workout summary */}
           <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady || loadError || started ? "hidden" : ""}`}>
             <p className="text-[11px] font-medium text-primary">{selectedDay}</p>
