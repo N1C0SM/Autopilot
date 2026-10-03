@@ -27,3 +27,9 @@
 - [x] No repetir el vídeo debajo si ya está en el hero; al pasar el ratón sobre la portada, reproducir el vídeo
 - [x] Claves de IA (OpenAI, Claude…) editables desde ajustes de admin; exercise-video las usa con prioridad
 - [x] Cerrar aviso de seguridad de certificados: enlace firmado vía función certificate-link y quitar regla pública
+
+## Barra de pestañas admin (en curso)
+- [x] Pestañas de la ficha de usuario repartidas por igual (flex-1) en cualquier ancho.
+- [ ] Admin con mínimo scroll: roles/onboarding en sección aparte.
+- [ ] Progreso: último entreno fuera del flujo, en ventana emergente.
+- [ ] Revisar fotos de progreso/compartir.
