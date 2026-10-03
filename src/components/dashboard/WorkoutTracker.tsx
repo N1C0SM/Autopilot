@@ -614,7 +614,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               if (!eq && pct === null) return null;
               return (
                 <div className="rounded-2xl border border-primary/20 bg-primary/5 px-3 py-2.5">
-                  {eq && <p className="truncate text-sm font-semibold">{eq.emoji} {eq.text}</p>}
+                  {eq && (
+                    <>
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]" />
+                        Telemetría de carga · {Math.round(totalVolume).toLocaleString("es-ES")} kg
+                      </p>
+                      <p className="mt-1 truncate text-sm font-semibold">{eq.text}</p>
+                    </>
+                  )}
                   {pct !== null && totalVolume > 0 && (
                     <p className={`mt-0.5 truncate text-xs font-medium ${diff >= 0 ? "text-primary" : "text-muted-foreground"}`}>
                       {diff >= 0 ? "+" : "−"}{Math.abs(Math.round(diff)).toLocaleString("es-ES")} kg ({pct > 0 ? "+" : ""}{pct} %) frente a tu sesión anterior

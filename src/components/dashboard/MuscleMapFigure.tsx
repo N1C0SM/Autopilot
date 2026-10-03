@@ -111,25 +111,16 @@ export function MuscleMapFigure({ side, muscles, intensityFor }: Props) {
         </filter>
       </defs>
       <image href={anatomy} x="0" y="0" width="399" height="698" preserveAspectRatio="none" />
-      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: "color" }}>
+      {/* Direct luminous fill: blend modes vanish on the dark anatomy artwork. */}
+      <g clipPath={`url(#${clipId})`}>
         {visibleRegions.map(({ muscle, d, details }) => (
           <path
             key={muscle}
             d={(details ?? [d]).join(" ")}
             fill={intensityFor(muscle)}
-            fillOpacity="0.94"
+            fillOpacity="0.85"
             filter={`url(#${softenId})`}
-          />
-        ))}
-      </g>
-      <g clipPath={`url(#${clipId})`} style={{ mixBlendMode: "soft-light" }}>
-        {visibleRegions.map(({ muscle, d, details }) => (
-          <path
-            key={muscle}
-            d={(details ?? [d]).join(" ")}
-            fill={intensityFor(muscle)}
-            fillOpacity="0.25"
-            filter={`url(#${softenId})`}
+            style={{ filter: `drop-shadow(0 0 6px ${intensityFor(muscle)})` }}
           />
         ))}
       </g>
