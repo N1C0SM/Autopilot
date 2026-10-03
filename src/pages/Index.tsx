@@ -58,6 +58,7 @@ const Index = () => {
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [landingCounts, setLandingCounts] = useState({ ebooks: 4, recommendations: 3 });
   const [ebooks, setEbooks] = useState<PreviewBook[]>([]);
   const [previewBook, setPreviewBook] = useState<PreviewBook | null>(null);
   const [recommendations, setRecommendations] = useState<Array<{ id?: string; title: string; description: string; image_url: string; url: string; badge: string }>>([]);
@@ -91,6 +92,10 @@ const Index = () => {
           show_blog: (s as any).show_blog ?? true,
           show_ebooks: (s as any).show_ebooks ?? false,
           show_recommendations: (s as any).show_recommendations ?? false,
+        });
+        setLandingCounts({
+          ebooks: Math.max(0, Number((s as any).landing_ebooks_count ?? 4)),
+          recommendations: Math.max(0, Number((s as any).landing_recommendations_count ?? 3)),
         });
         Promise.all([
           (supabase.rpc as any)("get_payment_mode"),
@@ -454,7 +459,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                    {ebooks.slice(0, 4).map((e, i) => (
+                    {ebooks.slice(0, landingCounts.ebooks).map((e, i) => (
                       <ScrollReveal key={e.id || i} delay={i * 0.05}>
                         <button
                           type="button"
@@ -502,7 +507,7 @@ const Index = () => {
                     </Link>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {recommendations.slice(0, 3).map((r, i) => (
+                    {recommendations.slice(0, landingCounts.recommendations).map((r, i) => (
                       <ScrollReveal key={r.id || i} delay={i * 0.05}>
                         <a
                           href={r.url || "/recursos"}

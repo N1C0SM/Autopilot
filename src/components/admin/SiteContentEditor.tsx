@@ -72,6 +72,8 @@ const SiteContentEditor = () => {
   const [settingsId, setSettingsId] = useState<string>("");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [sections, setSections] = useState({ show_blog: true, show_ebooks: false, show_recommendations: false });
+  const [landingCounts, setLandingCounts] = useState({ landing_ebooks_count: 4, landing_recommendations_count: 3 });
+  const [ranking, setRanking] = useState(false);
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [guideEbookUrl, setGuideEbookUrl] = useState<string>("");
@@ -100,7 +102,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -123,6 +125,10 @@ const SiteContentEditor = () => {
         show_blog: (s as any).show_blog ?? true,
         show_ebooks: (s as any).show_ebooks ?? false,
         show_recommendations: (s as any).show_recommendations ?? false,
+      });
+      setLandingCounts({
+        landing_ebooks_count: Math.max(0, Number((s as any).landing_ebooks_count ?? 4)),
+        landing_recommendations_count: Math.max(0, Number((s as any).landing_recommendations_count ?? 3)),
       });
       const rawEbooks = Array.isArray((s as any).ebooks) ? (s as any).ebooks : [];
       setEbooks(rawEbooks.map((e: any) => ({
@@ -153,6 +159,48 @@ const SiteContentEditor = () => {
     setSections(next);
     const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Secciones actualizadas");
+  };
+
+  const saveLandingCounts = async (next: typeof landingCounts) => {
+    setLandingCounts(next);
+    const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
+    if (error) toast.error("Error al guardar"); else toast.success("Cantidades actualizadas");
+  };
+
+  const rankWithAi = async () => {
+    setRanking(true);
+    try {
+      const { data: books } = await (supabase as any)
+        .from("library_books")
+        .select("id, title, description, price, is_pack")
+        .eq("published", true)
+        .eq("is_folder", false)
+        .order("sort_order", { ascending: true });
+      const { data, error } = await supabase.functions.invoke("rank-library", {
+        body: { books: books || [], recommendations },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const bookIds: string[] = data.book_ids || [];
+      await Promise.all(bookIds.map((id, i) =>
+        (supabase as any).from("library_books").update({ sort_order: i + 1 }).eq("id", id)
+      ));
+
+      const recoIds: string[] = data.recommendation_ids || [];
+      if (recoIds.length > 0) {
+        const byId = new Map(recommendations.map((r) => [r.id, r]));
+        const ordered = recoIds.map((id) => byId.get(id)).filter(Boolean) as Recommendation[];
+        const rest = recommendations.filter((r) => !recoIds.includes(r.id));
+        const next = [...ordered, ...rest];
+        setRecommendations(next);
+        await supabase.from("settings").update({ recommendations: next as any } as any).eq("id", settingsId);
+      }
+      toast.success(data.reason ? `Ordenado: ${data.reason}` : "Orden actualizado con IA");
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo ordenar con IA");
+    }
+    setRanking(false);
   };
 
   const saveEbooks = async () => {
@@ -430,6 +478,46 @@ const SiteContentEditor = () => {
               />
             </div>
           ))}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 pt-2">
+          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Libros en la landing</p>
+              <p className="text-[11px] text-muted-foreground">Cuántas guías se muestran en la portada (0 = ninguna).</p>
+            </div>
+            <Input
+              type="number" min={0} max={24}
+              className="w-20 text-center"
+              value={landingCounts.landing_ebooks_count}
+              onChange={(e) => setLandingCounts({ ...landingCounts, landing_ebooks_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
+              onBlur={() => saveLandingCounts(landingCounts)}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">Recomendaciones en la landing</p>
+              <p className="text-[11px] text-muted-foreground">Cuántos productos recomendados se muestran en la portada.</p>
+            </div>
+            <Input
+              type="number" min={0} max={24}
+              className="w-20 text-center"
+              value={landingCounts.landing_recommendations_count}
+              onChange={(e) => setLandingCounts({ ...landingCounts, landing_recommendations_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
+              onBlur={() => saveLandingCounts(landingCounts)}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-primary/30 bg-primary/5">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Ordenar con IA</p>
+            <p className="text-[11px] text-muted-foreground">La IA analiza libros y recomendaciones y pone primero los que más venden. En la landing se mostrarán los primeros según las cantidades de arriba.</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" disabled={ranking} onClick={rankWithAi} className="shrink-0">
+            {ranking ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+            Ordenar con IA
+          </Button>
         </div>
       </div>
 
