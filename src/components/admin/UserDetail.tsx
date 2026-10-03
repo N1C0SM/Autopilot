@@ -709,9 +709,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               )}
             </details>
           )}
-        </TabsContent>
-
-
         {!restricted && (
           <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
@@ -776,6 +773,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               )}
             </div>
           )}
+        </TabsContent>
+
+
         {/* Tab: Progress */}
         <TabsContent value="progress">
           <UserProgressPanel userId={profile.user_id} travelModeUntil={profile.travel_mode_until} travelEquipment={profile.travel_equipment} />
