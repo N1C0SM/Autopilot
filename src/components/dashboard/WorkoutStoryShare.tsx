@@ -123,8 +123,10 @@ async function renderStory(p: Props): Promise<Blob> {
   ctx.fillStyle = g; ctx.font = `900 170px ${F}`;
   ctx.fillText(big, W / 2, y);
   const eq = tonnageEquivalence(p.volumeKg);
-  ctx.fillStyle = fg; ctx.font = `700 44px ${F}`;
-  ctx.fillText(eq ? `${eq.emoji} ${eq.text}` : `${p.exercises} ejercicios completados`, W / 2, y + 80);
+  ctx.fillStyle = gold; ctx.font = `700 24px ${F}`;
+  ctx.fillText("—  TELEMETRÍA DE CARGA  —", W / 2, y + 60);
+  ctx.fillStyle = fg; ctx.font = `600 40px ${F}`;
+  ctx.fillText(eq ? eq.text : `${p.exercises} ejercicios completados`, W / 2, y + 112, W - 160);
 
   // comparison vs previous
   y += 140;
