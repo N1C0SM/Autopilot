@@ -219,14 +219,16 @@ const ProgressPhotos = ({ userId }: Props) => {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-card rounded-2xl p-10 border border-border text-center"
+          className="flex min-h-[55dvh] flex-col items-center justify-center rounded-[1.75rem] border border-border bg-card p-10 text-center"
         >
-          <div className="text-4xl mb-3">📷</div>
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+            <Camera className="h-7 w-7 text-primary" />
+          </div>
           <h3 className="font-display font-bold text-lg mb-1">Empieza a documentar tu progreso</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Sube fotos semanales para ver tu evolución. Frente, lateral y espalda.
           </p>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
+          <Button variant="hero" className="rounded-2xl active:scale-[0.98]" onClick={() => fileRef.current?.click()}>
             <Camera className="w-4 h-4 mr-1" /> Subir primera foto
           </Button>
         </motion.div>
