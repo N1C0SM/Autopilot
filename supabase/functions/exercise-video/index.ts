@@ -1,5 +1,6 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+import { getAiConfig } from "../_shared/ai-provider.ts";
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -53,14 +54,17 @@ Deno.serve(async (req) => {
     const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, video_url, video_job_id").eq("id", exerciseId).single();
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
 
-    // Prioridad de clave de IA: 1) la que el admin guardó en Ajustes (app_secrets),
-    // 2) variable de entorno OPENAI_API_KEY, 3) la del proyecto (créditos Lovable).
-    const { data: secretRow } = await svc.from("app_secrets").select("value").eq("key", "OPENAI_API_KEY").maybeSingle();
-    const openaiKey = (secretRow?.value || "").trim() || Deno.env.get("OPENAI_API_KEY");
-    const apiKey = openaiKey || Deno.env.get("LOVABLE_API_KEY");
+    // Proveedor según Ajustes: tu clave de OpenAI, Lovable AI o automático.
+    const cfg = await getAiConfig();
+    const jobRaw = String(exercise.video_job_id || "");
+    const jobIsOpenai = jobRaw.startsWith("openai:");
+    const useOpenai = action === "check" && jobRaw ? jobIsOpenai : cfg.order[0] === "openai";
+    const openaiKey = useOpenai ? cfg.openaiKey : "";
+    const apiKey = openaiKey || cfg.lovableKey;
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);
     const BASE = openaiKey ? "https://api.openai.com" : GATEWAY;
     const IMG_MODEL = openaiKey ? "gpt-image-1" : IMAGE_MODEL;
+    const jobId = jobRaw.replace(/^openai:/, "");
     const noCredit = openaiKey ? "Sin saldo en tu cuenta de OpenAI" : "Sin créditos de IA suficientes";
 
     const name = exercise.name || "un ejercicio";
@@ -123,7 +127,7 @@ Deno.serve(async (req) => {
         return json({ error: r.status === 429 ? "Ya hay un vídeo generándose, espera unos segundos" : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota") ? noCredit : msg }, r.status);
       }
       const job = (await r.json()) as Job;
-      await svc.from("exercises").update({ video_job_id: job.id }).eq("id", exerciseId);
+      await svc.from("exercises").update({ video_job_id: openaiKey ? `openai:${job.id}` : job.id }).eq("id", exerciseId);
       return json({ jobId: job.id, status: job.status });
     }
 
@@ -134,7 +138,7 @@ Deno.serve(async (req) => {
     }
 
 
-    const poll = await fetch(`${BASE}/v1/videos/${encodeURIComponent(exercise.video_job_id)}`, {
+    const poll = await fetch(`${BASE}/v1/videos/${encodeURIComponent(jobId)}`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
     if (!poll.ok) {
