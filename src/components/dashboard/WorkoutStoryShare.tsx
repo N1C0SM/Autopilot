@@ -110,22 +110,32 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number, cy: n
   ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H);
 }
 
-function drawHeader(ctx: CanvasRenderingContext2D, W: number, date: string) {
+// The most share-worthy fact of this session: PR > progress vs last time > nothing.
+function highlight(p: Props): string | null {
+  if (p.records.length) return `NUEVO RÉCORD · ${p.records[0]}`.toUpperCase();
+  const prev = p.previousVolumeKg || 0, diff = p.volumeKg - prev;
+  if (prev > 0 && diff > 0) return `+${fmt(diff)} KG VS TU ÚLTIMA SESIÓN (+${Math.round((diff / prev) * 100)} %)`;
+  return null;
+}
+
+function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props) {
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#fafaf9"; ctx.font = `76px ${DISPLAY}`;
   if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "6px";
   ctx.fillText("AUTOPILOT", 96, 210);
   if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "0px";
   ctx.textAlign = "right"; ctx.font = `700 34px ${F}`; ctx.fillStyle = "#d6c7a8";
-  ctx.fillText(date.toUpperCase(), W - 96, 200);
-  ctx.textAlign = "left"; ctx.font = `800 30px ${F}`;
-  const label = "SESIÓN VERIFICADA";
+  ctx.fillText(p.date.toUpperCase(), W - 96, 200);
+  const label = highlight(p);
+  if (!label) return;
+  ctx.textAlign = "left"; let fs = 32; ctx.font = `800 ${fs}px ${F}`;
+  while (ctx.measureText(label).width + 104 > W - 192 && fs > 20) { fs -= 2; ctx.font = `800 ${fs}px ${F}`; }
   const w = ctx.measureText(label).width + 104;
-  ctx.fillStyle = "rgba(255,150,40,0.08)"; ctx.strokeStyle = "rgba(243,180,80,0.55)"; ctx.lineWidth = 2.5;
+  ctx.fillStyle = "rgba(255,150,40,0.10)"; ctx.strokeStyle = "rgba(243,180,80,0.6)"; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.roundRect(96, 250, w, 72, 36); ctx.fill(); ctx.stroke();
   ctx.fillStyle = "#ff8a1f"; ctx.shadowColor = "#ff8a1f"; ctx.shadowBlur = 14;
   ctx.beginPath(); ctx.arc(136, 286, 9, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-  ctx.fillStyle = "#f3c969"; ctx.fillText(label, 164, 297);
+  ctx.fillStyle = "#f3c969"; ctx.fillText(label, 164, 286 + fs * 0.36);
 }
 
 // Huge gold number with a small "kg" suffix, auto-fitted to maxW.
@@ -166,7 +176,7 @@ function drawTitle(ctx: CanvasRenderingContext2D, p: Props, y: number, W: number
 function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number) {
   const cx = W / 2, cy = 820, R = 400;
   drawBackdrop(ctx, W, H, cy, Math.round(p.volumeKg) + p.sets);
-  drawHeader(ctx, W, p.date);
+  drawHeader(ctx, W, p);
   // Segmented ring: one segment per set (capped for legibility).
   const n = Math.max(1, Math.min(p.sets || 1, 40)), gap = n > 1 ? 0.06 : 0;
   ctx.lineCap = "round"; ctx.lineWidth = 22;
@@ -184,21 +194,20 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
   if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "4px";
   ctx.fillText(`${p.sets} SERIES`, cx, cy + 200);
   if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "0px";
-  drawTitle(ctx, p, 1390, W);
-  ctx.fillStyle = "rgba(243,201,105,0.25)"; ctx.fillRect(96, 1530, W - 192, 2);
+  const eq = tonnageEquivalence(p.volumeKg);
+  if (eq) {
+    ctx.textAlign = "center"; ctx.fillStyle = "#fafaf9"; ctx.font = `700 46px ${F}`;
+    wrap(ctx, eq.text, cx, 1300, W - 192, 54, 1);
+  }
+  drawTitle(ctx, p, 1470, W);
+  ctx.fillStyle = "rgba(243,201,105,0.25)"; ctx.fillRect(96, 1610, W - 192, 2);
   const stats = [[String(p.sets), "series"], [String(p.exercises), "ejercicios"], [fmt(p.volumeKg), "kg movidos"]];
   stats.forEach(([v, l], i) => {
     const x = 96 + i * ((W - 192) / 3);
-    ctx.textAlign = "left"; ctx.font = `110px ${DISPLAY}`; ctx.fillStyle = goldFill(ctx, 1560, 1660);
-    ctx.fillText(v, x, 1660);
-    ctx.font = `500 34px ${F}`; ctx.fillStyle = "#bdb6a8"; ctx.fillText(l, x, 1712);
+    ctx.textAlign = "left"; ctx.font = `110px ${DISPLAY}`; ctx.fillStyle = goldFill(ctx, 1640, 1740);
+    ctx.fillText(v, x, 1740);
+    ctx.font = `500 34px ${F}`; ctx.fillStyle = "#bdb6a8"; ctx.fillText(l, x, 1792);
   });
-  if (p.records.length) {
-    ctx.textAlign = "left"; ctx.font = `700 30px ${F}`; ctx.fillStyle = "#ff9d3c";
-    ctx.fillText(`RÉCORD · ${p.records.slice(0, 2).join(" · ").toUpperCase()}`, 96, 1250);
-  }
-  ctx.textAlign = "center"; ctx.fillStyle = "#a8a29e"; ctx.font = `500 36px ${F}`;
-  ctx.fillText("autopilotplan.com", cx, H - 110);
 }
 
 function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement) {
