@@ -165,7 +165,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         prevData
           .filter((row) => row.logged_at === lastDate)
           .forEach((row) => {
-            prev[row.exercise_name] = row.sets_completed as WorkoutSetLog[];
+            prev[row.exercise_name] = row.sets_completed as unknown as WorkoutSetLog[];
           });
       }
       if (data && data.length > 0) {
@@ -858,7 +858,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             const trackingConfig = getExerciseTrackingConfig({
               name: ex.name,
               skill_tag: metadata?.skill_tag ?? undefined,
-              movement_pattern: ex.movement_pattern ?? metadata?.movement_pattern ?? undefined,
+              movement_pattern: (ex as any).movement_pattern ?? metadata?.movement_pattern ?? undefined,
               exercise_type: exerciseType ?? undefined,
             });
             const progression = getProgressionSuggestion(ex, prevSets, previousSessionRpe);

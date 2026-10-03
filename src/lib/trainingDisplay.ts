@@ -9,7 +9,7 @@ const formatMuscleFocus = (muscleFocus: string) => {
   const [first, ...rest] = muscles;
   const titleCase = (value: string) => value.charAt(0).toLocaleUpperCase("es") + value.slice(1);
   const middle = rest.slice(0, -1);
-  return `${titleCase(first)}${middle.length ? `, ${middle.join(", ")}` : ""} y ${rest.at(-1)}`;
+  return `${titleCase(first)}${middle.length ? `, ${middle.join(", ")}` : ""} y ${rest[rest.length - 1]}`;
 };
 
 export const formatTrainingTitle = (routineName?: string | null, muscleFocus?: string | null) => {
