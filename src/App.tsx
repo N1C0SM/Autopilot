@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import ForTrainers, { AcceptInvitation } from "./pages/ForTrainers";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -96,6 +97,8 @@ const App = () => (
             <Routes>
             <Route path="/" element={<RootRoute />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/para-entrenadores" element={<ForTrainers />} />
+            <Route path="/invitacion/:token" element={<AcceptInvitation />} />
             <Route path="/login" element={<Login />} />
             <Route path="/scan" element={<Scan />} />
             <Route path="/scan/user/:userId" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
