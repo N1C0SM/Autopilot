@@ -17,6 +17,7 @@ import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutReview } from "./WorkoutReview";
+import { WorkoutStoryShare } from "./WorkoutStoryShare";
 import { MuscleMapFigure } from "./MuscleMapFigure";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
@@ -667,6 +668,16 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   </div>
                 ))}
               </section>
+
+              <WorkoutStoryShare
+                title={trainingTitle || "Sesión de hoy"}
+                date={new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+                volumeKg={totalVolume}
+                sets={completedSets}
+                exercises={completedExercises}
+                records={personalRecords}
+                muscles={musclesWorked}
+              />
 
               <section className="rounded-[1.75rem] border border-border/80 bg-card p-4 sm:p-5" aria-labelledby="workout-muscle-map-title">
                 <div className="flex items-start justify-between gap-3">
