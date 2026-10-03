@@ -91,7 +91,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
             </div>
           )}
           <p className="mt-2 truncate text-xs text-muted-foreground">
-            {leadMuscles.map((muscle) => `${muscle} · ${muscleSetCounts[muscle]} series`).join("  ·  ") || "Sesión registrada"}
+            {leadMuscles.map((muscle) => `${muscle} · ${Math.round(muscleSetCounts[muscle] || 0)} series`).join("  ·  ") || "Sesión registrada"}
           </p>
         </article>
 
