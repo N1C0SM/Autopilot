@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, CreditCard, Target } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, Target, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -113,6 +114,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [mealsText, setMealsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [isUserTrainer, setIsUserTrainer] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
@@ -425,14 +427,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
        <div className="flex-1 min-w-0">
          <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.name?.trim() || profile.email}</h1>
          {profile.name?.trim() && <p className="text-xs text-muted-foreground truncate">{profile.email}</p>}
-         <div className="flex flex-wrap gap-2 mt-1">
-            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.payment_status === "paid" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
-              {profile.payment_status === "paid" ? (PLAN_LABEL[(profile as any).subscription_tier as string] || "Activo") : "Inactivo"}
-            </span>
-            <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${profile.plan_status === "plan_ready" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
-              {profile.plan_status === "plan_ready" ? "Plan listo" : profile.plan_status === "plan_pending" ? "Pendiente" : "Perfil pendiente"}
-            </span>
-          </div>
         </div>
        </div>
        <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
@@ -447,75 +441,76 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           </>
         )}
         {!restricted && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => impersonateUser(profile.user_id, "/dashboard")}
-            title="Abrir la app en una pestaña nueva como si fueras este usuario"
-          >
-            <Eye className="w-4 h-4 mr-1.5" /> Ver como
-          </Button>
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0" aria-label="Más acciones">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => impersonateUser(profile.user_id, "/dashboard")}>
+                  <Eye className="w-4 h-4 mr-2" /> Ver como
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="w-4 h-4 mr-2" /> Eliminar usuario
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Se eliminarán permanentemente todos los datos de <strong>{profile.email}</strong>: perfil, planes, entrenamientos, chat, fotos y cuenta. Esta acción no se puede deshacer.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    {deleting ? "Eliminando..." : "Eliminar"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
         )}
-        {!restricted && <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Se eliminarán permanentemente todos los datos de <strong>{profile.email}</strong>: perfil, planes, entrenamientos, chat, fotos y cuenta. Esta acción no se puede deshacer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {deleting ? "Eliminando..." : "Eliminar"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>}
        </div>
       </div>
 
 
       {/* Tabs */}
-      <Tabs defaultValue={!hasAccess && !restricted ? "access" : "info"} className="space-y-6">
-        <TabsList className={`bg-secondary/50 w-full max-w-full flex md:grid overflow-x-auto no-scrollbar justify-start h-auto ${profile.payment_status === "paid" ? (trainingOnly ? (restricted ? "md:grid-cols-4" : "md:grid-cols-5") : (restricted ? "md:grid-cols-5" : "md:grid-cols-6")) : (restricted ? "md:grid-cols-1" : "md:grid-cols-2")}`}>
-          <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-            <User2 className="w-3.5 h-3.5" /> Cliente
-          </TabsTrigger>
-          {!restricted && (
-            <TabsTrigger value="access" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-              <CreditCard className="w-3.5 h-3.5" /> Plan y acceso
-            </TabsTrigger>
-          )}
+      <Tabs defaultValue="info" className="space-y-6">
+        <TabsList className="bg-secondary/50 w-full max-w-full flex overflow-x-auto no-scrollbar justify-start h-auto">
+          <TabsTrigger value="info" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
+            <User2 className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Cliente</span>
+           </TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <TrendingUp className="w-3.5 h-3.5" /> Progreso
-              </TabsTrigger>
-              <TabsTrigger value="training" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <Dumbbell className="w-3.5 h-3.5" /> Entreno
+              <TabsTrigger value="progress" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
+                <TrendingUp className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Progreso</span>
+               </TabsTrigger>
+              <TabsTrigger value="training" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
+                <Dumbbell className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Entreno</span>
               </TabsTrigger>
               {!trainingOnly && (
-                <TabsTrigger value="nutrition" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                  <Apple className="w-3.5 h-3.5" /> Nutrición
+                <TabsTrigger value="nutrition" className="group text-xs gap-1.5 shrink-0 whitespace-nowrap">
+                  <Apple className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Nutrición</span>
                 </TabsTrigger>
               )}
-              <TabsTrigger value="chat" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
-                <MessageCircle className="w-3.5 h-3.5" /> Chat
-              </TabsTrigger>
+              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
+                <TabsTrigger value="chat" className="group text-xs gap-1.5 flex-1 whitespace-nowrap">
+                  <MessageCircle className="w-3.5 h-3.5" /> <span className="hidden group-data-[state=active]:inline sm:inline">Chat</span>
+                </TabsTrigger>
+              )}
             </>
           )}
         </TabsList>
 
-        {/* Tab: Plan and access */}
+        {/* Tab: Info (incluye Plan y acceso) */}
+        <TabsContent value="info" className="space-y-6">
         {!restricted && (
-          <TabsContent value="access" className="space-y-4">
+          <>
             <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
                 <div className="font-semibold text-base">Plan</div>
@@ -637,11 +632,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 )}
               </div>
             </div>
-          </TabsContent>
+          </>
         )}
 
-        {/* Tab: Info */}
-        <TabsContent value="info" className="space-y-6">
           {(profile as any).subscription_tier === "transform" && (
             <TransformCyclePanel
               userId={profile.user_id}
@@ -781,23 +774,14 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         </TabsContent>
 
         {/* Tab: Training */}
-        <TabsContent value="training" className="space-y-6">
-          <Tabs defaultValue="plan" className="space-y-4">
-            <TabsList className="bg-secondary/50">
-              <TabsTrigger value="plan" className="text-xs gap-1.5">
-                <Dumbbell className="w-3.5 h-3.5" /> Plan de entreno
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className="text-xs gap-1.5">
-                <Calendar className="w-3.5 h-3.5" /> Calendario
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="plan">
-              <TrainingPlanForm dayPlans={dayPlans} onChange={setDayPlans} userSports={onboarding?.sports} equipmentType={onboarding?.equipment_type || "Mixto"} specificGoal={onboarding?.specific_goal || undefined} intensityLevel={onboarding?.intensity_level ?? 5} userGoal={onboarding?.goal || undefined} userInjuries={onboarding?.injuries || undefined} userAge={onboarding?.age ?? undefined} userAvailability={onboarding?.availability as Record<string, boolean> | null} />
-            </TabsContent>
-            <TabsContent value="calendar" className="space-y-6">
-              <AdminCalendarTab profile={profile} dayPlans={dayPlans} />
-            </TabsContent>
-          </Tabs>
+        <TabsContent value="training" className="space-y-8">
+          <TrainingPlanForm dayPlans={dayPlans} onChange={setDayPlans} userSports={onboarding?.sports} equipmentType={onboarding?.equipment_type || "Mixto"} specificGoal={onboarding?.specific_goal || undefined} intensityLevel={onboarding?.intensity_level ?? 5} userGoal={onboarding?.goal || undefined} userInjuries={onboarding?.injuries || undefined} userAge={onboarding?.age ?? undefined} userAvailability={onboarding?.availability as Record<string, boolean> | null} />
+          <div className="space-y-4 border-t border-border/50 pt-6">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Calendar className="w-4 h-4" /> Calendario
+            </h2>
+            <AdminCalendarTab profile={profile} dayPlans={dayPlans} />
+          </div>
         </TabsContent>
 
         {/* Tab: Nutrition */}
