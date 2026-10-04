@@ -9,23 +9,19 @@ html, body, #root {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
+/* Zonas seguras reales del dispositivo (notch, Dynamic Island, home indicator) */
 :root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
   --mobile-nav-height: 4.25rem;
   --mobile-nav-offset: 0.75rem;
-  --mobile-nav-content-padding: calc(var(--mobile-nav-height) + var(--mobile-nav-offset) + 1.5rem + var(--safe-bottom, 0px));
-  --safe-top: 0px;
-  --safe-bottom: 0px;
-  --safe-left: 0px;
-  --safe-right: 0px;
+  --mobile-nav-content-padding: calc(var(--mobile-nav-height) + var(--mobile-nav-offset) + 2.5rem + env(safe-area-inset-bottom, 0px));
 }
-/* Zonas seguras reales del dispositivo (notch, Dynamic Island, home indicator, cutouts Android) */
-@supports (padding: env(safe-area-inset-top)) {
-  :root {
-    --safe-top: env(safe-area-inset-top);
-    --safe-bottom: env(safe-area-inset-bottom);
-    --safe-left: env(safe-area-inset-left);
-    --safe-right: env(safe-area-inset-right);
-  }
+/* PWA instalada: evita que la página entera rebote y arrastre la barra */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior: none; }
 }
 
 /* Con el teclado abierto en nativo, la barra inferior no debe tapar el input */
