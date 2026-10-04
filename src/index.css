@@ -21,7 +21,7 @@ html, body, #root {
 }
 /* PWA instalada: evita que la página entera rebote y arrastre la barra */
 @media (display-mode: standalone) {
-  html, body { overscroll-behavior: none; }
+  html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
 }
 
 /* Con el teclado abierto en nativo, la barra inferior no debe tapar el input */
