@@ -24,9 +24,16 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
   <nav
     className={`${className} fixed z-50 md:hidden`}
     style={{
-      left: "max(0.75rem, var(--safe-left, 0px))",
-      right: "max(0.75rem, var(--safe-right, 0px))",
-      bottom: "calc(var(--mobile-nav-offset) + var(--safe-bottom, 0px))",
+      position: "fixed",
+      left: "max(0.75rem, env(safe-area-inset-left, 0px))",
+      right: "max(0.75rem, env(safe-area-inset-right, 0px))",
+      bottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
+      // Capa GPU propia: iOS la mantiene clavada durante el scroll inercial
+      transform: "translate3d(0,0,0)",
+      WebkitTransform: "translate3d(0,0,0)",
+      willChange: "transform",
+      backfaceVisibility: "hidden",
+      touchAction: "manipulation",
     }}
     aria-label={label}
   >
