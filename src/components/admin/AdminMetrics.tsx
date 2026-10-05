@@ -40,8 +40,10 @@ const AdminMetrics = () => {
       supabase.from("personal_records").select("id").gte("achieved_at", d7),
       supabase.from("email_send_log").select("status, message_id, created_at").gte("created_at", iso(30)),
     ]);
+    const { data: staff } = await supabase.from("user_roles").select("user_id").in("role", ["admin", "trainer"] as any);
+    const staffIds = new Set((staff || []).map((r: any) => r.user_id));
 
-    const profs = profiles || [];
+    const profs = (profiles || []).filter((p: any) => !staffIds.has(p.user_id));
     const comps = completions || [];
     const counts = { free: 0, plus: 0, coach: 0 } as Record<Plan, number>;
     profs.forEach((p) => counts[planOf(p)]++);
