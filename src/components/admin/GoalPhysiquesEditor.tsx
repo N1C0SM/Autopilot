@@ -102,8 +102,7 @@ const GoalPhysiquesEditor = () => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-2xl font-bold flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary" />
-            Físicos objetivo
+                        Físicos objetivo
           </h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             Físicos de referencia que verán los usuarios en el AI Scan. Pueden elegir uno como objetivo en vez de subir su propia foto.
@@ -122,7 +121,7 @@ const GoalPhysiquesEditor = () => {
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {items.map((it) => (
-            <div key={it.id} className="bg-card rounded-2xl border border-border p-4 space-y-3">
+            <div key={it.id} className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5 space-y-3">
               <div className="flex gap-3">
                 <div className="relative w-28 h-36 rounded-xl overflow-hidden bg-secondary shrink-0 border border-border">
                   {it.image_url ? (

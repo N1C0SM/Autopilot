@@ -54,30 +54,30 @@ const NumSelect = ({ value, onChange, options }: {
 );
 
 const GROUP_COLORS: Record<string, string> = {
-  Pecho: "bg-red-500/15 text-red-400 border-red-500/30",
-  Espalda: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-  Hombros: "bg-orange-500/15 text-orange-400 border-orange-500/30",
-  Bíceps: "bg-purple-500/15 text-purple-400 border-purple-500/30",
-  Tríceps: "bg-pink-500/15 text-pink-400 border-pink-500/30",
-  Piernas: "bg-green-500/15 text-green-400 border-green-500/30",
-  Glúteos: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  Core: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30",
-  Cardio: "bg-rose-500/15 text-rose-400 border-rose-500/30",
-  "Cuerpo completo": "bg-indigo-500/15 text-indigo-400 border-indigo-500/30",
-  Otro: "bg-muted text-muted-foreground border-border",
+  Pecho: "bg-secondary text-muted-foreground border-border/60",
+  Espalda: "bg-secondary text-muted-foreground border-border/60",
+  Hombros: "bg-secondary text-muted-foreground border-border/60",
+  Bíceps: "bg-secondary text-muted-foreground border-border/60",
+  Tríceps: "bg-secondary text-muted-foreground border-border/60",
+  Piernas: "bg-secondary text-muted-foreground border-border/60",
+  Glúteos: "bg-secondary text-muted-foreground border-border/60",
+  Core: "bg-secondary text-muted-foreground border-border/60",
+  Cardio: "bg-secondary text-muted-foreground border-border/60",
+  "Cuerpo completo": "bg-secondary text-muted-foreground border-border/60",
+  Otro: "bg-secondary text-muted-foreground border-border/60",
 };
 
 const LEVEL_COLORS: Record<number, string> = {
-  1: "bg-emerald-500/15 text-emerald-400",
-  2: "bg-yellow-500/15 text-yellow-400",
-  3: "bg-red-500/15 text-red-400",
+  1: "bg-secondary text-muted-foreground",
+  2: "bg-primary/10 text-primary/80",
+  3: "bg-primary/20 text-primary",
 };
 
 const STIMULUS_COLORS: Record<string, string> = {
-  Fuerza: "bg-blue-600/15 text-blue-400",
-  Hipertrofia: "bg-violet-500/15 text-violet-400",
-  Resistencia: "bg-orange-500/15 text-orange-400",
-  Isométrico: "bg-teal-500/15 text-teal-400",
+  Fuerza: "bg-secondary text-muted-foreground",
+  Hipertrofia: "bg-secondary text-muted-foreground",
+  Resistencia: "bg-secondary text-muted-foreground",
+  Isométrico: "bg-secondary text-muted-foreground",
 };
 
 /* ── Exercise Form Dialog ── */

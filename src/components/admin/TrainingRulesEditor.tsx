@@ -93,7 +93,7 @@ const TrainingRulesEditor = () => {
     const { id, ...rest } = rules;
     const { error } = await (supabase.from("training_rules") as any).update(rest).eq("id", id);
     if (error) toast.error("Error al guardar");
-    else toast.success("Reglas actualizadas ✅");
+    else toast.success("Reglas actualizadas");
     setSaving(false);
   };
 
@@ -111,7 +111,7 @@ const TrainingRulesEditor = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold font-display">Reglas de generación</h2>
+          <h2 className="font-display text-2xl font-bold">Reglas de generación</h2>
           <p className="text-xs text-muted-foreground">Configuración del motor Autopilot</p>
         </div>
         <div className="flex gap-2">
@@ -232,7 +232,7 @@ const TrainingRulesEditor = () => {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+    <div className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5 space-y-3">
       <div className="flex items-center gap-2">
         <div className="text-primary">{icon}</div>
         <h3 className="font-semibold text-sm">{title}</h3>
