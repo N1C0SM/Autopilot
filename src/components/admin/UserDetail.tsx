@@ -302,6 +302,16 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       return { name: name?.trim() || "", description: rest.join(":").trim() || "" };
     });
 
+    {
+      const p = Number(macros.protein) || 0, c = Number(macros.carbs) || 0, f = Number(macros.fats) || 0;
+      const kcal = p * 4 + c * 4 + f * 9;
+      if (p > 350 || c > 700 || f > 180 || (kcal > 0 && (kcal < 1000 || kcal > 5000))) {
+        toast.error(`Macros fuera de rango (${Math.round(kcal)} kcal). Máx: proteína 350 g, carbohidratos 700 g, grasa 180 g; total entre 1.000 y 5.000 kcal.`);
+        setSaving(false);
+        return;
+      }
+    }
+
     const { error: tpError } = await supabase.from("training_plan").upsert({
       user_id: profile.user_id,
       workouts_json: dayPlans as unknown as Json,
@@ -488,6 +498,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           <TabsTrigger value="perfil" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Perfil</span>
            </TabsTrigger>
+          {restricted && profile.payment_status !== "paid" && (
+            <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
+            </TabsTrigger>
+          )}
           {profile.payment_status === "paid" && (
             <>
               <TabsTrigger value="progress" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
@@ -501,7 +516,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Nutrición</span>
                 </TabsTrigger>
               )}
-              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
+              {(restricted || ["full", "transform", "personal", "coach"].includes(currentTier || "")) && (
                 <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
                   <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
                 </TabsTrigger>
