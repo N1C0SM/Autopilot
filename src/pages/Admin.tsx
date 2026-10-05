@@ -182,7 +182,7 @@ const Admin = () => {
                   <QuickAction
                     label="Planes pendientes"
                     value={users.filter(u => u.plan_status === "plan_pending").length}
-                    color="text-amber-400"
+                    color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
@@ -192,9 +192,9 @@ const Admin = () => {
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
-                    label="✈️ En viaje"
+                    label="En viaje"
                     value={users.filter(u => u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()).length}
-                    color="text-amber-400"
+                    color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
@@ -204,14 +204,14 @@ const Admin = () => {
                       const today = new Date();
                       return d.toDateString() === today.toDateString();
                     }).length}
-                    color="text-primary"
+                    color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                 </div>
 
                 {/* Recent users */}
                 <div>
-                  <h2 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground mb-3">Usuarios recientes</h2>
+                  <h2 className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground mb-3">Usuarios recientes</h2>
                   <div className="space-y-2">
                     {users
                       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -354,10 +354,10 @@ function QuickAction({ label, value, color, onClick }: { label: string; value: n
   return (
     <button
       onClick={onClick}
-      className="bg-card rounded-xl p-5 border border-border hover:border-primary/30 transition-all text-left group"
+      className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5 hover:border-primary/40 transition-colors text-left"
     >
-      <div className={`text-3xl font-bold font-display ${color}`}>{value}</div>
-      <div className="text-xs text-muted-foreground mt-1 group-hover:text-foreground transition-colors">{label}</div>
+      <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
+      <div className={`mt-2 font-display text-2xl font-bold tabular-nums sm:text-3xl ${color}`}>{value}</div>
     </button>
   );
 }
@@ -365,7 +365,7 @@ function QuickAction({ label, value, color, onClick }: { label: string; value: n
 function StatusDot({ status, payment }: { status: string; payment: string }) {
   if (payment === "unpaid") return <span className="w-2.5 h-2.5 rounded-full bg-destructive shrink-0" title="Sin pagar" />;
   if (status === "plan_ready") return <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" title="Plan listo" />;
-  if (status === "plan_pending") return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" title="Pendiente" />;
+  if (status === "plan_pending") return <span className="w-2.5 h-2.5 rounded-full bg-primary/50 shrink-0" title="Pendiente" />;
   return <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground shrink-0" title="Onboarding" />;
 }
 
