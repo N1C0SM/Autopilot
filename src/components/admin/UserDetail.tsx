@@ -488,6 +488,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           <TabsTrigger value="perfil" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Perfil</span>
            </TabsTrigger>
+          {restricted && profile.payment_status !== "paid" && (
+            <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
+            </TabsTrigger>
+          )}
           {profile.payment_status === "paid" && (
             <>
               <TabsTrigger value="progress" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
@@ -501,7 +506,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Nutrición</span>
                 </TabsTrigger>
               )}
-              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
+              {(restricted || ["full", "transform", "personal", "coach"].includes(currentTier || "")) && (
                 <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
                   <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
                 </TabsTrigger>
