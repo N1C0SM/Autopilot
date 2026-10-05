@@ -692,7 +692,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           <h3 className="font-display font-bold text-lg mb-1">Día de descanso</h3>
           <p className="text-sm text-muted-foreground">Recupera, o elige otra sesión de tu semana</p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {dayPlans.filter((p) => p.type !== "descanso" && (p.exercises?.length ?? 0) > 0).map((p) => (
+            {dayPlans.filter((p) => (p.type === "actividad" || (p.exercises?.length ?? 0) > 0)).map((p) => (
               <button key={p.day} type="button" onClick={() => setSelectedDay(p.day)}
                 className="rounded-full border border-border/60 bg-secondary px-3 py-1.5 text-xs font-medium hover:border-primary/50">
                 {p.day}{(p as any).name ? ` · ${(p as any).name}` : ""}
