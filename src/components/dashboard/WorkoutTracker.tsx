@@ -52,7 +52,7 @@ const getMuscleIntensity = (sets: number) => sets >= 6
 
 const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const selectedDay = DAYS_ORDER[todayIndex];
+  const [selectedDay, setSelectedDay] = useState<string>(DAYS_ORDER[todayIndex]);
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, WorkoutSetLog[]>>({});
@@ -690,7 +690,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         >
           <div className="text-4xl mb-3">😴</div>
           <h3 className="font-display font-bold text-lg mb-1">Día de descanso</h3>
-          <p className="text-sm text-muted-foreground">Recupera y vuelve más fuerte mañana</p>
+          <p className="text-sm text-muted-foreground">Recupera, o elige otra sesión de tu semana</p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            {dayPlans.filter((p) => (p.type === "actividad" || (p.exercises?.length ?? 0) > 0)).map((p) => (
+              <button key={p.day} type="button" onClick={() => setSelectedDay(p.day)}
+                className="rounded-full border border-border/60 bg-secondary px-3 py-1.5 text-xs font-medium hover:border-primary/50">
+                {p.day}{(p as any).name ? ` · ${(p as any).name}` : ""}
+              </button>
+            ))}
+          </div>
         </motion.div>
       )}
 

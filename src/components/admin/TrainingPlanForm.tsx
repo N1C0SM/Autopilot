@@ -54,10 +54,20 @@ const getInjuredMuscles = (injuries?: string): Set<string> => {
   return injured;
 };
 
+const WEEK_KEYS = ["lunes","martes","miercoles","miércoles","jueves","viernes","sabado","sábado","domingo","monday","tuesday","wednesday","thursday","friday","saturday","sunday","lun","mar","mie","jue","vie","sab","dom"];
+const countWeekDays = (a: Record<string, unknown>): number => {
+  const days = new Set<string>();
+  for (const [k, v] of Object.entries(a || {})) {
+    const key = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 3);
+    if (WEEK_KEYS.some((w) => w.normalize("NFD").replace(/[\u0300-\u036f]/g, "").startsWith(key) && w.length >= 3) && v && (v as any) !== "false") days.add(key);
+  }
+  return Math.min(7, days.size);
+};
+
 // ─── Availability → recommended template ───
 const getRecommendedStructure = (availability?: Record<string, boolean> | null): string | null => {
   if (!availability) return null;
-  const activeDays = Object.values(availability).filter(Boolean).length;
+  const activeDays = countWeekDays(availability);
   if (activeDays <= 2) return "fullbody";
   if (activeDays === 3) return "fullbody";
   if (activeDays === 4) return "upper_lower";
@@ -251,7 +261,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const injuredMuscles = getInjuredMuscles(userInjuries);
   const recommendedStructure = getRecommendedStructure(userAvailability);
-  const activeDays = userAvailability ? Object.values(userAvailability).filter(Boolean).length : null;
+  const activeDays = userAvailability ? countWeekDays(userAvailability) : null;
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set([0]));
 
   // Auto-calculated training params based on user profile

@@ -480,11 +480,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
 
       {/* Tabs */}
-      <Tabs defaultValue="info" className="space-y-6">
+      <Tabs defaultValue={restricted ? "perfil" : "info"} className="space-y-6">
         <TabsList className="bg-secondary/50 w-full max-w-full flex overflow-x-auto no-scrollbar h-auto">
-          <TabsTrigger value="info" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+          {!restricted && <TabsTrigger value="info" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
             <Target className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Plan</span>
-           </TabsTrigger>
+           </TabsTrigger> }
           <TabsTrigger value="perfil" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Perfil</span>
            </TabsTrigger>
