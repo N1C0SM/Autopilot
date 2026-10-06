@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode } fro
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { authRedirect } from "@/lib/authRedirect";
+import { clearAnonScanId } from "@/lib/scanAttribution";
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -70,6 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Al cerrar sesión olvidamos el id anónimo de escaneo: si otra persona
+    // escanea o se registra después en este mismo navegador, no debe heredar la
+    // atribución de fotos ajenas.
+    clearAnonScanId();
     await supabase.auth.signOut();
   };
 

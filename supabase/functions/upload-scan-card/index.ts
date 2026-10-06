@@ -20,6 +20,11 @@ const RL_WINDOW_SECONDS = 60
 const RL_LIMIT_IP = 8 // usuarios anónimos (sin sesión)
 const RL_LIMIT_USER = 20 // usuarios con sesión válida
 
+// Id anónimo de sesión: UUID que genera el navegador y que se copia a
+// raw_user_meta_data.anon_scan_id al registrarse. Es la única forma de atribuir
+// después una tarjeta anónima a una cuenta (RGPD art. 17).
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -105,9 +110,13 @@ Deno.serve(async (req) => {
   }
 
   let pngBase64: string | undefined
+  let anonSessionId: string | null = null
   try {
     const body = await req.json()
     pngBase64 = body?.pngBase64
+    if (typeof body?.anonSessionId === 'string' && UUID_RE.test(body.anonSessionId.trim())) {
+      anonSessionId = body.anonSessionId.trim().toLowerCase()
+    }
   } catch {
     return json({ error: 'Invalid JSON' }, 400)
   }
@@ -136,6 +145,30 @@ Deno.serve(async (req) => {
 
   if (upErr) {
     console.error('upload-scan-card upload error', upErr)
+    return json({ error: 'Upload failed' }, 500)
+  }
+
+  // 4.b) Atribución (RGPD art. 17): sin dueño demostrable no conservamos la foto.
+  //      - Con sesión: user_id (la ruta ya es scan-cards/<uid>/...).
+  //      - Sin sesión: anon_session_id, que el navegador copiará al registrarse.
+  //      Fail-closed: si no se puede registrar la atribución, borramos el objeto
+  //      recién subido. Así nunca queda una foto anónima imposible de borrar.
+  //      El email del diagnóstico sigue enviándose, solo que sin la tarjeta.
+  if (!userId && !anonSessionId) {
+    console.error('upload-scan-card: anonymous upload without a valid anonSessionId; discarding object')
+    await supabase.storage.from(BUCKET).remove([path])
+    return json({ error: 'anonSessionId required for anonymous uploads' }, 400)
+  }
+
+  const { error: ledgerErr } = await supabase.from('scan_card_uploads').insert({
+    storage_path: path,
+    user_id: userId,
+    anon_session_id: userId ? null : anonSessionId,
+  })
+
+  if (ledgerErr) {
+    console.error('upload-scan-card attribution error', ledgerErr)
+    await supabase.storage.from(BUCKET).remove([path])
     return json({ error: 'Upload failed' }, 500)
   }
 

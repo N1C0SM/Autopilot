@@ -13,6 +13,7 @@ import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { authRedirect } from "@/lib/authRedirect";
 import { signInWithApple } from "@/lib/nativeAuth";
+import { readAnonScanId } from "@/lib/scanAttribution";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -111,11 +112,15 @@ const Signup = () => {
         return;
       }
 
+      const anonScanId = readAnonScanId();
       const { error } = await signUp(email.trim(), password, {
         display_name: name.trim(),
         referral_code: referralCode,
         is_free: isFree ? "true" : "false",
         selected_plan: selectedPlan || "",
+        // Atribuye a la cuenta las tarjetas de escaneo subidas sin sesión desde
+        // esta pestaña, para poder borrarlas al eliminar la cuenta (RGPD art. 17).
+        ...(anonScanId ? { anon_scan_id: anonScanId } : {}),
       });
       if (error) {
         toast.error(error.message);

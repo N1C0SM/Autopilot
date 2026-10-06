@@ -54,6 +54,7 @@ import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
 import { MONTHLY_PRICE_EUR, TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
+import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -490,8 +491,13 @@ const Scan = () => {
       const dataUrl = await renderScanCardDataUrl();
       if (!dataUrl) return null;
       const pngBase64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+      // Sin sesión no hay user_id: enviamos el id anónimo de la pestaña para que
+      // la tarjeta quede atribuida y se pueda borrar al eliminar la cuenta (RGPD).
       const { data, error } = await supabase.functions.invoke("upload-scan-card", {
-        body: { pngBase64 },
+        body: {
+          pngBase64,
+          ...(user ? {} : { anonSessionId: getOrCreateAnonScanId() }),
+        },
       });
       if (error) {
         console.warn("upload-scan-card error", error);
@@ -975,6 +981,9 @@ const Scan = () => {
   };
 
   const reset = () => {
+    // Un escaneo nuevo estrena id anónimo: el anterior ya no debe atribuirse a
+    // quien escanee después en esta misma pestaña.
+    clearAnonScanId();
     setResult(null);
     setCurrentImg(null);
     setBackImg(null);

@@ -6,6 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (value: string): boolean => UUID_RE.test(value);
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -61,29 +64,79 @@ serve(async (req) => {
       supabaseAdmin.from("referrals").delete().eq("referred_user_id", userId),
     ]);
 
-    // Borra TODOS los archivos del usuario en storage (fotos de progreso, avatar)
-    const purgeBucket = async (bucket: string, prefix: string) => {
+    // Borra TODOS los archivos del usuario en storage (fotos de progreso, avatar,
+    // tarjetas de escaneo y medios de chat). Listado recursivo: hay objetos a más
+    // de un nivel (p.ej. progress-photos/<uid>/chat/<conversationId>/<ts>.jpg).
+    // Idempotente: si el prefijo ya no existe, list() no devuelve nada y no falla.
+    const purgeBucketPrefix = async (bucket: string, prefix: string, depth = 0): Promise<void> => {
       try {
-        const { data: files } = await supabaseAdmin.storage.from(bucket).list(prefix, { limit: 1000 });
-        if (!files?.length) return;
-        const paths: string[] = [];
-        for (const f of files) {
-          // Un nivel de subcarpetas (p.ej. progress-photos/<uid>/<scanId>/foto.jpg)
-          if (!f.id) {
-            const { data: nested } = await supabaseAdmin.storage
-              .from(bucket)
-              .list(`${prefix}/${f.name}`, { limit: 1000 });
-            nested?.forEach((n) => paths.push(`${prefix}/${f.name}/${n.name}`));
-          } else {
-            paths.push(`${prefix}/${f.name}`);
+        const { data: entries, error } = await supabaseAdmin.storage
+          .from(bucket)
+          .list(prefix, { limit: 1000 });
+        if (error || !entries?.length) return;
+        const files: string[] = [];
+        for (const entry of entries) {
+          const entryPath = `${prefix}/${entry.name}`;
+          // Supabase Storage lista las carpetas sin id (son "prefijos", no objetos).
+          if (entry.id) {
+            files.push(entryPath);
+          } else if (depth < 3) {
+            await purgeBucketPrefix(bucket, entryPath, depth + 1);
           }
         }
-        if (paths.length) await supabaseAdmin.storage.from(bucket).remove(paths);
+        if (files.length) {
+          for (let i = 0; i < files.length; i += 1000) {
+            await supabaseAdmin.storage.from(bucket).remove(files.slice(i, i + 1000));
+          }
+        }
       } catch (e) {
-        console.error(`[DELETE-ACCOUNT] storage purge ${bucket}:`, (e as Error).message);
+        console.error(`[DELETE-ACCOUNT] storage purge ${bucket}/${prefix}:`, (e as Error).message);
       }
     };
-    await Promise.all([purgeBucket("progress-photos", userId), purgeBucket("avatars", userId)]);
+
+    // Tarjetas de escaneo atribuidas a este usuario: se borran por RUTA EXACTA,
+    // nunca por prefijo amplio. Incluye las tarjetas anónimas que el navegador
+    // atribuyó a la cuenta al registrarse (raw_user_meta_data.anon_scan_id).
+    // NUNCA se borra scan-cards/anonymous/ completo: puede contener fotos de otras
+    // personas que aún no se han registrado.
+    const rawAnonScanId = userData.user.user_metadata?.anon_scan_id;
+    const anonScanId =
+      typeof rawAnonScanId === "string" && UUID_RE.test(rawAnonScanId.trim())
+        ? rawAnonScanId.trim().toLowerCase()
+        : null;
+    const ledgerFilter = anonScanId
+      ? `user_id.eq.${userId},anon_session_id.eq.${anonScanId}`
+      : `user_id.eq.${userId}`;
+    try {
+      const { data: ledger, error: ledgerReadErr } = await supabaseAdmin
+        .from("scan_card_uploads")
+        .select("storage_path")
+        .or(ledgerFilter);
+      if (ledgerReadErr) throw ledgerReadErr;
+      const recordedPaths = (ledger ?? [])
+        .map((row) => row.storage_path)
+        .filter(
+          (p): p is string =>
+            typeof p === "string" && p.startsWith("scan-cards/") && !p.includes("..")
+        );
+      if (recordedPaths.length) {
+        await supabaseAdmin.storage.from("progress-photos").remove(recordedPaths);
+      }
+      await supabaseAdmin.from("scan_card_uploads").delete().or(ledgerFilter);
+    } catch (e) {
+      // Si la migración aún no está aplicada (tabla inexistente), el borrado de
+      // cuenta debe seguir funcionando.
+      console.error("[DELETE-ACCOUNT] scan card ledger cleanup:", (e as Error).message);
+    }
+
+    await Promise.all([
+      // Carpeta del usuario (fotos, avatar, chat) y su carpeta de tarjetas de
+      // escaneo autenticadas: scan-cards/<uid>/... El uid sale del JWT verificado,
+      // así que estas rutas son demostrablemente suyas.
+      isUuid(userId) ? purgeBucketPrefix("progress-photos", userId) : Promise.resolve(),
+      isUuid(userId) ? purgeBucketPrefix("progress-photos", `scan-cards/${userId}`) : Promise.resolve(),
+      isUuid(userId) ? purgeBucketPrefix("avatars", userId) : Promise.resolve(),
+    ]);
 
     // Delete profile + roles
     await Promise.all([
