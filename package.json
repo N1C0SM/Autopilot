@@ -21,7 +21,7 @@
     "media:count": "node scripts/generate-exercise-media.mjs --dry-run"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.0",
+    "@capacitor/android": "^8.4.3",
     "@capacitor/app": "^8.1.0",
     "@capacitor/browser": "^8",
     "@capacitor/core": "^8.4.0",
