@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
-import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ExerciseThumb } from "@/components/ExerciseMedia";
+import ExerciseFocus from "@/components/ExerciseFocus";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
@@ -1247,52 +1247,21 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         </div>
       )}
 
-      {/* Ficha de técnica: foto grande y vídeo del ejercicio */}
-      <Sheet open={!!technique} onOpenChange={(open) => { if (!open) setTechnique(null); }}>
-        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
-          <div className="w-full overflow-hidden bg-black">
-            <ExerciseMedia video={technique?.video} image={technique?.image} name={technique?.name} />
-          </div>
-          <div className="p-4 pb-8 space-y-4">
-            <SheetHeader className="p-0 space-y-0 text-left">
-              <SheetTitle className="font-display text-xl font-bold">{technique?.name}</SheetTitle>
-            </SheetHeader>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Series</p>
-                <p className="font-bold text-lg font-display">{technique?.series ?? "—"}</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Reps</p>
-                <p className="font-bold text-lg font-display">{technique?.reps ?? "—"}</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Descanso</p>
-                <p className="font-bold text-sm font-display mt-1.5">{technique?.rest ?? "—"}</p>
-              </div>
-            </div>
-            {(technique?.category || technique?.type) && (
-              <div className="flex flex-wrap gap-1.5">
-                {technique?.category && (
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    {technique.category}
-                  </span>
-                )}
-                {technique?.type && (
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
-                    {technique.type}
-                  </span>
-                )}
-              </div>
-            )}
-            {!technique?.video && (
-              <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-                El vídeo de la técnica todavía no está disponible. Si tienes plan Coach, pregúntale a tu entrenador por el chat.
-              </p>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* El ejercicio a pantalla completa: nada más alrededor */}
+      <ExerciseFocus
+        exercise={technique ? {
+          name: technique.name,
+          image: technique.image,
+          video: technique.video,
+          series: technique.series,
+          reps: technique.reps,
+          rest: technique.rest,
+          muscleGroup: technique.category,
+          exerciseType: technique.type,
+        } : null}
+        onClose={() => setTechnique(null)}
+      />
+
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
     </div>

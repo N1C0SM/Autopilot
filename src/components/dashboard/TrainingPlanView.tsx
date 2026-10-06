@@ -2,13 +2,13 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Dumbbell, Flame, Clock, Download, Copy, Check, ChevronDown, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import CalendarExportDialog from "./CalendarExportDialog";
 import AIDisclaimer from "@/components/AIDisclaimer";
-import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
+import { ExerciseThumb } from "@/components/ExerciseMedia";
+import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -272,55 +272,20 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
         );
       })}
 
-      {/* Ficha de técnica del ejercicio */}
-      <Sheet open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
-        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
-          <div className="w-full overflow-hidden bg-black">
-            <ExerciseMedia video={detail?.video} image={detail?.image} name={detail?.name} />
-          </div>
-
-
-          <div className="p-4 pb-8 space-y-4">
-            <SheetHeader className="p-0 space-y-0 text-left">
-              <SheetTitle className="font-display text-xl font-bold">{detail?.name}</SheetTitle>
-            </SheetHeader>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Series</p>
-                <p className="font-bold text-lg font-display">{detail?.series ?? "—"}</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Reps</p>
-                <p className="font-bold text-lg font-display">{detail?.reps ?? "—"}</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-xs uppercase tracking-wider text-muted-foreground">Descanso</p>
-                <p className="font-bold text-lg font-display">{detail?.rest ?? "—"}</p>
-              </div>
-            </div>
-            {(detail?.category || detail?.type) && (
-              <div className="flex flex-wrap gap-1.5">
-                {detail?.category && (
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                    {detail.category}
-                  </span>
-                )}
-                {detail?.type && (
-                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
-                    {detail.type}
-                  </span>
-                )}
-              </div>
-            )}
-            {!detail?.video && (
-              <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-                El vídeo de la técnica de este ejercicio todavía no está disponible. Pregunta a tu entrenador por el chat.
-              </p>
-            )}
-
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* El ejercicio a pantalla completa: nada más alrededor */}
+      <ExerciseFocus
+        exercise={detail ? {
+          name: detail.name,
+          image: detail.image,
+          video: detail.video,
+          series: detail.series,
+          reps: detail.reps,
+          rest: detail.rest,
+          muscleGroup: detail.category,
+          exerciseType: detail.type,
+        } : null}
+        onClose={() => setDetail(null)}
+      />
     </div>
   );
 };
