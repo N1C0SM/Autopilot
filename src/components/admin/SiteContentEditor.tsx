@@ -45,6 +45,7 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const AI_KEYS = [
   { key: "OPENAI_API_KEY", label: "OpenAI (ChatGPT)", desc: "Vídeos, imágenes, blog, libros y el resto de la IA con tu cuenta de OpenAI.", placeholder: "sk-..." },
   { key: "ANTHROPIC_API_KEY", label: "Claude (Anthropic)", desc: "Segunda opción para el texto si OpenAI se queda sin saldo.", placeholder: "sk-ant-..." },
+  { key: "DEEPSEEK_API_KEY", label: "DeepSeek", desc: "Solo texto (planes, blog, chat, clasificación), mucho más barato. No genera imágenes ni vídeos: para eso sigue haciendo falta OpenAI.", placeholder: "sk-..." },
 ] as const;
 
 

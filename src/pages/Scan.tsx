@@ -1195,11 +1195,11 @@ const Scan = () => {
                   </div>
                 </div>
               ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
-                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-4 sm:p-5 flex items-center justify-between gap-4">
+                <div className="mx-auto mb-6 flex max-w-4xl items-center justify-between gap-4 rounded-xl border border-border bg-card p-4">
                   <div className="flex items-center gap-2 min-w-0">
                     <Target className="w-4 h-4 text-primary flex-shrink-0" />
                     <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Tu objetivo</div>
+                      <div className="text-xs text-muted-foreground">Tu objetivo</div>
                       <div className="font-display font-bold text-sm truncate">
                         {savedGoalText || "Sin objetivo definido"}
                       </div>
@@ -1210,12 +1210,12 @@ const Scan = () => {
                   </Button>
                 </div>
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
-                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
+                <div className="mx-auto mb-6 max-w-4xl rounded-xl border border-border bg-card p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <Target className="w-4 h-4 text-primary" />
                     <h2 className="font-display font-bold text-base">¿Tienes un físico objetivo?</h2>
                   </div>
-                  <p className="text-[12px] text-muted-foreground mb-4">
+                  <p className="mb-4 text-sm text-muted-foreground">
                     Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar.
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -1236,24 +1236,24 @@ const Scan = () => {
                   </div>
                 </div>
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "no" ? (
-                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-border bg-card/30 backdrop-blur p-4 sm:p-5 flex items-center justify-between gap-3">
-                  <p className="text-[12px] text-muted-foreground">
-                    Sin objetivo · análisis centrado en tu físico actual.
+                <div className="mx-auto mb-6 flex max-w-4xl items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Sin objetivo · el análisis se centra en tu físico actual.
                   </p>
                   <Button variant="ghost" size="sm" onClick={() => { setHasObjectiveChoice("yes"); setEditingObjective(true); }}>
                     Añadir objetivo
                   </Button>
                 </div>
               ) : (
-              <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
+              <div className="mx-auto mb-6 max-w-4xl rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div>
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4 text-primary" />
-                      <h2 className="font-display font-bold text-base">Tu físico objetivo <span className="text-muted-foreground font-normal text-xs uppercase tracking-widest ml-1">opcional</span></h2>
+                      <h2 className="font-display text-base font-bold">Tu físico objetivo <span className="ml-1 text-xs font-normal text-muted-foreground">opcional</span></h2>
                     </div>
-                    <p className="text-[12px] text-muted-foreground mt-1">
-                      Elige una referencia o sube tu propia foto. Solo si pones objetivo te calculamos cuántos meses tardarás en llegar.
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Elige una referencia o sube tu foto. Solo con objetivo calculamos cuántos meses te faltan.
                     </p>
                   </div>
                   {objectiveImg && (
@@ -1267,9 +1267,10 @@ const Scan = () => {
                   )}
                 </div>
 
-                {goalPresets.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-4">
-                    {goalPresets.map((p) => {
+                {/* Un objetivo sin foto es una caja vacía con un nombre: no aporta nada */}
+                {goalPresets.some((p) => p.image_url) && (
+                  <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                    {goalPresets.filter((p) => p.image_url).map((p) => {
                       const isSel = selectedPresetId === p.id;
                       return (
                         <button
@@ -1279,24 +1280,18 @@ const Scan = () => {
                             setObjectiveImg(p.image_url);
                             setSelectedPresetId(p.id);
                           }}
-                          className={`relative aspect-[3/4] rounded-xl overflow-hidden border-2 transition group ${
-                            isSel
-                              ? "border-primary glow-shadow"
-                              : "border-border hover:border-primary/50"
+                          className={`relative aspect-[3/4] overflow-hidden rounded-xl border-2 transition group ${
+                            isSel ? "border-primary" : "border-border hover:border-primary/50"
                           }`}
                         >
-                          {p.image_url ? (
-                            <img
-                              src={p.image_url}
-                              alt={p.name}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-secondary" />
-                          )}
+                          <img
+                            src={p.image_url}
+                            alt={p.name}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
                           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent p-2">
-                            <div className="text-[11px] font-semibold leading-tight line-clamp-2">
+                            <div className="line-clamp-2 text-xs font-semibold leading-tight">
                               {p.name}
                             </div>
                           </div>
@@ -1338,13 +1333,13 @@ const Scan = () => {
                           <>
                             <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" />
                             <div className="text-xs font-semibold">O sube tu propia foto</div>
-                            <div className="text-[10px] text-muted-foreground mt-0.5">JPG / PNG</div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">JPG / PNG</div>
                           </>
                         )}
                       </div>
                     </label>
                   </div>
-                  <div className="text-[12px] text-muted-foreground leading-relaxed">
+                  <div className="text-sm leading-relaxed text-muted-foreground">
                     {objectiveImg ? (
                       <span>
                         ✓ Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan.
@@ -1360,7 +1355,7 @@ const Scan = () => {
               )}
 
               {/* Guía para tomar las fotos */}
-              <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/20 bg-card/40 backdrop-blur p-5 sm:p-6">
+              <div className="mx-auto mb-6 max-w-4xl rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
                     <Eye className="w-4 h-4 text-primary" />

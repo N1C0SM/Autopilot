@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, Target, GripVertical } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, Target } from "lucide-react";
 import { toast } from "sonner";
 
 interface GoalPhysique {
@@ -58,7 +58,6 @@ const GoalPhysiquesEditor = () => {
       .update({
         name: it.name,
         image_url: it.image_url,
-        sort_order: it.sort_order,
         visible: it.visible,
       })
       .eq("id", it.id);
@@ -146,23 +145,12 @@ const GoalPhysiquesEditor = () => {
               </div>
               {/* La fila envuelve: si no cabe, los botones bajan en vez de salirse de la tarjeta. */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border">
-                <div className="flex min-w-0 items-center gap-3 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <GripVertical className="w-3 h-3 text-muted-foreground" />
-                    <Input
-                      type="number"
-                      value={it.sort_order}
-                      onChange={(e) => update(it.id, { sort_order: parseInt(e.target.value || "0", 10) })}
-                      className="w-16 h-8 text-xs"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={it.visible}
-                      onCheckedChange={(v) => update(it.id, { visible: v })}
-                    />
-                    <span className="text-muted-foreground">{it.visible ? "Visible" : "Oculto"}</span>
-                  </div>
+                <div className="flex min-w-0 items-center gap-2 text-xs">
+                  <Switch
+                    checked={it.visible}
+                    onCheckedChange={(v) => update(it.id, { visible: v })}
+                  />
+                  <span className="text-muted-foreground">{it.visible ? "Visible en el scan" : "Oculto"}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => save(it)}>

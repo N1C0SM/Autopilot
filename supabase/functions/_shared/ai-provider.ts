@@ -1,28 +1,32 @@
-// Proveedor de IA compartido: Lovable AI o la clave de OpenAI que el admin guarda en Ajustes.
-// Modo (app_secrets.AI_PROVIDER): "auto" (tu clave primero, si falla Lovable), "openai" o "lovable".
+// Proveedor de IA compartido: Lovable AI, OpenAI, Claude o DeepSeek.
+// Modo (app_secrets.AI_PROVIDER): "auto" (tus claves primero, Lovable como último recurso) o "lovable".
+// DeepSeek es SOLO texto: no genera imágenes ni vídeos.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
 const LOVABLE = "https://ai.gateway.lovable.dev";
 const OPENAI = "https://api.openai.com";
+const DEEPSEEK = "https://api.deepseek.com";
 const FALLBACK_STATUS = new Set([400, 401, 402, 403, 404, 429, 500, 502, 503]);
 
 export type AiMode = "auto" | "lovable";
 
 export async function getAiConfig() {
   const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "AI_PROVIDER"]);
+  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "AI_PROVIDER"]);
   const get = (k: string) => (data || []).find((r: any) => r.key === k)?.value?.trim() || "";
   const openaiKey = get("OPENAI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
   const anthropicKey = get("ANTHROPIC_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || "";
+  const deepseekKey = get("DEEPSEEK_API_KEY") || Deno.env.get("DEEPSEEK_API_KEY") || "";
   const mode: AiMode = get("AI_PROVIDER") === "lovable" ? "lovable" : "auto";
   const lovableKey = Deno.env.get("LOVABLE_API_KEY") || "";
-  // Cadena: OpenAI -> Claude -> Lovable (cada uno solo si tiene clave).
-  const order: ("openai" | "anthropic" | "lovable")[] = mode === "lovable" ? ["lovable"] : [
+  // Cadena: OpenAI -> Claude -> DeepSeek -> Lovable (cada uno solo si tiene clave).
+  const order: ("openai" | "anthropic" | "deepseek" | "lovable")[] = mode === "lovable" ? ["lovable"] : [
     ...(openaiKey ? ["openai" as const] : []),
     ...(anthropicKey ? ["anthropic" as const] : []),
+    ...(deepseekKey ? ["deepseek" as const] : []),
     "lovable",
   ];
-  return { mode, openaiKey, anthropicKey, lovableKey, order };
+  return { mode, openaiKey, anthropicKey, deepseekKey, lovableKey, order };
 }
 
 function toOpenAiModel(model: string, path: string): string | null {
@@ -64,6 +68,15 @@ export async function aiFetch(url: string, init: RequestInit = {}): Promise<Resp
       headers.set("Authorization", `Bearer ${cfg.anthropicKey}`);
       headers.set("x-api-key", cfg.anthropicKey);
       headers.set("anthropic-version", "2023-06-01");
+      headers.delete("X-Lovable-AIG-SDK");
+    } else if (p === "deepseek") {
+      // DeepSeek es OpenAI-compatible, pero SOLO texto: nunca imágenes ni vídeos.
+      if (!path.includes("/chat/completions") || !body || /image|video/.test(String(body.model || ""))) continue;
+      const b = { ...body, model: "deepseek-chat" };
+      delete b.reasoning_effort; delete b.reasoning; delete b.include; delete b.modalities; delete b.response_format;
+      reqBody = JSON.stringify(b);
+      target = DEEPSEEK + path;
+      headers.set("Authorization", `Bearer ${cfg.deepseekKey}`);
       headers.delete("X-Lovable-AIG-SDK");
     } else {
       headers.set("Authorization", `Bearer ${cfg.lovableKey}`);
