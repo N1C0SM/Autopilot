@@ -197,27 +197,47 @@ const TrainerPage = () => {
 
   const handleSignOut = async () => { await signOut(); navigate("/login", { replace: true }); };
 
+  const goSection = (s: TrainerSection) => { setSection(s); setSelected(null); };
+  const sectionTitle = section === "users" ? "Mis clientes" : section === "chat" ? "Chat con admin" : "Mi perfil";
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <TrainerSidebar
-          section={section}
-          onNavigate={(s) => { setSection(s); setSelected(null); }}
-          userCount={users.length}
-          onSignOut={handleSignOut}
-        />
+      <div className="min-h-dvh flex w-full bg-background">
+        <div className="hidden md:block">
+          <TrainerSidebar
+            section={section}
+            onNavigate={goSection}
+            userCount={users.length}
+            onSignOut={handleSignOut}
+          />
+        </div>
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="app-chrome h-14 border-b sticky top-0 z-40 flex items-center px-4 gap-3">
-            <SidebarTrigger />
-            <span className="text-sm font-medium text-muted-foreground">
-              {section === "users" ? "Usuarios asignados" : section === "chat" ? "Chat con administrador" : "Mi perfil"}
-            </span>
+          <header className="app-chrome border-b sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
+            <div className="h-14 flex items-center px-4 gap-3">
+              <SidebarTrigger className="hidden md:inline-flex" />
+              <span className="flex-1 text-center md:text-left text-sm font-semibold md:font-medium md:text-muted-foreground">
+                {selected ? (selected.name?.trim() || selected.email) : sectionTitle}
+              </span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                aria-label="Cerrar sesión"
+                className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </header>
-          <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-5xl mx-auto w-full">
+          <main className={`flex-1 p-4 md:p-6 lg:p-8 max-w-5xl mx-auto w-full pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 ${section === "chat" && !selected ? "max-md:flex max-md:flex-col max-md:h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] max-md:overflow-hidden max-md:pb-[calc(6rem+env(safe-area-inset-bottom))]" : ""}`}>
             {selected ? (
               <div>
-                <Button variant="ghost" size="sm" onClick={() => setSelected(null)} className="mb-4">
-                  <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setSelected(null)}
+                  className="mb-4 h-12 w-full md:w-auto justify-start rounded-xl text-sm font-semibold"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" /> Volver a mis clientes
                 </Button>
                 <UserDetail
                   profile={selected}
