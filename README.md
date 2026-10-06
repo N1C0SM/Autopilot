@@ -67,6 +67,35 @@ Abre la URL que muestre Vite. Para ejecutar los flujos completos también debes 
 | `npm run ios:sync` | Compilar y sincronizar el bundle local con iOS |
 | `npm run ios:open` | Abrir el proyecto iOS |
 | `CAP_DEV=0 npm run mobile:sync` | Compilar y sincronizar los proyectos móviles |
+| `npm run media:count` | Contar los ejercicios sin imagen o sin vídeo |
+| `npm run media:generate` | Generar los medios pendientes de toda la biblioteca |
+
+## Medios de los ejercicios
+
+Cada ejercicio tiene una imagen y un vídeo de técnica generados con IA, siempre con el
+mismo estilo: una única descripción visual (`STYLE` en `supabase/functions/exercise-video`)
+compartida por foto y vídeo, y un ángulo de cámara estandarizado según el patrón
+biomecánico. La versión del estilo se guarda en `exercises.media_style_version`, así que
+cambiar el estilo marca los medios anteriores como «estilo antiguo» y se pueden
+regenerar por lotes desde Admin → Biblioteca.
+
+Antes de generar hace falta:
+
+1. Una clave de IA configurada en Admin → Ajustes (o créditos de Lovable AI).
+2. `supabase db push` y `supabase functions deploy exercise-video`.
+3. Tu token de sesión de administrador (consola del navegador):
+
+```bash
+SUPABASE_URL=https://<ref>.supabase.co \
+SUPABASE_ANON_KEY=<clave publicable> \
+SUPABASE_ACCESS_TOKEN=<tu token> \
+npm run media:generate
+```
+
+El proceso recorre la cola del servidor, así que se puede interrumpir y relanzar: continúa
+donde iba y los ejercicios que fallan se saltan en esa pasada (quedan con el error visible
+en el filtro «Con error» del admin). Con `--images-only` genera solo fotos, mucho más
+rápido y barato, y con `--limit=N` procesa un máximo por ejecución.
 
 ## Organización
 

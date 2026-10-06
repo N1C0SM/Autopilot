@@ -62,12 +62,46 @@ Deno.serve(async (req) => {
     const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
     if (!isAdmin) return json({ error: "Forbidden" }, 403);
 
-    const { exercise_id: exerciseId, action } = await req.json().catch(() => ({}) as any);
-    if (!exerciseId) return json({ error: "Falta el ejercicio" }, 400);
-    if (action !== "create" && action !== "check" && action !== "image") return json({ error: "Acción no válida" }, 400);
+    const {
+      exercise_id: bodyExerciseId,
+      action: rawAction,
+      exclude: rawExclude,
+    } = await req.json().catch(() => ({}) as any);
+    if (rawAction !== "create" && rawAction !== "check" && rawAction !== "image" && rawAction !== "batch") {
+      return json({ error: "Acción no válida" }, 400);
+    }
 
     // Service-role client for exercise + storage access
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const exerciseId: string | undefined = bodyExerciseId;
+    const action: string = rawAction;
+
+    // "batch" no genera nada: devuelve el siguiente ejercicio pendiente para que un
+    // script pueda recorrer toda la biblioteca sin depender de una pestaña abierta.
+    // `exclude` evita que un ejercicio que falla siempre bloquee la cola.
+    if (action === "batch") {
+      const exclude = Array.isArray(rawExclude)
+        ? rawExclude.filter((id: unknown): id is string => typeof id === "string" && id.length > 0).slice(0, 200)
+        : [];
+      let query = svc
+        .from("exercises")
+        .select("id, name, image_url, video_url")
+        .or(`image_url.is.null,video_url.is.null,media_style_version.is.null,media_style_version.neq.${MEDIA_STYLE_VERSION}`);
+      if (exclude.length > 0) query = query.not("id", "in", `(${exclude.join(",")})`);
+      const { data: pending, error: pendErr } = await query
+        .order("image_url", { ascending: true, nullsFirst: true })
+        .order("video_url", { ascending: true, nullsFirst: true })
+        .order("name", { ascending: true })
+        .limit(1);
+      if (pendErr) return json({ error: "No se pudo consultar la biblioteca" }, 500);
+      const next = pending?.[0];
+      if (!next) return json({ done: true, remaining: 0 });
+      return json({ done: false, nextId: next.id, name: next.name, action: next.image_url ? "create" : "image" });
+    }
+
+    if (!exerciseId) return json({ error: "Falta el ejercicio" }, 400);
+
     const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, image_url, video_url, video_job_id").eq("id", exerciseId).single();
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
 
@@ -88,7 +122,10 @@ Deno.serve(async (req) => {
     const angle = cameraAngle(name, group);
 
     if (action === "image") {
-      const prompt = `Professional exercise technique reference photograph of the exercise "${name}" (${group}). The athlete is captured at the key contracted position of the movement with perfect biomechanical form. ${angle} ${STYLE}`;
+      // La imagen sale en 3:2 (límite del modelo) pero se muestra en un marco 16:9
+      // junto al vídeo: pedimos que el cuerpo quede dentro de la banda central 16:9
+      // para que el recorte sea idéntico en toda la biblioteca.
+      const prompt = `Professional exercise technique reference photograph of the exercise "${name}" (${group}). The athlete is captured at the key contracted position of the movement with perfect biomechanical form. Compose for a 16:9 crop: keep the entire athlete and any equipment inside the central 16:9 band of the frame, with only empty floor and background above and below it. ${angle} ${STYLE}`;
       // aiFetch hereda la cadena de proveedores (OpenAI admin -> Claude -> gateway).
       const r = await aiFetch(`${GATEWAY}/v1/images/generations`, {
         method: "POST",
