@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
-  Timer, TrendingUp, X, Video, Save, Trophy, Info,
+  Timer, TrendingUp, TrendingDown, Plus, X, Video, Save, Trophy, Info,
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,19 @@ import { WorkoutStudyCards } from "./WorkoutStudyCards";
 import { ExerciseSwap } from "./ExerciseSwap";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
-import { createWorkoutSetLogs, getWorkoutSetInputError, type WorkoutSetLog } from "@/lib/workoutSet";
+import {
+  addWorkoutSetDrop,
+  createWorkoutSetLogs,
+  formatWorkoutSetSummary,
+  getWorkoutSetDropInputError,
+  getWorkoutSetDrops,
+  getWorkoutSetDropsInputError,
+  getWorkoutSetInputError,
+  removeWorkoutSetDrop,
+  updateWorkoutSetDrop,
+  type WorkoutSetDrop,
+  type WorkoutSetLog,
+} from "@/lib/workoutSet";
 import { getExerciseTrackingConfig } from "@/lib/exerciseTrackingConfig";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { addExerciseLoad } from "@/lib/muscleMapping";
@@ -284,6 +296,32 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     });
   };
 
+  // Dropsets: las bajadas viven dentro de la misma serie y no tocan ni el
+  // temporizador de descanso ni los contadores de series.
+  const mutateSet = (exerciseName: string, setIndex: number, mutate: (set: WorkoutSetLog) => WorkoutSetLog) => {
+    setExerciseLogs((prev) => {
+      const sets = [...(prev[exerciseName] || [])];
+      const set = sets[setIndex];
+      if (!set) return prev;
+      sets[setIndex] = mutate(set);
+      return { ...prev, [exerciseName]: sets };
+    });
+  };
+
+  const addDrop = (exerciseName: string, setIndex: number) => {
+    mutateSet(exerciseName, setIndex, addWorkoutSetDrop);
+    void hapticTap();
+  };
+
+  const updateDrop = (exerciseName: string, setIndex: number, dropIndex: number, patch: Partial<WorkoutSetDrop>) => {
+    mutateSet(exerciseName, setIndex, (set) => updateWorkoutSetDrop(set, dropIndex, patch));
+  };
+
+  const removeDrop = (exerciseName: string, setIndex: number, dropIndex: number) => {
+    mutateSet(exerciseName, setIndex, (set) => removeWorkoutSetDrop(set, dropIndex));
+    void hapticTap();
+  };
+
   const applyProgression = (exerciseName: string, progression: NonNullable<ReturnType<typeof getProgressionSuggestion>>) => {
     setExerciseLogs((current) => ({
       ...current,
@@ -298,7 +336,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     const wasDone = set?.done;
     if (!set) return;
     if (!wasDone) {
-      const inputError = getWorkoutSetInputError(set);
+      const inputError = getWorkoutSetInputError(set) ?? getWorkoutSetDropsInputError(set);
       if (inputError) {
         toast.error(inputError);
         return;
@@ -1114,11 +1152,14 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                         </div>
 
                         {sets.map((set, si) => {
-                          const inputError = !set.done ? getWorkoutSetInputError(set) : null;
+                          const mainError = !set.done ? getWorkoutSetInputError(set) : null;
+                          const dropsError = !set.done ? getWorkoutSetDropsInputError(set) : null;
+                          const inputError = mainError ?? dropsError;
+                          const drops = getWorkoutSetDrops(set);
                           return (
                           <div
                             key={si}
-                            className={`relative grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center p-2 rounded-lg transition-all ${
+                            className={`relative rounded-lg p-2 transition-all ${
                               livePRs[`${ex.name}#${si}`]
                                 ? "bg-accent/15 border border-accent/60 shadow-[0_0_24px_hsl(var(--accent)/0.35)]"
                                 : set.done
@@ -1131,77 +1172,142 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 Récord · {livePRs[`${ex.name}#${si}`]}
                               </span>
                             )}
-                            {/* Set number */}
-                            <span className={`text-xs font-bold text-center ${
-                              set.done ? "text-primary" : "text-muted-foreground"
-                            }`}>
-                              {si + 1}
-                            </span>
 
-                            {/* Weight input */}
-                            <div className="min-w-0">
-                              <input
-                                type="text"
-                                inputMode="decimal"
-                                value={set.weight}
-                                onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
-                                placeholder={ex.weight || "kg"}
-                                onFocus={(e) => e.currentTarget.select()}
-                                aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
-                                aria-invalid={Boolean(inputError && set.weight.trim())}
-                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${inputError && set.weight.trim() ? "border-destructive" : "border-border"}`}
-                              />
-                              {prevSets?.[si] && (
-                                <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
-                                  Antes: {prevSets[si].weight || "—"} kg
-                                </p>
-                              )}
-                              {!prevSets?.[si] && progression && (
-                                <p className="mt-1 truncate text-center text-[10px] font-medium text-primary">
-                                  Para revisar: {progression.weight} kg
-                                </p>
-                              )}
+                            {/* Segmento principal de la serie */}
+                            <div className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center">
+                              {/* Set number */}
+                              <span className={`text-xs font-bold text-center ${
+                                set.done ? "text-primary" : "text-muted-foreground"
+                              }`}>
+                                {si + 1}
+                              </span>
+
+                              {/* Weight input */}
+                              <div className="min-w-0">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={set.weight}
+                                  onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
+                                  placeholder={ex.weight || "kg"}
+                                  onFocus={(e) => e.currentTarget.select()}
+                                  aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
+                                  aria-invalid={Boolean(mainError && set.weight.trim())}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
+                                />
+                                {prevSets?.[si] && (
+                                  <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
+                                    Antes: {prevSets[si].weight || "—"} kg
+                                  </p>
+                                )}
+                                {!prevSets?.[si] && progression && (
+                                  <p className="mt-1 truncate text-center text-[10px] font-medium text-primary">
+                                    Para revisar: {progression.weight} kg
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Reps input */}
+                              <div className="min-w-0">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={set.reps}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
+                                  }}
+                                  onFocus={(e) => e.currentTarget.select()}
+                                  aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
+                                  aria-invalid={Boolean(mainError && (!Number.isInteger(set.reps) || set.reps <= 0))}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${mainError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                />
+                                {prevSets?.[si] && (
+                                  <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
+                                    Antes: {prevSets[si].reps} reps
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Done toggle: marca la serie entera (bajadas incluidas) y arranca el descanso */}
+                              <button
+                                type="button"
+                                onClick={() => toggleSetDone(ex.name, si, restSec)}
+                                aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
+                                title={set.done ? "Desmarcar serie" : "Marcar serie como hecha"}
+                                className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all mx-auto ${
+                                  set.done
+                                    ? "bg-primary text-primary-foreground"
+                                    : inputError
+                                      ? "border border-destructive/40 bg-destructive/10 text-destructive"
+                                      : "border border-border bg-secondary text-muted-foreground hover:border-primary/50 hover:text-primary"
+                                }`}
+                              >
+                                <Check className="w-5 h-5" />
+                              </button>
                             </div>
 
-                            {/* Reps input */}
-                            <div className="min-w-0">
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={set.reps}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value);
-                                  if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
-                                }}
-                                onFocus={(e) => e.currentTarget.select()}
-                                aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
-                                aria-invalid={Boolean(inputError && (!Number.isInteger(set.reps) || set.reps <= 0))}
-                                className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${inputError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
-                              />
-                              {prevSets?.[si] && (
-                                <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
-                                  Antes: {prevSets[si].reps} reps
-                                </p>
-                              )}
+                            {/* Dropset: bajadas dentro de la misma serie, sin descanso entre ellas */}
+                            <div className={`space-y-1.5 ${drops.length > 0 ? "mt-1.5 border-t border-border/60 pt-1.5" : "mt-1"}`}>
+                              {drops.map((drop, di) => {
+                                const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
+                                return (
+                                <div key={di} className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center">
+                                  <span className="flex items-center justify-center text-muted-foreground" title={`Bajada ${di + 1}`}>
+                                    <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
+                                  </span>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={drop.weight}
+                                    onChange={(e) => updateDrop(ex.name, si, di, { weight: e.target.value })}
+                                    placeholder="kg"
+                                    onFocus={(e) => e.currentTarget.select()}
+                                    aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
+                                    aria-invalid={Boolean(dropError && drop.weight.trim())}
+                                    className={`min-h-11 w-full rounded-lg border bg-background px-3 py-2 text-center font-mono text-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${dropError && drop.weight.trim() ? "border-destructive" : "border-border"}`}
+                                  />
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={drop.reps}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value);
+                                      if (!isNaN(val)) updateDrop(ex.name, si, di, { reps: val });
+                                    }}
+                                    onFocus={(e) => e.currentTarget.select()}
+                                    aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
+                                    aria-invalid={Boolean(dropError && (!Number.isInteger(drop.reps) || drop.reps <= 0))}
+                                    className={`min-h-11 w-full rounded-lg border bg-background px-3 py-2 text-center font-mono text-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${dropError && (!Number.isInteger(drop.reps) || drop.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeDrop(ex.name, si, di)}
+                                    aria-label={`Quitar la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
+                                    title="Quitar bajada"
+                                    className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-secondary text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                onClick={() => addDrop(ex.name, si)}
+                                className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                Añadir bajada
+                              </button>
                             </div>
 
-                            {/* Done toggle */}
-                            <button
-                              type="button"
-                              onClick={() => toggleSetDone(ex.name, si, restSec)}
-                              aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
-                              title={set.done ? "Desmarcar serie" : "Marcar serie como hecha"}
-                              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all mx-auto ${
-                                set.done
-                                  ? "bg-primary text-primary-foreground"
-                                  : inputError
-                                    ? "border border-destructive/40 bg-destructive/10 text-destructive"
-                                    : "border border-border bg-secondary text-muted-foreground hover:border-primary/50 hover:text-primary"
-                              }`}
-                            >
-                              <Check className="w-5 h-5" />
-                            </button>
-                            {inputError && <p className="col-span-full px-1 text-[10px] text-destructive">{inputError}</p>}
+                            {drops.length > 0 && (
+                              <p className="mt-1.5 px-1 text-xs tabular-nums text-muted-foreground">
+                                {formatWorkoutSetSummary(set)}
+                              </p>
+                            )}
+                            {inputError && <p className="mt-1 px-1 text-[10px] text-destructive">{inputError}</p>}
                           </div>
                           );
                         })}
