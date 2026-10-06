@@ -225,7 +225,7 @@ const Dropzone = ({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="relative aspect-[3/4] w-full rounded-2xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-card/40 transition-all flex flex-col items-center justify-center gap-3 p-6 group overflow-hidden"
+          className="relative aspect-[3/4] w-full rounded-2xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-card/40 transition-all flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-6 group overflow-hidden"
         >
           {placeholder && (
             <img
@@ -236,7 +236,7 @@ const Dropzone = ({
               className="absolute inset-0 w-full h-full object-contain opacity-15 pointer-events-none select-none"
             />
           )}
-          <div className="relative w-14 h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:scale-110 transition">
+          <div className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:scale-110 transition">
             <Upload className="w-6 h-6 text-primary" />
           </div>
           <div className="relative text-center">
