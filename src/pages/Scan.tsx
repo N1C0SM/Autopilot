@@ -1029,18 +1029,19 @@ const Scan = () => {
       </div>
 
       {/* Header */}
-      <header className="container mx-auto max-w-6xl px-4 py-6 flex items-center justify-between">
-        {user && <SidebarTrigger />}
-        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
-          <ArrowLeft className="w-4 h-4" />
-          {user ? "Volver al dashboard" : "Volver"}
-        </Link>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-            {user ? "AI Scan · Tu progreso" : "AI Scan · Gratis"}
-          </span>
+      <header className="container mx-auto max-w-6xl px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 grid grid-cols-[1fr_auto_1fr] items-center">
+        <div className="flex items-center gap-1">
+          {user && <SidebarTrigger className="hidden md:inline-flex" />}
+          <Link
+            to={user ? "/dashboard" : "/"}
+            aria-label="Volver"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
         </div>
+        <span className="text-sm font-semibold tracking-tight">Escáner corporal</span>
+        <div />
       </header>
 
       <main className="container mx-auto max-w-6xl px-4 pb-24">
@@ -1053,36 +1054,16 @@ const Scan = () => {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4 }}
             >
-              {user && routeUserId && (
-                <>
-                  <ScanProgressPanel userId={user.id} />
-                  <div className="max-w-3xl mx-auto -mt-2 mb-8 flex justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetProgress}
-                      disabled={resettingProgress}
-                      className="hover-scale text-destructive hover:text-destructive"
-                    >
-                      {resettingProgress ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                      )}
-                      Resetear progreso
-                    </Button>
-                  </div>
-                </>
-              )}
-              <div className="text-center max-w-3xl mx-auto mb-12">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-display leading-[1.05] mb-4">
-                  Analiza tu físico con{" "}
-                  <span className="text-gradient">IA. Gratis.</span>
+              {user && routeUserId && <ScanProgressPanel userId={user.id} />}
+              <div className="text-center max-w-3xl mx-auto mb-8">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-3">
+                  Evolución física
                 </h1>
-                <p className="text-lg text-muted-foreground">
-                  Sube una foto de delante, una de atrás o las dos — con una sola ya funciona, con las dos el análisis es más completo. La IA te dice qué te limita y cómo mejorar.
+                <p className="text-base text-muted-foreground">
+                  Sube tu foto frontal o de espalda para actualizar tu análisis
                 </p>
               </div>
+
 
               <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-6">
                 <Dropzone
