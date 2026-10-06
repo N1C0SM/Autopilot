@@ -1020,6 +1020,16 @@ serve(async (req) => {
 
     console.log(`[GENERATE-PLAN] Nutrition: diet=${diet}, goal=${goal}, macros=${JSON.stringify(macros)}, meals=${includeNutrition ? meals.length : 0}`);
 
+    // La IA a veces devuelve barbaridades (nos llegó a escribir 500 g de grasa).
+    // Los topes coinciden con los que valida el panel de admin, para que lo que
+    // se guarda aquí siempre se pueda volver a guardar allí.
+    const saneMacros = (raw: unknown) => {
+      const m = (raw ?? {}) as Record<string, unknown>;
+      const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+      const limit = (v: unknown, max: number) => Math.round(Math.min(Math.max(num(v), 0), max));
+      return { ...m, protein: limit(m.protein, 350), carbs: limit(m.carbs, 700), fats: limit(m.fats, 180) };
+    };
+
     const { error: trainingError } = await supabase.from("training_plan").upsert(
       { user_id: targetUserId, workouts_json: weeklyPlan },
       { onConflict: "user_id", ignoreDuplicates: !paidCoaching },
@@ -1027,7 +1037,7 @@ serve(async (req) => {
     if (trainingError) throw trainingError;
     if (includeNutrition) {
       const { error } = await supabase.from("nutrition_plan").upsert(
-        { user_id: targetUserId, macros_json: macros ?? {}, meals_json: meals, updated_at: new Date().toISOString() },
+        { user_id: targetUserId, macros_json: saneMacros(macros), meals_json: meals, updated_at: new Date().toISOString() },
         { onConflict: "user_id" },
       );
       if (error) throw error;

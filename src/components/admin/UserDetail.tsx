@@ -111,6 +111,12 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState({ protein: "", carbs: "", fats: "" });
+  /**
+   * Los macros tal como estaban guardados. Sirve para no bloquear al admin:
+   * si vienen fuera de rango de la base de datos (los escribe la IA sin
+   * validar), tiene que poder guardar el resto del plan sin arreglarlos antes.
+   */
+  const [loadedMacros, setLoadedMacros] = useState({ protein: "", carbs: "", fats: "" });
   const [mealsText, setMealsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -157,7 +163,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
       if (np?.macros_json) {
         const m = np.macros_json as any;
-        setMacros({ protein: m.protein?.toString() || "", carbs: m.carbs?.toString() || "", fats: m.fats?.toString() || "" });
+        const cargados = { protein: m.protein?.toString() || "", carbs: m.carbs?.toString() || "", fats: m.fats?.toString() || "" };
+        setMacros(cargados);
+        setLoadedMacros(cargados);
       }
       if (np?.meals_json) {
         const meals = np.meals_json as any[];
@@ -306,12 +314,19 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     {
       const p = Number(macros.protein) || 0, c = Number(macros.carbs) || 0, f = Number(macros.fats) || 0;
       const kcal = p * 4 + c * 4 + f * 9;
-      if (p > 350 || c > 700 || f > 180 || (kcal > 0 && (kcal < 1000 || kcal > 5000))) {
+      // Si vienen tal cual de la base de datos, no bloqueamos: si no, el admin
+      // se queda sin poder guardar nada por unos macros que no ha escrito él.
+      const sinTocar = macros.protein === loadedMacros.protein
+        && macros.carbs === loadedMacros.carbs
+        && macros.fats === loadedMacros.fats;
+      if (!sinTocar && (p > 350 || c > 700 || f > 180 || (kcal > 0 && (kcal < 1000 || kcal > 5000)))) {
         toast.error(`Macros fuera de rango (${Math.round(kcal)} kcal). Máx: proteína 350 g, carbohidratos 700 g, grasa 180 g; total entre 1.000 y 5.000 kcal.`);
         setSaving(false);
         return;
       }
     }
+
+    setLoadedMacros(macros);
 
     const { error: tpError } = await supabase.from("training_plan").upsert({
       user_id: profile.user_id,
