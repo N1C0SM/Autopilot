@@ -122,6 +122,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [deleting, setDeleting] = useState(false);
   const [trainers, setTrainers] = useState<{ user_id: string; email: string }[]>([]);
   const [assignedTrainerId, setAssignedTrainerId] = useState<string>("");
+  const [chatTarget, setChatTarget] = useState<"client" | "trainer">("client");
   const [trainerSaving, setTrainerSaving] = useState(false);
   const [editingOnboarding, setEditingOnboarding] = useState(false);
   const [showGoalDetails, setShowGoalDetails] = useState(false);
@@ -874,7 +875,38 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Chat */}
         <TabsContent value="chat">
-          <Chat conversationUserId={profile.user_id} isAdmin />
+          {!restricted && assignedTrainerId ? (
+            <div className="space-y-3">
+              <div role="tablist" aria-label="Con quién hablar" className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1">
+                {(["client", "trainer"] as const).map((t) => {
+                  const trainerLabel = trainers.find((tr) => tr.user_id === assignedTrainerId)?.email || "asignado";
+                  const active = chatTarget === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setChatTarget(t)}
+                      className={`min-w-0 truncate rounded-full px-3 py-2 text-xs font-medium transition ${active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                    >
+                      {t === "client" ? "Alumno" : `Entrenador (${trainerLabel})`}
+                    </button>
+                  );
+                })}
+              </div>
+              {chatTarget === "trainer" ? (
+                <>
+                  <p className="text-center text-[11px] text-muted-foreground">Canal directo con el entrenador asignado a este cliente</p>
+                  <Chat key={`t-${assignedTrainerId}`} conversationUserId={assignedTrainerId} isAdmin />
+                </>
+              ) : (
+                <Chat key={`c-${profile.user_id}`} conversationUserId={profile.user_id} isAdmin />
+              )}
+            </div>
+          ) : (
+            <Chat conversationUserId={profile.user_id} isAdmin />
+          )}
         </TabsContent>
       </Tabs>
     </div>
