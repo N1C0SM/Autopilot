@@ -35,6 +35,7 @@ const STEP_LABELS: Record<StepKey, string> = {
   sports_schedule: "Tu agenda",
   level: "Tu nivel",
   health: "Salud y nutrición",
+  training_style: "Cómo entrenar",
   summary: "Resumen",
 };
 
@@ -135,6 +136,8 @@ const Onboarding = () => {
     goal_photo_url: "",
     accept_terms: false,
     accept_health: false,
+    // "solo" = entrena por su cuenta · "coach" = quiere que alguien le acompañe
+    training_style: "" as "" | "solo" | "coach",
   });
 
   const update = (field: string, value: any) => setData((d) => ({ ...d, [field]: value }));
@@ -387,6 +390,14 @@ const Onboarding = () => {
       } catch {}
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
+      // La preferencia decide qué plan le ofrecemos después. Va en user_metadata
+      // para no depender de una columna nueva en profiles.
+      if (data.training_style) {
+        try {
+          await supabase.auth.updateUser({ data: { training_style: data.training_style } });
+        } catch {}
+      }
+
       const { data: profile } = await supabase
         .from("profiles")
         .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
@@ -419,7 +430,7 @@ const Onboarding = () => {
   const activeSteps: StepKey[] = (() => {
     const arr: StepKey[] = ["about", "focus_goal"];
     if (data.goal === "skill_based") arr.push("specific_goal");
-    arr.push("sports_schedule", "level", "health", "summary");
+    arr.push("sports_schedule", "level", "health", "training_style", "summary");
     return arr;
   })();
 
@@ -435,6 +446,8 @@ const Onboarding = () => {
       return getAboutStepError(data) === null;
     }
     if (currentKey === "focus_goal") return !!data.primary_focus && !!data.goal;
+    // Es la pregunta que decide qué le ofrecemos después: sin respuesta, no avanza.
+    if (currentKey === "training_style") return data.training_style !== "";
     return true;
   };
 
@@ -909,6 +922,48 @@ const Onboarding = () => {
           )}
 
           {/* Resumen */}
+          {currentKey === "training_style" && (
+            <div>
+              <Label className="mb-1.5 block">¿Cómo quieres entrenar?</Label>
+              <p className="mb-5 text-xs text-muted-foreground">
+                Los dos caminos usan la misma app, el mismo plan y los mismos vídeos. Solo cambia si quieres que
+                alguien te acompañe.
+              </p>
+              <div className="space-y-3">
+                {([
+                  {
+                    value: "solo" as const,
+                    label: "Por mi cuenta",
+                    desc: "El plan, los vídeos de técnica y la progresión te guían en cada sesión. Sin nadie detrás.",
+                  },
+                  {
+                    value: "coach" as const,
+                    label: "Con un entrenador",
+                    desc: "Además, una persona revisa tu plan, te lo ajusta y te responde por el chat.",
+                  },
+                ]).map((option) => {
+                  const active = data.training_style === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => update("training_style", option.value)}
+                      className={`w-full rounded-xl border p-4 text-left transition-colors ${
+                        active ? "border-primary bg-primary/10" : "border-border hover:bg-secondary/40"
+                      }`}
+                    >
+                      <p className="font-display text-base font-bold">{option.label}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{option.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Puedes cambiarlo cuando quieras: la app funciona igual, el entrenador es una capa encima.
+              </p>
+            </div>
+          )}
+
           {currentKey === "summary" && (
             <div className="space-y-5">
               <div className="text-center mb-2">

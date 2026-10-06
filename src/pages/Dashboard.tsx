@@ -94,6 +94,12 @@ const Dashboard = () => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [landingPlan] = useState<"training" | "full" | undefined>(readLandingPlan);
+  /**
+   * Lo que contestó en el onboarding: quien quiere entrenador ve el plan con
+   * entrenador preseleccionado, y quien entrena por su cuenta ve el de la app.
+   * Si eligió un plan en la web, ese manda.
+   */
+  const wantsCoach = (user?.user_metadata as { training_style?: string } | undefined)?.training_style === "coach";
   const [section, setSectionState] = useState<MobileTab>(() => {
     try {
       const saved = sessionStorage.getItem("autopilot_section");
@@ -474,7 +480,11 @@ const Dashboard = () => {
                   Primera semana · día {firstWeek.dayNumber} de 7 · {firstWeek.completed} de {firstWeek.target} entrenos
                 </p>
               )}
-              <CoachingOffer onChoose={handleCompletePayment} compact defaultPlan={landingPlan} />
+              <CoachingOffer
+                onChoose={handleCompletePayment}
+                compact
+                defaultPlan={landingPlan ?? (wantsCoach ? "full" : "training")}
+              />
             </div>
           )}
         </div>

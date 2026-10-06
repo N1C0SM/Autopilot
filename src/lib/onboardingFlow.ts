@@ -5,6 +5,7 @@ export type OnboardingStepKey =
   | "sports_schedule"
   | "level"
   | "health"
+  | "training_style"
   | "summary";
 
 export const OPTIONAL_ONBOARDING_STEPS: OnboardingStepKey[] = [
@@ -23,6 +24,7 @@ export function getOnboardingSteps(goal: string): OnboardingStepKey[] {
     "sports_schedule",
     "level",
     "health",
+    "training_style",
     "summary",
   ];
 }
