@@ -482,7 +482,9 @@ const Scan = () => {
     }
   };
 
-  // Upload the card PNG via edge function and return its public URL (or null on failure).
+  // Sube la tarjeta PNG vía edge function y devuelve una URL firmada temporal.
+  // La tarjeta incluye la foto del usuario, así que el objeto vive en un bucket
+  // privado y el enlace del email caduca a los 7 días.
   const uploadScanCard = async (): Promise<string | null> => {
     try {
       const dataUrl = await renderScanCardDataUrl();
@@ -495,7 +497,8 @@ const Scan = () => {
         console.warn("upload-scan-card error", error);
         return null;
       }
-      return (data as any)?.publicUrl ?? null;
+      const payload = data as { signedUrl?: string; publicUrl?: string } | null;
+      return payload?.signedUrl ?? payload?.publicUrl ?? null;
     } catch (e) {
       console.warn("uploadScanCard failed", e);
       return null;
