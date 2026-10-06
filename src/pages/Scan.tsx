@@ -1065,7 +1065,7 @@ const Scan = () => {
               </div>
 
 
-              <div className="grid sm:grid-cols-2 gap-5 max-w-3xl mx-auto mb-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 max-w-md sm:max-w-3xl mx-auto mb-6">
                 <Dropzone
                   label="Foto de delante"
                   hint="Cuerpo completo"
