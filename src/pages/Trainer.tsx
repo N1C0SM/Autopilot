@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
+import { Loader2, MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -237,14 +237,8 @@ const TrainerPage = () => {
           <main className={`flex-1 p-4 md:p-6 lg:p-8 max-w-5xl mx-auto w-full pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 ${section === "chat" && !selected ? "max-md:flex max-md:flex-col max-md:h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] max-md:overflow-hidden max-md:pb-[calc(6rem+env(safe-area-inset-bottom))]" : ""}`}>
             {selected ? (
               <div>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => setSelected(null)}
-                  className="mb-4 h-12 w-full md:w-auto justify-start rounded-xl text-sm font-semibold"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" /> Volver a mis clientes
-                </Button>
+                {/* La ficha ya trae su propia flecha de volver: el botón grande
+                    duplicaba la acción y gastaba 100 px de scroll en cada cliente. */}
                 <UserDetail
                   profile={selected}
                   onBack={() => setSelected(null)}
@@ -266,10 +260,14 @@ const TrainerPage = () => {
                   }
                   hint="Tus clientes y sus cambios aparecen aquí en directo."
                   action={
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
-                      <span className={`h-1.5 w-1.5 rounded-full ${realtimeConnected ? "bg-primary" : "bg-muted-foreground"}`} />
-                      {realtimeConnected ? "En directo" : "Conectando…"}
-                    </span>
+                    // Solo se anuncia cuando está conectado: un «Conectando…» eterno
+                    // es ruido y promete algo que puede no llegar.
+                    realtimeConnected ? (
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        En directo
+                      </span>
+                    ) : null
                   }
                 />
                 {users.length > 3 && (
@@ -306,8 +304,11 @@ const TrainerPage = () => {
                           </AvatarFallback>
                         </Avatar>
                         <span className="min-w-0 flex-1">
+                          {/* Sin nombre no repetimos el email dos veces. */}
                           <span className="block truncate text-sm font-semibold">{u.name?.trim() || u.email}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                          {u.name?.trim() ? (
+                            <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                          ) : null}
                         </span>
                         <PlanStatusBadge planStatus={u.plan_status} />
                       </button>
