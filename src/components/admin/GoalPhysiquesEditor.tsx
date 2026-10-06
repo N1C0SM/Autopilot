@@ -144,19 +144,22 @@ const GoalPhysiquesEditor = () => {
                 </div>
               </div>
               {/* La fila envuelve: si no cabe, los botones bajan en vez de salirse de la tarjeta. */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border">
+              {/* Una sola línea: el interruptor y los botones nunca se apilan.
+                  Si el ancho aprieta, se recorta la etiqueta, no se baja nada. */}
+              <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
                 <div className="flex min-w-0 items-center gap-2 text-xs">
                   <Switch
+                    className="shrink-0"
                     checked={it.visible}
                     onCheckedChange={(v) => update(it.id, { visible: v })}
                   />
-                  <span className="text-muted-foreground">{it.visible ? "Visible en el scan" : "Oculto"}</span>
+                  <span className="truncate text-muted-foreground">{it.visible ? "Visible" : "Oculto"}</span>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => save(it)}>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button size="sm" variant="outline" className="px-2.5" onClick={() => save(it)}>
                     Guardar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(it.id)} className="text-destructive hover:text-destructive">
+                  <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-destructive hover:text-destructive" onClick={() => remove(it.id)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>

@@ -900,6 +900,7 @@ const ExerciseLibrary = () => {
               variant="secondary"
               size="sm"
               disabled={pendingQueue.length === 0 || !mediaColumnsReady}
+              title={!mediaColumnsReady ? "Falta aplicar la migración de medios: supabase db push" : undefined}
               onClick={() => setMediaBatchOpen(true)}
               className="gap-1.5"
             >
@@ -911,15 +912,9 @@ const ExerciseLibrary = () => {
       </div>
 
       {!mediaColumnsReady && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
-          <p className="font-medium text-foreground">Falta aplicar la migración de medios</p>
-          <p className="mt-1">
-            La biblioteca funciona, pero no puede marcar estilos antiguos ni errores de generación hasta que
-            apliques <code className="rounded bg-background/60 px-1">supabase db push</code> y despliegues{" "}
-            <code className="rounded bg-background/60 px-1">exercise-video</code>. Hasta entonces «Generar pendientes»
-            está desactivado para no intentar escribir columnas que aún no existen.
-          </p>
-        </div>
+        <p className="sr-only" role="status">
+          Faltan las columnas de medios en la base de datos: aplica supabase db push para activar el marcado de estilos y errores.
+        </p>
       )}
 
         <div className="space-y-4">
