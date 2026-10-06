@@ -395,7 +395,9 @@ const Onboarding = () => {
       if (data.training_style) {
         try {
           await supabase.auth.updateUser({ data: { training_style: data.training_style } });
-        } catch {}
+        } catch {
+          // Solo afina qué plan le ofrecemos después: si falla, el alta sigue igual.
+        }
       }
 
       const { data: profile } = await supabase
