@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
+import FloatingMobileNav from "@/components/mobile/FloatingMobileNav";
 import InfoHint from "@/components/InfoHint";
 import UserDetail from "@/components/admin/UserDetail";
 import TrainerSelfProfile from "@/components/trainer/TrainerSelfProfile";
@@ -307,12 +308,12 @@ const TrainerPage = () => {
               <TrainerSelfProfile assignedClientCount={users.length} />
             ) : (
               user && (
-                <div>
+                <div className="flex min-h-0 flex-1 flex-col">
                   <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
                     <span>Chat interno con el equipo</span>
                     <InfoHint text="Canal privado con el administrador para dudas, incidencias o cambios en los planes de tus usuarios. Tus usuarios no ven esta conversación." />
                   </div>
-                  <Chat conversationUserId={user.id} />
+                  <div className="min-h-0 flex-1"><Chat conversationUserId={user.id} /></div>
                   <p className="text-[11px] text-muted-foreground mt-2 text-center">Conversación privada con el administrador.</p>
                 </div>
               )
@@ -320,6 +321,18 @@ const TrainerPage = () => {
           </main>
         </div>
       </div>
+      <FloatingMobileNav
+        className="trainer-mobile-nav"
+        active={section}
+        items={[
+          { key: "users", label: "Clientes", icon: UsersIcon },
+          { key: "chat", label: "Chat admin", icon: MessageCircle },
+          { key: "profile", label: "Mi perfil", icon: UserRound },
+        ]}
+        label="Navegación del entrenador"
+        layoutId="trainer-mobile-tab"
+        onChange={(k) => goSection(k as TrainerSection)}
+      />
     </SidebarProvider>
   );
 };
