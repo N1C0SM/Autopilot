@@ -20,6 +20,23 @@ function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
 
+/**
+ * Hora local "flotante" (sin Z ni TZID). Es lo que hace que el entreno siga a
+ * la misma hora todo el año: con hora UTC fija, al cambiar el horario el evento
+ * se desplazaba una hora. DTSTAMP sí sigue en UTC, que es lo que pide el estándar.
+ */
+function toICSDateLocal(date: Date): string {
+  return (
+    date.getFullYear().toString() +
+    pad(date.getMonth() + 1) +
+    pad(date.getDate()) +
+    "T" +
+    pad(date.getHours()) +
+    pad(date.getMinutes()) +
+    "00"
+  );
+}
+
 function toICSDate(date: Date): string {
   return (
     date.getUTCFullYear().toString() +
@@ -89,8 +106,8 @@ export function buildICS(dayPlans: DayPlan[], opts: ICSOptions): string {
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${uid}`);
     lines.push(`DTSTAMP:${toICSDate(new Date())}`);
-    lines.push(`DTSTART:${toICSDate(start)}`);
-    lines.push(`DTEND:${toICSDate(end)}`);
+    lines.push(`DTSTART:${toICSDateLocal(start)}`);
+    lines.push(`DTEND:${toICSDateLocal(end)}`);
     // COUNT en vez de repetición infinita: el plan dura el ciclo (12 semanas) y
     // una regla sin fin llena el calendario para siempre y no hay forma de
     // quitarla al cambiar de plan. COUNT es seguro con el cambio de hora.
