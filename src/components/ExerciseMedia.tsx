@@ -100,14 +100,16 @@ const ExerciseMedia = ({ video, image, name, className = "", emptyLabel = "Sin v
   if (image) {
     return (
       <div className={`aspect-video w-full overflow-hidden rounded-xl bg-black ${className}`}>
-        {/* contain: una foto de técnica no debe recortar el cuerpo del ejercicio */}
-        <img src={image} alt={name ?? ""} loading="lazy" decoding="async" className="h-full w-full object-contain" />
+        {/* cover: mismo encuadre exacto que el vídeo, para que toda la biblioteca
+            se vea igual. El prompt de generación compone dentro de la banda 16:9,
+            así que este recorte no corta al atleta. */}
+        <img src={image} alt={name ?? ""} loading="lazy" decoding="async" className="h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
-    <div className={`flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl bg-secondary ${className}`}>
+    <div className={`flex aspect-video w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-border/60 bg-black ${className}`}>
       <Video className="h-7 w-7 text-muted-foreground/50" />
       <p className="text-xs text-muted-foreground">{emptyLabel}</p>
     </div>

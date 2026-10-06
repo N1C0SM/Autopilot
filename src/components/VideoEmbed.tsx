@@ -43,14 +43,14 @@ const VideoEmbed = ({ url, className = "" }: Props) => {
 
   if (embed.type === "video") {
     return (
-      <div className={`relative w-full overflow-hidden rounded-lg bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
-        <video src={embed.src} controls playsInline className="absolute inset-0 h-full w-full" />
+      <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
+        <video src={embed.src} controls playsInline className="absolute inset-0 h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
-    <div className={`relative w-full rounded-lg overflow-hidden bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
+    <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
       <iframe
         src={embed.src}
         title="Vídeo del ejercicio"
