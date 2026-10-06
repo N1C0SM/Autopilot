@@ -427,12 +427,18 @@ const SiteContentEditor = () => {
         </p>
         <div className="p-3 rounded-lg border border-border space-y-2">
           <p className="text-sm font-medium">¿Qué IA usar?</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {([
-              ["auto", "En cadena", "1º OpenAI → si no tiene saldo, 2º Claude → si tampoco, 3º Lovable"],
+              ["auto", "En cadena", "1º OpenAI → si no tiene saldo, 2º Claude → 3º DeepSeek → 4º Lovable"],
+              ["deepseek", "DeepSeek primero", "El texto va a DeepSeek (mucho más barato). Las imágenes y vídeos se saltan DeepSeek y siguen por OpenAI → Lovable."],
               ["lovable", "Solo Lovable", "Siempre los créditos de Lovable"],
             ] as const).map(([v, label, desc]) => {
-              const active = (aiKeys.AI_PROVIDER === "lovable" ? "lovable" : "auto") === v;
+              const currentMode = aiKeys.AI_PROVIDER === "lovable"
+                ? "lovable"
+                : aiKeys.AI_PROVIDER === "deepseek"
+                  ? "deepseek"
+                  : "auto";
+              const active = currentMode === v;
               return (
                 <button
                   key={v}
@@ -451,7 +457,7 @@ const SiteContentEditor = () => {
             })}
           </div>
           <p className="text-xs text-muted-foreground">
-            Lovable no necesita clave: va incluida y siempre queda como último recurso. Si no pones una clave, ese paso se salta. Claude solo hace texto (blog, comidas, sugerencias…); las imágenes y vídeos pasan de OpenAI directamente a Lovable.
+            Lovable no necesita clave: va incluida y siempre queda como último recurso. Si no pones una clave, ese paso se salta. Claude y DeepSeek solo hacen texto (planes, blog, comidas, sugerencias, clasificación de ejercicios). Las imágenes y los vídeos se los saltan siempre: esos van a OpenAI o a Lovable.
           </p>
         </div>
         <div className="space-y-3">

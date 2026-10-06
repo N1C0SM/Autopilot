@@ -8,7 +8,7 @@ const OPENAI = "https://api.openai.com";
 const DEEPSEEK = "https://api.deepseek.com";
 const FALLBACK_STATUS = new Set([400, 401, 402, 403, 404, 429, 500, 502, 503]);
 
-export type AiMode = "auto" | "lovable";
+export type AiMode = "auto" | "lovable" | "deepseek";
 
 export async function getAiConfig() {
   const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -17,15 +17,25 @@ export async function getAiConfig() {
   const openaiKey = get("OPENAI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
   const anthropicKey = get("ANTHROPIC_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || "";
   const deepseekKey = get("DEEPSEEK_API_KEY") || Deno.env.get("DEEPSEEK_API_KEY") || "";
-  const mode: AiMode = get("AI_PROVIDER") === "lovable" ? "lovable" : "auto";
+  const rawMode = get("AI_PROVIDER");
+  const mode: AiMode = rawMode === "lovable" ? "lovable" : rawMode === "deepseek" ? "deepseek" : "auto";
   const lovableKey = Deno.env.get("LOVABLE_API_KEY") || "";
-  // Cadena: OpenAI -> Claude -> DeepSeek -> Lovable (cada uno solo si tiene clave).
-  const order: ("openai" | "anthropic" | "deepseek" | "lovable")[] = mode === "lovable" ? ["lovable"] : [
-    ...(openaiKey ? ["openai" as const] : []),
-    ...(anthropicKey ? ["anthropic" as const] : []),
-    ...(deepseekKey ? ["deepseek" as const] : []),
-    "lovable",
-  ];
+
+  const openai = openaiKey ? (["openai"] as const) : [];
+  const anthropic = anthropicKey ? (["anthropic"] as const) : [];
+  const deepseek = deepseekKey ? (["deepseek"] as const) : [];
+
+  // Cadena de proveedores:
+  //  - "auto"     -> OpenAI -> Claude -> DeepSeek -> Lovable
+  //  - "deepseek" -> DeepSeek primero para el TEXTO; las imágenes y los vídeos
+  //                  se saltan DeepSeek (no puede generarlos) y siguen por
+  //                  OpenAI -> Lovable.
+  //  - "lovable"  -> solo Lovable.
+  const order: ("openai" | "anthropic" | "deepseek" | "lovable")[] =
+    mode === "lovable" ? ["lovable"]
+      : mode === "deepseek" ? [...deepseek, ...openai, ...anthropic, "lovable"]
+        : [...openai, ...anthropic, ...deepseek, "lovable"];
+
   return { mode, openaiKey, anthropicKey, deepseekKey, lovableKey, order };
 }
 
