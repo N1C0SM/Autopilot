@@ -310,7 +310,8 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
             {viewMedia.type === "image" ? (
               <img src={viewMedia.url} alt="" className="max-h-[85vh] rounded-xl object-contain" />
             ) : (
-              <video src={viewMedia.url} controls autoPlay className="max-h-[85vh] rounded-xl" />
+              // Sin autoPlay: se abre con los controles y el usuario pulsa play
+              <video src={viewMedia.url} controls className="max-h-[85vh] rounded-xl" />
             )}
           </div>
         </div>

@@ -1,5 +1,4 @@
-import { useRef } from "react";
-import { Dumbbell, Video } from "lucide-react";
+import { Dumbbell, Play, Video } from "lucide-react";
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
 
 const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
@@ -16,8 +15,12 @@ export type ExerciseThumbSize = keyof typeof THUMB_SIZES;
 
 type ThumbProps = {
   image?: string | null;
+  /** Si hay vídeo, la miniatura ES el vídeo: se reproduce al pasar el ratón o al tocarla. */
+  video?: string | null;
   name?: string | null;
   size?: ExerciseThumbSize;
+  /** "video" usa un marco 16:9 en vez del cuadrado. */
+  aspect?: "square" | "video";
   /** Atenúa la miniatura cuando el ejercicio ya está completado. */
   completed?: boolean;
   className?: string;
@@ -26,28 +29,52 @@ type ThumbProps = {
 /**
  * Miniatura de ejercicio. Única en toda la app: mismo tamaño, mismo radio y
  * mismo placeholder, tanto en administración como en usuario y entrenador.
+ * Cuando el ejercicio tiene vídeo, la miniatura lo muestra y lo reproduce sin
+ * necesidad de ningún botón.
  */
-export const ExerciseThumb = ({ image, name, size = "md", completed = false, className = "" }: ThumbProps) => (
-  <div
-    className={`${THUMB_SIZES[size]} shrink-0 overflow-hidden rounded-xl border border-border/60 ${
-      completed ? "bg-primary/15" : "bg-secondary"
-    } ${className}`}
-  >
-    {image ? (
-      <img
-        src={image}
-        alt={name ?? ""}
-        loading="lazy"
-        decoding="async"
-        className={`h-full w-full object-cover ${completed ? "opacity-70" : ""}`}
-      />
-    ) : (
-      <div className="flex h-full w-full items-center justify-center">
-        <Dumbbell className={`h-4 w-4 ${completed ? "text-primary" : "text-muted-foreground"}`} />
-      </div>
-    )}
-  </div>
-);
+export const ExerciseThumb = ({
+  image,
+  video,
+  name,
+  size = "md",
+  aspect = "square",
+  completed = false,
+  className = "",
+}: ThumbProps) => {
+  const box = aspect === "video" ? "aspect-video w-28" : THUMB_SIZES[size];
+  const hasVideo = Boolean(video && isDirectFile(video));
+
+  return (
+    <div
+      className={`relative ${box} shrink-0 overflow-hidden rounded-xl border border-border/60 ${
+        completed ? "bg-primary/15" : "bg-secondary"
+      } ${className}`}
+    >
+      {image ? (
+        <img
+          src={image}
+          alt={name ?? ""}
+          loading="lazy"
+          decoding="async"
+          className={`h-full w-full object-cover ${completed ? "opacity-70" : ""}`}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Dumbbell className={`h-4 w-4 ${completed ? "text-primary" : "text-muted-foreground"}`} />
+        </div>
+      )}
+      {/* Nada se reproduce solo: la miniatura es la portada y el play te lleva al vídeo */}
+      {hasVideo && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-background/85 ring-1 ring-border"
+        >
+          <Play className="h-2.5 w-2.5 text-primary" fill="currentColor" />
+        </span>
+      )}
+    </div>
+  );
+};
 
 type Props = {
   video?: string | null;
@@ -63,29 +90,14 @@ type Props = {
  * siempre 16:9 y con el mismo radio, así que nunca hay saltos de layout.
  */
 const ExerciseMedia = ({ video, image, name, className = "", emptyLabel = "Sin vídeo de técnica todavía" }: Props) => {
-  const ref = useRef<HTMLVideoElement>(null);
-
   if (video && isDirectFile(video)) {
     return (
-      <div
-        className={`relative aspect-video w-full overflow-hidden rounded-xl bg-black ${className}`}
-        onMouseEnter={() => {
-          void ref.current?.play().catch(() => {});
-        }}
-        onMouseLeave={() => {
-          const v = ref.current;
-          if (v) {
-            v.pause();
-            v.currentTime = 0;
-          }
-        }}
-      >
+      // El héroe es el vídeo con su portada: se ve al abrir la ficha y se
+      // reproduce solo si el usuario pulsa play. Nunca en automático.
+      <div className={`relative aspect-video w-full overflow-hidden rounded-xl bg-black ${className}`}>
         <video
-          ref={ref}
           src={video}
           poster={image ?? undefined}
-          muted
-          loop
           playsInline
           controls
           preload="metadata"

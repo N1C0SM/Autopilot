@@ -8,6 +8,7 @@ import { Plus, Trash2, Dumbbell, Copy, ChevronDown, ChevronUp, FileDown, GripVer
 import type { Exercise, DayPlan, GymExerciseEntry } from "@/types/training";
 import { DAYS, INTENSITIES, MUSCLE_GROUPS } from "@/types/training";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
+import { ExercisePreviewSheet, type ExercisePreviewData } from "@/components/ExercisePreviewSheet";
 
 interface Props {
   dayPlans: DayPlan[];
@@ -259,6 +260,7 @@ const SKILL_TEMPLATES: Record<string, SkillTemplate> = {
 };
 
 const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange, userSports, equipmentType = "Mixto", specificGoal, intensityLevel = 5, userGoal, userInjuries, userAge, userAvailability }, ref) => {
+  const [preview, setPreview] = useState<ExercisePreviewData | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const injuredMuscles = getInjuredMuscles(userInjuries);
   const recommendedStructure = getRecommendedStructure(userAvailability);
@@ -715,8 +717,15 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
                         {(plan.exercises || []).map((ex, exIdx) => (
                           <div key={exIdx} className="flex items-center gap-2 bg-background/50 rounded-lg p-2.5 border border-border/50 group">
-                            {/* Miniatura unificada del ejercicio */}
-                            <ExerciseThumb image={ex.image_url} name={ex.name} size="xs" />
+                            {/* Miniatura unificada: marca si hay vídeo y lo abre al tocar */}
+                            <button
+                              type="button"
+                              onClick={() => setPreview({ name: ex.name, image: ex.image_url, video: ex.video_url })}
+                              aria-label={`Ver el vídeo de ${ex.name}`}
+                              className="shrink-0 rounded-xl transition-opacity hover:opacity-80"
+                            >
+                              <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="xs" />
+                            </button>
                             <div className="w-[35%] shrink-0">
                               <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs" value={ex.exercise_id} onChange={(e) => selectExerciseFromLibrary(dayIdx, exIdx, e.target.value)}>
                                 <option value="">Seleccionar...</option>
@@ -756,6 +765,8 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
           );
         })}
       </div>
+
+      <ExercisePreviewSheet exercise={preview} onClose={() => setPreview(null)} />
     </div>
   );
 });

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Dumbbell, Flame, Clock, Download, Copy, Check, ChevronDown, ChevronUp, Calendar as CalendarIcon, Video } from "lucide-react";
+import { Dumbbell, Flame, Clock, Download, Copy, Check, ChevronDown, ChevronUp, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
@@ -43,7 +43,6 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const [expandedDay, setExpandedDay] = useState<string | null>(DAYS_ORDER[todayIndex]);
   const [copied, setCopied] = useState(false);
-  const [expandedVideos, setExpandedVideos] = useState<Record<string, boolean>>({});
   const [detail, setDetail] = useState<{
     name: string;
     image?: string | null;
@@ -199,7 +198,6 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                   const category = ex.muscle_group || metadata?.muscle_group;
                   const exerciseType = ex.exercise_type || metadata?.exercise_type;
                   const videoKey = `${day}-${ex.exercise_id || ex.name}-${i}`;
-                  const isVideoOpen = expandedVideos[videoKey] ?? false;
 
                   return (
                     <div
@@ -236,7 +234,9 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                       className="rounded-lg bg-secondary/20 p-2 cursor-pointer transition-colors hover:bg-secondary/30 active:bg-secondary/40"
                     >
                       <div className="flex items-center gap-3">
-                        <ExerciseThumb image={image} name={ex.name} />
+                        {/* La miniatura es la portada del vídeo (con su marca de play):
+                            al tocar la fila se abre la ficha, cuyo héroe es el vídeo. */}
+                        <ExerciseThumb image={image} video={video} name={ex.name} />
                         <div className="flex-1 min-w-0">
                           <p className="truncate text-sm font-medium">{ex.name}</p>
                           <p className="truncate text-xs text-muted-foreground">
@@ -245,25 +245,7 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                             {exerciseType ? ` · ${exerciseType}` : ""}
                           </p>
                         </div>
-                        {video && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedVideos((current) => ({ ...current, [videoKey]: !isVideoOpen }));
-                            }}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
-                          >
-                            <Video className="h-3.5 w-3.5" />
-                            {isVideoOpen ? "Ocultar" : "Vídeo"}
-                          </button>
-                        )}
                       </div>
-                      {video && isVideoOpen && (
-                        <div className="mt-3">
-                          <ExerciseMedia video={video} image={image} name={ex.name} emptyLabel="Sin vídeo de técnica" />
-                        </div>
-                      )}
                     </div>
                   );
                 })}

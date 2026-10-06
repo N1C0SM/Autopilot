@@ -62,7 +62,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [restTimer, setRestTimer] = useState<number | null>(null);
   const [restTarget, setRestTarget] = useState(0);
   const [rpeOpen, setRpeOpen] = useState(false);
-  const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
   const [technique, setTechnique] = useState<{
     name: string;
     image?: string | null;
@@ -938,7 +937,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-secondary/20 sm:px-4"
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app) */}
-                  <ExerciseThumb image={ex.image_url || metadata?.image_url} name={ex.name} completed={allDone} />
+                  <ExerciseThumb image={ex.image_url || metadata?.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />
                   <div className="flex-1 text-left min-w-0">
                     {/* El nombre ocupa todo el ancho: los iconos van en la columna de acciones */}
                     <div className={`truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
@@ -1052,38 +1051,26 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4 space-y-1.5">
-                        {/* Vídeo del ejercicio */}
-                        {exerciseVideo ? (
-                          <div className="mb-2">
-                            {showVideo[ex.name] ? (
-                              <div className="space-y-1.5">
-                                <ExerciseMedia
-                                  video={exerciseVideo}
-                                  image={ex.image_url || metadata?.image_url}
-                                  name={ex.name}
-                                  emptyLabel="Sin vídeo de técnica"
-                                />
-                                <button
-                                  onClick={() => setShowVideo((s) => ({ ...s, [ex.name]: false }))}
-                                  className="text-[10px] text-muted-foreground hover:text-foreground underline"
-                                >
-                                  Ocultar vídeo
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setShowVideo((s) => ({ ...s, [ex.name]: true }))}
-                                className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium px-2 py-1.5 rounded-md bg-primary/10 hover:bg-primary/15 transition-colors"
-                              >
-                                <Video className="w-3.5 h-3.5" />
-                                  Ver vídeo de técnica
-                              </button>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="mb-2 rounded-md bg-secondary/40 px-2 py-1.5 text-[11px] text-muted-foreground">
-                            Vídeo de técnica no disponible todavía.
-                          </p>
+                        {/* El vídeo no se reproduce aquí: la miniatura marca que existe
+                            y el botón de información abre la ficha con el héroe. */}
+                        {exerciseVideo && (
+                          <button
+                            type="button"
+                            onClick={() => setTechnique({
+                              name: ex.name,
+                              image: ex.image_url || metadata?.image_url,
+                              video: exerciseVideo,
+                              series: ex.series != null ? String(ex.series) : undefined,
+                              reps: ex.reps != null ? String(ex.reps) : undefined,
+                              rest: ex.rest,
+                              category: exerciseCategory,
+                              type: exerciseType,
+                            })}
+                            className="mb-2 flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            Ver el vídeo de técnica
+                          </button>
                         )}
 
 

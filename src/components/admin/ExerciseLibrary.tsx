@@ -23,6 +23,7 @@ import {
 } from "@/types/training";
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
 import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
+import { ExercisePreviewSheet, type ExercisePreviewData } from "@/components/ExercisePreviewSheet";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
@@ -579,6 +580,7 @@ const ExerciseFormDialog = ({
 
 const ExerciseLibrary = () => {
   const [exercises, setExercises] = useState<ExerciseRow[]>([]);
+  const [preview, setPreview] = useState<ExercisePreviewData | null>(null);
   const [loading, setLoading] = useState(false);
   const [mediaBatchOpen, setMediaBatchOpen] = useState(false);
   const [mediaBatch, setMediaBatch] = useState<{ current: number; total: number; exercise: string; task: string; errors: number } | null>(null);
@@ -960,7 +962,19 @@ const ExerciseLibrary = () => {
                   key={ex.id}
                   className="group flex items-start gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
                 >
-                  <ExerciseThumb image={ex.image_url} name={ex.name} size="sm" />
+                  <button
+                    type="button"
+                    onClick={() => setPreview({
+                      name: ex.name,
+                      image: ex.image_url,
+                      video: ex.video_url,
+                      detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || null,
+                    })}
+                    aria-label={`Ver el vídeo de ${ex.name}`}
+                    className="shrink-0 rounded-xl transition-opacity hover:opacity-80"
+                  >
+                    <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="sm" />
+                  </button>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{ex.name}</p>
                     {/* Clasificación y estado de medios en la misma fila que envuelve:
@@ -1066,6 +1080,9 @@ const ExerciseLibrary = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Ver el vídeo de un ejercicio sin entrar a editarlo */}
+      <ExercisePreviewSheet exercise={preview} onClose={() => setPreview(null)} />
     </div>
   );
 };
