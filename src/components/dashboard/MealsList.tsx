@@ -50,6 +50,9 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
   const f = Number(macros?.fats) || 0;
   const kcal = Number(macros?.calories) || Math.round(p * 4 + c * 4 + f * 9);
   const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
+  // Rueda de progreso del día
+  const R = 42;
+  const C = 2 * Math.PI * R;
 
   // Sin comidas ni objetivos: avisamos con calma en vez de mostrar una pantalla vacía.
   if (!meals.length && kcal <= 0) {
@@ -89,10 +92,31 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
 
       {macros && kcal > 0 && (
         <Surface padding="sm">
-          {/* kcal grande + 3 chips que caben siempre en una fila (nada de wrap) */}
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal * ratio)}</span>
-            <span className="text-xs text-muted-foreground">/ {fmt(kcal)} kcal</span>
+          <div className="flex items-center gap-4">
+            {/* La rueda: de un vistazo, cuánto llevas del día */}
+            <svg
+              viewBox="0 0 100 100"
+              className="h-20 w-20 shrink-0 -rotate-90"
+              role="img"
+              aria-label={`${Math.round(ratio * 100)} % de tus comidas de hoy`}
+            >
+              <circle cx="50" cy="50" r={R} fill="none" strokeWidth="9" className="stroke-muted" />
+              <circle
+                cx="50" cy="50" r={R} fill="none" strokeWidth="9" strokeLinecap="round"
+                className="stroke-primary transition-all duration-700"
+                strokeDasharray={C}
+                strokeDashoffset={C * (1 - ratio)}
+              />
+            </svg>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal * ratio)}</span>
+                <span className="text-xs text-muted-foreground">de {fmt(kcal)} kcal</span>
+              </div>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Según las comidas que marques hoy
+              </p>
+            </div>
           </div>
           <div className="mt-2 grid grid-cols-3 gap-1.5">
             {chips.map((m) => (
@@ -106,12 +130,6 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
                 <span className="text-muted-foreground">/{fmt(m.v)}g</span>
               </span>
             ))}
-          </div>
-          <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-700"
-              style={{ width: `${ratio * 100}%` }}
-            />
           </div>
         </Surface>
       )}
