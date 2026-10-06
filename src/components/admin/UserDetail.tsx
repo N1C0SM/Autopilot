@@ -492,39 +492,39 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
       {/* Tabs */}
       <Tabs defaultValue={restricted ? "perfil" : "info"} className="space-y-6">
-        <TabsList className="bg-secondary/50 w-full max-w-full flex overflow-x-auto no-scrollbar h-auto">
-          {!restricted && <TabsTrigger value="info" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-            <Target className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Plan</span>
+        <TabsList className="bg-secondary/50 w-full max-w-full flex justify-start overflow-x-auto no-scrollbar h-auto">
+          {!restricted && <TabsTrigger value="info" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+            <Target className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Plan</span>
            </TabsTrigger> }
-          <TabsTrigger value="perfil" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-            <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Perfil</span>
+          <TabsTrigger value="perfil" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Perfil</span>
            </TabsTrigger>
           {!restricted && (
-            <TabsTrigger value="acceso" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-              <KeyRound className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Acceso</span>
+            <TabsTrigger value="acceso" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <KeyRound className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Acceso</span>
             </TabsTrigger>
           )}
           {restricted && profile.payment_status !== "paid" && (
-            <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-              <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
+            <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Chat</span>
             </TabsTrigger>
           )}
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-                <TrendingUp className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Progreso</span>
+              <TabsTrigger value="progress" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                <TrendingUp className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Progreso</span>
                </TabsTrigger>
-              <TabsTrigger value="training" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-                <Dumbbell className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Entreno</span>
+              <TabsTrigger value="training" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                <Dumbbell className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Entreno</span>
               </TabsTrigger>
               {!trainingOnly && (
-                <TabsTrigger value="nutrition" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-                  <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Nutrición</span>
+                <TabsTrigger value="nutrition" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                  <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Nutrición</span>
                 </TabsTrigger>
               )}
               {(restricted || ["full", "transform", "personal", "coach"].includes(currentTier || "")) && (
-                <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
-                  <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
+                <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+                  <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Chat</span>
                 </TabsTrigger>
               )}
             </>

@@ -304,16 +304,16 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
             </SheetHeader>
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Series</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Series</p>
                 <p className="font-bold text-lg font-display">{detail?.series ?? "—"}</p>
               </div>
               <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Reps</p>
                 <p className="font-bold text-lg font-display">{detail?.reps ?? "—"}</p>
               </div>
               <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Descanso</p>
-                <p className="font-bold text-sm font-display mt-1.5">{detail?.rest ?? "—"}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Descanso</p>
+                <p className="font-bold text-lg font-display">{detail?.rest ?? "—"}</p>
               </div>
             </div>
             {(detail?.category || detail?.type) && (

@@ -958,50 +958,48 @@ const ExerciseLibrary = () => {
               {filtered.map((ex) => (
                 <div
                   key={ex.id}
-                  className="group flex items-center gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
+                  className="group flex items-start gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
                 >
                   <ExerciseThumb image={ex.image_url} name={ex.name} size="sm" />
                   <div className="min-w-0 flex-1">
-
-                    <p className="font-medium text-sm truncate">{ex.name}</p>
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <p className="truncate text-sm font-medium">{ex.name}</p>
+                    {/* Clasificación y estado de medios en la misma fila que envuelve:
+                        antes las insignias iban en su propia columna a la derecha y
+                        se comían el nombre del ejercicio. */}
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
                       {[ex.muscle_group, ex.exercise_type].filter(Boolean).map((category) => (
                         <span
                           key={category}
-                          className="rounded-full border border-border bg-secondary/60 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                          className="rounded-full border border-border bg-secondary/60 px-1.5 py-0.5 text-xs text-muted-foreground"
                         >
                           {category}
                         </span>
                       ))}
                       {!ex.muscle_group && !ex.exercise_type && (
-                        <span className="text-[10px] text-muted-foreground">Sin clasificar</span>
+                        <span className="text-xs text-muted-foreground">Sin clasificar</span>
+                      )}
+                      <span className={ex.image_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
+                        {ex.image_url ? <ImageIcon className="h-2.5 w-2.5" /> : <ImageOff className="h-2.5 w-2.5" />}
+                        {ex.image_url ? "Imagen" : "Sin imagen"}
+                      </span>
+                      <span className={ex.video_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
+                        {ex.video_url ? <Video className="h-2.5 w-2.5" /> : <VideoOff className="h-2.5 w-2.5" />}
+                        {ex.video_url ? "Vídeo" : "Sin vídeo"}
+                      </span>
+                      {hasOutdatedMedia(ex) && (
+                        <span className={MEDIA_BADGE_OFF} title="Generado con una versión de estilo anterior">
+                          <RefreshCw className="h-2.5 w-2.5" /> Estilo antiguo
+                        </span>
+                      )}
+                      {ex.media_error && (
+                        <span
+                          className={`${MEDIA_BADGE_BASE} border-destructive/40 bg-destructive/10 text-destructive`}
+                          title={ex.media_error}
+                        >
+                          <AlertTriangle className="h-2.5 w-2.5" /> Error
+                        </span>
                       )}
                     </div>
-                  </div>
-
-                  {/* Estado de medios por fila */}
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-                    <span className={ex.image_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
-                      {ex.image_url ? <ImageIcon className="h-2.5 w-2.5" /> : <ImageOff className="h-2.5 w-2.5" />}
-                      {ex.image_url ? "Imagen" : "Sin imagen"}
-                    </span>
-                    <span className={ex.video_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
-                      {ex.video_url ? <Video className="h-2.5 w-2.5" /> : <VideoOff className="h-2.5 w-2.5" />}
-                      {ex.video_url ? "Vídeo" : "Sin vídeo"}
-                    </span>
-                    {hasOutdatedMedia(ex) && (
-                      <span className={MEDIA_BADGE_OFF} title="Generado con una versión de estilo anterior">
-                        <RefreshCw className="h-2.5 w-2.5" /> Estilo antiguo
-                      </span>
-                    )}
-                    {ex.media_error && (
-                      <span
-                        className={`${MEDIA_BADGE_BASE} border-destructive/40 bg-destructive/10 text-destructive`}
-                        title={ex.media_error}
-                      >
-                        <AlertTriangle className="h-2.5 w-2.5" /> Error
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex items-center gap-0.5 shrink-0">

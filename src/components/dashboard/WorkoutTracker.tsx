@@ -698,7 +698,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         <div
           role="tablist"
           aria-label="Elige el día de la semana"
-          className="no-scrollbar -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1"
+          className="no-scrollbar -mx-1 mb-3 flex gap-1 px-1"
         >
           {DAYS_ORDER.map((day) => {
             const plan = dayPlans.find((p) => p.day === day);
@@ -713,7 +713,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 aria-selected={active}
                 aria-label={`${day}${hasWork ? "" : " · descanso"}${isToday ? " · hoy" : ""}`}
                 onClick={() => setSelectedDay(day)}
-                className={`flex h-11 min-w-[3rem] flex-1 shrink-0 flex-col items-center justify-center rounded-xl border text-xs font-medium transition-colors ${
+                className={`flex h-11 min-w-11 flex-1 shrink-0 flex-col items-center justify-center rounded-xl border text-xs font-medium transition-colors ${
                   active
                     ? "border-primary bg-primary/10 text-primary"
                     : isToday
@@ -940,39 +940,24 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   {/* Miniatura única de ejercicio (misma que en el resto de la app) */}
                   <ExerciseThumb image={ex.image_url || metadata?.image_url} name={ex.name} completed={allDone} />
                   <div className="flex-1 text-left min-w-0">
-                    <div className="flex items-center gap-1">
-                      <div className={`min-w-0 flex-1 truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
-                        {swaps[ex.name] || ex.name}
-                      </div>
-                      {!allDone && (
-                        <ExerciseSwap
-                          original={ex.name}
-                          current={swaps[ex.name]}
-                          movementPattern={metadata?.movement_pattern}
-                          muscleGroup={metadata?.muscle_group}
-                          onSelect={(name) => setSwaps((s) => { const next = { ...s }; if (name) next[ex.name] = name; else delete next[ex.name]; return next; })}
-                        />
-                      )}
+                    {/* El nombre ocupa todo el ancho: los iconos van en la columna de acciones */}
+                    <div className={`truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
+                      {swaps[ex.name] || ex.name}
                     </div>
-                    {swaps[ex.name] && <div className="truncate text-[10px] text-primary">En lugar de {ex.name}</div>}
-                    <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    {swaps[ex.name] && <div className="truncate text-xs text-primary">En lugar de {ex.name}</div>}
+                    <div className="mt-0.5 text-xs text-muted-foreground">
                       {ex.series} series <span className="px-0.5 text-border">·</span> {ex.reps} reps <span className="px-0.5 text-border">·</span> {ex.rest}
                     </div>
-                    {started && (exerciseCategory || exerciseType || trackingConfig) && (
+                    {started && (exerciseCategory || exerciseType) && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {exerciseCategory && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-medium text-primary">
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                             {exerciseCategory}
                           </span>
                         )}
                         {exerciseType && (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[9px] text-muted-foreground">
+                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
                             {exerciseType}
-                          </span>
-                        )}
-                        {trackingConfig && (
-                          <span className="rounded-full bg-secondary/80 px-2 py-0.5 text-[9px] text-muted-foreground">
-                            {trackingConfig.valueLabel}
                           </span>
                         )}
                       </div>
@@ -980,7 +965,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                     {started && progression && (
                       <span
                         title={progression.reason}
-                        className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
                           progression.label === "Subir" || progression.label === "Añadir rep"
                             ? "bg-primary/15 text-primary"
                             : "bg-secondary text-muted-foreground"
@@ -1001,6 +986,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {!allDone && (
+                      <ExerciseSwap
+                        original={ex.name}
+                        current={swaps[ex.name]}
+                        movementPattern={metadata?.movement_pattern}
+                        muscleGroup={metadata?.muscle_group}
+                        onSelect={(name) => setSwaps((s) => { const next = { ...s }; if (name) next[ex.name] = name; else delete next[ex.name]; return next; })}
+                      />
+                    )}
                     <span
                       role="button"
                       tabIndex={0}
@@ -1212,10 +1206,10 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                               title={set.done ? "Desmarcar serie" : "Marcar serie como hecha"}
                               className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all mx-auto ${
                                 set.done
-                                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                                  ? "bg-primary text-primary-foreground"
                                   : inputError
-                                    ? "bg-secondary text-muted-foreground"
-                                    : "border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+                                    ? "border border-destructive/40 bg-destructive/10 text-destructive"
+                                    : "border border-border bg-secondary text-muted-foreground hover:border-primary/50 hover:text-primary"
                               }`}
                             >
                               <Check className="w-5 h-5" />
@@ -1278,15 +1272,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             </SheetHeader>
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Series</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Series</p>
                 <p className="font-bold text-lg font-display">{technique?.series ?? "—"}</p>
               </div>
               <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Reps</p>
                 <p className="font-bold text-lg font-display">{technique?.reps ?? "—"}</p>
               </div>
               <div className="rounded-xl bg-secondary/40 p-3 text-center">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Descanso</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">Descanso</p>
                 <p className="font-bold text-sm font-display mt-1.5">{technique?.rest ?? "—"}</p>
               </div>
             </div>
@@ -1306,7 +1300,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             )}
             {!technique?.video && (
               <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-                El vídeo de la técnica todavía no está disponible. Pregunta a tu entrenador por el chat.
+                El vídeo de la técnica todavía no está disponible. Si tienes plan Coach, pregúntale a tu entrenador por el chat.
               </p>
             )}
           </div>
