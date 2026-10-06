@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Trash2, Upload, Target, GripVertical } from "lucide-react";
@@ -11,7 +10,6 @@ import { toast } from "sonner";
 interface GoalPhysique {
   id: string;
   name: string;
-  description: string;
   image_url: string;
   sort_order: number;
   visible: boolean;
@@ -43,7 +41,7 @@ const GoalPhysiquesEditor = () => {
   const add = async () => {
     const { data, error } = await supabase
       .from("goal_physiques")
-      .insert({ name: "Nuevo físico", description: "", image_url: "", sort_order: items.length, visible: true })
+      .insert({ name: "Nuevo físico", image_url: "", sort_order: items.length, visible: true })
       .select()
       .single();
     if (error) { toast.error("No se pudo crear"); return; }
@@ -59,7 +57,6 @@ const GoalPhysiquesEditor = () => {
       .from("goal_physiques")
       .update({
         name: it.name,
-        description: it.description,
         image_url: it.image_url,
         sort_order: it.sort_order,
         visible: it.visible,
@@ -116,18 +113,18 @@ const GoalPhysiquesEditor = () => {
 
       {items.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-border rounded-2xl text-sm text-muted-foreground">
-          Aún no hay físicos. Añade el primero (ej: "David Laid Prime", "Jason Statham Prime").
+          Aún no hay físicos de referencia. Añade el primero con una foto y un nombre.
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {items.map((it) => (
-            <div key={it.id} className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5 space-y-3">
+            <div key={it.id} className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
               <div className="flex gap-3">
-                <div className="relative w-28 h-36 rounded-xl overflow-hidden bg-secondary shrink-0 border border-border">
+                <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary">
                   {it.image_url ? (
                     <img src={it.image_url} alt={it.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground text-center px-2">
+                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground text-center px-2">
                       Sin foto
                     </div>
                   )}
@@ -138,28 +135,18 @@ const GoalPhysiquesEditor = () => {
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(it.id, e)} />
                   </label>
                 </div>
-                <div className="flex-1 space-y-2 min-w-0">
-                  <div>
-                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nombre</Label>
-                    <Input
-                      value={it.name}
-                      onChange={(e) => update(it.id, { name: e.target.value })}
-                      placeholder="David Laid prime"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Descripción corta</Label>
-                    <Textarea
-                      value={it.description}
-                      onChange={(e) => update(it.id, { description: e.target.value })}
-                      rows={2}
-                      placeholder="Definido, hombros anchos, cintura estrecha"
-                    />
-                  </div>
+                <div className="flex-1 min-w-0">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nombre</Label>
+                  <Input
+                    value={it.name}
+                    onChange={(e) => update(it.id, { name: e.target.value })}
+                    placeholder="Físico de referencia"
+                  />
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-                <div className="flex items-center gap-3 text-xs">
+              {/* La fila envuelve: si no cabe, los botones bajan en vez de salirse de la tarjeta. */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border">
+                <div className="flex min-w-0 items-center gap-3 text-xs">
                   <div className="flex items-center gap-1.5">
                     <GripVertical className="w-3 h-3 text-muted-foreground" />
                     <Input
@@ -177,7 +164,7 @@ const GoalPhysiquesEditor = () => {
                     <span className="text-muted-foreground">{it.visible ? "Visible" : "Oculto"}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <Button size="sm" variant="outline" onClick={() => save(it)}>
                     Guardar
                   </Button>
