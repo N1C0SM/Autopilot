@@ -73,10 +73,44 @@ async function call(body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+/**
+ * La cola vive en el servidor (acción `batch`), pero esa acción llega con el
+ * despliegue nuevo. Si la función desplegada todavía no la tiene, se listan los
+ * pendientes directamente por REST con tu propio token, así el script funciona
+ * igual sin esperar a desplegar.
+ */
+let restQueue = null;
+
+async function buildRestQueue() {
+  const rows = [];
+  const pageSize = 500;
+  for (let from = 0; ; from += pageSize) {
+    const url = `${URL_BASE}/rest/v1/exercises?select=id,name,image_url,video_url&order=image_url.asc.nullslast,video_url.asc.nullslast,name.asc&offset=${from}&limit=${pageSize}`;
+    const res = await fetch(url, {
+      headers: { apikey: ANON_KEY, Authorization: `Bearer ${ACCESS_TOKEN}` },
+    });
+    if (!res.ok) throw new Error(`No se pudo leer la biblioteca (${res.status}). ¿El token sigue siendo válido?`);
+    const batch = await res.json();
+    rows.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+  return rows.filter((r) => !r.image_url || !r.video_url);
+}
+
 async function nextPending(exclude) {
+  if (restQueue) {
+    const next = restQueue.find((r) => !exclude.includes(r.id));
+    if (!next) return { done: true, remaining: 0 };
+    return { done: false, nextId: next.id, name: next.name, action: next.image_url ? 'create' : 'image' };
+  }
+
   const { ok, status, data } = await call({ action: 'batch', exclude });
-  if (!ok) throw new Error(`batch falló (${status}): ${data?.error || 'error desconocido'}`);
-  return data;
+  if (ok) return data;
+
+  // La función desplegada aún no conoce `batch`: pasamos a modo REST.
+  restQueue = await buildRestQueue();
+  console.log(`La función desplegada no tiene la cola del servidor; uso la lista directa (${restQueue.length} pendientes).`);
+  return nextPending(exclude);
 }
 
 async function generateImage(exerciseId) {
