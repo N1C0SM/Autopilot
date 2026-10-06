@@ -596,14 +596,39 @@ const ExerciseLibrary = () => {
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseRow | null>(null);
+  /**
+   * Las columnas de medios (media_style_version, *_generated_at, media_error)
+   * llegan con la migración 20261006130000. Si todavía no está aplicada, la
+   * consulta falla: en ese caso seguimos listando la biblioteca sin ellas en vez
+   * de dejar la pantalla vacía.
+   */
+  const [mediaColumnsReady, setMediaColumnsReady] = useState(true);
+
+  const LEGACY_COLUMNS = "id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension";
+  const MEDIA_COLUMNS = "media_style_version, image_generated_at, video_generated_at, media_error";
 
   const fetchExercises = async () => {
-    const { data } = await supabase.from("exercises")
-      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, media_style_version, image_generated_at, video_generated_at, media_error")
+    const full = await supabase.from("exercises")
+      .select(`${LEGACY_COLUMNS}, ${MEDIA_COLUMNS}`)
       .order("muscle_group").order("recommended_order").order("name");
-    // Las columnas de medios vienen de la migración 20261006130000; los tipos
-    // generados de Supabase se regeneran al desplegar, de ahí el doble cast.
-    if (data) setExercises(data as unknown as ExerciseRow[]);
+
+    if (!full.error) {
+      setMediaColumnsReady(true);
+      setExercises((full.data ?? []) as unknown as ExerciseRow[]);
+      return;
+    }
+
+    console.warn("La biblioteca no pudo leer las columnas de medios; falta la migración", full.error.message);
+    const legacy = await supabase.from("exercises")
+      .select(LEGACY_COLUMNS)
+      .order("muscle_group").order("recommended_order").order("name");
+    setMediaColumnsReady(false);
+    // Sin el dato de estilo no podemos afirmar que un medio sea antiguo, así que
+    // lo damos por actual: no marcamos la biblioteca entera como pendiente.
+    setExercises(((legacy.data ?? []) as unknown as ExerciseRow[]).map((row) => ({
+      ...row,
+      media_style_version: MEDIA_STYLE_VERSION,
+    })));
   };
 
   useEffect(() => { fetchExercises(); }, []);
@@ -874,7 +899,7 @@ const ExerciseLibrary = () => {
               type="button"
               variant="secondary"
               size="sm"
-              disabled={pendingQueue.length === 0}
+              disabled={pendingQueue.length === 0 || !mediaColumnsReady}
               onClick={() => setMediaBatchOpen(true)}
               className="gap-1.5"
             >
@@ -884,6 +909,18 @@ const ExerciseLibrary = () => {
           )}
         </div>
       </div>
+
+      {!mediaColumnsReady && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">Falta aplicar la migración de medios</p>
+          <p className="mt-1">
+            La biblioteca funciona, pero no puede marcar estilos antiguos ni errores de generación hasta que
+            apliques <code className="rounded bg-background/60 px-1">supabase db push</code> y despliegues{" "}
+            <code className="rounded bg-background/60 px-1">exercise-video</code>. Hasta entonces «Generar pendientes»
+            está desactivado para no intentar escribir columnas que aún no existen.
+          </p>
+        </div>
+      )}
 
         <div className="space-y-4">
           {/* Search + Add */}

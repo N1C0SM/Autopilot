@@ -94,7 +94,14 @@ Deno.serve(async (req) => {
         .order("video_url", { ascending: true, nullsFirst: true })
         .order("name", { ascending: true })
         .limit(1);
-      if (pendErr) return json({ error: "No se pudo consultar la biblioteca" }, 500);
+      if (pendErr) {
+        const missing = /column .* does not exist/i.test(pendErr.message ?? "");
+        return json({
+          error: missing
+            ? "Falta aplicar la migración de medios: ejecuta `supabase db push`."
+            : "No se pudo consultar la biblioteca",
+        }, missing ? 503 : 500);
+      }
       const next = pending?.[0];
       if (!next) return json({ done: true, remaining: 0 });
       return json({ done: false, nextId: next.id, name: next.name, action: next.image_url ? "create" : "image" });
@@ -102,7 +109,16 @@ Deno.serve(async (req) => {
 
     if (!exerciseId) return json({ error: "Falta el ejercicio" }, 400);
 
-    const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, image_url, video_url, video_job_id").eq("id", exerciseId).single();
+    const { data: exercise, error: exerciseError } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, image_url, video_url, video_job_id").eq("id", exerciseId).single();
+    if (exerciseError) {
+      const missing = /column .* does not exist/i.test(exerciseError.message ?? "");
+      console.error(`exercise lookup failed: ${exerciseError.message}`);
+      return json({
+        error: missing
+          ? "Falta aplicar la migración de medios: ejecuta `supabase db push` y despliega esta función."
+          : "No se pudo leer el ejercicio",
+      }, missing ? 503 : 500);
+    }
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
 
     // Proveedor según Ajustes: tu clave de OpenAI, Lovable AI o automático.
