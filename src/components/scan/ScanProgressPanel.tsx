@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { History, TrendingUp, TrendingDown, Minus, Trophy, CalendarDays, Flame } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { signedUrlsFor } from "@/lib/storageSign";
 
 type Row = {
   id: string;
@@ -26,7 +27,13 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
         .eq("user_id", userId)
         .order("taken_at", { ascending: true });
       if (!active) return;
-      setRows((data as Row[]) || []);
+      const list = (data as Row[]) || [];
+      // progress-photos es privado: firmamos las rutas (y las URLs antiguas de ese bucket).
+      const needsSign = (v: string | null) => !!v && (!/^https?:/i.test(v) || v.includes("/progress-photos/"));
+      const values = list.map((r) => r.current_photo_url).filter((v): v is string => needsSign(v));
+      const map = values.length ? await signedUrlsFor("progress-photos", values) : new Map<string, string>();
+      if (!active) return;
+      setRows(list.map((r) => (needsSign(r.current_photo_url) ? { ...r, current_photo_url: map.get(r.current_photo_url as string) ?? null } : r)));
       setLoading(false);
     })();
     return () => {

@@ -16,56 +16,16 @@ interface Ebook { id?: string; title: string; description: string; cover_url: st
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
 interface Post { slug: string; title: string; excerpt: string | null; cover_url: string | null }
 
-const FALLBACK_EBOOKS: Ebook[] = [
-  {
-    title: "Guía en PDF: fundamentos de fuerza",
-    description:
-      "Cómo estructurar tus semanas, elegir ejercicios y progresar sin estancarte. Material autodidacta, sin entrenador.",
-    cover_url: "",
-    url: "",
-    price: "Gratis",
-  },
-  {
-    title: "Guía en PDF: nutrición sin dietas imposibles",
-    description:
-      "Calorías, proteína y comidas reales del día a día, explicado sencillo. Material autodidacta, sin entrenador.",
-    cover_url: "",
-    url: "",
-    price: "Gratis",
-  },
-];
-
-const FALLBACK_RECOS: Reco[] = [
-  {
-    title: "Proteína en polvo sencilla",
-    description: "Solo si te cuesta llegar a tu proteína diaria con comida normal. Nada milagroso.",
-    image_url: "",
-    url: "",
-    badge: "Básico",
-  },
-  {
-    title: "Creatina monohidrato",
-    description: "El suplemento con más respaldo para fuerza y rendimiento. 3-5 g al día.",
-    image_url: "",
-    url: "",
-    badge: "Recomendado",
-  },
-  {
-    title: "Bandas elásticas",
-    description: "Para entrenar en casa o de viaje sin perder el ritmo de tu plan.",
-    image_url: "",
-    url: "",
-    badge: "En casa",
-  },
-];
+// Sin contenido de reserva: si no hay libros o recomendaciones reales en la base de
+// datos, esas secciones simplemente no se muestran (nada de material inventado).
 
 const Recursos = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [ebooks, setEbooks] = useState<Ebook[]>(FALLBACK_EBOOKS);
+  const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [previewBook, setPreviewBook] = useState<Ebook | null>(null);
   const [previewReco, setPreviewReco] = useState<PreviewItem | null>(null);
-  const [recos, setRecos] = useState<Reco[]>(FALLBACK_RECOS);
+  const [recos, setRecos] = useState<Reco[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [flags, setFlags] = useState({ blog: true, ebooks: true, recos: true });
 
@@ -105,11 +65,9 @@ const Recursos = () => {
       }
 
       if (s) {
-        const dbEbooks = Array.isArray(s.ebooks) ? s.ebooks : [];
         const dbRecos = Array.isArray(s.recommendations) ? s.recommendations : [];
-        const combined = fromLibrary;
-        setEbooks(combined.length > 0 ? combined : FALLBACK_EBOOKS);
-        setRecos(dbRecos.length > 0 ? dbRecos : FALLBACK_RECOS);
+        setEbooks(fromLibrary);
+        setRecos(dbRecos);
         setFlags({
           blog: s.show_blog ?? true,
           ebooks: true,
@@ -160,7 +118,7 @@ const Recursos = () => {
             Todo lo que <span className="text-gradient">complementa</span> tu plan
           </h1>
           <p className="text-sm text-muted-foreground mt-3">
-            Ebooks, suplementos que realmente usamos y los últimos artículos del equipo.
+            Ebooks, recomendaciones de material y los últimos artículos del equipo.
           </p>
         </div>
 
@@ -218,7 +176,7 @@ const Recursos = () => {
               <h2 className="text-2xl font-bold font-display">Material para estudiar por tu cuenta</h2>
               <p className="text-xs text-muted-foreground mt-2 max-w-xl leading-relaxed">
                 Son documentos PDF para leer tú solo. No incluyen entrenador, plan personalizado ni seguimiento:
-                eso es el Programa Transformación.
+                eso es el plan Coach.
               </p>
             </div>
 

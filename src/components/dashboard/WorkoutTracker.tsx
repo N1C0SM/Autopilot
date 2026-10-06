@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
-  Timer, TrendingUp, X, Video, Save, Trophy,
+  Timer, TrendingUp, X, Video, Save, Trophy, Info,
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
 import VideoEmbed from "@/components/VideoEmbed";
+import ExerciseMedia from "@/components/ExerciseMedia";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
@@ -62,6 +64,16 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [restTarget, setRestTarget] = useState(0);
   const [rpeOpen, setRpeOpen] = useState(false);
   const [showVideo, setShowVideo] = useState<Record<string, boolean>>({});
+  const [technique, setTechnique] = useState<{
+    name: string;
+    image?: string | null;
+    video?: string | null;
+    series?: string;
+    reps?: string;
+    rest?: string;
+    category?: string | null;
+    type?: string | null;
+  } | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
@@ -964,7 +976,45 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                     )}
 
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Ver ficha de técnica de ${ex.name}`}
+                      title="Ver ficha de técnica"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTechnique({
+                          name: ex.name,
+                          image: ex.image_url || metadata?.image_url,
+                          video: exerciseVideo,
+                          series: ex.series != null ? String(ex.series) : undefined,
+                          reps: ex.reps != null ? String(ex.reps) : undefined,
+                          rest: ex.rest,
+                          category: exerciseCategory,
+                          type: exerciseType,
+                        });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setTechnique({
+                            name: ex.name,
+                            image: ex.image_url || metadata?.image_url,
+                            video: exerciseVideo,
+                            series: ex.series != null ? String(ex.series) : undefined,
+                            reps: ex.reps != null ? String(ex.reps) : undefined,
+                            rest: ex.rest,
+                            category: exerciseCategory,
+                            type: exerciseType,
+                          });
+                        }
+                      }}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                    >
+                      <Info className="w-4 h-4" />
+                    </span>
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-muted-foreground" />
                     ) : (
@@ -1186,6 +1236,53 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           </div>}
         </div>
       )}
+
+      {/* Ficha de técnica: foto grande y vídeo del ejercicio */}
+      <Sheet open={!!technique} onOpenChange={(open) => { if (!open) setTechnique(null); }}>
+        <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
+          <div className="w-full overflow-hidden bg-black">
+            <ExerciseMedia video={technique?.video} image={technique?.image} name={technique?.name} />
+          </div>
+          <div className="p-4 pb-8 space-y-4">
+            <SheetHeader className="p-0 space-y-0 text-left">
+              <SheetTitle className="font-display text-xl font-bold">{technique?.name}</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Series</p>
+                <p className="font-bold text-lg font-display">{technique?.series ?? "—"}</p>
+              </div>
+              <div className="rounded-xl bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Reps</p>
+                <p className="font-bold text-lg font-display">{technique?.reps ?? "—"}</p>
+              </div>
+              <div className="rounded-xl bg-secondary/40 p-3 text-center">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Descanso</p>
+                <p className="font-bold text-sm font-display mt-1.5">{technique?.rest ?? "—"}</p>
+              </div>
+            </div>
+            {(technique?.category || technique?.type) && (
+              <div className="flex flex-wrap gap-1.5">
+                {technique?.category && (
+                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                    {technique.category}
+                  </span>
+                )}
+                {technique?.type && (
+                  <span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground">
+                    {technique.type}
+                  </span>
+                )}
+              </div>
+            )}
+            {!technique?.video && (
+              <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+                El vídeo de la técnica todavía no está disponible. Pregunta a tu entrenador por el chat.
+              </p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
     </div>

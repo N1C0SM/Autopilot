@@ -21,13 +21,16 @@ export default function LockedInsightsGrid({
   insights?: Insight[];
   onCta: () => void;
 }) {
-  const items = (insights && insights.length >= 4 ? insights : [...(insights || []), ...FALLBACK]).slice(0, 8);
+  // Si la IA no devolvió insights suficientes usamos ejemplos, y lo decimos: nunca
+  // los presentamos como si fueran el análisis real de este usuario.
+  const hasRealInsights = !!insights && insights.length >= 4;
+  const items = (hasRealInsights ? insights! : [...(insights || []), ...FALLBACK]).slice(0, 8);
 
   return (
     <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-5 mt-4">
       <div className="flex items-center justify-between mb-4">
         <div className="text-[10px] uppercase tracking-widest text-primary flex items-center gap-1.5">
-          <Lock className="w-3 h-3" /> {items.length} insights bloqueados
+          <Lock className="w-3 h-3" /> {hasRealInsights ? `${items.length} insights bloqueados` : "Ejemplos de lo que incluye tu plan"}
         </div>
         <button
           onClick={onCta}
@@ -36,6 +39,11 @@ export default function LockedInsightsGrid({
           <Sparkles className="w-3 h-3" /> Desbloquear todos
         </button>
       </div>
+      {!hasRealInsights && (
+        <p className="mb-4 text-[11px] text-muted-foreground">
+          Ejemplos del tipo de recomendaciones que recibes con un plan. Las tuyas se calculan con tu análisis.
+        </p>
+      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
         {items.map((li, i) => (
           <motion.button

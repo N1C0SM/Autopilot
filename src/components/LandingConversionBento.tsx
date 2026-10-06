@@ -54,6 +54,7 @@ const steps = [
 ];
 
 const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
+  const coachName = trainer.trainer_name?.trim() || "tu entrenador";
   const visibleTestimonials = testimonials.slice(0, 3);
 
   return (
@@ -83,7 +84,7 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
                   </span>
                   <h3 className="font-display text-2xl font-bold">Tu semana cambia. Tu entrenamiento también.</h3>
                   <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                    {trainer.trainer_name} revisa tu situación y prepara tu plan. Si cambian tus horarios, tu material o tus sensaciones, tienes a quién escribir.
+                    Autopilot adapta tu plan a lo que registras. Y con el plan Coach, {coachName} revisa tu situación, prepara tu plan y te responde si cambian tus horarios, tu material o tus sensaciones.
                   </p>
                 </div>
                 {trainer.trainer_photo_url ? (
@@ -98,8 +99,8 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
               </div>
               <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" /> Plan personal</span>
-                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" /> Chat directo</span>
-                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" /> Ajustes reales</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" /> Ajustes al registrar</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-success" /> Chat directo (Coach)</span>
               </div>
             </article>
           </ScrollReveal>
@@ -121,9 +122,9 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
                   </span>
                 )}
                 <div>
-                  <p className="text-sm font-semibold">{trainer.trainer_name}</p>
+                  <p className="text-sm font-semibold">{trainer.trainer_name?.trim() || "Entrenador real"}</p>
                   <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <span className="h-1.5 w-1.5 rounded-full bg-success" /> Tu entrenador
+                    <span className="h-1.5 w-1.5 rounded-full bg-success" /> Plan Coach
                   </p>
                 </div>
               </div>
@@ -137,7 +138,7 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
                 </div>
               </div>
               <div className="mt-auto flex items-center gap-2 pt-5 text-xs text-muted-foreground">
-                <MessageCircle className="h-3.5 w-3.5 text-primary" /> Hablas con una persona, no con un bot
+                <MessageCircle className="h-3.5 w-3.5 text-primary" /> Chat con una persona real (plan Coach)
               </div>
             </article>
           </ScrollReveal>

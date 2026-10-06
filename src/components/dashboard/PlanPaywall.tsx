@@ -24,13 +24,16 @@ export const PlanPaywall = ({
   plan,
   onChoose,
   allowCoach = false,
+  defaultPlan,
 }: {
   plan: "plus" | "coach";
   onChoose: (tier: TierKey) => void;
   allowCoach?: boolean;
+  /** Plan que el usuario ya eligió en la web, para no obligarle a elegir otra vez. */
+  defaultPlan?: TierKey;
 }) => {
   const options: TierKey[] = allowCoach ? ["training", "full"] : [plan === "plus" ? "training" : "full"];
-  const [selected, setSelected] = useState<TierKey>(options[0]);
+  const [selected, setSelected] = useState<TierKey>(defaultPlan && options.includes(defaultPlan) ? defaultPlan : options[0]);
   const t = TIERS[selected];
 
   return (

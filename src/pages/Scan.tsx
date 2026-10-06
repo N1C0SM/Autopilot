@@ -53,6 +53,7 @@ import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
 import { MONTHLY_PRICE_EUR, TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
+import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -167,6 +168,8 @@ type GoalPhysique = {
   description: string;
   image_url: string;
   user_id?: string | null;
+  /** Ruta original en el bucket cuando `image_url` ya es una URL firmada para mostrar. */
+  storage_path?: string;
 };
 
 const fileToDataUrl = (file: File): Promise<string> =>
@@ -319,6 +322,7 @@ const Scan = () => {
   const [goalPresets, setGoalPresets] = useState<GoalPhysique[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
   const [savedObjectiveUrl, setSavedObjectiveUrl] = useState<string | null>(null);
+  const [savedObjectivePath, setSavedObjectivePath] = useState<string | null>(null);
   const [editingObjective, setEditingObjective] = useState(false);
   const [hasObjectiveChoice, setHasObjectiveChoice] = useState<"unset" | "yes" | "no">("unset");
   const [savedGoalText, setSavedGoalText] = useState<string | null>(null);
@@ -357,6 +361,7 @@ const Scan = () => {
       .then(({ data }: any) => {
         const url = data?.goal_photo_url ?? null;
         if (url) {
+          setSavedObjectivePath(url);
           // Bucket es privado: firmar la URL para visualización y para enviar al análisis IA.
           import("@/lib/storageSign").then(({ signedUrlFor }) =>
             signedUrlFor("progress-photos", url).then((signed) => {
@@ -377,7 +382,15 @@ const Scan = () => {
       .from("goal_physiques")
       .select("id, name, description, image_url, user_id")
       .order("sort_order", { ascending: true });
-    setGoalPresets(((data as GoalPhysique[]) ?? []));
+    const rows = ((data as GoalPhysique[]) ?? []);
+    // Las imágenes propias viven en progress-photos (privado): firmamos para poder mostrarlas.
+    const own = rows.map((r) => r.image_url).filter((u): u is string => !!u && !/^https?:/i.test(u));
+    const map = own.length ? await signedUrlsFor("progress-photos", own) : new Map<string, string>();
+    setGoalPresets(rows.map((r) => {
+      if (!r.image_url || /^https?:/i.test(r.image_url)) return r;
+      const signed = map.get(r.image_url);
+      return signed ? { ...r, storage_path: r.image_url, image_url: signed } : r;
+    }));
   };
   useEffect(() => {
     loadGoalPresets();
@@ -515,7 +528,7 @@ const Scan = () => {
     const prevTitle = document.title;
     const title = "AI Scan Autopilot Plan – Analiza tu físico con IA gratis";
     const description =
-      "AI Scan de Autopilot Plan: sube una foto y la IA analiza tu físico, potencial y mejoras en 60 segundos. Gratis y sin registro.";
+      "AI Scan de Autopilot Plan: sube una foto y la IA analiza tu físico, potencial y mejoras en menos de un minuto (aprox.). Gratis y sin registro.";
     document.title = title;
 
     const setMeta = (selector: string, attr: string, value: string, create?: () => HTMLElement) => {
@@ -727,7 +740,7 @@ const Scan = () => {
         if (r) {
           const recipient = leadEmail.trim();
           const cardImageUrl = await uploadScanCard();
-          await supabase.functions.invoke("send-transactional-email", {
+          const { error: emailError } = await supabase.functions.invoke("send-transactional-email", {
             body: {
               templateName: "scan-diagnosis",
               recipientEmail: recipient,
@@ -751,6 +764,8 @@ const Scan = () => {
               },
             },
           });
+          // Solo confirmamos el envío si la función no devolvió error.
+          if (emailError) throw emailError;
           toast.success("Te hemos enviado el diagnóstico por email ✓");
         }
       } catch (err) {
@@ -818,8 +833,10 @@ const Scan = () => {
     }
   };
 
-  // Upload a dataURL photo to the user's progress-photos folder and return public URL.
-  const uploadDataUrl = async (dataUrl: string, suffix: string): Promise<string | null> => {
+  // Sube una foto (dataURL) a la carpeta del usuario en progress-photos y devuelve
+  // la RUTA almacenada y una URL firmada para mostrarla. El bucket es privado: una
+  // URL pública no carga nunca.
+  const uploadDataUrl = async (dataUrl: string, suffix: string): Promise<{ path: string; url: string } | null> => {
     if (!user) return null;
     try {
       const blob = await (await fetch(dataUrl)).blob();
@@ -827,8 +844,9 @@ const Scan = () => {
       const path = `${user.id}/scan_${Date.now()}_${suffix}.${ext}`;
       const { error } = await supabase.storage.from("progress-photos").upload(path, blob, { upsert: false, contentType: blob.type });
       if (error) return null;
-      const { data } = supabase.storage.from("progress-photos").getPublicUrl(path);
-      return data.publicUrl;
+      const url = await signedUrlFor("progress-photos", path, 60 * 60 * 24 * 7);
+      if (!url) return null;
+      return { path, url };
     } catch { return null; }
   };
 
@@ -851,22 +869,23 @@ const Scan = () => {
     }
     setSavingCustomGoal(true);
     try {
-      const publicUrl = await uploadDataUrl(dataUrl, "goal");
-      if (!publicUrl) throw new Error("upload failed");
+      const uploaded = await uploadDataUrl(dataUrl, "goal");
+      if (!uploaded) throw new Error("upload failed");
       const { data, error } = await (supabase as any)
         .from("goal_physiques")
         .insert({
           user_id: user.id,
           name,
           description: "",
-          image_url: publicUrl,
+          image_url: uploaded.path,
           visible: false,
           sort_order: 999,
         })
         .select("id, name, description, image_url, user_id")
         .single();
       if (error) throw error;
-      const preset = data as GoalPhysique;
+      // Guardamos la ruta en la base de datos y mostramos la URL firmada.
+      const preset = { ...(data as GoalPhysique), storage_path: uploaded.path, image_url: uploaded.url };
       setGoalPresets((prev) => [...prev, preset]);
       setObjectiveImg(preset.image_url);
       setSelectedPresetId(preset.id);
@@ -884,7 +903,7 @@ const Scan = () => {
     if (!user || !userEmail) return;
     setAutoSaving(true);
     try {
-      const [frontUrl, backUrl, objUrl] = await Promise.all([
+      const [front, back, obj] = await Promise.all([
         currentImg ? uploadDataUrl(currentImg, "front") : Promise.resolve(null),
         backImg ? uploadDataUrl(backImg, "back") : Promise.resolve(null),
         objectiveImg ? uploadDataUrl(objectiveImg, "objective") : Promise.resolve(null),
@@ -892,9 +911,9 @@ const Scan = () => {
 
       const { error: insErr } = await (supabase as any).from("scan_history").insert({
         user_id: user.id,
-        current_photo_url: frontUrl,
-        back_photo_url: backUrl,
-        objective_photo_url: objUrl,
+        current_photo_url: front?.path ?? null,
+        back_photo_url: back?.path ?? null,
+        objective_photo_url: obj?.path ?? null,
         result: r,
         attractiveness: r.attractiveness,
         potential: r.potential,
@@ -928,7 +947,7 @@ const Scan = () => {
             summary: r.summary ?? undefined,
             priorities: (r.improvements ?? []).slice(0, 5),
             lockedInsights: (r.locked_insights ?? []).slice(0, 3),
-            photoUrl: frontUrl ?? undefined,
+            photoUrl: front?.url ?? undefined,
             reportUrl: "https://autopilotplan.com/dashboard",
             cardImageUrl: cardImageUrl ?? undefined,
             SCAN_IMAGE_URL: cardImageUrl ?? undefined,
@@ -976,6 +995,39 @@ const Scan = () => {
     if (!ok) return;
     setResettingProgress(true);
     try {
+      // Antes de borrar el historial, borramos también las fotos del bucket privado:
+      // si no, el usuario cree que las ha eliminado y siguen guardadas.
+      type ScanHistoryPhotoRow = {
+        current_photo_url: string | null;
+        back_photo_url: string | null;
+        objective_photo_url: string | null;
+      };
+      const scanHistoryClient = supabase as unknown as {
+        from: (table: string) => {
+          select: (columns: string) => {
+            eq: (column: string, value: string) => Promise<{ data: ScanHistoryPhotoRow[] | null }>;
+          };
+        };
+      };
+      const { data: rows } = await scanHistoryClient
+        .from("scan_history")
+        .select("current_photo_url, back_photo_url, objective_photo_url")
+        .eq("user_id", user.id);
+      const toPath = (v: unknown): string | null => {
+        if (typeof v !== "string" || !v) return null;
+        const marker = "/progress-photos/";
+        const idx = v.indexOf(marker);
+        if (idx >= 0) return v.substring(idx + marker.length).split("?")[0] || null;
+        return /^https?:/i.test(v) ? null : v;
+      };
+      const paths = (rows ?? [])
+        .flatMap((r) => [r.current_photo_url, r.back_photo_url, r.objective_photo_url])
+        .map(toPath)
+        .filter((p): p is string => !!p);
+      if (paths.length > 0) {
+        const { error: removeError } = await supabase.storage.from("progress-photos").remove(paths);
+        if (removeError) console.warn("No se pudieron borrar todas las fotos del scan", removeError);
+      }
       const { error } = await (supabase as any)
         .from("scan_history")
         .delete()
@@ -991,6 +1043,21 @@ const Scan = () => {
       setResettingProgress(false);
     }
   };
+
+  // Destino del CTA: si el scan ya recomendó un plan, lo llevamos hasta el registro
+  // para no obligar al usuario a elegir otra vez.
+  const signupWithPlan = (() => {
+    if (user) return "/dashboard";
+    if (result) {
+      const { rec } = recommendFor({
+        bottleneck: result.bottleneck,
+        improvements: result.improvements,
+        monthsWithPlan: result.months_with_plan,
+      });
+      if (rec.kind === "plan") return `${rec.to}&from=scan`;
+    }
+    return "/signup?from=scan";
+  })();
 
   if (isUnauthorized || isAwaitingAuth) {
     return (
@@ -1020,7 +1087,7 @@ const Scan = () => {
       {result && !isPaid && (
         // Sólo embudo para visitantes anónimos: usuarios logueados ven modo cuenta.
         !user &&
-        <StickyConversionBar onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")} />
+        <StickyConversionBar onCta={() => navigate(signupWithPlan)} />
       )}
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
@@ -1096,7 +1163,7 @@ const Scan = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <Target className="w-4 h-4 text-primary" />
                       <h2 className="font-display font-bold text-base truncate">
-                        {goalPresets.find((p) => p.image_url === savedObjectiveUrl)?.name || savedGoalText || "Tu objetivo actual"}
+                        {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || savedGoalText || "Tu objetivo actual"}
                       </h2>
                     </div>
                     <p className="text-[12px] text-muted-foreground">
@@ -1360,7 +1427,7 @@ const Scan = () => {
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                    100% privado
+                    Privado: solo para tu análisis
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
@@ -1368,7 +1435,7 @@ const Scan = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                    60 segundos
+                    Menos de 1 minuto
                   </div>
                 </div>
               </div>
@@ -1589,7 +1656,8 @@ const Scan = () => {
                 <div className="flex items-start gap-2 pt-1">
                   <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    Tu foto no se publica ni se comparte. Puedes solicitar su eliminación cuando quieras.
+                    Tu foto no se publica ni se comparte con otros usuarios. Se usa para tu análisis y se guarda en tu
+                    cuenta privada; puedes eliminarla cuando quieras.
                   </p>
                 </div>
               </div>
@@ -1949,24 +2017,25 @@ const Scan = () => {
                   {!isPaid && !user && (
                     <LockedInsightsGrid
                       insights={result.locked_insights}
-                      onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
+                      onCta={() => navigate(signupWithPlan)}
                     />
                   )}
                 </div>
               </div>
 
-              {/* === CAPA CLÍNICA — lo que ChatGPT no te da === */}
+              {/* === CAPA DE DETALLE — lectura estimada por IA === */}
               {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
                 <div className="max-w-5xl mx-auto mt-10 space-y-4">
                   <div className="text-center mb-2">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
                       <Gauge className="w-3.5 h-3.5 text-primary" />
                       <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-                        Diagnóstico clínico
+                        Lectura estimada por IA
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
-                      Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable. Esto es lo que un chat genérico no puede darte.
+                      Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable a partir de tus
+                      fotos. Es una estimación visual, no un diagnóstico médico.
                     </p>
                   </div>
 
@@ -2142,11 +2211,11 @@ const Scan = () => {
                       </div>
                     )}
 
-                    {/* Marcadores genéticos */}
+                    {/* Marcadores visuales (no genéticos) */}
                     {result.genetic_markers && result.genetic_markers.length > 0 && (
                       <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
                         <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
-                          <Dna className="w-3 h-3" /> Lo que te da (y te quita) tu genética
+                          <Dna className="w-3 h-3" /> Rasgos visuales que juegan a tu favor (o en contra)
                         </div>
                         <ul className="space-y-2">
                           {result.genetic_markers.map((g, i) => (
@@ -2156,6 +2225,9 @@ const Scan = () => {
                             </li>
                           ))}
                         </ul>
+                        <p className="mt-3 text-[11px] text-muted-foreground">
+                          Señales observadas en tus fotos: no es un estudio genético.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -2238,7 +2310,7 @@ const Scan = () => {
                   monthsWithoutPlan={result.months_without_plan}
                   priorities={(result.improvements || []).slice(0, 3).map((i) => i.label)}
                   bottleneck={result.bottleneck}
-                  onCta={() => navigate(user ? "/dashboard" : "/signup?from=scan")}
+                  onCta={() => navigate(signupWithPlan)}
                 />
               )}
               {!isPaid && !user && <SocialProofStrip />}
@@ -2281,13 +2353,12 @@ const Scan = () => {
                     </h3>
                     <p className="text-muted-foreground max-w-xl mx-auto mb-8">
                       La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
-                      Te montamos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin él, dentro de 6 meses
-                      estarás haciéndote el mismo scan con el mismo resultado.
+                      Te proponemos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin cambios de fondo,
+                      lo más probable es que el siguiente scan siga pareciéndose a este.
                     </p>
                     <div className="flex items-baseline justify-center gap-3 mb-5">
-                      <span className="text-sm text-muted-foreground line-through">Coach 1:1 desde 200€/mes</span>
                       <span className="text-3xl font-bold font-display text-gradient">Desde {MONTHLY_PRICE_EUR}€/mes</span>
-                      <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días gratis</span>
+                      <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días de prueba</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       {(() => {
@@ -2310,7 +2381,7 @@ const Scan = () => {
                     </div>
                     {!user && (
                       <p className="text-[11px] text-muted-foreground mt-3">
-                        7 días gratis en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
+                        7 días de prueba en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
                       </p>
                     )}
                     <div className="flex items-center gap-4 mt-6 justify-center text-xs text-muted-foreground flex-wrap">
@@ -2355,7 +2426,7 @@ const Scan = () => {
                     </Button>
                   )}
                   {!routeUserId && !user && (
-                    <Button variant="hero" size="xl" onClick={() => navigate("/signup?from=scan")}>
+                    <Button variant="hero" size="xl" onClick={() => navigate(signupWithPlan)}>
                       Empezar mi plan
                       <ArrowRight className="w-4 h-4" />
                     </Button>

@@ -31,6 +31,56 @@ export async function signedUrlFor(
   }
 }
 
+/** TTL por defecto (segundos) de las URLs firmadas. */
+export const DEFAULT_SIGNED_URL_TTL_SEC = 3600;
+
+/** Margen (segundos) con el que conviene renovar antes de que la firma caduque. */
+export const SIGNED_URL_REFRESH_MARGIN_SEC = 300;
+
+/**
+ * Extrae la ruta del objeto dentro del bucket a partir de una URL completa
+ * (pública o firmada) o de una ruta ya almacenada. Descarta el query string
+ * (por ejemplo `?token=...`) y devuelve null si no queda ruta utilizable.
+ *
+ * Se usa para borrar el objeto del bucket sin depender del formato con el que
+ * se guardó el valor (rutas nuevas o URLs antiguas).
+ */
+export function storagePathFor(bucket: string, urlOrPath: string | null | undefined): string | null {
+  if (!urlOrPath) return null;
+  const marker = `/${bucket}/`;
+  const idx = urlOrPath.indexOf(marker);
+  const raw = idx >= 0 ? urlOrPath.substring(idx + marker.length) : urlOrPath;
+  const path = raw.split("?")[0].trim();
+  return path || null;
+}
+
+export interface SignedUrlBatch {
+  /** Mapa con las URLs firmadas, igual que en `signedUrlsFor`. */
+  urls: Map<string, string>;
+  /** Momento (epoch ms) en el que las firmas dejan de ser válidas. */
+  expiresAtMs: number;
+  /** Momento (epoch ms) recomendado para volver a firmar (caducidad - margen). */
+  refreshAtMs: number;
+}
+
+/**
+ * Igual que `signedUrlsFor`, pero además informa de cuándo caducan las firmas
+ * para que quien las consume pueda renovarlas antes de que las imágenes se
+ * rompan (pestañas abiertas mucho tiempo). Nunca lanza: si una firma falla,
+ * simplemente no aparece en el mapa.
+ */
+export async function signedUrlsWithExpiry(
+  bucket: string,
+  values: (string | null | undefined)[],
+  expiresInSec = DEFAULT_SIGNED_URL_TTL_SEC
+): Promise<SignedUrlBatch> {
+  const urls = await signedUrlsFor(bucket, values, expiresInSec);
+  const now = Date.now();
+  const expiresAtMs = now + expiresInSec * 1000;
+  const marginSec = Math.min(SIGNED_URL_REFRESH_MARGIN_SEC, Math.max(1, expiresInSec / 2));
+  return { urls, expiresAtMs, refreshAtMs: expiresAtMs - marginSec * 1000 };
+}
+
 /**
  * Batch-sign multiple URLs/paths. Returns a Map keyed by the original value.
  */

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, Target, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, Target, MoreHorizontal, KeyRound } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -499,6 +499,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           <TabsTrigger value="perfil" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Perfil</span>
            </TabsTrigger>
+          {!restricted && (
+            <TabsTrigger value="acceso" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <KeyRound className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Acceso</span>
+            </TabsTrigger>
+          )}
           {restricted && profile.payment_status !== "paid" && (
             <TabsTrigger value="chat" className="group flex-1 min-w-0 text-xs gap-1.5 whitespace-nowrap">
               <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="hidden group-data-[state=active]:inline sm:inline truncate">Chat</span>
@@ -725,7 +730,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               )}
             </details>
           )}
+        </TabsContent>
+
+        {/* Tab: Acceso (roles y entrenador responsable, aparte del perfil para no acumular scroll) */}
         {!restricted && (
+          <TabsContent value="acceso" className="space-y-6">
           <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
               <div>
                 <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
@@ -788,9 +797,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               )}
             </div>
-          )}
-        </TabsContent>
-
+          </TabsContent>
+        )}
 
         {/* Tab: Progress */}
         <TabsContent value="progress">

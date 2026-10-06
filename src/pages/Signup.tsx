@@ -170,10 +170,10 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
-        <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta. Entrenador opcional." />
+        <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar; entrenador real solo en el plan Coach." />
         <link rel="canonical" href="https://autopilotplan.com/signup" />
         <meta property="og:title" content="Crear cuenta · Autopilot" />
-        <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Añade seguimiento de entrenador cuando lo necesites." />
+        <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Plus adapta el plan y Coach añade un entrenador real." />
         <meta property="og:url" content="https://autopilotplan.com/signup" />
       </Helmet>
       <div className="w-full max-w-md">
@@ -219,7 +219,7 @@ const Signup = () => {
                 Potencial <span className="font-bold text-foreground">{scanCtx.result.potential.toFixed(1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
               </p>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                7 días gratis · Sin tarjeta · Cancelas cuando quieras
+                7 días de prueba · no se cobra hasta el día 8 · cancelas cuando quieras
               </p>
             </div>
           </div>
@@ -231,7 +231,7 @@ const Signup = () => {
               <Sparkles className="w-4 h-4" /> Tu plan personalizado está reservado
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              7 días gratis · Sin tarjeta para empezar
+              7 días de prueba · se pide tarjeta al contratar, no se cobra hasta el día 8
             </p>
           </div>
         )}

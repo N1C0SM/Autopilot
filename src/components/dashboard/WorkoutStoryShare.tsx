@@ -250,7 +250,16 @@ export function WorkoutStoryShare(props: Props) {
       const blob = await renderStory(props, variant);
       const file = new File([blob], "autopilot-entreno.png", { type: "image/png" });
       if (mode === "share" && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: "Mi entreno en Autopilot" });
+        try {
+          await navigator.share({ files: [file], title: "Mi entreno en Autopilot" });
+        } catch (shareError) {
+          // El usuario canceló el menú nativo: no hay nada que hacer.
+          if ((shareError as Error)?.name === "AbortError") return;
+          // La imagen SÍ se creó; el fallo es solo del menú de compartir.
+          console.error("Native share failed, falling back to download", shareError);
+          download(blob);
+          toast.error("No se pudo abrir el menú de compartir. Imagen descargada, súbela a tu historia.");
+        }
       } else {
         download(blob);
         if (mode === "share") toast.success("Imagen descargada. Súbela a tu historia.");

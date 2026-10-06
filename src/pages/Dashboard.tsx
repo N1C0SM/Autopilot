@@ -44,6 +44,16 @@ const SectionFallback = () => (
   <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
 );
 
+/** Plan que el usuario eligió en la web antes de registrarse (si lo hay). */
+const readLandingPlan = (): "training" | "full" | undefined => {
+  try {
+    const stored = sessionStorage.getItem("autopilot_selected_plan");
+    return stored === "training" || stored === "full" ? stored : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export interface Profile {
   user_id: string;
   email: string;
@@ -82,6 +92,7 @@ const Dashboard = () => {
   const [macros, setMacros] = useState<Macros | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [landingPlan] = useState<"training" | "full" | undefined>(readLandingPlan);
   const [section, setSectionState] = useState<MobileTab>(() => {
     try {
       const saved = sessionStorage.getItem("autopilot_section");
@@ -399,7 +410,7 @@ const Dashboard = () => {
         </div>
       )}
       {!coaching && section === "nutrition" && (
-        <PlanPaywall plan="plus" allowCoach onChoose={(tier) => handleCompletePayment(tier)} />
+        <PlanPaywall plan="plus" allowCoach defaultPlan={landingPlan} onChoose={(tier) => handleCompletePayment(tier)} />
       )}
       {!coaching && section === "chat" && (
         <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
@@ -439,7 +450,7 @@ const Dashboard = () => {
               <div className="pt-3"><TravelModeCard userId={user.id} /></div>
             </details>
           )}
-          {!coaching && !firstWeek && <CoachingOffer onChoose={handleCompletePayment} compact />}
+          {!coaching && !firstWeek && <CoachingOffer onChoose={handleCompletePayment} compact defaultPlan={landingPlan} />}
         </div>
       )}
 

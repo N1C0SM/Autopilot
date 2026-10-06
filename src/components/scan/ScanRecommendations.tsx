@@ -18,46 +18,46 @@ type Item = {
 
 const GUIDES: Record<string, Item> = {
   base: {
-    name: "Base de Fuerza",
-    price: "9,90 €",
-    why: "Lo primero para ti es la técnica y los básicos. Esta guía te los enseña paso a paso.",
+    name: "Guía: técnica y básicos",
+    price: "",
+    why: "Lo primero para ti es la técnica y los básicos. En Recursos tienes las guías en PDF del equipo.",
     to: "/recursos",
-    cta: "Ver la guía",
+    cta: "Ver en Recursos",
     kind: "guia",
   },
   atlas: {
-    name: "Atlas de Progresiones",
-    price: "14,90 €",
-    why: "Estás estancado: aquí tienes las variantes y progresiones para volver a avanzar.",
+    name: "Guía: progresiones",
+    price: "",
+    why: "Estás estancado: en Recursos tienes material sobre variantes y progresiones para volver a avanzar.",
     to: "/recursos",
-    cta: "Ver la guía",
+    cta: "Ver en Recursos",
     kind: "guia",
   },
   blueprint: {
-    name: "Blueprint",
-    price: "19,90 €",
-    why: "Te falta orden más que esfuerzo. Con esto organizas tus próximas 12 semanas.",
+    name: "Guía: planificación",
+    price: "",
+    why: "Te falta orden más que esfuerzo. En Recursos tienes guías para organizar tus próximas semanas.",
     to: "/recursos",
-    cta: "Ver la guía",
+    cta: "Ver en Recursos",
     kind: "guia",
   },
 };
 
 const PLANS: Record<string, Item> = {
   training: {
-    name: "Entrenamiento",
+    name: "Plus",
     price: "29 €/mes",
-    why: "Un entrenador real prepara tu entrenamiento y lo ajusta cada semana según tus avances.",
+    why: "Autopilot genera tu entrenamiento y lo adapta automáticamente según tus avances, con IA avanzada y nutrición.",
     to: "/signup?plan=training",
-    cta: "Empezar con entrenador",
+    cta: "Empezar con Plus",
     kind: "plan",
   },
   full: {
-    name: "Completo",
+    name: "Coach",
     price: "49 €/mes",
-    why: "Entrenamiento y nutrición preparados por un entrenador real, con seguimiento por chat.",
+    why: "Todo lo de Plus y, además, un entrenador real asignado: revisa tu plan y te responde por chat.",
     to: "/signup?plan=full",
-    cta: "Empezar con entrenador",
+    cta: "Empezar con Coach",
     kind: "plan",
   },
 };
@@ -114,7 +114,7 @@ export default function ScanRecommendations({ bottleneck, improvements, monthsWi
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold">
-              {rec.name} · {rec.price}
+              {rec.name}{rec.price ? ` · ${rec.price}` : ""}
             </div>
             <div className="text-[13px] text-muted-foreground leading-snug mt-0.5">{rec.why}</div>
             <div className="text-[12px] text-primary font-medium mt-2">{rec.cta}</div>
@@ -124,10 +124,10 @@ export default function ScanRecommendations({ bottleneck, improvements, monthsWi
 
         <p className="mt-4 text-[11px] text-muted-foreground">
           {rec.kind === "guia"
-            ? "Si prefieres que alguien lo prepare y lo ajuste contigo, puedes ver los planes con entrenador real."
-            : "Si por ahora prefieres ir por tu cuenta, tienes las guías desde 9,90 € en Recursos."}{" "}
+            ? "Si prefieres que tu plan lo genere y lo adapte Autopilot, o que además lo lleve un entrenador real, mira los planes."
+            : "Si por ahora prefieres ir por tu cuenta, tienes las guías en PDF en Recursos."}{" "}
           <Link
-            to={rec.kind === "guia" ? "/#planes" : "/recursos"}
+            to={rec.kind === "guia" ? "/#pricing" : "/recursos"}
             className="underline underline-offset-2 hover:text-foreground"
           >
             {rec.kind === "guia" ? "Ver planes" : "Ver guías"}

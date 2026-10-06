@@ -31,8 +31,8 @@ export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
               <Zap className="w-4 h-4 text-primary" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold truncate">Plan preparado por tu entrenador · 1ª semana gratis</div>
-              <div className="text-[10px] text-muted-foreground truncate">Desde 29€/mes · no se cobra hasta el día 8</div>
+              <div className="text-xs font-semibold truncate">Tu plan, adaptado a ti · 7 días de prueba</div>
+              <div className="text-[10px] text-muted-foreground truncate">Plus desde 29€/mes · entrenador real en Coach · no se cobra hasta el día 8</div>
             </div>
             <button
               onClick={onCta}

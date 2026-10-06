@@ -11,11 +11,12 @@
 - [x] Clarificar toda la landing: el entrenador real prepara y ajusta el plan; la IA solo apoya el análisis inicial.
 - [x] Simplificar y reorganizar toda la landing con una composición modular orientada a compra y uso real.
 - [x] Auditar y convertir el entrenamiento del cliente en un tracker de gimnasio realmente utilizable, revisando también entrenador y administración.
-- [ ] Mejorar conversión integral de landing, escáner, planes y recursos sin claims inventados
-- [ ] Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
+- [x] Mejorar conversión integral de landing, escáner, planes y recursos sin claims inventados
+      Landing, escáner, recursos y legal alineados con los entitlements reales (Plus 29€ = IA + adaptación + nutrición, sin entrenador; Coach 49€ = entrenador real). Eliminados: badges de App Store/Play que apuntaban a Apple Fitness y Google Fit por defecto, comparativa inventada «Coach 1:1 desde 200€/mes», «diagnóstico clínico», bloque presentado como «tu genética», predicciones con cifras fijas, confianza 75%/55% inventada, insights hardcodeados presentados como del usuario, precios de guías y de pareja que no existen en el checkout, y los fallbacks de Recursos con dosis de suplementos. Unificado el mensaje de tarjeta (7 días de prueba, no se cobra hasta el día 8) y el plan elegido en la web ahora se preselecciona en el dashboard. CTAs del escáner propagan el plan recomendado.
+- [x] Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
 - [x] Biblioteca: ya existe con 271 ejercicios, 100% editable en admin
 - [x] Vídeo de técnica con IA (botón en el editor, función exercise-video)
-- [ ] (anterior) Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
+- [x] (anterior) Ficha de ejercicio al tocar: técnica con foto grande y vídeo; foto en cada fila de ejercicio
 - [x] Foto y vídeo con IA coherentes (mismo estilo), vídeo como hero y miniatura junto al nombre; nada de YouTube en usuario
 - [x] Nunca mostrar pantalla de error al usuario: fallos silenciosos y recuperación automática
 
@@ -30,6 +31,7 @@
 
 ## Barra de pestañas admin (en curso)
 - [x] Pestañas de la ficha de usuario repartidas por igual (flex-1) en cualquier ancho.
-- [ ] Admin con mínimo scroll: roles/onboarding en sección aparte.
-- [ ] Progreso: último entreno fuera del flujo, en ventana emergente.
-- [ ] Revisar fotos de progreso/compartir.
+- [x] Admin con mínimo scroll: roles/onboarding en sección aparte. (Roles y entrenador responsable en su propia pestaña «Acceso», separados de los datos del perfil.)
+- [x] Progreso: último entreno fuera del flujo, en ventana emergente. (Fila compacta «Último entreno» con diálogo de detalle y revisión del entrenador; el resto de secciones ya no arrastra el último entreno.)
+- [x] Revisar fotos de progreso/compartir.
+      Fotos de progreso: renovación automática de URLs firmadas antes de caducar (y al volver el foco), borrado del objeto en el bucket antes que la fila (con reintento), rutas en lugar de URLs públicas inservibles en bucket privado, subida por lotes tolerante a ficheros inválidos, visor accesible (diálogo, Escape, flechas, aria-label) y orden determinista. Escáner: las fotos y el «antes vs. ahora» firmadas correctamente y reset que borra también los ficheros. Compartir: fallback a descarga cuando el menú nativo falla, y enlaces de invitación con base pública en móvil nativo.

@@ -53,22 +53,26 @@ const AppStoreBadges = ({
   label,
   size = "default",
 }: Props) => {
-  // Enlaces provisionales: se sustituyen por los configurados en Ajustes del admin.
-  const [appStoreUrl, setAppStoreUrl] = useState("https://apps.apple.com/es/app/apple-fitness/id1208224953");
-  const [playStoreUrl, setPlayStoreUrl] = useState("https://play.google.com/store/apps/details?id=com.google.android.apps.fitness");
+  // Sin URLs configuradas en Ajustes no se muestra ningún badge: nunca enlazamos
+  // a una app de terceros como valor por defecto.
+  const [appStoreUrl, setAppStoreUrl] = useState("");
+  const [playStoreUrl, setPlayStoreUrl] = useState("");
 
   useEffect(() => {
     let alive = true;
-    supabase.rpc("get_public_settings").then(({ data }) => {
-      if (!alive) return;
-      const row = Array.isArray(data) ? data[0] : data;
-      if (row) {
-        const a = ((row as any).app_store_url || "").trim();
-        const p = ((row as any).play_store_url || "").trim();
-        if (a) setAppStoreUrl(a);
-        if (p) setPlayStoreUrl(p);
+    void (async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_public_settings");
+        if (!alive || error) return;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) {
+          setAppStoreUrl(((row as any).app_store_url || "").trim());
+          setPlayStoreUrl(((row as any).play_store_url || "").trim());
+        }
+      } catch {
+        // Sin datos no mostramos badges: nunca enlazamos a otra app por defecto.
       }
-    });
+    })();
     return () => {
       alive = false;
     };

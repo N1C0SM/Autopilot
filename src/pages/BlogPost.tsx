@@ -145,10 +145,10 @@ const BlogPost = () => {
         <div className="mt-16 p-6 sm:p-8 bg-card border border-primary/30 rounded-2xl text-center">
           <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-2">¿Listo para empezar?</p>
           <h3 className="text-xl sm:text-2xl font-bold font-display mb-3">
-            Diagnóstico físico con IA en 60 segundos
+            Diagnóstico físico con IA en menos de un minuto
           </h3>
           <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
-            Sube una foto y un entrenador real te dirá por dónde empezar. Gratis, sin tarjeta.
+            Sube una foto y la IA te dirá por dónde empezar. Gratis, sin tarjeta.
           </p>
           <Link to="/scan" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
             Hacer mi diagnóstico gratis →

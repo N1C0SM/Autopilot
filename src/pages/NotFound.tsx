@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import PageHead from "@/components/PageHead";
 
 const links = [
-  { to: "/scan", label: "Diagnóstico gratis", desc: "Analiza tu físico en 60s", Icon: Search },
+  { to: "/scan", label: "Diagnóstico gratis", desc: "Analiza tu físico en menos de 1 min", Icon: Search },
   { to: "/recursos", label: "Recursos", desc: "Blog, ebooks y recomendaciones", Icon: BookOpen },
   { to: "/login", label: "Iniciar sesión", desc: "Accede a tu plan", Icon: LifeBuoy },
 ];

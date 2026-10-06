@@ -52,7 +52,7 @@ export default function ProjectionTimeline({
           </span>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Mismo cuerpo, dos futuros. La diferencia no la marca la genética, la marca el sistema.
+          Mismo punto de partida, dos escenarios. Proyección orientativa: no es una promesa de resultados.
         </p>
       </div>
 
@@ -76,8 +76,8 @@ export default function ProjectionTimeline({
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li>• Mismo cuello de botella: <span className="italic">{bottleneck || "falta de estructura"}</span></li>
               <li>• Volumen mal distribuido → fatiga sin progreso</li>
-              <li>• Macros a ojo → recomp imposible</li>
-              <li>• En {mNo} meses, el mismo scan dirá lo mismo</li>
+              <li>• Macros a ojo → recompuesta más lenta</li>
+              <li>• Probablemente el siguiente scan seguiría igual</li>
             </ul>
           </div>
         </div>
@@ -93,7 +93,7 @@ export default function ProjectionTimeline({
                   Con plan · {m} meses
                 </span>
               </div>
-              <span className="text-[10px] text-primary">Score {target.toFixed(1)}</span>
+              <span className="text-[10px] text-primary">Objetivo orientativo</span>
             </div>
             <div className="h-2 rounded-full bg-muted/30 overflow-hidden mb-4">
               <motion.div

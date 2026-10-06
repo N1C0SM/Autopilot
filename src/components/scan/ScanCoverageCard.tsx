@@ -15,8 +15,10 @@ export default function ScanCoverageCard({ hasFront, hasBack, confidence, photoQ
   const level =
     views.length === 2 ? "Orientativo completo" : views.length === 1 ? "Orientativo parcial" : "Basado en respuestas";
   const notEvaluated = !hasBack ? FRONT_ONLY_GAPS : !hasFront ? BACK_ONLY_GAPS : null;
-  const pct = typeof confidence === "number" ? Math.round(confidence) : views.length === 2 ? 75 : 55;
-  const tone = pct >= 70 ? "text-success" : pct >= 45 ? "text-primary" : "text-destructive";
+  // Solo mostramos un porcentaje cuando la IA lo devuelve de verdad: nunca inventamos la cifra.
+  const hasConfidence = typeof confidence === "number" && Number.isFinite(confidence);
+  const pct = hasConfidence ? Math.round(confidence as number) : null;
+  const tone = pct === null ? "text-muted-foreground" : pct >= 70 ? "text-success" : pct >= 45 ? "text-primary" : "text-destructive";
 
   return (
     <div className="max-w-3xl mx-auto mb-8 rounded-2xl border border-border bg-card/50 backdrop-blur p-5">
@@ -32,7 +34,7 @@ export default function ScanCoverageCard({ hasFront, hasBack, confidence, photoQ
             <Gauge className="w-3.5 h-3.5 text-primary" /> Nivel de confianza
           </div>
           <div className="font-semibold">
-            {level} <span className={tone}>· {pct}%</span>
+            {level} {pct !== null && <span className={tone}>· {pct}%</span>}
           </div>
         </div>
         <div>

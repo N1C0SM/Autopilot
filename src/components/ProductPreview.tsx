@@ -43,12 +43,12 @@ const side: Record<View, { title: string; points: string[] }> = {
     points: ["Registra por separado el peso y las repeticiones de cada serie.", "Ves lo que levantaste la última vez para progresar.", "El tracker y el progreso están incluidos en el plan Gratis."],
   },
   nutrition: {
-    title: "Nutrición personalizada en el plan Completo.",
-    points: ["Calorías y macros del día de un vistazo.", "Comidas preparadas por tu entrenador, adaptables a tus gustos.", "Esta sección no está incluida en el plan Gratis."],
+    title: "Tu plan de nutrición, incluido desde Plus.",
+    points: ["Calorías y macros del día de un vistazo.", "Comidas ajustadas a tus gustos y a lo que registras.", "Esta sección no está incluida en el plan Gratis."],
   },
   chat: {
     title: "Una persona real al otro lado.",
-    points: ["Dudas, molestias o cambios: se lo dices a tu entrenador.", "Te responde y ajusta tu plan, no un robot.", "El chat está disponible en los planes con entrenador, no en Gratis."],
+    points: ["Dudas, molestias o cambios: se lo dices a tu entrenador.", "Te responde y ajusta tu plan, no un robot.", "El chat con entrenador es exclusivo del plan Coach."],
   },
   progress: {
     title: "Comprueba tu evolución con datos de tus sesiones.",
@@ -153,7 +153,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                     <li key={p} className="flex gap-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}</li>
                   ))}
                 </ul>
-                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? "Nutrición personalizada incluida en Completo · 49€/mes tras la prueba. No forma parte del plan Gratis." : view === "chat" ? "Chat en los planes de pago: respuesta en 48h con Entrenamiento y en 24h con Completo. No está incluido en Gratis." : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; el chat y la nutrición son funciones de los planes con entrenador."}</p>
+                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? "El plan de nutrición está incluido desde Plus · 29€/mes tras la prueba. No forma parte del plan Gratis." : view === "chat" ? "El chat con entrenador real es exclusivo del plan Coach · 49€/mes tras la prueba. No está incluido en Gratis ni en Plus." : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
               </motion.div>
             </AnimatePresence>
           </div>

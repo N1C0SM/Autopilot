@@ -5,7 +5,7 @@ import { Target, Sparkles, Trash2, Upload, Loader2, Trophy, ImageOff } from "luc
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { signedUrlsFor, signedUrlFor } from "@/lib/storageSign";
+import { signedUrlsFor, signedUrlFor, storagePathFor } from "@/lib/storageSign";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -30,6 +30,19 @@ interface Comparison {
   congratulate: boolean;
 }
 
+const BUCKET = "progress-photos";
+const MAX_GOAL_BYTES = 8 * 1024 * 1024;
+
+/** Tipos MIME admitidos -> extensión normalizada (evita extensiones arbitrarias). */
+const ALLOWED_GOAL_TYPES: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/heic": "heic",
+  "image/heif": "heif",
+};
+
 const UserGoalPanel = ({ userId, email }: Props) => {
   const [loading, setLoading] = useState(true);
   const [goalUrl, setGoalUrl] = useState<string | null>(null);
@@ -42,25 +55,45 @@ const UserGoalPanel = ({ userId, email }: Props) => {
   const [removing, setRemoving] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
     const load = async () => {
       setLoading(true);
       setComparison(null);
-      const [{ data: onb }, { data: photos }] = await Promise.all([
-        supabase.from("onboarding").select("goal_photo_url").eq("user_id", userId).maybeSingle(),
-        supabase.from("progress_photos").select("id, photo_url, taken_at")
-          .eq("user_id", userId).order("taken_at", { ascending: false }).limit(10),
-      ]);
-      setGoalUrl((onb?.goal_photo_url as string | null) || null);
-      const list = (photos as PhotoRow[]) || [];
-      setAllPhotos(list);
-      setLatestPhoto(list[0] || null);
-      const urls: string[] = list.map((p) => p.photo_url);
-      if (onb?.goal_photo_url) urls.push(onb.goal_photo_url as string);
-      const map = await signedUrlsFor("progress-photos", urls);
-      setSigned(map);
-      setLoading(false);
+      try {
+        const [onboardingResult, photosResult] = await Promise.all([
+          supabase.from("onboarding").select("goal_photo_url").eq("user_id", userId).maybeSingle(),
+          supabase.from("progress_photos").select("id, photo_url, taken_at")
+            .eq("user_id", userId).order("taken_at", { ascending: false }).limit(10),
+        ]);
+        if (!active) return;
+        if (onboardingResult.error) throw onboardingResult.error;
+        if (photosResult.error) throw photosResult.error;
+
+        const onb = onboardingResult.data;
+        const list = (photosResult.data as PhotoRow[]) || [];
+        setGoalUrl((onb?.goal_photo_url as string | null) || null);
+        setAllPhotos(list);
+        setLatestPhoto(list[0] || null);
+        const urls: string[] = list.map((p) => p.photo_url);
+        if (onb?.goal_photo_url) urls.push(onb.goal_photo_url as string);
+        const map = await signedUrlsFor(BUCKET, urls);
+        if (!active) return;
+        setSigned(map);
+      } catch (error) {
+        if (!active) return;
+        console.error("Failed to load goal panel data", error);
+        toast.error("No se pudo cargar el objetivo. Inténtalo de nuevo en unos segundos.");
+      } finally {
+        // Nunca dejamos el spinner infinito si una query falla.
+        if (active) setLoading(false);
+      }
     };
-    load();
+
+    void load();
+    return () => {
+      active = false;
+    };
   }, [userId]);
 
   const runComparison = async () => {
@@ -72,8 +105,8 @@ const UserGoalPanel = ({ userId, email }: Props) => {
     setComparison(null);
     try {
       const [signedGoal, signedCurrent] = await Promise.all([
-        signedUrlFor("progress-photos", goalUrl),
-        signedUrlFor("progress-photos", latestPhoto.photo_url),
+        signedUrlFor(BUCKET, goalUrl),
+        signedUrlFor(BUCKET, latestPhoto.photo_url),
       ]);
       if (!signedGoal || !signedCurrent) throw new Error("No se pudieron firmar las imágenes");
       const { data, error } = await supabase.functions.invoke("compare-goal-photo", {
@@ -82,39 +115,79 @@ const UserGoalPanel = ({ userId, email }: Props) => {
       if (error || !data || data.error) throw new Error(error?.message || data?.error || "Error IA");
       setComparison(data as Comparison);
       if (data.congratulate) toast.success(`🎉 ¡${data.similarity}%! Muy cerca del objetivo`);
-    } catch (e: any) {
-      toast.error("Error al comparar: " + e.message);
+    } catch (e) {
+      toast.error("Error al comparar: " + (e instanceof Error ? e.message : "Inténtalo de nuevo."));
     }
     setComparing(false);
   };
 
   const handleUploadGoal = async (file: File) => {
-    if (file.size > 8 * 1024 * 1024) { toast.error("Máx 8MB"); return; }
+    const ext = ALLOWED_GOAL_TYPES[file.type.toLowerCase()];
+    if (!ext) {
+      toast.error("Formato no válido. Sube una imagen JPG, PNG, WebP o HEIC.");
+      return;
+    }
+    if (file.size > MAX_GOAL_BYTES) { toast.error("Máx 8MB"); return; }
     setUploading(true);
+    const path = `${userId}/goal-${Date.now()}.${ext}`;
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${userId}/goal-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("progress-photos").upload(path, file, { upsert: false });
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false });
       if (upErr) throw upErr;
-      const { data: signedRes } = await supabase.storage.from("progress-photos").createSignedUrl(path, 60 * 60 * 24 * 7); const pub = { publicUrl: signedRes?.signedUrl };
-      const { error: updErr } = await supabase.from("onboarding").update({ goal_photo_url: pub.publicUrl }).eq("user_id", userId);
-      if (updErr) throw updErr;
-      setGoalUrl(pub.publicUrl);
+      // Guardamos la RUTA: el bucket es privado y una URL firmada caduca.
+      const { error: updErr } = await supabase.from("onboarding").update({ goal_photo_url: path }).eq("user_id", userId);
+      if (updErr) {
+        // Si no se pudo guardar la referencia, no dejamos el archivo huérfano.
+        const { error: cleanupError } = await supabase.storage.from(BUCKET).remove([path]);
+        if (cleanupError) {
+          console.error("Failed to clean up the goal photo after its record could not be saved", cleanupError);
+        }
+        throw updErr;
+      }
+      const signedGoal = await signedUrlFor(BUCKET, path);
+      setGoalUrl(path);
+      if (signedGoal) setSigned((prev) => new Map(prev).set(path, signedGoal));
       setComparison(null);
       toast.success("Foto objetivo actualizada");
-    } catch (e: any) {
-      toast.error("Error: " + e.message);
+    } catch (e) {
+      toast.error("Error: " + (e instanceof Error ? e.message : "Inténtalo de nuevo."));
     }
     setUploading(false);
   };
 
   const handleRemoveGoal = async () => {
     setRemoving(true);
-    const { error } = await supabase.from("onboarding").update({ goal_photo_url: null }).eq("user_id", userId);
-    if (error) toast.error("Error al quitar objetivo");
-    else { setGoalUrl(null); setComparison(null); toast.success("Objetivo eliminado"); }
-    setRemoving(false);
+    try {
+      // 1) Borramos primero el archivo del bucket privado.
+      const path = storagePathFor(BUCKET, goalUrl);
+      if (path) {
+        const { error: removeError } = await supabase.storage.from(BUCKET).remove([path]);
+        if (removeError) {
+          console.error("Failed to delete the goal photo file", removeError);
+          toast.error("No se pudo borrar la foto objetivo. Inténtalo de nuevo.");
+          return;
+        }
+      }
+      // 2) Solo cuando el archivo ya no existe quitamos la referencia.
+      const { error } = await supabase.from("onboarding").update({ goal_photo_url: null }).eq("user_id", userId);
+      if (error) {
+        console.error("Goal photo file deleted but its record could not be cleared", error);
+        toast.error("La foto ya no está almacenada, pero no se pudo quitar el objetivo. Vuelve a intentarlo.");
+        return;
+      }
+      setGoalUrl(null);
+      setComparison(null);
+      toast.success("Objetivo eliminado");
+    } catch (e) {
+      console.error("Failed to remove the goal photo", e);
+      toast.error("Error al quitar objetivo");
+    } finally {
+      setRemoving(false);
+    }
   };
+
+  // Evitamos `src=""` (petición a la propia página) mientras no haya firma.
+  const goalSignedUrl = goalUrl ? signed.get(goalUrl) : undefined;
+  const latestSignedUrl = latestPhoto ? signed.get(latestPhoto.photo_url) : undefined;
 
   if (loading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
@@ -175,7 +248,14 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           </div>
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {goalUrl ? (
-              <img src={signed.get(goalUrl) || ""} alt="Físico objetivo" className="w-full h-full object-contain" />
+              goalSignedUrl ? (
+                <img src={goalSignedUrl} alt="Físico objetivo" className="w-full h-full object-contain" />
+              ) : (
+                <div className="text-center p-6">
+                  <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Preparando la foto objetivo…</p>
+                </div>
+              )
             ) : (
               <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-center p-6">
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
@@ -205,7 +285,14 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           </div>
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {latestPhoto ? (
-              <img src={signed.get(latestPhoto.photo_url) || ""} alt="Estado actual" className="w-full h-full object-contain" />
+              latestSignedUrl ? (
+                <img src={latestSignedUrl} alt="Estado actual" className="w-full h-full object-contain" />
+              ) : (
+                <div className="text-center p-6">
+                  <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Preparando la última foto…</p>
+                </div>
+              )
             ) : (
               <div className="text-center p-6">
                 <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -283,7 +370,11 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           <div className="grid grid-cols-5 gap-2">
             {allPhotos.map((p) => (
               <div key={p.id} className="aspect-[3/4] rounded-lg overflow-hidden border border-border relative">
-                <img src={signed.get(p.photo_url) || ""} alt="" className="w-full h-full object-cover" />
+                {signed.get(p.photo_url) ? (
+                  <img src={signed.get(p.photo_url)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-secondary/40" />
+                )}
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1">
                   <span className="text-[9px] text-white font-medium">
                     {new Date(p.taken_at + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" })}

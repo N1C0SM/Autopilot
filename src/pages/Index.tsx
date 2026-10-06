@@ -31,21 +31,21 @@ import {
 } from "@/components/ui/accordion";
 
 const faqs = [
-  { q: "¿Qué diferencia hay entre Gratis y tener entrenador?", a: "Gratis incluye una rutina inicial y el registro de tus entrenamientos y progreso, sin tarjeta. Con Entrenamiento, una persona prepara tu plan, lo revisa cada 2 semanas y responde por chat en 48h. Completo añade nutrición personalizada, revisión semanal y respuesta en 24h." },
+  { q: "¿Qué diferencia hay entre Free, Plus y Coach?", a: "Free incluye rutina inicial, registro de entrenamientos y progreso, sin tarjeta. Plus (29€/mes) añade IA avanzada, adaptación automática, análisis corporal y plan de nutrición. Coach (49€/mes) añade además un entrenador real asignado: revisa tu plan, hace check-ins contigo y te responde por chat." },
   { q: "¿La demo me crea una cuenta o me cobra?", a: "No. La demo es un ejemplo interactivo con datos ficticios. Puedes explorarla sin registrarte. Para guardar tus propios entrenamientos, crea una cuenta Gratis." },
-  { q: "¿Qué ocurre al terminar los 7 días de prueba?", a: "En los planes de pago, la suscripción se renueva automáticamente por 29€/mes o 49€/mes según el plan. Cancela antes de terminar la prueba para evitar el primer cobro, desde Ajustes → Suscripción. El plan Gratis no tiene una prueba que cancelar." },
+  { q: "¿Qué ocurre al terminar los 7 días de prueba?", a: "Los planes de pago empiezan con 7 días de prueba: se pide tarjeta al contratar, no se cobra nada hasta el día 8 y puedes cancelar antes desde Ajustes → Suscripción para evitar el primer cobro. Si no cancelas, la suscripción se renueva a 29€/mes (Plus) o 49€/mes (Coach). El plan Free no tiene prueba ni tarjeta." },
   { q: "¿El análisis inicial es gratis?", a: "Sí. El AI Physique Scan es un análisis inicial 100% gratis, sin tarjeta y sin necesidad de crear una cuenta." },
-  { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. El tiempo del análisis puede variar; el plan y el seguimiento empiezan cuando eliges un plan con entrenador." },
-  { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual inicial. Si eliges un plan, un entrenador real estudia tu caso, habla contigo y prepara tu entrenamiento; la nutrición personalizada se incluye en Completo." },
-  { q: "¿Puedo elegir solo entrenamiento?", a: "Sí. El plan Entrenamiento (29€/mes) es para quien solo quiere entrenar mejor, sin nutrición personalizada." },
-  { q: "¿El plan Completo incluye nutrición?", a: "Sí. El Completo (49€/mes) incluye entrenamiento y plan de nutrición adaptados, además de chat y ajustes semanales." },
-  { q: "¿Quién prepara y ajusta mi plan?", a: "Un entrenador real. La IA solo sirve como herramienta de apoyo para el análisis inicial; no diseña tu plan, no lo reorganiza y no responde a tus mensajes." },
+  { q: "¿Necesito tarjeta para hacer el análisis?", a: "No. Solo necesitas una foto. El tiempo del análisis puede variar; el plan y el seguimiento empiezan cuando eliges un plan de pago." },
+  { q: "¿Qué pasa después del scan?", a: "Recibes un análisis visual estimado por IA. Si eliges Plus, Autopilot genera y adapta tu entrenamiento y tu plan de nutrición. Con Coach, además, un entrenador real estudia tu caso, habla contigo y ajusta el plan." },
+  { q: "¿Puedo elegir solo entrenamiento, sin entrenador?", a: "Sí. Plus (29€/mes) es para quien quiere entrenar mejor con IA avanzada, adaptación automática y nutrición, sin entrenador humano." },
+  { q: "¿Qué incluye el plan Coach?", a: "Coach (49€/mes) incluye todo lo de Plus, es decir entrenamiento adaptativo y plan de nutrición, y añade un entrenador real asignado: revisiones, check-ins y chat directo." },
+  { q: "¿Quién prepara y ajusta mi plan?", a: "Con Plus, Autopilot genera y adapta tu plan automáticamente a partir de tu cuestionario inicial y de lo que registras. Con Coach, además, un entrenador real revisa tu caso, ajusta el plan y responde a tus mensajes. La IA nunca sustituye al entrenador en Coach: le sirve de apoyo para el análisis." },
   { q: "¿Puedo cancelar cuando quiera?", a: "Los planes mensuales se renuevan automáticamente hasta que cancelas desde Ajustes → Suscripción." },
-  { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y tu entrenador prepara el plan sobre esa base: calistenia, mancuernas en casa o cero material." },
-  { q: "¿Y si nunca he entrenado?", a: "Tu entrenador parte de tu nivel real y te guía paso a paso, sin saltar fases." },
-  { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto, YouTube te da una rutina genérica. Aquí hay una persona real que conoce tu nivel, tu equipamiento y tu semana, y ajusta el plan contigo cada vez que algo cambia." },
-  { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Lo avisas por chat y reorganizamos. Tu entrenador puede ajustar el plan a tu disponibilidad. Si hay una lesión, consulta con un profesional sanitario antes de continuar." },
-  { q: "¿Y si veo que no es para mí?", a: "Empieza con el plan Gratis sin tarjeta. Si quieres seguimiento, prueba un plan de pago durante 7 días y cancela antes del primer cobro." },
+  { q: "¿Y si entreno en casa?", a: "Sin problema. Indicas tu equipamiento exacto y el plan se construye sobre esa base: calistenia, mancuernas en casa o cero material. Con Coach, tu entrenador lo revisa contigo." },
+  { q: "¿Y si nunca he entrenado?", a: "El plan parte de tu nivel real y progresa paso a paso, sin saltar fases. Con Coach, tu entrenador lo supervisa." },
+  { q: "¿En qué se diferencia esto de ChatGPT o de una rutina de YouTube?", a: "ChatGPT te da un texto y YouTube una rutina genérica. En Plus, Autopilot genera y adapta tu plan con tus datos reales: nivel, equipamiento, disponibilidad y lo que vas registrando. Con Coach, además, hay una persona real que revisa tu caso y ajusta el plan contigo." },
+  { q: "¿Y si me voy de viaje o pierdo una semana?", a: "Con Coach, lo avisas por chat y tu entrenador reorganiza el plan según tu disponibilidad. Con Plus, el plan se adapta automáticamente a lo que registras. Si hay una lesión, consulta con un profesional sanitario antes de continuar." },
+  { q: "¿Y si veo que no es para mí?", a: "Empieza con el plan Free, sin tarjeta. Los planes de pago tienen 7 días de prueba: se pide tarjeta y no se cobra hasta el día 8, así que puedes cancelar antes sin coste." },
 ];
 
 const Index = () => {
@@ -54,7 +54,7 @@ const Index = () => {
     name: string; result: string; text: string; photo_url: string | null;
     photo_before_url: string | null; photo_after_url: string | null;
   }>>([]);
-  const [trainer] = useState({ trainer_name: "Tu entrenador", trainer_photo_url: "", trainer_bio: "" });
+  const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "" });
   const [heroVideo, setHeroVideo] = useState<{ url: string; poster: string }>({ url: "", poster: "" });
   const [stats, setStats] = useState<{ paid: number; activePct: number | null }>({ paid: 0, activePct: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -89,6 +89,13 @@ const Index = () => {
         setHeroVideo({
           url: (s as any).hero_video_url || "",
           poster: (s as any).hero_video_poster_url || "",
+        });
+        const cfg = s as Record<string, unknown>;
+        const str = (v: unknown) => (typeof v === "string" ? v : "");
+        setTrainer({
+          trainer_name: str(cfg.trainer_name),
+          trainer_photo_url: str(cfg.trainer_photo_url),
+          trainer_bio: str(cfg.trainer_bio),
         });
         setSections({
           show_blog: (s as any).show_blog ?? true,
@@ -191,11 +198,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative">
       <Helmet>
-        <title>Autopilot — Entrenamiento con entrenador real</title>
-        <meta name="description" content="Un entrenador real prepara y ajusta tu entrenamiento. Chat directo y nutrición personalizada según el plan. Análisis inicial gratis con IA." />
+        <title>Autopilot — Entrenamiento y nutrición que se adaptan a ti</title>
+        <meta name="description" content="Plan de entrenamiento y nutrición que se adapta a tu progreso, con análisis inicial gratis por IA. Con el plan Coach, un entrenador real prepara y ajusta tu plan." />
         <link rel="canonical" href="https://autopilotplan.com/" />
-        <meta property="og:title" content="Autopilot — Tu entrenamiento, en manos de un entrenador real" />
-        <meta property="og:description" content="Tu entrenador prepara y ajusta tu plan contigo. La IA solo apoya el análisis inicial gratuito." />
+        <meta property="og:title" content="Autopilot — Entrenamiento y nutrición que se adaptan a ti" />
+        <meta property="og:description" content="Análisis inicial gratis con IA y un plan que se adapta a ti. Con Coach, un entrenador real prepara y ajusta tu plan." />
         <meta property="og:url" content="https://autopilotplan.com/" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
@@ -209,13 +216,13 @@ const Index = () => {
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Service",
-          serviceType: "Coaching fitness online con entrenador humano",
+          serviceType: "Entrenamiento y nutrición online con IA y, en el plan Coach, entrenador humano",
           provider: { "@type": "Organization", name: "Autopilot", url: "https://autopilotplan.com/" },
           areaServed: "ES",
           offers: [
-            { "@type": "Offer", name: "Entrenamiento", price: "29", priceCurrency: "EUR" },
-            { "@type": "Offer", name: "Completo", price: "49", priceCurrency: "EUR" },
-            { "@type": "Offer", name: "Gratis", price: "0", priceCurrency: "EUR" },
+            { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
+            { "@type": "Offer", name: "Plus", price: "29", priceCurrency: "EUR" },
+            { "@type": "Offer", name: "Coach", price: "49", priceCurrency: "EUR" },
           ],
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
@@ -223,7 +230,7 @@ const Index = () => {
           "@type": "Organization",
           name: "Autopilot",
           url: "https://autopilotplan.com/",
-          description: "Entrenamiento y nutrición personalizados con seguimiento de un entrenador real, para toda España.",
+          description: "Entrenamiento y nutrición que se adaptan a tu progreso, con análisis inicial por IA y entrenador real en el plan Coach, para toda España.",
           areaServed: { "@type": "Country", name: "España" },
           address: { "@type": "PostalAddress", addressCountry: "ES" },
           availableLanguage: ["es"],
@@ -324,18 +331,18 @@ const Index = () => {
                 Empieza a entrenar gratis. <span className="text-gradient">Hazlo tuyo.</span>
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg animate-fade-in">
-                Crea tu cuenta, empieza con una rutina y guarda tus entrenamientos. Cuando necesites seguimiento, podrás contratar a tu entrenador desde la app.
+                Crea tu cuenta, empieza con una rutina y guarda tus entrenamientos. Cuando necesites más, activa el plan que se adapta a ti o el seguimiento de un entrenador real.
               </p>
 
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row animate-fade-in">
-                <Button variant="hero" size="xl" onClick={() => goFree("hero")} className="w-full sm:w-auto">
-                  Ver planes con entrenador <ArrowRight className="h-4 w-4" />
+                <Button variant="hero" size="xl" onClick={() => goToPricing("hero")} className="w-full sm:w-auto">
+                  Ver planes y precios <ArrowRight className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="xl" asChild className="w-full sm:w-auto">
                   <a href="#ver-app" onClick={() => track("plan_preview_view", { source: "hero" })}>Probar la demo sin registro</a>
                 </Button>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">Sin tarjeta · Sin prueba que cancelar · Entrenador opcional de pago</p>
+              <p className="mt-4 text-xs text-muted-foreground">Empieza gratis y sin tarjeta · 7 días de prueba en los planes de pago · Entrenador real en Coach</p>
               <button type="button" onClick={() => goScan("hero_secondary")} className="mt-3 min-h-11 text-xs text-primary underline underline-offset-4">
                 También puedes hacer el análisis inicial con IA gratis
               </button>
@@ -365,7 +372,7 @@ const Index = () => {
                       <p className="text-xs text-muted-foreground">Entrenamiento y seguimiento personal</p>
                     </div>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Nicolás dirige Autopilot. Tu entrenador prepara el plan y te acompaña en el seguimiento.</p>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">Nicolás dirige Autopilot. Con el plan Coach, un entrenador real prepara el plan y te acompaña en el seguimiento.</p>
                   <a href="#equipo" className="mt-4 inline-block text-sm text-primary underline underline-offset-4">Conocer al equipo</a>
                 </div>
                 {stats.paid >= 20 && (
@@ -405,7 +412,7 @@ const Index = () => {
                   Empieza gratis. Añade seguimiento cuando lo necesites.
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Entrena por tu cuenta gratis o prueba 7 días con un entrenador que prepare y revise tu plan.
+                  Entrena por tu cuenta gratis, o prueba 7 días un plan de pago: Plus si quieres que se adapte solo, Coach si quieres además un entrenador real que lo revise.
                 </p>
               </div>
             </ScrollReveal>
@@ -599,7 +606,7 @@ const Index = () => {
                 <span className="text-gradient">crear tu cuenta gratis.</span>
               </h2>
               <p className="text-base text-muted-foreground mb-10 max-w-md mx-auto">
-                Empieza con tu rutina y registra tu progreso. Si después quieres que un entrenador te acompañe, elige el seguimiento que necesites.
+                Empieza con tu rutina y registra tu progreso. Cuando lo necesites, activa Plus para que el plan se adapte solo, o Coach para que un entrenador real te acompañe.
               </p>
               <Button
                 variant="hero"
@@ -613,7 +620,7 @@ const Index = () => {
               <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Cuenta gratis</span>
                 <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Sin tarjeta</span>
-                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Entrenador opcional</span>
+                <span className="flex items-center gap-1.5"><Check className="w-3 h-3 text-success" /> Entrenador real en Coach</span>
               </div>
             </ScrollReveal>
           </div>

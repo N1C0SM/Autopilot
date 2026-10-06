@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { signedUrlFor } from "@/lib/storageSign";
 
 type Prev = {
   id: string;
@@ -22,6 +23,7 @@ export default function BeforeAfterCompare({
   currentScores: { physique: number; attractiveness: number; potential: number };
 }) {
   const [prev, setPrev] = useState<Prev | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +43,13 @@ export default function BeforeAfterCompare({
         list.length > 0 &&
         Date.now() - new Date(list[0].taken_at).getTime() < 120_000;
       const row = recentIsCurrent ? list[1] ?? null : list[0] ?? null;
+      if (!active) return;
+      // progress-photos es privado: firmamos la ruta antes de pintarla.
+      const raw = row?.current_photo_url ?? null;
+      const signed = raw ? await signedUrlFor("progress-photos", raw) : null;
+      if (!active) return;
       setPrev(row);
+      setPhotoUrl(signed ?? raw);
       setLoading(false);
     })();
     return () => {
@@ -49,7 +57,7 @@ export default function BeforeAfterCompare({
     };
   }, [userId]);
 
-  if (loading || !prev || !prev.current_photo_url) return null;
+  if (loading || !prev || !photoUrl) return null;
 
   const pPhys = Number(prev.physique ?? 0);
   const delta = currentScores.physique - pPhys;
@@ -76,7 +84,7 @@ export default function BeforeAfterCompare({
       <div className="grid grid-cols-[1fr,auto,1fr] gap-4 items-center">
         <div className="text-center">
           <img
-            src={prev.current_photo_url}
+            src={photoUrl}
             alt="Scan anterior"
             className="w-full aspect-[3/4] object-cover rounded-xl border border-border mb-2"
           />
