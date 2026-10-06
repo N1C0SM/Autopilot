@@ -1154,7 +1154,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           })}
 
           {/* Finish workout */}
-          {!workoutCompleted && completionReady && !loadError && <div className="sticky bottom-3 z-20 pt-3 pb-4">
+          {!workoutCompleted && completionReady && !loadError && started && <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background/95 backdrop-blur-md border-t border-border/40">
             <div className="flex items-center justify-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
               <span role="status" aria-live="polite" className={saveError ? "text-destructive" : ""}>
                 {saveStatus === "error"
