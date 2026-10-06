@@ -1,3 +1,4 @@
+import { isWorkoutSetWarmup } from "./workoutSet";
 import { parsePositiveWeight } from "./weight";
 
 export interface WorkoutLogRecord {
@@ -31,8 +32,12 @@ export function buildExerciseHistory(logs: WorkoutLogRecord[]): Record<string, E
   for (const log of logs) {
     if (!log.exercise_name || !/^\d{4}-\d{2}-\d{2}$/.test(log.logged_at) || !Array.isArray(log.sets_completed)) continue;
 
+    // Las series de calentamiento se guardan (el registro es honesto) pero no
+    // cuentan en volumen, 1RM ni series completadas. Los registros antiguos sin
+    // el campo `isWarmup` entran como series de trabajo normales.
     const sets = log.sets_completed.filter((set): set is Record<string, unknown> =>
-      typeof set === "object" && set !== null && !Array.isArray(set) && set.done === true,
+      typeof set === "object" && set !== null && !Array.isArray(set)
+      && set.done === true && !isWorkoutSetWarmup(set),
     );
     const validSets = sets.flatMap((set) => {
       const reps = parsePositiveNumber(set.reps);

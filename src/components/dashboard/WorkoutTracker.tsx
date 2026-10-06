@@ -30,7 +30,9 @@ import {
   getWorkoutSetDrops,
   getWorkoutSetDropsInputError,
   getWorkoutSetInputError,
+  isWorkoutSetWarmup,
   removeWorkoutSetDrop,
+  setWorkoutSetWarmup,
   updateWorkoutSetDrop,
   type WorkoutSetDrop,
   type WorkoutSetLog,
@@ -362,6 +364,21 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     void hapticTap();
   };
 
+  // Calentamiento: la serie se sigue guardando y se puede marcar con ✓, pero
+  // deja de contar en volumen, récords y series completadas.
+  const toggleWarmup = (exerciseName: string, setIndex: number) => {
+    mutateSet(exerciseName, setIndex, (set) => setWorkoutSetWarmup(set, !isWorkoutSetWarmup(set)));
+    // El récord en directo de esa serie deja de ser válido al pasar a calentamiento.
+    setLivePRs((prev) => {
+      const key = `${exerciseName}#${setIndex}`;
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    void hapticTap();
+  };
+
   const applyProgression = (exerciseName: string, progression: NonNullable<ReturnType<typeof getProgressionSuggestion>>) => {
     setExerciseLogs((current) => ({
       ...current,
@@ -405,10 +422,14 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         setRestTarget(effectiveRest);
         setRestTimer(effectiveRest);
       }
-      // Récord en directo: supera el mejor peso de la sesión anterior
+      // Récord en directo: supera el mejor peso de la sesión anterior. Ni la
+      // serie de calentamiento ni las de calentamiento previas cuentan.
+      const isWarmup = isWorkoutSetWarmup(set);
       const w = parsePositiveWeight(set.weight);
-      const prevBest = Math.max(0, ...(previousLogs[exerciseName] || []).filter((s) => s.done).map((s) => parsePositiveWeight(s.weight) || 0));
-      if (w && prevBest > 0 && w > prevBest) {
+      const prevBest = Math.max(0, ...(previousLogs[exerciseName] || [])
+        .filter((s) => s.done && !isWorkoutSetWarmup(s))
+        .map((s) => parsePositiveWeight(s.weight) || 0));
+      if (!isWarmup && w && prevBest > 0 && w > prevBest) {
         const diff = Math.round((w - prevBest) * 10) / 10;
         setLivePRs((prev) => ({ ...prev, [`${exerciseName}#${setIndex}`]: `+${diff} kg` }));
         try { navigator.vibrate?.([30, 60, 30]); } catch { /* noop */ }
@@ -502,7 +523,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   }, [exerciseLogs, logsReady, selectedDay, selectedDate, workoutCompleted]);
 
   const detectAndSavePRs = async () => {
-    // For each exercise with weight > 0, find best (weight, reps) and upsert
+    // For each exercise with weight > 0, find best (weight, reps) and upsert.
+    // Las series de calentamiento nunca se guardan como récord.
     const prsToInsert: Array<{
       user_id: string;
       exercise_name: string;
@@ -515,7 +537,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     for (const [name, sets] of Object.entries(exerciseLogs)) {
       const completed = sets.flatMap((set) => {
         const weight = parsePositiveWeight(set.weight);
-        return set.done && weight !== null && Number.isFinite(set.reps) && set.reps > 0
+        return set.done && !isWorkoutSetWarmup(set) && weight !== null && Number.isFinite(set.reps) && set.reps > 0
           ? [{ ...set, parsedWeight: weight }]
           : [];
       });
@@ -651,17 +673,22 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     }
   };
 
-  const completedSets = Object.values(exerciseLogs).flat().filter((s) => s.done).length;
-  const totalSets = Object.values(exerciseLogs).flat().length;
-  const completedLogEntries = Object.entries(exerciseLogs).flatMap(([name, sets]) =>
-    sets.filter((set) => set.done).map((set) => ({ name, set })),
+  // Las series de calentamiento se guardan, pero no cuentan ni en el recuento
+  // de series completadas ni en el volumen.
+  const allLogEntries = Object.entries(exerciseLogs).flatMap(([name, sets]) =>
+    sets.map((set) => ({ name, set })),
   );
-  const totalVolume = completedLogEntries.reduce((total, { set }) => {
+  const workingLogEntries = allLogEntries.filter(({ set }) => !isWorkoutSetWarmup(set));
+  const completedSets = workingLogEntries.filter(({ set }) => set.done).length;
+  const totalSets = workingLogEntries.length;
+  const totalVolume = workingLogEntries.reduce((total, { set }) => {
+    if (!set.done) return total;
     const weight = parsePositiveWeight(set.weight);
     return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
   }, 0);
   const muscleSetCounts = (currentPlan?.exercises || []).reduce<Record<string, number>>((counts, exercise) => {
-    const completedSetsForExercise = (exerciseLogs[exercise.name] || []).filter((set) => set.done).length;
+    const completedSetsForExercise = (exerciseLogs[exercise.name] || [])
+      .filter((set) => set.done && !isWorkoutSetWarmup(set)).length;
     if (completedSetsForExercise === 0) return counts;
 
     const metadata = exerciseMetadata.byId[exercise.exercise_id] || exerciseMetadata.byName[exercise.name];
@@ -670,7 +697,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     return counts;
   }, {});
   const previousVolume = Object.values(previousLogs).flat().reduce((total, set) => {
-    const weight = set.done ? parsePositiveWeight(set.weight) : null;
+    const weight = set.done && !isWorkoutSetWarmup(set) ? parsePositiveWeight(set.weight) : null;
     return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
   }, 0);
   const musclesWorked = Object.keys(muscleSetCounts);
@@ -1014,7 +1041,12 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               movement_pattern: (ex as any).movement_pattern ?? metadata?.movement_pattern ?? undefined,
               exercise_type: exerciseType ?? undefined,
             });
-            const progression = getProgressionSuggestion(ex, prevSets, previousSessionRpe);
+            // La progresión se calcula solo con las series de trabajo de la sesión anterior.
+            const progression = getProgressionSuggestion(
+              ex,
+              prevSets?.filter((set) => !isWorkoutSetWarmup(set)),
+              previousSessionRpe,
+            );
             // Superserie: cadena a la que pertenece este ejercicio y, si no es el
             // último de la lista, el siguiente con el que se puede enlazar.
             const supersetChain = getSupersetChain(exerciseNames, supersetLinks, i);
@@ -1259,12 +1291,22 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                           const dropsError = !set.done ? getWorkoutSetDropsInputError(set) : null;
                           const inputError = mainError ?? dropsError;
                           const drops = getWorkoutSetDrops(set);
+                          const isWarmup = isWorkoutSetWarmup(set);
+                          // Serie de calentamiento: atenuada y nunca con el color de serie hecha.
+                          const doneButtonClass = isWarmup
+                            ? "border border-border bg-secondary text-muted-foreground"
+                            : "bg-primary text-primary-foreground";
+                          const pendingButtonClass = inputError
+                            ? "border border-destructive/40 bg-destructive/10 text-destructive"
+                            : "border border-border bg-secondary text-muted-foreground hover:border-primary/50 hover:text-primary";
                           return (
                           <div
                             key={si}
                             className={`relative rounded-lg p-2 transition-all ${
                               livePRs[`${ex.name}#${si}`]
                                 ? "bg-accent/15 border border-accent/60 shadow-[0_0_24px_hsl(var(--accent)/0.35)]"
+                                : isWarmup
+                                ? "bg-secondary/30 border border-border/60 text-muted-foreground"
                                 : set.done
                                 ? "bg-primary/10 border border-primary/20"
                                 : "bg-secondary/30"
@@ -1280,7 +1322,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                             <div className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center">
                               {/* Set number */}
                               <span className={`text-xs font-bold text-center ${
-                                set.done ? "text-primary" : "text-muted-foreground"
+                                set.done && !isWarmup ? "text-primary" : "text-muted-foreground"
                               }`}>
                                 {si + 1}
                               </span>
@@ -1296,7 +1338,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(mainError && set.weight.trim())}
-                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                                 />
                                 {prevSets?.[si] && (
                                   <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1323,7 +1365,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(mainError && (!Number.isInteger(set.reps) || set.reps <= 0))}
-                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${mainError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${mainError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
                                 />
                                 {prevSets?.[si] && (
                                   <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
@@ -1339,11 +1381,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
                                 title={set.done ? "Desmarcar serie" : "Marcar serie como hecha"}
                                 className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all mx-auto ${
-                                  set.done
-                                    ? "bg-primary text-primary-foreground"
-                                    : inputError
-                                      ? "border border-destructive/40 bg-destructive/10 text-destructive"
-                                      : "border border-border bg-secondary text-muted-foreground hover:border-primary/50 hover:text-primary"
+                                  set.done ? doneButtonClass : pendingButtonClass
                                 }`}
                               >
                                 <Check className="w-5 h-5" />
@@ -1395,14 +1433,34 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 </div>
                                 );
                               })}
+                              <div className="flex gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => addDrop(ex.name, si)}
-                                className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                                className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
                               >
                                 <Plus className="h-3.5 w-3.5" />
                                 Añadir bajada
                               </button>
+                              {/* Calentamiento: se guarda y se marca con ✓, pero no cuenta en tus métricas */}
+                              <button
+                                type="button"
+                                aria-pressed={isWarmup}
+                                aria-label={`${isWarmup ? "Quitar" : "Marcar"} la serie ${si + 1} de ${ex.name} como calentamiento`}
+                                title={isWarmup
+                                  ? "Calentamiento: no cuenta en volumen, récords ni series completadas. Toca para volver a serie de trabajo."
+                                  : "Marcar como calentamiento: no contará en volumen, récords ni series completadas."}
+                                onClick={() => toggleWarmup(ex.name, si)}
+                                className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-medium transition-colors ${
+                                  isWarmup
+                                    ? "border-border bg-secondary/30 text-muted-foreground"
+                                    : "border-dashed border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
+                                }`}
+                              >
+                                <Flame className="h-3.5 w-3.5" fill={isWarmup ? "currentColor" : "none"} aria-hidden="true" />
+                                Calentamiento
+                              </button>
+                              </div>
                             </div>
 
                             {drops.length > 0 && (

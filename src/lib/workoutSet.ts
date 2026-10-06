@@ -17,10 +17,32 @@ export interface WorkoutSetLog extends WorkoutSetInput {
    * como series sin bajadas, sin migración ni errores.
    */
   drops?: WorkoutSetDrop[];
+  /**
+   * Serie de calentamiento. También es opcional a propósito: las series ya
+   * guardadas no tienen este campo y se leen como series normales de trabajo,
+   * sin migración. Solo se escribe cuando la serie es de calentamiento.
+   */
+  isWarmup?: boolean;
 }
 
 export function getWorkoutSetDrops(set: { drops?: WorkoutSetDrop[] }): WorkoutSetDrop[] {
   return Array.isArray(set.drops) ? set.drops : [];
+}
+
+/**
+ * Una serie es de calentamiento solo si el campo vale exactamente `true`. Cualquier
+ * otro valor (incluido el campo ausente de los registros antiguos) es serie de trabajo.
+ */
+export function isWorkoutSetWarmup(set: { isWarmup?: unknown }): boolean {
+  return set.isWarmup === true;
+}
+
+/** Marca o desmarca la serie como calentamiento. Al desmarcarla el campo desaparece del JSON guardado. */
+export function setWorkoutSetWarmup(set: WorkoutSetLog, warmup: boolean): WorkoutSetLog {
+  const next: WorkoutSetLog = { ...set };
+  if (warmup) next.isWarmup = true;
+  else delete next.isWarmup;
+  return next;
 }
 
 export function createWorkoutSetLogs(
@@ -37,6 +59,9 @@ export function createWorkoutSetLogs(
         reps: canReuse ? previous.reps : exercise.reps,
         weight: canReuse && typeof previous.weight === "string" ? previous.weight : exercise.weight || "",
         done: false,
+        // La marca de calentamiento se copia de la sesión anterior; el resto de
+        // series conserva exactamente el mismo formato de siempre.
+        ...(canReuse && isWorkoutSetWarmup(previous) ? { isWarmup: true } : {}),
         // Solo las series que de verdad tenían bajadas llevan el campo: el resto
         // conserva exactamente el mismo formato de siempre.
         ...(drops.length > 0 ? { drops: drops.map((drop) => ({ ...drop })) } : {}),

@@ -19,7 +19,7 @@ export type FocusExercise = {
   exerciseType?: string | null;
 };
 
-type LoggedSet = { reps: number; weight: string; done: boolean };
+type LoggedSet = { reps: number; weight: string; done: boolean; isWarmup: boolean };
 
 const asSets = (value: unknown): LoggedSet[] => {
   if (!Array.isArray(value)) return [];
@@ -31,6 +31,7 @@ const asSets = (value: unknown): LoggedSet[] => {
       reps: Number.isFinite(reps) ? reps : 0,
       weight: set.weight == null ? "" : String(set.weight),
       done: set.done === true,
+      isWarmup: set.isWarmup === true,
     }];
   });
 };
@@ -87,7 +88,8 @@ export const ExerciseFocus = ({
     const reps = Number(exercise?.reps);
     if (!Number.isFinite(series) || !Number.isFinite(reps) || series <= 0 || reps <= 0) return null;
     const newest = logs[0] as (WorkoutLogRecord & { rpe?: number | null }) | undefined;
-    const previous = asSets(newest?.sets_completed);
+    // La progresión se calcula solo con las series de trabajo de la última sesión.
+    const previous = asSets(newest?.sets_completed).filter((set) => !set.isWarmup);
     if (previous.length === 0) return null;
     return getProgressionSuggestion(
       { series, reps } as GymExerciseEntry,

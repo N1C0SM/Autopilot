@@ -1,12 +1,13 @@
-export interface ReviewSet { reps: number; weight: string; done: boolean }
+export interface ReviewSet { reps: number; weight: string; done: boolean; isWarmup?: boolean }
 export interface ReviewExercise { name: string; sets: ReviewSet[] }
 export interface WorkoutReviewItem { name: string; observation: string; proposal: string }
 
 const fmt = (n: number) => (Math.round(n * 10) / 10).toLocaleString("es-ES");
 
 // Compare against the previous session with real numbers: top load, reps at equal load, then volume.
+// Las series de calentamiento no entran en la comparación (ni en el volumen ni en el recuento).
 export function buildWorkoutReview(current: ReviewExercise[], previous: ReviewExercise[], rpe?: number | null): WorkoutReviewItem[] {
-  const valid = (sets: ReviewSet[]) => sets.filter(s => s.done && Number.isFinite(s.reps) && s.reps > 0);
+  const valid = (sets: ReviewSet[]) => sets.filter(s => s.done && s.isWarmup !== true && Number.isFinite(s.reps) && s.reps > 0);
   const weight = (s: ReviewSet) => {
     const n = Number(s.weight.trim().replace(",", "."));
     return s.weight.trim() !== "" && Number.isFinite(n) && n >= 0 ? n : null;
