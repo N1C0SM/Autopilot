@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,6 +36,12 @@ import {
   type WorkoutSetLog,
 } from "@/lib/workoutSet";
 import { getExerciseTrackingConfig } from "@/lib/exerciseTrackingConfig";
+import {
+  getNextSupersetWork,
+  getSupersetChain,
+  toggleSupersetLink,
+  type SupersetLinks,
+} from "@/lib/workoutSuperset";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { addExerciseLoad } from "@/lib/muscleMapping";
 
@@ -101,6 +107,11 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const [livePRs, setLivePRs] = useState<Record<string, string>>({});
+  // Superseries: solo en memoria durante la sesión (no se guardan ni se envían).
+  const [supersetLinks, setSupersetLinks] = useState<SupersetLinks>({});
+  const restChainRef = useRef<number[] | null>(null);
+  const restWasRunningRef = useRef(false);
+  const exerciseLogsRef = useRef(exerciseLogs);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
 
   const formatLocalDate = (date: Date) => {
@@ -121,6 +132,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
   const trainingTitle = formatTrainingTitle(currentPlan?.routine_name, currentPlan?.muscle_focus);
   const currentPlanSignature = JSON.stringify(currentPlan || null);
+  const planExercises = currentPlan?.exercises;
+  const exerciseNames = useMemo(() => (planExercises ?? []).map((exercise) => exercise.name), [planExercises]);
   const startWorkout = (exerciseIndex = 0) => {
     if (!logsReady || loadError) return;
     setStarted(true);
@@ -132,6 +145,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   useEffect(() => {
     setStarted(false);
     setExpandedExercise(null);
+    // Las superseries son de la sesión: al cambiar de día no se arrastran.
+    setSupersetLinks({});
+    restChainRef.current = null;
   }, [selectedDay]);
 
   // Load existing logs + previous session
@@ -256,6 +272,30 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     return () => clearInterval(interval);
   }, [restTimer !== null]);
 
+  // Copia siempre fresca de las series: el efecto de abajo la lee al acabar el
+  // descanso sin depender de `exerciseLogs` en sus dependencias.
+  useEffect(() => {
+    exerciseLogsRef.current = exerciseLogs;
+  }, [exerciseLogs]);
+
+  // Superserie: al terminar (o cerrar) el descanso que cierra la ronda, se
+  // vuelve a abrir el primer ejercicio de la cadena con series pendientes.
+  useEffect(() => {
+    if (restTimer !== null) {
+      restWasRunningRef.current = true;
+      return;
+    }
+    if (!restWasRunningRef.current) return;
+    restWasRunningRef.current = false;
+    const chain = restChainRef.current;
+    restChainRef.current = null;
+    if (!chain || !started || workoutCompleted) return;
+    const pendingIndex = chain.find((index) =>
+      (exerciseLogsRef.current[exerciseNames[index]] || []).some((set) => !set.done),
+    );
+    if (pendingIndex !== undefined) setExpandedExercise(pendingIndex);
+  }, [restTimer, exerciseNames, started, workoutCompleted]);
+
   const adjustRest = (delta: number) => {
     setRestTimer((prev) => {
       if (prev === null) return prev;
@@ -344,13 +384,27 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     }
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
+    const exerciseIndex = currentPlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
+    const sets = exerciseLogs[exerciseName] || [];
+
+    // Superserie: mientras el siguiente miembro de la cadena tenga series
+    // pendientes no hay descanso y se abre ese ejercicio. Si a la cadena ya no
+    // le quedan series pendientes, el descanso arranca como siempre.
+    const hasPendingSets = (index: number) => (exerciseLogs[exerciseNames[index]] || [])
+      .some((candidate, candidateIndex) => !candidate.done && !(index === exerciseIndex && candidateIndex === setIndex));
+    const continuesSuperset = !wasDone && exerciseIndex >= 0
+      ? getNextSupersetWork(exerciseNames, supersetLinks, exerciseIndex, hasPendingSets)
+      : null;
+
     // Start rest timer when marking set as done
     if (!wasDone) {
       void hapticTap();
-      const configuredRest = getWorkoutRestSeconds(userId);
-      const effectiveRest = configuredRest || restSeconds || 60;
-      setRestTarget(effectiveRest);
-      setRestTimer(effectiveRest);
+      if (continuesSuperset === null) {
+        const configuredRest = getWorkoutRestSeconds(userId);
+        const effectiveRest = configuredRest || restSeconds || 60;
+        setRestTarget(effectiveRest);
+        setRestTimer(effectiveRest);
+      }
       // Récord en directo: supera el mejor peso de la sesión anterior
       const w = parsePositiveWeight(set.weight);
       const prevBest = Math.max(0, ...(previousLogs[exerciseName] || []).filter((s) => s.done).map((s) => parsePositiveWeight(s.weight) || 0));
@@ -367,10 +421,19 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
       });
     }
 
-    const exerciseIndex = currentPlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
-    const sets = exerciseLogs[exerciseName] || [];
-    if (!wasDone && exerciseIndex >= 0 && setIndex === sets.length - 1 && currentPlan?.exercises?.[exerciseIndex + 1]) {
-      setExpandedExercise(exerciseIndex + 1);
+    if (!wasDone && exerciseIndex >= 0) {
+      if (continuesSuperset !== null) {
+        setExpandedExercise(continuesSuperset);
+        return;
+      }
+
+      // Descanso normal (con o sin superserie): al acabar la ronda se retoma la
+      // cadena por el primer ejercicio con series pendientes.
+      const chain = getSupersetChain(exerciseNames, supersetLinks, exerciseIndex);
+      restChainRef.current = chain.length > 1 ? chain : null;
+      if (chain.length === 1 && setIndex === sets.length - 1 && currentPlan?.exercises?.[exerciseIndex + 1]) {
+        setExpandedExercise(exerciseIndex + 1);
+      }
     }
   };
 
@@ -952,6 +1015,17 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               exercise_type: exerciseType ?? undefined,
             });
             const progression = getProgressionSuggestion(ex, prevSets, previousSessionRpe);
+            // Superserie: cadena a la que pertenece este ejercicio y, si no es el
+            // último de la lista, el siguiente con el que se puede enlazar.
+            const supersetChain = getSupersetChain(exerciseNames, supersetLinks, i);
+            const isInSuperset = supersetChain.length > 1;
+            const supersetPosition = supersetChain.indexOf(i) + 1;
+            const isSupersetLinked = Boolean(supersetLinks[ex.name]);
+            const nextExercise = currentPlan.exercises?.[i + 1] ?? null;
+            const nextExerciseName = nextExercise ? swaps[nextExercise.name] || nextExercise.name : "";
+            const supersetChainLabel = supersetChain
+              .map((chainIndex) => swaps[exerciseNames[chainIndex]] || exerciseNames[chainIndex])
+              .join(" → ");
 
             return (
               <motion.div
@@ -978,8 +1052,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   <ExerciseThumb image={ex.image_url || metadata?.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />
                   <div className="flex-1 text-left min-w-0">
                     {/* El nombre ocupa todo el ancho: los iconos van en la columna de acciones */}
-                    <div className={`truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
-                      {swaps[ex.name] || ex.name}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={`truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
+                        {swaps[ex.name] || ex.name}
+                      </span>
+                      {isInSuperset && (
+                        <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          Superserie {supersetPosition}/{supersetChain.length}
+                        </span>
+                      )}
                     </div>
                     {swaps[ex.name] && <div className="truncate text-xs text-primary">En lugar de {ex.name}</div>}
                     <div className="mt-0.5 text-xs text-muted-foreground">
@@ -1089,6 +1170,28 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4 space-y-1.5">
+                        {/* Superserie: enlaza este ejercicio con el siguiente de la lista */}
+                        {nextExercise && (
+                          <div className="mb-2 rounded-xl border border-border bg-secondary/30 p-2">
+                            <p className="px-1 pb-2 text-xs text-muted-foreground">
+                              {isSupersetLinked
+                                ? `Superserie ${supersetPosition} de ${supersetChain.length}: ${supersetChainLabel}. Haces una serie de cada ejercicio seguida y descansas al cerrar la ronda.`
+                                : `Enlaza con ${nextExerciseName} para hacerlos seguidos: una serie de cada uno y descanso al terminar la ronda.`}
+                            </p>
+                            <button
+                              type="button"
+                              aria-pressed={isSupersetLinked}
+                              onClick={() => {
+                                setSupersetLinks((current) => toggleSupersetLink(current, ex.name));
+                                void hapticTap();
+                              }}
+                              className="flex min-h-11 w-full items-center justify-center rounded-xl border border-border bg-card px-3 text-xs font-semibold text-primary transition-colors hover:border-primary/40"
+                            >
+                              {isSupersetLinked ? "Quitar superserie" : `Superserie con ${nextExerciseName}`}
+                            </button>
+                          </div>
+                        )}
+
                         {/* El vídeo no se reproduce aquí: la miniatura marca que existe
                             y el botón de información abre la ficha con el héroe. */}
                         {exerciseVideo && (

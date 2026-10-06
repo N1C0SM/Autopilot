@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Estado local del CLI de Supabase (enlaces, caché)
+supabase/.temp/
