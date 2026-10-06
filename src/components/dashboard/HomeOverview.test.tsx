@@ -46,7 +46,7 @@ describe("dashboard home overview", () => {
 
     expect(screen.getByText("Tu semana")).toBeVisible();
     expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
-    expect(screen.getByText("Plan Completo")).toBeVisible();
+    expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
     expect(nutritionCard).toHaveClass("min-h-24", "p-4", "flex-1", "flex-col");
     expect(nutritionCard.parentElement).toHaveClass("flex", "items-stretch");

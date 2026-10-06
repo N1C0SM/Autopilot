@@ -7,17 +7,17 @@ interface Props {
 }
 
 /**
- * Aviso visible exigido por el AI Act / RGPD:
- * la IA solo apoya el análisis inicial; el plan y seguimiento son humanos.
- * No sustituye consejo médico.
+ * Aviso visible exigido por el AI Act / RGPD. Debe ser exacto con lo que hace el
+ * producto: la IA genera y adapta el plan; solo el plan Coach añade un entrenador
+ * real. No sustituye consejo médico.
  */
 const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
   if (variant === "compact") {
     return (
-      <p className={`text-[11px] text-muted-foreground flex items-center gap-1 ${className}`}>
+      <p className={`flex items-center gap-1 text-xs text-muted-foreground ${className}`}>
         <Sparkles className="w-3 h-3 text-primary shrink-0" />
         <span>
-          Análisis inicial asistido por IA · el plan lo prepara tu entrenador ·{" "}
+          Análisis asistido por IA · tu plan se adapta a ti ·{" "}
           <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
             no sustituye consejo médico
           </Link>
@@ -28,14 +28,14 @@ const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
 
   return (
     <div
-      className={`flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground ${className}`}
+      className={`flex items-start gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs text-muted-foreground ${className}`}
       role="note"
     >
       <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
       <p className="leading-snug">
-        La <strong className="text-foreground">IA</strong> solo apoya este análisis inicial. Un{" "}
-        <strong className="text-foreground">entrenador humano</strong> prepara y ajusta el plan. No sustituye el consejo de un médico
-        ni de un profesional sanitario.{" "}
+        El análisis inicial se apoya en <strong className="text-foreground">IA</strong>. Tu plan se genera y se adapta
+        automáticamente a lo que registras; con el plan <strong className="text-foreground">Coach</strong>, además, un
+        entrenador real lo revisa y lo ajusta. No sustituye el consejo de un médico ni de un profesional sanitario.{" "}
         <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
           Leer aviso completo
         </Link>

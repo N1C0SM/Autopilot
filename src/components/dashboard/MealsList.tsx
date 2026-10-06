@@ -63,9 +63,9 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
   }
 
   const chips = [
-    { l: "Proteína", v: p },
-    { l: "Carbos", v: c },
-    { l: "Grasas", v: f },
+    { l: "Proteína", short: "Prot.", v: p },
+    { l: "Carbos", short: "Carb.", v: c },
+    { l: "Grasas", short: "Gras.", v: f },
   ];
 
   return (
@@ -89,20 +89,21 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
 
       {macros && kcal > 0 && (
         <Surface padding="sm">
-          {/* Una sola fila compacta: kcal + 3 chips de macros */}
-          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
-            <div className="mr-auto flex items-baseline gap-1.5">
-              <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal * ratio)}</span>
-              <span className="text-xs text-muted-foreground">/ {fmt(kcal)} kcal</span>
-            </div>
+          {/* kcal grande + 3 chips que caben siempre en una fila (nada de wrap) */}
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal * ratio)}</span>
+            <span className="text-xs text-muted-foreground">/ {fmt(kcal)} kcal</span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
             {chips.map((m) => (
               <span
                 key={m.l}
-                className="inline-flex items-baseline gap-1 rounded-full bg-secondary/60 px-2.5 py-1 text-xs"
+                aria-label={`${m.l}: ${fmt(m.v * ratio)} de ${fmt(m.v)} gramos`}
+                className="flex items-baseline justify-center gap-1 rounded-full bg-secondary/60 px-1.5 py-1 text-xs"
               >
-                <span className="text-muted-foreground">{m.l}</span>
+                <span className="text-muted-foreground">{m.short}</span>
                 <span className="font-semibold tabular-nums">{fmt(m.v * ratio)}</span>
-                <span className="text-muted-foreground">/{fmt(m.v)} g</span>
+                <span className="text-muted-foreground">/{fmt(m.v)}g</span>
               </span>
             ))}
           </div>

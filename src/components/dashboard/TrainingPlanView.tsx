@@ -74,6 +74,23 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
     toast.success("Plan descargado");
   };
 
+  // Días consecutivos sin entrenamiento se muestran en una sola fila.
+  const dayRows: { days: string[]; plan?: DayPlan }[] = [];
+  for (const day of DAYS_ORDER) {
+    const plan = dayPlans.find((p) => p.day === day);
+    const isWork = plan?.type === "gimnasio" || plan?.type === "actividad";
+    if (!isWork) {
+      const prev = dayRows[dayRows.length - 1];
+      if (prev && !prev.plan) {
+        prev.days.push(day);
+        continue;
+      }
+      dayRows.push({ days: [day] });
+    } else {
+      dayRows.push({ days: [day], plan });
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4 px-1 sm:px-0">
       {/* Header + actions */}
@@ -103,13 +120,16 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
         </div>
       </div>
 
-      <AIDisclaimer />
+      <AIDisclaimer variant="compact" />
 
-      {/* Days */}
-      {DAYS_ORDER.map((day) => {
-        const plan = dayPlans.find((p) => p.day === day);
-        const isToday = day === DAYS_ORDER[todayIndex];
+      {/* Days. Los descansos consecutivos se agrupan en una sola fila: cuatro
+          tarjetas casi vacías ocupaban media pantalla sin aportar nada. */}
+      {dayRows.map((row) => {
+        const day = row.days[0];
+        const plan = row.plan;
+        const isToday = row.days.includes(DAYS_ORDER[todayIndex]);
         const isExpanded = expandedDay === day;
+        const dayLabel = row.days.length > 1 ? `${day} a ${row.days[row.days.length - 1]}` : day;
 
         return (
           <motion.div
@@ -121,10 +141,11 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
             }`}
           >
             <button
-              onClick={() => setExpandedDay(isExpanded ? null : day)}
-              className="w-full flex items-center gap-2.5 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 hover:bg-secondary/20 transition-colors"
+              onClick={() => { if (plan) setExpandedDay(isExpanded ? null : day); }}
+              disabled={!plan}
+              className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors ${plan ? "hover:bg-secondary/20" : "cursor-default"}`}
             >
-              <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0 ${
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                 plan ? "bg-primary/15" : "bg-secondary/50"
               }`}>
                 {plan?.type === "gimnasio" ? (
@@ -132,22 +153,22 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                 ) : plan?.type === "actividad" ? (
                   <Flame className="w-4 h-4 text-primary" />
                 ) : (
-                  <span className="text-xs sm:text-sm">😴</span>
+                  <span className="text-sm">😴</span>
                 )}
               </div>
 
               <div className="flex-1 text-left min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <span className={`font-bold text-[13px] sm:text-sm ${isToday ? "text-primary" : ""}`}>
-                    {day}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`font-bold text-sm ${isToday ? "text-primary" : ""}`}>
+                    {dayLabel}
                   </span>
                   {isToday && (
-                    <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                    <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">
                       HOY
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] sm:text-xs text-muted-foreground line-clamp-1 block">
+                <span className="text-xs text-muted-foreground line-clamp-1 block">
                   {plan?.type === "gimnasio"
                     ? formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"
                     : plan?.type === "actividad"
@@ -212,47 +233,30 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                           });
                         }
                       }}
-                      className="rounded-lg bg-secondary/20 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-secondary/30 active:bg-secondary/40"
+                      className="rounded-lg bg-secondary/20 p-2 cursor-pointer transition-colors hover:bg-secondary/30 active:bg-secondary/40"
                     >
                       <div className="flex items-center gap-3">
                         <ExerciseThumb image={image} name={ex.name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{ex.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {ex.series} series × {ex.reps} reps · {ex.rest}
+                          <p className="truncate text-sm font-medium">{ex.name}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {ex.series} × {ex.reps} · {ex.rest}
+                            {category ? ` · ${category}` : ""}
+                            {exerciseType ? ` · ${exerciseType}` : ""}
                           </p>
                         </div>
-                        {video ? (
+                        {video && (
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setExpandedVideos((current) => ({ ...current, [videoKey]: !isVideoOpen }));
                             }}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-md bg-primary/10 px-2 py-1.5 text-[10px] font-medium text-primary hover:bg-primary/15"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary/10 px-2 py-1.5 text-xs font-medium text-primary hover:bg-primary/15"
                           >
                             <Video className="h-3.5 w-3.5" />
                             {isVideoOpen ? "Ocultar" : "Vídeo"}
                           </button>
-                        ) : (
-                          <span className="shrink-0 text-[10px] text-muted-foreground/60">Sin vídeo</span>
-                        )}
-
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1 pl-12">
-                        {category ? (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            {category}
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
-                            Sin categoría
-                          </span>
-                        )}
-                        {exerciseType && (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-muted-foreground">
-                            {exerciseType}
-                          </span>
                         )}
                       </div>
                       {video && isVideoOpen && (

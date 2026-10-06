@@ -89,7 +89,7 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-2">
+        <Button size="sm" variant="outline" className="gap-2">
           <Plus className="w-4 h-4" /> Crear cuenta de prueba
         </Button>
       </DialogTrigger>

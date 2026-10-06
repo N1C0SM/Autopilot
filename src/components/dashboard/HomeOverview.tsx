@@ -199,10 +199,10 @@ const HomeOverview = ({
               className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
             >
               <span className="flex min-w-0 items-center gap-3">
-                <span className="relative h-11 w-11 shrink-0">
-                  <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
-                    <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3" />
-                    {nutrition && meals.length > 0 && (
+                {nutrition && meals.length > 0 ? (
+                  <span className="relative h-11 w-11 shrink-0">
+                    <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
+                      <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3" />
                       <circle
                         cx="18"
                         cy="18"
@@ -214,14 +214,20 @@ const HomeOverview = ({
                         strokeDasharray="97.4"
                         strokeDashoffset={97.4 * (1 - mealProgress)}
                       />
-                    )}
-                  </svg>
-                  {nutrition && <Utensils className="absolute inset-0 m-auto h-4 w-4 text-primary" />}
-                </span>
+                    </svg>
+                    <Utensils className="absolute inset-0 m-auto h-4 w-4 text-primary" />
+                  </span>
+                ) : (
+                  // Misma forma que la tarjeta de al lado: icono en caja, sin donut vacío.
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    {nutrition
+                      ? <Utensils className="h-5 w-5 text-primary" />
+                      : <LockKeyhole className="h-5 w-5 text-primary" />}
+                  </span>
+                )}
                 <span className="min-w-0">
                   <span className="flex items-center gap-1 text-base font-semibold leading-tight">
                     Nutrición
-                    {!nutrition && <LockKeyhole className="h-3 w-3 shrink-0 text-muted-foreground" />}
                   </span>
                   <span className="mt-1 block text-xs leading-tight text-muted-foreground">
                     {nutrition
@@ -230,12 +236,12 @@ const HomeOverview = ({
                         : calorieTarget
                           ? `${calorieTarget.toLocaleString("es-ES")} kcal objetivo`
                           : "Ver plan de hoy"
-                      : "Plan Completo"}
+                      : "Plan de nutrición"}
                   </span>
                 </span>
               </span>
               {nutrition && macros ? (
-                <span className="flex w-full justify-between gap-1 border-t border-border/70 pt-3 text-[11px] text-muted-foreground sm:text-xs">
+                <span className="flex w-full justify-between gap-1 border-t border-border/70 pt-3 text-xs text-muted-foreground">
                   {[
                     { label: "P", value: macros.protein },
                     { label: "C", value: macros.carbs },
@@ -245,9 +251,9 @@ const HomeOverview = ({
                   ))}
                 </span>
               ) : (
-                <span className="flex w-full items-center gap-1.5 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-                  <span className="h-2 flex-1 rounded-full bg-secondary" />
-                  Ver plan
+                <span className="flex w-full items-center justify-between border-t border-border/70 pt-3 text-xs">
+                  <span className="text-muted-foreground">{nutrition ? "Ver plan de hoy" : "Incluido en Plus"}</span>
+                  <span className="font-medium text-primary">Ver →</span>
                 </span>
               )}
             </button>
