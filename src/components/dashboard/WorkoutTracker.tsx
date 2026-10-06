@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Check, Dumbbell, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
+  Check, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
   Timer, TrendingUp, X, Video, Save, Trophy, Info,
   RefreshCw,
 } from "lucide-react";
@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
-import VideoEmbed from "@/components/VideoEmbed";
-import ExerciseMedia from "@/components/ExerciseMedia";
+import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
@@ -603,7 +602,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         intro={
           <div className="flex h-full flex-col gap-[clamp(0.5rem,2dvh,1.25rem)]">
             <header className="flex items-center gap-3 pt-1 text-left">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary shadow-[0_0_30px_hsl(var(--primary)/0.45)] ring-1 ring-primary/30">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary ring-1 ring-primary/30">
                 <Trophy className="h-5 w-5" />
               </div>
               <div className="w-full">
@@ -693,6 +692,43 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         )}
       </div>
 
+      {/* Selector de día: la semana entera siempre a un toque. Se oculta durante la
+          sesión para no cambiar de día con series a medias. */}
+      {!started && !workoutCompleted && dayPlans.length > 0 && (
+        <div
+          role="tablist"
+          aria-label="Elige el día de la semana"
+          className="no-scrollbar -mx-1 mb-3 flex gap-1.5 overflow-x-auto px-1"
+        >
+          {DAYS_ORDER.map((day) => {
+            const plan = dayPlans.find((p) => p.day === day);
+            const active = day === selectedDay;
+            const isToday = day === DAYS_ORDER[todayIndex];
+            const hasWork = plan?.type === "gimnasio" || plan?.type === "actividad";
+            return (
+              <button
+                key={day}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-label={`${day}${hasWork ? "" : " · descanso"}${isToday ? " · hoy" : ""}`}
+                onClick={() => setSelectedDay(day)}
+                className={`flex h-11 min-w-[3rem] flex-1 shrink-0 flex-col items-center justify-center rounded-xl border text-xs font-medium transition-colors ${
+                  active
+                    ? "border-primary bg-primary/10 text-primary"
+                    : isToday
+                      ? "border-primary/40 bg-card text-foreground"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/40"
+                }`}
+              >
+                <span>{day.slice(0, 3)}</span>
+                <span className={`mt-0.5 h-1 w-1 rounded-full ${hasWork ? "bg-primary" : "bg-border"}`} />
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Rest day */}
       {!currentPlan && (
         <motion.div
@@ -751,7 +787,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             <div className="mt-3">
               <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-amber-200"
+                  className="h-full rounded-full bg-primary"
                   animate={{ width: `${progressPercent}%` }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
                 />
@@ -901,20 +937,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                   }}
                   className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-secondary/20 sm:px-4"
                 >
-                  {/* Exercise image or icon */}
-                  {(ex.image_url || metadata?.image_url) ? (
-                    <img
-                      src={ex.image_url || metadata?.image_url || ""}
-                      alt={ex.name}
-                      className="h-11 w-11 shrink-0 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                      allDone ? "bg-primary/20" : "bg-secondary"
-                    }`}>
-                      <Dumbbell className={`w-4 h-4 ${allDone ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                  )}
+                  {/* Miniatura única de ejercicio (misma que en el resto de la app) */}
+                  <ExerciseThumb image={ex.image_url || metadata?.image_url} name={ex.name} completed={allDone} />
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center gap-1">
                       <div className={`min-w-0 flex-1 truncate text-sm font-semibold ${allDone ? "text-primary" : ""}`}>
@@ -1039,7 +1063,12 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                           <div className="mb-2">
                             {showVideo[ex.name] ? (
                               <div className="space-y-1.5">
-                                <VideoEmbed url={exerciseVideo} />
+                                <ExerciseMedia
+                                  video={exerciseVideo}
+                                  image={ex.image_url || metadata?.image_url}
+                                  name={ex.name}
+                                  emptyLabel="Sin vídeo de técnica"
+                                />
                                 <button
                                   onClick={() => setShowVideo((s) => ({ ...s, [ex.name]: false }))}
                                   className="text-[10px] text-muted-foreground hover:text-foreground underline"

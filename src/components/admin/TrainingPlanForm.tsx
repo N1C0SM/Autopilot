@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Dumbbell, Copy, ChevronDown, ChevronUp, FileDown, GripVertical, Download } from "lucide-react";
 import type { Exercise, DayPlan, GymExerciseEntry } from "@/types/training";
 import { DAYS, INTENSITIES, MUSCLE_GROUPS } from "@/types/training";
+import { ExerciseThumb } from "@/components/ExerciseMedia";
 
 interface Props {
   dayPlans: DayPlan[];
@@ -539,7 +540,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
         <span>Descanso: <strong className="text-foreground">{params.rest}</strong></span>
         {userGoal && <span>Objetivo: <strong className="text-foreground">{userGoal}</strong></span>}
         {activeDays && <span>Días disponibles: <strong className="text-foreground">{activeDays}</strong></span>}
-        {userAge && userAge > 45 && <span className="text-amber-500">👴 +45 años — considerar volumen reducido</span>}
+        {userAge && userAge > 45 && <span className="text-primary">👴 +45 años — considerar volumen reducido</span>}
       </div>
 
       {/* Injury warning */}
@@ -714,10 +715,8 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
                         {(plan.exercises || []).map((ex, exIdx) => (
                           <div key={exIdx} className="flex items-center gap-2 bg-background/50 rounded-lg p-2.5 border border-border/50 group">
-                            {/* Exercise image thumbnail */}
-                            {ex.image_url && (
-                              <img src={ex.image_url} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
-                            )}
+                            {/* Miniatura unificada del ejercicio */}
+                            <ExerciseThumb image={ex.image_url} name={ex.name} size="xs" />
                             <div className="w-[35%] shrink-0">
                               <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs" value={ex.exercise_id} onChange={(e) => selectExerciseFromLibrary(dayIdx, exIdx, e.target.value)}>
                                 <option value="">Seleccionar...</option>

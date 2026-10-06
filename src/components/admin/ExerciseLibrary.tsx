@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,54 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, Sparkles, Loader2, ImagePlus } from "lucide-react";
+import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, VideoOff, Image as ImageIcon, ImageOff, RefreshCw, AlertTriangle, Sparkles, Loader2, ImagePlus } from "lucide-react";
 import type { Exercise } from "@/types/training";
 import {
   MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
   PRIORITIES, STIMULUS_TYPES, LOAD_LEVELS, FATIGUE_LEVELS, RECOMMENDED_ORDERS, SKILL_TAGS,
 } from "@/types/training";
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
-import ExerciseMedia from "@/components/ExerciseMedia";
+import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
+
+/**
+ * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
+ * edge function `exercise-video`; los medios con otra versión (o sin versión) se
+ * marcan como "estilo antiguo" y se pueden regenerar.
+ */
+const MEDIA_STYLE_VERSION = 2;
+
+/** Los vídeos con IA (sora-2) tardan bastante más de 4 minutos; damos 10. */
+const VIDEO_DEADLINE_MS = 10 * 60 * 1000;
+
+/** Columnas de medios que la biblioteca necesita además del tipo Exercise. */
+type ExerciseRow = Exercise & {
+  media_style_version?: number | null;
+  image_generated_at?: string | null;
+  video_generated_at?: string | null;
+  media_error?: string | null;
+};
+
+type MediaFilter = "all" | "no-image" | "no-video" | "old-style" | "error";
+
+const isOldStyle = (exercise: ExerciseRow) => (exercise.media_style_version ?? 0) !== MEDIA_STYLE_VERSION;
+/** Tiene algún medio pero generado con un estilo anterior (o sin versión). */
+const hasOutdatedMedia = (exercise: ExerciseRow) =>
+  Boolean(exercise.image_url || exercise.video_url) && isOldStyle(exercise);
+const needsGeneration = (exercise: ExerciseRow) =>
+  !exercise.image_url || !exercise.video_url || hasOutdatedMedia(exercise);
+
+/**
+ * Ruta del objeto dentro del bucket público site-assets a partir de su URL
+ * pública. Devuelve null para URLs externas (YouTube, etc.) o ajenas al prefijo.
+ */
+const siteAssetPath = (url: string | null | undefined, prefix: string): string | null => {
+  if (!url) return null;
+  const marker = "/site-assets/";
+  const index = url.indexOf(marker);
+  if (index === -1) return null;
+  const path = url.slice(index + marker.length).split("?")[0];
+  return path.startsWith(prefix) ? path : null;
+};
 
 const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS, "Otro"] as const;
 
@@ -79,6 +119,12 @@ const STIMULUS_COLORS: Record<string, string> = {
   Resistencia: "bg-secondary text-muted-foreground",
   Isométrico: "bg-secondary text-muted-foreground",
 };
+
+/* ── Chips de estado de medios ── */
+
+const MEDIA_BADGE_BASE = "flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium";
+const MEDIA_BADGE_ON = `${MEDIA_BADGE_BASE} border-primary/30 bg-primary/15 text-primary`;
+const MEDIA_BADGE_OFF = `${MEDIA_BADGE_BASE} border-border bg-secondary/60 text-muted-foreground`;
 
 /* ── Exercise Form Dialog ── */
 
@@ -144,7 +190,7 @@ const ExerciseFormDialog = ({
       }
       if (start.data?.error) throw new Error(start.data.error);
       setGenStatus("Generando vídeo…");
-      const deadline = Date.now() + 4 * 60 * 1000;
+      const deadline = Date.now() + VIDEO_DEADLINE_MS;
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 6000));
         const check = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "check" } });
@@ -254,11 +300,7 @@ const ExerciseFormDialog = ({
 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {form.image_url ? (
-              <img src={form.image_url} alt="" className="h-8 w-8 shrink-0 rounded-lg border border-border object-cover" />
-            ) : (
-              <Dumbbell className="w-5 h-5 text-primary" />
-            )}
+            <ExerciseThumb image={form.image_url} name={form.name} size="xs" />
             {initial ? "Editar ejercicio" : "Nuevo ejercicio"}
           </DialogTitle>
         </DialogHeader>
@@ -396,13 +438,7 @@ const ExerciseFormDialog = ({
               <ImagePlus className="w-3.5 h-3.5" /> Imagen del ejercicio
             </p>
             <div className="flex items-center gap-3">
-              {form.image_url ? (
-                <img src={form.image_url} alt="" className="w-16 h-16 rounded-lg object-cover border border-border shrink-0" />
-              ) : (
-                <div className="w-16 h-16 rounded-lg bg-secondary/50 border border-dashed border-border flex items-center justify-center shrink-0">
-                  <Dumbbell className="w-5 h-5 text-muted-foreground" />
-                </div>
-              )}
+              <ExerciseThumb image={form.image_url} name={form.name} size="lg" />
               <div className="flex-1 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
@@ -542,28 +578,68 @@ const ExerciseFormDialog = ({
 /* ── Main Component ── */
 
 const ExerciseLibrary = () => {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exercises, setExercises] = useState<ExerciseRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [mediaBatchOpen, setMediaBatchOpen] = useState(false);
-  const [mediaBatch, setMediaBatch] = useState<{ current: number; total: number; exercise: string; task: string } | null>(null);
+  const [mediaBatch, setMediaBatch] = useState<{ current: number; total: number; exercise: string; task: string; errors: number } | null>(null);
   const [search, setSearch] = useState("");
   const [filterGroup, setFilterGroup] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string | null>(null);
+  const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all");
+
+  // Cola de generación: cancelación limpia y espera interrumpible entre sondeos.
+  const cancelRef = useRef(false);
+  const sleepRef = useRef<{ id: number; resolve: () => void } | null>(null);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
+  const [editingExercise, setEditingExercise] = useState<ExerciseRow | null>(null);
 
   const fetchExercises = async () => {
     const { data } = await supabase.from("exercises")
-      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension")
+      .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, media_style_version, image_generated_at, video_generated_at, media_error")
       .order("muscle_group").order("recommended_order").order("name");
-    if (data) setExercises(data as Exercise[]);
+    // Las columnas de medios vienen de la migración 20261006130000; los tipos
+    // generados de Supabase se regeneran al desplegar, de ahí el doble cast.
+    if (data) setExercises(data as unknown as ExerciseRow[]);
   };
 
   useEffect(() => { fetchExercises(); }, []);
 
-  const exercisesMissingMedia = exercises.filter((exercise) => !exercise.image_url || !exercise.video_url);
+  // Al desmontar: cancelamos la cola y despertamos la espera pendiente para no
+  // dejar timers ni promesas colgando.
+  useEffect(() => () => {
+    cancelRef.current = true;
+    const pending = sleepRef.current;
+    if (pending) {
+      window.clearTimeout(pending.id);
+      sleepRef.current = null;
+      pending.resolve();
+    }
+  }, []);
+
+  const interruptibleSleep = (ms: number) =>
+    new Promise<void>((resolve) => {
+      if (cancelRef.current) {
+        resolve();
+        return;
+      }
+      const id = window.setTimeout(() => {
+        sleepRef.current = null;
+        resolve();
+      }, ms);
+      sleepRef.current = { id, resolve };
+    });
+
+  const cancelMediaQueue = () => {
+    cancelRef.current = true;
+    const pending = sleepRef.current;
+    if (pending) {
+      window.clearTimeout(pending.id);
+      sleepRef.current = null;
+      pending.resolve();
+    }
+  };
 
   const invokeExerciseMedia = async (exerciseId: string, action: "image" | "create" | "check") => {
     const { data, error } = await supabase.functions.invoke("exercise-video", {
@@ -583,35 +659,48 @@ const ExerciseLibrary = () => {
     return data;
   };
 
-  const generateMissingMediaForAll = async () => {
-    const queue = exercisesMissingMedia;
+  /** Cola en serie que nunca se detiene por un error: lo registra y sigue. */
+  const generatePendingMedia = async () => {
+    const queue = pendingQueue;
     if (queue.length === 0) {
       setMediaBatchOpen(false);
-      toast.success("Todos los ejercicios ya tienen imagen y vídeo de técnica.");
+      toast.success("No hay medios pendientes con los filtros actuales.");
       return;
     }
 
     setMediaBatchOpen(false);
+    cancelRef.current = false;
+    const total = queue.length;
     let completed = 0;
-    for (const exercise of queue) {
+    let errors = 0;
+
+    for (let index = 0; index < total; index++) {
+      if (cancelRef.current) break;
+      const exercise = queue[index];
+      const setProgress = (task: string) =>
+        setMediaBatch({ current: index + 1, total, exercise: exercise.name, task, errors });
+
       try {
-        let imageUrl = exercise.image_url;
-        let videoUrl = exercise.video_url;
-        if (!imageUrl) {
-          setMediaBatch({ current: completed + 1, total: queue.length, exercise: exercise.name, task: "Generando imagen" });
+        const oldStyle = hasOutdatedMedia(exercise);
+
+        if (!exercise.image_url || oldStyle) {
+          setProgress("Generando imagen");
           const image = await invokeExerciseMedia(exercise.id, "image");
           if (!image?.image_url) throw new Error("La IA no devolvió una imagen.");
-          imageUrl = image.image_url;
-          setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, image_url: image.image_url } : item));
+          setExercises((current) => current.map((item) => item.id === exercise.id
+            ? { ...item, image_url: image.image_url, media_style_version: MEDIA_STYLE_VERSION, image_generated_at: new Date().toISOString(), media_error: null }
+            : item));
         }
+        if (cancelRef.current) break;
 
-        if (!videoUrl) {
-          setMediaBatch({ current: completed + 1, total: queue.length, exercise: exercise.name, task: "Generando técnica en vídeo" });
+        if (!exercise.video_url || oldStyle) {
+          setProgress("Generando técnica en vídeo");
           await invokeExerciseMedia(exercise.id, "create");
-          const deadline = Date.now() + 4 * 60 * 1000;
+          const deadline = Date.now() + VIDEO_DEADLINE_MS;
           let completedVideoUrl: string | null = null;
-          while (Date.now() < deadline) {
-            await new Promise((resolve) => setTimeout(resolve, 6000));
+          while (Date.now() < deadline && !cancelRef.current) {
+            await interruptibleSleep(6000);
+            if (cancelRef.current) break;
             const status = await invokeExerciseMedia(exercise.id, "check");
             if (status?.status === "failed") throw new Error(status.error || "La generación del vídeo falló.");
             if (status?.status === "completed" && status.video_url) {
@@ -619,26 +708,34 @@ const ExerciseLibrary = () => {
               break;
             }
             const progress = status?.progress ? ` (${Math.round(status.progress * 100)}%)` : "";
-            setMediaBatch({ current: completed + 1, total: queue.length, exercise: exercise.name, task: `Generando técnica en vídeo${progress}` });
+            setProgress(`Generando técnica en vídeo${progress}`);
           }
-          if (!completedVideoUrl) throw new Error("El vídeo sigue generándose. Puedes volver a iniciar la cola más tarde; el trabajo se reanudará.");
-          videoUrl = completedVideoUrl;
-          setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, video_url: completedVideoUrl } : item));
+          if (cancelRef.current) break;
+          if (!completedVideoUrl) throw new Error("El vídeo sigue generándose. Puedes reanudar la cola más tarde; el trabajo se reanudará.");
+          setExercises((current) => current.map((item) => item.id === exercise.id
+            ? { ...item, video_url: completedVideoUrl, media_style_version: MEDIA_STYLE_VERSION, video_generated_at: new Date().toISOString(), media_error: null }
+            : item));
         }
-        if (!imageUrl || !videoUrl) throw new Error("Faltan recursos después de la generación.");
+
         completed++;
       } catch (error) {
-        console.error(`Failed to generate media for exercise "${exercise.name}"`, error);
-        toast.error(`${exercise.name}: ${error instanceof Error ? error.message : "No se pudo completar la generación."} La cola se detuvo; puedes reanudarla después.`);
-        setMediaBatch(null);
-        void fetchExercises();
-        return;
+        errors++;
+        const message = error instanceof Error ? error.message : "No se pudo completar la generación.";
+        console.error(`No se pudieron generar los medios de "${exercise.name}"`, error);
+        // El error se guarda en la fila (media_error) y la cola continúa.
+        setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, media_error: message } : item));
+        toast.error(`${exercise.name}: ${message}`);
       }
     }
 
+    const cancelled = cancelRef.current;
+    cancelRef.current = false;
     setMediaBatch(null);
     void fetchExercises();
-    toast.success(`Imagen y técnica generadas para ${completed} ejercicios.`);
+    const detail = `${completed}/${total} · errores: ${errors}`;
+    if (cancelled) toast.info(`Cola cancelada (${detail}).`);
+    else if (errors > 0) toast.warning(`Medios generados con incidencias (${detail}).`);
+    else toast.success(`Medios generados (${detail}).`);
   };
 
   const filtered = useMemo(() => {
@@ -649,8 +746,29 @@ const ExerciseLibrary = () => {
     }
     if (filterGroup) result = result.filter((e) => (e.muscle_group || "Sin grupo") === filterGroup);
     if (filterType) result = result.filter((e) => e.exercise_type === filterType);
+    if (mediaFilter === "no-image") result = result.filter((e) => !e.image_url);
+    if (mediaFilter === "no-video") result = result.filter((e) => !e.video_url);
+    if (mediaFilter === "old-style") result = result.filter(hasOutdatedMedia);
+    if (mediaFilter === "error") result = result.filter((e) => Boolean(e.media_error));
     return result;
-  }, [exercises, search, filterGroup, filterType]);
+  }, [exercises, search, filterGroup, filterType, mediaFilter]);
+
+  /** Pendientes visibles: lo que realmente procesará el botón "Generar pendientes". */
+  const pendingQueue = useMemo(() => filtered.filter(needsGeneration), [filtered]);
+
+  const mediaFilterOptions = useMemo(() => ([
+    { value: "all" as const, label: "Todos", count: exercises.length },
+    { value: "no-image" as const, label: "Sin imagen", count: exercises.filter((e) => !e.image_url).length },
+    { value: "no-video" as const, label: "Sin vídeo", count: exercises.filter((e) => !e.video_url).length },
+    { value: "old-style" as const, label: "Estilo antiguo", count: exercises.filter(hasOutdatedMedia).length },
+    { value: "error" as const, label: "Con error", count: exercises.filter((e) => Boolean(e.media_error)).length },
+  ]), [exercises]);
+
+  const pendingCounts = useMemo(() => ({
+    missingImage: pendingQueue.filter((e) => !e.image_url).length,
+    missingVideo: pendingQueue.filter((e) => !e.video_url).length,
+    oldStyle: pendingQueue.filter(hasOutdatedMedia).length,
+  }), [pendingQueue]);
 
   const groupCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -702,13 +820,24 @@ const ExerciseLibrary = () => {
   };
 
   const deleteExercise = async (id: string) => {
+    const target = exercises.find((exercise) => exercise.id === id);
     const { error } = await supabase.from("exercises").delete().eq("id", id);
-    if (!error) {
-      setExercises((e) => e.filter((ex) => ex.id !== id));
-      toast.success("Ejercicio eliminado");
-    } else {
+    if (error) {
       toast.error("Error al eliminar");
+      return;
     }
+    setExercises((e) => e.filter((ex) => ex.id !== id));
+    // Higiene de medios: primero se borra la fila (revoca el acceso) y después
+    // los objetos del bucket. Si la limpieza falla, el ejercicio ya no existe.
+    const orphanPaths = [
+      siteAssetPath(target?.image_url, "exercise-images/"),
+      siteAssetPath(target?.video_url, "exercise-videos/"),
+    ].filter((path): path is string => Boolean(path));
+    if (orphanPaths.length > 0) {
+      const { error: cleanupError } = await supabase.storage.from("site-assets").remove(orphanPaths);
+      if (cleanupError) console.warn("No se pudieron limpiar los medios del ejercicio eliminado", cleanupError);
+    }
+    toast.success("Ejercicio eliminado");
   };
 
   const levelLabel = (l: number) => LEVELS.find((x) => x.value === l)?.label || "";
@@ -729,20 +858,26 @@ const ExerciseLibrary = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {mediaBatch ? (
-            <p role="status" className="text-xs text-muted-foreground">
-              {mediaBatch.current}/{mediaBatch.total} · {mediaBatch.exercise}: {mediaBatch.task}
-            </p>
+            <>
+              <p role="status" className="text-xs text-muted-foreground">
+                {mediaBatch.current}/{mediaBatch.total} · errores: {mediaBatch.errors} · {mediaBatch.exercise}: {mediaBatch.task}
+              </p>
+              <Button type="button" variant="secondary" size="sm" onClick={cancelMediaQueue} className="gap-1.5">
+                <X className="h-3.5 w-3.5" />
+                Cancelar
+              </Button>
+            </>
           ) : (
             <Button
               type="button"
               variant="secondary"
               size="sm"
-              disabled={exercisesMissingMedia.length === 0}
+              disabled={pendingQueue.length === 0}
               onClick={() => setMediaBatchOpen(true)}
               className="gap-1.5"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Completar medios ({exercisesMissingMedia.length})
+              Generar pendientes ({pendingQueue.length})
             </Button>
           )}
         </div>
@@ -798,6 +933,25 @@ const ExerciseLibrary = () => {
             </label>
           </div>
 
+          {/* Chips de estado de medios */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {mediaFilterOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setMediaFilter(option.value)}
+                aria-pressed={mediaFilter === option.value}
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  mediaFilter === option.value
+                    ? "border-primary/40 bg-primary/15 text-primary"
+                    : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary/70"
+                }`}
+              >
+                {option.label} · {option.count}
+              </button>
+            ))}
+          </div>
+
           {/* Lista única y limpia */}
           {filtered.length > 0 ? (
             <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80">
@@ -806,11 +960,7 @@ const ExerciseLibrary = () => {
                   key={ex.id}
                   className="group flex items-center gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
                 >
-                  {ex.image_url ? (
-                    <img src={ex.image_url} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-border/70 object-cover" />
-                  ) : (
-                    <div className="h-10 w-10 shrink-0 rounded-lg bg-gradient-to-b from-secondary/70 to-secondary/30" />
-                  )}
+                  <ExerciseThumb image={ex.image_url} name={ex.name} size="sm" />
                   <div className="min-w-0 flex-1">
 
                     <p className="font-medium text-sm truncate">{ex.name}</p>
@@ -829,13 +979,30 @@ const ExerciseLibrary = () => {
                     </div>
                   </div>
 
-                  {ex.video_url ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-medium flex items-center gap-1 shrink-0">
-                      <Video className="w-2.5 h-2.5" /> Vídeo
+                  {/* Estado de medios por fila */}
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                    <span className={ex.image_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
+                      {ex.image_url ? <ImageIcon className="h-2.5 w-2.5" /> : <ImageOff className="h-2.5 w-2.5" />}
+                      {ex.image_url ? "Imagen" : "Sin imagen"}
                     </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground/60 shrink-0">Sin vídeo</span>
-                  )}
+                    <span className={ex.video_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
+                      {ex.video_url ? <Video className="h-2.5 w-2.5" /> : <VideoOff className="h-2.5 w-2.5" />}
+                      {ex.video_url ? "Vídeo" : "Sin vídeo"}
+                    </span>
+                    {hasOutdatedMedia(ex) && (
+                      <span className={MEDIA_BADGE_OFF} title="Generado con una versión de estilo anterior">
+                        <RefreshCw className="h-2.5 w-2.5" /> Estilo antiguo
+                      </span>
+                    )}
+                    {ex.media_error && (
+                      <span
+                        className={`${MEDIA_BADGE_BASE} border-destructive/40 bg-destructive/10 text-destructive`}
+                        title={ex.media_error}
+                      >
+                        <AlertTriangle className="h-2.5 w-2.5" /> Error
+                      </span>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button
@@ -879,23 +1046,24 @@ const ExerciseLibrary = () => {
       <AlertDialog open={mediaBatchOpen} onOpenChange={setMediaBatchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Completar medios de los ejercicios</AlertDialogTitle>
+            <AlertDialogTitle>Generar medios pendientes</AlertDialogTitle>
             <AlertDialogDescription>
-              Se generará una imagen y un vídeo de técnica con IA para cada ejercicio que aún no los tenga
-              ({exercisesMissingMedia.length} ejercicios). El proceso puede tardar bastante y consume créditos de IA.
-              Los recursos se guardan a medida que se completan; si se interrumpe, podrás reanudarlo sin repetir los que ya estén listos.
+              Se generará imagen y/o vídeo de técnica con IA para {pendingQueue.length} ejercicios de los filtros actuales
+              ({pendingCounts.missingImage} sin imagen, {pendingCounts.missingVideo} sin vídeo y {pendingCounts.oldStyle} con
+              estilo antiguo, que se regenerarán). El proceso puede tardar bastante y consume créditos de IA. Los recursos
+              se guardan a medida que se completan: si se interrumpe o lo cancelas, podrás reanudarlo sin repetir los que ya estén listos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Ahora no</AlertDialogCancel>
             <AlertDialogAction
-              disabled={exercisesMissingMedia.length === 0 || mediaBatch !== null}
+              disabled={pendingQueue.length === 0 || mediaBatch !== null}
               onClick={(event) => {
                 event.preventDefault();
-                void generateMissingMediaForAll();
+                void generatePendingMedia();
               }}
             >
-              Generar para todos
+              Generar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

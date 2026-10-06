@@ -38,7 +38,7 @@ const STYLE = [
 ];
 const MODE = [
   { v: "individual", l: "Individual", d: "Un plan solo para ti" },
-  { v: "pareja", l: "En pareja", d: "Plus 44€/mes o Coach 74€/mes para los dos (~25% menos)" },
+  { v: "pareja", l: "En pareja", d: "Entrenáis juntos con un plan para los dos" },
 ];
 const TIMES = Array.from({ length: 32 }, (_, i) => {
   const m = 7 * 60 + i * 30;

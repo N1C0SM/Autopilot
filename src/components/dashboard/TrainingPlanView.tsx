@@ -8,8 +8,7 @@ import type { DayPlan } from "@/types/training";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import CalendarExportDialog from "./CalendarExportDialog";
 import AIDisclaimer from "@/components/AIDisclaimer";
-import VideoEmbed from "@/components/VideoEmbed";
-import ExerciseMedia from "@/components/ExerciseMedia";
+import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -215,15 +214,11 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                       }}
                       className="rounded-lg bg-secondary/20 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-secondary/30 active:bg-secondary/40"
                     >
-                      <div className="flex items-center gap-2.5 sm:gap-3">
-                        {image ? (
-                          <img src={image} alt={ex.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg object-cover shrink-0" />
-                        ) : (
-                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-b from-secondary/70 to-secondary/30 shrink-0" />
-                        )}
+                      <div className="flex items-center gap-3">
+                        <ExerciseThumb image={image} name={ex.name} />
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-[13px] sm:text-sm truncate">{ex.name}</p>
-                          <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
+                          <p className="font-medium text-sm truncate">{ex.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
                             {ex.series} series × {ex.reps} reps · {ex.rest}
                           </p>
                         </div>
@@ -262,7 +257,7 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                       </div>
                       {video && isVideoOpen && (
                         <div className="mt-3">
-                          <VideoEmbed url={video} />
+                          <ExerciseMedia video={video} image={image} name={ex.name} emptyLabel="Sin vídeo de técnica" />
                         </div>
                       )}
                     </div>

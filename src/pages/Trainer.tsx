@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, MessageCircle, LogOut, Users as UsersIcon, UserRound } from "lucide-react";
+import { Loader2, ArrowLeft, MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -13,6 +13,10 @@ import UserDetail from "@/components/admin/UserDetail";
 import TrainerSelfProfile from "@/components/trainer/TrainerSelfProfile";
 import type { Profile } from "@/pages/Admin";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Surface } from "@/components/ui/surface";
+import { SectionHeader } from "@/components/ui/section-header";
+import { PlanStatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Sidebar,
   SidebarContent,
@@ -55,7 +59,7 @@ const TrainerSidebar = ({
           {!collapsed ? (
             <>
               <span className="font-display text-lg font-bold text-gradient">Autopilot</span>
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground ml-2">Entrenador</span>
+              <span className="text-xs uppercase tracking-widest text-muted-foreground ml-2">Entrenador</span>
             </>
           ) : (
             <span className="font-display text-lg font-bold text-gradient">A</span>
@@ -78,7 +82,7 @@ const TrainerSidebar = ({
                         <span className="flex-1 flex items-center justify-between">
                           {item.title}
                           {item.section === "users" && (
-                            <span className="text-[10px] bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
+                            <span className="text-xs bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
                               {userCount}
                             </span>
                           )}
@@ -200,6 +204,7 @@ const TrainerPage = () => {
 
   const goSection = (s: TrainerSection) => { setSection(s); setSelected(null); };
   const sectionTitle = section === "users" ? "Mis clientes" : section === "chat" ? "Chat con admin" : "Mi perfil";
+  const visibleUsers = users.filter((u) => u.email.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <SidebarProvider>
@@ -251,57 +256,63 @@ const TrainerPage = () => {
                 />
               </div>
             ) : section === "users" ? (
-              <div className="space-y-2">
-                <h1 className="text-xl font-bold font-display mb-1 flex items-center gap-2">
-                  Usuarios asignados ({users.length})
-                  <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />
-                </h1>
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <p className="text-xs text-muted-foreground">Tus clientes y sus cambios aparecen aquí en directo.</p>
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1.5 shrink-0" aria-live="polite">
-                    <span className={`w-1.5 h-1.5 rounded-full ${realtimeConnected ? "bg-emerald-500" : "bg-muted-foreground"}`} />
-                    {realtimeConnected ? "En directo" : "Conectando…"}
-                  </span>
-                </div>
+              <div className="space-y-3">
+                <SectionHeader
+                  title={
+                    <span className="flex items-center gap-2">
+                      Usuarios asignados ({users.length})
+                      <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />
+                    </span>
+                  }
+                  hint="Tus clientes y sus cambios aparecen aquí en directo."
+                  action={
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
+                      <span className={`h-1.5 w-1.5 rounded-full ${realtimeConnected ? "bg-primary" : "bg-muted-foreground"}`} />
+                      {realtimeConnected ? "En directo" : "Conectando…"}
+                    </span>
+                  }
+                />
                 {users.length > 3 && (
                   <Input
                     type="search"
                     placeholder="Buscar por email…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="mb-3"
+                    className="h-11"
                     aria-label="Buscar usuario asignado"
                   />
                 )}
                 {users.length === 0 ? (
-                  <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
-                    <p className="text-sm text-muted-foreground">Aún no tienes clientes asignados.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Pide al administrador que te asigne clientes para empezar a seguir su progreso.</p>
-                  </div>
+                  <EmptyState
+                    icon={UsersIcon}
+                    title="Aún no tienes clientes asignados"
+                    description="Pide al administrador que te asigne clientes para empezar a seguir su progreso."
+                  />
+                ) : visibleUsers.length === 0 ? (
+                  <EmptyState icon={Search} title="Sin coincidencias" description="Prueba con otro email." />
                 ) : (
-                  users
-                    .filter((u) => u.email.toLowerCase().includes(query.trim().toLowerCase()))
-                    .map((u) => (
-                    <div
-                      key={u.user_id}
-                      className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all group"
-                      onClick={() => setSelected(u)}
-                    >
-                      <Avatar className="w-10 h-10 shrink-0">
-                        <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
-                        <AvatarFallback className="bg-secondary text-sm font-bold">
-                          {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">{u.name?.trim() || u.email}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {u.email}{u.plan_status === "plan_ready" ? " · Plan listo" : u.plan_status === "plan_pending" ? " · Pendiente" : " · Perfil pendiente"}
-                        </div>
-                      </div>
-                      <span className="text-muted-foreground group-hover:text-primary">→</span>
-                    </div>
-                  ))
+                  <Surface padding="none" className="divide-y divide-border overflow-hidden">
+                    {visibleUsers.map((u) => (
+                      <button
+                        key={u.user_id}
+                        type="button"
+                        onClick={() => setSelected(u)}
+                        className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40"
+                      >
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
+                          <AvatarFallback className="bg-secondary text-xs font-semibold text-muted-foreground">
+                            {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold">{u.name?.trim() || u.email}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                        </span>
+                        <PlanStatusBadge planStatus={u.plan_status} />
+                      </button>
+                    ))}
+                  </Surface>
                 )}
               </div>
             ) : section === "profile" ? (
@@ -309,12 +320,12 @@ const TrainerPage = () => {
             ) : (
               user && (
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="flex items-center gap-1.5 mb-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground">
                     <span>Chat interno con el equipo</span>
                     <InfoHint text="Canal privado con el administrador para dudas, incidencias o cambios en los planes de tus usuarios. Tus usuarios no ven esta conversación." />
                   </div>
                   <div className="min-h-0 flex-1"><Chat conversationUserId={user.id} /></div>
-                  <p className="text-[11px] text-muted-foreground mt-2 text-center">Conversación privada con el administrador.</p>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">Conversación privada con el administrador.</p>
                 </div>
               )
             )}

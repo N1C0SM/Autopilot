@@ -196,7 +196,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("nutrition")}
-              className="flex min-h-36 min-w-0 flex-1 flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
+              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
             >
               <span className="flex min-w-0 items-center gap-3">
                 <span className="relative h-11 w-11 shrink-0">
@@ -255,7 +255,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => onNavigate("progress")}
-              className="flex min-h-36 min-w-0 flex-1 flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-5 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99] sm:p-5"
+              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
             >
               <span className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">

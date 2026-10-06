@@ -25,19 +25,24 @@ export const PlanPaywall = ({
   onChoose,
   allowCoach = false,
   defaultPlan,
+  onSeeOther,
+  otherLabel,
 }: {
   plan: "plus" | "coach";
   onChoose: (tier: TierKey) => void;
   allowCoach?: boolean;
   /** Plan que el usuario ya eligió en la web, para no obligarle a elegir otra vez. */
   defaultPlan?: TierKey;
+  /** Salida alternativa cuando el plan mostrado no es el que quiere el usuario. */
+  onSeeOther?: () => void;
+  otherLabel?: string;
 }) => {
   const options: TierKey[] = allowCoach ? ["training", "full"] : [plan === "plus" ? "training" : "full"];
   const [selected, setSelected] = useState<TierKey>(defaultPlan && options.includes(defaultPlan) ? defaultPlan : options[0]);
   const t = TIERS[selected];
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-[1.75rem] border border-border bg-card p-6 text-center card-shadow sm:p-8">
+    <div className="mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center sm:p-8">
       <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
         <Lock className="h-7 w-7 text-primary" />
       </div>
@@ -84,18 +89,27 @@ export const PlanPaywall = ({
         variant="hero"
         size="lg"
         onClick={() => onChoose(selected)}
-        className="h-12 w-full rounded-2xl active:scale-[0.98]"
+        className="h-12 w-full rounded-xl active:scale-[0.98]"
       >
         Continuar al pago · {t.price} €/mes
       </Button>
       <p className="mt-3 text-xs text-muted-foreground">Sin permanencia. Cancela cuando quieras.</p>
+      {onSeeOther && otherLabel && (
+        <button
+          type="button"
+          onClick={onSeeOther}
+          className="mt-3 min-h-11 w-full text-xs font-medium text-primary underline underline-offset-4"
+        >
+          {otherLabel}
+        </button>
+      )}
     </div>
   );
 };
 
 /** Estado Coach pagado sin entrenador asignado todavía. */
 export const CoachPendingAssignment = () => (
-  <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
+  <div className="bg-card rounded-2xl p-6 md:p-10 border border-border text-center max-w-2xl mx-auto md:w-full md:max-w-none">
     <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5"><UserCheck className="w-7 h-7 text-primary" /></div>
     <h2 className="text-xl font-bold font-display">Estamos asignándote un entrenador.</h2>
     <p className="mt-2 text-sm text-muted-foreground">Mientras tanto puedes seguir usando todo Plus. Te avisaremos en cuanto tengas a tu entrenador.</p>

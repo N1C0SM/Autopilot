@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { PLAN_LABEL } from "@/config/tiers";
-import { Users, Search, Shield, UserCog, CalendarIcon, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Search, Shield, UserCog, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -11,6 +9,10 @@ import { cn } from "@/lib/utils";
 import type { Profile } from "@/pages/Admin";
 import CreateTestAccountDialog, { type TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Surface } from "@/components/ui/surface";
+import { SectionHeader } from "@/components/ui/section-header";
+import { PaymentDot, PlanStatusBadge, StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Props {
   users: Profile[];
@@ -20,14 +22,93 @@ interface Props {
   onTestAccountCreated: (profile: Profile, kind: TestAccountKind) => void;
 }
 
+type UserKind = "user" | "admin" | "trainer";
+
 const STATUS_FILTERS = [
   { label: "Todos", value: "all" },
   { label: "Pagados", value: "paid" },
   { label: "Sin pagar", value: "unpaid" },
   { label: "Plan pendiente", value: "plan_pending" },
   { label: "Plan listo", value: "plan_ready" },
-  { label: "✈️ En viaje", value: "traveling" },
+  { label: "En viaje", value: "traveling" },
 ] as const;
+
+const isTraveling = (u: Profile) =>
+  !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
+
+// Fila única de usuario: 56px, avatar/icono, título, meta y a la derecha
+// como máximo un badge de estado + un punto de pago.
+const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; onClick: () => void }) => {
+  const name = u.name?.trim() || u.email;
+  const meta =
+    kind === "admin"
+      ? "Administrador"
+      : kind === "trainer"
+        ? "Entrenador"
+        : `${u.name?.trim() ? `${u.email} · ` : ""}Alta ${new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40"
+    >
+      {kind === "user" ? (
+        <Avatar className="h-9 w-9 shrink-0">
+          <AvatarImage src={u.avatar_url || undefined} alt={name} />
+          <AvatarFallback className="bg-secondary text-xs font-semibold text-muted-foreground">
+            {name.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+      ) : (
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+          {kind === "admin" ? <Shield className="h-4 w-4" /> : <UserCog className="h-4 w-4" />}
+        </span>
+      )}
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{meta}</span>
+      </span>
+
+      {kind === "user" ? (
+        <>
+          <PlanStatusBadge planStatus={u.plan_status} traveling={isTraveling(u)} />
+          <PaymentDot status={u.payment_status} />
+        </>
+      ) : (
+        <StatusBadge tone="accent">{kind === "admin" ? "Admin" : "Entrenador"}</StatusBadge>
+      )}
+    </button>
+  );
+};
+
+const UserGroup = ({
+  title,
+  users,
+  kind,
+  onSelectUser,
+  empty,
+}: {
+  title: string;
+  users: Profile[];
+  kind: UserKind;
+  onSelectUser: (user: Profile) => void;
+  empty?: ReactNode;
+}) => (
+  <section>
+    <SectionHeader title={title} className="mb-2" />
+    {users.length === 0 ? (
+      empty
+    ) : (
+      <Surface padding="none" className="divide-y divide-border overflow-hidden">
+        {users.map((u) => (
+          <UserRow key={u.user_id} user={u} kind={kind} onClick={() => onSelectUser(u)} />
+        ))}
+      </Surface>
+    )}
+  </section>
+);
 
 const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCreated }: Props) => {
   const trainerSet = trainerIds ?? new Set<string>();
@@ -63,164 +144,91 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
     if (filter === "all") return matchesSearch && inRange;
     if (filter === "paid") return matchesSearch && inRange && u.payment_status === "paid";
     if (filter === "unpaid") return matchesSearch && inRange && u.payment_status === "unpaid";
-    if (filter === "traveling") {
-      return matchesSearch && inRange && !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
-    }
+    if (filter === "traveling") return matchesSearch && inRange && isTraveling(u);
     return matchesSearch && inRange && u.plan_status === filter;
   };
-
-  const isTraveling = (u: Profile) => !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
 
   const regularUsers = users.filter((u) => !adminIds.has(u.user_id) && !trainerSet.has(u.user_id) && matchesFilters(u));
   const trainerUsers = users.filter((u) => trainerSet.has(u.user_id) && !adminIds.has(u.user_id) && matchesFilters(u));
   const adminUsers = users.filter((u) => adminIds.has(u.user_id) && matchesFilters(u));
 
-  const renderUserCard = (u: Profile, kind: "user" | "admin" | "trainer" = "user") => (
-    <div
-      key={u.user_id}
-      className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/5 group"
-      onClick={() => onSelectUser(u)}
-    >
-      {kind === "user" ? (
-        <Avatar className="w-10 h-10 shrink-0">
-          <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
-          <AvatarFallback className="bg-secondary text-sm font-semibold text-muted-foreground">
-            {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-      ) : (
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${kind === "admin" ? "bg-primary/20" : "bg-amber-500/20"}`}>
-          {kind === "admin" ? (
-          <Shield className="w-4 h-4 text-primary" />
-          ) : (
-            <UserCog className="w-4 h-4 text-amber-400" />
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-          {u.name?.trim() || u.email}
-        </div>
-        <div className="text-xs text-muted-foreground truncate">
-          {u.name?.trim() ? u.email + " · " : ""}
-          Registrado {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-        </div>
-      </div>
-
-      {kind === "admin" ? (
-        <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30 hover:bg-primary/20">
-          Admin
-        </Badge>
-      ) : kind === "trainer" ? (
-        <Badge className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
-          Entrenador
-        </Badge>
-      ) : (
-        <div className="flex gap-2 shrink-0 flex-wrap justify-end">
-          {isTraveling(u) && (
-            <Badge className="text-[10px] bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
-              ✈️ Viaje
-            </Badge>
-          )}
-          <Badge variant="outline" className="text-[10px]">
-            {PLAN_LABEL[((u as any).subscription_tier as string) || ""] || "Sin plan"}
-          </Badge>
-          <Badge variant={u.payment_status === "paid" ? "default" : "destructive"} className="text-[10px]">
-            {u.payment_status === "paid" ? "💳 Pagado" : "⏳ Sin pagar"}
-          </Badge>
-          <Badge
-            variant="secondary"
-            className={`text-[10px] ${u.plan_status === "plan_ready" ? "bg-primary/20 text-primary border-primary/30" : ""}`}
-          >
-            {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "Perfil pendiente"}
-          </Badge>
-        </div>
-      )}
-
-      <div className="text-muted-foreground group-hover:text-primary transition-colors">
-        →
-      </div>
-    </div>
-  );
+  const rangeLabel = dateRange?.from
+    ? dateRange.to
+      ? `${dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`
+      : dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })
+    : "";
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex items-center gap-2 min-w-0">
-          <Users className="w-5 h-5 text-primary shrink-0" />
-          <h1 className="text-2xl font-bold font-display">Usuarios</h1>
-          <span className="text-sm text-muted-foreground ml-2">
-            ({regularUsers.length + trainerUsers.length} usuarios · {trainerSet.size} entrenadores · {adminIds.size} admin)
-          </span>
-        </div>
-        <CreateTestAccountDialog onCreated={onTestAccountCreated} />
-      </div>
+      <SectionHeader
+        title="Usuarios"
+        hint={`${regularUsers.length} usuarios · ${trainerSet.size} entrenadores · ${adminIds.size} admin`}
+        action={<CreateTestAccountDialog onCreated={onTestAccountCreated} />}
+        className="mb-3"
+      />
 
-      {/* Search & Filters */}
-      <div className="space-y-3 mb-6">
-        {/* Row 1: search + date picker */}
-        <div className="flex flex-col md:flex-row gap-2">
-          <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nombre o email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "justify-start text-left font-normal md:w-[240px] shrink-0",
-                  !dateRange?.from && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="w-4 h-4 mr-2 shrink-0" />
-                <span className="truncate">
-                  {dateRange?.from
-                    ? dateRange.to
-                      ? `${dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`
-                      : dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
-                    : "Fecha de registro"}
-                </span>
-                {dateRange?.from && (
-                  <X
-                    className="w-3.5 h-3.5 ml-auto opacity-60 hover:opacity-100 shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDateRange(undefined);
-                    }}
-                  />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={2}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
+      {/* Una sola fila de filtros: búsqueda, fecha y estados (desplazable en horizontal) */}
+      <div className="mb-4 flex items-center gap-2">
+        <div className="relative min-w-0 flex-1 md:max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre o email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 pl-9"
+            aria-label="Buscar usuario"
+          />
         </div>
-        {/* Row 2: status pills */}
-        <div className="flex gap-2 flex-wrap">
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn("h-11 shrink-0 gap-2 px-3 font-normal", dateRange?.from && "bg-primary/10")}
+              title={rangeLabel || "Filtrar por fecha de registro"}
+              aria-label="Filtrar por fecha de registro"
+            >
+              <CalendarIcon className="h-4 w-4 shrink-0" />
+              {rangeLabel ? <span className="text-xs">{rangeLabel}</span> : null}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={2}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+
+        {dateRange?.from && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11 shrink-0"
+            onClick={() => setDateRange(undefined)}
+            aria-label="Quitar filtro de fecha"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
+              type="button"
               onClick={() => setFilter(f.value)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              aria-pressed={filter === f.value}
+              className={cn(
+                "h-11 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors",
                 filter === f.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card border-border text-muted-foreground hover:border-primary/50"
-              }`}
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/50",
+              )}
             >
               {f.label}
             </button>
@@ -228,44 +236,39 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
         </div>
       </div>
 
-      {/* Regular users */}
-      <div className="mb-8">
-        <h2 className="font-display font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3">
-          Usuarios ({regularUsers.length})
-        </h2>
-        <div className="space-y-2">
-          {regularUsers.map((u) => renderUserCard(u, "user"))}
-          {regularUsers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No se encontraron usuarios
-            </div>
-          )}
-        </div>
+      <div className="space-y-6">
+        <UserGroup
+          title={`Usuarios (${regularUsers.length})`}
+          users={regularUsers}
+          kind="user"
+          onSelectUser={onSelectUser}
+          empty={
+            <EmptyState
+              icon={Search}
+              title="Sin usuarios"
+              description="Ajusta la búsqueda o los filtros para ver resultados."
+            />
+          }
+        />
+
+        {trainerUsers.length > 0 && (
+          <UserGroup
+            title={`Entrenadores (${trainerUsers.length})`}
+            users={trainerUsers}
+            kind="trainer"
+            onSelectUser={onSelectUser}
+          />
+        )}
+
+        {adminUsers.length > 0 && (
+          <UserGroup
+            title={`Administradores (${adminUsers.length})`}
+            users={adminUsers}
+            kind="admin"
+            onSelectUser={onSelectUser}
+          />
+        )}
       </div>
-
-      {/* Trainers */}
-      {trainerUsers.length > 0 && (
-        <div className="mb-8">
-          <h2 className="font-display font-bold text-xs uppercase tracking-widest text-amber-400 mb-3 flex items-center gap-2">
-            <UserCog className="w-3 h-3" /> Entrenadores ({trainerUsers.length})
-          </h2>
-          <div className="space-y-2">
-            {trainerUsers.map((u) => renderUserCard(u, "trainer"))}
-          </div>
-        </div>
-      )}
-
-      {/* Admins */}
-      {adminUsers.length > 0 && (
-        <div>
-          <h2 className="font-display font-bold text-xs uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
-            <Shield className="w-3 h-3" /> Administradores ({adminUsers.length})
-          </h2>
-          <div className="space-y-2">
-            {adminUsers.map((u) => renderUserCard(u, "admin"))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

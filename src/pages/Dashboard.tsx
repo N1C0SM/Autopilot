@@ -37,6 +37,7 @@ const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
 const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"));
 const ProgressCharts = lazy(() => import("@/components/ProgressCharts"));
 const WorkoutTracker = lazy(() => import("@/components/dashboard/WorkoutTracker"));
+const TrainingPlanView = lazy(() => import("@/components/dashboard/TrainingPlanView"));
 const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgress"));
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 
@@ -113,6 +114,7 @@ const Dashboard = () => {
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
+  const [trainingView, setTrainingView] = useState<"tracker" | "plan">("tracker");
   const [firstWeek, setFirstWeek] = useState<{
     dayNumber: number;
     startDate: string;
@@ -288,14 +290,20 @@ const Dashboard = () => {
     };
   }, [user, fetchData]);
 
-  const handleCompletePayment = async (plan: "training" | "full" | "transform" = "full") => {
+  // Por defecto Plus: es el plan que queremos vender primero. Coach es una elección explícita.
+  const handleCompletePayment = async (plan: "training" | "full" | "transform" = "training") => {
     try {
       track("checkout_start", { plan, source: "dashboard" });
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
         body: { referral_code: "", plan },
       });
       if (checkoutError || !checkoutData?.url) {
-        toast.error("Error al iniciar el pago. Inténtalo de nuevo.");
+        // Si falta configurar el enlace de pago, el problema no es del usuario.
+        if (checkoutData?.code === "no_price") {
+          toast.error("El pago de este plan aún no está configurado. Avísanos por el chat y lo activamos.");
+        } else {
+          toast.error("Error al iniciar el pago. Inténtalo de nuevo.");
+        }
         return;
       }
       window.location.href = checkoutData.url;
@@ -410,10 +418,17 @@ const Dashboard = () => {
         </div>
       )}
       {!coaching && section === "nutrition" && (
-        <PlanPaywall plan="plus" allowCoach defaultPlan={landingPlan} onChoose={(tier) => handleCompletePayment(tier)} />
+        // Plus preseleccionado siempre: es el plan que queremos vender primero.
+        <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
       )}
       {!coaching && section === "chat" && (
-        <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
+        // El chat exige Coach, pero no dejamos al usuario de gratis sin salida hacia Plus.
+        <PlanPaywall
+          plan="coach"
+          onChoose={() => handleCompletePayment("full")}
+          onSeeOther={() => setSection("nutrition")}
+          otherLabel={`Ver Plus · ${TIERS.training.price} €/mes`}
+        />
       )}
 
       {coaching && planStatus === "plan_pending" && (section === "home" || section === "training") && (
@@ -450,27 +465,62 @@ const Dashboard = () => {
               <div className="pt-3"><TravelModeCard userId={user.id} /></div>
             </details>
           )}
-          {!coaching && !firstWeek && <CoachingOffer onChoose={handleCompletePayment} compact defaultPlan={landingPlan} />}
+          {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
+              más intención hay. Se mantiene compacta para no competir con entrenar. */}
+          {!coaching && (
+            <div className="mx-auto w-full max-w-3xl space-y-2">
+              {firstWeek && (
+                <p className="text-center text-xs text-muted-foreground">
+                  Primera semana · día {firstWeek.dayNumber} de 7 · {firstWeek.completed} de {firstWeek.target} entrenos
+                </p>
+              )}
+              <CoachingOffer onChoose={handleCompletePayment} compact defaultPlan={landingPlan} />
+            </div>
+          )}
         </div>
       )}
 
       {hasPlan && section === "training" && user && (
         <div className="w-full min-w-0">
+          {/* El plan de la semana estaba a 4 toques (Progreso). Ahora es un toque,
+              y solo se ofrece cuando no hay una sesión en marcha. */}
+          {!workoutMode && !autoStartWorkout && (
+            <div role="tablist" aria-label="Entrenar o ver el plan" className="mx-auto mb-3 flex w-full max-w-md gap-1 rounded-full bg-secondary p-1">
+              {([["tracker", "Entrenar"], ["plan", "Ver plan"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={trainingView === key}
+                  onClick={() => setTrainingView(key)}
+                  className={`h-10 flex-1 rounded-full text-sm font-medium transition-colors ${
+                    trainingView === key ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <Suspense fallback={<SectionFallback />}>
-            <WorkoutTracker
-              userId={user.id}
-              dayPlans={dayPlans}
-              autoStart={autoStartWorkout}
-              onAutoStartConsumed={() => setAutoStartWorkout(false)}
-              onSessionModeChange={setWorkoutMode}
-              onCancel={() => setWorkoutMode(false)}
-              onExit={() => {
-                setWorkoutMode(false);
-                setCompletedToday(true);
-                setSection("home");
-                void fetchData();
-              }}
-            />
+            {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
+              <TrainingPlanView dayPlans={dayPlans} />
+            ) : (
+              <WorkoutTracker
+                userId={user.id}
+                dayPlans={dayPlans}
+                autoStart={autoStartWorkout}
+                onAutoStartConsumed={() => setAutoStartWorkout(false)}
+                onSessionModeChange={setWorkoutMode}
+                onCancel={() => setWorkoutMode(false)}
+                onExit={() => {
+                  setWorkoutMode(false);
+                  setCompletedToday(true);
+                  setSection("home");
+                  void fetchData();
+                }}
+              />
+            )}
           </Suspense>
         </div>
       )}
@@ -564,7 +614,7 @@ const Dashboard = () => {
       )}
 
       {section === "settings" && (
-        <div className="w-full"><SettingsPanel /></div>
+        <div className="w-full"><SettingsPanel onUpgrade={(plan) => handleCompletePayment(plan)} /></div>
       )}
     </>
   );

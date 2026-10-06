@@ -350,7 +350,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
                 <p className="text-xs text-foreground/90">{comparison.strengths}</p>
               </div>
               <div className="bg-secondary/30 rounded-lg p-3">
-                <div className="text-[10px] uppercase tracking-wider font-bold text-amber-400 mb-1">⚡ A mejorar</div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-primary mb-1">⚡ A mejorar</div>
                 <p className="text-xs text-foreground/90">{comparison.gaps}</p>
               </div>
             </div>

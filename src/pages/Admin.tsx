@@ -2,13 +2,17 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, Users as UsersIcon } from "lucide-react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminStats from "@/components/admin/AdminStats";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Surface } from "@/components/ui/surface";
+import { SectionHeader } from "@/components/ui/section-header";
+import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 
 const AdminMetrics = lazy(() => import("@/components/admin/AdminMetrics"));
@@ -211,30 +215,43 @@ const Admin = () => {
 
                 {/* Recent users */}
                 <div>
-                  <h2 className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground mb-3">Usuarios recientes</h2>
-                  <div className="space-y-2">
-                    {users
-                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                      .slice(0, 5)
-                      .map((u) => (
-                        <div
-                          key={u.user_id}
-                          className="bg-card rounded-xl p-4 border border-border flex items-center gap-3 cursor-pointer hover:border-primary/50 transition-all"
-                          onClick={() => handleSelectUser(u)}
-                        >
-                          <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                            <span className="text-xs font-bold text-muted-foreground">{u.email.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate">{u.email}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                            </div>
-                          </div>
-                          <StatusDot status={u.plan_status} payment={u.payment_status} />
-                        </div>
-                      ))}
-                  </div>
+                  <SectionHeader title="Usuarios recientes" className="mb-2" />
+                  {users.length === 0 ? (
+                    <EmptyState
+                      icon={UsersIcon}
+                      title="Todavía no hay usuarios"
+                      description="Cuando alguien se registre aparecerá aquí."
+                    />
+                  ) : (
+                    <Surface padding="none" className="divide-y divide-border overflow-hidden">
+                      {users
+                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        .slice(0, 5)
+                        .map((u) => (
+                          <button
+                            key={u.user_id}
+                            type="button"
+                            onClick={() => handleSelectUser(u)}
+                            className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40"
+                          >
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-muted-foreground">
+                              {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold">{u.name?.trim() || u.email}</span>
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                              </span>
+                            </span>
+                            <PlanStatusBadge
+                              planStatus={u.plan_status}
+                              traveling={!!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()}
+                            />
+                            <PaymentDot status={u.payment_status} />
+                          </button>
+                        ))}
+                    </Surface>
+                  )}
                 </div>
               </div>
             )}
@@ -354,19 +371,12 @@ function QuickAction({ label, value, color, onClick }: { label: string; value: n
   return (
     <button
       onClick={onClick}
-      className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5 hover:border-primary/40 transition-colors text-left"
+      className="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
     >
-      <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
-      <div className={`mt-2 font-display text-2xl font-bold tabular-nums sm:text-3xl ${color}`}>{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`mt-1 font-display text-2xl font-bold tabular-nums ${color}`}>{value}</div>
     </button>
   );
-}
-
-function StatusDot({ status, payment }: { status: string; payment: string }) {
-  if (payment === "unpaid") return <span className="w-2.5 h-2.5 rounded-full bg-destructive shrink-0" title="Sin pagar" />;
-  if (status === "plan_ready") return <span className="w-2.5 h-2.5 rounded-full bg-primary shrink-0" title="Plan listo" />;
-  if (status === "plan_pending") return <span className="w-2.5 h-2.5 rounded-full bg-primary/50 shrink-0" title="Pendiente" />;
-  return <span className="w-2.5 h-2.5 rounded-full bg-muted-foreground shrink-0" title="Onboarding" />;
 }
 
 // Full-page exercise library (always open)

@@ -43,12 +43,9 @@ const VideoEmbed = ({ url, className = "" }: Props) => {
 
   if (embed.type === "video") {
     return (
-      <video
-        src={embed.src}
-        controls
-        playsInline
-        className={`w-full rounded-lg bg-black ${className}`}
-      />
+      <div className={`relative w-full overflow-hidden rounded-lg bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
+        <video src={embed.src} controls playsInline className="absolute inset-0 h-full w-full" />
+      </div>
     );
   }
 

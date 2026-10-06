@@ -113,7 +113,7 @@ export default function EmailPreview() {
           <div className="text-sm font-semibold truncate">{subject || "Sin asunto"}</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${connected ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"}`}>
+          <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${connected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
             <Radio className="w-3 h-3" /> {connected ? "Sincronizado con el editor" : "Esperando editor…"}
           </div>
           <div className="flex items-center bg-background border border-border rounded-lg p-0.5">

@@ -40,9 +40,10 @@ const EXTERNAL_FATIGUE: Record<string, "Alta" | "Media" | "Baja"> = {
 };
 
 const LOAD_LABEL: Record<string, { dot: string; bg: string; label: string; recovery: string }> = {
-  Alta:  { dot: "bg-red-500",    bg: "bg-red-500/10 text-red-400 border-red-500/30",     label: "Carga alta",  recovery: "48h recomendadas" },
-  Media: { dot: "bg-amber-400",  bg: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "Carga media", recovery: "24h recomendadas" },
-  Baja:  { dot: "bg-emerald-500",bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", label: "Carga baja",  recovery: "Sin restricción" },
+  // Escala de carga sobre tokens: alta / media / baja, sin colores fuera de paleta.
+  Alta:  { dot: "bg-destructive", bg: "bg-destructive/10 text-destructive border-destructive/30", label: "Carga alta",  recovery: "48h recomendadas" },
+  Media: { dot: "bg-primary",     bg: "bg-primary/10 text-primary border-primary/30",             label: "Carga media", recovery: "24h recomendadas" },
+  Baja:  { dot: "bg-muted-foreground", bg: "bg-secondary text-muted-foreground border-border",    label: "Carga baja",  recovery: "Sin restricción" },
 };
 
 /** Estima la carga de un día de plan a partir de los fatigue_level de sus ejercicios. */

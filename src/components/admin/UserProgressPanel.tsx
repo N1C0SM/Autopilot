@@ -183,7 +183,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
         </div>
       )}
       {realtimeError && (
-        <div className="text-xs text-amber-500" role="status">No se pudo conectar con las actualizaciones en directo.</div>
+        <div className="text-xs text-primary" role="status">No se pudo conectar con las actualizaciones en directo.</div>
       )}
 
       {/* Immediate coach view: one compact row, full detail on demand */}
@@ -239,10 +239,10 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
 
       {/* Travel mode banner */}
       {isTraveling && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-center gap-3">
-          <Plane className="w-5 h-5 text-amber-400 shrink-0" />
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 flex items-center gap-3">
+          <Plane className="w-5 h-5 text-primary shrink-0" />
           <div className="flex-1">
-            <div className="text-sm font-medium text-amber-400">Modo viaje activo</div>
+            <div className="text-sm font-medium text-primary">Modo viaje activo</div>
             <div className="text-xs text-muted-foreground">
               Hasta {new Date(travelModeUntil!).toLocaleDateString("es-ES", { day: "numeric", month: "long" })} · Equipamiento: {travelEquipment || "Sin equipamiento"}
             </div>

@@ -291,7 +291,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
                           <span className="text-xs font-bold">{u.email.charAt(0).toUpperCase()}</span>
                         </div>
                         <span className="flex-1 text-sm truncate">{u.email}</span>
-                        {previousTrainer && <span className="text-[10px] text-amber-400">Reasignar</span>}
+                        {previousTrainer && <span className="text-[10px] text-primary">Reasignar</span>}
                         <UserPlus className="w-4 h-4 text-primary" />
                       </button>
                     );

@@ -33,14 +33,22 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated");
     log("User authenticated", { email: user.email });
 
-    let plan: "training" | "full" | "transform" = "full";
+    // Plus (training) es el plan por defecto: es el que se vende primero. Coach solo
+    // si el usuario lo pide explícitamente.
+    let plan: "training" | "full" | "transform" = "training";
     try {
       const body = await req.json();
-      const p = String(body.plan || "").toLowerCase();
-      if (p === "training") plan = "training";
+      const p = String(body.plan || "").toLowerCase().trim();
+      if (p === "training" || p === "plus") plan = "training";
       else if (p === "transform") plan = "transform";
-      else plan = "full";
-    } catch { /* no body */ }
+      else if (p === "full" || p === "coach" || p === "completo") plan = "full";
+      else if (p) {
+        return new Response(
+          JSON.stringify({ error: `Plan no reconocido: "${p}"`, code: "unknown_plan" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } catch { /* sin cuerpo: se usa el plan por defecto */ }
     log("Request params", { plan });
 
     // Read all settings from DB
@@ -57,7 +65,16 @@ serve(async (req) => {
     log("Payment link lookup", { plan, paymentMode, hasLink: Boolean(PAYMENT_LINK) });
 
     if (!PAYMENT_LINK) {
-      throw new Error(`Payment link no configurado para el plan "${plan}" en modo ${paymentMode}. Configúralo en Admin → Pagos.`);
+      // Error de configuración, no del usuario: se devuelve en claro para poder
+      // mostrar un mensaje accionable en vez de un 500 genérico.
+      log("Payment link missing", { linkKey });
+      return new Response(
+        JSON.stringify({
+          error: `Payment link no configurado para el plan "${plan}" en modo ${paymentMode}. Configúralo en Admin → Pagos.`,
+          code: "no_price",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     // A checkout attempt does not grant access; only verified Stripe events do.

@@ -1087,7 +1087,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
         </Button>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold font-display truncate">{profile.email}</h1>
-          <span className={`inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${kind === "admin" ? "bg-amber-500/20 text-amber-400" : "bg-primary/20 text-primary"}`}>
+          <span className={`inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${kind === "admin" ? "bg-primary/15 text-primary" : "bg-primary/20 text-primary"}`}>
             {kind === "admin" ? "👑 Administrador" : "🏋️ Entrenador"}
           </span>
         </div>
@@ -1384,10 +1384,10 @@ function AdminCalendarTab({ profile, dayPlans }: AdminCalendarTabProps) {
   return (
     <div className="space-y-4">
       {conflicts.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 space-y-3">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <div>
                 <p className="font-bold text-sm">{conflicts.length} conflicto{conflicts.length > 1 ? "s" : ""} detectado{conflicts.length > 1 ? "s" : ""} esta semana</p>
                 <p className="text-xs text-muted-foreground mt-0.5">El sistema puede reubicar los entrenos automáticamente respetando recuperación.</p>
@@ -1401,7 +1401,7 @@ function AdminCalendarTab({ profile, dayPlans }: AdminCalendarTabProps) {
           <ul className="space-y-1.5">
             {conflicts.slice(0, 5).map((c, i) => (
               <li key={i} className="text-xs flex items-start gap-2">
-                <span className="text-amber-400 mt-0.5">•</span>
+                <span className="text-primary mt-0.5">•</span>
                 <span>
                   <strong>{c.dayLabel}</strong> · {c.trainingTitle} —{" "}
                   <span className="text-muted-foreground">{c.hint}</span>

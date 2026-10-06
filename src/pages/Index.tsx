@@ -612,7 +612,7 @@ const Index = () => {
                 variant="hero"
                 size="xl"
                 onClick={() => goFree("footer")}
-                className="hover-scale shadow-[0_0_40px_-10px_hsl(var(--primary)/0.6)] text-base px-8 group"
+                className="hover-scale text-base px-8 group"
               >
                 Crear mi cuenta gratis
                 <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />

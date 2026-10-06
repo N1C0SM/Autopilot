@@ -24,7 +24,7 @@ import {
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
 import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/lib/workoutPreferences";
 
-const SettingsPanel = () => {
+const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") => void } = {}) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -467,7 +467,25 @@ const SettingsPanel = () => {
           )}
 
           {!isActive && paymentStatus !== "paid" && (
-            <p className="text-sm text-muted-foreground text-center">No tienes una suscripción activa. Vuelve al inicio para suscribirte.</p>
+            <div className="space-y-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                No tienes una suscripción activa. Empieza cuando quieras: 7 días de prueba.
+              </p>
+              {onUpgrade && (
+                <>
+                  <Button variant="hero" className="w-full" onClick={() => onUpgrade("training")}>
+                    <Zap className="mr-2 h-4 w-4" /> Mejorar a Plus · {MONTHLY_PRICE_EUR} €/mes
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => onUpgrade("full")}
+                    className="min-h-11 w-full text-xs font-medium text-primary underline underline-offset-4"
+                  >
+                    Ver Coach · entrenador real asignado
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

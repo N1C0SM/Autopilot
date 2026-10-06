@@ -1,6 +1,6 @@
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
-import { getAiConfig } from "../_shared/ai-provider.ts";
+import { aiFetch, getAiConfig } from "../_shared/ai-provider.ts";
 
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -18,6 +18,13 @@ const STYLE = [
   "Prohibited: no text, no captions, no watermarks, no logos, no music, no on-screen graphics, no morphed or floating equipment, no extra limbs, no camera movement, no cuts.",
 ].join(" ");
 
+/**
+ * Versión del estilo visual actual. Súbela al cambiar STYLE o cameraAngle y
+ * todos los medios anteriores quedarán marcados como "estilo antiguo" en el
+ * admin (coincide con MEDIA_STYLE_VERSION en ExerciseLibrary.tsx).
+ */
+const MEDIA_STYLE_VERSION = 2;
+
 /** Ángulo de cámara estandarizado según el patrón biomecánico. */
 function cameraAngle(name: string, group: string): string {
   const n = `${name} ${group}`.toLowerCase();
@@ -31,6 +38,16 @@ function cameraAngle(name: string, group: string): string {
 }
 
 type Job = { id: string; status: string; progress?: number; error?: { code: string; message: string } };
+
+/** Ruta del objeto dentro del bucket público site-assets a partir de su URL pública. */
+function siteAssetPath(url: unknown, prefix: string): string | null {
+  if (typeof url !== "string" || !url) return null;
+  const marker = "/site-assets/";
+  const index = url.indexOf(marker);
+  if (index === -1) return null;
+  const path = url.slice(index + marker.length).split("?")[0];
+  return path.startsWith(prefix) ? path : null;
+}
 
 
 Deno.serve(async (req) => {
@@ -51,7 +68,7 @@ Deno.serve(async (req) => {
 
     // Service-role client for exercise + storage access
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, video_url, video_job_id").eq("id", exerciseId).single();
+    const { data: exercise } = await svc.from("exercises").select("id, name, muscle_group, exercise_type, image_url, video_url, video_job_id").eq("id", exerciseId).single();
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
 
     // Proveedor según Ajustes: tu clave de OpenAI, Lovable AI o automático.
@@ -63,7 +80,6 @@ Deno.serve(async (req) => {
     const apiKey = openaiKey || cfg.lovableKey;
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 500);
     const BASE = openaiKey ? "https://api.openai.com" : GATEWAY;
-    const IMG_MODEL = openaiKey ? "gpt-image-1" : IMAGE_MODEL;
     const jobId = jobRaw.replace(/^openai:/, "");
     const noCredit = openaiKey ? "Sin saldo en tu cuenta de OpenAI" : "Sin créditos de IA suficientes";
 
@@ -73,16 +89,23 @@ Deno.serve(async (req) => {
 
     if (action === "image") {
       const prompt = `Professional exercise technique reference photograph of the exercise "${name}" (${group}). The athlete is captured at the key contracted position of the movement with perfect biomechanical form. ${angle} ${STYLE}`;
-      const r = await fetch(`${BASE}/v1/images/generations`, {
+      // aiFetch hereda la cadena de proveedores (OpenAI admin -> Claude -> gateway).
+      const r = await aiFetch(`${GATEWAY}/v1/images/generations`, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-        body: JSON.stringify({ model: IMG_MODEL, prompt, n: 1, size: "1536x1024" }),
+        body: JSON.stringify({ model: IMAGE_MODEL, prompt, n: 1, size: "1536x1024" }),
       });
       if (!r.ok) {
         const body = await r.json().catch(() => null);
         const msg = (body as any)?.message || (body as any)?.error?.message || `Error de IA (${r.status})`;
+        const message = r.status === 429
+          ? "Demasiadas peticiones, espera unos segundos"
+          : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota")
+            ? "Sin créditos de IA suficientes"
+            : msg;
         console.error(`image create failed [${r.status}]: ${msg}`);
-        return json({ error: r.status === 429 ? "Demasiadas peticiones, espera unos segundos" : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota") ? noCredit : msg }, r.status);
+        await svc.from("exercises").update({ media_error: message }).eq("id", exerciseId);
+        return json({ error: message }, r.status);
       }
       const out = await r.json();
       const b64 = out?.data?.[0]?.b64_json;
@@ -94,15 +117,30 @@ Deno.serve(async (req) => {
         const dl = await fetch(url);
         if (dl.ok) bytes = new Uint8Array(await dl.arrayBuffer());
       }
-      if (!bytes) return json({ error: "La IA no devolvió ninguna imagen" }, 502);
+      if (!bytes) {
+        await svc.from("exercises").update({ media_error: "La IA no devolvió ninguna imagen" }).eq("id", exerciseId);
+        return json({ error: "La IA no devolvió ninguna imagen" }, 502);
+      }
+      const previousImagePath = siteAssetPath(exercise.image_url, "exercise-images/");
       const path = `exercise-images/${exerciseId}-${Date.now()}.png`;
       const { error: upErr } = await svc.storage.from("site-assets").upload(path, bytes, { contentType: "image/png", upsert: true });
       if (upErr) {
         console.error(`storage upload failed: ${upErr.message}`);
+        await svc.from("exercises").update({ media_error: "No se pudo guardar la imagen" }).eq("id", exerciseId);
         return json({ error: "No se pudo guardar la imagen" }, 500);
       }
       const { data: pub } = svc.storage.from("site-assets").getPublicUrl(path);
-      await svc.from("exercises").update({ image_url: pub.publicUrl }).eq("id", exerciseId);
+      await svc.from("exercises").update({
+        image_url: pub.publicUrl,
+        media_style_version: MEDIA_STYLE_VERSION,
+        image_generated_at: new Date().toISOString(),
+        media_error: null,
+      }).eq("id", exerciseId);
+      // Limpieza del objeto anterior: la imagen cambia de nombre en cada generación.
+      if (previousImagePath) {
+        const { error: rmErr } = await svc.storage.from("site-assets").remove([previousImagePath]);
+        if (rmErr) console.warn(`old image cleanup failed: ${rmErr.message}`);
+      }
       return json({ status: "completed", image_url: pub.publicUrl });
     }
 
@@ -123,11 +161,20 @@ Deno.serve(async (req) => {
       if (!r.ok) {
         const body = await r.json().catch(() => null);
         const msg = (body as any)?.message || (body as any)?.error?.message || `Error de IA (${r.status})`;
+        const message = r.status === 429
+          ? "Ya hay un vídeo generándose, espera unos segundos"
+          : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota")
+            ? noCredit
+            : msg;
         console.error(`video create failed [${r.status}]: ${msg}`);
-        return json({ error: r.status === 429 ? "Ya hay un vídeo generándose, espera unos segundos" : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota") ? noCredit : msg }, r.status);
+        await svc.from("exercises").update({ media_error: message }).eq("id", exerciseId);
+        return json({ error: message }, r.status);
       }
       const job = (await r.json()) as Job;
-      await svc.from("exercises").update({ video_job_id: openaiKey ? `openai:${job.id}` : job.id }).eq("id", exerciseId);
+      await svc.from("exercises").update({
+        video_job_id: openaiKey ? `openai:${job.id}` : job.id,
+        media_error: null,
+      }).eq("id", exerciseId);
       return json({ jobId: job.id, status: job.status });
     }
 
@@ -148,8 +195,9 @@ Deno.serve(async (req) => {
     }
     const job = (await poll.json()) as Job;
     if (job.status === "failed") {
-      await svc.from("exercises").update({ video_job_id: null }).eq("id", exerciseId);
-      return json({ status: "failed", error: job.error?.message || "La generación del vídeo falló" });
+      const message = job.error?.message || "La generación del vídeo falló";
+      await svc.from("exercises").update({ video_job_id: null, media_error: message }).eq("id", exerciseId);
+      return json({ status: "failed", error: message });
     }
     if (job.status !== "completed") {
       return json({ status: job.status, progress: job.progress ?? null });
@@ -159,16 +207,26 @@ Deno.serve(async (req) => {
     const dl = await fetch(`${BASE}/v1/videos/${encodeURIComponent(job.id)}/content`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
-    if (!dl.ok || !dl.body) return json({ error: "No se pudo descargar el vídeo generado" }, 502);
+    if (!dl.ok || !dl.body) {
+      await svc.from("exercises").update({ media_error: "No se pudo descargar el vídeo generado" }).eq("id", exerciseId);
+      return json({ error: "No se pudo descargar el vídeo generado" }, 502);
+    }
     const bytes = new Uint8Array(await dl.arrayBuffer());
     const path = `exercise-videos/${exerciseId}.mp4`;
     const { error: upErr } = await svc.storage.from("site-assets").upload(path, bytes, { contentType: "video/mp4", upsert: true });
     if (upErr) {
       console.error(`storage upload failed: ${upErr.message}`);
+      await svc.from("exercises").update({ media_error: "No se pudo guardar el vídeo" }).eq("id", exerciseId);
       return json({ error: "No se pudo guardar el vídeo" }, 500);
     }
     const { data } = svc.storage.from("site-assets").getPublicUrl(path);
-    await svc.from("exercises").update({ video_url: data.publicUrl, video_job_id: null }).eq("id", exerciseId);
+    await svc.from("exercises").update({
+      video_url: data.publicUrl,
+      video_job_id: null,
+      media_style_version: MEDIA_STYLE_VERSION,
+      video_generated_at: new Date().toISOString(),
+      media_error: null,
+    }).eq("id", exerciseId);
     return json({ status: "completed", video_url: data.publicUrl });
   } catch (e) {
     console.error(e);

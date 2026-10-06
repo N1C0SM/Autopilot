@@ -134,9 +134,10 @@ body.keyboard-open main {
 
     --gradient-hero: linear-gradient(135deg, hsl(44 78% 72%) 0%, hsl(38 66% 52%) 100%);
     --gradient-gold: linear-gradient(180deg, hsl(44 78% 74%) 0%, hsl(40 66% 52%) 100%);
-    --shadow-glow: 0 0 36px hsl(42 68% 58% / 0.2);
-    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.5);
-    --shadow-premium: 0 30px 80px -30px hsl(42 58% 54% / 0.25), 0 0 0 1px hsl(42 30% 70% / 0.06);
+    /* Elevación mínima: un filo, no una sombra difusa de 80px. */
+    --shadow-glow: 0 0 0 1px hsl(42 68% 58% / 0.35);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.35);
+    --shadow-premium: 0 0 0 1px hsl(42 58% 54% / 0.3);
   }
 }
 
@@ -155,12 +156,8 @@ body.keyboard-open main {
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-image:
-      radial-gradient(ellipse at 8% -12%, hsl(var(--primary) / 0.075), transparent 34rem),
-      radial-gradient(ellipse at 102% 36%, hsl(205 75% 48% / 0.045), transparent 32rem),
-      linear-gradient(hsl(210 70% 65% / 0.018) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(210 70% 65% / 0.018) 1px, transparent 1px);
-    background-size: auto, auto, 52px 52px, 52px 52px;
+    /* Una sola luz de fondo: el mínimo para que la app no sea un plano negro. */
+    background-image: radial-gradient(ellipse at 12% -14%, hsl(var(--primary) / 0.06), transparent 34rem);
     background-attachment: scroll;
   }
 
@@ -175,15 +172,11 @@ body.keyboard-open main {
     outline-offset: 3px;
   }
 
+  /* Superficie plana: el borde separa, no la sombra. Nada de degradados apilados
+     ni de cuatro capas de box-shadow en cada tarjeta. */
   .bg-card {
-    background-image:
-      linear-gradient(145deg, hsl(var(--card) / 0.995), hsl(var(--card) / 0.94)),
-      radial-gradient(ellipse at 0% 0%, hsl(var(--primary) / 0.075), transparent 78%);
-    box-shadow:
-      inset 0 1px 0 hsl(var(--foreground) / 0.055),
-      inset 0 0 0 1px hsl(var(--foreground) / 0.012),
-      0 16px 38px -28px hsl(225 40% 1% / 0.95),
-      0 8px 24px -22px hsl(var(--primary) / 0.24);
+    background-image: none;
+    box-shadow: none;
   }
 
   .app-chrome {
@@ -193,24 +186,10 @@ body.keyboard-open main {
     backdrop-filter: blur(20px) saturate(1.3);
   }
 
+  /* Misma tipografía en móvil y escritorio: una sola identidad, no dos. */
   .mobile-dashboard-shell {
     background-color: hsl(var(--background));
-    background-image: radial-gradient(ellipse at 50% -24%, hsl(var(--primary) / 0.055), transparent 36rem);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-  }
-
-  .mobile-dashboard-shell :is(h1, h2, h3, h4, h5, h6) {
-    font-family: inherit;
-    letter-spacing: -0.035em;
-  }
-
-  .mobile-dashboard-shell .bg-card {
     background-image: none;
-    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.035);
-  }
-
-  .mobile-dashboard-shell .card-shadow {
-    box-shadow: none;
   }
 
   .mobile-dashboard-content {
