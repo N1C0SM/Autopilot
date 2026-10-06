@@ -3,6 +3,8 @@ import type { DayPlan } from "@/types/training";
 const DAY_INDEX: Record<string, number> = {
   Lunes: 1, Martes: 2, Miércoles: 3, Jueves: 4, Viernes: 5, Sábado: 6, Domingo: 0,
 };
+import { CYCLE_WEEKS } from "./renewal";
+
 const DAY_RRULE: Record<string, string> = {
   Lunes: "MO", Martes: "TU", Miércoles: "WE", Jueves: "TH", Viernes: "FR", Sábado: "SA", Domingo: "SU",
 };
@@ -80,14 +82,19 @@ export function buildICS(dayPlans: DayPlan[], opts: ICSOptions): string {
     const start = nextDateForDay(dow, hour);
     const end = new Date(start.getTime() + opts.durationMin * 60 * 1000);
     const { title, description } = describePlan(plan);
-    const uid = `${plan.day}-${plan.type}-autopilot@lovable.app`;
+    // UID estable: NO incluye el tipo, para que cambiar un día de gimnasio a
+    // actividad actualice el mismo evento en vez de dejar el viejo colgado.
+    const uid = `${plan.day.toLowerCase()}-autopilot@lovable.app`;
 
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${uid}`);
     lines.push(`DTSTAMP:${toICSDate(new Date())}`);
     lines.push(`DTSTART:${toICSDate(start)}`);
     lines.push(`DTEND:${toICSDate(end)}`);
-    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${rruleDay}`);
+    // COUNT en vez de repetición infinita: el plan dura el ciclo (12 semanas) y
+    // una regla sin fin llena el calendario para siempre y no hay forma de
+    // quitarla al cambiar de plan. COUNT es seguro con el cambio de hora.
+    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${rruleDay};COUNT=${CYCLE_WEEKS}`);
     lines.push(`SUMMARY:${escape(title)}`);
     lines.push(`DESCRIPTION:${escape(description)}`);
     if (opts.reminderMin > 0) {
