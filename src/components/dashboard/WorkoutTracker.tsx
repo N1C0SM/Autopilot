@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronDown, ChevronUp, Flame, Clock, ArrowLeft,
   Timer, TrendingUp, TrendingDown, Plus, X, Video, Save, Trophy, Info,
-  RefreshCw,
+  RefreshCw, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -1023,9 +1023,61 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             )}
           </AnimatePresence>}
 
+          {/* Modo foco: visor del ejercicio activo + carrusel de toda la sesión */}
+          {started && !workoutCompleted && completionReady && !loadError && expandedExercise !== null && (() => {
+            const active = currentPlan.exercises?.[expandedExercise];
+            if (!active) return null;
+            const meta = exerciseMetadata.byId[active.exercise_id] || exerciseMetadata.byName[active.name];
+            const img = active.image_url || meta?.image_url;
+            const vid = active.video_url || meta?.video_url;
+            return (
+              <div className="mb-3 space-y-3">
+                <div className="relative flex aspect-[4/3] max-h-[34dvh] w-full items-center justify-center overflow-hidden rounded-3xl bg-card">
+                  {img ? (
+                    <img src={img} alt={active.name} className="h-full w-full object-contain" />
+                  ) : (
+                    <p className="px-6 text-center text-sm text-muted-foreground">{swaps[active.name] || active.name}</p>
+                  )}
+                  {vid && (
+                    <button
+                      type="button"
+                      aria-label={`Ver vídeo de técnica de ${active.name}`}
+                      onClick={() => setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type })}
+                      className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur"
+                    >
+                      <Play className="h-4 w-4 fill-current" />
+                    </button>
+                  )}
+                </div>
+                <div role="tablist" aria-label="Ejercicios de la sesión" className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-1">
+                  {(currentPlan.exercises || []).map((item, idx) => {
+                    const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
+                    const itemSets = exerciseLogs[item.name] || [];
+                    const done = itemSets.length > 0 && itemSets.every((set) => set.done);
+                    const isActive = idx === expandedExercise;
+                    return (
+                      <button
+                        key={`${item.name}-${idx}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-label={`${idx + 1}. ${swaps[item.name] || item.name}${done ? " · hecho" : ""}`}
+                        onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
+                        className={`shrink-0 rounded-2xl p-0.5 transition-all ${isActive ? "ring-2 ring-primary" : "opacity-60"}`}
+                      >
+                        <ExerciseThumb image={item.image_url || m?.image_url} video={item.video_url || m?.video_url} name={item.name} completed={done} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Exercise list */}
           {!workoutCompleted && completionReady && !loadError && (currentPlan.exercises || []).map((ex, i) => {
             const isExpanded = expandedExercise === i;
+            if (started && expandedExercise !== null && !isExpanded) return null;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
             const allDone = doneSets === sets.length && sets.length > 0;
@@ -1075,7 +1127,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                     if (!started) {
                       startWorkout(i);
                     } else {
-                      setExpandedExercise(isExpanded ? null : i);
+                      setExpandedExercise(i);
                     }
                   }}
                   className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-secondary/20 sm:px-4"
@@ -1270,8 +1322,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                         )}
 
                         {/* Column headers */}
-                        <div className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-1 pb-1">
+                        <div className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-1 pb-1">
                           <span>Serie</span>
+                          <span className="text-center">Previa</span>
                           <span className="flex items-center gap-1">
                             {trackingConfig.weightLabel}
                             <InfoHint text={trackingConfig.description} />
@@ -1319,12 +1372,15 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                             )}
 
                             {/* Segmento principal de la serie */}
-                            <div className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center">
+                            <div className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 items-center">
                               {/* Set number */}
                               <span className={`text-xs font-bold text-center ${
                                 set.done && !isWarmup ? "text-primary" : "text-muted-foreground"
                               }`}>
                                 {si + 1}
+                              </span>
+                              <span className="truncate text-center text-[11px] tabular-nums text-muted-foreground">
+                                {prevSets?.[si]?.done ? `${prevSets[si].weight || "—"}×${prevSets[si].reps}` : "—"}
                               </span>
 
                               {/* Weight input */}
@@ -1340,11 +1396,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                   aria-invalid={Boolean(mainError && set.weight.trim())}
                                   className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                                 />
-                                {prevSets?.[si] && (
-                                  <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
-                                    Antes: {prevSets[si].weight || "—"} kg
-                                  </p>
-                                )}
                                 {!prevSets?.[si] && progression && (
                                   <p className="mt-1 truncate text-center text-[10px] font-medium text-primary">
                                     Para revisar: {progression.weight} kg
@@ -1367,11 +1418,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                   aria-invalid={Boolean(mainError && (!Number.isInteger(set.reps) || set.reps <= 0))}
                                   className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${mainError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
                                 />
-                                {prevSets?.[si] && (
-                                  <p className="mt-1 truncate text-center text-[10px] text-muted-foreground">
-                                    Antes: {prevSets[si].reps} reps
-                                  </p>
-                                )}
                               </div>
 
                               {/* Done toggle: marca la serie entera (bajadas incluidas) y arranca el descanso */}
@@ -1393,10 +1439,11 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                               {drops.map((drop, di) => {
                                 const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
                                 return (
-                                <div key={di} className="grid grid-cols-[36px_1fr_1fr_44px] gap-2 items-center">
+                                <div key={di} className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 items-center">
                                   <span className="flex items-center justify-center text-muted-foreground" title={`Bajada ${di + 1}`}>
                                     <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
                                   </span>
+                                  <span aria-hidden="true" />
                                   <input
                                     type="text"
                                     inputMode="decimal"
