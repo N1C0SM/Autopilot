@@ -218,7 +218,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         data.forEach((row) => {
           logs[row.exercise_name] = row.sets_completed as unknown as WorkoutSetLog[];
         });
-        setExerciseLogs(logs);
+        const base = currentPlan?.type === "gimnasio" && currentPlan.exercises ? createWorkoutSetLogs(currentPlan.exercises, prev) : {};
+        Object.keys(logs).forEach((k) => { if (!Array.isArray(logs[k]) || logs[k].length === 0) delete logs[k]; });
+        setExerciseLogs({ ...base, ...logs });
       } else if (currentPlan?.type === "gimnasio" && currentPlan.exercises) {
         setExerciseLogs(createWorkoutSetLogs(currentPlan.exercises, prev));
       } else {
@@ -1043,9 +1045,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                       type="button"
                       aria-label={`Ver vídeo de técnica de ${active.name}`}
                       onClick={() => setTechnique({ name: active.name, image: img, video: vid, series: active.series != null ? String(active.series) : undefined, reps: active.reps != null ? String(active.reps) : undefined, rest: active.rest, category: active.muscle_group || meta?.muscle_group, type: active.exercise_type || meta?.exercise_type })}
-                      className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur"
+                      className="absolute inset-0 m-auto flex h-14 w-14 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur"
                     >
-                      <Play className="h-4 w-4 fill-current" />
+                      <Play className="h-5 w-5 fill-current" />
                     </button>
                   )}
                 </div>
@@ -1304,7 +1306,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-2 px-1">
                             <TrendingUp className="w-3 h-3" />
                             <span>Toca ✓ para repetir lo de la última vez: {prevSets.filter((set) => set.done).map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
-                            <InfoHint text="Los pesos y repeticiones de las series completadas la última vez ya están puestos. Ajusta solo lo que cambie hoy." />
                           </div>
                         )}
 
@@ -1326,16 +1327,13 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                           <span>Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="flex items-center gap-1">
-                            {trackingConfig.weightLabel}
-                            <InfoHint text={trackingConfig.description} />
+                            {trackingConfig.weightLabel === "Peso (kg)" ? "KG" : trackingConfig.weightLabel}
                           </span>
                           <span className="flex items-center gap-1">
                             {trackingConfig.valueLabel}
-                            <InfoHint text="Registra el valor que realmente completaste, aunque sea menor o mayor que lo planificado." />
                           </span>
                           <span className="text-center flex items-center justify-center gap-1">
                             ✓
-                            <InfoHint text="Marca la serie al terminarla: se inicia el temporizador de descanso y cuenta para tu progreso del día." />
                           </span>
                         </div>
 
@@ -1541,7 +1539,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                         ? "Guardado automáticamente"
                         : "Se guarda automáticamente"}
               </span>
-              <InfoHint text="Tus series se guardan automáticamente. Al terminar se guardará cualquier cambio pendiente; solo se marcará el día como completado si has hecho todas las series." />
             </div>
             {completedSets === totalSets && totalSets > 0 && (
               <Button type="button" variant="ghost" className="mb-1 w-full" onClick={() => setRpeOpen(true)} disabled={saving}>
