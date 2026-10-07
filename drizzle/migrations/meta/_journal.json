@@ -22,6 +22,13 @@
       "when": 1791020101569,
       "tag": "0002_landing_content_counts",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791355777962,
+      "tag": "0003_exercise_media_style",
+      "breakpoints": true
     }
   ]
 }

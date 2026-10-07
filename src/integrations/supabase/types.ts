@@ -393,11 +393,14 @@ export type Database = {
           fatigue_level: string | null
           high_tension: boolean
           id: string
+          image_generated_at: string | null
           image_url: string | null
           is_progressable: boolean
           is_stable: boolean
           level: number | null
           load_level: string | null
+          media_error: string | null
+          media_style_version: number | null
           movement_pattern: string | null
           muscle_group: string | null
           name: string
@@ -406,6 +409,7 @@ export type Database = {
           recommended_order: number | null
           skill_tag: string | null
           stimulus_type: string | null
+          video_generated_at: string | null
           video_job_id: string | null
           video_url: string | null
         }
@@ -416,11 +420,14 @@ export type Database = {
           fatigue_level?: string | null
           high_tension?: boolean
           id?: string
+          image_generated_at?: string | null
           image_url?: string | null
           is_progressable?: boolean
           is_stable?: boolean
           level?: number | null
           load_level?: string | null
+          media_error?: string | null
+          media_style_version?: number | null
           movement_pattern?: string | null
           muscle_group?: string | null
           name: string
@@ -429,6 +436,7 @@ export type Database = {
           recommended_order?: number | null
           skill_tag?: string | null
           stimulus_type?: string | null
+          video_generated_at?: string | null
           video_job_id?: string | null
           video_url?: string | null
         }
@@ -439,11 +447,14 @@ export type Database = {
           fatigue_level?: string | null
           high_tension?: boolean
           id?: string
+          image_generated_at?: string | null
           image_url?: string | null
           is_progressable?: boolean
           is_stable?: boolean
           level?: number | null
           load_level?: string | null
+          media_error?: string | null
+          media_style_version?: number | null
           movement_pattern?: string | null
           muscle_group?: string | null
           name?: string
@@ -452,6 +463,7 @@ export type Database = {
           recommended_order?: number | null
           skill_tag?: string | null
           stimulus_type?: string | null
+          video_generated_at?: string | null
           video_job_id?: string | null
           video_url?: string | null
         }
