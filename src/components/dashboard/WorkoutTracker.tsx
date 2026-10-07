@@ -12,7 +12,6 @@ import type { DayPlan } from "@/types/training";
 import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
-import InfoHint from "@/components/InfoHint";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
@@ -1327,7 +1326,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                           <span>Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="flex items-center gap-1">
-                            {trackingConfig.weightLabel === "Peso (kg)" ? "KG" : trackingConfig.weightLabel}
+                            {trackingConfig.weightLabel}
                           </span>
                           <span className="flex items-center gap-1">
                             {trackingConfig.valueLabel}
