@@ -164,7 +164,7 @@ const MySchedule = () => {
   return (
     <div className="min-h-screen bg-background">
       <PageHead
-        title="Mi semana · Autopilot"
+        title="Horarios y disponibilidad · Autopilot"
         description="Configura tus horarios reales de entrenamiento y disponibilidad."
         path="/my-schedule"
         noindex
@@ -174,7 +174,7 @@ const MySchedule = () => {
           <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver
         </Button>
         <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground flex-1">
-          Mi semana real
+          Horarios y disponibilidad
         </h1>
         <Button onClick={handleSave} disabled={saving} variant="hero" size="sm">
           {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}

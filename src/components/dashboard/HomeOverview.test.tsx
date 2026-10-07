@@ -44,13 +44,13 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("Tu semana")).toBeVisible();
+    expect(screen.getByText("Progreso semanal")).toBeVisible();
     expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
     expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
     expect(nutritionCard).toHaveClass("min-h-24", "p-4", "flex-1", "flex-col");
     expect(nutritionCard.parentElement).toHaveClass("flex", "items-stretch");
-    expect(screen.getByRole("button", { name: /Tu semana/ })).toHaveClass("min-h-24", "p-4", "flex-1", "flex-col");
+    expect(screen.getByRole("button", { name: /Progreso semanal/ })).toHaveClass("min-h-24", "p-4", "flex-1", "flex-col");
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     expect(startButton).toHaveClass("bg-primary", "text-primary-foreground");

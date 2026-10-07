@@ -140,7 +140,7 @@ const Configurator = () => {
   };
 
   const dayNames = DOW.filter((d) => c.days.includes(d.v)).map((d) => d.s).join(", ");
-  const titles = ["¿Qué quieres conseguir?", "Tu semana de entrenamiento", "Tu nutrición", "Tu seguimiento", "Tu plan Autopilot"];
+  const titles = ["¿Qué quieres conseguir?", "Horarios y disponibilidad", "Tu nutrición", "Tu seguimiento", "Tu plan Autopilot"];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -250,7 +250,7 @@ const Configurator = () => {
             </div>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} />
             <div className="rounded-xl border border-border bg-secondary/25 p-3 text-xs text-muted-foreground">
-              <p><span className="font-semibold text-foreground">Tu semana:</span> {c.days.length} días ({dayNames}) · {label(DURATION, c.minutes)} · {label(STRUCTURE, c.structure)}.</p>
+              <p><span className="font-semibold text-foreground">Horarios:</span> {c.days.length} días ({dayNames}) · {label(DURATION, c.minutes)} · {label(STRUCTURE, c.structure)}.</p>
               <p className="mt-1"><span className="font-semibold text-foreground">Tu revisión:</span> {DOW.find((d) => d.v === c.checkin_dow)?.l} a las {c.checkin_time} · {label(STYLE, c.style)}.</p>
             </div>
             <label className="flex items-start gap-2 text-xs text-muted-foreground">

@@ -511,7 +511,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
             </div>
             <div className="grid sm:grid-cols-3 gap-2">
               <Button variant="outline" onClick={() => navigate("/my-schedule")} size="sm">
-                <CalendarClock className="w-4 h-4 mr-2" /> Mi semana
+                <CalendarClock className="w-4 h-4 mr-2" /> Horarios y disponibilidad
               </Button>
               <Button variant="default" onClick={handleSyncGoogle} disabled={gcalLoading} size="sm">
                 {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
@@ -529,7 +529,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
             </p>
             <div className="grid sm:grid-cols-2 gap-2">
               <Button variant="outline" onClick={() => navigate("/my-schedule")} size="sm">
-                <CalendarClock className="w-4 h-4 mr-2" /> Mi semana
+                <CalendarClock className="w-4 h-4 mr-2" /> Horarios y disponibilidad
               </Button>
               <Button variant="hero" onClick={handleConnectGoogle} disabled={gcalLoading} size="sm">
                 {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
