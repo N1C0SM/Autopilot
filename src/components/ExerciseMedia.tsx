@@ -63,15 +63,6 @@ export const ExerciseThumb = ({
           <Dumbbell className={`h-4 w-4 ${completed ? "text-primary" : "text-muted-foreground"}`} />
         </div>
       )}
-      {/* Nada se reproduce solo: la miniatura es la portada y el play te lleva al vídeo */}
-      {hasVideo && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-background/85 ring-1 ring-border"
-        >
-          <Play className="h-2.5 w-2.5 text-primary" fill="currentColor" />
-        </span>
-      )}
     </div>
   );
 };
