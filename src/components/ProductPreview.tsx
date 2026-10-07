@@ -227,7 +227,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                               </div>
                             </button>
                             <button type="button" onClick={() => changeView("progress")} className="rounded-2xl border border-border p-3 text-left transition-colors hover:bg-secondary">
-                              <p className="flex items-center gap-1 text-xs font-semibold"><LineChart className="h-3 w-3 text-primary" />Tu semana</p>
+                              <p className="flex items-center gap-1 text-xs font-semibold"><LineChart className="h-3 w-3 text-primary" />Progreso semanal</p>
                               <p className="text-[10px] text-muted-foreground">2 de 3 sesiones</p>
                               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full w-2/3 rounded-full bg-primary" /></div>
                             </button>

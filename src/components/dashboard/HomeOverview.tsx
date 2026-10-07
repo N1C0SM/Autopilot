@@ -267,7 +267,7 @@ const HomeOverview = ({
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                   <LineChart className="h-5 w-5 text-primary" />
                 </span>
-                <span className="text-base font-semibold">Tu semana</span>
+                <span className="text-base font-semibold">Progreso semanal</span>
               </span>
               <span className="block truncate text-sm text-muted-foreground">
                   {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
