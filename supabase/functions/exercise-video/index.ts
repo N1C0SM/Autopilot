@@ -247,6 +247,11 @@ Deno.serve(async (req) => {
     if (!poll.ok) {
       const body = await poll.json().catch(() => null);
       console.error(`video poll failed [${poll.status}]: ${body?.message ?? poll.status}`);
+      if (poll.status === 404) {
+        // Trabajo caducado o inexistente: lo soltamos para que la cola lo vuelva a crear.
+        await svc.from("exercises").update({ video_job_id: null, media_error: null }).eq("id", exerciseId);
+        return json({ status: "failed", expired: true, error: "El vídeo anterior caducó; se volverá a generar" });
+      }
       return json({ error: "No se pudo comprobar el vídeo, inténtalo de nuevo" }, 502);
     }
     const job = (await poll.json()) as Job;
