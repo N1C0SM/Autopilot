@@ -1151,41 +1151,6 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                     <div className="mt-0.5 text-xs text-muted-foreground">
                       {ex.series} series <span className="px-0.5 text-border">·</span> {ex.reps} reps <span className="px-0.5 text-border">·</span> {ex.rest}
                     </div>
-                    {started && (exerciseCategory || exerciseType) && (
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {exerciseCategory && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            {exerciseCategory}
-                          </span>
-                        )}
-                        {exerciseType && (
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
-                            {exerciseType}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {started && progression && (
-                      <span
-                        title={progression.reason}
-                        className={`mt-1.5 inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          progression.label === "Subir" || progression.label === "Añadir rep"
-                            ? "bg-primary/15 text-primary"
-                            : "bg-secondary text-muted-foreground"
-                        }`}
-                      >
-                        <TrendingUp className="h-3 w-3 shrink-0" />
-                        <span className="truncate">
-                          {progression.label === "Subir"
-                            ? `Sube a ${progression.weight} kg hoy`
-                            : progression.label === "Añadir rep"
-                              ? "Prueba 1 rep más por serie"
-                              : progression.label === "Mantener"
-                                ? progression.weight ? `Mantén ${progression.weight} kg hoy` : "Mantén las repeticiones hoy"
-                                : progression.weight ? `Repite ${progression.weight} kg hoy` : "Repite las repeticiones hoy"}
-                        </span>
-                      </span>
-                    )}
 
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -1255,71 +1220,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4 space-y-1.5">
-                        {/* Superserie: enlaza este ejercicio con el siguiente de la lista */}
-                        {nextExercise && (
-                          <div className="mb-2 rounded-xl border border-border bg-secondary/30 p-2">
-                            <p className="px-1 pb-2 text-xs text-muted-foreground">
-                              {isSupersetLinked
-                                ? `Superserie ${supersetPosition} de ${supersetChain.length}: ${supersetChainLabel}. Haces una serie de cada ejercicio seguida y descansas al cerrar la ronda.`
-                                : `Enlaza con ${nextExerciseName} para hacerlos seguidos: una serie de cada uno y descanso al terminar la ronda.`}
-                            </p>
-                            <button
-                              type="button"
-                              aria-pressed={isSupersetLinked}
-                              onClick={() => {
-                                setSupersetLinks((current) => toggleSupersetLink(current, ex.name));
-                                void hapticTap();
-                              }}
-                              className="flex min-h-11 w-full items-center justify-center rounded-xl border border-border bg-card px-3 text-xs font-semibold text-primary transition-colors hover:border-primary/40"
-                            >
-                              {isSupersetLinked ? "Quitar superserie" : `Superserie con ${nextExerciseName}`}
-                            </button>
-                          </div>
-                        )}
-
-                        {/* El vídeo no se reproduce aquí: la miniatura marca que existe
-                            y el botón de información abre la ficha con el héroe. */}
-                        {exerciseVideo && (
-                          <button
-                            type="button"
-                            onClick={() => setTechnique({
-                              name: ex.name,
-                              image: ex.image_url || metadata?.image_url,
-                              video: exerciseVideo,
-                              series: ex.series != null ? String(ex.series) : undefined,
-                              reps: ex.reps != null ? String(ex.reps) : undefined,
-                              rest: ex.rest,
-                              category: exerciseCategory,
-                              type: exerciseType,
-                            })}
-                            className="mb-2 flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                          >
-                            <Video className="w-3.5 h-3.5" />
-                            Ver el vídeo de técnica
-                          </button>
-                        )}
-
-
-                        {/* Previous session hint */}
-                        {prevSets?.some((set) => set.done) && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-2 px-1">
-                            <TrendingUp className="w-3 h-3" />
-                            <span>Toca ✓ para repetir lo de la última vez: {prevSets.filter((set) => set.done).map((s) => `${s.weight || "—"}×${s.reps}`).join(", ")}</span>
-                          </div>
-                        )}
-
-                        {progression && !allDone && (
-                          <div className="mb-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
-                            <p className="text-xs font-semibold">{progression.reason}</p>
-                            <button
-                              type="button"
-                              onClick={() => applyProgression(ex.name, progression)}
-                              className="mt-2 min-h-10 w-full rounded-lg bg-primary/10 px-3 text-left text-xs font-semibold text-primary transition-colors hover:bg-primary/15"
-                            >
-                              Aplicar a las series pendientes
-                            </button>
-                          </div>
-                        )}
+                        {/* Minimal: la sugerencia (sobrecarga progresiva / entrenador) va en gris dentro de cada casilla */}
 
                         {/* Column headers */}
                         <div className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-1 pb-1">
@@ -1387,17 +1288,12 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                   inputMode="decimal"
                                   value={set.weight}
                                   onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
-                                  placeholder={ex.weight || "kg"}
+                                  placeholder={String(progression?.weight || prevSets?.[si]?.weight || ex.weight || "kg")}
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(mainError && set.weight.trim())}
-                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                                 />
-                                {!prevSets?.[si] && progression && (
-                                  <p className="mt-1 truncate text-center text-[10px] font-medium text-primary">
-                                    Para revisar: {progression.weight} kg
-                                  </p>
-                                )}
                               </div>
 
                               {/* Reps input */}
