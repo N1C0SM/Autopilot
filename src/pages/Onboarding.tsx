@@ -456,6 +456,26 @@ const Onboarding = () => {
   const skipToSummary = () => setStep(activeSteps.length - 1);
   const suggestions = SPECIFIC_GOAL_SUGGESTIONS[focusToEquipment(data.primary_focus)] || SPECIFIC_GOAL_SUGGESTIONS["Mixto"];
 
+  // Avance automático: al completar una decisión de 1 toque, saltamos al siguiente
+  // paso sin obligar a pulsar "Siguiente" (mínimo esfuerzo).
+  const autoAdvance = () => {
+    window.setTimeout(() => setStep((s) => Math.min(s + 1, activeSteps.length - 1)), 220);
+  };
+
+  // Chips de 1 toque que editan un campo de texto separado por comas.
+  // "noneLabel" limpia el campo (p. ej. "Ninguna").
+  const toggleTextChip = (field: "injuries" | "nutrition_preferences" | "allergies", chip: string, noneLabel?: string) => {
+    setData((d) => {
+      if (noneLabel && chip === noneLabel) return { ...d, [field]: "" };
+      const parts = d[field].split(",").map((p) => p.trim()).filter(Boolean);
+      const has = parts.some((p) => p.toLowerCase() === chip.toLowerCase());
+      const next = has ? parts.filter((p) => p.toLowerCase() !== chip.toLowerCase()) : [...parts, chip];
+      return { ...d, [field]: next.join(", ") };
+    });
+  };
+  const chipSelected = (field: "injuries" | "nutrition_preferences" | "allergies", chip: string) =>
+    data[field].split(",").map((p) => p.trim().toLowerCase()).includes(chip.toLowerCase());
+
 
   return (
     <div
@@ -581,7 +601,10 @@ const Onboarding = () => {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => update("primary_focus", opt.value)}
+                      onClick={() => {
+                        update("primary_focus", opt.value);
+                        if (data.goal) autoAdvance();
+                      }}
                       className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-center transition-all ${
                         data.primary_focus === opt.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                       }`}
@@ -605,7 +628,10 @@ const Onboarding = () => {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => update("goal", opt.value)}
+                      onClick={() => {
+                        update("goal", opt.value);
+                        if (data.primary_focus) autoAdvance();
+                      }}
                       className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left text-sm transition-all ${
                         data.goal === opt.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                       }`}
@@ -949,7 +975,10 @@ const Onboarding = () => {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => update("training_style", option.value)}
+                      onClick={() => {
+                        update("training_style", option.value);
+                        autoAdvance();
+                      }}
                       className={`w-full rounded-xl border p-4 text-left transition-colors ${
                         active ? "border-primary bg-primary/10" : "border-border hover:bg-secondary/40"
                       }`}
