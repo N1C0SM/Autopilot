@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon, ArrowUp, ArrowDown, Video } from "lucide-react";
 import { toast } from "sonner";
 import { toOptimizedWebp } from "@/lib/imageOptimization";
 
@@ -48,6 +48,13 @@ const AI_KEYS = [
   { key: "DEEPSEEK_API_KEY", label: "DeepSeek", desc: "Solo texto (planes, blog, chat, clasificación), mucho más barato. No genera imágenes ni vídeos: para eso sigue haciendo falta OpenAI.", placeholder: "sk-..." },
 ] as const;
 
+
+const TEXT_PROVIDERS = [
+  { id: "openai", label: "OpenAI", desc: "Texto, imágenes y vídeo" },
+  { id: "anthropic", label: "Claude", desc: "Solo texto" },
+  { id: "deepseek", label: "DeepSeek", desc: "Solo texto, muy barato" },
+  { id: "lovable", label: "Lovable", desc: "Incluida, sin clave" },
+] as const;
 
 const uploadImage = async (file: File, folder: string) => {
   const optimized = await toOptimizedWebp(file);
@@ -97,6 +104,37 @@ const SiteContentEditor = () => {
   const removeAiKey = async (key: string) => {
     const { error } = await supabase.from("app_secrets").delete().eq("key", key);
     if (error) toast.error("Error al borrar"); else { setAiKeys((p) => ({ ...p, [key]: "" })); toast.success("Clave eliminada"); }
+  };
+
+  const saveAiSetting = async (key: string, value: string, okMsg?: string) => {
+    setAiKeys((p) => ({ ...p, [key]: value }));
+    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() } as any);
+    if (error) toast.error("No se pudo guardar"); else if (okMsg) toast.success(okMsg);
+  };
+
+  // Motor de texto: orden libre y activación por proveedor
+  const textProviderIds = TEXT_PROVIDERS.map((p) => p.id) as string[];
+  const savedTextOrder = (aiKeys.AI_TEXT_ORDER || "").split(",").map((s) => s.trim()).filter((s) => textProviderIds.includes(s));
+  const textDisplay = [...savedTextOrder, ...textProviderIds.filter((id) => !savedTextOrder.includes(id))];
+  const textEnabled = new Set(aiKeys.AI_TEXT_ORDER ? savedTextOrder : textProviderIds);
+
+  const saveTextOrder = (display: string[], enabled: Set<string>) =>
+    saveAiSetting("AI_TEXT_ORDER", display.filter((id) => enabled.has(id)).join(","), "Orden de IA guardado");
+
+  const moveTextProvider = (id: string, dir: -1 | 1) => {
+    const i = textDisplay.indexOf(id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= textDisplay.length) return;
+    const next = [...textDisplay];
+    [next[i], next[j]] = [next[j], next[i]];
+    saveTextOrder(next, textEnabled);
+  };
+
+  const toggleTextProvider = (id: string, on: boolean) => {
+    const next = new Set(textEnabled);
+    if (on) next.add(id); else next.delete(id);
+    if (next.size === 0) { toast.error("Deja al menos una IA activa"); return; }
+    saveTextOrder(textDisplay, next);
   };
 
 
@@ -425,29 +463,60 @@ const SiteContentEditor = () => {
         <p className="text-xs text-muted-foreground">
           Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI.
         </p>
+        {/* Motor de texto: orden libre + activación */}
         <div className="p-3 rounded-lg border border-border space-y-2">
-          <p className="text-sm font-medium">¿Qué IA usar?</p>
+          <p className="text-sm font-medium">Motor de texto</p>
+          <p className="text-xs text-muted-foreground">
+            Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente. Apaga los que no quieras usar (deja solo uno para usar «solo esa IA»).
+          </p>
+          <div className="space-y-2">
+            {textDisplay.map((id, i) => {
+              const p = TEXT_PROVIDERS.find((t) => t.id === id)!;
+              const on = textEnabled.has(id);
+              return (
+                <div key={id} className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${on ? "border-border" : "border-border/50 opacity-60"}`}>
+                  <span className="text-[10px] font-bold text-muted-foreground w-4 text-center">{on ? i + 1 : "–"}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{p.label}</p>
+                    <p className="text-[11px] text-muted-foreground">{p.desc}</p>
+                  </div>
+                  <div className="flex flex-col">
+                    <button type="button" onClick={() => moveTextProvider(id, -1)} disabled={i === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5" aria-label={`Subir ${p.label}`}>
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => moveTextProvider(id, 1)} disabled={i === textDisplay.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5" aria-label={`Bajar ${p.label}`}>
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <Switch checked={on} onCheckedChange={(v) => toggleTextProvider(id, v)} />
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Claude y DeepSeek solo hacen texto: las imágenes y los vídeos siempre van a OpenAI o Lovable. Si un proveedor no tiene clave puesta, se salta solo.
+          </p>
+        </div>
+
+        {/* Motor de imágenes */}
+        <div className="p-3 rounded-lg border border-border space-y-2">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-primary" />
+            <p className="text-sm font-medium">Motor de imágenes</p>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {([
-              ["auto", "En cadena", "1º OpenAI → si no tiene saldo, 2º Claude → 3º DeepSeek → 4º Lovable"],
-              ["deepseek", "DeepSeek primero", "El texto va a DeepSeek (mucho más barato). Las imágenes y vídeos se saltan DeepSeek y siguen por OpenAI → Lovable."],
-              ["lovable", "Solo Lovable", "Siempre los créditos de Lovable"],
+              ["auto", "Automático", "Sigue el orden del motor de texto (se salta las que no hacen imágenes)"],
+              ["openai", "OpenAI", "Siempre tu cuenta de OpenAI; si falla, Lovable de respaldo"],
+              ["lovable", "Lovable", "Siempre los créditos de Lovable"],
             ] as const).map(([v, label, desc]) => {
-              const currentMode = aiKeys.AI_PROVIDER === "lovable"
-                ? "lovable"
-                : aiKeys.AI_PROVIDER === "deepseek"
-                  ? "deepseek"
-                  : "auto";
-              const active = currentMode === v;
+              const current = aiKeys.AI_MEDIA_PROVIDER === "openai" ? "openai" : aiKeys.AI_MEDIA_PROVIDER === "lovable" ? "lovable" : "auto";
+              const active = current === v;
               return (
                 <button
                   key={v}
                   type="button"
-                  onClick={async () => {
-                    setAiKeys((p) => ({ ...p, AI_PROVIDER: v }));
-                    const { error } = await supabase.from("app_secrets").upsert({ key: "AI_PROVIDER", value: v, updated_at: new Date().toISOString() } as any);
-                    if (error) toast.error("No se pudo guardar"); else toast.success(`IA: ${label}`);
-                  }}
+                  onClick={() => saveAiSetting("AI_MEDIA_PROVIDER", v, `Imágenes: ${label}`)}
                   className={`text-left p-3 rounded-lg border transition-colors ${active ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}
                 >
                   <p className="text-sm font-medium">{label}</p>
@@ -456,9 +525,23 @@ const SiteContentEditor = () => {
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Lovable no necesita clave: va incluida y siempre queda como último recurso. Si no pones una clave, ese paso se salta. Claude y DeepSeek solo hacen texto (planes, blog, comidas, sugerencias, clasificación de ejercicios). Las imágenes y los vídeos se los saltan siempre: esos van a OpenAI o a Lovable.
-          </p>
+        </div>
+
+        {/* Motor de vídeos */}
+        <div className="p-3 rounded-lg border border-border space-y-2">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <Video className="w-4 h-4 text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Motor de vídeos</p>
+                <p className="text-[11px] text-muted-foreground">Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios.</p>
+              </div>
+            </div>
+            <Switch
+              checked={aiKeys.AI_VIDEO_ENABLED !== "0"}
+              onCheckedChange={(v) => saveAiSetting("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa")}
+            />
+          </div>
         </div>
         <div className="space-y-3">
           {AI_KEYS.map((k) => (

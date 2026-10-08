@@ -9,10 +9,12 @@ const DEEPSEEK = "https://api.deepseek.com";
 const FALLBACK_STATUS = new Set([400, 401, 402, 403, 404, 429, 500, 502, 503]);
 
 export type AiMode = "auto" | "lovable" | "deepseek";
+export type MediaProvider = "auto" | "openai" | "lovable";
+type ProviderId = "openai" | "anthropic" | "deepseek" | "lovable";
 
 export async function getAiConfig() {
   const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "AI_PROVIDER"]);
+  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "AI_PROVIDER", "AI_TEXT_ORDER", "AI_MEDIA_PROVIDER", "AI_VIDEO_ENABLED"]);
   const get = (k: string) => (data || []).find((r: any) => r.key === k)?.value?.trim() || "";
   const openaiKey = get("OPENAI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
   const anthropicKey = get("ANTHROPIC_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || "";
@@ -31,12 +33,34 @@ export async function getAiConfig() {
   //                  se saltan DeepSeek (no puede generarlos) y siguen por
   //                  OpenAI -> Lovable.
   //  - "lovable"  -> solo Lovable.
-  const order: ("openai" | "anthropic" | "deepseek" | "lovable")[] =
+  const defaultOrder: ProviderId[] =
     mode === "lovable" ? ["lovable"]
       : mode === "deepseek" ? [...deepseek, ...openai, ...anthropic, "lovable"]
         : [...openai, ...anthropic, ...deepseek, "lovable"];
 
-  return { mode, openaiKey, anthropicKey, deepseekKey, lovableKey, order };
+  // Orden personalizado de TEXTO (app_secrets.AI_TEXT_ORDER, p. ej. "deepseek,openai").
+  // Solo entran los proveedores listados y con clave; si queda vacío, Lovable como red de seguridad.
+  const available: Record<ProviderId, boolean> = { openai: !!openaiKey, anthropic: !!anthropicKey, deepseek: !!deepseekKey, lovable: true };
+  const rawTextOrder = get("AI_TEXT_ORDER");
+  let order: ProviderId[] = defaultOrder;
+  if (rawTextOrder) {
+    const custom = rawTextOrder.split(",").map((s) => s.trim()).filter((p): p is ProviderId => p in available && available[p as ProviderId]);
+    order = custom.length ? custom : ["lovable"];
+  }
+
+  // Motor de IMÁGENES/VÍDEOS (app_secrets.AI_MEDIA_PROVIDER): "auto" sigue la cadena,
+  // "openai" fuerza OpenAI (con Lovable de respaldo), "lovable" solo Lovable.
+  const rawMedia = get("AI_MEDIA_PROVIDER");
+  const mediaProvider: MediaProvider = rawMedia === "openai" ? "openai" : rawMedia === "lovable" ? "lovable" : "auto";
+  const mediaOrder: ProviderId[] =
+    mediaProvider === "openai" ? (openaiKey ? ["openai", "lovable"] : ["lovable"])
+      : mediaProvider === "lovable" ? ["lovable"]
+        : order;
+
+  // Interruptor global de generación de VÍDEO (app_secrets.AI_VIDEO_ENABLED = "0" lo pausa).
+  const videoEnabled = get("AI_VIDEO_ENABLED") !== "0";
+
+  return { mode, openaiKey, anthropicKey, deepseekKey, lovableKey, order, mediaOrder, mediaProvider, videoEnabled };
 }
 
 function toOpenAiModel(model: string, path: string): string | null {
@@ -51,9 +75,12 @@ export async function aiFetch(url: string, init: RequestInit = {}): Promise<Resp
   const cfg = await getAiConfig();
   const path = url.replace(LOVABLE, "");
   const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
+  // Imágenes y vídeos usan el motor de medios configurado; el texto usa el orden de texto.
+  const isMedia = path.includes("/images/") || path.includes("/video") || /image|video/.test(String(body?.model || ""));
+  const chain = isMedia ? cfg.mediaOrder : cfg.order;
   let last: Response | null = null;
-  for (let i = 0; i < cfg.order.length; i++) {
-    const p = cfg.order[i];
+  for (let i = 0; i < chain.length; i++) {
+    const p = chain[i];
     const headers = new Headers(init.headers);
     let reqBody = init.body;
     let target = url;
@@ -92,7 +119,7 @@ export async function aiFetch(url: string, init: RequestInit = {}): Promise<Resp
       headers.set("Authorization", `Bearer ${cfg.lovableKey}`);
     }
     const r = await fetch(target, { ...init, headers, body: reqBody });
-    if (r.ok || i === cfg.order.length - 1 || !FALLBACK_STATUS.has(r.status)) return r;
+    if (r.ok || i === chain.length - 1 || !FALLBACK_STATUS.has(r.status)) return r;
     console.warn(`AI provider ${p} failed [${r.status}], trying next`);
     last = r;
   }
