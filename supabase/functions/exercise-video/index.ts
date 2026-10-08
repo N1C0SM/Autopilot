@@ -129,7 +129,8 @@ Deno.serve(async (req) => {
     // Proveedor según Ajustes: tu clave de OpenAI, Lovable AI o automático.
     const cfg = await getAiConfig();
     if (!cfg.videoEnabled && action === "create") {
-      return json({ error: "La generación de vídeos está pausada en Ajustes → Claves de IA" }, 503);
+      // 200 con `paused`: no es un fallo, la cola simplemente salta los vídeos.
+      return json({ paused: true, status: "paused", message: "La generación de vídeos está pausada en Ajustes → Claves de IA" });
     }
     const jobRaw = String(exercise.video_job_id || "");
     const jobIsOpenai = jobRaw.startsWith("openai:");

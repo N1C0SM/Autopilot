@@ -190,6 +190,10 @@ const ExerciseFormDialog = ({
         return;
       }
       if (start.data?.error) throw new Error(start.data.error);
+      if (start.data?.paused) {
+        toast.info(start.data.message || "La generación de vídeos está pausada");
+        return;
+      }
       setGenStatus("Generando vídeo…");
       const deadline = Date.now() + VIDEO_DEADLINE_MS;
       while (Date.now() < deadline) {
@@ -723,17 +727,12 @@ const ExerciseLibrary = () => {
 
         if (!videosPaused && (!exercise.video_url || oldStyle)) {
           setProgress("Generando técnica en vídeo");
-          try {
-            await invokeExerciseMedia(exercise.id, "create");
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : "";
-            if (/pausad/i.test(msg)) {
-              // Vídeos pausados en Claves de IA: seguimos solo con las fotos.
-              videosPaused = true;
-              completed++;
-              continue;
-            }
-            throw err;
+          const started = await invokeExerciseMedia(exercise.id, "create");
+          if (started?.paused) {
+            // Vídeos pausados en Claves de IA: seguimos solo con las fotos.
+            videosPaused = true;
+            completed++;
+            continue;
           }
           const deadline = Date.now() + VIDEO_DEADLINE_MS;
           let completedVideoUrl: string | null = null;
