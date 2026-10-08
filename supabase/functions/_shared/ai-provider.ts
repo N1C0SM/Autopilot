@@ -119,7 +119,7 @@ export async function aiFetch(url: string, init: RequestInit = {}): Promise<Resp
       headers.set("Authorization", `Bearer ${cfg.lovableKey}`);
     }
     const r = await fetch(target, { ...init, headers, body: reqBody });
-    if (r.ok || i === cfg.order.length - 1 || !FALLBACK_STATUS.has(r.status)) return r;
+    if (r.ok || i === chain.length - 1 || !FALLBACK_STATUS.has(r.status)) return r;
     console.warn(`AI provider ${p} failed [${r.status}], trying next`);
     last = r;
   }
