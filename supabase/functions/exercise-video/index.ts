@@ -84,10 +84,14 @@ Deno.serve(async (req) => {
       const exclude = Array.isArray(rawExclude)
         ? rawExclude.filter((id: unknown): id is string => typeof id === "string" && id.length > 0).slice(0, 200)
         : [];
+      // Con los vídeos pausados, la cola solo recorre las fotos pendientes.
+      const { videoEnabled } = await getAiConfig();
       let query = svc
         .from("exercises")
         .select("id, name, image_url, video_url")
-        .or(`image_url.is.null,video_url.is.null,media_style_version.is.null,media_style_version.neq.${MEDIA_STYLE_VERSION}`);
+        .or(videoEnabled
+          ? `image_url.is.null,video_url.is.null,media_style_version.is.null,media_style_version.neq.${MEDIA_STYLE_VERSION}`
+          : `image_url.is.null,media_style_version.is.null,media_style_version.neq.${MEDIA_STYLE_VERSION}`);
       if (exclude.length > 0) query = query.not("id", "in", `(${exclude.join(",")})`);
       const { data: pending, error: pendErr } = await query
         .order("image_url", { ascending: true, nullsFirst: true })
@@ -104,7 +108,8 @@ Deno.serve(async (req) => {
       }
       const next = pending?.[0];
       if (!next) return json({ done: true, remaining: 0 });
-      return json({ done: false, nextId: next.id, name: next.name, action: next.image_url ? "create" : "image" });
+      const needsImage = !next.image_url || !videoEnabled;
+      return json({ done: false, nextId: next.id, name: next.name, action: needsImage ? "image" : "create", videoEnabled });
     }
 
     if (!exerciseId) return json({ error: "Falta el ejercicio" }, 400);
@@ -123,7 +128,7 @@ Deno.serve(async (req) => {
 
     // Proveedor según Ajustes: tu clave de OpenAI, Lovable AI o automático.
     const cfg = await getAiConfig();
-    if (!cfg.videoEnabled && action !== "check") {
+    if (!cfg.videoEnabled && action === "create") {
       return json({ error: "La generación de vídeos está pausada en Ajustes → Claves de IA" }, 503);
     }
     const jobRaw = String(exercise.video_job_id || "");
