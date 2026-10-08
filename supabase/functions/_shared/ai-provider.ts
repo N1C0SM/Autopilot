@@ -9,10 +9,12 @@ const DEEPSEEK = "https://api.deepseek.com";
 const FALLBACK_STATUS = new Set([400, 401, 402, 403, 404, 429, 500, 502, 503]);
 
 export type AiMode = "auto" | "lovable" | "deepseek";
+export type MediaProvider = "auto" | "openai" | "lovable";
+type ProviderId = "openai" | "anthropic" | "deepseek" | "lovable";
 
 export async function getAiConfig() {
   const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "AI_PROVIDER"]);
+  const { data } = await svc.from("app_secrets").select("key, value").in("key", ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "AI_PROVIDER", "AI_TEXT_ORDER", "AI_MEDIA_PROVIDER", "AI_VIDEO_ENABLED"]);
   const get = (k: string) => (data || []).find((r: any) => r.key === k)?.value?.trim() || "";
   const openaiKey = get("OPENAI_API_KEY") || Deno.env.get("OPENAI_API_KEY") || "";
   const anthropicKey = get("ANTHROPIC_API_KEY") || Deno.env.get("ANTHROPIC_API_KEY") || "";
