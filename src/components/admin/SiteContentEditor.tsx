@@ -106,6 +106,37 @@ const SiteContentEditor = () => {
     if (error) toast.error("Error al borrar"); else { setAiKeys((p) => ({ ...p, [key]: "" })); toast.success("Clave eliminada"); }
   };
 
+  const saveAiSetting = async (key: string, value: string, okMsg?: string) => {
+    setAiKeys((p) => ({ ...p, [key]: value }));
+    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() } as any);
+    if (error) toast.error("No se pudo guardar"); else if (okMsg) toast.success(okMsg);
+  };
+
+  // Motor de texto: orden libre y activación por proveedor
+  const textProviderIds = TEXT_PROVIDERS.map((p) => p.id) as string[];
+  const savedTextOrder = (aiKeys.AI_TEXT_ORDER || "").split(",").map((s) => s.trim()).filter((s) => textProviderIds.includes(s));
+  const textDisplay = [...savedTextOrder, ...textProviderIds.filter((id) => !savedTextOrder.includes(id))];
+  const textEnabled = new Set(aiKeys.AI_TEXT_ORDER ? savedTextOrder : textProviderIds);
+
+  const saveTextOrder = (display: string[], enabled: Set<string>) =>
+    saveAiSetting("AI_TEXT_ORDER", display.filter((id) => enabled.has(id)).join(","), "Orden de IA guardado");
+
+  const moveTextProvider = (id: string, dir: -1 | 1) => {
+    const i = textDisplay.indexOf(id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= textDisplay.length) return;
+    const next = [...textDisplay];
+    [next[i], next[j]] = [next[j], next[i]];
+    saveTextOrder(next, textEnabled);
+  };
+
+  const toggleTextProvider = (id: string, on: boolean) => {
+    const next = new Set(textEnabled);
+    if (on) next.add(id); else next.delete(id);
+    if (next.size === 0) { toast.error("Deja al menos una IA activa"); return; }
+    saveTextOrder(textDisplay, next);
+  };
+
 
   const load = async () => {
     setLoading(true);
