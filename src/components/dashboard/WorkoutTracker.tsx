@@ -1383,6 +1383,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 );
                               })}
                               <div className="flex gap-1.5">
+                              {si === firstPendingIndex && (
+                              <>
                               <button
                                 type="button"
                                 onClick={() => addDrop(ex.name, si)}
