@@ -33,12 +33,34 @@ export async function getAiConfig() {
   //                  se saltan DeepSeek (no puede generarlos) y siguen por
   //                  OpenAI -> Lovable.
   //  - "lovable"  -> solo Lovable.
-  const order: ("openai" | "anthropic" | "deepseek" | "lovable")[] =
+  const defaultOrder: ProviderId[] =
     mode === "lovable" ? ["lovable"]
       : mode === "deepseek" ? [...deepseek, ...openai, ...anthropic, "lovable"]
         : [...openai, ...anthropic, ...deepseek, "lovable"];
 
-  return { mode, openaiKey, anthropicKey, deepseekKey, lovableKey, order };
+  // Orden personalizado de TEXTO (app_secrets.AI_TEXT_ORDER, p. ej. "deepseek,openai").
+  // Solo entran los proveedores listados y con clave; si queda vacío, Lovable como red de seguridad.
+  const available: Record<ProviderId, boolean> = { openai: !!openaiKey, anthropic: !!anthropicKey, deepseek: !!deepseekKey, lovable: true };
+  const rawTextOrder = get("AI_TEXT_ORDER");
+  let order: ProviderId[] = defaultOrder;
+  if (rawTextOrder) {
+    const custom = rawTextOrder.split(",").map((s) => s.trim()).filter((p): p is ProviderId => p in available && available[p as ProviderId]);
+    order = custom.length ? custom : ["lovable"];
+  }
+
+  // Motor de IMÁGENES/VÍDEOS (app_secrets.AI_MEDIA_PROVIDER): "auto" sigue la cadena,
+  // "openai" fuerza OpenAI (con Lovable de respaldo), "lovable" solo Lovable.
+  const rawMedia = get("AI_MEDIA_PROVIDER");
+  const mediaProvider: MediaProvider = rawMedia === "openai" ? "openai" : rawMedia === "lovable" ? "lovable" : "auto";
+  const mediaOrder: ProviderId[] =
+    mediaProvider === "openai" ? (openaiKey ? ["openai", "lovable"] : ["lovable"])
+      : mediaProvider === "lovable" ? ["lovable"]
+        : order;
+
+  // Interruptor global de generación de VÍDEO (app_secrets.AI_VIDEO_ENABLED = "0" lo pausa).
+  const videoEnabled = get("AI_VIDEO_ENABLED") !== "0";
+
+  return { mode, openaiKey, anthropicKey, deepseekKey, lovableKey, order, mediaOrder, mediaProvider, videoEnabled };
 }
 
 function toOpenAiModel(model: string, path: string): string | null {
