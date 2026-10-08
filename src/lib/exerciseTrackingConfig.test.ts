@@ -20,4 +20,16 @@ describe("getExerciseTrackingConfig", () => {
     expect(getExerciseTrackingConfig({ name: "Planche" }).kind).toBe("reps_only");
     expect(getExerciseTrackingConfig(undefined).kind).toBe("reps_only");
   });
+
+  it("tracks gym and machine exercises as weighted reps with KG labels", () => {
+    const config = getExerciseTrackingConfig({ name: "Abductores en máquina", exercise_type: "Gimnasio" });
+    expect(config.kind).toBe("weighted_reps");
+    expect(config.weightLabel).toBe("KG");
+    expect(config.valueLabel).toBe("Repeticiones");
+    expect(config.supportsWeight).toBe(true);
+  });
+
+  it("labels generic rep counting as Repeticiones, not Peso corporal", () => {
+    expect(getExerciseTrackingConfig({ name: "Planche" }).valueLabel).toBe("Repeticiones");
+  });
 });

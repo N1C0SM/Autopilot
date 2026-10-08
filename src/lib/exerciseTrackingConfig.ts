@@ -111,7 +111,7 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     return {
       kind: "assisted_reps",
       weightLabel: "Lastre (kg)",
-      valueLabel: "Reps",
+      valueLabel: "Repeticiones",
       secondaryLabel: "Asistencia",
       supportsWeight: true,
       supportsSecondaryMetric: true,
@@ -131,7 +131,7 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     return {
       kind: "assisted_reps",
       weightLabel: "Lastre (kg)",
-      valueLabel: "Reps",
+      valueLabel: "Repeticiones",
       secondaryLabel: "Peso corporal / asistencia",
       supportsWeight: true,
       supportsSecondaryMetric: true,
@@ -173,7 +173,21 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     return {
       kind: "weighted_reps",
       weightLabel: "KG",
-      valueLabel: "Reps",
+      valueLabel: "Repeticiones",
+      secondaryLabel: "RPE",
+      supportsWeight: true,
+      supportsSecondaryMetric: true,
+      description: "Levantamiento con carga: peso y repeticiones, con capacidad de añadir esfuerzo o RPE.",
+    };
+  }
+
+  // Ejercicios de gimnasio o máquina: siempre llevan carga, aunque el nombre
+  // no coincida con un patrón conocido (p. ej. «Abductores en máquina»).
+  if (exerciseType && /gimnasio|gym|m[áa]quina|maquina/.test(exerciseType)) {
+    return {
+      kind: "weighted_reps",
+      weightLabel: "KG",
+      valueLabel: "Repeticiones",
       secondaryLabel: "RPE",
       supportsWeight: true,
       supportsSecondaryMetric: true,
@@ -184,7 +198,7 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
   return {
     kind: "reps_only",
     weightLabel: "Peso corporal",
-    valueLabel: "Reps",
+    valueLabel: "Repeticiones",
     secondaryLabel: "RPE",
     supportsWeight: false,
     supportsSecondaryMetric: true,

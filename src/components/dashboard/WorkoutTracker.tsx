@@ -923,14 +923,20 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             </div>
 
             {!started && (
-              <Button
-                onClick={() => startWorkout(0)}
-                variant="hero"
-                size="lg"
-                className="mt-4 h-12 w-full text-base"
-              >
-                Empezar entrenamiento
-              </Button>
+              currentPlan?.exercises?.length ? (
+                <Button
+                  onClick={() => startWorkout(0)}
+                  variant="hero"
+                  size="lg"
+                  className="mt-4 h-12 w-full text-base"
+                >
+                  Empezar entrenamiento
+                </Button>
+              ) : (
+                <p className="mt-4 rounded-xl border border-dashed border-border px-4 py-3 text-center text-sm text-muted-foreground">
+                  Este día no tiene ejercicios asignados todavía.
+                </p>
+              )
             )}
           </div>
 
@@ -1081,6 +1087,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             if (started && expandedExercise !== null && !isExpanded) return null;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
+            // Minimalismo: las acciones (bajada / calentamiento) solo se ofrecen
+            // en la primera serie pendiente, nunca en todas las filas.
+            const firstPendingIndex = sets.findIndex((s) => !s.done);
             const allDone = doneSets === sets.length && sets.length > 0;
             const prevSets = previousLogs[ex.name];
             const restSec = parseRestSeconds(ex.rest);
@@ -1374,6 +1383,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 );
                               })}
                               <div className="flex gap-1.5">
+                              {si === firstPendingIndex && (
+                              <>
                               <button
                                 type="button"
                                 onClick={() => addDrop(ex.name, si)}
@@ -1400,6 +1411,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 <Flame className="h-3.5 w-3.5" fill={isWarmup ? "currentColor" : "none"} aria-hidden="true" />
                                 Calentamiento
                               </button>
+                              </>
+                              )}
                               </div>
                             </div>
 
