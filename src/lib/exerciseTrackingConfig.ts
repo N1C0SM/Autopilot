@@ -181,10 +181,24 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     };
   }
 
+  // Ejercicios de gimnasio o máquina: siempre llevan carga, aunque el nombre
+  // no coincida con un patrón conocido (p. ej. «Abductores en máquina»).
+  if (exerciseType && /gimnasio|gym|m[áa]quina|maquina/.test(exerciseType)) {
+    return {
+      kind: "weighted_reps",
+      weightLabel: "KG",
+      valueLabel: "Repeticiones",
+      secondaryLabel: "RPE",
+      supportsWeight: true,
+      supportsSecondaryMetric: true,
+      description: "Levantamiento con carga: peso y repeticiones, con capacidad de añadir esfuerzo o RPE.",
+    };
+  }
+
   return {
     kind: "reps_only",
     weightLabel: "Peso corporal",
-    valueLabel: "Reps",
+    valueLabel: "Repeticiones",
     secondaryLabel: "RPE",
     supportsWeight: false,
     supportsSecondaryMetric: true,
