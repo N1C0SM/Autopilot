@@ -111,7 +111,7 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     return {
       kind: "assisted_reps",
       weightLabel: "Lastre (kg)",
-      valueLabel: "Reps",
+      valueLabel: "Repeticiones",
       secondaryLabel: "Asistencia",
       supportsWeight: true,
       supportsSecondaryMetric: true,
@@ -131,7 +131,7 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     return {
       kind: "assisted_reps",
       weightLabel: "Lastre (kg)",
-      valueLabel: "Reps",
+      valueLabel: "Repeticiones",
       secondaryLabel: "Peso corporal / asistencia",
       supportsWeight: true,
       supportsSecondaryMetric: true,
@@ -173,7 +173,7 @@ export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): Exe
     return {
       kind: "weighted_reps",
       weightLabel: "KG",
-      valueLabel: "Reps",
+      valueLabel: "Repeticiones",
       secondaryLabel: "RPE",
       supportsWeight: true,
       supportsSecondaryMetric: true,
