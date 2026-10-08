@@ -456,6 +456,26 @@ const Onboarding = () => {
   const skipToSummary = () => setStep(activeSteps.length - 1);
   const suggestions = SPECIFIC_GOAL_SUGGESTIONS[focusToEquipment(data.primary_focus)] || SPECIFIC_GOAL_SUGGESTIONS["Mixto"];
 
+  // Avance automático: al completar una decisión de 1 toque, saltamos al siguiente
+  // paso sin obligar a pulsar "Siguiente" (mínimo esfuerzo).
+  const autoAdvance = () => {
+    window.setTimeout(() => setStep((s) => Math.min(s + 1, activeSteps.length - 1)), 220);
+  };
+
+  // Chips de 1 toque que editan un campo de texto separado por comas.
+  // "noneLabel" limpia el campo (p. ej. "Ninguna").
+  const toggleTextChip = (field: "injuries" | "nutrition_preferences" | "allergies", chip: string, noneLabel?: string) => {
+    setData((d) => {
+      if (noneLabel && chip === noneLabel) return { ...d, [field]: "" };
+      const parts = d[field].split(",").map((p) => p.trim()).filter(Boolean);
+      const has = parts.some((p) => p.toLowerCase() === chip.toLowerCase());
+      const next = has ? parts.filter((p) => p.toLowerCase() !== chip.toLowerCase()) : [...parts, chip];
+      return { ...d, [field]: next.join(", ") };
+    });
+  };
+  const chipSelected = (field: "injuries" | "nutrition_preferences" | "allergies", chip: string) =>
+    data[field].split(",").map((p) => p.trim().toLowerCase()).includes(chip.toLowerCase());
+
 
   return (
     <div
@@ -581,7 +601,10 @@ const Onboarding = () => {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => update("primary_focus", opt.value)}
+                      onClick={() => {
+                        update("primary_focus", opt.value);
+                        if (data.goal) autoAdvance();
+                      }}
                       className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 text-center transition-all ${
                         data.primary_focus === opt.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                       }`}
@@ -605,7 +628,10 @@ const Onboarding = () => {
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => update("goal", opt.value)}
+                      onClick={() => {
+                        update("goal", opt.value);
+                        if (data.primary_focus) autoAdvance();
+                      }}
                       className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left text-sm transition-all ${
                         data.goal === opt.value ? "border-primary bg-primary/10" : "border-border hover:border-primary/30"
                       }`}
@@ -889,34 +915,78 @@ const Onboarding = () => {
 
           {/* Salud + Nutrición (combinados) */}
           {currentKey === "health" && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <Label>¿Lesiones o molestias?</Label>
+                <Label className="mb-2 block">¿Lesiones o molestias?</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Ninguna", "Lumbar", "Hombro", "Rodilla", "Cuello", "Muñeca", "Tobillo"].map((chip) => {
+                    const selected = chip === "Ninguna" ? data.injuries.trim() === "" : chipSelected("injuries", chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleTextChip("injuries", chip, "Ninguna")}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          selected ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {selected && chip !== "Ninguna" ? "✓ " : ""}{chip}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Textarea
                   value={data.injuries}
                   onChange={(e) => update("injuries", e.target.value)}
-                  placeholder="Ej: Lumbar, tendinitis hombro derecho…"
-                  className="mt-1.5"
+                  placeholder="¿Algo más? Detállalo aquí (opcional)"
+                  className="mt-2"
                   rows={2}
                 />
               </div>
               <div>
-                <Label>Preferencias nutricionales</Label>
-                <Textarea
-                  value={data.nutrition_preferences}
-                  onChange={(e) => update("nutrition_preferences", e.target.value)}
-                  placeholder="Vegetariano, alta en proteínas, mediterránea…"
-                  className="mt-1.5"
-                  rows={2}
-                />
+                <Label className="mb-2 block">¿Cómo comes?</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Sin preferencia", "Mediterránea", "Alta en proteína", "Vegetariana", "Vegana", "Halal", "Sin cerdo"].map((chip) => {
+                    const selected = chip === "Sin preferencia" ? data.nutrition_preferences.trim() === "" : chipSelected("nutrition_preferences", chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleTextChip("nutrition_preferences", chip, "Sin preferencia")}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          selected ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {selected && chip !== "Sin preferencia" ? "✓ " : ""}{chip}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
-                <Label>Alergias o intolerancias</Label>
+                <Label className="mb-2 block">Alergias o intolerancias</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Ninguna", "Lactosa", "Gluten", "Frutos secos", "Marisco", "Huevo", "Soja"].map((chip) => {
+                    const selected = chip === "Ninguna" ? data.allergies.trim() === "" : chipSelected("allergies", chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleTextChip("allergies", chip, "Ninguna")}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          selected ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {selected && chip !== "Ninguna" ? "✓ " : ""}{chip}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Textarea
                   value={data.allergies}
                   onChange={(e) => update("allergies", e.target.value)}
-                  placeholder="Lactosa, gluten, frutos secos…"
-                  className="mt-1.5"
+                  placeholder="¿Otra alergia? Escríbela aquí (opcional)"
+                  className="mt-2"
                   rows={2}
                 />
               </div>
@@ -949,7 +1019,10 @@ const Onboarding = () => {
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => update("training_style", option.value)}
+                      onClick={() => {
+                        update("training_style", option.value);
+                        autoAdvance();
+                      }}
                       className={`w-full rounded-xl border p-4 text-left transition-colors ${
                         active ? "border-primary bg-primary/10" : "border-border hover:bg-secondary/40"
                       }`}
