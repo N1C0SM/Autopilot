@@ -923,14 +923,20 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             </div>
 
             {!started && (
-              <Button
-                onClick={() => startWorkout(0)}
-                variant="hero"
-                size="lg"
-                className="mt-4 h-12 w-full text-base"
-              >
-                Empezar entrenamiento
-              </Button>
+              currentPlan?.exercises?.length ? (
+                <Button
+                  onClick={() => startWorkout(0)}
+                  variant="hero"
+                  size="lg"
+                  className="mt-4 h-12 w-full text-base"
+                >
+                  Empezar entrenamiento
+                </Button>
+              ) : (
+                <p className="mt-4 rounded-xl border border-dashed border-border px-4 py-3 text-center text-sm text-muted-foreground">
+                  Este día no tiene ejercicios asignados todavía.
+                </p>
+              )
             )}
           </div>
 
