@@ -1087,6 +1087,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             if (started && expandedExercise !== null && !isExpanded) return null;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
+            // Minimalismo: las acciones (bajada / calentamiento) solo se ofrecen
+            // en la primera serie pendiente, nunca en todas las filas.
+            const firstPendingIndex = sets.findIndex((s) => !s.done);
             const allDone = doneSets === sets.length && sets.length > 0;
             const prevSets = previousLogs[ex.name];
             const restSec = parseRestSeconds(ex.rest);
