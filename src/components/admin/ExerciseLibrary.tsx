@@ -759,6 +759,11 @@ const ExerciseLibrary = () => {
       } catch (error) {
         errors++;
         const message = error instanceof Error ? error.message : "No se pudo completar la generación.";
+        if (/credit limit|sin créditos|402/i.test(message)) {
+          // Sin saldo o límite mensual alcanzado: parar la cola en vez de fallar 271 veces.
+          toast.error("Se ha alcanzado el límite de créditos de IA. La cola se ha detenido.");
+          break;
+        }
         console.error(`No se pudieron generar los medios de "${exercise.name}"`, error);
         // El error se guarda en la fila (media_error) y la cola continúa.
         setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, media_error: message } : item));
