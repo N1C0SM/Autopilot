@@ -915,34 +915,78 @@ const Onboarding = () => {
 
           {/* Salud + Nutrición (combinados) */}
           {currentKey === "health" && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <Label>¿Lesiones o molestias?</Label>
+                <Label className="mb-2 block">¿Lesiones o molestias?</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Ninguna", "Lumbar", "Hombro", "Rodilla", "Cuello", "Muñeca", "Tobillo"].map((chip) => {
+                    const selected = chip === "Ninguna" ? data.injuries.trim() === "" : chipSelected("injuries", chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleTextChip("injuries", chip, "Ninguna")}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          selected ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {selected && chip !== "Ninguna" ? "✓ " : ""}{chip}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Textarea
                   value={data.injuries}
                   onChange={(e) => update("injuries", e.target.value)}
-                  placeholder="Ej: Lumbar, tendinitis hombro derecho…"
-                  className="mt-1.5"
+                  placeholder="¿Algo más? Detállalo aquí (opcional)"
+                  className="mt-2"
                   rows={2}
                 />
               </div>
               <div>
-                <Label>Preferencias nutricionales</Label>
-                <Textarea
-                  value={data.nutrition_preferences}
-                  onChange={(e) => update("nutrition_preferences", e.target.value)}
-                  placeholder="Vegetariano, alta en proteínas, mediterránea…"
-                  className="mt-1.5"
-                  rows={2}
-                />
+                <Label className="mb-2 block">¿Cómo comes?</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Sin preferencia", "Mediterránea", "Alta en proteína", "Vegetariana", "Vegana", "Halal", "Sin cerdo"].map((chip) => {
+                    const selected = chip === "Sin preferencia" ? data.nutrition_preferences.trim() === "" : chipSelected("nutrition_preferences", chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleTextChip("nutrition_preferences", chip, "Sin preferencia")}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          selected ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {selected && chip !== "Sin preferencia" ? "✓ " : ""}{chip}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
-                <Label>Alergias o intolerancias</Label>
+                <Label className="mb-2 block">Alergias o intolerancias</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {["Ninguna", "Lactosa", "Gluten", "Frutos secos", "Marisco", "Huevo", "Soja"].map((chip) => {
+                    const selected = chip === "Ninguna" ? data.allergies.trim() === "" : chipSelected("allergies", chip);
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => toggleTextChip("allergies", chip, "Ninguna")}
+                        className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                          selected ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {selected && chip !== "Ninguna" ? "✓ " : ""}{chip}
+                      </button>
+                    );
+                  })}
+                </div>
                 <Textarea
                   value={data.allergies}
                   onChange={(e) => update("allergies", e.target.value)}
-                  placeholder="Lactosa, gluten, frutos secos…"
-                  className="mt-1.5"
+                  placeholder="¿Otra alergia? Escríbela aquí (opcional)"
+                  className="mt-2"
                   rows={2}
                 />
               </div>
