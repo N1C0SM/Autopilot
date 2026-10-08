@@ -700,6 +700,7 @@ const ExerciseLibrary = () => {
     const total = queue.length;
     let completed = 0;
     let errors = 0;
+    let videosPaused = false;
 
     for (let index = 0; index < total; index++) {
       if (cancelRef.current) break;
@@ -720,9 +721,20 @@ const ExerciseLibrary = () => {
         }
         if (cancelRef.current) break;
 
-        if (!exercise.video_url || oldStyle) {
+        if (!videosPaused && (!exercise.video_url || oldStyle)) {
           setProgress("Generando técnica en vídeo");
-          await invokeExerciseMedia(exercise.id, "create");
+          try {
+            await invokeExerciseMedia(exercise.id, "create");
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : "";
+            if (/pausad/i.test(msg)) {
+              // Vídeos pausados en Claves de IA: seguimos solo con las fotos.
+              videosPaused = true;
+              completed++;
+              continue;
+            }
+            throw err;
+          }
           const deadline = Date.now() + VIDEO_DEADLINE_MS;
           let completedVideoUrl: string | null = null;
           while (Date.now() < deadline && !cancelRef.current) {
