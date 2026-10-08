@@ -1411,6 +1411,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                                 <Flame className="h-3.5 w-3.5" fill={isWarmup ? "currentColor" : "none"} aria-hidden="true" />
                                 Calentamiento
                               </button>
+                              </>
+                              )}
                               </div>
                             </div>
 
