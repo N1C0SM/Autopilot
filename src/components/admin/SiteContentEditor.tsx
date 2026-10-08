@@ -49,6 +49,13 @@ const AI_KEYS = [
 ] as const;
 
 
+const TEXT_PROVIDERS = [
+  { id: "openai", label: "OpenAI", desc: "Texto, imágenes y vídeo" },
+  { id: "anthropic", label: "Claude", desc: "Solo texto" },
+  { id: "deepseek", label: "DeepSeek", desc: "Solo texto, muy barato" },
+  { id: "lovable", label: "Lovable", desc: "Incluida, sin clave" },
+] as const;
+
 const uploadImage = async (file: File, folder: string) => {
   const optimized = await toOptimizedWebp(file);
   const ext = optimized.name.split(".").pop() || "webp";
