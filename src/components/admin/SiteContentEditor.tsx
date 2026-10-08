@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon } from "lucide-react";
+import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon, ArrowUp, ArrowDown, Video } from "lucide-react";
 import { toast } from "sonner";
 import { toOptimizedWebp } from "@/lib/imageOptimization";
 
