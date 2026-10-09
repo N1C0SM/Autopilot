@@ -120,6 +120,7 @@ const Dashboard = () => {
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
+  const [trainingDay, setTrainingDay] = useState<string | undefined>();
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">("tracker");
   const [firstWeek, setFirstWeek] = useState<{
     dayNumber: number;
@@ -457,8 +458,14 @@ const Dashboard = () => {
             planStatus={planStatus}
             dayPlans={dayPlans}
             onNavigate={(s) => {
-              setAutoStartWorkout(s === "training");
+              setAutoStartWorkout(false);
+              if (s === "training") setTrainingView("plan");
               setSection(s as MobileTab);
+            }}
+            onStartWorkout={() => {
+              setTrainingView("tracker");
+              setAutoStartWorkout(true);
+              setSection("training");
             }}
             profileName={profileName}
             macros={nutrition ? macros : null}
@@ -496,7 +503,7 @@ const Dashboard = () => {
               y solo se ofrece cuando no hay una sesión en marcha. */}
           {!workoutMode && !autoStartWorkout && (
             <div role="tablist" aria-label="Entrenar o ver el plan" className="mx-auto mb-3 flex w-full max-w-md gap-1 rounded-full bg-secondary p-1">
-              {([["tracker", "Entrenar"], ["plan", "Ver plan"]] as const).map(([key, label]) => (
+              {([["tracker", "Entrenar"], ["plan", "Rutina semanal"]] as const).map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -514,18 +521,21 @@ const Dashboard = () => {
           )}
           <Suspense fallback={<SectionFallback />}>
             {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-              <TrainingPlanView dayPlans={dayPlans} />
+              <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
+                setTrainingDay(day);
+                setTrainingView("tracker");
+              }} />
             ) : (
               <WorkoutTracker
                 userId={user.id}
                 dayPlans={dayPlans}
+                initialDay={trainingDay}
                 autoStart={autoStartWorkout}
                 onAutoStartConsumed={() => setAutoStartWorkout(false)}
                 onSessionModeChange={setWorkoutMode}
                 onCancel={() => setWorkoutMode(false)}
                 onExit={() => {
                   setWorkoutMode(false);
-                  setCompletedToday(true);
                   setSection("home");
                   void fetchData();
                 }}

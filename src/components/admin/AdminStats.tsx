@@ -1,27 +1,24 @@
 import { motion } from "framer-motion";
 import type { Profile } from "@/pages/Admin";
+import { MONTHLY_ESTIMATE_NOTE, summarizeClientPlans } from "@/lib/adminMetrics";
 
 interface Props {
   users: Profile[];
 }
 
-const COACH_TIERS = ["full", "transform", "personal", "coach"];
-
 const AdminStats = ({ users }: Props) => {
-  const paid = users.filter((u) => u.payment_status === "paid");
-  const plus = paid.filter((u) => u.subscription_tier === "training").length;
-  const coach = paid.filter((u) => COACH_TIERS.includes(u.subscription_tier || "")).length;
-  const mrr = plus * 29 + coach * 49;
+  const { total, counts, estimatedMonthly } = summarizeClientPlans(users);
 
   const stats = [
-    { label: "Ingresos / mes", value: mrr.toLocaleString("es-ES") + " €" },
-    { label: "Usuarios", value: users.length },
-    { label: "Plus", value: plus },
-    { label: "Coach", value: coach },
+    { label: "Estimación mensual", value: estimatedMonthly.toLocaleString("es-ES") + " €" },
+    { label: "Clientes", value: total },
+    { label: "Plus", value: counts.plus },
+    { label: "Coach", value: counts.coach },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+    <div className="space-y-3 mb-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {stats.map((s, i) => (
         <motion.div
           key={s.label}
@@ -34,6 +31,8 @@ const AdminStats = ({ users }: Props) => {
           <div className="mt-2 font-display text-2xl font-bold tabular-nums sm:text-3xl">{s.value}</div>
         </motion.div>
       ))}
+    </div>
+    <p className="text-xs leading-relaxed text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
     </div>
   );
 };

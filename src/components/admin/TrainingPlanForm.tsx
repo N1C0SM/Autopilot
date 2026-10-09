@@ -1,12 +1,13 @@
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect, useId, forwardRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Plus, Trash2, Dumbbell, Copy, ChevronDown, ChevronUp, FileDown, GripVertical, Download } from "lucide-react";
+import { Plus, Trash2, Dumbbell, Copy, ChevronDown, ChevronUp, FileDown, Download } from "lucide-react";
 import type { Exercise, DayPlan, GymExerciseEntry } from "@/types/training";
-import { DAYS, INTENSITIES, MUSCLE_GROUPS } from "@/types/training";
+import { DAYS, INTENSITIES } from "@/types/training";
+import { getAvailabilityDayCount } from "@/lib/availability";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import { ExercisePreviewSheet, type ExercisePreviewData } from "@/components/ExercisePreviewSheet";
 
@@ -20,7 +21,7 @@ interface Props {
   userGoal?: string;
   userInjuries?: string;
   userAge?: number;
-  userAvailability?: Record<string, boolean> | null;
+  userAvailability?: Record<string, unknown> | null;
 }
 
 // ─── Injury → muscle group mapping ───
@@ -56,20 +57,11 @@ const getInjuredMuscles = (injuries?: string): Set<string> => {
   return injured;
 };
 
-const WEEK_KEYS = ["lunes","martes","miercoles","miércoles","jueves","viernes","sabado","sábado","domingo","monday","tuesday","wednesday","thursday","friday","saturday","sunday","lun","mar","mie","jue","vie","sab","dom"];
-const countWeekDays = (a: Record<string, unknown>): number => {
-  const days = new Set<string>();
-  for (const [k, v] of Object.entries(a || {})) {
-    const key = k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").slice(0, 3);
-    if (WEEK_KEYS.some((w) => w.normalize("NFD").replace(/[\u0300-\u036f]/g, "").startsWith(key) && w.length >= 3) && v && (v as any) !== "false") days.add(key);
-  }
-  return Math.min(7, days.size);
-};
-
 // ─── Availability → recommended template ───
-const getRecommendedStructure = (availability?: Record<string, boolean> | null): string | null => {
+const getRecommendedStructure = (availability?: Record<string, unknown> | null): string | null => {
   if (!availability) return null;
-  const activeDays = countWeekDays(availability);
+  const activeDays = getAvailabilityDayCount(availability);
+  if (!activeDays) return null;
   if (activeDays <= 2) return "fullbody";
   if (activeDays === 3) return "fullbody";
   if (activeDays === 4) return "upper_lower";
@@ -260,11 +252,13 @@ const SKILL_TEMPLATES: Record<string, SkillTemplate> = {
 };
 
 const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange, userSports, equipmentType = "Mixto", specificGoal, intensityLevel = 5, userGoal, userInjuries, userAge, userAvailability }, ref) => {
+  const formId = useId();
   const [preview, setPreview] = useState<ExercisePreviewData | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const injuredMuscles = getInjuredMuscles(userInjuries);
   const recommendedStructure = getRecommendedStructure(userAvailability);
-  const activeDays = userAvailability ? countWeekDays(userAvailability) : null;
+  const activeDays = getAvailabilityDayCount(userAvailability);
+  const trainingDays = new Set(dayPlans.filter((plan) => plan.type === "gimnasio").map((plan) => plan.day)).size;
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set([0]));
 
   // Auto-calculated training params based on user profile
@@ -292,7 +286,8 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
   const toggleExpand = (i: number) => {
     setExpandedDays((prev) => {
       const next = new Set(prev);
-      next.has(i) ? next.delete(i) : next.add(i);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
       return next;
     });
   };
@@ -324,8 +319,13 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
   const loadTemplate = (key: string) => {
     const tpl = STRUCTURE_TEMPLATES[key];
     if (!tpl) return;
-    const days = tpl.days.map((d) => ({
+    const templateDays = key === "fullbody" && activeDays && activeDays < 3 ? tpl.days.slice(0, activeDays) : tpl.days;
+    const selectedWeekdays = Array.isArray(userAvailability?.training_days)
+      ? [...new Set(userAvailability.training_days.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6))]
+      : [];
+    const days = templateDays.map((d, index) => ({
       ...d,
+      ...(selectedWeekdays.length === templateDays.length ? { day: DAYS[(selectedWeekdays[index] + 6) % 7] } : {}),
       exercises: d.muscle_focus ? pickExercisesForMuscles(d.muscle_focus) : [],
     }));
     onChange(days);
@@ -500,21 +500,21 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
   const tierLabel = intensityLevel <= 3 ? "Principiante" : intensityLevel <= 6 ? "Intermedio" : "Avanzado";
 
   return (
-    <div ref={ref} className="bg-card rounded-xl p-6 border border-border">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-bold font-display flex items-center gap-2">
+    <div ref={ref} className="min-w-0 bg-card rounded-xl p-3 sm:p-6 border border-border">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between mb-4">
+        <h2 className="min-w-0 font-bold font-display flex flex-wrap items-center gap-2">
           <Dumbbell className="w-5 h-5 text-primary" />
           Plan de Entrenamiento
           <span className="text-xs font-normal text-muted-foreground">{eqLabel}</span>
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs text-muted-foreground">{dayPlans.length}/7 días</span>
           {dayPlans.length > 0 && (
-            <Button variant="outline" size="sm" onClick={exportRoutine}>
+            <Button variant="outline" size="sm" className="min-h-11" onClick={exportRoutine}>
               <Download className="w-3.5 h-3.5 mr-1" /> Exportar
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={addDay} disabled={dayPlans.length >= 7}>
+          <Button variant="outline" size="sm" className="min-h-11" onClick={addDay} disabled={dayPlans.length >= 7}>
             <Plus className="w-3.5 h-3.5 mr-1" /> Día
           </Button>
         </div>
@@ -522,12 +522,12 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
       {/* Recommended template banner */}
       {recommendedSkill && dayPlans.length === 0 && (
-        <div className="mb-4 p-3 bg-primary/10 rounded-lg border border-primary/30 flex items-center justify-between">
+        <div className="mb-4 p-3 bg-primary/10 rounded-lg border border-primary/30 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="text-sm font-medium">⭐ Recomendado para este usuario:</span>
             <span className="ml-2 text-sm font-bold">{SKILL_TEMPLATES[recommendedSkill].emoji} {SKILL_TEMPLATES[recommendedSkill].label}</span>
           </div>
-          <Button size="sm" onClick={() => loadSkillTemplate(recommendedSkill)} className="text-xs">
+          <Button size="sm" onClick={() => loadSkillTemplate(recommendedSkill)} className="min-h-11 text-xs">
             Cargar plantilla
           </Button>
         </div>
@@ -545,6 +545,12 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
         {userAge && userAge > 45 && <span className="text-primary">👴 +45 años — considerar volumen reducido</span>}
       </div>
 
+      {activeDays != null && activeDays > 0 && trainingDays > 0 && trainingDays !== activeDays && (
+        <p className="mb-4 rounded-lg border border-border bg-secondary/30 p-3 text-sm text-muted-foreground">
+          El cliente indicó {activeDays} días de entrenamiento por semana y este plan tiene {trainingDays}.
+          Revisa la distribución con el cliente antes de guardar.
+        </p>
+      )}
       {/* Injury warning */}
       {injuredMuscles.size > 0 && (
         <div className="mb-4 p-3 bg-destructive/10 rounded-lg border border-destructive/30 text-xs">
@@ -558,12 +564,12 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
       {/* Availability-based recommendation */}
       {recommendedStructure && dayPlans.length === 0 && !recommendedSkill && (
-        <div className="mb-4 p-3 bg-primary/10 rounded-lg border border-primary/30 flex items-center justify-between">
+        <div className="mb-4 p-3 bg-primary/10 rounded-lg border border-primary/30 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="text-sm font-medium">📅 Recomendado ({activeDays} días disponibles):</span>
-            <span className="ml-2 text-sm font-bold">{STRUCTURE_TEMPLATES[recommendedStructure]?.label}</span>
+            <span className="ml-2 text-sm font-bold">{recommendedStructure === "fullbody" && activeDays && activeDays < 3 ? `Full Body (${activeDays} días)` : STRUCTURE_TEMPLATES[recommendedStructure]?.label}</span>
           </div>
-          <Button size="sm" onClick={() => loadTemplate(recommendedStructure)} className="text-xs">
+          <Button size="sm" onClick={() => loadTemplate(recommendedStructure)} className="min-h-11 text-xs">
             Cargar plantilla
           </Button>
         </div>
@@ -577,7 +583,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
         </div>
         <div className="flex flex-wrap gap-2">
           {Object.entries(STRUCTURE_TEMPLATES).map(([key, tpl]) => (
-            <Button key={key} variant="outline" size="sm" className="text-xs h-7" onClick={() => loadTemplate(key)}>
+            <Button key={key} variant="outline" size="sm" className="min-h-11 max-w-full whitespace-normal text-xs" onClick={() => loadTemplate(key)}>
               {tpl.label}
             </Button>
           ))}
@@ -597,7 +603,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
           <Button
             variant="default"
             size="sm"
-            className="text-xs h-8"
+            className="min-h-11 max-w-full whitespace-normal text-xs"
             onClick={() => loadSkillTemplate(recommendedSkill)}
           >
             {SKILL_TEMPLATES[recommendedSkill].emoji} {SKILL_TEMPLATES[recommendedSkill].label}
@@ -621,9 +627,12 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
 
           return (
             <div key={dayIdx} className={`border rounded-xl overflow-hidden transition-colors ${isExpanded ? "border-primary/40 bg-secondary/20" : "border-border"}`}>
-              <div
-                className="flex items-center gap-3 p-4 cursor-pointer hover:bg-secondary/30 transition-colors"
+              <button
+                type="button"
+                className="flex min-h-14 w-full items-center gap-2 p-3 sm:gap-3 sm:p-4 text-left hover:bg-secondary/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                 onClick={() => toggleExpand(dayIdx)}
+                aria-expanded={isExpanded}
+                aria-controls={`${formId}-day-${dayIdx}`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${plan.type === "gimnasio" ? "bg-primary/20 text-primary" : "bg-accent/20 text-accent-foreground"}`}>
                   {plan.day.slice(0, 2)}
@@ -632,24 +641,24 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
                   <div className="font-medium text-sm">{plan.day}</div>
                   <div className="text-xs text-muted-foreground truncate">{summary}</div>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${plan.type === "gimnasio" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${plan.type === "gimnasio" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
                   {plan.type === "gimnasio" ? "🏋️ Gimnasio" : "🏃 Actividad"}
                 </span>
-                {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-              </div>
+                {isExpanded ? <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />}
+              </button>
 
               {isExpanded && (
-                <div className="px-4 pb-4 space-y-3 border-t border-border/50 pt-3">
+                <div id={`${formId}-day-${dayIdx}`} className="px-3 pb-3 sm:px-4 sm:pb-4 min-w-0 space-y-3 border-t border-border/50 pt-3">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <div className="w-28">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Día</Label>
-                      <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={plan.day} onChange={(e) => updateDay(dayIdx, { day: e.target.value })}>
+                    <div className="min-w-0 flex-1 basis-24 sm:flex-none sm:w-28">
+                      <Label htmlFor={`${formId}-${dayIdx}-day`} className="text-xs text-muted-foreground">Día</Label>
+                      <select id={`${formId}-${dayIdx}-day`} className="flex h-11 min-w-0 w-full rounded-md border border-input bg-background px-2 py-1 text-base sm:text-sm" value={plan.day} onChange={(e) => updateDay(dayIdx, { day: e.target.value })}>
                         {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
-                    <div className="w-28">
-                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tipo</Label>
-                      <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={plan.type} onChange={(e) => updateDay(dayIdx, {
+                    <div className="min-w-0 flex-1 basis-24 sm:flex-none sm:w-28">
+                      <Label htmlFor={`${formId}-${dayIdx}-type`} className="text-xs text-muted-foreground">Tipo</Label>
+                      <select id={`${formId}-${dayIdx}-type`} className="flex h-11 min-w-0 w-full rounded-md border border-input bg-background px-2 py-1 text-base sm:text-sm" value={plan.type} onChange={(e) => updateDay(dayIdx, {
                         type: e.target.value as "actividad" | "gimnasio",
                         ...(e.target.value === "gimnasio" ? { routine_name: "", muscle_focus: "", exercises: [emptyGymExercise()] } : { sport: "", intensity: "Media", duration: "" }),
                       })}>
@@ -657,104 +666,86 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
                         <option value="actividad">Actividad</option>
                       </select>
                     </div>
-                    <div className="flex-1" />
-                    <Button variant="ghost" size="sm" onClick={() => duplicateDay(dayIdx)} className="text-muted-foreground h-8">
+                    <div className="hidden sm:block sm:flex-1" />
+                    <Button variant="ghost" size="sm" disabled={dayPlans.length >= 7} onClick={() => duplicateDay(dayIdx)} className="min-h-11 text-muted-foreground">
                       <Copy className="w-3.5 h-3.5 mr-1" /> Duplicar
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => removeDay(dayIdx)} className="text-destructive h-8">
+                    <Button variant="ghost" size="sm" onClick={() => removeDay(dayIdx)} className="min-h-11 text-destructive">
                       <Trash2 className="w-3.5 h-3.5 mr-1" /> Eliminar
                     </Button>
                   </div>
 
                   {plan.type === "actividad" && (
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-3">
                       <div>
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Actividad</Label>
+                        <Label htmlFor={`${formId}-${dayIdx}-sport`} className="text-xs text-muted-foreground">Actividad</Label>
                         {sportOptions.length > 0 ? (
-                          <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={plan.sport || ""} onChange={(e) => updateDay(dayIdx, { sport: e.target.value })}>
+                          <select id={`${formId}-${dayIdx}-sport`} className="flex h-11 min-w-0 w-full rounded-md border border-input bg-background px-2 py-1 text-base sm:text-sm" value={plan.sport || ""} onChange={(e) => updateDay(dayIdx, { sport: e.target.value })}>
                             <option value="">Seleccionar...</option>
                             {sportOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                             <option value="__custom">Otra...</option>
                           </select>
                         ) : (
-                          <Input className="h-9" value={plan.sport || ""} onChange={(e) => updateDay(dayIdx, { sport: e.target.value })} placeholder="Escalada, Running..." />
+                          <Input id={`${formId}-${dayIdx}-sport`} className="h-11 text-base sm:text-sm" value={plan.sport || ""} onChange={(e) => updateDay(dayIdx, { sport: e.target.value })} placeholder="Escalada, Running..." />
                         )}
                       </div>
                       <div>
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Intensidad</Label>
-                        <select className="flex h-9 w-full rounded-md border border-input bg-background px-2 py-1 text-sm" value={plan.intensity || "Media"} onChange={(e) => updateDay(dayIdx, { intensity: e.target.value })}>
+                        <Label htmlFor={`${formId}-${dayIdx}-intensity`} className="text-xs text-muted-foreground">Intensidad</Label>
+                        <select id={`${formId}-${dayIdx}-intensity`} className="flex h-11 min-w-0 w-full rounded-md border border-input bg-background px-2 py-1 text-base sm:text-sm" value={plan.intensity || "Media"} onChange={(e) => updateDay(dayIdx, { intensity: e.target.value })}>
                           {INTENSITIES.map((i) => <option key={i} value={i}>{i}</option>)}
                         </select>
                       </div>
                       <div>
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Duración</Label>
-                        <Input className="h-9" value={plan.duration || ""} onChange={(e) => updateDay(dayIdx, { duration: e.target.value })} placeholder="45min" />
+                        <Label htmlFor={`${formId}-${dayIdx}-duration`} className="text-xs text-muted-foreground">Duración</Label>
+                        <Input id={`${formId}-${dayIdx}-duration`} className="h-11 text-base sm:text-sm" value={plan.duration || ""} onChange={(e) => updateDay(dayIdx, { duration: e.target.value })} placeholder="45min" />
                       </div>
                     </div>
                   )}
 
                   {plan.type === "gimnasio" && (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nombre de la rutina</Label>
-                          <Input className="h-9" value={plan.routine_name || ""} onChange={(e) => updateDay(dayIdx, { routine_name: e.target.value })} placeholder="Push A, Piernas..." />
+                          <Label htmlFor={`${formId}-${dayIdx}-routine`} className="text-xs text-muted-foreground">Nombre de la rutina</Label>
+                          <Input id={`${formId}-${dayIdx}-routine`} className="h-11 text-base sm:text-sm" value={plan.routine_name || ""} onChange={(e) => updateDay(dayIdx, { routine_name: e.target.value })} placeholder="Push A, Piernas..." />
                         </div>
                         <div>
-                          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Músculos principales</Label>
-                          <Input className="h-9" value={plan.muscle_focus || ""} onChange={(e) => updateDay(dayIdx, { muscle_focus: e.target.value })} placeholder="Pecho · Tríceps" />
+                          <Label htmlFor={`${formId}-${dayIdx}-muscles`} className="text-xs text-muted-foreground">Músculos principales</Label>
+                          <Input id={`${formId}-${dayIdx}-muscles`} className="h-11 text-base sm:text-sm" value={plan.muscle_focus || ""} onChange={(e) => updateDay(dayIdx, { muscle_focus: e.target.value })} placeholder="Pecho · Tríceps" />
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider px-1">
-                          <span className="w-[35%]">Ejercicio</span>
-                          <span className="w-[12%]">Series</span>
-                          <span className="w-[12%]">Reps</span>
-                          <span className="w-[15%]">Peso</span>
-                          <span className="w-[12%]">Desc.</span>
-                        </div>
-
-                        {(plan.exercises || []).map((ex, exIdx) => (
-                          <div key={exIdx} className="flex items-center gap-2 bg-background/50 rounded-lg p-2.5 border border-border/50 group">
-                            {/* Miniatura unificada: marca si hay vídeo y lo abre al tocar */}
-                            <button
-                              type="button"
-                              onClick={() => setPreview({ name: ex.name, image: ex.image_url, video: ex.video_url })}
-                              aria-label={`Ver el vídeo de ${ex.name}`}
-                              className="shrink-0 rounded-xl transition-opacity hover:opacity-80"
-                            >
-                              <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="xs" />
-                            </button>
-                            <div className="w-[35%] shrink-0">
-                              <select className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-xs" value={ex.exercise_id} onChange={(e) => selectExerciseFromLibrary(dayIdx, exIdx, e.target.value)}>
-                                <option value="">Seleccionar...</option>
-                                {Object.entries(groupedExercises).map(([group, exs]) => (
-                                  <optgroup key={group} label={group}>
-                                    {exs.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                                  </optgroup>
-                                ))}
-                              </select>
+                      <div className="space-y-3">
+                        {(plan.exercises || []).map((ex, exIdx) => {
+                          const exerciseId = `${formId}-exercise-${dayIdx}-${exIdx}`;
+                          return (
+                            <div key={exIdx} className="min-w-0 bg-background/50 rounded-lg p-3 border border-border/50 space-y-3">
+                              <div className="flex min-w-0 items-end gap-2">
+                                <button type="button" onClick={() => setPreview({ name: ex.name, image: ex.image_url, video: ex.video_url })} aria-label={`Ver técnica de ${ex.name || "este ejercicio"}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                  <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="xs" />
+                                </button>
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <Label htmlFor={exerciseId} className="text-xs text-muted-foreground">Ejercicio</Label>
+                                  <select id={exerciseId} className="flex h-11 min-w-0 w-full rounded-md border border-input bg-background px-2 py-1 text-base sm:text-sm" value={ex.exercise_id} onChange={(event) => selectExerciseFromLibrary(dayIdx, exIdx, event.target.value)}>
+                                    <option value="">Seleccionar...</option>
+                                    {ex.exercise_id && !exercises.some((exercise) => exercise.id === ex.exercise_id) && <option value={ex.exercise_id}>{ex.name || "Ejercicio guardado"}</option>}
+                                    {Object.entries(groupedExercises).map(([group, exs]) => <optgroup key={group} label={group}>{exs.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}</optgroup>)}
+                                  </select>
+                                </div>
+                                <button type="button" onClick={() => removeGymExercise(dayIdx, exIdx)} aria-label={`Eliminar ejercicio ${exIdx + 1}${ex.name ? `: ${ex.name}` : ""}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                              {ex.name && <p className="break-words text-xs text-muted-foreground">{ex.name}</p>}
+                              <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="min-w-0 space-y-1"><Label htmlFor={`${exerciseId}-series`} className="text-xs text-muted-foreground">Series</Label><Input id={`${exerciseId}-series`} type="number" inputMode="numeric" min={1} className="h-11 text-base sm:text-sm" value={ex.series} onChange={(event) => updateGymExercise(dayIdx, exIdx, { series: parseInt(event.target.value) || 0 })} /></div>
+                                <div className="min-w-0 space-y-1"><Label htmlFor={`${exerciseId}-reps`} className="text-xs text-muted-foreground">Repeticiones</Label><Input id={`${exerciseId}-reps`} type="number" inputMode="numeric" min={1} className="h-11 text-base sm:text-sm" value={ex.reps} onChange={(event) => updateGymExercise(dayIdx, exIdx, { reps: parseInt(event.target.value) || 0 })} /></div>
+                                <div className="min-w-0 space-y-1"><Label htmlFor={`${exerciseId}-weight`} className="text-xs text-muted-foreground">Peso</Label><Input id={`${exerciseId}-weight`} className="h-11 text-base sm:text-sm" value={ex.weight} onChange={(event) => updateGymExercise(dayIdx, exIdx, { weight: event.target.value })} placeholder="kg o corporal" /></div>
+                                <div className="min-w-0 space-y-1"><Label htmlFor={`${exerciseId}-rest`} className="text-xs text-muted-foreground">Descanso</Label><Input id={`${exerciseId}-rest`} className="h-11 text-base sm:text-sm" value={ex.rest} onChange={(event) => updateGymExercise(dayIdx, exIdx, { rest: event.target.value })} placeholder="60s" /></div>
+                              </div>
                             </div>
-                            <div className="w-[12%]">
-                              <Input type="number" className="h-8 text-xs text-center" value={ex.series} onChange={(e) => updateGymExercise(dayIdx, exIdx, { series: parseInt(e.target.value) || 0 })} />
-                            </div>
-                            <div className="w-[12%]">
-                              <Input type="number" className="h-8 text-xs text-center" value={ex.reps} onChange={(e) => updateGymExercise(dayIdx, exIdx, { reps: parseInt(e.target.value) || 0 })} />
-                            </div>
-                            <div className="w-[15%]">
-                              <Input className="h-8 text-xs text-center" value={ex.weight} onChange={(e) => updateGymExercise(dayIdx, exIdx, { weight: e.target.value })} placeholder="kg" />
-                            </div>
-                            <div className="w-[12%]">
-                              <Input className="h-8 text-xs text-center" value={ex.rest} onChange={(e) => updateGymExercise(dayIdx, exIdx, { rest: e.target.value })} placeholder="60s" />
-                            </div>
-                            <button onClick={() => removeGymExercise(dayIdx, exIdx)} className="text-muted-foreground hover:text-destructive shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => addGymExercise(dayIdx)} className="h-8 text-xs">
+                      <Button variant="outline" size="sm" onClick={() => addGymExercise(dayIdx)} className="min-h-11 text-xs">
                         <Plus className="w-3 h-3 mr-1" /> Añadir ejercicio
                       </Button>
                     </div>

@@ -13,6 +13,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("meal check-ins", () => {
+  it("does not turn an unweighed meal check-in into consumed calories", () => {
+    render(<MealsList meals={[{ name: "Comida", description: "Plato equilibrado" }]} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
+    fireEvent.click(screen.getByRole("button", { name: /Comida Plato equilibrado/ }));
+    expect(screen.getByText(/Marcar comidas no mide las calorías consumidas/)).toBeVisible();
+    expect(screen.getByText("kcal de objetivo diario")).toBeVisible();
+  });
+  it("flags existing invalid targets while preserving the saved meal", () => {
+    render(<MealsList meals={[{ name: "Cena", description: "Guardada" }]} macros={{ protein: 50, carbs: 100, fats: 500 }} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("pendientes de revisión");
+    expect(screen.getByRole("button", { name: /Cena/ })).toBeVisible();
+    expect(screen.queryByText("kcal de objetivo diario")).not.toBeInTheDocument();
+  });
   it("gives lightweight feedback when a meal is checked and persists the check-in", () => {
     render(<MealsList meals={[{ name: "Desayuno", description: "Avena y yogur" }]} />);
     const meal = screen.getByRole("button", { name: /Desayuno/ });

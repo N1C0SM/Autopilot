@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_LABEL, TIERS } from "@/config/tiers";
+import { getConsumerPlan, resolveFeatures } from "@/lib/entitlements";
+import { nutritionMacroError } from "@/lib/nutritionValidation";
 import UserProgressPanel from "./UserProgressPanel";
 import UserGoalPanel from "./UserGoalPanel";
 import TransformCyclePanel from "./TransformCyclePanel";
@@ -111,12 +113,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [dayPlans, setDayPlans] = useState<DayPlan[]>([]);
   const [macros, setMacros] = useState({ protein: "", carbs: "", fats: "" });
-  /**
-   * Los macros tal como estaban guardados. Sirve para no bloquear al admin:
-   * si vienen fuera de rango de la base de datos (los escribe la IA sin
-   * validar), tiene que poder guardar el resto del plan sin arreglarlos antes.
-   */
-  const [loadedMacros, setLoadedMacros] = useState({ protein: "", carbs: "", fats: "" });
   const [mealsText, setMealsText] = useState("");
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -165,7 +161,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         const m = np.macros_json as any;
         const cargados = { protein: m.protein?.toString() || "", carbs: m.carbs?.toString() || "", fats: m.fats?.toString() || "" };
         setMacros(cargados);
-        setLoadedMacros(cargados);
       }
       if (np?.meals_json) {
         const meals = np.meals_json as any[];
@@ -305,41 +300,26 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   };
 
   const savePlans = async () => {
+    const macroError = canViewNutrition ? nutritionMacroError(macros, onboarding?.weight) : null;
+    if (macroError) { toast.error(macroError); return; }
     setSaving(true);
     const meals = mealsText.split("\n").filter(Boolean).map((line) => {
       const [name, ...rest] = line.split(":");
       return { name: name?.trim() || "", description: rest.join(":").trim() || "" };
     });
 
-    {
-      const p = Number(macros.protein) || 0, c = Number(macros.carbs) || 0, f = Number(macros.fats) || 0;
-      const kcal = p * 4 + c * 4 + f * 9;
-      // Si vienen tal cual de la base de datos, no bloqueamos: si no, el admin
-      // se queda sin poder guardar nada por unos macros que no ha escrito él.
-      const sinTocar = macros.protein === loadedMacros.protein
-        && macros.carbs === loadedMacros.carbs
-        && macros.fats === loadedMacros.fats;
-      if (!sinTocar && (p > 350 || c > 700 || f > 180 || (kcal > 0 && (kcal < 1000 || kcal > 5000)))) {
-        toast.error(`Macros fuera de rango (${Math.round(kcal)} kcal). Máx: proteína 350 g, carbohidratos 700 g, grasa 180 g; total entre 1.000 y 5.000 kcal.`);
-        setSaving(false);
-        return;
-      }
-    }
-
-    setLoadedMacros(macros);
-
     const { error: tpError } = await supabase.from("training_plan").upsert({
       user_id: profile.user_id,
       workouts_json: dayPlans as unknown as Json,
     }, { onConflict: "user_id" });
 
-    const { error: npError } = await supabase.from("nutrition_plan").upsert({
+    const { error: npError } = canViewNutrition ? await supabase.from("nutrition_plan").upsert({
       user_id: profile.user_id,
       macros_json: [macros.protein, macros.carbs, macros.fats].every((value) => Number(value) > 0)
-        ? { protein: parseInt(macros.protein), carbs: parseInt(macros.carbs), fats: parseInt(macros.fats) } as unknown as Json
+        ? { protein: Number(macros.protein), carbs: Number(macros.carbs), fats: Number(macros.fats) } as unknown as Json
         : {} as unknown as Json,
       meals_json: meals as unknown as Json,
-    }, { onConflict: "user_id" });
+    }, { onConflict: "user_id" }) : { error: null };
 
     if (!tpError && !npError) {
       await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", profile.user_id);
@@ -416,7 +396,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     general_health: "❤️ Salud general",
   };
 
-  const trainingOnly = (profile as any).subscription_tier === "training";
+  const clientFeatures = resolveFeatures(getConsumerPlan(profile));
+  const canMessageClient = clientFeatures.has("coachMessaging");
+  const canViewNutrition = clientFeatures.has("nutritionPlan");
 
   // ─── Reduced view for trainers / admins ───
   if (isTargetTrainer || isTargetAdmin) {
@@ -437,11 +419,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const currentTier = ((profile as any).subscription_tier as string) || undefined;
 
   return (
-    <div>
+    <div className="min-w-0">
       {/* Header */}
       <div className="mb-6 space-y-3 sm:space-y-0 sm:flex sm:items-start sm:gap-3">
        <div className="flex items-start gap-3 min-w-0 sm:flex-1">
-        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={onBack} className="h-11 w-11 shrink-0" aria-label="Volver a clientes">
           <ArrowLeft className="w-5 h-5" />
         </Button>
        <Avatar className="w-11 h-11 shrink-0">
@@ -451,17 +433,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
          </AvatarFallback>
        </Avatar>
        <div className="flex-1 min-w-0">
-         <h1 className="text-base sm:text-xl font-bold font-display truncate">{profile.name?.trim() || profile.email}</h1>
-         {profile.name?.trim() && <p className="text-xs text-muted-foreground truncate">{profile.email}</p>}
+         <h1 className="text-base sm:text-xl font-bold font-display break-all">{profile.name?.trim() || profile.email}</h1>
+         {profile.name?.trim() && <p className="text-xs text-muted-foreground break-all">{profile.email}</p>}
         </div>
        </div>
        <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
         {profile.payment_status === "paid" && (
           <>
-            <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="shrink-0">
+            <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="min-h-11 flex-1 sm:flex-none">
               <Wand2 className="w-4 h-4 mr-1" /> {generating ? "Generando..." : "Auto-generar"}
             </Button>
-            <Button variant="hero" onClick={savePlans} disabled={saving} className="shrink-0">
+            <Button variant="hero" onClick={savePlans} disabled={saving} className="min-h-11 flex-1 sm:flex-none">
               <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar"}
             </Button>
           </>
@@ -506,45 +488,52 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
 
       {/* Tabs */}
-      <Tabs defaultValue={restricted ? "perfil" : "info"} className="space-y-6">
-        <TabsList className="bg-secondary/50 w-full max-w-full flex justify-start overflow-x-auto no-scrollbar h-auto">
-          {!restricted && <TabsTrigger value="info" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+      <Tabs key={profile.user_id} defaultValue={restricted ? "summary" : "info"} className="min-w-0 space-y-6">
+        <TabsList className="bg-secondary/50 w-full max-w-full flex justify-start overflow-x-auto no-scrollbar h-auto" aria-label="Ficha del cliente">
+          {restricted && <TabsTrigger value="summary" className="min-h-11 shrink-0 gap-1.5 text-xs whitespace-nowrap"><Target className="w-3.5 h-3.5" /> Plan</TabsTrigger>}
+          {!restricted && <TabsTrigger value="info" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
             <Target className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Plan</span>
            </TabsTrigger> }
-          <TabsTrigger value="perfil" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+          <TabsTrigger value="perfil" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Perfil</span>
            </TabsTrigger>
           {!restricted && (
-            <TabsTrigger value="acceso" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+            <TabsTrigger value="acceso" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
               <KeyRound className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Acceso</span>
-            </TabsTrigger>
-          )}
-          {restricted && profile.payment_status !== "paid" && (
-            <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
-              <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Chat</span>
             </TabsTrigger>
           )}
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <TabsTrigger value="progress" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
                 <TrendingUp className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Progreso</span>
                </TabsTrigger>
-              <TabsTrigger value="training" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              <TabsTrigger value="training" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
                 <Dumbbell className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Entreno</span>
               </TabsTrigger>
-              {!trainingOnly && (
-                <TabsTrigger value="nutrition" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              {canViewNutrition && (
+                <TabsTrigger value="nutrition" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
                   <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Nutrición</span>
                 </TabsTrigger>
               )}
-              {(restricted || ["full", "transform", "personal", "coach"].includes(currentTier || "")) && (
-                <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 text-xs gap-1.5 whitespace-nowrap">
+              {canMessageClient && (
+                <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
                   <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Chat</span>
                 </TabsTrigger>
               )}
             </>
           )}
         </TabsList>
+
+        {restricted && <TabsContent value="summary" className="space-y-4">
+          <section className="rounded-xl border border-border bg-card p-4 sm:p-6 space-y-3">
+            <h2 className="font-display font-semibold">Resumen del plan</h2>
+            <p className="text-sm text-muted-foreground">{dayPlans.length ? `${dayPlans.length} sesiones guardadas para este cliente.` : "Este cliente aún no tiene sesiones guardadas."}</p>
+            {dayPlans.length > 0 && <ul className="divide-y divide-border">{dayPlans.map((plan, index) => <li key={`${plan.day}-${index}`} className="py-3 text-sm"><span className="font-medium">{plan.day}</span><span className="block break-words text-muted-foreground">{plan.type === "gimnasio" ? (plan.routine_name || "Entrenamiento") : (plan.sport || "Actividad")} · {plan.type === "gimnasio" ? `${plan.exercises?.length || 0} ejercicios` : (plan.duration || "Duración pendiente")}</span></li>)}</ul>}
+            {!onboarding && <p className="text-sm text-muted-foreground">Falta completar el perfil del cliente. Pide al administrador que revise sus datos.</p>}
+            {!("subscription_tier" in profile) && <p role="status" className="rounded-lg bg-secondary/40 p-3 text-sm text-muted-foreground">La información de acceso del cliente está pendiente de actualizar. El chat con el cliente aparecerá cuando se confirme su acceso Coach.</p>}
+            {"subscription_tier" in profile && !canMessageClient && <p className="text-sm text-muted-foreground">Este cliente no tiene acceso activo al chat de seguimiento Coach.</p>}
+          </section>
+        </TabsContent>}
 
         {/* Tab: Info (incluye Plan y acceso) */}
         <TabsContent value="info" className="space-y-6">
@@ -632,7 +621,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               onCancel={() => setEditingOnboarding(false)}
             />
           ) : onboarding ? (
-            <div className="bg-card rounded-xl p-6 border border-border">
+            <div className="min-w-0 bg-card rounded-xl p-4 sm:p-6 border border-border">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">Perfil del cliente</h2>
                 {!restricted && (
@@ -671,7 +660,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 ].map((item) => (
                   <div key={item.label} className="bg-secondary/30 rounded-lg p-3">
                     <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{item.label}</div>
-                    <div className="text-sm font-medium">{item.value || "—"}</div>
+                    <div className="break-words text-sm font-medium">{item.value || "—"}</div>
                   </div>
                 ))}
                 {Object.keys(sportSchedules).length > 0 && (
@@ -703,16 +692,16 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 {onboarding.injuries && (
                   <div className="sm:col-span-2 bg-destructive/10 rounded-lg p-3 border border-destructive/20">
                     <div className="text-[10px] uppercase tracking-wider text-destructive mb-1">⚠️ Lesiones / Condiciones</div>
-                    <div className="text-sm">{onboarding.injuries}</div>
+                    <div className="break-words text-sm">{onboarding.injuries}</div>
                   </div>
                 )}
                 <div className="sm:col-span-2 bg-secondary/30 rounded-lg p-3">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Preferencias nutricionales</div>
-                  <div className="text-sm">{onboarding.nutrition_preferences || "—"}</div>
+                  <div className="break-words text-sm">{onboarding.nutrition_preferences || "—"}</div>
                 </div>
                 <div className="sm:col-span-2 bg-secondary/30 rounded-lg p-3">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Alergias</div>
-                  <div className="text-sm">{onboarding.allergies || "—"}</div>
+                  <div className="break-words text-sm">{onboarding.allergies || "—"}</div>
                 </div>
               </div>
                 );
@@ -833,7 +822,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Nutrition */}
         <TabsContent value="nutrition" className="space-y-6">
-          <div className="bg-card rounded-xl p-6 border border-border">
+          <div className="min-w-0 bg-card rounded-xl p-4 sm:p-6 border border-border">
             <h2 className="font-bold font-display mb-4 flex items-center gap-2">
               <Apple className="w-5 h-5 text-primary" />
               Plan de Nutrición
@@ -851,7 +840,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(MACRO_TEMPLATES).map(([key, tpl]) => (
-                  <Button key={key} variant="outline" size="sm" className="text-xs h-7" onClick={() => applyMacroTemplate(key)} disabled={!onboarding?.weight || onboarding.weight <= 0}>
+                  <Button key={key} variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => applyMacroTemplate(key)} disabled={!onboarding?.weight || onboarding.weight <= 0}>
                     {tpl.label}
                   </Button>
                 ))}
@@ -859,7 +848,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
 
             {/* Macros */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
               {[
                 { key: "protein" as const, label: "Proteína (g)", emoji: "🥩" },
                 { key: "carbs" as const, label: "Carbos (g)", emoji: "🍚" },
@@ -867,12 +856,16 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               ].map((m) => (
                 <div key={m.key} className="bg-secondary/30 rounded-lg p-4 text-center">
                   <div className="text-2xl mb-1">{m.emoji}</div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{m.label}</Label>
+                  <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="text-xs text-muted-foreground">{m.label}</Label>
                   <Input
+                    id={`client-${profile.user_id}-${m.key}`}
                     type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
                     value={macros[m.key]}
                     onChange={(e) => setMacros((prev) => ({ ...prev, [m.key]: e.target.value }))}
-                    className="mt-1 text-center text-lg font-bold bg-background"
+                    className="mt-1 h-11 text-center text-lg font-bold bg-background"
                   />
                 </div>
               ))}
@@ -897,7 +890,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
 
         {/* Tab: Chat */}
-        <TabsContent value="chat">
+        {canMessageClient && <TabsContent value="chat" className="min-w-0">
+          {restricted && <p className="mb-3 text-sm text-muted-foreground">Conversación con {profile.name?.trim() || "tu cliente"}.</p>}
           {!restricted && assignedTrainerId ? (
             <div className="space-y-3">
               <div role="tablist" aria-label="Con quién hablar" className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1">
@@ -911,7 +905,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       role="tab"
                       aria-selected={active}
                       onClick={() => setChatTarget(t)}
-                      className={`min-w-0 truncate rounded-full px-3 py-2 text-xs font-medium transition ${active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                      className={`min-h-11 min-w-0 truncate rounded-full px-3 py-2 text-xs font-medium transition ${active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
                     >
                       {t === "client" ? "Alumno" : `Entrenador (${trainerLabel})`}
                     </button>
@@ -921,16 +915,16 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               {chatTarget === "trainer" ? (
                 <>
                   <p className="text-center text-[11px] text-muted-foreground">Canal directo con el entrenador asignado a este cliente</p>
-                  <Chat key={`t-${assignedTrainerId}`} conversationUserId={assignedTrainerId} isAdmin />
+                  <Chat key={`t-${assignedTrainerId}`} conversationUserId={assignedTrainerId} isAdmin audience="trainer" />
                 </>
               ) : (
-                <Chat key={`c-${profile.user_id}`} conversationUserId={profile.user_id} isAdmin />
+                <Chat key={`c-${profile.user_id}`} conversationUserId={profile.user_id} isAdmin audience="client" />
               )}
             </div>
           ) : (
-            <Chat conversationUserId={profile.user_id} isAdmin />
+            <Chat conversationUserId={profile.user_id} isAdmin audience="client" />
           )}
-        </TabsContent>
+        </TabsContent>}
       </Tabs>
     </div>
   );
@@ -1097,7 +1091,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
   return (
     <div>
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={onBack} className="h-11 w-11 shrink-0" aria-label="Volver a clientes">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1 min-w-0">
@@ -1356,7 +1350,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           )}
 
           <TabsContent value="chat">
-            <Chat conversationUserId={profile.user_id} isAdmin />
+            <Chat conversationUserId={profile.user_id} isAdmin audience={kind === "trainer" ? "trainer" : "team"} />
           </TabsContent>
         </Tabs>
       )}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { MacroTargets } from "@/lib/nutrition";
+import { nutritionMacroError } from "@/lib/nutritionValidation";
 
 interface Meal {
   name: string;
@@ -50,6 +51,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
   const f = Number(macros?.fats) || 0;
   const kcal = Number(macros?.calories) || Math.round(p * 4 + c * 4 + f * 9);
   const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
+  const targetError = macros ? nutritionMacroError(macros) : null;
   // Rueda de progreso del día
   const R = 42;
   const C = 2 * Math.PI * R;
@@ -73,6 +75,12 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
 
   return (
     <div className="space-y-2">
+      {targetError && (
+        <Surface padding="sm" role="alert">
+          <p className="text-sm font-semibold">Objetivos pendientes de revisión</p>
+          <p className="mt-1 text-xs text-muted-foreground">{targetError} Las comidas guardadas siguen disponibles.</p>
+        </Surface>
+      )}
       {meals.length > 0 && !macros && (
         <Surface padding="sm" className="flex flex-wrap items-start gap-2">
           <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -90,7 +98,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
         </Surface>
       )}
 
-      {macros && kcal > 0 && (
+      {macros && kcal > 0 && !targetError && (
         <Surface padding="sm">
           <div className="flex items-center gap-4">
             {/* La rueda: de un vistazo, cuánto llevas del día */}
@@ -110,11 +118,11 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
             </svg>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal * ratio)}</span>
-                <span className="text-xs text-muted-foreground">de {fmt(kcal)} kcal</span>
+                <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal)}</span>
+                <span className="text-xs text-muted-foreground">kcal de objetivo diario</span>
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Según las comidas que marques hoy
+                {meals.filter((meal) => done.has(meal.name)).length} de {meals.length} comidas marcadas. Marcar comidas no mide las calorías consumidas.
               </p>
             </div>
           </div>
@@ -122,12 +130,11 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
             {chips.map((m) => (
               <span
                 key={m.l}
-                aria-label={`${m.l}: ${fmt(m.v * ratio)} de ${fmt(m.v)} gramos`}
+                aria-label={`${m.l}: objetivo diario de ${fmt(m.v)} gramos`}
                 className="flex items-baseline justify-center gap-1 rounded-full bg-secondary/60 px-1.5 py-1 text-xs"
               >
                 <span className="text-muted-foreground">{m.short}</span>
-                <span className="font-semibold tabular-nums">{fmt(m.v * ratio)}</span>
-                <span className="text-muted-foreground">/{fmt(m.v)}g</span>
+                <span className="font-semibold tabular-nums">{fmt(m.v)}g</span>
               </span>
             ))}
           </div>

@@ -130,22 +130,22 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
   }
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="w-full min-w-0 max-w-xl space-y-6">
       <div>
         <h1 className="text-xl font-bold font-display">Mi perfil</h1>
         <p className="text-sm text-muted-foreground mt-1">Actualiza el nombre y la foto que ven tus clientes.</p>
       </div>
-      <form onSubmit={handleSave} className="bg-card border border-border rounded-xl p-5 space-y-5">
+      <form onSubmit={handleSave} className="bg-card border border-border rounded-xl p-4 sm:p-5 space-y-5">
         <div className="flex items-center gap-4">
-          <Avatar className="w-16 h-16">
+          <Avatar className="w-16 h-16 shrink-0">
             <AvatarImage src={photoPreview || photoUrl || undefined} alt={name || "Foto de perfil"} />
             <AvatarFallback><UserRound className="w-6 h-6" /></AvatarFallback>
           </Avatar>
           <div>
-            <Label htmlFor="trainer-photo" className="inline-flex items-center gap-2 cursor-pointer text-sm font-medium">
+            <Label htmlFor="trainer-photo" className="inline-flex min-h-11 items-center gap-2 cursor-pointer text-sm font-medium">
               <Camera className="w-4 h-4" /> Cambiar foto
             </Label>
-            <Input
+            <input
               id="trainer-photo"
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -165,9 +165,9 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
         </div>
         <div className="space-y-2">
           <Label htmlFor="trainer-name">Nombre</Label>
-          <Input id="trainer-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={80} required />
+          <Input id="trainer-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={80} required className="h-11 text-base sm:text-sm" />
         </div>
-        <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+        <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
           <div>
             <Label htmlFor="trainer-public-profile">Mostrar mi perfil públicamente</Label>
             <p className="text-xs text-muted-foreground mt-1">
@@ -176,18 +176,19 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
           </div>
           <Switch
             id="trainer-public-profile"
+            className="mt-1 shrink-0"
             checked={publicProfileVisible}
             onCheckedChange={setPublicProfileVisible}
             aria-label="Mostrar mi perfil en la página pública de entrenadores"
           />
         </div>
-        <Button type="submit" disabled={saving} variant="hero">
+        <Button type="submit" disabled={saving} variant="hero" className="min-h-11 w-full sm:w-auto">
           {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
           Guardar cambios
         </Button>
       </form>
 
-      <section className="bg-card border border-border rounded-xl p-5 space-y-3">
+      <section className="bg-card border border-border rounded-xl p-4 sm:p-5 space-y-3">
         <div>
           <h2 className="font-semibold">Cuenta de entrenador</h2>
           {assignedClientCount > 0 && (
@@ -199,7 +200,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
         <div className="flex flex-wrap gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" disabled={resigning || assignedClientCount > 0}>
+              <Button variant="outline" disabled={resigning || assignedClientCount > 0} className="min-h-11 w-full sm:w-auto">
                 {resigning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserX className="w-4 h-4 mr-2" />}
                 Renunciar al rol
               </Button>
@@ -217,7 +218,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button variant="ghost" onClick={handleSignOut}><LogOut className="w-4 h-4 mr-2" />Cerrar sesión</Button>
+          <Button variant="ghost" onClick={handleSignOut} className="min-h-11 w-full sm:w-auto"><LogOut className="w-4 h-4 mr-2" />Cerrar sesión</Button>
         </div>
       </section>
     </div>

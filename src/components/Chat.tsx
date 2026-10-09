@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, MessageCircle, Image, Video, X, Play, Sparkles, Loader2 } from "lucide-react";
+import { Send, MessageCircle, Image, Video, X, Sparkles, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatMediaGallery from "@/components/chat/ChatMediaGallery";
@@ -25,11 +25,19 @@ interface Props {
   isAdmin?: boolean;
   onRequestVideoCall?: () => void;
   callLabel?: string;
+  audience?: "client" | "trainer" | "team";
+  layout?: "panel" | "fill";
 }
 
-const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLabel = "Videollamada" }: Props) => {
+const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLabel = "Videollamada", audience = isAdmin ? "client" : "trainer", layout = "panel" }: Props) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [connectionLost, setConnectionLost] = useState(false);
+  const activeConversation = useRef(conversationUserId);
+  const loadVersion = useRef(0);
+  const sendingRef = useRef(false);
   const [newMsg, setNewMsg] = useState("");
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -48,37 +56,63 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
     }
   }, [call.error]);
 
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("conversation_user_id", conversationUserId)
-        .order("created_at", { ascending: true });
-      if (data) setMessages(data as Message[]);
-    };
-    load();
-
-    const channel = supabase
-      .channel(`chat-${conversationUserId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "chat_messages",
-          filter: `conversation_user_id=eq.${conversationUserId}`,
-        },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+  const loadMessages = useCallback(async () => {
+    const version = ++loadVersion.current;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const { data, error } = await supabase.from("chat_messages").select("*")
+        .eq("conversation_user_id", conversationUserId).order("created_at", { ascending: true });
+      if (error) throw error;
+      if (version !== loadVersion.current || activeConversation.current !== conversationUserId) return;
+      setMessages((current) => {
+        const merged = new Map((data as Message[] || []).map((message) => [message.id, message]));
+        current.forEach((message) => merged.set(message.id, message));
+        return [...merged.values()].sort((first, second) => first.created_at.localeCompare(second.created_at));
+      });
+    } catch {
+      if (version === loadVersion.current && activeConversation.current === conversationUserId) {
+        setLoadError("No se pudo cargar esta conversación.");
+      }
+    } finally {
+      if (version === loadVersion.current && activeConversation.current === conversationUserId) setLoading(false);
+    }
   }, [conversationUserId]);
+
+  const invalidateLoad = useCallback(() => { loadVersion.current++; }, []);
+
+  useEffect(() => {
+    activeConversation.current = conversationUserId;
+    setMessages([]);
+    setNewMsg("");
+    setPreviewFile(null);
+    setAiSuggestions([]);
+    setActiveTab("chat");
+    setConnectionLost(false);
+    sendingRef.current = false;
+    setSending(false);
+    void loadMessages();
+    const channel = supabase.channel(`chat-${conversationUserId}`).on("postgres_changes", {
+      event: "INSERT", schema: "public", table: "chat_messages", filter: `conversation_user_id=eq.${conversationUserId}`,
+    }, (payload) => {
+      if (activeConversation.current !== conversationUserId) return;
+      const message = payload.new as Message;
+      setMessages((current) => current.some((existing) => existing.id === message.id) ? current : [...current, message]);
+    }).subscribe((status) => {
+      if (activeConversation.current === conversationUserId) {
+        setConnectionLost(status === "CHANNEL_ERROR" || status === "TIMED_OUT");
+      }
+    });
+    return () => { invalidateLoad(); void supabase.removeChannel(channel); };
+  }, [conversationUserId, loadMessages, invalidateLoad]);
+
+  useEffect(() => () => { if (previewFile) URL.revokeObjectURL(previewFile.url); }, [previewFile]);
+  useEffect(() => {
+    if (!viewMedia) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setViewMedia(null); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [viewMedia]);
 
   const uploadMedia = async (file: File): Promise<{ url: string; type: "image" | "video" }> => {
     const ext = file.name.split(".").pop() || "jpg";
@@ -97,6 +131,11 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      toast.error("Elige una foto o un vídeo.");
+      e.target.value = "";
+      return;
+    }
     const isVideo = file.type.startsWith("video");
     const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024; // 50MB video, 10MB foto
     if (file.size > maxSize) {
@@ -111,7 +150,9 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
   };
 
   const sendMessage = async () => {
-    if ((!newMsg.trim() && !previewFile) || !user) return;
+    if ((!newMsg.trim() && !previewFile) || !user || sendingRef.current) return;
+    const targetConversation = conversationUserId;
+    sendingRef.current = true;
     setSending(true);
     setUploading(!!previewFile);
     try {
@@ -122,28 +163,34 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
         media_url = result.url;
         media_type = result.type;
       }
-      const { error } = await supabase.from("chat_messages").insert({
+      const { data, error } = await supabase.from("chat_messages").insert({
         conversation_user_id: conversationUserId,
         sender_id: user.id,
         content: newMsg.trim() || (media_type === "video" ? "📹 Video" : "📷 Foto"),
         media_url,
         media_type,
-      });
-      if (!error) {
+      }).select("*").single();
+      if (error) throw error;
+      if (activeConversation.current === targetConversation) {
+        if (data) setMessages((current) => current.some((message) => message.id === data.id) ? current : [...current, data as Message]);
         setNewMsg("");
         setPreviewFile(null);
       }
-    } catch (err: any) {
-      toast.error("Error al enviar: " + (err.message || ""));
+    } catch {
+      toast.error("No se pudo enviar el mensaje. Tu borrador sigue aquí; inténtalo de nuevo.");
+    } finally {
+      if (activeConversation.current === targetConversation) {
+        sendingRef.current = false;
+        setSending(false);
+        setUploading(false);
+      }
     }
-    setSending(false);
-    setUploading(false);
   };
 
   const fetchAISuggestions = async () => {
     const lastUser = [...messages].reverse().find((m) => m.sender_id === conversationUserId);
     if (!lastUser) {
-      toast.info("No hay mensajes del cliente todavía");
+      toast.info("Todavía no hay mensajes para sugerir una respuesta");
       return;
     }
     setAiSuggestLoading(true);
@@ -159,39 +206,47 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setAiSuggestions(data?.replies || []);
-    } catch (e: any) {
-      toast.error(e.message || "Error con IA");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "No se pudo sugerir una respuesta.");
     }
     setAiSuggestLoading(false);
   };
 
+  const chatTitle = audience === "team" ? "Chat con administración" : audience === "client" ? "Chat con cliente" : "Chat con tu entrenador";
+  const emptyMessage = audience === "team"
+    ? "Canal privado con administración. Escribe aquí para coordinar el seguimiento de tus clientes."
+    : audience === "client" ? "Empieza la conversación con tu cliente. Puedes compartir mensajes, fotos y vídeos."
+      : "Escribe aquí tus dudas sobre el plan o comparte fotos y vídeos con tu entrenador.";
   const mediaCount = messages.filter(m => m.media_url).length;
 
   return (
     <>
-      <div className="flex h-[calc(100dvh-68px-var(--safe-top,0px)-var(--mobile-nav-content-padding))] min-h-[20rem] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card card-shadow sm:h-[calc(100dvh-10rem)] sm:min-h-[32rem]">
+      <div className={`flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card card-shadow ${layout === "fill" ? "h-full min-h-0 flex-1" : "h-[min(42rem,calc(100dvh-12rem))] min-h-[20rem]"}`}>
         {/* Header with tabs */}
-        <div className="flex min-w-0 items-center gap-1.5 border-b border-border p-2 sm:gap-2 sm:p-3">
+        <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-1.5 border-b border-border p-2 sm:gap-2 sm:p-3">
           <button
+            type="button"
             onClick={() => setActiveTab("chat")}
+            aria-label={chatTitle}
             aria-pressed={activeTab === "chat"}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
+            className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
               activeTab === "chat" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <MessageCircle className="w-4 h-4" />
             <span className="sm:hidden">Chat</span>
-            <span className="hidden sm:inline">{isAdmin ? "Chat" : "Chat con tu entrenador"}</span>
+            <span className="hidden sm:inline">{chatTitle}</span>
           </button>
           <button
-            onClick={() => setActiveTab((current) => current === "media" ? "chat" : "media")}
+            type="button"
+            onClick={() => setActiveTab("media")}
             aria-pressed={activeTab === "media"}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
+            className={`flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors sm:px-3 sm:text-sm ${
               activeTab === "media" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <Image className="w-4 h-4" />
-            Media
+            Archivos
             {mediaCount > 0 && (
               <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-bold">{mediaCount}</span>
             )}
@@ -201,7 +256,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               type="button"
               size="sm"
               variant="outline"
-              className="ml-auto h-9 w-9 shrink-0 gap-1.5 p-0 sm:w-auto sm:px-3"
+              className="ml-auto h-11 w-11 shrink-0 gap-1.5 p-0 sm:w-auto sm:px-3"
               onClick={call.startCall}
               disabled={call.state !== "idle"}
               title="Videollamada dentro de Autopilot"
@@ -216,7 +271,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               type="button"
               size="sm"
               variant="outline"
-              className="ml-auto h-9 w-9 shrink-0 gap-1.5 p-0 sm:w-auto sm:px-3"
+              className="ml-auto h-11 w-11 shrink-0 gap-1.5 p-0 sm:w-auto sm:px-3"
               onClick={onRequestVideoCall}
               aria-label={callLabel}
               title={callLabel}
@@ -229,16 +284,20 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
 
         {/* Content */}
-        {!isAdmin && (
-          <div className="px-3 pt-2">
+        {!isAdmin && audience === "trainer" && (
+          <div className="shrink-0 px-3 pt-2">
             <AIDisclaimer variant="compact" />
           </div>
         )}
-        <ChatMessages messages={messages} onViewMedia={setViewMedia} />
+        {connectionLost && !loadError && <div role="status" className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-1 text-xs text-muted-foreground"><span className="min-w-0 flex-1">La conexión en directo se interrumpió.</span><Button type="button" variant="ghost" size="sm" className="min-h-11 shrink-0" onClick={() => void loadMessages()}>Actualizar</Button></div>}
+        {loading ? <div role="status" className="flex min-h-0 flex-1 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando conversación…</div>
+          : loadError ? <div role="alert" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-4 text-center text-sm"><p>{loadError}</p><Button type="button" variant="outline" className="min-h-11" onClick={() => void loadMessages()}><RefreshCw className="h-4 w-4" /> Reintentar</Button></div>
+          : activeTab === "chat" ? <ChatMessages messages={messages} onViewMedia={setViewMedia} emptyMessage={emptyMessage} />
+          : <ChatMediaGallery messages={messages} onViewMedia={setViewMedia} />}
 
         {/* Preview */}
         {previewFile && (
-          <div className="px-3 pt-2 flex items-center gap-2">
+          <div className="shrink-0 px-3 py-2 flex items-center gap-2">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
               {previewFile.type === "image" ? (
                 <img src={previewFile.url} alt="" className="w-full h-full object-cover" />
@@ -247,16 +306,10 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
                   <Video className="w-6 h-6 text-muted-foreground" />
                 </div>
               )}
-              <button
-                onClick={() => setPreviewFile(null)}
-                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center"
-              >
-                <X className="w-3 h-3" />
-              </button>
+
             </div>
-            <span className="text-xs text-muted-foreground">
-              {previewFile.type === "image" ? "📷 Foto lista" : "📹 Vídeo listo"}
-            </span>
+            <span className="min-w-0 flex-1 text-xs text-muted-foreground">{previewFile.type === "image" ? "Foto lista" : "Vídeo listo"}</span>
+            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => setPreviewFile(null)} aria-label="Quitar archivo adjunto"><X className="w-4 h-4" /></Button>
           </div>
         )}
 
@@ -269,7 +322,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
                     key={i}
                     type="button"
                     onClick={() => { setNewMsg(s.text); setAiSuggestions([]); }}
-                    className="w-full text-left text-xs bg-secondary hover:bg-secondary/80 rounded-lg px-3 py-2 border border-border transition-colors"
+                    className="min-h-11 w-full break-words text-left text-xs bg-secondary hover:bg-secondary/80 rounded-lg px-3 py-2 border border-border transition-colors"
                   >
                     <div className="text-[10px] font-bold uppercase text-primary tracking-wider mb-0.5">{s.label}</div>
                     <div className="text-foreground/90">{s.text}</div>
@@ -277,33 +330,29 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
                 ))}
               </div>
             )}
-            <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
-              <Button type="button" variant="ghost" size="icon" onClick={() => fileRef.current?.click()} className="shrink-0" disabled={uploading}>
+            <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex min-w-0 gap-1.5 sm:gap-2">
+              <Button type="button" variant="ghost" size="icon" onClick={() => fileRef.current?.click()} className="h-11 w-11 shrink-0" aria-label="Adjuntar foto o vídeo" disabled={sending || uploading || loading || !!loadError}>
                 <Image className="w-5 h-5" />
               </Button>
               <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileSelect} />
               {isAdmin && (
-                <Button type="button" variant="ghost" size="icon" onClick={fetchAISuggestions} disabled={aiSuggestLoading} className="shrink-0" title="Sugerir respuesta con IA">
+                <Button type="button" variant="ghost" size="icon" onClick={fetchAISuggestions} disabled={aiSuggestLoading || sending || loading || !!loadError} className="h-11 w-11 shrink-0" aria-label="Sugerir respuesta con IA" title="Sugerir respuesta con IA">
                   {aiSuggestLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 text-primary" />}
                 </Button>
               )}
-              <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1" />
-              <Button type="submit" size="icon" disabled={sending || (!newMsg.trim() && !previewFile)}>
-                <Send className="w-4 h-4" />
+              <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Escribe un mensaje…" aria-label="Mensaje" disabled={sending || loading || !!loadError} className="h-11 min-w-0 flex-1 text-base sm:text-sm" />
+              <Button type="submit" size="icon" className="h-11 w-11 shrink-0" aria-label={sending ? "Enviando mensaje" : "Enviar mensaje"} disabled={sending || loading || !!loadError || (!newMsg.trim() && !previewFile)}>
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </form>
         </div>
-        {activeTab === "media" && (
-          <div className="flex h-36 shrink-0 flex-col border-t border-border sm:h-48">
-            <ChatMediaGallery messages={messages} onViewMedia={setViewMedia} />
-          </div>
-        )}
+
       </div>
 
       {/* Media Viewer */}
       {viewMedia && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setViewMedia(null)}>
-          <button onClick={() => setViewMedia(null)} className="absolute top-4 right-4 text-white/70 hover:text-white p-2">
+        <div role="dialog" aria-modal="true" aria-label="Archivo del chat" className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setViewMedia(null)}>
+          <button type="button" onClick={() => setViewMedia(null)} aria-label="Cerrar archivo" className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center text-white/70 hover:text-white">
             <X className="w-6 h-6" />
           </button>
           <div onClick={(e) => e.stopPropagation()} className="max-w-3xl max-h-[85vh]">
@@ -322,7 +371,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
         remoteStream={call.remoteStream}
         micOn={call.micOn}
         camOn={call.camOn}
-        peerName={isAdmin ? "Tu cliente" : "Tu entrenador"}
+        peerName={audience === "team" ? "Administración" : audience === "client" ? "Tu cliente" : "Tu entrenador"}
         onAccept={call.accept}
         onDecline={call.decline}
         onHangup={call.hangup}

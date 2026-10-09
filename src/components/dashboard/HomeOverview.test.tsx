@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeOverview from "./HomeOverview";
 
 const mocks = vi.hoisted(() => ({ hapticTap: vi.fn() }));
 vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap }));
 
-afterEach(cleanup);
+beforeEach(() => vi.clearAllMocks());
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 const today = DAYS[(new Date().getDay() + 6) % 7];
@@ -56,5 +57,25 @@ describe("dashboard home overview", () => {
     expect(startButton).toHaveClass("bg-primary", "text-primary-foreground");
     fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenCalledWith("nutrition");
+  });
+
+  it("opens the routine week on a rest Sunday", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-04T12:00:00"));
+    const onNavigate = vi.fn();
+    const onStartWorkout = vi.fn();
+    render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ver rutina semanal" }));
+    expect(onNavigate).toHaveBeenCalledWith("training");
+    expect(onStartWorkout).not.toHaveBeenCalled();
+  });
+
+  it("uses the direct start action only for today's planned session", () => {
+    const onNavigate = vi.fn();
+    const onStartWorkout = vi.fn();
+    render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
+    fireEvent.click(screen.getByRole("button", { name: /Empezar Entrenamiento/ }));
+    expect(onStartWorkout).toHaveBeenCalledOnce();
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 });

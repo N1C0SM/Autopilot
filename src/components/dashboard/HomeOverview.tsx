@@ -6,6 +6,7 @@ import type { DayPlan } from "@/types/training";
 import type { UserSection } from "@/components/UserSidebar";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticTap } from "@/lib/native";
+import { nutritionMacroError } from "@/lib/nutritionValidation";
 
 interface Macros {
   protein: number;
@@ -24,6 +25,7 @@ interface Props {
   meals?: Meal[];
   userId?: string;
   onNavigate: (section: UserSection) => void;
+  onStartWorkout?: () => void;
   profileName?: string;
   macros?: Macros | null;
   completedThisWeek?: number;
@@ -48,6 +50,7 @@ const HomeOverview = ({
   meals = [],
   userId,
   onNavigate,
+  onStartWorkout,
   profileName,
   macros,
   completedThisWeek = 0,
@@ -73,7 +76,8 @@ const HomeOverview = ({
   const mealProgress = meals.length
     ? doneMealCount / meals.length
     : 0;
-  const calorieTarget = macros
+  const macroError = macros ? nutritionMacroError(macros) : null;
+  const calorieTarget = macros && !macroError
     ? Number(macros.calories) || Math.round(macros.protein * 4 + macros.carbs * 4 + macros.fats * 9)
     : null;
   const sessionTitle = completedToday
@@ -169,10 +173,14 @@ const HomeOverview = ({
             type="button"
             onClick={() => {
               void hapticTap();
-              onNavigate(completedToday ? "progress" : todayPlan ? "training" : "progress");
+              if (completedToday) onNavigate("progress");
+              else if (todayPlan) {
+                if (onStartWorkout) onStartWorkout();
+                else onNavigate("training");
+              } else onNavigate("training");
             }}
             className="group flex min-h-[5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
-            aria-label={completedToday ? "Ver progreso de la sesión" : `Empezar ${sessionTitle}`}
+            aria-label={completedToday ? "Ver progreso de la sesión" : todayPlan ? `Empezar ${sessionTitle}` : "Ver rutina semanal"}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
                 {completedToday ? <Check className="h-5 w-5" /> : todayPlan?.type === "actividad" ? <Activity className="h-5 w-5" /> : todayPlan ? <Dumbbell className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -186,7 +194,7 @@ const HomeOverview = ({
                       ? `${exerciseCount} ${exerciseCount === 1 ? "ejercicio" : "ejercicios"}`
                       : todayPlan?.type === "actividad"
                         ? [todayPlan.intensity, todayPlan.duration].filter(Boolean).join(" · ")
-                        : "Día de descanso"}
+                        : "Ver rutina semanal"}
               </span>
             </span>
             <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
@@ -240,7 +248,7 @@ const HomeOverview = ({
                   </span>
                 </span>
               </span>
-              {nutrition && macros ? (
+              {nutrition && macros && !macroError ? (
                 <span className="flex w-full justify-between gap-1 border-t border-border/70 pt-3 text-xs text-muted-foreground">
                   {[
                     { label: "P", value: macros.protein },
@@ -252,7 +260,7 @@ const HomeOverview = ({
                 </span>
               ) : (
                 <span className="flex w-full items-center justify-between border-t border-border/70 pt-3 text-xs">
-                  <span className="text-muted-foreground">{nutrition ? "Ver plan de hoy" : "Incluido en Plus"}</span>
+                  <span className="text-muted-foreground">{macroError ? "Objetivos por revisar" : nutrition ? "Ver plan de hoy" : "Incluido en Plus"}</span>
                   <span className="font-medium text-primary">Ver →</span>
                 </span>
               )}

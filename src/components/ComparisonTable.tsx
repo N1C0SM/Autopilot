@@ -14,10 +14,10 @@ const ComparisonTable = () => (
           </div>
           <div className="border-t border-primary pt-5">
             <h3 className="font-display text-lg font-semibold">Si quieres que alguien revise contigo</h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Autopilot combina el registro del entrenamiento con un plan preparado por una persona y chat para hablar de tus dudas. Ese seguimiento es lo que estás contratando desde {TIERS.training.price}€/mes.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Coach añade un entrenador asignado, revisiones y chat directo por {TIERS.full.price}€/mes. Plus, por {TIERS.training.price}€/mes, incluye adaptación con IA y nutrición; no incluye entrenador humano.</p>
           </div>
         </div>
-        <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">El acompañamiento es online. No incluye supervisión presencial de cada sesión ni sustituye atención médica o rehabilitación. La nutrición está incluida en Completo.</p>
+        <p className="mt-8 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">Free incluye rutina inicial, registro y progreso. La nutrición está incluida en Plus y Coach. El acompañamiento de Coach es online y no incluye supervisión presencial de cada sesión ni sustituye atención médica o rehabilitación.</p>
       </ScrollReveal>
     </div>
   </section>

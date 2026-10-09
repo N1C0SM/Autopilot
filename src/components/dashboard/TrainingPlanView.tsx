@@ -15,6 +15,7 @@ const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 
 interface Props {
   dayPlans: DayPlan[];
+  onOpenWorkout?: (day: string) => void;
 }
 
 function planToText(dayPlans: DayPlan[]): string {
@@ -39,7 +40,7 @@ function planToText(dayPlans: DayPlan[]): string {
   return text;
 }
 
-const TrainingPlanView = ({ dayPlans }: Props) => {
+const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const [expandedDay, setExpandedDay] = useState<string | null>(DAYS_ORDER[todayIndex]);
   const [copied, setCopied] = useState(false);
@@ -96,21 +97,21 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Dumbbell className="w-5 h-5 text-primary shrink-0" />
-          <h2 className="text-lg sm:text-xl font-bold font-display truncate">Tu Plan</h2>
+          <h2 className="text-lg sm:text-xl font-bold font-display truncate">Rutina semanal</h2>
         </div>
         <div className="flex gap-1.5 sm:gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={handleCopy} className="h-8 px-2 sm:px-3">
+          <Button variant="outline" size="sm" aria-label={copied ? "Plan copiado" : "Copiar plan"} onClick={handleCopy} className="h-11 px-2 sm:px-3">
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
             <span className="hidden sm:inline ml-1">{copied ? "Copiado" : "Copiar"}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDownload} className="h-8 px-2 sm:px-3">
+          <Button variant="outline" size="sm" aria-label="Descargar plan" onClick={handleDownload} className="h-11 px-2 sm:px-3">
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline ml-1">Descargar</span>
           </Button>
           <CalendarExportDialog
             dayPlans={dayPlans}
             trigger={
-              <Button variant="outline" size="sm" className="h-8 px-2 sm:px-3">
+              <Button variant="outline" size="sm" aria-label="Exportar plan al calendario" className="h-11 px-2 sm:px-3">
                 <CalendarIcon className="w-4 h-4" />
                 <span className="hidden sm:inline ml-1">Calendario</span>
               </Button>
@@ -140,6 +141,8 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
             }`}
           >
             <button
+              type="button"
+              aria-expanded={plan ? isExpanded : undefined}
               onClick={() => { if (plan) setExpandedDay(isExpanded ? null : day); }}
               disabled={!plan}
               className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors ${plan ? "hover:bg-secondary/20" : "cursor-default"}`}
@@ -249,6 +252,11 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                     </div>
                   );
                 })}
+                {onOpenWorkout && plan.exercises.length > 0 && (
+                  <Button type="button" variant="hero" className="mt-2 h-11 w-full" onClick={() => onOpenWorkout(day)}>
+                    Abrir sesión del {day.toLocaleLowerCase("es-ES")}
+                  </Button>
+                )}
               </motion.div>
             )}
 
@@ -266,6 +274,11 @@ const TrainingPlanView = ({ dayPlans }: Props) => {
                     <Clock className="w-3.5 h-3.5 text-primary" />{plan.duration}
                   </span>
                 </div>
+                {onOpenWorkout && (
+                  <Button type="button" variant="outline" className="mt-3 h-11 w-full" onClick={() => onOpenWorkout(day)}>
+                    Abrir actividad del {day.toLocaleLowerCase("es-ES")}
+                  </Button>
+                )}
               </motion.div>
             )}
           </motion.div>

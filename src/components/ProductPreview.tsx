@@ -5,6 +5,7 @@ import {
   RotateCcw, Send, Settings as SettingsIcon, Sparkles, Timer, Utensils, Lock, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TIERS } from "@/config/tiers";
 import { track } from "@/lib/analytics";
 import { buildExerciseHistory } from "@/lib/workoutMetrics";
 
@@ -138,7 +139,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
           <div className="max-w-xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="font-display text-3xl font-bold sm:text-4xl">Prueba cómo sería tu día.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos. Nutrición y chat aparecen como ejemplos de planes con entrenador; no están incluidos en Gratis. Sin cuenta ni tarjeta.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos. La nutrición está incluida desde Plus y el chat con entrenador en Coach. Free incluye rutina inicial, registro y progreso. Sin cuenta ni tarjeta.</p>
           </div>
           <span className="text-xs text-muted-foreground">Demo con datos ficticios · no es un plan personal</span>
         </div>
@@ -153,7 +154,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                     <li key={p} className="flex gap-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}</li>
                   ))}
                 </ul>
-                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? "El plan de nutrición está incluido desde Plus · 29€/mes tras la prueba. No forma parte del plan Gratis." : view === "chat" ? "El chat con entrenador real es exclusivo del plan Coach · 49€/mes tras la prueba. No está incluido en Gratis ni en Plus." : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
+                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? `El plan de nutrición está incluido desde Plus · ${TIERS.training.price}€/mes tras la prueba. No forma parte del plan Gratis.` : view === "chat" ? `El chat con entrenador real es exclusivo del plan Coach · ${TIERS.full.price}€/mes tras la prueba. No está incluido en Gratis ni en Plus.` : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -234,7 +235,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                           </div>
                           <div className="flex gap-2.5 rounded-2xl bg-secondary p-3">
                             <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                            <p className="text-xs leading-relaxed"><span className="font-semibold">En planes con entrenador:</span> <span className="text-muted-foreground">recibes seguimiento humano y ajustes de tu plan. Gratis tienes registro y progreso.</span></p>
+                            <p className="text-xs leading-relaxed"><span className="font-semibold">En Coach:</span> <span className="text-muted-foreground">recibes seguimiento humano y ajustes de tu plan. Gratis tienes registro y progreso.</span></p>
                           </div>
                         </div>
                       )}
@@ -347,9 +348,9 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
 
                       {view === "nutrition" && (
                         <div>
-                          <p className="text-[11px] font-medium text-primary">Hoy · plan Completo</p>
+                          <p className="text-[11px] font-medium text-primary">Hoy · plan Plus</p>
                           <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-secondary p-3">
-                            <span className="flex items-center gap-2 text-xs font-semibold"><Lock className="h-4 w-4 text-primary" />Plan Completo</span>
+                            <span className="flex items-center gap-2 text-xs font-semibold"><Lock className="h-4 w-4 text-primary" />Plus y Coach</span>
                             <span className="text-[10px] text-muted-foreground">Función de pago</span>
                           </div>
                           <div className="mt-3 flex items-center gap-4 rounded-2xl bg-secondary p-4">
@@ -376,21 +377,21 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                               </div>
                             ))}
                           </div>
-                          <p className="mt-3 text-[10px] text-muted-foreground">Comidas ilustrativas, sin recomendaciones para tu caso. Nutrición disponible en Completo, no en Gratis.</p>
+                          <p className="mt-3 text-[10px] text-muted-foreground">Comidas ilustrativas, sin recomendaciones para tu caso. Nutrición disponible desde Plus.</p>
                         </div>
                       )}
 
                       {view === "chat" && (
                         <div className="flex h-full flex-col">
                           <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 p-2">
-                            <span className="flex items-center gap-1.5 text-[10px] font-semibold"><Lock className="h-3.5 w-3.5 text-primary" />Plan con entrenador</span>
+                            <span className="flex items-center gap-1.5 text-[10px] font-semibold"><Lock className="h-3.5 w-3.5 text-primary" />Plan Coach</span>
                             <span className="text-[9px] text-muted-foreground">No incluido en Gratis</span>
                           </div>
                           <div className="flex items-center gap-2.5 border-b border-border pb-3">
                             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">N</span>
                             <div>
                               <p className="text-sm font-semibold">Niko · tu entrenador</p>
-                              <p className="text-[10px] text-muted-foreground">Respuesta: 48 h · Completo: 24 h</p>
+                              <p className="text-[10px] text-muted-foreground">Chat directo · plan Coach</p>
                             </div>
                           </div>
                           <div className="mt-3 space-y-2.5">
