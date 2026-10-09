@@ -41,6 +41,8 @@ type ExerciseRow = Exercise & {
   image_generated_at?: string | null;
   video_generated_at?: string | null;
   media_error?: string | null;
+  /** 1 = vídeo clave: la cola de pendientes lo genera primero. */
+  video_priority?: number | null;
 };
 
 type MediaFilter = "all" | "no-image" | "no-video" | "old-style" | "error";
@@ -609,7 +611,7 @@ const ExerciseLibrary = () => {
   const [mediaColumnsReady, setMediaColumnsReady] = useState(true);
 
   const LEGACY_COLUMNS = "id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension";
-  const MEDIA_COLUMNS = "media_style_version, image_generated_at, video_generated_at, media_error";
+  const MEDIA_COLUMNS = "media_style_version, image_generated_at, video_generated_at, media_error, video_priority";
 
   const fetchExercises = async () => {
     const full = await supabase.from("exercises")
@@ -797,7 +799,11 @@ const ExerciseLibrary = () => {
   }, [exercises, search, filterGroup, filterType, mediaFilter]);
 
   /** Pendientes visibles: lo que realmente procesará el botón "Generar pendientes". */
-  const pendingQueue = useMemo(() => filtered.filter(needsGeneration), [filtered]);
+  /** Los ejercicios clave (video_priority) van primero, el resto conserva su orden. */
+  const pendingQueue = useMemo(
+    () => filtered.filter(needsGeneration).sort((a, b) => (a.video_priority ?? 99) - (b.video_priority ?? 99)),
+    [filtered],
+  );
 
   const mediaFilterOptions = useMemo(() => ([
     { value: "all" as const, label: "Todos", count: exercises.length },
