@@ -2037,6 +2037,10 @@ export type Database = {
           plan_status: string
           referral_code: string
           referred_by: string
+          stripe_payment_id: string
+          subscription_end: string
+          subscription_status: string
+          subscription_tier: string
           travel_equipment: string
           travel_mode_until: string
           updated_at: string
@@ -2056,6 +2060,11 @@ export type Database = {
           price: number
         }[]
       }
+      has_active_nutrition_access: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      has_human_coach_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2076,6 +2085,7 @@ export type Database = {
         }
         Returns: number
       }
+      nutrition_targets_valid: { Args: { targets: Json }; Returns: boolean }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
