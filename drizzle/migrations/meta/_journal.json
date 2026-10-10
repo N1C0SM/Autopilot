@@ -29,6 +29,13 @@
       "when": 1791355777962,
       "tag": "0003_exercise_media_style",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791606721075,
+      "tag": "0004_exercise_tracking_mode",
+      "breakpoints": true
     }
   ]
 }

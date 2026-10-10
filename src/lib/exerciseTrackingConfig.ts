@@ -1,5 +1,7 @@
 export type ExerciseTrackingKind =
   | "weighted_reps"
+  | "bodyweight_reps"
+  | "weighted_bodyweight"
   | "bodyweight_seconds"
   | "seconds_only"
   | "assisted_reps"
@@ -14,6 +16,12 @@ export interface ExerciseTrackingConfig {
   supportsWeight: boolean;
   supportsSecondaryMetric: boolean;
   description: string;
+  /** Casilla de carga fija «PC»: solo se anotan repeticiones. */
+  fixedBodyweight?: boolean;
+  /** Sufijo de la métrica principal en el histórico (p. ej. «s»). */
+  valueSuffix?: string;
+  /** Sugerencia por defecto en la casilla de carga. */
+  weightPlaceholder?: string;
 }
 
 export type ExerciseTrackingInput =
@@ -25,12 +33,23 @@ export type ExerciseTrackingInput =
       skill_tag?: string | null;
       movement_pattern?: string | null;
       exercise_type?: string | null;
+      tracking_mode?: string | null;
     };
 
 const normalizeExerciseName = (value?: string | null) => (value || "").toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 
+export const TRACKING_MODES: Record<string, ExerciseTrackingConfig> = {
+  weighted_reps: { kind: "weighted_reps", weightLabel: "KG", valueLabel: "Repeticiones", supportsWeight: true, supportsSecondaryMetric: false, description: "Carga externa: kilos y repeticiones.", weightPlaceholder: "kg" },
+  bodyweight_reps: { kind: "bodyweight_reps", weightLabel: "Carga", valueLabel: "Repeticiones", supportsWeight: false, supportsSecondaryMetric: false, description: "Peso corporal puro: solo repeticiones.", fixedBodyweight: true },
+  weighted_bodyweight: { kind: "weighted_bodyweight", weightLabel: "+KG (Lastre)", valueLabel: "Repeticiones", supportsWeight: true, supportsSecondaryMetric: false, description: "Calistenia con lastre: 0 kg = peso corporal.", weightPlaceholder: "0" },
+  seconds_only: { kind: "seconds_only", weightLabel: "Carga", valueLabel: "Segundos", secondaryLabel: "Intentos", supportsWeight: false, supportsSecondaryMetric: true, description: "Isométricos: segundos sostenidos.", fixedBodyweight: true, valueSuffix: "s" },
+  assisted_reps: { kind: "assisted_reps", weightLabel: "-KG (Asist.)", valueLabel: "Repeticiones", supportsWeight: true, supportsSecondaryMetric: false, description: "Progresión asistida: kilos de asistencia o goma.", weightPlaceholder: "0" },
+};
+
 export function getExerciseTrackingConfig(exercise?: ExerciseTrackingInput): ExerciseTrackingConfig {
   const candidate = typeof exercise === "string" ? { name: exercise } : exercise ?? {};
+  const explicit = candidate.tracking_mode ? TRACKING_MODES[candidate.tracking_mode] : undefined;
+  if (explicit) return explicit;
   const name = normalizeExerciseName(candidate.name);
   const skillTag = normalizeExerciseName(candidate.skill_tag);
   const pattern = normalizeExerciseName(candidate.movement_pattern);
