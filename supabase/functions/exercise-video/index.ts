@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       action: rawAction,
       exclude: rawExclude,
     } = await req.json().catch(() => ({}) as any);
-    if (rawAction !== "create" && rawAction !== "check" && rawAction !== "image" && rawAction !== "batch") {
+    if (rawAction !== "create" && rawAction !== "check" && rawAction !== "image" && rawAction !== "batch" && rawAction !== "webp") {
       return json({ error: "Acción no válida" }, 400);
     }
 
