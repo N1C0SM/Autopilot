@@ -33,3 +33,20 @@ describe("getExerciseTrackingConfig", () => {
     expect(getExerciseTrackingConfig({ name: "Planche" }).valueLabel).toBe("Repeticiones");
   });
 });
+
+describe("tracking_mode explícito", () => {
+  it("prevalece sobre la heurística del nombre", () => {
+    expect(getExerciseTrackingConfig({ name: "Press banca", tracking_mode: "bodyweight_reps" }).kind).toBe("bodyweight_reps");
+  });
+  it("peso corporal fija la casilla en PC", () => {
+    expect(getExerciseTrackingConfig({ name: "Flexiones", tracking_mode: "bodyweight_reps" }).fixedBodyweight).toBe(true);
+  });
+  it("lastre sugiere 0 kg", () => {
+    expect(getExerciseTrackingConfig({ name: "Dominada", tracking_mode: "weighted_bodyweight" }).weightPlaceholder).toBe("0");
+  });
+  it("isométricos se miden en segundos", () => {
+    const c = getExerciseTrackingConfig({ name: "Plancha", tracking_mode: "seconds_only" });
+    expect(c.valueLabel).toBe("Segundos");
+    expect(c.valueSuffix).toBe("s");
+  });
+});
