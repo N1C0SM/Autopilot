@@ -1,6 +1,6 @@
 # Validación — entrenador responsive y correcciones de auditoría
 
-Fecha: 10 de octubre de 2026. PR: https://github.com/N1C0SM/Autopilot/pull/37. Rama: `codex/trainer-responsive-review`. Base actualizada e integrada: `origin/main b3c5f92`.
+Fecha: 10 de octubre de 2026. PR: https://github.com/N1C0SM/Autopilot/pull/37. Rama: `codex/trainer-responsive-review`. Base actualizada e integrada: `origin/main a25ac56`.
 
 ## Cambios
 
@@ -27,7 +27,7 @@ Fecha: 10 de octubre de 2026. PR: https://github.com/N1C0SM/Autopilot/pull/37. R
 | test-nutrition-access-db.mjs | Correcto: nutrición Plus/Coach, chat humano Coach, alias y compras antiguas, caducidad, canal interno, asignaciones y aislamiento |
 | test-trainer-context-db.mjs | Correcto: asignación, denegación anónima, sin acceso directo a perfiles y referencia enmascarada |
 | test-recommendation-copy.mjs | Correcto: conserva orden, campos propios y ediciones del propietario; idempotente |
-| Lint global | No pasa: 364 errores y 37 advertencias. Base: 388 errores y 37 advertencias. Sin diagnósticos nuevos |
+| Lint global | No pasa: 364 errores y 37 advertencias. Base: 388 errores y 37 advertencias. Sin diagnósticos nuevos propios de esta PR |
 | git diff --check | Correcto |
 
 Repetición:
