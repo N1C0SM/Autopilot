@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Play, X } from "lucide-react";
+import { Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { signedUrlsFor } from "@/lib/storageSign";
 
@@ -14,16 +14,18 @@ interface Message {
 
 interface Props {
   messages: Message[];
+  emptyMessage?: string;
   onViewMedia: (media: { url: string; type: string }) => void;
 }
 
-const ChatMessages = ({ messages, onViewMedia }: Props) => {
+const ChatMessages = ({ messages, onViewMedia, emptyMessage = "Escribe aquí tus dudas sobre el plan o comparte fotos y vídeos con tu entrenador." }: Props) => {
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [signed, setSigned] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scroller = scrollRef.current?.parentElement;
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }, [messages]);
 
   useEffect(() => {
@@ -41,10 +43,10 @@ const ChatMessages = ({ messages, onViewMedia }: Props) => {
   const resolve = (u?: string | null) => (u ? signed.get(u) || "" : "");
 
   return (
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
+    <div role="log" aria-label="Mensajes de la conversación" aria-live="polite" className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4">
       {messages.length === 0 && (
         <div className="text-center text-sm text-muted-foreground py-10">
-          ¡Hola! Escribe aquí si tienes alguna duda sobre tu plan. También puedes enviar fotos y vídeos de tu progreso 💪📸
+          {emptyMessage}
         </div>
       )}
       {messages.map((msg) => {
@@ -52,14 +54,14 @@ const ChatMessages = ({ messages, onViewMedia }: Props) => {
         return (
           <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
+              className={`min-w-0 max-w-[88%] break-words rounded-2xl px-4 py-2.5 text-sm ${
                 isMine
                   ? "bg-primary text-primary-foreground rounded-br-md"
                   : "bg-secondary text-foreground rounded-bl-md"
               }`}
             >
               {msg.media_url && msg.media_type === "image" && (
-                <button
+                <button type="button" aria-label="Ver foto adjunta"
                   onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "image" })}
                   className="block mb-2 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
                 >
@@ -67,7 +69,7 @@ const ChatMessages = ({ messages, onViewMedia }: Props) => {
                 </button>
               )}
               {msg.media_url && msg.media_type === "video" && (
-                <button
+                <button type="button" aria-label="Ver vídeo adjunto"
                   onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "video" })}
                   className="block mb-2 rounded-lg overflow-hidden relative group"
                 >
@@ -78,7 +80,7 @@ const ChatMessages = ({ messages, onViewMedia }: Props) => {
                 </button>
               )}
               {(!msg.media_url || (msg.content !== "📷 Foto" && msg.content !== "📹 Video")) && (
-                <span>{msg.content}</span>
+                <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{msg.content}</span>
               )}
               <div className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {new Date(msg.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}

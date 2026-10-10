@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -14,6 +14,9 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
+import { clientProfiles } from "@/lib/adminMetrics";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const AdminMetrics = lazy(() => import("@/components/admin/AdminMetrics"));
 const UserList = lazy(() => import("@/components/admin/UserList"));
@@ -41,6 +44,9 @@ export interface Profile {
   travel_mode_until?: string | null;
   travel_equipment?: string | null;
   subscription_tier?: string | null;
+  subscription_status?: string | null;
+  subscription_end?: string | null;
+  stripe_payment_id?: string | null;
 }
 
 export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products";
@@ -50,6 +56,7 @@ const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [allUsers, setAllUsers] = useState<Profile[]>([]);
   const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
@@ -57,37 +64,45 @@ const Admin = () => {
   const [section, setSection] = useState<AdminSection>("dashboard");
   const isMobile = useIsMobile();
 
-  useEffect(() => {
+  const refreshUsers = useCallback(async () => {
+    const [profilesResult, rolesResult] = await Promise.all([
+      supabase.from("profiles").select("user_id, email, name, avatar_url, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier, subscription_status, subscription_end, stripe_payment_id"),
+      supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
+    ]);
+    if (profilesResult.error) throw profilesResult.error;
+    if (rolesResult.error) throw rolesResult.error;
+    setAllUsers(profilesResult.data || []);
+    setAdminIds(new Set((rolesResult.data || []).filter((role) => role.role === "admin").map((role) => role.user_id)));
+    setTrainerIds(new Set((rolesResult.data || []).filter((role) => role.role === "trainer").map((role) => role.user_id)));
+    setLoadError(false);
+    return clientProfiles(profilesResult.data || [], new Set((rolesResult.data || []).map((role) => role.user_id)));
+  }, []);
+
+  const clients = useMemo(() => clientProfiles(allUsers, new Set([...adminIds, ...trainerIds])), [allUsers, adminIds, trainerIds]);
+
+  const loadAdmin = useCallback(async () => {
     if (!user) return;
-    const checkAdmin = async () => {
-      const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+      if (error) throw error;
       if (!data) {
         navigate("/dashboard");
         return;
       }
       setIsAdmin(true);
-      const [{ data: profiles }, { data: roles }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("user_id, email, name, avatar_url, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier"),
-        supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
-      ]);
-      if (profiles) setAllUsers(profiles as unknown as Profile[]);
-      if (roles) {
-        setAdminIds(new Set(roles.filter((r) => r.role === "admin").map((r) => r.user_id)));
-        setTrainerIds(new Set(roles.filter((r) => r.role === "trainer").map((r) => r.user_id)));
-      }
+      await refreshUsers();
+    } catch {
+      setLoadError(true);
+    } finally {
       setLoading(false);
-    };
-    checkAdmin();
-  }, [user, navigate]);
+    }
+  }, [user, navigate, refreshUsers]);
+
+  useEffect(() => { void loadAdmin(); }, [loadAdmin]);
 
   const refreshRoles = async () => {
-    const { data: roles } = await supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]);
-    if (roles) {
-      setAdminIds(new Set(roles.filter((r) => r.role === "admin").map((r) => r.user_id)));
-      setTrainerIds(new Set(roles.filter((r) => r.role === "trainer").map((r) => r.user_id)));
-    }
+    try { await refreshUsers(); } catch { toast.error("No se pudieron actualizar las cuentas"); }
   };
 
   const updateUserInList = (userId: string, updates: Partial<Profile>) => {
@@ -118,6 +133,15 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <p>No se pudieron cargar las cuentas y sus permisos.</p>
+        <Button onClick={() => { void loadAdmin(); }}>Reintentar</Button>
       </div>
     );
   }
@@ -179,31 +203,31 @@ const Admin = () => {
             <Suspense fallback={<div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />}>
             {section === "dashboard" && (
               <div className="max-w-5xl space-y-6">
-                <AdminStats users={users} />
+                <AdminStats users={clients} />
 
                 {/* Quick actions */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <QuickAction
                     label="Planes pendientes"
-                    value={users.filter(u => u.plan_status === "plan_pending").length}
+                    value={clients.filter(u => u.plan_status === "plan_pending").length}
                     color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
                     label="Sin pagar"
-                    value={users.filter(u => u.payment_status === "unpaid").length}
+                    value={clients.filter(u => u.payment_status === "unpaid").length}
                     color="text-destructive"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
                     label="En viaje"
-                    value={users.filter(u => u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()).length}
+                    value={clients.filter(u => u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()).length}
                     color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
                     label="Nuevos (hoy)"
-                    value={users.filter(u => {
+                    value={clients.filter(u => {
                       const d = new Date(u.created_at);
                       const today = new Date();
                       return d.toDateString() === today.toDateString();
@@ -216,7 +240,7 @@ const Admin = () => {
                 {/* Recent users */}
                 <div>
                   <SectionHeader title="Usuarios recientes" className="mb-2" />
-                  {users.length === 0 ? (
+                  {clients.length === 0 ? (
                     <EmptyState
                       icon={UsersIcon}
                       title="Todavía no hay usuarios"
@@ -224,7 +248,7 @@ const Admin = () => {
                     />
                   ) : (
                     <Surface padding="none" className="divide-y divide-border overflow-hidden">
-                      {users
+                      {[...clients]
                         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                         .slice(0, 5)
                         .map((u) => (
@@ -351,7 +375,7 @@ const Admin = () => {
 
             {section === "metrics" && (
               <div className="max-w-7xl">
-                <AdminMetrics />
+                <AdminMetrics users={clients} onRefresh={refreshUsers} />
               </div>
             )}
             </Suspense>

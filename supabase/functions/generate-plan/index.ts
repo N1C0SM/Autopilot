@@ -1,5 +1,5 @@
 import { hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
-import { parseBodyWeight } from "../_shared/nutrition.ts";
+import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -1020,15 +1020,10 @@ serve(async (req) => {
 
     console.log(`[GENERATE-PLAN] Nutrition: diet=${diet}, goal=${goal}, macros=${JSON.stringify(macros)}, meals=${includeNutrition ? meals.length : 0}`);
 
-    // La IA a veces devuelve barbaridades (nos llegó a escribir 500 g de grasa).
-    // Los topes coinciden con los que valida el panel de admin, para que lo que
-    // se guarda aquí siempre se pueda volver a guardar allí.
-    const saneMacros = (raw: unknown) => {
-      const m = (raw ?? {}) as Record<string, unknown>;
-      const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
-      const limit = (v: unknown, max: number) => Math.round(Math.min(Math.max(num(v), 0), max));
-      return { ...m, protein: limit(m.protein, 350), carbs: limit(m.carbs, 700), fats: limit(m.fats, 180) };
-    };
+    // Reject inconsistent generated targets before writing either plan. Never
+    // silently replace a generated prescription with capped/invented values.
+    const macroError = includeNutrition ? nutritionMacroError(macros) : null;
+    if (macroError) throw new Error(macroError);
 
     const { error: trainingError } = await supabase.from("training_plan").upsert(
       { user_id: targetUserId, workouts_json: weeklyPlan },
@@ -1037,7 +1032,7 @@ serve(async (req) => {
     if (trainingError) throw trainingError;
     if (includeNutrition) {
       const { error } = await supabase.from("nutrition_plan").upsert(
-        { user_id: targetUserId, macros_json: saneMacros(macros), meals_json: meals, updated_at: new Date().toISOString() },
+        { user_id: targetUserId, macros_json: macros, meals_json: meals, updated_at: new Date().toISOString() },
         { onConflict: "user_id" },
       );
       if (error) throw error;

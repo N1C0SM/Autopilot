@@ -49,6 +49,7 @@ import { addExerciseLoad } from "@/lib/muscleMapping";
 interface Props {
   userId: string;
   dayPlans: DayPlan[];
+  initialDay?: string;
   autoStart?: boolean;
   onAutoStartConsumed?: () => void;
   onExit?: () => void;
@@ -70,9 +71,10 @@ const getMuscleIntensity = (sets: number) => sets >= 6
     ? MUSCLE_INTENSITY.medium
     : MUSCLE_INTENSITY.low;
 
-const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
+const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const [selectedDay, setSelectedDay] = useState<string>(DAYS_ORDER[todayIndex]);
+  const today = DAYS_ORDER[todayIndex];
+  const [selectedDay, setSelectedDay] = useState<string>(() => initialDay && DAYS_ORDER.includes(initialDay) ? initialDay : today);
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, WorkoutSetLog[]>>({});
@@ -121,15 +123,10 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
-  const selectedDate = (() => {
-    const monday = new Date();
-    const day = monday.getDay();
-    monday.setDate(monday.getDate() - (day === 0 ? 6 : day - 1));
-    monday.setHours(12, 0, 0, 0);
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + DAYS_ORDER.indexOf(selectedDay));
-    return formatLocalDate(date);
-  })();
+  // El día identifica la rutina; la fecha identifica cuándo se entrena de verdad.
+  // Se mantiene estable durante la sesión, incluso si pasa la medianoche.
+  const currentDate = formatLocalDate(new Date());
+  const [selectedDate, setSelectedDate] = useState(currentDate);
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
   const trainingTitle = formatTrainingTitle(currentPlan?.routine_name, currentPlan?.muscle_focus);
   const currentPlanSignature = JSON.stringify(currentPlan || null);
@@ -137,15 +134,34 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   const exerciseNames = useMemo(() => (planExercises ?? []).map((exercise) => exercise.name), [planExercises]);
   const startWorkout = (exerciseIndex = 0) => {
     if (!logsReady || loadError) return;
+    const actualDate = formatLocalDate(new Date());
+    if (actualDate !== selectedDate) {
+      setLogsReady(false);
+      setSelectedDate(actualDate);
+      return;
+    }
     setStarted(true);
     setExpandedExercise(exerciseIndex);
     onSessionModeChange?.(true);
   };
 
+  useEffect(() => {
+    if (!started && !workoutCompleted && selectedDate !== currentDate) {
+      setLogsReady(false);
+      setSelectedDate(currentDate);
+    }
+  }, [currentDate, selectedDate, started, workoutCompleted]);
+
   // Start with a clean overview; the first exercise opens when the user starts.
   useEffect(() => {
     setStarted(false);
     setExpandedExercise(null);
+    setRestTimer(null);
+    setTechnique(null);
+    setSwaps({});
+    setLivePRs({});
+    setPersonalRecords([]);
+    setSaveError(false);
     // Las superseries son de la sesión: al cambiar de día no se arrastran.
     setSupersetLinks({});
     restChainRef.current = null;
@@ -249,14 +265,33 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   }, [selectedDay, selectedDate, userId, currentPlanSignature, reloadLogs]);
 
   useEffect(() => {
-    if (!autoStart || !logsReady) return;
+    if (!autoStart) return;
+    // Inicio siempre abre la rutina de hoy, aunque antes se consultara otro día.
+    if (started) {
+      onAutoStartConsumed?.();
+      return;
+    }
+    if (selectedDay !== today) {
+      setLogsReady(false);
+      setSelectedDay(today);
+      return;
+    }
+    if (selectedDate !== currentDate) {
+      setLogsReady(false);
+      setSelectedDate(currentDate);
+      return;
+    }
+    if (!logsReady) {
+      if (loadError) onAutoStartConsumed?.();
+      return;
+    }
     if (currentPlan?.type === "gimnasio" && !workoutCompleted && !loadError) {
       setStarted(true);
       setExpandedExercise(0);
       onSessionModeChange?.(true);
     }
     onAutoStartConsumed?.();
-  }, [autoStart, currentPlan?.type, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, workoutCompleted]);
+  }, [autoStart, currentDate, currentPlan?.type, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, selectedDate, selectedDay, started, today, workoutCompleted]);
 
   // Rest timer countdown (sin avisos de texto: vibración al terminar)
   useEffect(() => {
@@ -498,7 +533,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
   // Save each change so the session can be resumed after a connection drop or app close.
   useEffect(() => {
     const attempt = ++saveAttemptRef.current;
-    if (!logsReady || workoutCompleted || Object.keys(exerciseLogs).length === 0) return;
+    if (!started || !logsReady || workoutCompleted || Object.keys(exerciseLogs).length === 0) return;
     setSaveStatus("pending");
     setSaveError(false);
     const timeout = window.setTimeout(async () => {
@@ -521,7 +556,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
       window.clearTimeout(timeout);
       if (saveTimeoutRef.current === timeout) saveTimeoutRef.current = null;
     };
-  }, [exerciseLogs, logsReady, selectedDay, selectedDate, workoutCompleted]);
+  }, [exerciseLogs, logsReady, selectedDay, selectedDate, started, workoutCompleted]);
 
   const detectAndSavePRs = async () => {
     // For each exercise with weight > 0, find best (weight, reps) and upsert.
@@ -659,6 +694,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
       if (completionError) throw completionError;
       setSessionRpe(rpe);
       setWorkoutCompleted(true);
+      setStarted(false);
+      setExpandedExercise(null);
+      onSessionModeChange?.(false);
       setShowCompletionSummary(true);
       try {
         await detectAndSavePRs();
@@ -822,11 +860,11 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
       {/* Selector de día: la semana entera siempre a un toque. Se oculta durante la
           sesión para no cambiar de día con series a medias. */}
-      {!started && !workoutCompleted && dayPlans.length > 0 && (
+      {!started && dayPlans.length > 0 && (
         <div
           role="tablist"
           aria-label="Elige el día de la semana"
-          className="no-scrollbar -mx-1 mb-3 flex gap-1 px-1"
+          className="no-scrollbar -mx-1 mb-3 flex gap-1 overflow-x-auto px-1"
         >
           {DAYS_ORDER.map((day) => {
             const plan = dayPlans.find((p) => p.day === day);
@@ -840,7 +878,13 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
                 role="tab"
                 aria-selected={active}
                 aria-label={`${day}${hasWork ? "" : " · descanso"}${isToday ? " · hoy" : ""}`}
-                onClick={() => setSelectedDay(day)}
+                disabled={saving}
+                onClick={() => {
+                  if (day === selectedDay) return;
+                  setLogsReady(false);
+                  setCompletionReady(false);
+                  setSelectedDay(day);
+                }}
                 className={`flex h-11 min-w-11 flex-1 shrink-0 flex-col items-center justify-center rounded-xl border text-xs font-medium transition-colors ${
                   active
                     ? "border-primary bg-primary/10 text-primary"
@@ -869,9 +913,13 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
           <p className="text-sm text-muted-foreground">Recupera, o elige otra sesión de tu semana</p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {dayPlans.filter((p) => (p.type === "actividad" || (p.exercises?.length ?? 0) > 0)).map((p) => (
-              <button key={p.day} type="button" onClick={() => setSelectedDay(p.day)}
-                className="rounded-full border border-border/60 bg-secondary px-3 py-1.5 text-xs font-medium hover:border-primary/50">
-                {p.day}{(p as any).name ? ` · ${(p as any).name}` : ""}
+              <button key={p.day} type="button" onClick={() => {
+                setLogsReady(false);
+                setCompletionReady(false);
+                setSelectedDay(p.day);
+              }}
+                className="min-h-11 rounded-full border border-border/60 bg-secondary px-3 py-1.5 text-xs font-medium hover:border-primary/50">
+                {p.day}
               </button>
             ))}
           </div>
@@ -902,7 +950,8 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
         <div className={`space-y-3`}>
           {/* Today's workout summary */}
           <div className={`rounded-2xl border border-border bg-card p-4 sm:p-5 ${workoutCompleted || !completionReady || loadError || started ? "hidden" : ""}`}>
-            <p className="text-[11px] font-medium text-primary">{selectedDay}</p>
+            <p className="text-[11px] font-medium text-primary">Rutina del {selectedDay.toLocaleLowerCase("es-ES")}</p>
+            {selectedDay !== today && <p className="mt-1 text-xs text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
             <div className="mt-1 flex items-end justify-between gap-2">
               <h3 className="min-w-0 font-display text-lg font-bold leading-tight sm:text-xl">
                 {trainingTitle || selectedDay}
@@ -926,6 +975,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               currentPlan?.exercises?.length ? (
                 <Button
                   onClick={() => startWorkout(0)}
+                disabled={!logsReady || loadError}
                   variant="hero"
                   size="lg"
                   className="mt-4 h-12 w-full text-base"
@@ -942,7 +992,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
 
           {!completionReady && !loadError && (
             <div className="rounded-2xl border border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              Comprobando tu entrenamiento de hoy…
+              Comprobando tu sesión…
             </div>
           )}
           {loadError && (
@@ -1100,7 +1150,9 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
             const trackingConfig = getExerciseTrackingConfig({
               name: ex.name,
               skill_tag: metadata?.skill_tag ?? undefined,
-              movement_pattern: (ex as any).movement_pattern ?? metadata?.movement_pattern ?? undefined,
+              movement_pattern: "movement_pattern" in ex && typeof ex.movement_pattern === "string"
+                ? ex.movement_pattern
+                : metadata?.movement_pattern ?? undefined,
               exercise_type: exerciseType ?? undefined,
               tracking_mode: ex.tracking_mode ?? metadata?.tracking_mode ?? undefined,
             });

@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
 import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/lib/workoutPreferences";
+import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
+import { TIERS } from "@/config/tiers";
+import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
+import type { Json } from "@/integrations/supabase/types";
 
 const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") => void } = {}) => {
   const { user, signOut } = useAuth();
@@ -52,9 +56,8 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
 
   // Subscription
   const [subscriptionStatus, setSubscriptionStatus] = useState("");
-  const [subscriptionTier, setSubscriptionTier] = useState("");
+  const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
   const [subscriptionEnd, setSubscriptionEnd] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState("");
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<"monthly" | "yearly" | null>(null);
   const [yearlyPriceEur, setYearlyPriceEur] = useState<number>(DEFAULT_YEARLY_PRICE_EUR);
@@ -71,6 +74,8 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
     nutrition_preferences: "", allergies: "",
   });
   const [hasOnboarding, setHasOnboarding] = useState(false);
+  const [originalAvailability, setOriginalAvailability] = useState<Record<string, Json | undefined>>({});
+  const [availabilityEdited, setAvailabilityEdited] = useState(false);
 
   // Google Calendar connection
   const [gcalConnected, setGcalConnected] = useState(false);
@@ -82,7 +87,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
     if (!user) return;
     const fetch = async () => {
       const [{ data: profile }, { data: onb }] = await Promise.all([
-        supabase.from("profiles").select("name, email, avatar_url, subscription_status, subscription_tier, subscription_end, payment_status, name_public, avatar_public, progress_public").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profiles").select("name, email, avatar_url, subscription_status, subscription_tier, subscription_end, payment_status, stripe_payment_id, name_public, avatar_public, progress_public").eq("user_id", user.id).maybeSingle(),
         supabase.from("onboarding").select("*").eq("user_id", user.id).maybeSingle(),
       ]);
 
@@ -92,19 +97,20 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
         setAvatarUrl(profile.avatar_url || "");
         setPrivacy({ name_public: !!(profile as any).name_public, avatar_public: !!(profile as any).avatar_public, progress_public: !!(profile as any).progress_public });
         setSubscriptionStatus(profile.subscription_status || "inactive");
-        setSubscriptionTier(profile.subscription_tier || "none");
+        setConsumerPlan(getConsumerPlan(profile));
         setSubscriptionEnd(profile.subscription_end);
-        setPaymentStatus(profile.payment_status || "unpaid");
       }
 
       if (onb) {
         setHasOnboarding(true);
-        const avail = (onb.availability as any) || { days: "", hours: "" };
+        const avail = onb.availability;
+        setOriginalAvailability(avail !== null && typeof avail === "object" && !Array.isArray(avail) ? avail : {});
+        setAvailabilityEdited(false);
         setOnboarding({
           age: onb.age?.toString() || "", height: onb.height?.toString() || "",
           weight: onb.weight?.toString() || "", goal: onb.goal || "lose_weight",
           sports: onb.sports || "",
-          availability: { days: avail.days?.toString() || "", hours: avail.hours?.toString() || "" },
+          availability: { days: getAvailabilityDayCount(avail)?.toString() ?? "", hours: getAvailabilityHours(avail)?.toString() ?? "" },
           nutrition_preferences: onb.nutrition_preferences || "", allergies: onb.allergies || "",
         });
       }
@@ -226,12 +232,22 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
 
   const saveOnboarding = async () => {
     if (!user) return;
+    if (availabilityEdited) {
+      const days = getAvailabilityDayCount(onboarding.availability);
+      if (days === null || days < 1 || getAvailabilityHours(onboarding.availability) === null) {
+        toast.error("Indica entre 1 y 7 días y una duración válida para cada sesión.");
+        return;
+      }
+    }
     setSaving(true);
     const { error } = await supabase.from("onboarding").upsert({
       user_id: user.id,
       age: parseInt(onboarding.age) || null, height: parseFloat(onboarding.height) || null,
       weight: parseFloat(onboarding.weight) || null, goal: onboarding.goal, sports: onboarding.sports,
-      availability: onboarding.availability, nutrition_preferences: onboarding.nutrition_preferences,
+      availability: availabilityEdited
+        ? { ...originalAvailability, ...onboarding.availability, auto_calculated: false }
+        : originalAvailability,
+      nutrition_preferences: onboarding.nutrition_preferences,
       allergies: onboarding.allergies,
     });
     if (!error) toast.success("Datos actualizados");
@@ -301,7 +317,9 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
   }
 
-  const isActive = subscriptionStatus === "active" || subscriptionStatus === "trialing";
+  const hasPaidAccess = consumerPlan !== "free";
+  const isActive = hasPaidAccess && ["active", "trialing"].includes(subscriptionStatus);
+  const planName = consumerPlan === "coach" ? TIERS.full.name : consumerPlan === "plus" ? TIERS.training.name : TIERS.free.name;
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
@@ -409,20 +427,20 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? "bg-primary/20" : "bg-muted"}`}>
-                <Crown className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasPaidAccess ? "bg-primary/20" : "bg-muted"}`}>
+                <Crown className={`w-5 h-5 ${hasPaidAccess ? "text-primary" : "text-muted-foreground"}`} />
               </div>
               <div>
-                <div className="font-medium text-sm">Plan {subscriptionTier === "free" ? "Gratis" : subscriptionTier === "personal" ? "Personal" : subscriptionTier || "—"}</div>
+                <div className="font-medium text-sm">Plan {planName}</div>
                 <div className="text-xs text-muted-foreground">
                   {isActive ? (
                     subscriptionStatus === "trialing" ? "Prueba gratuita activa" : "Suscripción activa"
-                  ) : paymentStatus === "paid" ? "Plan activo (pago único)" : "Cuenta gratuita · entrenador opcional"}
+                  ) : hasPaidAccess ? "Acceso activo (pago único)" : "Cuenta Free · entrenador opcional"}
                 </div>
               </div>
             </div>
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${isActive ? "bg-primary/20 text-primary" : paymentStatus === "paid" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive"}`}>
-              {isActive ? (subscriptionStatus === "trialing" ? "Trial" : "Activa") : paymentStatus === "paid" ? "Pagado" : "Gratis"}
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${hasPaidAccess ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
+              {isActive ? (subscriptionStatus === "trialing" ? "Prueba" : "Activa") : hasPaidAccess ? "Pagado" : "Free"}
             </span>
           </div>
 
@@ -438,7 +456,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
             </div>
           )}
 
-          {(isActive || paymentStatus === "paid") && (
+          {hasPaidAccess && (
             <>
               {currentPlan && (
                 <div className="p-4 rounded-xl border border-border bg-secondary/20 text-sm space-y-1.5">
@@ -466,7 +484,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
             </>
           )}
 
-          {!isActive && paymentStatus !== "paid" && (
+          {!hasPaidAccess && (
             <div className="space-y-3 text-center">
               <p className="text-sm text-muted-foreground">
                 No tienes una suscripción activa. Empieza cuando quieras: 7 días de prueba.
@@ -584,8 +602,8 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
             </div>
             <div><Label className="text-xs">Deportes</Label><Textarea value={onboarding.sports} onChange={(e) => setOnboarding((o) => ({ ...o, sports: e.target.value }))} className="mt-1" rows={2} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs">Días/semana</Label><Input type="number" min={1} max={7} value={onboarding.availability.days} onChange={(e) => setOnboarding((o) => ({ ...o, availability: { ...o.availability, days: e.target.value } }))} className="mt-1" /></div>
-              <div><Label className="text-xs">Horas/sesión</Label><Input type="number" step="0.5" value={onboarding.availability.hours} onChange={(e) => setOnboarding((o) => ({ ...o, availability: { ...o.availability, hours: e.target.value } }))} className="mt-1" /></div>
+              <div><Label htmlFor="availability-days" className="text-xs">Días/semana</Label><Input id="availability-days" type="number" min={1} max={7} value={onboarding.availability.days} onChange={(e) => { setAvailabilityEdited(true); setOnboarding((o) => ({ ...o, availability: { ...o.availability, days: e.target.value } })); }} className="mt-1" /></div>
+              <div><Label htmlFor="availability-hours" className="text-xs">Horas/sesión</Label><Input id="availability-hours" type="number" min={0.25} max={24} step="0.01" value={onboarding.availability.hours} onChange={(e) => { setAvailabilityEdited(true); setOnboarding((o) => ({ ...o, availability: { ...o.availability, hours: e.target.value } })); }} className="mt-1" /></div>
             </div>
             <div><Label className="text-xs">Preferencias nutricionales</Label><Textarea value={onboarding.nutrition_preferences} onChange={(e) => setOnboarding((o) => ({ ...o, nutrition_preferences: e.target.value }))} className="mt-1" rows={2} /></div>
             <div><Label className="text-xs">Alergias</Label><Textarea value={onboarding.allergies} onChange={(e) => setOnboarding((o) => ({ ...o, allergies: e.target.value }))} className="mt-1" rows={2} /></div>

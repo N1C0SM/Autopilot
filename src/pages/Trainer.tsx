@@ -45,7 +45,7 @@ const TrainerSidebar = ({
   userCount: number;
   onSignOut: () => void;
 }) => {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const items: { title: string; section: TrainerSection; icon: typeof UsersIcon }[] = [
     { title: "Mis usuarios", section: "users", icon: UsersIcon },
@@ -74,8 +74,8 @@ const TrainerSidebar = ({
                 return (
                   <SidebarMenuItem key={item.section}>
                     <SidebarMenuButton
-                      onClick={() => onNavigate(item.section)}
-                      className={`cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                      onClick={() => { onNavigate(item.section); if (isMobile) setOpenMobile(false); }}
+                      className={`min-h-11 cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && (
@@ -99,7 +99,7 @@ const TrainerSidebar = ({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="cursor-pointer text-muted-foreground hover:text-destructive">
+            <SidebarMenuButton onClick={onSignOut} className="min-h-11 cursor-pointer text-muted-foreground hover:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>
@@ -132,7 +132,7 @@ const TrainerPage = () => {
     setSelected((current) =>
       current && !updatedProfiles.some((assignedUser) => assignedUser.user_id === current.user_id)
         ? null
-        : current,
+        : updatedProfiles.find((assignedUser) => assignedUser.user_id === current?.user_id) || null,
     );
   }, []);
 
@@ -221,14 +221,14 @@ const TrainerPage = () => {
           <header className="app-chrome border-b sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
             <div className="h-14 flex items-center px-4 gap-3">
               <SidebarTrigger className="hidden md:inline-flex" />
-              <span className="flex-1 text-center md:text-left text-sm font-semibold md:font-medium md:text-muted-foreground">
+              <span className="min-w-0 flex-1 truncate text-center md:text-left text-sm font-semibold md:font-medium md:text-muted-foreground">
                 {selected ? (selected.name?.trim() || selected.email) : sectionTitle}
               </span>
               <button
                 type="button"
                 onClick={handleSignOut}
                 aria-label="Cerrar sesión"
-                className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
+                className="md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -252,9 +252,10 @@ const TrainerPage = () => {
             ) : section === "users" ? (
               <div className="space-y-3">
                 <SectionHeader
+                  className="flex-wrap"
                   title={
-                    <span className="flex items-center gap-2">
-                      Usuarios asignados ({users.length})
+                    <span className="flex flex-wrap items-center gap-2">
+                      Clientes asignados ({users.length})
                       <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />
                     </span>
                   }
@@ -295,7 +296,7 @@ const TrainerPage = () => {
                         key={u.user_id}
                         type="button"
                         onClick={() => setSelected(u)}
-                        className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40"
+                        className="flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
                       >
                         <Avatar className="h-9 w-9 shrink-0">
                           <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
@@ -305,12 +306,12 @@ const TrainerPage = () => {
                         </Avatar>
                         <span className="min-w-0 flex-1">
                           {/* Sin nombre no repetimos el email dos veces. */}
-                          <span className="block truncate text-sm font-semibold">{u.name?.trim() || u.email}</span>
+                          <span className="block break-all text-sm font-semibold">{u.name?.trim() || u.email}</span>
                           {u.name?.trim() ? (
-                            <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                            <span className="block break-all text-xs text-muted-foreground">{u.email}</span>
                           ) : null}
                         </span>
-                        <PlanStatusBadge planStatus={u.plan_status} />
+                        <span className="shrink-0"><PlanStatusBadge planStatus={u.plan_status} /></span>
                       </button>
                     ))}
                   </Surface>
@@ -325,7 +326,7 @@ const TrainerPage = () => {
                     <span>Chat interno con el equipo</span>
                     <InfoHint text="Canal privado con el administrador para dudas, incidencias o cambios en los planes de tus usuarios. Tus usuarios no ven esta conversación." />
                   </div>
-                  <div className="min-h-0 flex-1"><Chat conversationUserId={user.id} /></div>
+                  <div className="min-h-0 flex-1"><Chat conversationUserId={user.id} audience="team" layout="fill" /></div>
                   <p className="text-xs text-muted-foreground mt-2 text-center">Conversación privada con el administrador.</p>
                 </div>
               )

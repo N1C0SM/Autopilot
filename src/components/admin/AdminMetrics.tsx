@@ -1,100 +1,103 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Loader2, RefreshCw, Trash2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
+import type { Profile } from "@/pages/Admin";
+import type { ConsumerPlan } from "@/lib/entitlements";
+import { clientActivity, countCompletedWorkSets, MONTHLY_ESTIMATE_NOTE, summarizeClientPlans } from "@/lib/adminMetrics";
+import { PLAN_PRICE } from "@/config/tiers";
+import { toLocalDateString } from "@/lib/localDates";
 
-const PRICE = { plus: 29, coach: 49 };
-const COACH_TIERS = ["full", "transform", "personal", "coach"];
-
-type Plan = "free" | "plus" | "coach";
-const planOf = (p: any): Plan => {
-  if (p.payment_status !== "paid") return "free";
-  if (p.subscription_tier === "training") return "plus";
-  if (COACH_TIERS.includes(p.subscription_tier)) return "coach";
-  return "free";
-};
+interface MetricsData extends ReturnType<typeof summarizeClientPlans> {
+  active7: number;
+  active30: number;
+  workoutsToday: number;
+  workouts7: number;
+  sets7: number;
+  prs7: number;
+  onboarded: number;
+  newUsers7: number;
+  daily: { d: string; entrenos: number; registros: number }[];
+  emailsFailed: number;
+}
 
 const fmtEur = (n: number) => n.toLocaleString("es-ES") + " €";
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
-const AdminMetrics = () => {
+const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () => Promise<Profile[]> }) => {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<MetricsData | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [resetting, setResetting] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async (profiles = users) => {
     setLoading(true);
-    const now = Date.now();
-    const iso = (d: number) => new Date(now - d * 86400000).toISOString();
-    const today = new Date().toISOString().slice(0, 10);
-    const d7 = iso(7).slice(0, 10);
-    const d30 = iso(30).slice(0, 10);
-
-    const [{ data: profiles }, { data: completions }, { data: logs }, { data: prs }, { data: emails }] = await Promise.all([
-      supabase.from("profiles").select("user_id, created_at, payment_status, plan_status, subscription_tier"),
-      supabase.from("day_completions").select("user_id, completed_at").gte("completed_at", d30),
-      supabase.from("workout_logs").select("sets_completed, logged_at").gte("logged_at", d7),
-      supabase.from("personal_records").select("id").gte("achieved_at", d7),
-      supabase.from("email_send_log").select("status, message_id, created_at").gte("created_at", iso(30)),
-    ]);
-    const { data: staff } = await supabase.from("user_roles").select("user_id").in("role", ["admin", "trainer"] as any);
-    const staffIds = new Set((staff || []).map((r: any) => r.user_id));
-
-    const profs = (profiles || []).filter((p: any) => !staffIds.has(p.user_id));
-    const comps = completions || [];
-    const counts = { free: 0, plus: 0, coach: 0 } as Record<Plan, number>;
-    profs.forEach((p) => counts[planOf(p)]++);
-    const paying = counts.plus + counts.coach;
-    const mrr = counts.plus * PRICE.plus + counts.coach * PRICE.coach;
-
-    const active7 = new Set(comps.filter((c: any) => c.completed_at >= d7).map((c: any) => c.user_id)).size;
-    const active30 = new Set(comps.map((c: any) => c.user_id)).size;
-    const workoutsToday = comps.filter((c: any) => c.completed_at === today).length;
-    const workouts7 = comps.filter((c: any) => c.completed_at >= d7).length;
-    const sets7 = (logs || []).reduce((s: number, l: any) => s + (Array.isArray(l.sets_completed) ? l.sets_completed.length : 0), 0);
-
-    const daily: { d: string; entrenos: number; registros: number }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const k = iso(i).slice(0, 10);
-      daily.push({
-        d: k.slice(8),
-        entrenos: comps.filter((c: any) => c.completed_at === k).length,
-        registros: profs.filter((p) => (p.created_at || "").slice(0, 10) === k).length,
+    try {
+      const daysAgo = (days: number) => { const date = new Date(); date.setDate(date.getDate() - days); return date; };
+      const today = toLocalDateString();
+      const d7 = toLocalDateString(daysAgo(6));
+      const d30 = toLocalDateString(daysAgo(29));
+      const results = await Promise.all([
+        supabase.from("day_completions").select("user_id, completed_at").gte("completed_at", d30),
+        supabase.from("workout_logs").select("user_id, sets_completed, logged_at").gte("logged_at", d7),
+        supabase.from("personal_records").select("user_id, id").gte("achieved_at", d7),
+        supabase.from("email_send_log").select("status, message_id, created_at").gte("created_at", daysAgo(30).toISOString()),
+      ]);
+      for (const result of results) { if (result.error) throw result.error; }
+      const [completionResult, logResult, prResult, emailResult] = results;
+      const comps = clientActivity(completionResult.data || [], profiles);
+      const logs = clientActivity(logResult.data || [], profiles);
+      const prs = clientActivity(prResult.data || [], profiles);
+      const summary = summarizeClientPlans(profiles);
+      const active7 = new Set(comps.filter((c) => c.completed_at >= d7).map((c) => c.user_id)).size;
+      const active30 = new Set(comps.map((c) => c.user_id)).size;
+      const workoutsToday = comps.filter((c) => c.completed_at === today).length;
+      const workouts7 = comps.filter((c) => c.completed_at >= d7).length;
+      const sets7 = logs.reduce((sum, log) => sum + countCompletedWorkSets(log.sets_completed), 0);
+      const daily: MetricsData["daily"] = [];
+      for (let i = 29; i >= 0; i--) {
+        const k = toLocalDateString(daysAgo(i));
+        daily.push({
+          d: k.slice(8),
+          entrenos: comps.filter((c) => c.completed_at === k).length,
+          registros: profiles.filter((p) => toLocalDateString(new Date(p.created_at)) === k).length,
+        });
+      }
+      const emailMap = new Map<string, NonNullable<typeof emailResult.data>[number]>();
+      (emailResult.data || []).forEach((e) => {
+        if (!e.message_id) return;
+        const prev = emailMap.get(e.message_id);
+        if (!prev || e.created_at > prev.created_at) emailMap.set(e.message_id, e);
       });
+      const emailsFailed = [...emailMap.values()].filter((e) => e.status === "dlq" || e.status === "failed").length;
+      setData({
+        ...summary, active7, active30, workoutsToday, workouts7, sets7,
+        prs7: prs.length,
+        onboarded: profiles.filter((p) => p.plan_status === "plan_ready").length,
+        newUsers7: profiles.filter((p) => toLocalDateString(new Date(p.created_at)) >= d7).length,
+        daily, emailsFailed,
+      });
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
+  }, [users]);
 
-    const emailMap = new Map<string, any>();
-    (emails || []).forEach((e: any) => {
-      if (!e.message_id) return;
-      const prev = emailMap.get(e.message_id);
-      if (!prev || e.created_at > prev.created_at) emailMap.set(e.message_id, e);
-    });
-    const emailsFailed = [...emailMap.values()].filter((e) => e.status === "dlq" || e.status === "failed").length;
+  useEffect(() => { void load(); }, [load]);
 
-    setData({
-      total: profs.length,
-      counts,
-      paying,
-      mrr,
-      arpu: paying ? Math.round(mrr / paying) : 0,
-      active7,
-      active30,
-      workoutsToday,
-      workouts7,
-      sets7,
-      prs7: (prs || []).length,
-      onboarded: profs.filter((p) => p.plan_status === "plan_ready").length,
-      newUsers7: profs.filter((p) => (p.created_at || "").slice(0, 10) >= d7).length,
-      daily,
-      emailsFailed,
-    });
-    setLoading(false);
+  const refresh = async () => {
+    setLoading(true);
+    try { await load(await onRefresh()); } catch {
+      toast.error("No se pudieron actualizar las métricas");
+      setLoadError(true);
+      setLoading(false);
+    }
   };
-
-  useEffect(() => { load(); }, []);
 
   const resetMetrics = async () => {
     if (!confirm("¿Resetear TODAS las métricas a 0? Se borran scans, leads, logs de emails, entrenos, pesos, PRs, fotos, chat, notificaciones y recordatorios. Las cuentas NO se borran. Irreversible.")) return;
@@ -105,32 +108,31 @@ const AdminMetrics = () => {
       if (data?.error) throw new Error(data.error);
       toast.success("Métricas reseteadas");
       await load();
-    } catch (e: any) {
-      toast.error("Error al resetear: " + (e.message || e));
+    } catch (error) {
+      toast.error("Error al resetear: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setResetting(false);
     }
   };
 
+  if (!loading && !data && loadError) {
+    return <div className="space-y-3 py-12 text-center"><p>No se pudieron cargar las métricas.</p><Button variant="outline" onClick={refresh}>Reintentar</Button></div>;
+  }
   if (loading || !data) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
   }
 
   const kpis = [
-    { label: "Ingresos / mes", value: fmtEur(data.mrr), hint: `${fmtEur(data.arpu)} por cliente` },
-    { label: "Clientes de pago", value: data.paying, hint: `${pct(data.paying, data.total)}% del total` },
-    { label: "Usuarios", value: data.total, hint: `+${data.newUsers7} esta semana` },
+    { label: "Estimación mensual", value: fmtEur(data.estimatedMonthly), hint: `${fmtEur(data.estimatedPerPlan)} por plan activo` },
+    { label: "Plus y Coach activos", value: data.activePlans, hint: `${pct(data.activePlans, data.total)}% del total` },
+    { label: "Clientes", value: data.total, hint: `+${data.newUsers7} esta semana` },
     { label: "Activos 7 días", value: `${pct(data.active7, data.total)}%`, hint: `${data.active7} entrenando` },
   ];
 
-  const plans: { key: Plan; name: string; price: string; tone: string }[] = [
+  const plans: { key: ConsumerPlan; name: string; price: string; tone: string }[] = [
     { key: "free", name: "Free", price: "0 €", tone: "bg-muted-foreground/40" },
-    { key: "plus", name: "Plus", price: "29 €", tone: "bg-primary/60" },
-    { key: "coach", name: "Coach", price: "49 €", tone: "bg-primary" },
+    { key: "plus", name: "Plus", price: fmtEur(PLAN_PRICE.plus), tone: "bg-primary/60" },
+    { key: "coach", name: "Coach", price: fmtEur(PLAN_PRICE.coach), tone: "bg-primary" },
   ];
 
   const activity = [
@@ -144,7 +146,7 @@ const AdminMetrics = () => {
     { label: "Registrados", value: data.total },
     { label: "Plan listo", value: data.onboarded },
     { label: "Activos 30 días", value: data.active30 },
-    { label: "De pago", value: data.paying },
+    { label: "Plus y Coach", value: data.activePlans },
   ];
 
   return (
@@ -152,7 +154,7 @@ const AdminMetrics = () => {
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-lg font-bold sm:text-xl">Métricas</h2>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={load} aria-label="Actualizar">
+          <Button variant="ghost" size="icon" onClick={refresh} aria-label="Actualizar">
             <RefreshCw className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={resetMetrics} disabled={resetting} aria-label="Resetear métricas" className="text-muted-foreground hover:text-destructive">
@@ -161,6 +163,8 @@ const AdminMetrics = () => {
         </div>
       </div>
 
+      {loadError && <p role="alert" className="text-sm text-destructive">No se pudieron actualizar los datos. Se muestra la última carga correcta.</p>}
+      <p className="text-xs leading-relaxed text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {kpis.map((k, i) => (
           <Tile key={k.label} i={i}>
@@ -173,7 +177,7 @@ const AdminMetrics = () => {
 
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         <Tile i={4}>
-          <Label>Usuarios por plan</Label>
+          <Label>Clientes por plan</Label>
           <div className="mt-4 space-y-4">
             {plans.map((p) => {
               const c = data.counts[p.key];

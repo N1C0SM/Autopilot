@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ScrollReveal from "@/components/ScrollReveal";
+import { TIERS } from "@/config/tiers";
 
 interface Trainer {
   trainer_name: string;
@@ -37,19 +38,19 @@ const steps = [
     icon: ScanLine,
     number: "01",
     title: "Conocemos tu punto de partida",
-    text: "Eliges tu plan con entrenador y nos cuentas tu objetivo, disponibilidad y material.",
+    text: "Nos cuentas tu objetivo, disponibilidad y material. Empiezas con una rutina inicial en Free.",
   },
   {
     icon: User,
     number: "02",
-    title: "Tu entrenador prepara el plan",
-    text: "Una persona real estudia tu caso y organiza un entrenamiento que puedas cumplir.",
+    title: "Eliges el apoyo que necesitas",
+    text: "Plus añade adaptación con IA y nutrición. Coach incorpora un entrenador real que revisa tu plan.",
   },
   {
     icon: Wrench,
     number: "03",
-    title: "Lo ajusta contigo",
-    text: "Le escribes por chat y adapta tu semana según avances, horarios y sensaciones.",
+    title: "Registras y sigues avanzando",
+    text: "Guardas tus series y consultas el progreso. En Coach también hablas con tu entrenador para revisar ajustes.",
   },
 ];
 
@@ -69,7 +70,7 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
               Un plan que encaja en tu vida. <span className="text-gradient">Y alguien que lo lleva contigo.</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Empieza por tu cuenta gratis. Si necesitas ayuda para adaptar tu rutina, los planes de pago añaden seguimiento de un entrenador real.
+              Empieza por tu cuenta gratis. Plus añade adaptación con IA y nutrición; Coach incorpora seguimiento y chat con un entrenador real.
             </p>
           </div>
         </ScrollReveal>
@@ -180,12 +181,12 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
                   text: "Prueba de 7 días en los planes mensuales. Cancela antes de que termine para evitar el primer cobro.",
                 },
                 {
-                  title: "Revisado por una persona",
-                  text: "Tu plan lo prepara y ajusta un entrenador real, no una plantilla automática.",
+                  title: "Eliges cómo recibir ayuda",
+                  text: `Plus: IA y nutrición por ${TIERS.training.price}€/mes. Coach: todo Plus y un entrenador real por ${TIERS.full.price}€/mes.`,
                 },
                 {
                   title: "Se adapta a tu semana",
-                  text: "Si cambia tu horario o tu material, explícaselo a tu entrenador para revisar tu plan.",
+                  text: "Plus adapta el plan con IA a tus registros. En Coach puedes consultar los cambios con tu entrenador.",
                 },
               ].map((item) => (
                 <div key={item.title} className="rounded-lg border border-border bg-background/60 p-5">
@@ -207,7 +208,7 @@ const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" /> Entrenamiento: revisión cada 2 semanas · Completo: revisión semanal
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success" /> Plus: IA y nutrición · Coach: entrenador, revisiones y chat
           </p>
         </div>
       </div>
