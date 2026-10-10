@@ -1,34 +1,36 @@
-# Validación — entrenador responsive y correcciones de auditoría
+# Validación — Autopilot
 
-Fecha: 10 de octubre de 2026. PR: https://github.com/N1C0SM/Autopilot/pull/37. Rama: `codex/trainer-responsive-review`. Base actualizada e integrada: `origin/main a25ac56`.
+Fecha: 10 de octubre de 2026. [PR 37](https://github.com/N1C0SM/Autopilot/pull/37) fusionada en `main`: `2c7473b25bdf655610f8834c84c4cd16be778f25`. Se conservaron los cambios recientes de main sobre seguimiento y medios de ejercicios.
+
+## Publicación
+
+Lovable sincronizó el commit de fusión y confirmó «Your website was updated». Publicación: `f9f82f34-d326-4492-997f-3728a745d87b`. Se comprobó después la cuenta de entrenador en [autopilotplan.com](https://autopilotplan.com).
+
+Esta publicación acredita el frontend. Las funciones Edge `generate-plan` y `auto-tasks` mostraban despliegues anteriores a la fusión; sus fuentes están sincronizadas, pero falta desplegar y comprobar las versiones nuevas del servidor.
 
 ## Cambios
 
-- Navegación y perfil del entrenador adaptados a móvil; ficha con resumen útil aunque falte contexto de acceso; editor por tarjetas y controles etiquetados de 44 px.
-- Chat con estados de carga/error/reintento, borrador conservado si falla el envío y deduplicación realtime.
-- Capacidades del cliente resueltas con el helper compartido. La migración del RPC conserva el aislamiento por asignación y enmascara la referencia de pago.
-- Semana y sesión separadas: otro día de rutina mantiene la fecha real; no se guarda actividad sin iniciar.
-- Disponibilidad compatible con formatos guardados, sin contar metadatos.
-- Métricas consistentes para clientes y valoración mensual claramente estimada, con estados de error.
-- Copy Free/Plus/Coach y corrección selectiva de recomendaciones.
-- Macros validados en editor, generador y base de datos; registros históricos conservados para revisión.
-- Restricciones del servidor coherentes con Plus/Coach y disparador que permite editar comidas/metadatos sin cambiar objetivos históricos inválidos.
-- Ajuste automático con errores de persistencia comprobados y aviso de notificación separado del éxito del ajuste.
-- Incorporados los cambios recientes de main sobre modos de seguimiento y medios de ejercicios.
+- Entrenador adaptado a móvil: clientes, resumen, perfil, navegación y editor por tarjetas con controles etiquetados de 44 px.
+- Chat con carga, error, reintento, borrador conservado y deduplicación realtime; distingue conversación interna y conversación con cliente.
+- Capacidades Free/Plus/Coach compartidas y aislamiento por asignación; contexto mínimo del cliente con referencia de pago enmascarada.
+- Semana accesible en descanso; fecha real de sesión independiente del día elegido; no se guarda actividad hasta iniciar.
+- Disponibilidad calculada sin metadatos; métricas con la misma población de clientes y valoración mensual presentada como estimación.
+- Validación de macros, conservación de objetivos históricos dudosos y corrección selectiva de recomendaciones.
+- Ajuste automático con escrituras comprobadas; un fallo de nutrición no avanza el peso base y un fallo de notificación se informa por separado. Su versión del servidor está pendiente de despliegue.
 
 ## Comprobaciones automáticas
 
 | Comprobación | Resultado |
 | --- | --- |
-| Vitest completo | 34 archivos, 155 pruebas correctas |
-| TypeScript app, sin emisión | Correcto |
-| Build de producción | Correcto |
-| test-nutrition-db.mjs | Correcto: conserva objetivos históricos al editar comidas, rechaza nuevos objetivos inválidos y admite correcciones |
-| test-nutrition-access-db.mjs | Correcto: nutrición Plus/Coach, chat humano Coach, alias y compras antiguas, caducidad, canal interno, asignaciones y aislamiento |
-| test-trainer-context-db.mjs | Correcto: asignación, denegación anónima, sin acceso directo a perfiles y referencia enmascarada |
-| test-recommendation-copy.mjs | Correcto: conserva orden, campos propios y ediciones del propietario; idempotente |
-| Lint global | No pasa: 364 errores y 37 advertencias. Base: 388 errores y 37 advertencias. Sin diagnósticos nuevos propios de esta PR |
+| Vitest completo | 155 pruebas correctas en 34 archivos |
+| TypeScript y build de producción | Correctos |
+| test-nutrition-db.mjs | Conserva objetivos históricos al editar comidas; rechaza objetivos nuevos inválidos y admite correcciones |
+| test-nutrition-access-db.mjs | Acceso Plus/Coach, chat Coach, alias antiguos, caducidad, canal interno y aislamiento correctos |
+| test-trainer-context-db.mjs | Asignación, denegación anónima y referencia enmascarada correctas |
+| test-recommendation-copy.mjs | Conservación de campos propios e idempotencia correctas |
+| Lint global | No pasa: 364 errores y 37 advertencias; base inicial 388 y 37. Sin diagnósticos nuevos propios de esta PR; main incorporó uno en exercise-video |
 | git diff --check | Correcto |
+| GitHub | CodeQL, Analyze y dependency-review correctos para `c5d230dc578a1f9a5e10dd5eb26ed445d86d6513`; Copilot falló con error 402 por cuota mensual agotada |
 
 Repetición:
 ```sh
@@ -42,28 +44,27 @@ node scripts/test-recommendation-copy.mjs
 npm run lint
 ```
 
-Los scripts SQL usan PGlite 0.5.8, declarado como dependencia de desarrollo, y datos ficticios aislados. No prueban las políticas ni el despliegue del proyecto de Supabase real. El lint es deuda existente, no una comprobación aprobada.
+Los cuatro scripts SQL usan PGlite 0.5.8 y datos ficticios aislados; no prueban por sí solos las políticas desplegadas. Las pruebas usaron las dependencias locales existentes. Una instalación limpia puede encontrar el conflicto previo entre Vite 8 y @vitejs/plugin-react-swc 3.11.0; no se forzaron ni actualizaron estas dependencias. El lint sigue siendo deuda pendiente.
 
-Las pruebas se ejecutaron con las dependencias locales existentes, no desde una instalación limpia. Al resolver dependencias con npm se detectó un conflicto previo: Vite 8 frente al rango de compatibilidad de @vitejs/plugin-react-swc 3.11.0. No se actualizaron ni forzaron las dependencias de la aplicación para ocultarlo. Revisar este punto si una instalación nueva falla; los scripts SQL no modifican la base de datos real.
+## Comprobaciones visuales en producción
 
-## Comprobaciones visuales
+- Perfil a 390 px: antes la página medía 506 px de ancho; después, 390 px. También sin desbordamiento a 320, 430, 768 y 1440 px.
+- Ficha del cliente: resumen real de 6 sesiones y acceso a chat sujeto a Coach; sin desbordamiento a 320 px.
+- Chat interno a 320 px: página de 320 px, campo de mensaje de 44 px y borde inferior en 651 px, por encima de la navegación que comienza en 700 px. También comprobado a 390 px. No se enviaron mensajes.
+- Administrador: dashboard y Métricas coinciden en 1 cliente Free, 0 Plus, 0 Coach y estimación mensual de 0 €; excluyen al personal y aclaran que no representan cobros de Stripe. Son los valores observados el 10 de octubre, sujetos a cambios. No se reiniciaron datos.
+- Usuario Free: entrada, rutina semanal y acceso humano reservado a Coach comprobados. Al elegir domingo de descanso aparece la salida a otras rutinas; al abrir lunes se mantiene «Se registra hoy · 10 de octubre» y el botón «Empezar entrenamiento». No se inició ni completó una sesión. El día real era sábado; no se simuló el reloj del dispositivo.
+- Capturas publicadas: `entrenador-perfil-publicado-390.png`, `entrenador-cliente-publicado-390.png`, `entrenador-chat-publicado-320.png` y `entrenador-chat-publicado-390.png` y `usuario-descanso-publicado-390.png` en la carpeta de entrega.
 
-Frontend local conectado al backend existente, sin guardar cambios en datos reales:
-- Entrenador: entrada, lista de clientes, resumen del cliente, navegación, perfil y chat interno.
-- 320 y 390 px: ficha y chat sin desbordamiento; campo de mensaje accesible sobre la navegación inferior.
-- Perfil a 320, 430, 768 y 1440 px: sin desbordamiento de página tras corregir el input de foto oculto.
-- Editor a 320 px con datos ficticios y estado local: series y descanso editables, campos de 44 px, sin desbordamiento. No se guardó un plan real.
-- Safari de escritorio: editor renderizado e interacción parcial con el campo de series. No acredita Safari de iPhone.
-- Administración: dashboard y métricas muestran la misma población de clientes y la misma estimación. Los valores actuales pueden cambiar.
+Comprobaciones locales anteriores: editor a 320 px con datos ficticios, campos de 44 px y sin desbordamiento; interacción parcial en Safari de escritorio; coherencia entre dashboard y métricas de administración. El editor no se guardó en un plan real. Safari de escritorio no acredita Safari de iPhone.
 
 ## Base de datos real
 
-Aplicadas las cinco migraciones de esta PR en una transacción y registradas en el historial de `enebrcdrdnfkyduzyrzm`: las tres del 9 de octubre y las dos del 10. Verificado después: 5 registros de migración, contexto de acceso en el RPC del entrenador, 3 políticas restrictivas y el disparador de nutrición activo. Permanecen los 6 planes y la asignación existente; 3 objetivos históricos siguen por revisar. No se concedieron planes ni se enviaron mensajes.
+Aplicadas y registradas las cinco migraciones de esta PR en `enebrcdrdnfkyduzyrzm`: `20261009122000`, `20261009150000`, `20261009160000`, `20261010010000` y `20261010011000`. Verificados 5 registros de migración, contexto de acceso en el RPC, 3 políticas restrictivas y el disparador de nutrición activo. Permanecen los 6 planes y la asignación existente; 3 objetivos históricos siguen por revisar. No se concedieron planes ni se cambiaron pagos.
 
-## Pendiente de despliegue y prueba completa
+## Pendiente
 
-Comprobar la integración y versión publicada del frontend. `generate-plan` y `auto-tasks` requieren desplegar las versiones de esta PR; aplicar SQL no actualiza sus funciones Edge. CodeQL y dependency-review pasaron. La revisión adicional de Copilot falló por cuota mensual agotada, sin emitir una revisión de código.
+Desplegar y verificar `generate-plan` y `auto-tasks` con sus helpers. No hubo una vía de despliegue disponible en las herramientas, la interfaz o la CLI accesibles; sincronizar el código y aplicar SQL no demuestra ese despliegue.
 
-Faltan pruebas reales de persistencia del editor y mensajes entre cuentas Coach de prueba después de migrar, Safari de iPhone con teclado, sesión completa persistida y checkout en modo de prueba. No se hicieron cargos ni envíos de mensajes reales. No se acredita superioridad respecto a otras apps.
+Quedan las pruebas con cuentas de prueba de persistencia del editor y mensajes Coach, sesión completa persistida, Safari de iPhone con teclado y checkout en modo de prueba. No se hicieron cargos ni envíos de mensajes reales. No se acredita superioridad respecto a Hevy o Symmetry.
 
-Consulta `docs/lovable-publish-prompt.md` para completar la integración, publicación y QA.
+El siguiente trabajo está en `docs/lovable-publish-prompt.md`.
