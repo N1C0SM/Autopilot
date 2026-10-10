@@ -1,5 +1,8 @@
+export type ExerciseTrackingMode = 'weighted_reps' | 'bodyweight_reps' | 'weighted_bodyweight' | 'seconds_only' | 'assisted_reps';
+
 export interface Exercise {
   id: string;
+  tracking_mode?: ExerciseTrackingMode | null;
   name: string;
   muscle_group: string | null;
   image_url?: string | null;
@@ -22,6 +25,7 @@ export interface Exercise {
 
 export interface GymExerciseEntry {
   exercise_id: string;
+  tracking_mode?: ExerciseTrackingMode | null;
   name: string;
   series: number;
   reps: number;
