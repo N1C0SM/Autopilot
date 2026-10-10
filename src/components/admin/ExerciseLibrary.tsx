@@ -1,3 +1,4 @@
+import { getExerciseTrackingConfig, TRACKING_MODES } from "@/lib/exerciseTrackingConfig";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -417,6 +418,34 @@ const ExerciseFormDialog = ({
             </div>
           </div>
 
+          {/* Tracking mode */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Modo de registro / métricas</p>
+            <div className="grid grid-cols-1 gap-1.5">
+              {([
+                ["", "Automático", "Se deduce por el nombre y el tipo"],
+                ...Object.entries(TRACKING_MODES).map(([k, c]) => [k, ({ weighted_reps: "KG + Repes", bodyweight_reps: "Peso corporal (PC)", weighted_bodyweight: "Lastre + Repes", seconds_only: "Segundos", assisted_reps: "Asistida + Repes" } as Record<string, string>)[k], c.description]),
+              ] as [string, string, string][]).map(([k, label, desc]) => {
+                const active = (form.tracking_mode || "") === k;
+                return (
+                  <button key={k || "auto"} type="button" onClick={() => set("tracking_mode", k || null)}
+                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
+                    <span className="block text-sm font-medium">{label}</span>
+                    <span className="block text-[11px] text-muted-foreground">{desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {(() => {
+              const c = getExerciseTrackingConfig({ name: form.name, skill_tag: form.skill_tag, movement_pattern: form.movement_pattern, exercise_type: form.exercise_type, tracking_mode: form.tracking_mode });
+              return (
+                <div className="grid grid-cols-[40px_52px_1fr_1fr_24px] gap-2 rounded-lg bg-secondary/40 px-3 py-2 text-[10px] font-semibold uppercase text-muted-foreground">
+                  <span>Serie</span><span>Previa</span><span>{c.fixedBodyweight ? "PC" : c.weightLabel}</span><span>{c.valueLabel}</span><span>✓</span>
+                </div>
+              );
+            })()}
+          </div>
+
           {/* Skill Progression */}
           <div className="space-y-3">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Progresión de Skill</p>
@@ -610,7 +639,7 @@ const ExerciseLibrary = () => {
    */
   const [mediaColumnsReady, setMediaColumnsReady] = useState(true);
 
-  const LEGACY_COLUMNS = "id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension";
+  const LEGACY_COLUMNS = "id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode";
   const MEDIA_COLUMNS = "media_style_version, image_generated_at, video_generated_at, media_error, video_priority";
 
   const fetchExercises = async () => {
@@ -853,6 +882,7 @@ const ExerciseLibrary = () => {
       is_stable: form.is_stable ?? true,
       is_progressable: form.is_progressable ?? true,
       high_tension: form.high_tension ?? true,
+      tracking_mode: form.tracking_mode || null,
     };
 
     if (editingExercise) {

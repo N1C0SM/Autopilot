@@ -409,8 +409,10 @@ export type Database = {
           recommended_order: number | null
           skill_tag: string | null
           stimulus_type: string | null
+          tracking_mode: string | null
           video_generated_at: string | null
           video_job_id: string | null
+          video_priority: number | null
           video_url: string | null
         }
         Insert: {
@@ -436,8 +438,10 @@ export type Database = {
           recommended_order?: number | null
           skill_tag?: string | null
           stimulus_type?: string | null
+          tracking_mode?: string | null
           video_generated_at?: string | null
           video_job_id?: string | null
+          video_priority?: number | null
           video_url?: string | null
         }
         Update: {
@@ -463,8 +467,10 @@ export type Database = {
           recommended_order?: number | null
           skill_tag?: string | null
           stimulus_type?: string | null
+          tracking_mode?: string | null
           video_generated_at?: string | null
           video_job_id?: string | null
+          video_priority?: number | null
           video_url?: string | null
         }
         Relationships: [

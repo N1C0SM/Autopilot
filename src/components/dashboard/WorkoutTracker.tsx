@@ -1091,7 +1091,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
               <div className="mb-3 space-y-3">
                 <div className="relative flex aspect-[4/3] max-h-[34dvh] w-full items-center justify-center overflow-hidden rounded-3xl bg-card">
                   {img ? (
-                    <img src={img} alt={active.name} className="h-full w-full object-contain" />
+                    <img src={img} alt={active.name} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
                   ) : (
                     <p className="px-6 text-center text-sm text-muted-foreground">{swaps[active.name] || active.name}</p>
                   )}
@@ -1154,6 +1154,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                 ? ex.movement_pattern
                 : metadata?.movement_pattern ?? undefined,
               exercise_type: exerciseType ?? undefined,
+              tracking_mode: ex.tracking_mode ?? metadata?.tracking_mode ?? undefined,
             });
             // La progresión se calcula solo con las series de trabajo de la sesión anterior.
             const progression = getProgressionSuggestion(
@@ -1288,7 +1289,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                           <span>Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="flex items-center gap-1">
-                            {trackingConfig.weightLabel}
+                            {trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel}
                           </span>
                           <span className="flex items-center gap-1">
                             {trackingConfig.valueLabel}
@@ -1339,22 +1340,26 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                 {si + 1}
                               </span>
                               <span className="truncate text-center text-[11px] tabular-nums text-muted-foreground">
-                                {prevSets?.[si]?.done ? `${prevSets[si].weight || "—"}×${prevSets[si].reps}` : "—"}
+                                {prevSets?.[si]?.done ? (trackingConfig.fixedBodyweight ? `${prevSets[si].reps}${trackingConfig.valueSuffix ?? ""}` : `${prevSets[si].weight || (trackingConfig.kind === "weighted_bodyweight" ? "PC" : "—")}×${prevSets[si].reps}${trackingConfig.valueSuffix ?? ""}`) : "—"}
                               </span>
 
                               {/* Weight input */}
                               <div className="min-w-0">
+                                {trackingConfig.fixedBodyweight ? (
+                                  <div aria-label="Peso corporal" className="flex min-h-11 w-full items-center justify-center rounded-lg border border-border/50 bg-secondary/40 text-sm font-mono text-muted-foreground">PC</div>
+                                ) : (
                                 <input
                                   type="text"
                                   inputMode="decimal"
                                   value={set.weight}
                                   onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
-                                  placeholder={String(progression?.weight || prevSets?.[si]?.weight || ex.weight || "kg")}
+                                  placeholder={String(progression?.weight || prevSets?.[si]?.weight || ex.weight || trackingConfig.weightPlaceholder || "kg")}
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(mainError && set.weight.trim())}
                                   className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                                 />
+                                )}
                               </div>
 
                               {/* Reps input */}

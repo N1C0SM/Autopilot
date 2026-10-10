@@ -12,6 +12,7 @@ export interface ExerciseMetadata {
   skill_tag: string | null;
   video_url: string | null;
   image_url: string | null;
+  tracking_mode?: string | null;
 }
 
 interface ExerciseMetadataIndex {
@@ -45,7 +46,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
           requests.push(
             supabase
               .from("exercises")
-              .select("id, name, muscle_group, exercise_type, movement_pattern, skill_tag, video_url, image_url")
+              .select("id, name, muscle_group, exercise_type, movement_pattern, skill_tag, video_url, image_url, tracking_mode")
               .in("id", ids),
           );
         }
@@ -53,7 +54,7 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
           requests.push(
             supabase
               .from("exercises")
-              .select("id, name, muscle_group, exercise_type, movement_pattern, skill_tag, video_url, image_url")
+              .select("id, name, muscle_group, exercise_type, movement_pattern, skill_tag, video_url, image_url, tracking_mode")
               .in("name", names),
           );
         }
