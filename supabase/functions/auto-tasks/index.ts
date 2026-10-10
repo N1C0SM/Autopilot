@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { persistAutoMacroAdjustment } from "../_shared/auto-macro-adjustment.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -141,36 +142,45 @@ serve(async (req) => {
           const newMacros = calcMacros(currentWeight, onboarding.goal || "general_health");
 
           // Get current macros
-          const { data: currentPlan } = await supabase
+          const { data: currentPlan, error: currentPlanError } = await supabase
             .from("nutrition_plan")
             .select("macros_json")
             .eq("user_id", userId)
             .single();
 
-          const oldMacros = currentPlan?.macros_json as any;
-
-          if (oldMacros && (
-            oldMacros.protein !== newMacros.protein ||
-            oldMacros.carbs !== newMacros.carbs ||
-            oldMacros.fats !== newMacros.fats
-          )) {
-            await supabase.from("nutrition_plan").update({
-              macros_json: newMacros,
-              updated_at: now.toISOString(),
-            }).eq("user_id", userId);
-
-            // Update onboarding weight to match
-            await supabase.from("onboarding").update({ weight: currentWeight }).eq("user_id", userId);
-
-            await supabase.from("notifications").insert({
-              user_id: userId,
-              type: "macros_adjusted",
-              title: "Macros ajustados ⚡",
-              message: `Tus macros se han actualizado según tu peso actual (${currentWeight}kg): P${newMacros.protein}g / C${newMacros.carbs}g / G${newMacros.fats}g`,
+          if (currentPlanError) {
+            log("Failed to load nutrition plan for macro adjustment", { userId, error: currentPlanError });
+          } else if (currentPlan?.macros_json) {
+            // Retry even when the targets already match: the previous run may
+            // have saved nutrition but failed to update the weight reference.
+            const adjustment = await persistAutoMacroAdjustment(newMacros, {
+              saveNutrition: async () => await supabase.from("nutrition_plan").update({
+                macros_json: newMacros,
+                updated_at: now.toISOString(),
+              }).eq("user_id", userId).select("user_id").single(),
+              saveBaseline: async () => await supabase.from("onboarding")
+                .update({ weight: currentWeight }).eq("user_id", userId).select("user_id").single(),
+              notify: async () => await supabase.from("notifications").insert({
+                user_id: userId,
+                type: "macros_adjusted",
+                title: "Macros ajustados ⚡",
+                message: `Tus macros se han actualizado según tu peso actual (${currentWeight}kg): P${newMacros.protein}g / C${newMacros.carbs}g / G${newMacros.fats}g`,
+              }),
             });
 
-            results.macrosAdjusted++;
-            log("Macros adjusted", { userId, currentWeight, newMacros });
+            if (adjustment.success === true) {
+              results.macrosAdjusted++;
+              log("Macros adjusted", { userId, currentWeight, newMacros });
+              if (adjustment.warning) {
+                log("Macros saved but adjustment notification failed", {
+                  userId,
+                  stage: adjustment.warning.stage,
+                  error: adjustment.warning.error,
+                });
+              }
+            } else {
+              log("Failed to adjust macros", { userId, stage: adjustment.stage, error: adjustment.error });
+            }
           }
         }
       }
