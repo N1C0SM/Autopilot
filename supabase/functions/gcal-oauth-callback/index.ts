@@ -35,7 +35,7 @@ async function verifyState(stateRaw: string): Promise<{ uid: string; return_to?:
     const ok = await crypto.subtle.verify(
       "HMAC",
       key,
-      b64urlToBytes(sig),
+      new Uint8Array(b64urlToBytes(sig)),
       new TextEncoder().encode(payload),
     );
     if (!ok) return null;
@@ -59,7 +59,7 @@ function safeReturnTo(url: string | undefined): string {
     if (allowed.some((h) => parsed.hostname === h || parsed.hostname.endsWith("." + h))) {
       return parsed.toString();
     }
-  } catch {}
+  } catch { /* Invalid optional redirect falls back to the dashboard. */ }
   return "/dashboard";
 }
 

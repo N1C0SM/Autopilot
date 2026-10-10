@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     const sys = `Eres Nicolás, entrenador personal humano de Autopilot. Responde por chat al cliente en español, en tono cercano, breve (máx 3 frases), profesional y empático. Si el usuario menciona dolor/lesión: ofrece sustituir ejercicio y bajar carga. Si pide cambio de horario: confirma que reorganizas la semana. Si pregunta nutrición: da pauta concreta. Genera 3 respuestas alternativas distintas (corta, completa, motivadora). Devuelve SIEMPRE llamando la función suggest_replies.`;
 
-    const messages: any[] = [{ role: "system", content: sys }];
+    const messages: Array<{ role: string; content: string }> = [{ role: "system", content: sys }];
     if (context) messages.push({ role: "system", content: `Contexto del cliente: ${context}` });
     if (Array.isArray(history)) {
       for (const m of history.slice(-6)) {

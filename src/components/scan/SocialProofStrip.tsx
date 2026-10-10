@@ -16,7 +16,7 @@ export default function SocialProofStrip() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("site_testimonials")
         .select("id, name, result, text, photo_url")
         .eq("visible", true)

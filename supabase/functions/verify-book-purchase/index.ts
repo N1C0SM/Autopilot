@@ -1,162 +1,84 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
+import { bookIdFromReference, bookPaymentMatches } from "../_shared/book-purchase.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
+  headers: { ...corsHeaders, "Content-Type": "application/json" }, status,
+});
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const body = await req.json().catch(() => ({}));
     const sessionId = typeof body?.session_id === "string" ? body.session_id.trim() : "";
     const ref = typeof body?.ref === "string" ? body.ref.trim() : "";
-
-    if (sessionId && (!sessionId.startsWith("cs_") || sessionId.length > 300)) {
-      return new Response(JSON.stringify({ error: "Sesión de pago no válida." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
-      });
+    if (!sessionId.startsWith("cs_") || sessionId.length <= 3 || sessionId.length > 300) {
+      return json({ error: "Falta una sesión válida de Stripe. Si ya has pagado, contacta con nosotros con tu recibo." }, 400);
     }
-    if (ref && (!ref.startsWith("book-") || !UUID_RE.test(ref.slice(5)))) {
-      return new Response(JSON.stringify({ error: "Referencia de compra no válida." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
-      });
-    }
-    if (!sessionId && !ref) {
-      return new Response(JSON.stringify({ error: "Falta la referencia de la compra." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
-      });
-    }
-
-
+    if (ref && !bookIdFromReference(ref)) return json({ error: "Referencia de compra no válida." }, 400);
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
+    const { data: settings, error: settingsError } = await supabaseAdmin.from("settings").select("payment_mode").limit(1).single();
+    if (settingsError || !settings) throw settingsError || new Error("Payment configuration unavailable");
+    const mode = settings.payment_mode === "live" ? "live" : "test";
+    const keys = [...new Set([
+      mode === "live" ? Deno.env.get("STRIPE_LIVE_SECRET_KEY") : Deno.env.get("STRIPE_TEST_SECRET_KEY"),
+      Deno.env.get("STRIPE_SECRET_KEY"),
+    ].filter((key): key is string => !!key))];
 
-    const { data: settings } = await supabaseAdmin.from("settings").select("payment_mode").limit(1).single();
-    const mode = settings?.payment_mode === "live" ? "live" : "test";
-
-    const keys: Array<[string, string | undefined]> = [
-      [mode, mode === "live" ? Deno.env.get("STRIPE_LIVE_SECRET_KEY") : Deno.env.get("STRIPE_TEST_SECRET_KEY")],
-      [mode === "live" ? "test" : "live", mode === "live" ? Deno.env.get("STRIPE_TEST_SECRET_KEY") : Deno.env.get("STRIPE_LIVE_SECRET_KEY")],
-      ["default", Deno.env.get("STRIPE_SECRET_KEY")],
-    ];
-
-    let session: any = null;
-    for (const [_name, key] of keys) {
-      if (!key) continue;
+    let session: Stripe.Checkout.Session | null = null;
+    let stripe: Stripe | null = null;
+    for (const key of keys) {
       try {
-        const stripe = new Stripe(key, { apiVersion: "2025-08-27.basil" });
-        if (sessionId) {
-          const s = await stripe.checkout.sessions.retrieve(sessionId);
-          if (s && !s.error) { session = s; break; }
-        } else {
-          // No session_id in the return URL: find the most recent paid checkout
-          // for this exact book reference in the last 2 hours.
-          const since = Math.floor(Date.now() / 1000) - 7200;
-          const list = await stripe.checkout.sessions.list({ limit: 100, created: { gte: since } });
-          const paid = (list.data || []).filter(
-            (s: any) => s.payment_status === "paid" && s.status === "complete" && s.mode === "payment"
-          );
-          let match = paid.find((s: any) => s.client_reference_id === ref);
-          if (!match) {
-            // Fallback: match by the book's Stripe payment link URL.
-            const { data: b } = await supabaseAdmin
-              .from("library_books").select("buy_url, buy_url_test, buy_url_live")
-              .eq("id", ref.slice(5)).maybeSingle();
-            const norm = (u?: string | null) => (u || "").split("?")[0].replace(/\/$/, "");
-            const urls = [b?.buy_url, b?.buy_url_test, b?.buy_url_live].map(norm).filter(Boolean);
-            const linkCache: Record<string, string> = {};
-            for (const s of paid) {
-              const pl = typeof s.payment_link === "string" ? s.payment_link : s.payment_link?.id;
-              if (!pl) continue;
-              if (!(pl in linkCache)) {
-                try { linkCache[pl] = norm((await stripe.paymentLinks.retrieve(pl)).url); } catch { linkCache[pl] = ""; }
-              }
-              if (linkCache[pl] && urls.includes(linkCache[pl])) { match = { ...s, client_reference_id: ref }; break; }
-            }
-          }
-          if (!match) {
-            // Last resort: the browser remembered this book; accept the newest
-            // one-off paid checkout from the last 20 minutes.
-            const recent = Math.floor(Date.now() / 1000) - 1200;
-            const newest = paid.find((s: any) => s.created >= recent && !String(s.client_reference_id || "").startsWith("book-"));
-            if (newest) match = { ...newest, client_reference_id: ref };
-          }
-          console.log("verify-book", { mode: _name, paid: paid.length, matched: !!match });
-          if (match) { session = match; break; }
-        }
-      } catch (e) {
-        console.log("verify-book stripe error", _name, String((e as any)?.message || e));
+        const candidate = new Stripe(key, { apiVersion: "2025-08-27.basil" });
+        const retrieved = await candidate.checkout.sessions.retrieve(sessionId);
+        if (retrieved.livemode !== (mode === "live")) continue;
+        session = retrieved;
+        stripe = candidate;
+        break;
+      } catch (error) {
+        console.log("verify-book Stripe lookup failed", errorMessage(error));
       }
     }
-
-
-    if (!session) {
-      return new Response(JSON.stringify({ error: "No hemos encontrado el pago. Vuelve a intentarlo en unos segundos." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404,
-      });
+    if (!session || !stripe) return json({ error: "No hemos encontrado esta sesión de pago." }, 404);
+    if (session.mode === "subscription") return json({ kind: "subscription" });
+    if (session.mode !== "payment" || session.status !== "complete" || session.payment_status !== "paid") {
+      return json({ error: "El pago todavía no está confirmado. Espera unos segundos e inténtalo de nuevo." }, 409);
     }
 
-    // A subscription checkout is never a book purchase.
-    if (session.mode === "subscription") {
-      return new Response(JSON.stringify({ kind: "subscription" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
-      });
-    }
+    // Never search recent sales or replace a session's reference with browser data.
+    const sessionRef = session.client_reference_id || "";
+    const resolvedRef = sessionRef || ref;
+    const bookId = bookIdFromReference(resolvedRef);
+    if (!bookId || (ref && ref !== resolvedRef)) return json({ error: "El pago no corresponde a esta compra." }, 403);
+    const { data: book, error: bookError } = await supabaseAdmin.from("library_books")
+      .select("id, title, kind, price, file_path, published, is_folder, buy_url, buy_url_test, buy_url_live")
+      .eq("id", bookId).maybeSingle();
+    if (bookError) throw bookError;
+    if (!book || !book.published || book.is_folder) return json({ error: "El producto ya no está disponible." }, 404);
 
-    const sessionRef = typeof session.client_reference_id === "string" ? session.client_reference_id : "";
-    const resolvedRef = sessionRef.startsWith("book-") && UUID_RE.test(sessionRef.slice(5)) ? sessionRef : ref;
-
-    if (!resolvedRef) {
-      return new Response(JSON.stringify({ kind: "subscription" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
-      });
-    }
-    if (sessionRef && sessionRef !== resolvedRef) {
-      return new Response(JSON.stringify({ error: "El pago no corresponde a esta compra." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403,
-      });
-    }
-    const bookId = resolvedRef.slice(5);
-
-    if (session.status !== "complete" || session.payment_status !== "paid") {
-      return new Response(JSON.stringify({ error: "El pago todavía no está confirmado. Espera unos segundos e inténtalo de nuevo." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 409,
-      });
-    }
-
-
-    const { data: book } = await supabaseAdmin
-      .from("library_books")
-      .select("id, title, kind, price, file_path, published, is_folder")
-      .eq("id", bookId)
-      .maybeSingle();
-
-    if (!book || !book.published || book.is_folder) {
-      return new Response(JSON.stringify({ error: "El producto ya no está disponible." }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404,
-      });
+    const paymentLinkId = typeof session.payment_link === "string" ? session.payment_link : session.payment_link?.id;
+    if (!paymentLinkId) return json({ error: "No se puede vincular el pago con este producto." }, 403);
+    const paymentLink = await stripe.paymentLinks.retrieve(paymentLinkId);
+    const configuredUrls = [mode === "live" ? book.buy_url_live : book.buy_url_test, book.buy_url];
+    if (!bookPaymentMatches(session, mode, bookId, ref, paymentLink.url, configuredUrls)) {
+      return json({ error: "El pago no corresponde a este producto." }, 403);
     }
 
     let fileUrl: string | null = null;
     if (book.file_path) {
-      const { data: signed } = await supabaseAdmin.storage.from("library").createSignedUrl(book.file_path, 86400);
+      const { data: signed, error: signingError } = await supabaseAdmin.storage.from("library").createSignedUrl(book.file_path, 86400);
+      if (signingError) throw signingError;
       fileUrl = signed?.signedUrl ?? null;
     }
-
-    return new Response(
-      JSON.stringify({ title: book.title, kind: book.kind, price: book.price, file_url: fileUrl }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-    );
-  } catch (_e) {
-    return new Response(JSON.stringify({ error: "Error verificando el pago." }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500,
-    });
+    return json({ title: book.title, kind: book.kind, price: book.price, file_url: fileUrl });
+  } catch (error) {
+    console.error("verify-book verification failed", errorMessage(error));
+    return json({ error: "Error verificando el pago." }, 500);
   }
 });

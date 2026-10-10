@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/runtimeValues";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -89,7 +90,7 @@ const LibraryDrive = () => {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("library_books")
       .select("*")
       .order("is_folder", { ascending: false })
@@ -126,7 +127,7 @@ const LibraryDrive = () => {
       : kind === "recommendation" ? "Nueva recomendación"
       : "Nuevo libro";
     const folder = slugify(`${kind}-${books.length + 1}`);
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("library_books")
       .insert({
         title,
@@ -153,7 +154,7 @@ const LibraryDrive = () => {
 
   const save = async (b: Book) => {
     setBusy(b.id);
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("library_books")
       .update({
         title: b.title,
@@ -175,7 +176,7 @@ const LibraryDrive = () => {
   const rename = async (b: Book) => {
     const title = prompt("Nombre de la carpeta", b.title);
     if (!title) return;
-    await (supabase as any).from("library_books").update({ title }).eq("id", b.id);
+    await supabase.from("library_books").update({ title }).eq("id", b.id);
     patch(b.id, { title });
   };
 
@@ -183,7 +184,7 @@ const LibraryDrive = () => {
     if (!confirm(`¿Eliminar "${b.title}" y todo lo que contiene?`)) return;
     const paths = [b.cover_path, b.file_path].filter((x) => x && !x.startsWith("http")) as string[];
     if (paths.length) await supabase.storage.from("library").remove(paths);
-    await (supabase as any).from("library_books").delete().eq("id", b.id);
+    await supabase.from("library_books").delete().eq("id", b.id);
     setOpenId(null);
     toast.success("Eliminado");
     load();
@@ -213,9 +214,9 @@ const LibraryDrive = () => {
       const value = kind === "cover"
         ? supabase.storage.from("site-assets").getPublicUrl(finalPath).data.publicUrl
         : path;
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await supabase
         .from("library_books")
-        .update({ [col]: value })
+        .update(kind === "cover" ? { cover_path: value } : { file_path: value })
         .eq("id", b.id);
       if (updateError) {
         await supabase.storage.from(bucket).remove([finalPath]);
@@ -230,7 +231,7 @@ const LibraryDrive = () => {
       if (kind === "cover") setCovers((c) => ({ ...c, [b.id]: value }));
       toast.success(kind === "cover" ? "Portada reemplazada" : "PDF reemplazado correctamente");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Error al subir el archivo";
+      const message = err instanceof Error ? errorMessage(err) : "Error al subir el archivo";
       console.error("Library file upload failed", err);
       toast.error(message);
     } finally {
@@ -251,7 +252,7 @@ const LibraryDrive = () => {
   };
 
   const shareOnce = async (bookId: string) => {
-    const { data, error } = await (supabase as any).from("book_share_links").insert({ book_id: bookId }).select("token").single();
+    const { data, error } = await supabase.from("book_share_links").insert({ book_id: bookId }).select("token").single();
     if (error || !data?.token) { toast.error("No se pudo crear el enlace"); return; }
     const url = `https://autopilotplan.com/d/${data.token}`;
     try { await navigator.clipboard.writeText(url); toast.success("Enlace copiado: sirve para 1 descarga, caduca en 7 días"); }

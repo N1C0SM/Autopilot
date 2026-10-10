@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAvailabilityDayCount, getAvailabilityHours } from "./availability";
+import { getAvailabilityDayCount, getAvailabilityHours, getSportSchedules, getCustomActivities } from "./availability";
 
 describe("onboarding availability", () => {
   it("reads explicit capacity without counting metadata or schedule objects", () => {
@@ -25,5 +25,16 @@ describe("onboarding availability", () => {
     expect(getAvailabilityHours({ hours: "0,92" })).toBe(0.92);
     expect(getAvailabilityHours({ hours: "" })).toBeNull();
     expect(getAvailabilityHours({ hours: false })).toBeNull();
+  });
+
+  it("reads saved schedules while rejecting malformed days and activities", () => {
+    const saved = {
+      sport_schedules: { boxeo: { dow: 2, start: "18:00", end: "19:00" }, bad: { dow: 8, start: "18:00", end: "19:00" } },
+      custom_activities: [null, { title: 42, dow: 1, start: "08:00", end: "09:00" }, { title: "Trabajo", dow: 1, start: "08:00", end: "09:00" }],
+    };
+    expect(getSportSchedules(saved)).toEqual({ boxeo: { dow: 2, start: "18:00", end: "19:00" } });
+    expect(getCustomActivities(saved)).toEqual([{ title: "Trabajo", dow: 1, start: "08:00", end: "09:00" }]);
+    expect(getSportSchedules(null)).toEqual({});
+    expect(getCustomActivities({ custom_activities: {} })).toEqual([]);
   });
 });

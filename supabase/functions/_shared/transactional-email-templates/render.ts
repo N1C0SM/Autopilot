@@ -20,9 +20,9 @@ export interface OverrideRow {
  * Replace {{var}} / {{nested.path}} placeholders using values from `data`.
  * Missing keys collapse to an empty string (mirrors current behavior).
  */
-export function interpolate(str: string, data: Record<string, any>): string {
-  return str.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => {
-    const val = key.split('.').reduce((acc: any, k: string) => acc?.[k], data)
+export function interpolate(str: string, data: Record<string, unknown>): string {
+  return str.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key: string) => {
+    const val = key.split('.').reduce<unknown>((acc, k: string) => acc !== null && typeof acc === 'object' ? (acc as Record<string, unknown>)[k] : undefined, data)
     return val == null ? '' : String(val)
   })
 }
@@ -38,7 +38,7 @@ export function interpolate(str: string, data: Record<string, any>): string {
  */
 export async function renderTemplate(opts: {
   templateName: string
-  templateData?: Record<string, any>
+  templateData?: Record<string, unknown>
   override?: OverrideRow | null
   customHtml?: string | null
   customSubject?: string | null
@@ -85,8 +85,8 @@ export async function renderTemplate(opts: {
 }
 
 function resolveSubject(
-  s: TemplateEntry['subject'] extends infer T ? T : never | any,
-  data: Record<string, any>
+  s: TemplateEntry['subject'],
+  data: Record<string, unknown>
 ): string {
   return typeof s === 'function' ? s(data) : String(s ?? '')
 }

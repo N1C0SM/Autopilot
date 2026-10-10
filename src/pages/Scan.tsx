@@ -1,3 +1,4 @@
+import { errorMessage, errorStatus } from "@/lib/runtimeValues";
 import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -354,12 +355,12 @@ const Scan = () => {
         setLeadEmail((prev) => prev || data?.email || user.email || "");
         setLeadName((prev) => prev || data?.name || "");
       });
-    (supabase as any)
+    supabase
       .from("onboarding")
       .select("goal_photo_url, goal, specific_goal")
       .eq("user_id", user.id)
       .maybeSingle()
-      .then(({ data }: any) => {
+      .then(({ data }) => {
         const url = data?.goal_photo_url ?? null;
         if (url) {
           setSavedObjectivePath(url);
@@ -379,7 +380,7 @@ const Scan = () => {
 
   // Cargar físicos objetivo: los públicos del admin + los del propio usuario
   const loadGoalPresets = async () => {
-    const { data } = await (supabase as any)
+    const { data } = await supabase
       .from("goal_physiques")
       .select("id, name, description, image_url, user_id")
       .order("sort_order", { ascending: true });
@@ -406,7 +407,7 @@ const Scan = () => {
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], "autopilot-scan.png", { type: "image/png" });
 
-      const navAny = navigator as any;
+      const navAny = navigator;
       if (navAny.canShare?.({ files: [file] })) {
         try {
           await navAny.share({
@@ -425,7 +426,7 @@ const Scan = () => {
       link.download = "autopilot-scan.png";
       link.click();
       toast.success("Tarjeta descargada");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
       toast.error("No se pudo generar la tarjeta");
     } finally {
@@ -460,7 +461,7 @@ const Scan = () => {
       await Promise.all(
         imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()))
       );
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     try {
       // Llamamos dos veces: la primera "calienta" caches de fuentes/imágenes y la
       // segunda devuelve la imagen final ya con todo embebido correctamente.
@@ -526,8 +527,8 @@ const Scan = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       setFutureImg(data.imageUrl);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Error generando la simulación");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Error generando la simulación");
     } finally {
       setGenLoading(false);
     }
@@ -641,7 +642,7 @@ const Scan = () => {
             createdAt: Date.now(),
           })
         );
-      } catch {}
+      } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       setPendingResult(r);
       // Si está logueado saltamos el formulario de lead (ya tenemos su email)
       if (user && isPaid && routeUserId) {
@@ -666,10 +667,10 @@ const Scan = () => {
         }, 400);
       }
       // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e);
-      const status = e?.context?.status;
-      const msg = String(e?.message ?? "");
+      const status = errorStatus(e);
+      const msg = errorMessage(e);
       if (status === 429 || /too many|429/i.test(msg)) {
         toast.error("Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo.");
       } else {
@@ -723,14 +724,14 @@ const Scan = () => {
     }
     setSubmittingLead(true);
     try {
-      const { error } = await (supabase as any).from("scan_leads").insert({
+      const { error } = await supabase.from("scan_leads").insert({
         user_id: user?.id ?? null,
         name: leadName.trim().slice(0, 100),
         whatsapp: null,
         email: leadEmail.trim().slice(0, 255),
         goal: goal ?? "unspecified",
         consent: leadConsent,
-        result: pendingResult as any,
+        result: pendingResult,
       });
       if (error) throw error;
       // Guardamos nombre y email para no pedirlos otra vez al crear la cuenta
@@ -741,7 +742,7 @@ const Scan = () => {
           "autopilot_scan",
           JSON.stringify({ ...prev, leadName: leadName.trim(), leadEmail: leadEmail.trim() })
         );
-      } catch {}
+      } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       if (pendingResult) setResult(pendingResult);
       // Enviar diagnóstico por email (la API de WhatsApp no está disponible)
       try {
@@ -781,7 +782,7 @@ const Scan = () => {
         console.warn("send diagnosis email failed", err);
         toast.error("Diagnóstico listo, pero no pudimos enviarlo por email");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("submitLead", e);
       toast.error("No se pudo enviar. Inténtalo de nuevo.");
     } finally {
@@ -805,7 +806,7 @@ const Scan = () => {
         return;
       }
 
-      const updates: Record<string, any> = {};
+      const updates: import("@/integrations/supabase/types").TablesUpdate<"onboarding"> = {};
       if (r.inferred_goal) updates.goal = r.inferred_goal;
       if (r.inferred_focus) {
         updates.primary_focus = r.inferred_focus;
@@ -823,7 +824,7 @@ const Scan = () => {
         return;
       }
 
-      const { error: updErr } = await (supabase as any)
+      const { error: updErr } = await supabase
         .from("onboarding")
         .update(updates)
         .eq("user_id", user.id);
@@ -835,7 +836,7 @@ const Scan = () => {
       if (genErr) throw genErr;
       setPlanApplyState("success");
       toast.success("Plan actualizado con tu scan ✓");
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error("applyScanToPlan", e);
       setPlanApplyState("error");
       toast.error("No se pudo aplicar al plan automáticamente");
@@ -880,7 +881,7 @@ const Scan = () => {
     try {
       const uploaded = await uploadDataUrl(dataUrl, "goal");
       if (!uploaded) throw new Error("upload failed");
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("goal_physiques")
         .insert({
           user_id: user.id,
@@ -918,7 +919,7 @@ const Scan = () => {
         objectiveImg ? uploadDataUrl(objectiveImg, "objective") : Promise.resolve(null),
       ]);
 
-      const { error: insErr } = await (supabase as any).from("scan_history").insert({
+      const { error: insErr } = await supabase.from("scan_history").insert({
         user_id: user.id,
         current_photo_url: front?.path ?? null,
         back_photo_url: back?.path ?? null,
@@ -1040,7 +1041,7 @@ const Scan = () => {
         const { error: removeError } = await supabase.storage.from("progress-photos").remove(paths);
         if (removeError) console.warn("No se pudieron borrar todas las fotos del scan", removeError);
       }
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("scan_history")
         .delete()
         .eq("user_id", user.id);
@@ -2370,9 +2371,9 @@ const Scan = () => {
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       {(() => {
                         const { rec } = recommendFor({
-                          bottleneck: (result as any).bottleneck,
-                          improvements: result.improvements as any,
-                          monthsWithPlan: (result as any).months_with_plan,
+                          bottleneck: result.bottleneck,
+                          improvements: result.improvements,
+                          monthsWithPlan: result.months_with_plan,
                         });
                         const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
                         return (

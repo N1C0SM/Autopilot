@@ -61,7 +61,7 @@ serve(async (req) => {
 
     let reminders = 0;
     let fallbacks = 0;
-    const results: any[] = [];
+    const results: unknown[] = [];
 
     for (const p of rows ?? []) {
       const start = p.cycle_start_date as string;

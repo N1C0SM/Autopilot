@@ -1,3 +1,4 @@
+import { getSportSchedules, getCustomActivities } from "@/lib/availability";
 import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -47,7 +48,7 @@ const LOAD_LABEL: Record<string, { dot: string; bg: string; label: string; recov
 };
 
 /** Estima la carga de un día de plan a partir de los fatigue_level de sus ejercicios. */
-function estimatePlanLoad(plan: any): "Alta" | "Media" | "Baja" {
+function estimatePlanLoad(plan: DayPlan): "Alta" | "Media" | "Baja" {
   if (plan?.type === "actividad") {
     const intensity = (plan.intensity || "").toLowerCase();
     if (intensity.includes("alta") || intensity.includes("intensa")) return "Alta";
@@ -127,6 +128,15 @@ interface ScheduleOverride {
   admin_note?: string | null;
 }
 
+type CalendarDetails = {
+  kind: "training" | "external";
+  plan?: DayPlan;
+  ext?: ExternalActivity;
+  load: "Alta" | "Media" | "Baja";
+  override?: ScheduleOverride;
+};
+type ScheduleEvent = Omit<EventInput, "extendedProps"> & { extendedProps: CalendarDetails };
+
 interface Props {
   dayPlans: DayPlan[];
   /** If set, the calendar operates on this user's data (admin mode). Otherwise uses the logged-in user. */
@@ -167,7 +177,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
 
   const [editOpen, setEditOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<EventInput | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
 
   // form state
   const [editId, setEditId] = useState<string | null>(null);
@@ -193,7 +203,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
     ]);
     setExternals((ext as ExternalActivity[]) || []);
     const map: Record<string, ScheduleOverride> = {};
-    (ovr || []).forEach((o: any) => { map[o.day_label] = o; });
+    (ovr || []).forEach((o) => { map[o.day_label] = o; });
     setOverrides(map);
     setLoading(false);
   };
@@ -216,18 +226,17 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
 
     // Horarios definidos por el usuario en el onboarding (formato nuevo: start/end como "HH:MM")
     const userSchedules: Record<string, { dow: number; start: string; end: string }> =
-      ((onb.availability as any)?.sport_schedules) || {};
+      getSportSchedules(onb.availability);
 
     // Actividades personalizadas del onboarding (salir con amigos, trabajo, etc.)
-    const customActivities: Array<{ id: string; title: string; dow: number; start: string; end: string }> =
-      ((onb.availability as any)?.custom_activities) || [];
+    const customActivities = getCustomActivities(onb.availability);
 
     const { data: existing } = await supabase
       .from("external_activities")
       .select("category, title")
       .eq("user_id", effectiveUserId);
-    const existingCats = new Set((existing || []).map((e: any) => e.category));
-    const existingTitles = new Set((existing || []).map((e: any) => `personal::${(e.title || "").toLowerCase()}`));
+    const existingCats = new Set((existing || []).map((e) => e.category));
+    const existingTitles = new Set((existing || []).map((e) => `personal::${(e.title || "").toLowerCase()}`));
 
     const parseHM = (hm: string, fallback = { h: 19, m: 0 }) => {
       const [hStr, mStr] = (hm || "").split(":");
@@ -332,8 +341,8 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
   }, [effectiveUserId, isAdminMode]);
 
   // Build events from plan + externals
-  const events: EventInput[] = useMemo(() => {
-    const out: EventInput[] = [];
+  const events: ScheduleEvent[] = useMemo(() => {
+    const out: ScheduleEvent[] = [];
 
     for (const plan of dayPlans) {
       const baseDow = DAY_TO_DOW[plan.day];
@@ -386,16 +395,16 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
   // 24h previas a un entreno, marcamos como conflicto de recuperación.
   const conflicts: ScheduleConflict[] = useMemo(() => {
     const list: ScheduleConflict[] = [];
-    const trainingEvents = events.filter((e) => (e.extendedProps as any)?.kind === "training");
-    const externalEvents = events.filter((e) => (e.extendedProps as any)?.kind === "external");
+    const trainingEvents = events.filter((e) => e.extendedProps?.kind === "training");
+    const externalEvents = events.filter((e) => e.extendedProps?.kind === "external");
     for (const tr of trainingEvents) {
       const trStart = tr.start as Date;
       const trEnd = tr.end as Date;
-      const trProps = tr.extendedProps as any;
+      const trProps = tr.extendedProps;
       for (const ex of externalEvents) {
         const exStart = ex.start as Date;
         const exEnd = ex.end as Date;
-        const exProps = ex.extendedProps as any;
+        const exProps = ex.extendedProps;
         // Solape directo
         if (exStart < trEnd && exEnd > trStart) {
           list.push({
@@ -521,7 +530,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
   };
 
   const handleEventClick = (arg: EventClickArg) => {
-    const props = arg.event.extendedProps as any;
+    const props = arg.event.extendedProps as CalendarDetails;
     if (props?.kind === "training") {
       const dayLabel = props.plan?.day;
       const existingNote = dayLabel ? (overrides[dayLabel]?.admin_note || "") : "";
@@ -532,7 +541,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
       title: arg.event.title,
       start: arg.event.start || undefined,
       end: arg.event.end || undefined,
-      extendedProps: arg.event.extendedProps,
+      extendedProps: props,
     });
     setDetailOpen(true);
   };
@@ -547,7 +556,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
     const newHour = newStart.getHours();
     const newMinute = newStart.getMinutes();
     const newDuration = newEnd ? Math.round((newEnd.getTime() - newStart.getTime()) / 60000) : 60;
-    const props = ev.extendedProps as any;
+    const props = ev.extendedProps as CalendarDetails;
 
     if (props.kind === "external") {
       const { error } = await supabase.from("external_activities").update({
@@ -584,7 +593,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
     sel.view.calendar.unselect();
   };
 
-  const detailProps = selectedEvent?.extendedProps as any;
+  const detailProps = selectedEvent?.extendedProps;
 
   return (
     <div className="space-y-3">
@@ -612,7 +621,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
       {/* Calendar */}
       <div className="bg-card border border-border rounded-xl p-2 sm:p-4 fc-themed">
         <FullCalendar
-          ref={calendarRef as any}
+          ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           locale={esLocale}
@@ -634,7 +643,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
           events={events}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
-          eventResize={handleEventDrop as any}
+          eventResize={handleEventDrop}
           select={handleSelect}
           dayMaxEvents={3}
         />
@@ -737,7 +746,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
                     <Dumbbell className="w-3.5 h-3.5" /> {detailProps.plan.muscle_focus}
                   </div>
                   <div className="space-y-1.5">
-                    {(detailProps.plan.exercises || []).map((ex: any, i: number) => (
+                    {(detailProps.plan.exercises || []).map((ex, i) => (
                       <div key={i} className="bg-secondary/30 rounded-lg p-2.5">
                         <p className="font-medium text-sm">{ex.name}</p>
                         <p className="text-xs text-muted-foreground">{ex.series} × {ex.reps} · {ex.rest}</p>

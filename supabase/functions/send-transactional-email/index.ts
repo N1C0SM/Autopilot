@@ -37,7 +37,7 @@ function generateToken(): string {
 //  - anon          -> denied; public callers must never control recipients
 const SELF_SERVICE_TEMPLATES = new Set(['scan-diagnosis', 'mini-plan'])
 
-function parseJwtClaims(token: string): Record<string, any> | null {
+function parseJwtClaims(token: string): Record<string, unknown> | null {
   try {
     const payload = token.split('.')[1]
     const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
   let recipientEmail: string
   let idempotencyKey: string
   let messageId: string
-  let templateData: Record<string, any> = {}
+  let templateData: Record<string, unknown> = {}
   try {
     const body = await req.json()
     templateName = body.templateName || body.template_name

@@ -72,8 +72,8 @@ const TrialEndingEmail = ({
 
 export const template = {
   component: TrialEndingEmail,
-  subject: (data: Record<string, any>) =>
-    (data?.daysLeft ?? 2) <= 1
+  subject: (data: Record<string, unknown>) =>
+    Number(data?.daysLeft ?? 2) <= 1
       ? 'Tu prueba gratuita termina mañana ⏰'
       : `Tu prueba gratuita termina en ${data?.daysLeft ?? 2} días`,
   displayName: 'Recordatorio fin de prueba',

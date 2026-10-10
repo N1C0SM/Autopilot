@@ -23,4 +23,10 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // esbuild emits var when bundling this generated function. Its authored
+    // source in src/lib/mcp still follows no-var and all other lint rules.
+    files: ["supabase/functions/mcp/index.ts"],
+    rules: { "no-var": "off" },
+  },
 );

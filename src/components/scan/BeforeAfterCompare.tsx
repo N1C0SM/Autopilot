@@ -30,7 +30,7 @@ export default function BeforeAfterCompare({
     let active = true;
     (async () => {
       // Penúltimo scan: el actual aún puede no estar guardado, así que cogemos el más reciente existente.
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("scan_history")
         .select("id, taken_at, current_photo_url, physique, attractiveness, potential")
         .eq("user_id", userId)

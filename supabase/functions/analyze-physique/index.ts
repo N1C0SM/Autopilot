@@ -1,3 +1,4 @@
+import { errorMessage, jsonObject } from "../_shared/runtime-values.ts";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { generateText } from "npm:ai";
@@ -17,8 +18,8 @@ const toNum = (v: unknown): number | undefined => {
   }
   return undefined;
 };
-const optNum = (schema: z.ZodTypeAny) => z.preprocess((v) => toNum(v), schema.optional());
-const reqNum = (fallback: number, schema: z.ZodTypeAny) =>
+const optNum = <T extends z.ZodType>(schema: T) => z.preprocess((v) => toNum(v), schema.optional());
+const reqNum = <T extends z.ZodType>(fallback: number, schema: T) =>
   z.preprocess((v) => toNum(v) ?? fallback, schema);
 
 // Recorta al rango permitido en vez de fallar si el modelo se sale.
@@ -40,7 +41,8 @@ const AnalysisSchema = z.object({
     (val) => {
       if (!Array.isArray(val)) return val;
       return val
-        .map((item: any) => {
+        .map((value: unknown) => {
+          const item = typeof value === "string" ? value : jsonObject(value);
           if (typeof item === "string") return { label: item, priority: "Media" };
           if (!item || typeof item !== "object") return null;
           const label =
@@ -89,12 +91,12 @@ const AnalysisSchema = z.object({
       if (val == null) return undefined;
       if (Array.isArray(val)) return val;
       if (typeof val === "object") {
-        return Object.entries(val as Record<string, any>).map(([group, v]) => {
+        return Object.entries(val as Record<string, unknown>).map(([group, v]) => {
           if (v && typeof v === "object") {
             return {
-              group: (v as any).group ?? group,
-              score: toNum((v as any).score) ?? 5,
-              verdict: String((v as any).verdict ?? (v as any).note ?? ""),
+              group: jsonObject(v).group ?? group,
+              score: toNum(jsonObject(v).score) ?? 5,
+              verdict: String(jsonObject(v).verdict ?? jsonObject(v).note ?? ""),
             };
           }
           return { group, score: toNum(v) ?? 5, verdict: "" };
@@ -271,7 +273,7 @@ Deno.serve(async (req) => {
         ? "SOLO tienes la vista frontal: NO evalúes ni puntúes espalda alta, dorsales, deltoides posterior, glúteos ni isquios. Omite esos grupos de muscle_breakdown en lugar de inventarlos. IMPORTANTE: con esta única vista DEBES cubrir TODOS los grupos frontales visibles (Pecho, Deltoides, Brazos, Core/abdomen, Cuádriceps) — nunca te limites a uno o dos grupos: cada uno con su lectura y su score. Di en summary que falta la vista de espalda."
         : "SOLO tienes la vista trasera: NO evalúes ni puntúes pecho, abdomen, bíceps ni cuádriceps desde delante. Omite esos grupos de muscle_breakdown en lugar de inventarlos. IMPORTANTE: con esta única vista DEBES cubrir TODOS los grupos posteriores visibles (Espalda alta, Dorsales, Deltoides posterior, Tríceps, Cadena posterior glúteo+isquio, Gemelos) — nunca te limites a uno o dos grupos: cada uno con su lectura y su score. Di en summary que falta la vista frontal.";
 
-    const userContent: any[] = [
+    const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
       {
         type: "text",
         text: `Recibes ${order.length} imagen(es) — ${viewsText}. ${coverageRule} ${monthsRule} Devuelve una orientación visual honesta y útil en español, sin lenguaje médico.`,
@@ -307,7 +309,7 @@ Deno.serve(async (req) => {
     });
 
     // A veces la respuesta llega como array (varios objetos o envuelta): fusionamos los objetos.
-    let raw: any = extractJson(text);
+    let raw: unknown = extractJson(text);
     if (Array.isArray(raw)) {
       raw = raw
         .filter((x) => x && typeof x === "object" && !Array.isArray(x))
@@ -345,18 +347,18 @@ Deno.serve(async (req) => {
       }
     } else {
       // Sin objetivo: no tiene sentido hablar de meses al objetivo. Los borramos.
-      delete (parsed as any).months_with_plan;
-      delete (parsed as any).months_without_plan;
-      delete (parsed as any).estimated_months;
+      delete parsed.months_with_plan;
+      delete parsed.months_without_plan;
+      delete parsed.estimated_months;
       parsed.similarity = 0;
     }
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("analyze-physique error:", e);
-    return new Response(JSON.stringify({ error: e?.message ?? "Error desconocido" }), {
+    return new Response(JSON.stringify({ error: errorMessage(e) || "Error desconocido" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

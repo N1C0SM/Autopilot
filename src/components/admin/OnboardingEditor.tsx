@@ -44,7 +44,7 @@ interface Props {
 }
 
 const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
-  const av = (data?.availability as any) || {};
+  const av = data?.availability && typeof data.availability === "object" && !Array.isArray(data.availability) ? data.availability : {};
   const [form, setForm] = useState({
     age: data?.age?.toString() ?? "",
     height: data?.height?.toString() ?? "",

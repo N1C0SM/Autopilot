@@ -18,7 +18,10 @@ export default defineTool({
     if (!Number.isFinite(weight_kg) || weight_kg <= 20 || weight_kg > 400) {
       return { content: [{ type: "text", text: "Peso fuera de rango (20-400 kg)" }], isError: true };
     }
-    const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     });

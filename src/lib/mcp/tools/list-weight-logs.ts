@@ -15,7 +15,10 @@ export default defineTool({
       return { content: [{ type: "text", text: "No autenticado" }], isError: true };
     }
     const n = Math.min(Math.max(Number(limit ?? 30), 1), 100);
-    const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false },
     });

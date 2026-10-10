@@ -39,17 +39,17 @@ const RenewalFlow = ({ userId, subscriptionTier }: Props) => {
         .eq("user_id", userId)
         .maybeSingle();
       if (!data) return;
-      const start = ((data as any).cycle_start_date as string) || null;
-      const dec = ((data as any).renewal_decision as RenewalDecision) || null;
+      const start = (data.cycle_start_date as string) || null;
+      const dec = (data.renewal_decision as RenewalDecision) || null;
       setCycleStart(start);
       setDecision(dec);
       const week = currentCycleWeek(start);
       if (!dec && week !== null && week >= 11) {
         setOpen(true);
-        if (!(data as any).renewal_prompt_shown_at) {
+        if (!data.renewal_prompt_shown_at) {
           await supabase
             .from("profiles")
-            .update({ renewal_prompt_shown_at: new Date().toISOString() } as any)
+            .update({ renewal_prompt_shown_at: new Date().toISOString() })
             .eq("user_id", userId);
         }
       }
@@ -60,7 +60,7 @@ const RenewalFlow = ({ userId, subscriptionTier }: Props) => {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ renewal_decision: value, renewal_decision_at: new Date().toISOString() } as any)
+      .update({ renewal_decision: value, renewal_decision_at: new Date().toISOString() })
       .eq("user_id", userId);
     setSaving(false);
     if (error) {

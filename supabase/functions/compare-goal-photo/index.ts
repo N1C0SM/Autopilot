@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { aiFetch } from "../_shared/ai-provider.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,9 +80,9 @@ Deno.serve(async (req) => {
       gaps: parsed.gaps || "",
       congratulate: sim >= 85,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  } catch (e: any) {
-    console.error("[compare-goal-photo] ERROR:", e.message);
-    return new Response(JSON.stringify({ error: e.message }), {
+  } catch (e: unknown) {
+    console.error("[compare-goal-photo] ERROR:", errorMessage(e));
+    return new Response(JSON.stringify({ error: errorMessage(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       "referrals",
     ];
 
-    const results: Record<string, any> = {};
+    const results: Record<string, unknown> = {};
     await Promise.all(
       tables.map(async (t) => {
         const { data } = await admin.from(t).select("*").eq("user_id", userId);

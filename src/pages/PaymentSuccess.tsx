@@ -1,9 +1,9 @@
-import { hasCoaching } from "@/lib/entitlements";
+import { getConsumerPlan } from "@/lib/entitlements";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, Loader2, Download, ArrowRight, BookOpen } from "lucide-react";
+import { CheckCircle2, CircleAlert, Loader2, Download, ArrowRight, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
 import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
@@ -24,6 +24,10 @@ export const BookSuccess = ({
   useEffect(() => {
     if (!sessionId && !bookRef) {
       onNotBook();
+      return;
+    }
+    if (!sessionId) {
+      setState("missing");
       return;
     }
     (async () => {
@@ -124,15 +128,15 @@ export const BookSuccess = ({
 
   return (
     <div className="text-center max-w-md">
-      <PageHead title="Pago recibido · Autopilot" description="Tu pago se ha procesado correctamente." path="/payment-success" noindex />
+      <PageHead title="Compra sin confirmar · Autopilot" description="Todavía no hemos podido confirmar esta compra." path="/payment-success" noindex />
       <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-        <CheckCircle2 className="w-10 h-10 text-primary" />
+        <CircleAlert className="w-10 h-10 text-primary" />
       </div>
-      <h1 className="text-3xl font-bold font-display mb-3">¡Pago Recibido!</h1>
+      <h1 className="text-3xl font-bold font-display mb-3">No hemos podido confirmar tu compra</h1>
       <p className="text-muted-foreground mb-8 text-sm">
         {state === "missing"
-          ? "No pudimos verificar la compra automáticamente. Escríbenos y te enviamos tu libro hoy mismo."
-          : "No hemos podido verificar el pago automáticamente. Espera unos segundos e inténtalo de nuevo, o escríbenos y te enviamos tu libro hoy mismo."}
+          ? "Falta la confirmación de Stripe. Si ya has pagado, contacta con nosotros con tu recibo para recuperar el libro."
+          : "Espera unos segundos y comprueba de nuevo. Si ya has pagado y sigue fallando, contacta con nosotros con tu recibo."}
       </p>
       {state === "error" && (
         <Button variant="outline" size="lg" className="w-full mb-3" onClick={() => window.location.reload()}>
@@ -153,7 +157,7 @@ const PaymentSuccess = () => {
   const queryRef = searchParams.get("client_reference_id") || "";
   const sessionId = searchParams.get("session_id") || "";
   const [pendingRef] = useState(() => readPendingBookRef());
-  const bookRef = queryRef.startsWith("book-") ? queryRef : pendingRef;
+  const bookRef = queryRef ? (queryRef.startsWith("book-") ? queryRef : "") : pendingRef;
   // If Stripe sends us back with a session but no tag, ask the backend what was bought.
   const [notBook, setNotBook] = useState(false);
   const isBook = !notBook && (!!bookRef || !!sessionId);
@@ -171,8 +175,13 @@ const PaymentSuccess = () => {
 
     let attempts = 0;
     const maxAttempts = 12;
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    setChecking(true);
+    setPaid(false);
 
     const checkPayment = async () => {
+      if (cancelled) return;
       // Proactively sync with Stripe only every 3rd attempt to avoid rate limits
       if (attempts % 3 === 0) {
         try {
@@ -188,7 +197,8 @@ const PaymentSuccess = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (hasCoaching(profile)) {
+      if (cancelled) return;
+      if (getConsumerPlan(profile) !== "free") {
         setPaid(true);
         setChecking(false);
         track("checkout_success", {});
@@ -197,7 +207,7 @@ const PaymentSuccess = () => {
 
       attempts++;
       if (attempts < maxAttempts) {
-        setTimeout(checkPayment, 2500);
+        retryTimer = setTimeout(checkPayment, 2500);
       } else {
         // Stop polling but do not falsely mark as paid
         setPaid(false);
@@ -206,6 +216,10 @@ const PaymentSuccess = () => {
     };
 
     checkPayment();
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [user, loading, isBook]);
 
   // Auto-redirect to dashboard once paid (plan purchases only)
@@ -239,12 +253,12 @@ const PaymentSuccess = () => {
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <PageHead title="Pago recibido · Autopilot" description="Tu pago se ha procesado correctamente." path="/payment-success" noindex />
+        <PageHead title="Confirma tu plan · Autopilot" description="Inicia sesión para comprobar el estado de tu plan." path="/payment-success" noindex />
         <div className="text-center max-w-md">
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-primary" />
+            <CircleAlert className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold font-display mb-3">¡Pago Recibido!</h1>
+          <h1 className="text-3xl font-bold font-display mb-3">Inicia sesión para confirmar tu plan</h1>
           <p className="text-muted-foreground mb-8">
             Por favor inicia sesión para continuar con la configuración de tu plan personalizado.
           </p>

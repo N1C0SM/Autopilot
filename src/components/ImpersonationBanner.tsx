@@ -9,7 +9,7 @@ export default function ImpersonationBanner() {
       if (sessionStorage.getItem("lovable-impersonating") === "1") {
         setEmail(sessionStorage.getItem("lovable-impersonating-email"));
       }
-    } catch {}
+    } catch { /* Session storage may be unavailable in private browsing. */ }
   }, []);
 
   if (!email) return null;

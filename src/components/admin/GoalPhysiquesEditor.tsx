@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/runtimeValues";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -80,8 +81,8 @@ const GoalPhysiquesEditor = () => {
       // auto-save URL
       await supabase.from("goal_physiques").update({ image_url: url }).eq("id", id);
       toast.success("Foto subida");
-    } catch (err: any) {
-      toast.error(err.message ?? "Error al subir");
+    } catch (err: unknown) {
+      toast.error(errorMessage(err) ?? "Error al subir");
     }
   };
 

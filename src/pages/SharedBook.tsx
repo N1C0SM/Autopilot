@@ -1,3 +1,4 @@
+import { functionErrorMessage } from "@/lib/runtimeValues";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Download, Loader2 } from "lucide-react";
@@ -16,8 +17,7 @@ const SharedBook = () => {
     setState("busy");
     const { data, error } = await supabase.functions.invoke("redeem-book-link", { body: { token } });
     if (error || !data?.url) {
-      let m = "Este enlace ya se ha usado o ha caducado.";
-      try { m = JSON.parse(await (error as any)?.context?.text?.()).error || m; } catch { /* keep */ }
+      const m = await functionErrorMessage(error, "Este enlace ya se ha usado o ha caducado.");
       setMsg(m); setState("error"); return;
     }
     if (data.pack && Array.isArray(data.files)) {

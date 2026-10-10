@@ -1,9 +1,10 @@
+import { errorMessage } from "@/lib/runtimeValues";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Monitor, Smartphone, Radio } from "lucide-react";
 
-type Msg = { customHtml: string; subject: string; templateData?: Record<string, any> };
+type Msg = { customHtml: string; subject: string; templateData?: Record<string, unknown> };
 
 export default function EmailPreview() {
   const { templateKey = "" } = useParams();
@@ -23,7 +24,7 @@ export default function EmailPreview() {
   const render = async (msg: Msg | null) => {
     const id = ++inflight.current;
     try {
-      const body: any = { templateName: templateKey };
+      const body: { templateName: string; customHtml?: string; templateData?: Record<string, unknown> } = { templateName: templateKey };
       if (msg?.customHtml) body.customHtml = msg.customHtml;
       if (msg?.templateData) body.templateData = msg.templateData;
       const { data, error } = await supabase.functions.invoke("render-email-template", { body });
@@ -31,9 +32,9 @@ export default function EmailPreview() {
       if (id !== inflight.current) return; // stale
       setRenderedHtml(data.html ?? "");
       setSubject((msg?.subject?.trim()) || (data.subject ?? ""));
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (id === inflight.current) {
-        setRenderedHtml(`<pre style="padding:24px;color:#b00020;font-family:monospace">Error: ${e?.message ?? e}</pre>`);
+        setRenderedHtml(`<pre style="padding:24px;color:#b00020;font-family:monospace">Error: ${errorMessage(e) || "No se pudo cargar la vista previa"}</pre>`);
       }
     } finally {
       if (id === inflight.current) setLoading(false);
@@ -74,7 +75,7 @@ export default function EmailPreview() {
       };
       // Announce we're alive so editor can push latest
       bc.postMessage({ type: "ready" });
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
 
     const onStorage = (e: StorageEvent) => {
       if (e.key !== channelName || !e.newValue) return;
@@ -82,7 +83,7 @@ export default function EmailPreview() {
         const parsed = JSON.parse(e.newValue);
         setConnected(true);
         scheduleRender(parsed as Msg);
-      } catch {}
+      } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     };
     window.addEventListener("storage", onStorage);
 
@@ -94,7 +95,7 @@ export default function EmailPreview() {
         setConnected(true);
         scheduleRender(parsed as Msg);
       }
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
 
     return () => {
       bc?.close();

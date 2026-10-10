@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     if (tokenRow?.refresh_token) {
       try {
         await fetch(`https://oauth2.googleapis.com/revoke?token=${tokenRow.refresh_token}`, { method: "POST" });
-      } catch (_) {}
+      } catch { /* The optional Google operation may be unavailable. */ }
     }
 
     await admin.from("google_calendar_tokens").delete().eq("user_id", user.id);

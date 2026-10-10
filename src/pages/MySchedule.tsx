@@ -125,12 +125,12 @@ const MySchedule = () => {
 
       // Run plan regeneration + (optional) calendar sync in parallel
       const { data: gcalTok } = await supabase
-        .from("google_calendar_connections" as any)
+        .from("google_calendar_connections")
         .select("user_id")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const tasks: Promise<any>[] = [supabase.functions.invoke("generate-plan")];
+      const tasks = [supabase.functions.invoke("generate-plan")];
       if (gcalTok) tasks.push(supabase.functions.invoke("gcal-sync"));
 
       const [planRes, syncRes] = await Promise.all(tasks);
@@ -141,7 +141,7 @@ const MySchedule = () => {
       }
 
       if (gcalTok && syncRes?.data) {
-        const synced = (syncRes.data as any)?.synced ?? 0;
+        const synced = syncRes.data?.synced ?? 0;
         toast.success(`Plan actualizado · ${synced} eventos en Google Calendar`, { id: toastId });
       } else {
         toast.success("Plan actualizado a tu nueva semana ✓", { id: toastId });

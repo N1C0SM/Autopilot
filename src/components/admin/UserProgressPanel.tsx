@@ -102,7 +102,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
       if (dayData) {
         setCompletedSessionKeys(dayData.map(d => `${d.completed_at}|${d.day_label}`));
         setRpeData(
-          (dayData as any[]).filter(d => d.rpe != null).reverse().map((d) => ({
+          dayData.filter(d => d.rpe != null).reverse().map((d) => ({
             date: new Date(d.completed_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
             rpe: d.rpe,
             label: d.day_label,

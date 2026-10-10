@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -59,9 +60,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, results }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[ADMIN-RESET-METRICS] Error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: errorMessage(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

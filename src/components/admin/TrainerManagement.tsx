@@ -81,7 +81,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
   }, [selectedTrainer]);
 
   const promoteToTrainer = async (userId: string) => {
-    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "trainer" as any });
+    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "trainer" });
     if (error) { toast.error("Error: " + error.message); return; }
     toast.success("Usuario promovido a entrenador");
     setPromoteOpen(false);
@@ -92,7 +92,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
     if (!confirm("¿Quitar el rol de entrenador? Sus asignaciones se eliminarán.")) return;
     await supabase.from("trainer_assignments").delete().eq("trainer_id", userId);
     await supabase.from("trainer_profiles").delete().eq("user_id", userId);
-    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "trainer" as any);
+    const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", "trainer");
     if (error) { toast.error("Error: " + error.message); return; }
     toast.success("Rol de entrenador eliminado");
     setSelectedTrainer(null);

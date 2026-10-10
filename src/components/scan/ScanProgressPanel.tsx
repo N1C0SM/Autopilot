@@ -21,7 +21,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("scan_history")
         .select("id, taken_at, physique, attractiveness, potential, current_photo_url")
         .eq("user_id", userId)

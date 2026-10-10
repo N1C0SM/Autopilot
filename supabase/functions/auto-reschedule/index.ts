@@ -1,3 +1,6 @@
+import type { DayPlan } from "../_shared/training-types.ts";
+type ScheduleOverride = { day_label: string; new_day_of_week: number; start_hour: number; start_minute: number; duration_min: number; admin_note?: string | null };
+import { jsonObject } from "../_shared/runtime-values.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -17,7 +20,7 @@ const EXTERNAL_FATIGUE: Record<string, "Alta" | "Media" | "Baja"> = {
   yoga: "Baja", personal: "Baja", trabajo: "Baja", otro: "Baja",
 };
 
-function estimatePlanLoad(plan: any): "Alta" | "Media" | "Baja" {
+function estimatePlanLoad(plan: DayPlan): "Alta" | "Media" | "Baja" {
   if (plan?.type === "actividad") {
     const intensity = (plan.intensity || "").toLowerCase();
     if (intensity.includes("alta") || intensity.includes("intensa")) return "Alta";
@@ -101,12 +104,12 @@ serve(async (req) => {
       supabase.from("training_schedule_overrides").select("*").eq("user_id", user_id),
     ]);
 
-    const dayPlans: any[] = (planRow?.workouts_json as any)?.dayPlans || (planRow?.workouts_json as any) || [];
-    const ovrMap = new Map<string, any>();
+    const dayPlans = (jsonObject(planRow?.workouts_json).dayPlans || planRow?.workouts_json || []) as DayPlan[];
+    const ovrMap = new Map<string, ScheduleOverride>();
     for (const o of (overrides || [])) ovrMap.set(o.day_label, o);
 
     // Bloques semanales [startMin, endMin, kind]
-    type Block = { startMin: number; endMin: number; kind: "training" | "external"; label: string; load: string; planRef?: any };
+    type Block = { startMin: number; endMin: number; kind: "training" | "external"; label: string; load: string; planRef?: DayPlan };
     const blocks: Block[] = [];
 
     for (const ext of (externals || [])) {
@@ -193,7 +196,8 @@ serve(async (req) => {
       const slot = findFreeSlot(tr, dur);
       if (!slot) continue;
 
-      const dayLabel = tr.planRef.day;
+      const dayLabel = tr.planRef?.day;
+      if (!dayLabel) continue;
       const oldPos = fromMinutes(tr.startMin);
       const fromText = `${DOW_TO_DAY[oldPos.dow]} ${String(oldPos.h).padStart(2, "0")}:${String(oldPos.m).padStart(2, "0")}`;
       const toText = `${DOW_TO_DAY[slot.dow]} ${String(slot.h).padStart(2, "0")}:00`;

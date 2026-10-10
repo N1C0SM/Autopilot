@@ -1,3 +1,4 @@
+import { parseRecommendations } from "@/lib/siteContent";
 import { ShieldCheck, User, Check, ArrowRight } from "lucide-react";
 import { Menu, BookOpen, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -79,16 +80,16 @@ const Index = () => {
     const run = async () => {
       const [{ data: t }, settingsRes, statsRes] = await Promise.all([
         supabase.from("site_testimonials").select("name, result, text, photo_url, photo_before_url, photo_after_url").eq("visible", true).order("sort_order"),
-        (supabase.rpc as any)("get_public_settings"),
-        (supabase.rpc as any)("get_public_stats"),
+        supabase.rpc("get_public_settings"),
+        supabase.rpc("get_public_stats"),
       ]);
       const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
-      if (t && t.length > 0) setTestimonials(t as any);
+      if (t && t.length > 0) setTestimonials(t);
       if (s) {
 
         setHeroVideo({
-          url: (s as any).hero_video_url || "",
-          poster: (s as any).hero_video_poster_url || "",
+          url: s.hero_video_url || "",
+          poster: s.hero_video_poster_url || "",
         });
         const cfg = s as Record<string, unknown>;
         const str = (v: unknown) => (typeof v === "string" ? v : "");
@@ -98,26 +99,26 @@ const Index = () => {
           trainer_bio: str(cfg.trainer_bio),
         });
         setSections({
-          show_blog: (s as any).show_blog ?? true,
-          show_ebooks: (s as any).show_ebooks ?? false,
-          show_recommendations: (s as any).show_recommendations ?? false,
+          show_blog: s.show_blog ?? true,
+          show_ebooks: s.show_ebooks ?? false,
+          show_recommendations: s.show_recommendations ?? false,
         });
         setLandingCounts({
-          ebooks: Math.max(0, Number((s as any).landing_ebooks_count ?? 4)),
-          recommendations: Math.max(0, Number((s as any).landing_recommendations_count ?? 3)),
+          ebooks: Math.max(0, Number(s.landing_ebooks_count ?? 4)),
+          recommendations: Math.max(0, Number(s.landing_recommendations_count ?? 3)),
         });
         Promise.all([
-          (supabase.rpc as any)("get_payment_mode"),
-          (supabase as any)
+          supabase.rpc("get_payment_mode"),
+          supabase
             .from("library_books")
             .select("id, title, description, price, cover_path, buy_url, buy_url_test, buy_url_live, is_pack")
             .eq("published", true)
             .eq("is_folder", false)
             .order("sort_order", { ascending: true }),
-        ]).then(([modeRes, { data }]: any) => {
+        ]).then(([modeRes, { data }]) => {
           const live = modeRes?.data === "live";
           setEbooks(
-            (data || []).map((b: any) => ({
+            (data || []).map((b) => ({
               id: b.id,
               title: b.title,
               description: b.description || "",
@@ -128,15 +129,15 @@ const Index = () => {
             })),
           );
         });
-        setRecommendations(Array.isArray((s as any).recommendations) ? (s as any).recommendations : []);
-        if ((s as any).show_blog ?? true) {
+        setRecommendations(parseRecommendations(s.recommendations));
+        if (s.show_blog ?? true) {
           supabase
             .from("blog_posts")
             .select("slug, title, excerpt, cover_url, published_at")
             .eq("published", true)
             .order("published_at", { ascending: false })
             .limit(3)
-            .then(({ data }) => { if (data) setLatestPosts(data as any); });
+            .then(({ data }) => { if (data) setLatestPosts(data); });
         }
       }
       const row = Array.isArray(statsRes.data) ? statsRes.data[0] : statsRes.data;
@@ -148,7 +149,7 @@ const Index = () => {
       });
     };
     // Deferimos a idle: no compite con el primer paint.
-    const w = window as any;
+    const w = window;
     if (typeof w.requestIdleCallback === "function") {
       const id = w.requestIdleCallback(() => { run(); }, { timeout: 2000 });
       return () => w.cancelIdleCallback?.(id);

@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -7,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const log = (step: string, details?: any) => {
+const log = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
@@ -59,9 +60,9 @@ serve(async (req) => {
       .single();
 
     const paymentMode = (settings?.payment_mode || "test") as "test" | "live";
-    const s: any = settings || {};
+    const s: Record<string, unknown> = settings || {};
     const linkKey = `payment_link_${plan}_${paymentMode}`;
-    const PAYMENT_LINK: string = s[linkKey] || "";
+    const PAYMENT_LINK = typeof s[linkKey] === "string" ? s[linkKey] : "";
     log("Payment link lookup", { plan, paymentMode, hasLink: Boolean(PAYMENT_LINK) });
 
     if (!PAYMENT_LINK) {
@@ -87,8 +88,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    log("ERROR", { message: error.message, stack: error.stack });
-    return new Response(JSON.stringify({ error: error.message }), {
+    log("ERROR", { message: errorMessage(error), stack: error instanceof Error ? error.stack : undefined });
+    return new Response(JSON.stringify({ error: errorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

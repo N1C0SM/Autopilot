@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/runtimeValues";
 import { useState, useEffect, useRef } from "react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,7 +48,8 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
   const updatePrivacy = async (key: keyof typeof privacy, value: boolean) => {
     if (!user) return;
     setPrivacy((p) => ({ ...p, [key]: value }));
-    const { error } = await supabase.from("profiles").update({ [key]: value } as any).eq("user_id", user.id);
+    const changes: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = { [key]: value };
+    const { error } = await supabase.from("profiles").update(changes).eq("user_id", user.id);
     if (error) {
       setPrivacy((p) => ({ ...p, [key]: !value }));
       toast.error("No se pudo guardar la privacidad");
@@ -95,7 +97,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
         setName(profile.name || "");
         setEmail(profile.email || "");
         setAvatarUrl(profile.avatar_url || "");
-        setPrivacy({ name_public: !!(profile as any).name_public, avatar_public: !!(profile as any).avatar_public, progress_public: !!(profile as any).progress_public });
+        setPrivacy({ name_public: !!profile.name_public, avatar_public: !!profile.avatar_public, progress_public: !!profile.progress_public });
         setSubscriptionStatus(profile.subscription_status || "inactive");
         setConsumerPlan(getConsumerPlan(profile));
         setSubscriptionEnd(profile.subscription_end);
@@ -118,7 +120,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
       setLoading(false);
 
       // Fetch current plan (monthly/yearly) from check-subscription + yearly price
-      (supabase.rpc as any)("get_public_settings").then(({ data }: any) => {
+      supabase.rpc("get_public_settings").then(({ data }) => {
         const row = Array.isArray(data) ? data[0] : data;
         if (row?.yearly_price_eur) setYearlyPriceEur(row.yearly_price_eur);
       });
@@ -128,11 +130,11 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
 
       // Fetch Google Calendar connection status
       supabase
-        .from("google_calendar_connections" as any)
+        .from("google_calendar_connections")
         .select("last_sync_at")
         .eq("user_id", user.id)
         .maybeSingle()
-        .then(({ data }: any) => {
+        .then(({ data }) => {
           setGcalConnected(!!data);
           setGcalLastSync(data?.last_sync_at || null);
         });
@@ -306,8 +308,8 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
       link.click();
       link.remove();
       toast.success("Tus datos se han descargado");
-    } catch (e: any) {
-      toast.error(e?.message || "No se pudieron exportar tus datos");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "No se pudieron exportar tus datos");
     } finally {
       setExporting(false);
     }

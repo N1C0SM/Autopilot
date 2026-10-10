@@ -1,3 +1,5 @@
+import { getSportSchedules, getCustomActivities } from "@/lib/availability";
+import { jsonObject, jsonString } from "@/lib/runtimeValues";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Chat from "@/components/Chat";
@@ -142,7 +144,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       const [{ data: onb }, { data: roleData }, { data: trainerRoleData }, { data: tp }, { data: np }] = await Promise.all([
         supabase.from("onboarding").select("*").eq("user_id", profile.user_id).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "admin").maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "trainer" as any).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", profile.user_id).eq("role", "trainer").maybeSingle(),
         supabase.from("training_plan").select("workouts_json").eq("user_id", profile.user_id).maybeSingle(),
       supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", profile.user_id).maybeSingle(),
       ]);
@@ -158,14 +160,14 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       }
 
       if (np?.macros_json) {
-        const m = np.macros_json as any;
+        const m = jsonObject(np.macros_json);
         const cargados = { protein: m.protein?.toString() || "", carbs: m.carbs?.toString() || "", fats: m.fats?.toString() || "" };
         setMacros(cargados);
       }
       if (np?.meals_json) {
-        const meals = np.meals_json as any[];
+        const meals = np.meals_json;
         if (Array.isArray(meals)) {
-          setMealsText(meals.map((m: any) => `${m.name}: ${m.description}`).join("\n"));
+          setMealsText(meals.map(jsonObject).map(m => `${jsonString(m.name)}: ${jsonString(m.description)}`).join("\n"));
         }
       }
       setDataLoading(false);
@@ -203,18 +205,18 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     if (restricted) return;
     (async () => {
       const [{ data: roles }, { data: assignment }] = await Promise.all([
-        supabase.from("user_roles").select("user_id").eq("role", "trainer" as any),
+        supabase.from("user_roles").select("user_id").eq("role", "trainer"),
         supabase.from("trainer_assignments").select("trainer_id").eq("user_id", profile.user_id).maybeSingle(),
       ]);
-      const trainerIds = (roles || []).map((r: any) => r.user_id);
+      const trainerIds = (roles || []).map((r) => r.user_id);
       if (trainerIds.length > 0) {
         const { data: profs } = await supabase
           .from("profiles")
           .select("user_id, email")
           .in("user_id", trainerIds);
-        setTrainers(((profs || []) as any).map((p: any) => ({ user_id: p.user_id, email: p.email })));
+        setTrainers((profs || []).map((p) => ({ user_id: p.user_id, email: p.email })));
       }
-      setAssignedTrainerId((assignment as any)?.trainer_id || "");
+      setAssignedTrainerId(assignment?.trainer_id || "");
     })();
   }, [profile.user_id, restricted]);
 
@@ -247,7 +249,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       if (!error) { setIsUserAdmin(false); toast.success("Rol de admin eliminado"); }
       else toast.error("Error al cambiar rol");
     } else {
-      const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "admin" as any });
+      const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "admin" });
       if (!error) { setIsUserAdmin(true); toast.success("Rol de admin asignado"); }
       else toast.error("Error al cambiar rol");
     }
@@ -257,11 +259,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const toggleTrainerRole = async () => {
     setRoleLoading(true);
     if (isUserTrainer) {
-      const { error } = await supabase.from("user_roles").delete().eq("user_id", profile.user_id).eq("role", "trainer" as any);
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", profile.user_id).eq("role", "trainer");
       if (!error) { setIsUserTrainer(false); toast.success("Rol de entrenador eliminado"); }
       else toast.error("Error al cambiar rol de entrenador");
     } else {
-      const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "trainer" as any });
+      const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "trainer" });
       if (!error) { setIsUserTrainer(true); toast.success("Rol de entrenador asignado"); }
       else toast.error("Error al cambiar rol de entrenador");
     }
@@ -363,13 +365,13 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       if (Array.isArray(plans)) setDayPlans(plans);
     }
     if (np?.macros_json) {
-      const m = np.macros_json as any;
+      const m = jsonObject(np.macros_json);
       setMacros({ protein: m.protein?.toString() || "", carbs: m.carbs?.toString() || "", fats: m.fats?.toString() || "" });
     }
     if (np?.meals_json) {
-      const meals = np.meals_json as any[];
+      const meals = np.meals_json;
       if (Array.isArray(meals)) {
-        setMealsText(meals.map((m: any) => `${m.name}: ${m.description}`).join("\n"));
+        setMealsText(meals.map(jsonObject).map(m => `${jsonString(m.name)}: ${jsonString(m.description)}`).join("\n"));
       }
     }
 
@@ -416,7 +418,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   }
 
   const hasAccess = profile.payment_status === "paid";
-  const currentTier = ((profile as any).subscription_tier as string) || undefined;
+  const currentTier = (profile.subscription_tier as string) || undefined;
 
   return (
     <div className="min-w-0">
@@ -561,7 +563,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       aria-pressed={active}
                       disabled={tierSaving || active}
                       onClick={async () => {
-                        const updates: any = opt.value === "free"
+                        const updates: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = opt.value === "free"
                           ? { payment_status: "unpaid", subscription_status: "inactive" }
                           : {
                               subscription_tier: opt.value,
@@ -600,11 +602,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
             </div>
           )}
 
-          {(profile as any).subscription_tier === "transform" && (
+          {profile.subscription_tier === "transform" && (
             <TransformCyclePanel
               userId={profile.user_id}
-              cycleStartDate={((profile as any).cycle_start_date as string) || null}
-              renewalDecision={((profile as any).renewal_decision as string) || null}
+              cycleStartDate={(profile.cycle_start_date as string) || null}
+              renewalDecision={(profile.renewal_decision as string) || null}
               disabled={restricted}
             />
           )}
@@ -629,9 +631,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 )}
               </div>
               {(() => {
-                const av = onboarding.availability as any;
-                const sportSchedules: Record<string, { dow: number; start: string; end: string }> = av?.sport_schedules || {};
-                const customActivities: Array<{ title: string; dow: number; start: string; end: string }> = av?.custom_activities || [];
+                const av = jsonObject(onboarding.availability);
+                const sportSchedules = getSportSchedules(onboarding.availability);
+                const customActivities = getCustomActivities(onboarding.availability);
                 const dowNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
                 const formatSchedule = (s: { dow: number; start: string; end: string }) =>
                   `${dowNames[s.dow] ?? "?"} ${s.start}–${s.end}`;
@@ -652,10 +654,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   { label: "Intensidad", value: onboarding.intensity_level ? `${onboarding.intensity_level}/10` : null },
                   { label: "Disponibilidad", value: summary },
                   { label: "Días elegidos", value: Array.isArray(av?.training_days) ? av.training_days.map((d: number) => dowNames[d]).join(", ") : null },
-                  { label: "Estructura", value: ({ full_body: "Full Body", torso_pierna: "Torso / Pierna", ppl: "Empuje / Tirón / Pierna", coach: "Elige el entrenador" } as Record<string, string>)[av?.structure] || null },
-                  { label: "Revisión preferida", value: av?.checkin_time ? `${dowNames[av.checkin_dow] ?? "?"} ${av.checkin_time}` : null },
-                  { label: "Estilo de coach", value: ({ direct: "Directo y exigente", flexible: "Flexible y realista", technical: "Técnico y analítico" } as Record<string, string>)[av?.coach_style] || null },
-                  { label: "Cocina", value: ({ quick: "Rápido / sin tiempo", normal: "Algo de cocina", loves: "Le gusta cocinar" } as Record<string, string>)[av?.cooking] || null },
+                  { label: "Estructura", value: ({ full_body: "Full Body", torso_pierna: "Torso / Pierna", ppl: "Empuje / Tirón / Pierna", coach: "Elige el entrenador" } as Record<string, string>)[jsonString(av.structure)] || null },
+                  { label: "Revisión preferida", value: av?.checkin_time ? `${dowNames[typeof av.checkin_dow === "number" ? av.checkin_dow : -1] ?? "?"} ${av.checkin_time}` : null },
+                  { label: "Estilo de coach", value: ({ direct: "Directo y exigente", flexible: "Flexible y realista", technical: "Técnico y analítico" } as Record<string, string>)[jsonString(av.coach_style)] || null },
+                  { label: "Cocina", value: ({ quick: "Rápido / sin tiempo", normal: "Algo de cocina", loves: "Le gusta cocinar" } as Record<string, string>)[jsonString(av.cooking)] || null },
                   { label: "Modalidad", value: av?.training_mode === "pareja" ? `En pareja · ${av.partner_email || ""}` : av?.training_mode ? "Individual" : null },
                 ].map((item) => (
                   <div key={item.label} className="bg-secondary/30 rounded-lg p-3">
@@ -944,7 +946,7 @@ interface StaffDetailProps {
 }
 
 function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, setDeleting }: StaffDetailProps) {
-  const [trainerProfile, setTrainerProfile] = useState<any>(null);
+  const [trainerProfile, setTrainerProfile] = useState<import("@/integrations/supabase/types").TablesInsert<"trainer_profiles"> | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [assigned, setAssigned] = useState<{ user_id: string; email: string; plan_status: string; payment_status: string }[]>([]);
@@ -958,20 +960,20 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
       .from("trainer_assignments")
       .select("user_id")
       .eq("trainer_id", profile.user_id);
-    const ids = (assignments || []).map((a: any) => a.user_id);
+    const ids = (assignments || []).map((a) => a.user_id);
     if (ids.length === 0) { setAssigned([]); return; }
     const { data: profs } = await supabase
       .from("profiles")
       .select("user_id, email, plan_status, payment_status")
       .in("user_id", ids);
-    setAssigned((profs as any) || []);
+    setAssigned(profs || []);
   };
 
   const handleAssign = async () => {
     const email = assignEmail.trim();
     if (!email) return;
     setAssigning(true);
-    const { error } = await (supabase.rpc as any)("admin_assign_user_to_trainer", {
+    const { error } = await supabase.rpc("admin_assign_user_to_trainer", {
       _trainer_id: profile.user_id,
       _email: email,
     });
@@ -984,7 +986,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
 
   const handleUnassign = async (userId: string) => {
     if (!confirm("¿Quitar este usuario del entrenador?")) return;
-    const { error } = await (supabase.rpc as any)("admin_unassign_user_from_trainer", {
+    const { error } = await supabase.rpc("admin_unassign_user_from_trainer", {
       _trainer_id: profile.user_id,
       _user_id: userId,
     });
@@ -996,14 +998,11 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
   useEffect(() => {
     (async () => {
       setLoading(true);
-      let results: any[] = [];
       if (kind === "trainer") {
-        results = await Promise.all([
-          supabase.from("trainer_profiles").select("*").eq("user_id", profile.user_id).maybeSingle() as any,
-          supabase.from("trainer_assignments").select("user_id").eq("trainer_id", profile.user_id) as any,
+        const results = await Promise.all([
+          supabase.from("trainer_profiles").select("*").eq("user_id", profile.user_id).maybeSingle(),
+          supabase.from("trainer_assignments").select("user_id").eq("trainer_id", profile.user_id),
         ]);
-      }
-      if (kind === "trainer") {
         const tp = results[0]?.data || {
           user_id: profile.user_id,
           display_name: "",
@@ -1016,13 +1015,13 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
         };
         const assignments = results[1]?.data || [];
         setTrainerProfile(tp);
-        const ids = assignments.map((a: any) => a.user_id);
+        const ids = assignments.map((a) => a.user_id);
         if (ids.length > 0) {
           const { data: profs } = await supabase
             .from("profiles")
             .select("user_id, email, plan_status, payment_status")
             .in("user_id", ids);
-          setAssigned((profs as any) || []);
+          setAssigned(profs || []);
         }
       }
       setLoading(false);

@@ -34,7 +34,7 @@ serve(async (req) => {
     // Prefer the customer bound to the account. Do not select an arbitrary matching email.
     const customers = profile.stripe_customer_id
       ? [profile.stripe_customer_id]
-      : (await stripe.customers.list({ email: user.email, limit: 100 })).data.map(c => c.id);
+      : (await stripe.customers.list({ email: user.email, limit: 100 })).data.map((c: { id: string }) => c.id);
     let chosen: { sub: Stripe.Subscription; tier: string; customerId: string } | null = null;
     for (const customerId of customers) {
       for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
@@ -46,7 +46,7 @@ serve(async (req) => {
     }
     if (chosen) {
       const { sub, tier, customerId } = chosen;
-      const end = (sub as any).current_period_end ?? sub.items.data[0]?.current_period_end;
+      const end = ("current_period_end" in sub && typeof sub.current_period_end === "number" ? sub.current_period_end : undefined) ?? sub.items.data[0]?.current_period_end;
       const subscriptionEnd = end ? new Date(end * 1000).toISOString() : null;
       const updates: Record<string, unknown> = {
         payment_status: "paid", subscription_tier: tier, subscription_status: sub.status,
