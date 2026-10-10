@@ -1041,7 +1041,7 @@ const WorkoutTracker = ({ userId, dayPlans, autoStart = false, onAutoStartConsum
               <div className="mb-3 space-y-3">
                 <div className="relative flex aspect-[4/3] max-h-[34dvh] w-full items-center justify-center overflow-hidden rounded-3xl bg-card">
                   {img ? (
-                    <img src={img} alt={active.name} className="h-full w-full object-contain" />
+                    <img src={img} alt={active.name} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
                   ) : (
                     <p className="px-6 text-center text-sm text-muted-foreground">{swaps[active.name] || active.name}</p>
                   )}

@@ -39,6 +39,20 @@ function cameraAngle(name: string, group: string): string {
 
 type Job = { id: string; status: string; progress?: number; error?: { code: string; message: string } };
 
+/** PNG/JPEG -> WebP (calidad 82, máx. 1280 px de ancho). null si falla. */
+async function toWebp(bytes: Uint8Array): Promise<Uint8Array | null> {
+  try {
+    const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
+    // deno-lint-ignore no-explicit-any
+    const img: any = await Image.decode(bytes);
+    if (img.width > 1280) img.resize(1280, Image.RESIZE_AUTO);
+    return await img.encodeWEBP(82);
+  } catch (e) {
+    console.error(`webp failed: ${(e as Error).message}`);
+    return null;
+  }
+}
+
 /** Ruta del objeto dentro del bucket público site-assets a partir de su URL pública. */
 function siteAssetPath(url: unknown, prefix: string): string | null {
   if (typeof url !== "string" || !url) return null;
@@ -67,7 +81,7 @@ Deno.serve(async (req) => {
       action: rawAction,
       exclude: rawExclude,
     } = await req.json().catch(() => ({}) as any);
-    if (rawAction !== "create" && rawAction !== "check" && rawAction !== "image" && rawAction !== "batch") {
+    if (rawAction !== "create" && rawAction !== "check" && rawAction !== "image" && rawAction !== "batch" && rawAction !== "webp") {
       return json({ error: "Acción no válida" }, 400);
     }
 
@@ -125,6 +139,24 @@ Deno.serve(async (req) => {
       }, missing ? 503 : 500);
     }
     if (!exercise) return json({ error: "Ejercicio no encontrado" }, 404);
+
+    // Convierte la foto actual (PNG) a WebP ultraligero sin gastar IA.
+    if (action === "webp") {
+      const src = String(exercise.image_url || "");
+      if (!src || /\.webp(\?|$)/i.test(src)) return json({ skipped: true });
+      const dl = await fetch(src);
+      if (!dl.ok) return json({ error: "No se pudo descargar la imagen" }, 502);
+      const webp = await toWebp(new Uint8Array(await dl.arrayBuffer()));
+      if (!webp) return json({ error: "No se pudo convertir a WebP" }, 500);
+      const path = `exercise-images/${exerciseId}-${Date.now()}.webp`;
+      const { error: upErr } = await svc.storage.from("site-assets").upload(path, webp, { contentType: "image/webp", upsert: true, cacheControl: "31536000" });
+      if (upErr) return json({ error: "No se pudo guardar la imagen" }, 500);
+      const { data: pub } = svc.storage.from("site-assets").getPublicUrl(path);
+      await svc.from("exercises").update({ image_url: pub.publicUrl }).eq("id", exerciseId);
+      const old = siteAssetPath(src, "exercise-images/");
+      if (old) await svc.storage.from("site-assets").remove([old]);
+      return json({ ok: true, url: pub.publicUrl, bytes: webp.length });
+    }
 
     // Proveedor según Ajustes: tu clave de OpenAI, Lovable AI o automático.
     const cfg = await getAiConfig();
@@ -184,8 +216,9 @@ Deno.serve(async (req) => {
         return json({ error: "La IA no devolvió ninguna imagen" }, 502);
       }
       const previousImagePath = siteAssetPath(exercise.image_url, "exercise-images/");
-      const path = `exercise-images/${exerciseId}-${Date.now()}.png`;
-      const { error: upErr } = await svc.storage.from("site-assets").upload(path, bytes, { contentType: "image/png", upsert: true });
+      const webp = await toWebp(bytes);
+      const path = `exercise-images/${exerciseId}-${Date.now()}.${webp ? "webp" : "png"}`;
+      const { error: upErr } = await svc.storage.from("site-assets").upload(path, webp ?? bytes, { contentType: webp ? "image/webp" : "image/png", upsert: true, cacheControl: "31536000" });
       if (upErr) {
         console.error(`storage upload failed: ${upErr.message}`);
         await svc.from("exercises").update({ media_error: "No se pudo guardar la imagen" }).eq("id", exerciseId);
