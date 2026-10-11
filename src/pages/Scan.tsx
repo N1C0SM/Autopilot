@@ -948,6 +948,18 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
       });
       if (insErr) console.warn("scan_history insert", insErr);
 
+      // La foto frontal del scan también queda en «Físico» (diario de progreso).
+      for (const [ph, label] of [[front, "Scan · frente"], [back, "Scan · espalda"]] as const) {
+        if (!ph) continue;
+        const { error: phErr } = await supabase.from("progress_photos").insert({
+          user_id: user.id,
+          photo_url: ph.path,
+          note: label,
+          taken_at: toLocalDateString(),
+        });
+        if (phErr) console.warn("progress_photos insert", phErr);
+      }
+
       const firstName = (userName || user.email?.split("@")[0] || "atleta").split(" ")[0];
       const cardImageUrl = await uploadScanCard();
       await supabase.functions.invoke("send-transactional-email", {
