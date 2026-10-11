@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 const Index = lazy(() => import("./pages/Index"));
+const PublicInfo = lazy(() => import("./pages/PublicInfo"));
 const Signup = lazy(() => import("./pages/Signup"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const Login = lazy(() => import("./pages/Login"));
@@ -96,6 +97,10 @@ const App = () => (
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<RootRoute />} />
+            <Route path="/planes" element={<PublicInfo page="plans" />} />
+            <Route path="/como-funciona" element={<PublicInfo page="how" />} />
+            <Route path="/equipo" element={<PublicInfo page="team" />} />
+            <Route path="/preguntas-frecuentes" element={<PublicInfo page="faq" />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/para-entrenadores" element={<ForTrainers />} />
             <Route path="/invitacion/:token" element={<AcceptInvitation />} />
