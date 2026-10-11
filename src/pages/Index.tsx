@@ -34,7 +34,7 @@ export default function Index() {
     track("plan_select", { plan, source: "landing" });
     navigate(plan === "free" ? "/onboarding" : `/signup?plan=${plan}`);
   };
-  if (destination && destination !== "/#demo") {
+  if (destination) {
     const [pathname, anchor] = destination.split("#");
     return <Navigate replace to={{ pathname, search, hash: anchor ? `#${anchor}` : "" }} />;
   }
@@ -44,7 +44,7 @@ export default function Index() {
 <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Service",
-          serviceType: "Entrenamiento y nutrición online con IA y, en el plan Coach, entrenador humano",
+          serviceType: "Entrenamiento y nutrición online con IA y, en el plan Coach, atención personal del fundador",
           provider: { "@type": "Organization", name: "Autopilot", url: "https://autopilotplan.com/" },
           areaServed: "ES",
           offers: [
@@ -58,7 +58,7 @@ export default function Index() {
           "@type": "Organization",
           name: "Autopilot",
           url: "https://autopilotplan.com/",
-          description: "Entrenamiento y nutrición que se adaptan a tu progreso, con análisis inicial por IA y entrenador real en el plan Coach, para toda España.",
+          description: "Entrenamiento y nutrición que se adaptan a tu progreso, con análisis corporal por IA y atención personal del fundador en el plan Coach, para toda España.",
           areaServed: { "@type": "Country", name: "España" },
           address: { "@type": "PostalAddress", addressCountry: "ES" },
           availableLanguage: ["es"],
@@ -135,7 +135,7 @@ export default function Index() {
         <div>
           <h2 id="fundador-titulo" className="font-display text-3xl font-bold sm:text-4xl">Quién está detrás</h2>
           <p className="mt-4 leading-relaxed text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo, y en el plan Coach también soy yo quien revisa tu plan y te responde por chat. Quería una app que te diga qué hacer hoy sin complicarte.</p>
-          <p className="mt-3 text-sm text-muted-foreground">Es un proyecto de una persona. Por eso el número de clientes de Coach es limitado y las respuestas no son inmediatas.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Es un proyecto de una persona. Por eso las respuestas por chat no son inmediatas ni 24/7.</p>
         </div>
         <div>
           <h2 className="font-display text-2xl font-bold">Dudas frecuentes</h2>
