@@ -1086,7 +1086,6 @@ const Scan = () => {
   const embedded = !!user && isMobile;
   const scanBody = (
     <>
-      <div className="flex-1 min-w-0 relative">
       <Helmet>
         <title>{routeUserId ? "Mi progreso · AI Scan" : "AI Body Scan · Autopilot"}</title>
         <meta name="description" content="Sube una foto y recibe un análisis IA de tu físico con recomendaciones personalizadas." />
