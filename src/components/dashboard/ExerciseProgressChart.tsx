@@ -1,4 +1,4 @@
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { motion } from "framer-motion";
 import type { ExerciseHistoryEntry } from "@/lib/workoutMetrics";
 
@@ -13,10 +13,12 @@ interface Props {
 }
 
 const METRICS: [Metric, string][] = [
-  ["bestEstimated1RmKg", "Fuerza"],
+  ["bestEstimated1RmKg", "1RM"],
   ["volumeKg", "Volumen"],
   ["reps", "Reps"],
 ];
+
+const round = (v: number) => Math.round(v * 10) / 10;
 
 const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, compact = false }: Props) => {
   const valueOf = (entry: ExerciseHistoryEntry | undefined) => {
@@ -25,27 +27,34 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
     if (metric === "reps") return entry.reps;
     return entry.bestEstimated1RmKg;
   };
-  const chartData = history.slice(-12).map((entry) => ({ ...entry, metricValue: valueOf(entry) }));
+  const chartData = history.slice(-16).map((entry) => ({ ...entry, metricValue: valueOf(entry) }));
+  const values = chartData.map((d) => d.metricValue).filter((v): v is number => v !== null);
   const latest = valueOf(history[history.length - 1]);
-  const previous = valueOf(history[history.length - 2]);
-  const change = latest !== null && previous !== null ? latest - previous : null;
+  const first = values[0] ?? null;
+  const best = values.length ? Math.max(...values) : null;
+  const totalChange = latest !== null && first !== null && first > 0 ? ((latest - first) / first) * 100 : null;
   const unit = metric === "reps" ? "reps" : "kg";
-  const round = (v: number) => Math.round(v * 10) / 10;
-  const gid = `grad-${metric}`;
+  const gid = `area-${metric}`;
+  const min = values.length ? Math.min(...values) : 0;
+  const pad = best !== null ? Math.max(1, (best - min) * 0.15) : 1;
 
   return (
     <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col"}>
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-4xl font-bold leading-none tabular-nums tracking-tight sm:text-5xl">
+          <p className="font-display text-3xl font-semibold leading-none tabular-nums tracking-tight sm:text-4xl">
             {latest !== null ? round(latest) : "—"}
-            <span className="ml-1 text-base font-semibold text-muted-foreground">{unit}</span>
+            <span className="ml-1 text-sm font-medium text-muted-foreground">{unit}</span>
           </p>
-          {change !== null && (
-            <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${change >= 0 ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"}`}>
-              {change > 0 ? "+" : ""}{round(change)} {unit} vs. anterior
-            </span>
-          )}
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] tabular-nums text-muted-foreground">
+            {totalChange !== null && values.length > 1 && (
+              <span className={totalChange >= 0 ? "font-semibold text-primary" : "font-semibold"}>
+                {totalChange > 0 ? "+" : ""}{round(totalChange)}% desde el inicio
+              </span>
+            )}
+            {best !== null && <span>Mejor: {round(best)} {unit}</span>}
+            <span>{history.length} {history.length === 1 ? "sesión" : "sesiones"}</span>
+          </div>
         </div>
         <div role="tablist" aria-label="Métrica" className="flex shrink-0 rounded-full bg-secondary/60 p-0.5">
           {METRICS.map(([k, label]) => (
@@ -63,34 +72,48 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
         </div>
       </div>
 
-      <div
-        className={`mt-4 w-full ${compact ? "min-h-[220px] flex-1" : "h-64"}`}
-        role="img"
-        aria-label={`Gráfica de ${exerciseName}`}
-      >
+      <div className={`mt-4 w-full ${compact ? "min-h-[200px] flex-1" : "h-64"}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 6, left: 6, bottom: 0 }} barCategoryGap="22%">
+          <AreaChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={1} />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="sessionLabel" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-            <YAxis hide domain={[0, "dataMax"]} />
+            <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+            <XAxis dataKey="sessionLabel" axisLine={false} tickLine={false} minTickGap={16} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+            <YAxis
+              orientation="right"
+              width={36}
+              axisLine={false}
+              tickLine={false}
+              tickCount={4}
+              domain={[Math.max(0, Math.floor(min - pad)), Math.ceil((best ?? 0) + pad)]}
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+            />
+            {best !== null && values.length > 1 && (
+              <ReferenceLine y={best} stroke="hsl(var(--primary))" strokeOpacity={0.35} strokeDasharray="3 4" />
+            )}
             <Tooltip
-              cursor={{ fill: "hsl(var(--primary) / .08)" }}
-              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12 }}
+              cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.4 }}
+              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
               labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-              formatter={(value: number) => [`${round(value)} ${unit}`, ""]}
+              formatter={(value: number) => [`${round(value)} ${unit}`, METRICS.find(([k]) => k === metric)?.[1] ?? ""]}
               labelFormatter={(_, payload) => payload?.[0]?.payload?.date || ""}
             />
-            <Bar dataKey="metricValue" radius={[10, 10, 4, 4]} maxBarSize={chartData.length <= 3 ? 120 : 56} isAnimationActive={false}>
-              {chartData.map((_, i) => (
-                <Cell key={i} fill={`url(#${gid})`} fillOpacity={i === chartData.length - 1 ? 1 : 0.4} />
-              ))}
-            </Bar>
-          </BarChart>
+            <Area
+              type="monotone"
+              dataKey="metricValue"
+              connectNulls
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              fill={`url(#${gid})`}
+              dot={{ r: 2.5, fill: "hsl(var(--background))", stroke: "hsl(var(--primary))", strokeWidth: 1.5 }}
+              activeDot={{ r: 4, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+              isAnimationActive={false}
+            />
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>
