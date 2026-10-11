@@ -17,7 +17,15 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
   const plans = usePlanCatalog();
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-stretch max-w-6xl mx-auto">
+      <div
+        className={`grid gap-5 md:gap-6 items-stretch mx-auto ${
+          plans.length <= 1
+            ? "grid-cols-1 max-w-md"
+            : plans.length === 2
+              ? "md:grid-cols-2 max-w-4xl"
+              : "md:grid-cols-3 max-w-6xl"
+        }`}
+      >
         {plans.map((t) => {
           const key = t.key;
           const isRec = key === recommended;
