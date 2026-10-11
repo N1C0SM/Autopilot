@@ -13,7 +13,7 @@ const ProductPreview = lazy(() => import("@/components/ProductPreview"));
 const PricingTiers = lazy(() => import("@/components/PricingTiers"));
 
 const legacySections: Record<string, string> = {
-  "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/#demo",
+  "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/como-funciona#demo",
   "#como-funciona": "/como-funciona", "#equipo": "/equipo", "#faq": "/preguntas-frecuentes",
 };
 

@@ -21,18 +21,20 @@ describe("short public home", () => {
   it("takes the clear primary action to the routine configurator", () => {
     open();
     const main = screen.getByRole("main");
-    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Crea tu rutina.");
-    fireEvent.click(within(main).getByRole("link", { name: /Crear mi rutina gratis/ }));
+    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Tu entrenamiento.");
+    fireEvent.click(within(main).getAllByRole("link", { name: /Crear mi rutina gratis/ })[0]);
     expect(screen.getByTestId("destination")).toHaveTextContent("/onboarding");
   });
 
-  it("offers direct pages instead of embedding every section on the home", () => {
+  it("shows demo, real prices and the four key questions on the home", async () => {
     open();
     const main = screen.getByRole("main");
-    expect(main.querySelectorAll("section")).toHaveLength(2);
-    expect(within(main).getByRole("link", { name: "Ver planes y precios" })).toHaveAttribute("href", "/planes");
-    expect(within(main).getByRole("link", { name: "Ver la demo" })).toHaveAttribute("href", "/como-funciona#demo");
-    expect(main.querySelector("#pricing")).toBeNull();
+    expect(within(main).getByRole("link", { name: "Probar la demo" })).toHaveAttribute("href", "#demo");
+    expect(main.querySelector("#demo")).not.toBeNull();
+    expect(await within(main).findByText("€29")).toBeInTheDocument();
+    expect(within(main).getByText("€49")).toBeInTheDocument();
+    expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
+    expect(within(main).getAllByRole("button", { name: /\?$/ }).length).toBeGreaterThanOrEqual(4);
   });
 
   it("opens mobile navigation and reaches the questions page", () => {
