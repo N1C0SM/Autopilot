@@ -78,7 +78,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           onChange={(event) => setSelectedExercise(event.target.value)}
           className="-ml-1 w-full min-w-0 truncate bg-transparent font-display text-base font-bold focus:outline-none"
         >
-          {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise}</option>)}
+          {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise} · {historyByExercise[exercise].length} {historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}</option>)}
         </select>
       )}
 
