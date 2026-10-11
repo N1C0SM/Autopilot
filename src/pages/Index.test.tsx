@@ -14,8 +14,8 @@ function open(path = "/") {
     <Route path="/" element={<Index />} /><Route path="*" element={<Destination />} />
   </Routes></MemoryRouter></HelmetProvider>);
 }
-beforeEach(() => { vi.spyOn(window, "scrollTo").mockImplementation(() => {}); });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+beforeEach(() => { vi.stubGlobal("IntersectionObserver", class { observe() {} unobserve() {} disconnect() {} takeRecords() { return []; } }); vi.spyOn(window, "scrollTo").mockImplementation(() => {}); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("short public home", () => {
   it("takes the clear primary action to the routine configurator", () => {
