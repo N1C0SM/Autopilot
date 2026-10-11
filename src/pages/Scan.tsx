@@ -1144,7 +1144,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.4 }}
             >
-              {user && routeUserId && <ScanProgressPanel userId={user.id} />}
+              {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} />}
               <div className="text-center max-w-3xl mx-auto mb-8">
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-3">
                   Análisis físico con IA
@@ -1687,8 +1687,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              {user && routeUserId && <ScanProgressPanel userId={user.id} compact />}
-              {user && routeUserId && (
+              {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} compact />}
+              {user && routeUserId && !inline && (
                 <BeforeAfterCompare
                   userId={user.id}
                   currentPhoto={currentImg}
