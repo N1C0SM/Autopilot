@@ -35,7 +35,7 @@ const Achievements = ({ userId }: Props) => {
       // Calculate max streak
       let maxStreak = 0;
       if (completions && completions.length > 0) {
-        const uniqueDates = [...new Set(completions.map((c: any) => c.completed_at))].sort().reverse();
+        const uniqueDates = [...new Set(completions.map((c) => c.completed_at))].sort().reverse();
         let currentStreak = 1;
         for (let i = 1; i < uniqueDates.length; i++) {
           const prev = new Date(uniqueDates[i - 1]);

@@ -59,7 +59,7 @@ const Login = () => {
       if (authedUser) {
         const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
           supabase.rpc("has_role", { _user_id: authedUser.id, _role: "admin" }),
-          supabase.rpc("has_role", { _user_id: authedUser.id, _role: "trainer" as any }),
+          supabase.rpc("has_role", { _user_id: authedUser.id, _role: "trainer" }),
         ]);
         if (isAdmin) navigate("/admin");
         else if (isTrainer) navigate("/trainer");

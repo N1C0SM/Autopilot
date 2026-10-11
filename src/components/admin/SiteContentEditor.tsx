@@ -1,3 +1,4 @@
+import { errorMessage, jsonObject, jsonString } from "@/lib/runtimeValues";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -89,14 +90,14 @@ const SiteContentEditor = () => {
 
   const loadAiKeys = async () => {
     const { data } = await supabase.from("app_secrets").select("key, value");
-    if (data) setAiKeys(Object.fromEntries(data.map((r: any) => [r.key, r.value])));
+    if (data) setAiKeys(Object.fromEntries(data.map((r) => [r.key, r.value])));
   };
 
   const saveAiKey = async (key: string) => {
     const value = (aiKeys[key] || "").trim();
     if (!value) { toast.error("Pega la clave primero"); return; }
     setSaving(true);
-    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() } as any);
+    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() });
     if (error) toast.error("Error al guardar la clave"); else toast.success("Clave guardada");
     setSaving(false);
   };
@@ -108,7 +109,7 @@ const SiteContentEditor = () => {
 
   const saveAiSetting = async (key: string, value: string, okMsg?: string) => {
     setAiKeys((p) => ({ ...p, [key]: value }));
-    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() } as any);
+    const { error } = await supabase.from("app_secrets").upsert({ key, value, updated_at: new Date().toISOString() });
     if (error) toast.error("No se pudo guardar"); else if (okMsg) toast.success(okMsg);
   };
 
@@ -150,45 +151,45 @@ const SiteContentEditor = () => {
         trainer_name: s.trainer_name || "Nicolás",
         trainer_photo_url: s.trainer_photo_url || "",
         trainer_bio: s.trainer_bio || "",
-        contact_phone: (s as any).contact_phone || "",
+        contact_phone: s.contact_phone || "",
       });
       setHero({
-        hero_video_url: (s as any).hero_video_url || "",
-        hero_video_poster_url: (s as any).hero_video_poster_url || "",
+        hero_video_url: s.hero_video_url || "",
+        hero_video_poster_url: s.hero_video_poster_url || "",
       });
       setStores({
-        app_store_url: (s as any).app_store_url || "",
-        play_store_url: (s as any).play_store_url || "",
+        app_store_url: s.app_store_url || "",
+        play_store_url: s.play_store_url || "",
       });
-      setTransformationSlots(Math.max(0, Number((s as any).transformation_slots ?? 10)));
+      setTransformationSlots(Math.max(0, Number(s.transformation_slots ?? 10)));
       setSections({
-        show_blog: (s as any).show_blog ?? true,
-        show_ebooks: (s as any).show_ebooks ?? false,
-        show_recommendations: (s as any).show_recommendations ?? false,
+        show_blog: s.show_blog ?? true,
+        show_ebooks: s.show_ebooks ?? false,
+        show_recommendations: s.show_recommendations ?? false,
       });
       setLandingCounts({
-        landing_ebooks_count: Math.max(0, Number((s as any).landing_ebooks_count ?? 4)),
-        landing_recommendations_count: Math.max(0, Number((s as any).landing_recommendations_count ?? 3)),
+        landing_ebooks_count: Math.max(0, Number(s.landing_ebooks_count ?? 4)),
+        landing_recommendations_count: Math.max(0, Number(s.landing_recommendations_count ?? 3)),
       });
-      const rawEbooks = Array.isArray((s as any).ebooks) ? (s as any).ebooks : [];
-      setEbooks(rawEbooks.map((e: any) => ({
-        id: e.id || uid(),
-        title: e.title || "",
-        description: e.description || "",
-        cover_url: e.cover_url || "",
-        url: e.url || "",
-        price: e.price || "",
+      const rawEbooks = Array.isArray(s.ebooks) ? s.ebooks : [];
+      setEbooks(rawEbooks.map(jsonObject).map((e) => ({
+        id: jsonString(e.id) || uid(),
+        title: jsonString(e.title) || "",
+        description: jsonString(e.description) || "",
+        cover_url: jsonString(e.cover_url) || "",
+        url: jsonString(e.url) || "",
+        price: jsonString(e.price) || "",
       })));
-      const rawRecs = Array.isArray((s as any).recommendations) ? (s as any).recommendations : [];
-      setRecommendations(rawRecs.map((r: any) => ({
-        id: r.id || uid(),
-        title: r.title || "",
-        description: r.description || "",
-        image_url: r.image_url || "",
-        url: r.url || "",
-        badge: r.badge || "",
+      const rawRecs = Array.isArray(s.recommendations) ? s.recommendations : [];
+      setRecommendations(rawRecs.map(jsonObject).map((r) => ({
+        id: jsonString(r.id) || uid(),
+        title: jsonString(r.title) || "",
+        description: jsonString(r.description) || "",
+        image_url: jsonString(r.image_url) || "",
+        url: jsonString(r.url) || "",
+        badge: jsonString(r.badge) || "",
       })));
-      setGuideEbookUrl(((s as any).guide_ebook_url as string) || "");
+      setGuideEbookUrl((s.guide_ebook_url as string) || "");
     }
     if (t) setTestimonials(t as Testimonial[]);
     setLoading(false);
@@ -197,20 +198,20 @@ const SiteContentEditor = () => {
 
   const saveSectionsToggles = async (next: typeof sections) => {
     setSections(next);
-    const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update(next).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Secciones actualizadas");
   };
 
   const saveLandingCounts = async (next: typeof landingCounts) => {
     setLandingCounts(next);
-    const { error } = await supabase.from("settings").update(next as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update(next).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Cantidades actualizadas");
   };
 
   const rankWithAi = async () => {
     setRanking(true);
     try {
-      const { data: books } = await (supabase as any)
+      const { data: books } = await supabase
         .from("library_books")
         .select("id, title, description, price, is_pack")
         .eq("published", true)
@@ -224,7 +225,7 @@ const SiteContentEditor = () => {
 
       const bookIds: string[] = data.book_ids || [];
       await Promise.all(bookIds.map((id, i) =>
-        (supabase as any).from("library_books").update({ sort_order: i + 1 }).eq("id", id)
+        supabase.from("library_books").update({ sort_order: i + 1 }).eq("id", id)
       ));
 
       const recoIds: string[] = data.recommendation_ids || [];
@@ -234,25 +235,25 @@ const SiteContentEditor = () => {
         const rest = recommendations.filter((r) => !recoIds.includes(r.id));
         const next = [...ordered, ...rest];
         setRecommendations(next);
-        await supabase.from("settings").update({ recommendations: next as any } as any).eq("id", settingsId);
+        await supabase.from("settings").update({ recommendations: next.map(item => ({ ...item })) }).eq("id", settingsId);
       }
       toast.success(data.reason ? `Ordenado: ${data.reason}` : "Orden actualizado con IA");
-    } catch (e: any) {
-      toast.error(e?.message || "No se pudo ordenar con IA");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "No se pudo ordenar con IA");
     }
     setRanking(false);
   };
 
   const saveEbooks = async () => {
     setSaving(true);
-    const { error } = await supabase.from("settings").update({ ebooks: ebooks as any } as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update({ ebooks: ebooks.map(item => ({ ...item })) }).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Ebooks guardados");
     setSaving(false);
   };
 
   const saveRecommendations = async () => {
     setSaving(true);
-    const { error } = await supabase.from("settings").update({ recommendations: recommendations as any } as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update({ recommendations: recommendations.map(item => ({ ...item })) }).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Recomendaciones guardadas");
     setSaving(false);
   };
@@ -265,7 +266,7 @@ const SiteContentEditor = () => {
       setSaving(false);
       return;
     }
-    const { error } = await supabase.from("settings").update({ guide_ebook_url: clean } as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update({ guide_ebook_url: clean }).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Link de la guía actualizado");
     setSaving(false);
   };
@@ -276,7 +277,7 @@ const SiteContentEditor = () => {
     try {
       const url = await uploadImage(file, "ebooks");
       setEbooks((arr) => arr.map((x) => x.id === id ? { ...x, cover_url: url } : x));
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(errorMessage(err)); }
   };
 
   const onRecImage = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -285,7 +286,7 @@ const SiteContentEditor = () => {
     try {
       const url = await uploadImage(file, "recommendations");
       setRecommendations((arr) => arr.map((x) => x.id === id ? { ...x, image_url: url } : x));
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(errorMessage(err)); }
   };
 
   const saveTrainer = async () => {
@@ -297,7 +298,7 @@ const SiteContentEditor = () => {
 
   const saveHero = async () => {
     setSaving(true);
-    const { error } = await supabase.from("settings").update(hero as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update(hero).eq("id", settingsId);
     if (error) toast.error("Error al guardar"); else toast.success("Vídeo del hero actualizado");
     setSaving(false);
   };
@@ -314,7 +315,7 @@ const SiteContentEditor = () => {
       setSaving(false);
       return;
     }
-    const { error } = await supabase.from("settings").update(clean as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update(clean).eq("id", settingsId);
     if (error) toast.error("Error al guardar");
     else {
       setStores(clean);
@@ -326,7 +327,7 @@ const SiteContentEditor = () => {
   const saveTransformationSlots = async () => {
     const slots = Math.max(0, Math.min(999, Math.round(transformationSlots)));
     setSaving(true);
-    const { error } = await supabase.from("settings").update({ transformation_slots: slots } as any).eq("id", settingsId);
+    const { error } = await supabase.from("settings").update({ transformation_slots: slots }).eq("id", settingsId);
     if (error) toast.error("Error al guardar las plazas");
     else {
       setTransformationSlots(slots);
@@ -354,10 +355,10 @@ const SiteContentEditor = () => {
       const url = supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
       const next = { ...hero, hero_video_url: url };
       setHero(next);
-      await supabase.from("settings").update(next as any).eq("id", settingsId);
+      await supabase.from("settings").update(next).eq("id", settingsId);
       toast.success("Vídeo subido y publicado");
-    } catch (err: any) {
-      toast.error(err.message || "Error subiendo vídeo");
+    } catch (err: unknown) {
+      toast.error(errorMessage(err) || "Error subiendo vídeo");
     } finally {
       setVideoUploading(false);
     }
@@ -371,10 +372,10 @@ const SiteContentEditor = () => {
       const url = await uploadImage(file, "hero");
       const next = { ...hero, hero_video_poster_url: url };
       setHero(next);
-      await supabase.from("settings").update(next as any).eq("id", settingsId);
+      await supabase.from("settings").update(next).eq("id", settingsId);
       toast.success("Miniatura actualizada");
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err: unknown) {
+      toast.error(errorMessage(err));
     } finally {
       setPosterUploading(false);
     }
@@ -384,7 +385,7 @@ const SiteContentEditor = () => {
     if (!confirm("¿Quitar el vídeo del hero?")) return;
     const next = { hero_video_url: "", hero_video_poster_url: "" };
     setHero(next);
-    await supabase.from("settings").update(next as any).eq("id", settingsId);
+    await supabase.from("settings").update(next).eq("id", settingsId);
     toast.success("Vídeo eliminado del hero");
   };
 
@@ -395,7 +396,7 @@ const SiteContentEditor = () => {
       const url = await uploadImage(file, "trainer");
       setTrainer((t) => ({ ...t, trainer_photo_url: url }));
       toast.success("Foto subida");
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(errorMessage(err)); }
   };
 
   const addTestimonial = async () => {
@@ -418,7 +419,7 @@ const SiteContentEditor = () => {
       photo_after_url: t.photo_after_url,
       sort_order: t.sort_order, visible: t.visible,
       is_12w_transformation: !!t.is_12w_transformation,
-    } as any).eq("id", t.id);
+    }).eq("id", t.id);
     if (error) toast.error("Error al guardar"); else toast.success("Guardado");
   };
 
@@ -434,7 +435,7 @@ const SiteContentEditor = () => {
     try {
       const url = await uploadImage(file, "testimonials");
       updateTestimonial(id, { photo_url: url });
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(errorMessage(err)); }
   };
 
   const onTestBeforeAfter = async (
@@ -447,7 +448,7 @@ const SiteContentEditor = () => {
     try {
       const url = await uploadImage(file, "testimonials");
       updateTestimonial(id, { [field]: url } as Partial<Testimonial>);
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(errorMessage(err)); }
   };
 
   if (loading) return <div className="flex justify-center p-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -582,18 +583,18 @@ const SiteContentEditor = () => {
         </div>
         <p className="text-xs text-muted-foreground">Activa o desactiva bloques enteros de la home pública.</p>
         <div className="space-y-3">
-          {[
+          {([
             { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
             { key: "show_ebooks", label: "Guías / Ebooks", desc: "Sección de guías descargables (visible en /recursos y en la landing)." },
             { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recursos y en la landing)." },
-          ].map((s) => (
+          ] as const).map((s) => (
             <div key={s.key} className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
               <div className="min-w-0">
                 <p className="text-sm font-medium">{s.label}</p>
                 <p className="text-[11px] text-muted-foreground">{s.desc}</p>
               </div>
               <Switch
-                checked={(sections as any)[s.key]}
+                checked={sections[s.key]}
                 onCheckedChange={(v) => saveSectionsToggles({ ...sections, [s.key]: v })}
               />
             </div>

@@ -18,7 +18,7 @@ const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
 
   useEffect(() => {
     (async () => {
-      const { data } = await (supabase.rpc as any)("get_my_trainer");
+      const { data } = await supabase.rpc("get_my_trainer");
       if (data && data.length > 0) setTrainer(data[0] as Trainer);
       setLoaded(true);
     })();

@@ -1,39 +1,48 @@
 # Validación — Autopilot
 
-Fecha: 10 de octubre de 2026. [PR 37](https://github.com/N1C0SM/Autopilot/pull/37) fusionada en `main`: `2c7473b25bdf655610f8834c84c4cd16be778f25`. Se conservaron los cambios recientes de main sobre seguimiento y medios de ejercicios.
+Fecha: 10 de octubre de 2026. La [PR 37](https://github.com/N1C0SM/Autopilot/pull/37) integró entrenador responsive, chat, permisos, seguimiento, nutrición y métricas. Esta continuación corrige los errores de análisis del código, permite instalar desde cero y amplía las pruebas del servidor real.
 
-## Publicación
+## Publicación y límites
 
-Lovable sincronizó el commit de fusión y confirmó «Your website was updated». Publicación: `f9f82f34-d326-4492-997f-3728a745d87b`. Se comprobó después la cuenta de entrenador en [autopilotplan.com](https://autopilotplan.com).
+El frontend de la PR 37 se publicó en autopilotplan.com: Lovable confirmó «Your website was updated», publicación `f9f82f34-d326-4492-997f-3728a745d87b`. La revisión visual descrita más abajo corresponde a esa publicación. Las nuevas correcciones necesitan sincronización y publicación tras fusionarse.
 
-Esta publicación acredita el frontend. Las funciones Edge `generate-plan` y `auto-tasks` mostraban despliegues anteriores a la fusión; sus fuentes están sincronizadas, pero falta desplegar y comprobar las versiones nuevas del servidor.
+Las funciones Edge `generate-plan` y `auto-tasks` tenían despliegues anteriores a la PR 37. Sincronizar fuentes, aplicar SQL o pasar Deno no acredita una versión desplegada. Esta continuación modifica otras 26 funciones, principalmente para concretar tipos y manejar errores. Deben publicarse las 28 entradas modificadas con sus helpers y verificarse sus versiones activas. El usuario eligió conectar Supabase y conservar créditos de Lovable; no se ha enviado una petición a su agente de IA para desplegarlas.
 
 ## Cambios
 
 - Entrenador adaptado a móvil: clientes, resumen, perfil, navegación y editor por tarjetas con controles etiquetados de 44 px.
-- Chat con carga, error, reintento, borrador conservado y deduplicación realtime; distingue conversación interna y conversación con cliente.
-- Capacidades Free/Plus/Coach compartidas y aislamiento por asignación; contexto mínimo del cliente con referencia de pago enmascarada.
-- Semana accesible en descanso; fecha real de sesión independiente del día elegido; no se guarda actividad hasta iniciar.
-- Disponibilidad calculada sin metadatos; métricas con la misma población de clientes y valoración mensual presentada como estimación.
+- Chat con carga, error, reintento, borrador conservado y deduplicación realtime; conversación interna separada de la conversación con cliente.
+- Capacidades Free/Plus/Coach compartidas, aislamiento por asignación y referencia de pago enmascarada.
+- Semana accesible en descanso; fecha real independiente de la rutina elegida; no se guarda actividad hasta iniciar.
+- Disponibilidad sin contar metadatos; métricas con la misma población de clientes y valoración mensual presentada como estimación.
 - Validación de macros, conservación de objetivos históricos dudosos y corrección selectiva de recomendaciones.
-- Ajuste automático con escrituras comprobadas; un fallo de nutrición no avanza el peso base y un fallo de notificación se informa por separado. Su versión del servidor está pendiente de despliegue.
+- Ajuste automático con escrituras comprobadas: un fallo de nutrición no avanza el peso base; un fallo de notificación se informa por separado. Pendiente publicar esta versión del servidor.
+- JSON de recomendaciones y horarios comprobado antes de usarlo; errores HTTP conservan su mensaje y cuerpo original.
+- Conexión MCP: consulta el perfil por `user_id`, conserva la autorización del usuario y detecta configuración ausente. Se regenera desde sus fuentes al compilar.
+- Descargas de libros: exige sesión de Stripe pagada, completa y del entorno activo; comprueba el enlace real del producto. Elimina la búsqueda de ventas recientes y el uso de referencias públicas como prueba de pago. La interfaz no anuncia éxito si no se ha confirmado.
+- Confirmación de planes: admite Plus activo además de Coach, evita confundir una compra de libro recordada con un retorno explícito de plan y cancela reintentos al salir.
+- Actualización mínima de `@vitejs/plugin-react-swc` a 4.3.3 y `lovable-tagger` a 1.3.5 para admitir Vite 8 e instalar sin forzar dependencias.
 
-## Comprobaciones automáticas
+## Comprobaciones automáticas de esta continuación
 
 | Comprobación | Resultado |
 | --- | --- |
-| Vitest completo | 155 pruebas correctas en 34 archivos |
+| Instalación limpia `npm ci` | Correcta, sin `--force` ni `--legacy-peer-deps`, en dependencias aisladas |
+| Vitest completo | 176 pruebas correctas en 38 archivos |
 | TypeScript y build de producción | Correctos |
-| test-nutrition-db.mjs | Conserva objetivos históricos al editar comidas; rechaza objetivos nuevos inválidos y admite correcciones |
+| Deno 2.9.6 | Las 28 funciones modificadas pasan tipos, incluido MCP regenerado |
+| Lint global | 0 errores y 36 advertencias; antes, 364 errores y 37 advertencias |
+| test-nutrition-db.mjs | Conserva objetivos históricos al editar comidas; rechaza nuevos objetivos inválidos y admite correcciones |
 | test-nutrition-access-db.mjs | Acceso Plus/Coach, chat Coach, alias antiguos, caducidad, canal interno y aislamiento correctos |
 | test-trainer-context-db.mjs | Asignación, denegación anónima y referencia enmascarada correctas |
 | test-recommendation-copy.mjs | Conservación de campos propios e idempotencia correctas |
-| Lint global | No pasa: 364 errores y 37 advertencias; base inicial 388 y 37. Sin diagnósticos nuevos propios de esta PR; main incorporó uno en exercise-video |
 | git diff --check | Correcto |
-| GitHub | CodeQL, Analyze y dependency-review correctos para `c5d230dc578a1f9a5e10dd5eb26ed445d86d6513`; Copilot falló con error 402 por cuota mensual agotada |
+
+La única excepción de lint nueva desactiva `no-var` exclusivamente en `supabase/functions/mcp/index.ts`: es salida de esbuild, emite `var` y se sobrescribe al compilar. Su fuente en `src/lib/mcp` conserva todas las reglas; el archivo generado conserva las demás. Las 36 advertencias siguen visibles, principalmente sobre efectos y React Refresh; no se han ocultado con una desactivación general.
 
 Repetición:
 ```sh
+npm ci
 npm test -- --reporter=dot
 npx tsc -p tsconfig.app.json --noEmit
 npm run build
@@ -42,29 +51,53 @@ node scripts/test-nutrition-access-db.mjs
 node scripts/test-trainer-context-db.mjs
 node scripts/test-recommendation-copy.mjs
 npm run lint
+# Repetir para cada entrada Edge modificada:
+deno check --node-modules-dir=none --no-config supabase/functions/generate-plan/index.ts
 ```
 
-Los cuatro scripts SQL usan PGlite 0.5.8 y datos ficticios aislados; no prueban por sí solos las políticas desplegadas. Las pruebas usaron las dependencias locales existentes. Una instalación limpia puede encontrar el conflicto previo entre Vite 8 y @vitejs/plugin-react-swc 3.11.0; no se forzaron ni actualizaron estas dependencias. El lint sigue siendo deuda pendiente.
+Los cuatro scripts SQL usan PGlite 0.5.8 y datos ficticios aislados. El entorno desplegado se comprobó por separado.
 
-## Comprobaciones visuales en producción
+## Pruebas del servidor desplegado con cuentas temporales
 
-- Perfil a 390 px: antes la página medía 506 px de ancho; después, 390 px. También sin desbordamiento a 320, 430, 768 y 1440 px.
-- Ficha del cliente: resumen real de 6 sesiones y acceso a chat sujeto a Coach; sin desbordamiento a 320 px.
-- Chat interno a 320 px: página de 320 px, campo de mensaje de 44 px y borde inferior en 651 px, por encima de la navegación que comienza en 700 px. También comprobado a 390 px. No se enviaron mensajes.
-- Administrador: dashboard y Métricas coinciden en 1 cliente Free, 0 Plus, 0 Coach y estimación mensual de 0 €; excluyen al personal y aclaran que no representan cobros de Stripe. Son los valores observados el 10 de octubre, sujetos a cambios. No se reiniciaron datos.
-- Usuario Free: entrada, rutina semanal y acceso humano reservado a Coach comprobados. Al elegir domingo de descanso aparece la salida a otras rutinas; al abrir lunes se mantiene «Se registra hoy · 10 de octubre» y el botón «Empezar entrenamiento». No se inició ni completó una sesión. El día real era sábado; no se simuló el reloj del dispositivo.
-- Capturas publicadas: `entrenador-perfil-publicado-390.png`, `entrenador-cliente-publicado-390.png`, `entrenador-chat-publicado-320.png` y `entrenador-chat-publicado-390.png` y `usuario-descanso-publicado-390.png` en la carpeta de entrega.
+Script: `scripts/verify-live-qa.mjs`. Requiere `AUTOPILOT_QA_ADMIN_EMAIL` y `AUTOPILOT_QA_ADMIN_PASSWORD` en el entorno; no contiene credenciales. Crea cuentas temporales Coach, Plus y dos entrenadores, verifica el destino y las elimina al terminar. No envía correos, ejecuta IA/cron ni modifica planes o pagos de clientes reales.
 
-Comprobaciones locales anteriores: editor a 320 px con datos ficticios, campos de 44 px y sin desbordamiento; interacción parcial en Safari de escritorio; coherencia entre dashboard y métricas de administración. El editor no se guardó en un plan real. Safari de escritorio no acredita Safari de iPhone.
+Resultado del 10 de octubre, 20:35 UTC: ocho grupos correctos.
+
+1. Cliente visible solo para su entrenador asignado mediante el RPC; referencia de Stripe ausente o enmascarada.
+2. Rutina guardada y recuperada desde otra sesión autenticada. Otro entrenador no puede leerla ni alterarla.
+3. Series con la estructura real del producto y finalización recuperadas; fecha de Madrid independiente de la etiqueta «Lunes».
+4. Mensaje y respuesta conservados; chat interno separado; otro entrenador no puede leer ni escribir.
+5. Plus y Free no pueden escribir en el chat humano.
+6. Nuevos objetivos nutricionales inválidos rechazados; objetivos y comida ficticios válidos conservados.
+7. Plus y Coach devuelven enlaces Stripe de prueba con el cliente correcto. Pedir el enlace no concede acceso de pago.
+8. Cuentas temporales eliminadas. SQL posterior: 0 usuarios y 0 perfiles temporales; permanecen 6 planes de nutrición y 1 asignación.
+
+Son pruebas de API y persistencia del servidor real. No acreditan por sí solas el recorrido del editor/chat en navegador, ni un pago completado y procesado por webhook.
+
+## Comprobaciones visuales de la publicación anterior
+
+- Perfil a 390 px: antes medía 506 px de ancho; después, 390 px. También sin desbordamiento a 320, 430, 768 y 1440 px.
+- Ficha del cliente: resumen observado de 6 sesiones y acceso a chat sujeto a Coach; sin desbordamiento a 320 px.
+- Chat interno a 320 px: campo de 44 px y borde inferior en 651 px, por encima de la navegación que comienza en 700 px. También comprobado a 390 px. No se enviaron mensajes de cuentas reales.
+- Administrador: dashboard y Métricas coincidían en 1 cliente Free, 0 Plus, 0 Coach y estimación de 0 €; excluyen al personal y aclaran que no representan cobros Stripe. Valores observados el 10 de octubre, sujetos a cambios; no se reiniciaron datos.
+- Usuario Free: semana y acceso humano reservado a Coach comprobados. Elegir domingo de descanso permite abrir lunes conservando «Se registra hoy · 10 de octubre» y «Empezar entrenamiento». No se inició una sesión real; era sábado y no se simuló el reloj.
+
+Revisión local anterior: editor a 320 px con datos ficticios, controles de 44 px y sin desbordamiento; interacción parcial en Safari de escritorio. Esto no acredita Safari de iPhone. Las capturas anteriores no se incluyen como archivos disponibles aquí. Las herramientas actuales no han permitido repetir la revisión visual después de los últimos cambios.
+
+Las 14 pruebas nuevas de pagos cubren Plus, retorno de plan con un libro recordado, ausencia de sesión, rechazo del servidor, pago pendiente, suscripción ajena, entorno incorrecto, referencia manipulada y enlace de otro producto. No se ha intentado explotar la versión desplegada ni firmado descargas de compras ajenas.
 
 ## Base de datos real
 
-Aplicadas y registradas las cinco migraciones de esta PR en `enebrcdrdnfkyduzyrzm`: `20261009122000`, `20261009150000`, `20261009160000`, `20261010010000` y `20261010011000`. Verificados 5 registros de migración, contexto de acceso en el RPC, 3 políticas restrictivas y el disparador de nutrición activo. Permanecen los 6 planes y la asignación existente; 3 objetivos históricos siguen por revisar. No se concedieron planes ni se cambiaron pagos.
+Aplicadas y registradas las cinco migraciones de la PR 37 en `enebrcdrdnfkyduzyrzm`: `20261009122000`, `20261009150000`, `20261009160000`, `20261010010000` y `20261010011000`. Verificados registros, RPC, 3 políticas restrictivas y disparador de nutrición activo.
+
+Tras las pruebas permanecen 6 planes y 1 asignación. Tres objetivos históricos requieren revisión: dos tienen proteína, carbohidratos y grasas a cero; otro tiene 50 g, 100 g y 500 g respectivamente. Se han conservado sin inventar sustituciones. No se concedieron planes ni se cambiaron pagos reales. Stripe está en modo de prueba.
 
 ## Pendiente
 
-Desplegar y verificar `generate-plan` y `auto-tasks` con sus helpers. No hubo una vía de despliegue disponible en las herramientas, la interfaz o la CLI accesibles; sincronizar el código y aplicar SQL no demuestra ese despliegue.
+- Conectar Supabase, desplegar las funciones modificadas con sus helpers y acreditar versiones activas; prioritarias `generate-plan`, `auto-tasks` y `verify-book-purchase`. La corrección de descargas no está activa hasta desplegar esta última.
+- Repetir recorridos visuales tras publicar: editor/chat con recarga, teclado y áreas seguras en Safari de iPhone, horizontal y comienzo/finalización de una sesión desde la interfaz en un día real de descanso.
+- Confirmar en Stripe el retorno de los cinco libros publicados: `https://autopilotplan.com/descarga-libro?session_id={CHECKOUT_SESSION_ID}`. Sin sesión, la descarga queda bloqueada y se indica cómo recuperar la compra. No se ha modificado Stripe. [Configuración oficial del retorno](https://docs.stripe.com/payment-links/post-payment).
+- Completar checkout de prueba en navegador y comprobar webhook y acceso resultante, sin cargos reales.
+- Revisar con el responsable los tres objetivos nutricionales históricos.
 
-Quedan las pruebas con cuentas de prueba de persistencia del editor y mensajes Coach, sesión completa persistida, Safari de iPhone con teclado y checkout en modo de prueba. No se hicieron cargos ni envíos de mensajes reales. No se acredita superioridad respecto a Hevy o Symmetry.
-
-El siguiente trabajo está en `docs/lovable-publish-prompt.md`.
+No se acredita superioridad respecto a Hevy o Symmetry. Siguiente trabajo: `docs/lovable-publish-prompt.md`.

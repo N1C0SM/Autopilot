@@ -10,11 +10,11 @@ export async function initNative() {
     const { StatusBar, Style } = await import("@capacitor/status-bar");
     await StatusBar.setStyle({ style: Style.Dark });
     await StatusBar.setBackgroundColor({ color: "#090909" });
-  } catch {}
+  } catch { /* This native capability may be unavailable on the current platform. */ }
   try {
     const { SplashScreen } = await import("@capacitor/splash-screen");
     await SplashScreen.hide();
-  } catch {}
+  } catch { /* This native capability may be unavailable on the current platform. */ }
   // Con el teclado abierto ocultamos la barra inferior para que no tape
   // el campo de texto (chat, formularios, onboarding).
   try {
@@ -25,7 +25,7 @@ export async function initNative() {
     Keyboard.addListener("keyboardWillHide", () => {
       document.body.classList.remove("keyboard-open");
     });
-  } catch {}
+  } catch { /* This native capability may be unavailable on the current platform. */ }
 }
 
 export async function hapticTap() {
@@ -33,7 +33,7 @@ export async function hapticTap() {
   try {
     const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
     await Haptics.impact({ style: ImpactStyle.Light });
-  } catch {}
+  } catch { /* This native capability may be unavailable on the current platform. */ }
 }
 
 // Maneja el botón "atrás" físico de Android.

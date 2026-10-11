@@ -1,3 +1,4 @@
+import { jsonObject } from "../_shared/runtime-values.ts";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { aiFetch, getAiConfig } from "../_shared/ai-provider.ts";
@@ -43,10 +44,12 @@ type Job = { id: string; status: string; progress?: number; error?: { code: stri
 async function toWebp(bytes: Uint8Array): Promise<Uint8Array | null> {
   try {
     const { Image } = await import("https://deno.land/x/imagescript@1.3.0/mod.ts");
-    // deno-lint-ignore no-explicit-any
-    const img: any = await Image.decode(bytes);
+    const img = await Image.decode(bytes);
     if (img.width > 1280) img.resize(1280, Image.RESIZE_AUTO);
-    return await img.encodeWEBP(82);
+    const encode = jsonObject(img).encodeWEBP;
+    if (typeof encode !== "function") return null;
+    const encoded: unknown = await encode.call(img, 82);
+    return encoded instanceof Uint8Array ? encoded : null;
   } catch (e) {
     console.error(`webp failed: ${(e as Error).message}`);
     return null;
@@ -80,7 +83,7 @@ Deno.serve(async (req) => {
       exercise_id: bodyExerciseId,
       action: rawAction,
       exclude: rawExclude,
-    } = await req.json().catch(() => ({}) as any);
+    } = await req.json().catch(() => ({}));
     if (rawAction !== "create" && rawAction !== "check" && rawAction !== "image" && rawAction !== "batch" && rawAction !== "webp") {
       return json({ error: "Acción no válida" }, 400);
     }
@@ -191,10 +194,10 @@ Deno.serve(async (req) => {
       });
       if (!r.ok) {
         const body = await r.json().catch(() => null);
-        const msg = (body as any)?.message || (body as any)?.error?.message || `Error de IA (${r.status})`;
+        const msg = body?.message || body?.error?.message || `Error de IA (${r.status})`;
         const message = r.status === 429
           ? "Demasiadas peticiones, espera unos segundos"
-          : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota")
+          : (r.status === 402 || body?.error?.code === "insufficient_quota")
             ? "Sin créditos de IA suficientes"
             : msg;
         console.error(`image create failed [${r.status}]: ${msg}`);
@@ -255,10 +258,10 @@ Deno.serve(async (req) => {
       });
       if (!r.ok) {
         const body = await r.json().catch(() => null);
-        const msg = (body as any)?.message || (body as any)?.error?.message || `Error de IA (${r.status})`;
+        const msg = body?.message || body?.error?.message || `Error de IA (${r.status})`;
         const message = r.status === 429
           ? "Ya hay un vídeo generándose, espera unos segundos"
-          : (r.status === 402 || (body as any)?.error?.code === "insufficient_quota")
+          : (r.status === 402 || body?.error?.code === "insufficient_quota")
             ? noCredit
             : msg;
         console.error(`video create failed [${r.status}]: ${msg}`);

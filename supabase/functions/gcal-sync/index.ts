@@ -1,3 +1,15 @@
+import type { DayPlan } from "../_shared/training-types.ts";
+import type { MacroTargets } from "../_shared/nutrition.ts";
+
+type CalendarMeal = { name?: string; description?: string; kcal?: number; protein?: number; carbs?: number; fats?: number };
+type CalendarSchedule = {
+  gym_slots?: Array<{ day: number; start: string; end: string; duration?: number }>;
+  meal_times?: Record<string, string>;
+  meal_duration_min?: number;
+  weekly_reminders?: { weigh_in?: boolean; progress_photo?: boolean };
+  busy_blocks?: Array<{ day: number; start: string; end: string; label?: string }>;
+};
+type CalendarEvent = { id: string; summary: string } & Record<string, unknown>;
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -143,7 +155,7 @@ Deno.serve(async (req) => {
       try {
         const body = await req.json();
         if (body?.user_id) userId = body.user_id as string;
-      } catch (_) {}
+      } catch { /* The optional Google operation may be unavailable. */ }
       if (!userId) return json({ error: "Missing user_id for service-role call" }, 400);
     } else {
       if (!authHeader) return json({ error: "No auth" }, 401);
@@ -183,12 +195,12 @@ Deno.serve(async (req) => {
       admin.from("user_schedule").select("gym_slots, meal_times, meal_duration_min, weekly_reminders, busy_blocks").eq("user_id", userId).maybeSingle(),
     ]);
 
-    const plans = (tp?.workouts_json as any[]) || [];
-    const meals = (np?.meals_json as any[]) || [];
-    const macros = np?.macros_json as any;
-    const schedule = sched as any;
+    const plans = (tp?.workouts_json as DayPlan[]) || [];
+    const meals = (np?.meals_json as CalendarMeal[]) || [];
+    const macros = np?.macros_json as (MacroTargets & { kcal?: number }) | null;
+    const schedule = sched as CalendarSchedule | null;
 
-    const events: any[] = [];
+    const events: CalendarEvent[] = [];
     const errors: string[] = [];
 
     // ---------- Build per-day occupied intervals (from meals + busy_blocks) ----------
@@ -207,7 +219,7 @@ Deno.serve(async (req) => {
     if (meals.length > 0 && schedule?.meal_times) {
       MEAL_SLOTS.forEach((slot, idx) => {
         if (!meals[idx]) return;
-        const [h, m] = parseHM(schedule.meal_times[slot.key], [8 + idx * 3, 0]);
+        const [h, m] = parseHM(schedule.meal_times?.[slot.key], [8 + idx * 3, 0]);
         const startMin = h * 60 + m;
         const interval: Interval = { startMin, endMin: startMin + mealDur, label: slot.label };
         // Meals repeat daily → block every weekday
@@ -246,7 +258,7 @@ Deno.serve(async (req) => {
       const dow = DAY_INDEX[plan.day];
       const rrule = DAY_RRULE[plan.day];
       if (dow === undefined) continue;
-      const slot = schedule?.gym_slots?.find((s: any) => s.day === dow);
+      const slot = schedule?.gym_slots?.find((s) => s.day === dow);
       const [h, m] = slot ? parseHM(slot.start, [18, 0]) : [plan.type === "gimnasio" ? 18 : 19, 0];
       const dur = slot?.duration ?? 60;
       const originalStartMin = h * 60 + m;
@@ -265,7 +277,7 @@ Deno.serve(async (req) => {
         ? `\n\n(Movido de ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")} para no chocar con tus comidas)`
         : "";
       const description = (plan.type === "gimnasio"
-        ? `Músculos: ${plan.muscle_focus || "-"}\n\n${(plan.exercises || []).map((e: any, i: number) => `${i + 1}. ${e.name} — ${e.series}x${e.reps} (descanso ${e.rest})`).join("\n")}`
+        ? `Músculos: ${plan.muscle_focus || "-"}\n\n${(plan.exercises || []).map((e, i) => `${i + 1}. ${e.name} — ${e.series}x${e.reps} (descanso ${e.rest})`).join("\n")}`
         : `Intensidad: ${plan.intensity || "-"}\nDuración: ${plan.duration || "-"}`) + moved;
       events.push({
         id: eventId(`workout-${plan.day}-${plan.type}`),
@@ -292,7 +304,7 @@ Deno.serve(async (req) => {
       MEAL_SLOTS.forEach((slot, idx) => {
         const meal = meals[idx];
         if (!meal) return;
-        const [h, m] = parseHM(schedule.meal_times[slot.key], [8 + idx * 3, 0]);
+        const [h, m] = parseHM(schedule.meal_times?.[slot.key], [8 + idx * 3, 0]);
         const start = thisWeekDayHM(1, h, m); // anchor to Monday of this week; daily RRULE expands
         const end = new Date(start.getTime() + mealDur * 60 * 1000);
         const k = meal.kcal ?? fallback?.kcal;

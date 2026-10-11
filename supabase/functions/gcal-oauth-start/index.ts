@@ -35,7 +35,7 @@ function sanitizeReturnTo(raw: string): string {
     if (allowed.some((h) => parsed.hostname === h || parsed.hostname.endsWith("." + h))) {
       return parsed.toString();
     }
-  } catch {}
+  } catch { /* Invalid optional redirect falls back to the dashboard. */ }
   return "/dashboard";
 }
 

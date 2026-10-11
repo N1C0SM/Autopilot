@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CircleAlert, ArrowRight } from "lucide-react";
 import PageHead from "@/components/PageHead";
 import { readPendingBookRef } from "@/lib/buyLink";
 import { BookSuccess } from "./PaymentSuccess";
@@ -25,17 +25,17 @@ const BookDownload = () => {
       {unknown ? (
         <div className="text-center max-w-md">
           <PageHead
-            title="Pago recibido · Autopilot"
-            description="Tu pago se ha procesado correctamente."
+            title="Compra sin confirmar · Autopilot"
+            description="Todavía no hemos podido confirmar esta compra."
             path="/descarga-libro"
             noindex
           />
           <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-primary" />
+            <CircleAlert className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold font-display mb-3">¡Pago Recibido!</h1>
+          <h1 className="text-3xl font-bold font-display mb-3">No hemos podido identificar tu compra</h1>
           <p className="text-muted-foreground mb-8 text-sm">
-            No hemos podido identificar automáticamente la guía comprada. Escríbenos y te la enviamos hoy mismo.
+            Si ya has pagado, contacta con nosotros con tu recibo para recuperar la guía.
           </p>
           <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/recursos")}>
             Ver mis recursos <ArrowRight className="w-4 h-4 ml-2" />

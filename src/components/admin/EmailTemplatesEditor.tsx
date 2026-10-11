@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/runtimeValues";
 import { useEffect, useRef, useState } from "react";
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +22,7 @@ type TemplateDef = {
   name: string;
   label: string;
   placeholders: string[];
-  sampleData: Record<string, any>;
+  sampleData: Record<string, unknown>;
 };
 
 // Sample values used to render `{{variables}}` in the live preview so the
@@ -96,9 +97,9 @@ export default function EmailTemplatesEditor() {
   const [hasOverride, setHasOverride] = useState(false);
   const bcRef = useRef<BroadcastChannel | null>(null);
   const previewWinRef = useRef<Window | null>(null);
-  const editorRef = useRef<any>(null);
-  const cssEditorRef = useRef<any>(null);
-  const monacoRef = useRef<any>(null);
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const cssEditorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const monacoRef = useRef<Parameters<OnMount>[1] | null>(null);
 
   // Removes zero-width / invisible chars that React Email injects inside the
   // <Preview> block as padding for inbox preview. They are invisible in real
@@ -150,8 +151,8 @@ export default function EmailTemplatesEditor() {
     }
   };
 
-  const foldAll = (ed: any) => {
-    try { ed?.getAction?.("editor.foldAll")?.run?.(); } catch {}
+  const foldAll = (ed: Parameters<OnMount>[0]) => {
+    try { ed?.getAction?.("editor.foldAll")?.run?.(); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   };
 
   const editorOptions = {
@@ -285,8 +286,8 @@ export default function EmailTemplatesEditor() {
     // the user will receive.
     const inlined = reinlineStyles(html, css);
     const payload = { customHtml: inlined, subject, templateData: current.sampleData };
-    try { bcRef.current?.postMessage({ type: "update", payload }); } catch {}
-    try { localStorage.setItem(`email-preview-${selected}`, JSON.stringify(payload)); } catch {}
+    try { bcRef.current?.postMessage({ type: "update", payload }); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+    try { localStorage.setItem(`email-preview-${selected}`, JSON.stringify(payload)); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   };
 
   // Debounced live-push whenever editable fields change
@@ -314,15 +315,15 @@ export default function EmailTemplatesEditor() {
     try {
       // Try fetch override
       const { data: override } = await supabase
-        .from("email_template_overrides" as any)
+        .from("email_template_overrides")
         .select("subject, html, enabled")
         .eq("template_name", selected)
         .maybeSingle();
 
       if (override) {
-        setSubject((override as any).subject);
-        await applyRawHtml((override as any).html);
-        setEnabled((override as any).enabled);
+        setSubject(override.subject);
+        await applyRawHtml(override.html);
+        setEnabled(override.enabled);
         setHasOverride(true);
       } else {
         // Load default from edge function
@@ -335,14 +336,14 @@ export default function EmailTemplatesEditor() {
         setEnabled(true);
         setHasOverride(false);
       }
-    } catch (e: any) {
-      toast.error("No se pudo cargar la plantilla: " + (e?.message ?? "error"));
+    } catch (e: unknown) {
+      toast.error("No se pudo cargar la plantilla: " + (errorMessage(e) || "error"));
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [selected]);
+  useEffect(() => { load(); }, [selected]);
 
   const save = async () => {
     if (!subject.trim() || !html.trim()) {
@@ -353,7 +354,7 @@ export default function EmailTemplatesEditor() {
     try {
       // Re-inline CSS back into the HTML for Gmail/Outlook compatibility.
       const cleanHtml = sanitizeEditableHtml(reinlineStyles(html, css));
-      const { error } = await supabase.from("email_template_overrides" as any).upsert({
+      const { error } = await supabase.from("email_template_overrides").upsert({
         template_name: selected,
         subject: subject.trim(),
         html: cleanHtml,
@@ -362,8 +363,8 @@ export default function EmailTemplatesEditor() {
       if (error) throw error;
       toast.success("Plantilla guardada");
       setHasOverride(true);
-    } catch (e: any) {
-      toast.error("No se pudo guardar: " + (e?.message ?? "error"));
+    } catch (e: unknown) {
+      toast.error("No se pudo guardar: " + (errorMessage(e) || "error"));
     } finally {
       setSaving(false);
     }
@@ -372,13 +373,13 @@ export default function EmailTemplatesEditor() {
   const resetToDefault = async () => {
     if (!confirm("¿Restaurar la plantilla por defecto? Se borrará tu personalización.")) return;
     try {
-      const { error } = await supabase.from("email_template_overrides" as any)
+      const { error } = await supabase.from("email_template_overrides")
         .delete().eq("template_name", selected);
       if (error) throw error;
       toast.success("Restaurada");
       load();
-    } catch (e: any) {
-      toast.error("Error: " + (e?.message ?? ""));
+    } catch (e: unknown) {
+      toast.error("Error: " + (errorMessage(e)));
     }
   };
 
@@ -387,7 +388,7 @@ export default function EmailTemplatesEditor() {
     pushLive();
     const url = `/admin/email-preview/${encodeURIComponent(selected)}`;
     if (previewWinRef.current && !previewWinRef.current.closed) {
-      try { previewWinRef.current.focus(); return; } catch {}
+      try { previewWinRef.current.focus(); return; } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     }
     previewWinRef.current = window.open(url, `email-preview-${selected}`);
   };
@@ -402,8 +403,8 @@ export default function EmailTemplatesEditor() {
       await applyRawHtml(data.html ?? "");
       setSubject(data.subject ?? "");
       toast.success("HTML por defecto cargado");
-    } catch (e: any) {
-      toast.error("Error: " + (e?.message ?? ""));
+    } catch (e: unknown) {
+      toast.error("Error: " + (errorMessage(e)));
     }
   };
 

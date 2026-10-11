@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 import { renderTemplate } from '../_shared/transactional-email-templates/render.ts'
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ html, subject, previewData: tpl.previewData ?? {}, displayName: tpl.displayName ?? templateName }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-  } catch (e: any) {
-    return new Response(JSON.stringify({ error: e?.message ?? 'error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  } catch (e: unknown) {
+    return new Response(JSON.stringify({ error: errorMessage(e) || 'error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

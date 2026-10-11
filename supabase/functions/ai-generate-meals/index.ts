@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { aiFetch } from "../_shared/ai-provider.ts";
 import { hasNutrition } from "../_shared/entitlements.ts";
 const corsHeaders = {
@@ -98,9 +99,9 @@ Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos cohere
     return new Response(JSON.stringify({ meals: parsed.meals || [] }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e: any) {
-    console.error("[ai-generate-meals] ERROR:", e.message);
-    return new Response(JSON.stringify({ error: e.message }), {
+  } catch (e: unknown) {
+    console.error("[ai-generate-meals] ERROR:", errorMessage(e));
+    return new Response(JSON.stringify({ error: errorMessage(e) }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

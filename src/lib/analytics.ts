@@ -24,17 +24,16 @@ export type EventName =
   | "cta_click"
   | "pricing_view";
 
-export function track(event: EventName, params: Record<string, any> = {}) {
+export function track(event: EventName, params: Record<string, unknown> = {}) {
   try {
     const payload = { event, ...params, ts: Date.now() };
-    const w: any = typeof window !== "undefined" ? window : {};
+    const w: { dataLayer?: unknown[]; gtag?: (command: "event", event: EventName, params: Record<string, unknown>) => void } = typeof window !== "undefined" ? window as Window & { dataLayer?: unknown[] } : {};
     w.dataLayer = w.dataLayer || [];
     w.dataLayer.push(payload);
     if (typeof w.gtag === "function") {
       w.gtag("event", event, params);
     }
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.log("[analytics]", event, params);
     }
   } catch {

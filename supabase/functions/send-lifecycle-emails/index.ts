@@ -44,13 +44,13 @@ serve(async (req) => {
       .gte("created_at", new Date(now - 8 * 24 * 3600 * 1000).toISOString());
     if (error) throw error;
 
-    const results: any[] = [];
+    const results: unknown[] = [];
     let sent = 0;
 
     for (const p of rows ?? []) {
       if (!p.email) continue;
       const ageDays = (now - new Date(p.created_at as string).getTime()) / 86_400_000;
-      const already: string[] = (p as any).lifecycle_emails_sent ?? [];
+      const already: string[] = p.lifecycle_emails_sent ?? [];
 
       for (const b of BUCKETS) {
         // Send when the user has crossed the bucket day mark (with ~24h window) and hasn't received it yet
@@ -73,7 +73,7 @@ serve(async (req) => {
           sent++;
           await supabase
             .from("profiles")
-            .update({ lifecycle_emails_sent: [...already, b.marker] } as any)
+            .update({ lifecycle_emails_sent: [...already, b.marker] })
             .eq("user_id", p.user_id);
           already.push(b.marker);
         }

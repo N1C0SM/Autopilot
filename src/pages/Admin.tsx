@@ -47,6 +47,8 @@ export interface Profile {
   subscription_status?: string | null;
   subscription_end?: string | null;
   stripe_payment_id?: string | null;
+  cycle_start_date?: string | null;
+  renewal_decision?: string | null;
 }
 
 export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products";

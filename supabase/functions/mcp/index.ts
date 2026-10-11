@@ -3,11 +3,11 @@
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
 // src/lib/mcp/index.ts
-import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
 
 // src/lib/mcp/tools/get-profile.ts
 import { createClient } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.1";
 var get_profile_default = defineTool({
   name: "get_profile",
   title: "Obtener perfil del usuario",
@@ -18,11 +18,14 @@ var get_profile_default = defineTool({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "No autenticado" }], isError: true };
     }
-    const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false }
     });
-    const { data, error } = await sb.from("profiles").select("*").eq("id", ctx.getUserId()).maybeSingle();
+    const { data, error } = await sb.from("profiles").select("*").eq("user_id", ctx.getUserId()).maybeSingle();
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
     return {
       content: [{ type: "text", text: JSON.stringify(data) }],
@@ -33,7 +36,7 @@ var get_profile_default = defineTool({
 
 // src/lib/mcp/tools/get-training-plan.ts
 import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.1";
 var get_training_plan_default = defineTool2({
   name: "get_training_plan",
   title: "Obtener plan de entrenamiento",
@@ -44,7 +47,10 @@ var get_training_plan_default = defineTool2({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "No autenticado" }], isError: true };
     }
-    const sb = createClient2(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient2(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -59,7 +65,7 @@ var get_training_plan_default = defineTool2({
 
 // src/lib/mcp/tools/get-nutrition-plan.ts
 import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.1";
 var get_nutrition_plan_default = defineTool3({
   name: "get_nutrition_plan",
   title: "Obtener plan de nutrici\xF3n",
@@ -70,7 +76,10 @@ var get_nutrition_plan_default = defineTool3({
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "No autenticado" }], isError: true };
     }
-    const sb = createClient3(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient3(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -85,7 +94,7 @@ var get_nutrition_plan_default = defineTool3({
 
 // src/lib/mcp/tools/list-weight-logs.ts
 import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z } from "npm:zod@^4.4.3";
 var list_weight_logs_default = defineTool4({
   name: "list_weight_logs",
@@ -100,7 +109,10 @@ var list_weight_logs_default = defineTool4({
       return { content: [{ type: "text", text: "No autenticado" }], isError: true };
     }
     const n = Math.min(Math.max(Number(limit ?? 30), 1), 100);
-    const sb = createClient4(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient4(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -115,7 +127,7 @@ var list_weight_logs_default = defineTool4({
 
 // src/lib/mcp/tools/log-weight.ts
 import { createClient as createClient5 } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z as z2 } from "npm:zod@^4.4.3";
 var log_weight_default = defineTool5({
   name: "log_weight",
@@ -133,7 +145,10 @@ var log_weight_default = defineTool5({
     if (!Number.isFinite(weight_kg) || weight_kg <= 20 || weight_kg > 400) {
       return { content: [{ type: "text", text: "Peso fuera de rango (20-400 kg)" }], isError: true };
     }
-    const sb = createClient5(process.env.SUPABASE_URL, process.env.SUPABASE_PUBLISHABLE_KEY, {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_PUBLISHABLE_KEY;
+    if (!url || !key) throw new Error("Missing Supabase configuration");
+    const sb = createClient5(url, key, {
       global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
       auth: { persistSession: false, autoRefreshToken: false }
     });
@@ -161,5 +176,5 @@ var mcp_default = defineMcp({
 });
 
 // lovable-mcp-supabase-entry.ts
-import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.20.0/stacks/supabase";
+import { createSupabaseHandler } from "npm:@lovable.dev/mcp-js@0.20.1/stacks/supabase";
 Deno.serve(createSupabaseHandler(mcp_default, { functionName: "mcp" }));

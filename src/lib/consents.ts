@@ -15,7 +15,7 @@ export type ConsentType =
 export async function logConsent(
   type: ConsentType,
   granted: boolean,
-  extra?: Record<string, unknown>
+  extra?: Record<string, import("@/integrations/supabase/types").Json | undefined>
 ) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -27,7 +27,7 @@ export async function logConsent(
         granted,
         document_version: LEGAL_VERSION,
         user_agent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
-        metadata: (extra ?? null) as any,
+        metadata: extra ?? null,
       },
     ]);
   } catch (e) {

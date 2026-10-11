@@ -1,3 +1,4 @@
+import { jsonObject, jsonString } from "@/lib/runtimeValues";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -49,20 +50,20 @@ const BlogPostsEditor = () => {
       body: { topic: aiTopic.trim(), audience: aiAudience.trim() },
     });
     setGenerating(false);
-    if (error || !data || (data as any).error) {
-      toast.error((data as any)?.error || "No se pudo generar el artículo");
+    if (error || !data || data.error) {
+      toast.error(data?.error || "No se pudo generar el artículo");
       return;
     }
-    const d = data as any;
+    const d = jsonObject(data);
     setEditing({
       id: "",
-      slug: slugify(d.title || aiTopic),
-      title: d.title || aiTopic,
-      excerpt: d.excerpt || "",
-      body_markdown: d.body_markdown || "",
+      slug: slugify(jsonString(d.title) || aiTopic),
+      title: jsonString(d.title) || aiTopic,
+      excerpt: jsonString(d.excerpt) || "",
+      body_markdown: jsonString(d.body_markdown) || "",
       cover_url: "",
-      seo_title: d.seo_title || "",
-      seo_description: d.seo_description || "",
+      seo_title: jsonString(d.seo_title) || "",
+      seo_description: jsonString(d.seo_description) || "",
       author_name: "Autopilot",
       published: false,
       published_at: null,
@@ -106,7 +107,7 @@ const BlogPostsEditor = () => {
     if (!editing.title.trim()) { toast.error("Falta el título"); return; }
     const slug = editing.slug.trim() || slugify(editing.title);
     setSaving(true);
-    const payload: any = {
+    const payload = {
       slug,
       title: editing.title.trim(),
       excerpt: editing.excerpt || null,

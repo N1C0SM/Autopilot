@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/runtimeValues";
 import { hasCoaching } from "@/lib/entitlements";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -140,7 +141,7 @@ const Onboarding = () => {
     training_style: "" as "" | "solo" | "coach",
   });
 
-  const update = (field: string, value: any) => setData((d) => ({ ...d, [field]: value }));
+  const update = <K extends keyof typeof data>(field: K, value: (typeof data)[K]) => setData((d) => ({ ...d, [field]: value }));
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -170,7 +171,7 @@ const Onboarding = () => {
           toast.success("Bienvenido, confirma tu plan para crearlo");
         }
       }
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   }, [user]);
 
   // Pre-rellenar desde el AI Scan si existe en sessionStorage
@@ -212,7 +213,7 @@ const Onboarding = () => {
         primary_focus: d.primary_focus || focus || "",
         specific_goal: d.specific_goal || specific || "",
       }));
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   }, []);
 
   // Subir foto objetivo del scan al bucket si no hay aún
@@ -230,7 +231,7 @@ const Onboarding = () => {
         const { data: signedRes } = await supabase.storage.from("progress-photos").createSignedUrl(path, 60 * 60 * 24 * 7); const pub = { publicUrl: signedRes?.signedUrl };
         update("goal_photo_url", pub.publicUrl);
         setScanPrefill((p) => (p ? { ...p, used: true } : p));
-      } catch {}
+      } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     })();
   }, [user, scanPrefill, data.goal_photo_url]);
 
@@ -247,7 +248,7 @@ const Onboarding = () => {
   useEffect(() => {
     if (!user) return;
     supabase
-      .from("google_calendar_connections" as any)
+      .from("google_calendar_connections")
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle()
@@ -322,7 +323,7 @@ const Onboarding = () => {
           QUIZ_STORAGE_KEY,
           JSON.stringify({ data, createdAt: Date.now() })
         );
-      } catch {}
+      } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       track("onboarding_complete", { paid: false, anonymous: true });
       toast.success("Crea tu cuenta para guardar tu plan");
       navigate("/signup?from=quiz");
@@ -379,7 +380,7 @@ const Onboarding = () => {
 
     if (!error) {
       // Limpiamos el cuestionario anónimo si venía del flujo pre-signup.
-      try { sessionStorage.removeItem(QUIZ_STORAGE_KEY); } catch {}
+      try { sessionStorage.removeItem(QUIZ_STORAGE_KEY); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       // Registramos los consentimientos obligatorios (RGPD).
       try {
         await Promise.all([
@@ -387,7 +388,7 @@ const Onboarding = () => {
           logConsent("privacy", true, { source: "onboarding_summary" }),
           logConsent("health_data", true, { source: "onboarding_summary" }),
         ]);
-      } catch {}
+      } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
       // La preferencia decide qué plan le ofrecemos después. Va en user_metadata
@@ -1127,8 +1128,8 @@ const Onboarding = () => {
                           const { data: signedRes } = await supabase.storage.from("progress-photos").createSignedUrl(path, 60 * 60 * 24 * 7); const pub = { publicUrl: signedRes?.signedUrl };
                           update("goal_photo_url", pub.publicUrl);
                           toast.success("Foto subida");
-                        } catch (err: any) {
-                          toast.error(err.message || "Error al subir");
+                        } catch (err: unknown) {
+                          toast.error(errorMessage(err) || "Error al subir");
                         }
                         setLoading(false);
                       }}

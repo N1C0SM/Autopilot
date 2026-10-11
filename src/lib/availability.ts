@@ -49,3 +49,28 @@ export function getAvailabilityHours(value: unknown): number | null {
   const hours = numericValue(asRecord(value)?.hours);
   return hours !== null && hours > 0 && hours <= 24 ? hours : null;
 }
+
+export type SavedSchedule = { dow: number; start: string; end: string };
+
+const savedSchedule = (value: unknown): SavedSchedule | null => {
+  const schedule = asRecord(value);
+  return schedule && typeof schedule.dow === "number" && Number.isInteger(schedule.dow) && schedule.dow >= 0 && schedule.dow <= 6
+    && typeof schedule.start === "string" && typeof schedule.end === "string"
+    ? { dow: schedule.dow, start: schedule.start, end: schedule.end } : null;
+};
+
+export function getSportSchedules(value: unknown): Record<string, SavedSchedule> {
+  return Object.fromEntries(Object.entries(asRecord(asRecord(value)?.sport_schedules) || {}).flatMap(([sport, item]) => {
+    const schedule = savedSchedule(item);
+    return schedule ? [[sport, schedule]] : [];
+  }));
+}
+
+export function getCustomActivities(value: unknown): Array<SavedSchedule & { title: string }> {
+  const activities = asRecord(value)?.custom_activities;
+  return Array.isArray(activities) ? activities.flatMap((item) => {
+    const schedule = savedSchedule(item);
+    const title = asRecord(item)?.title;
+    return schedule && typeof title === "string" ? [{ ...schedule, title }] : [];
+  }) : [];
+}

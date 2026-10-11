@@ -41,7 +41,7 @@ serve(async (req) => {
     if (error) throw error;
 
     let sent = 0;
-    const results: any[] = [];
+    const results: unknown[] = [];
 
     for (const p of rows ?? []) {
       if (!p.email || !p.subscription_end) continue;

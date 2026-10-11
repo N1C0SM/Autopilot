@@ -1,7 +1,7 @@
 import { tierToPlan } from "./entitlements.ts";
 
-// deno-lint-ignore no-explicit-any
-type Db = any;
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2.57.2";
+type Db = Pick<SupabaseClient, "from">;
 
 /** Mirror the Stripe-backed plan into `entitlements` (source = stripe). Backend-only authority. */
 export async function syncStripeEntitlement(db: Db, userId: string, tier: string | null, status: string, expiresAt: string | null, externalId?: string) {

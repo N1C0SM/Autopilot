@@ -66,8 +66,8 @@ const AppStoreBadges = ({
         if (!alive || error) return;
         const row = Array.isArray(data) ? data[0] : data;
         if (row) {
-          setAppStoreUrl(((row as any).app_store_url || "").trim());
-          setPlayStoreUrl(((row as any).play_store_url || "").trim());
+          setAppStoreUrl((row.app_store_url || "").trim());
+          setPlayStoreUrl((row.play_store_url || "").trim());
         }
       } catch {
         // Sin datos no mostramos badges: nunca enlazamos a otra app por defecto.

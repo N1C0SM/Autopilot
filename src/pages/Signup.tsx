@@ -40,14 +40,14 @@ const Signup = () => {
   const planParam = (searchParams.get("plan") || "").toLowerCase();
   const selectedPlan: "training" | "full" | null =
     isFree ? null : planParam === "training" ? "training" : planParam === "full" ? "full" : null;
-  const [scanCtx, setScanCtx] = useState<any>(null);
+  const [scanCtx, setScanCtx] = useState<{ currentImg?: string; result?: { potential: number; improvements?: unknown[] } } | null>(null);
   const { signUp } = useAuth();
 
   useEffect(() => {
     try {
       if (isFree) sessionStorage.removeItem("autopilot_selected_plan");
       else if (selectedPlan) sessionStorage.setItem("autopilot_selected_plan", selectedPlan);
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   }, [isFree, selectedPlan]);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ const Signup = () => {
       const p = raw ? JSON.parse(raw) : null;
       if (p?.leadName) setName((v) => v || p.leadName);
       if (p?.leadEmail) setEmail((v) => v || p.leadEmail);
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   }, []);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ const Signup = () => {
         return;
       }
       setScanCtx(parsed);
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   }, [fromScan]);
 
   const checkEmail = async (value: string) => {
@@ -305,7 +305,7 @@ const Signup = () => {
             className="w-full"
             onClick={async () => {
                if (selectedPlan) {
-                 try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch {}
+                 try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
                }
               const result = await signInWithApple("/onboarding");
               if (result.error) toast.error("No se pudo continuar con Apple");

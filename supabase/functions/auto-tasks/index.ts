@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { persistAutoMacroAdjustment } from "../_shared/auto-macro-adjustment.ts";
@@ -7,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const log = (msg: string, details?: any) =>
+const log = (msg: string, details?: unknown) =>
   console.log(`[AUTO-TASKS] ${msg}${details ? ` - ${JSON.stringify(details)}` : ""}`);
 
 // ─── Macro calculation (duplicated from generate-plan for independence) ───
@@ -228,8 +229,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    log("ERROR", { message: error.message });
-    return new Response(JSON.stringify({ error: error.message }), {
+    log("ERROR", { message: errorMessage(error) });
+    return new Response(JSON.stringify({ error: errorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

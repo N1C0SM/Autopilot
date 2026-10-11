@@ -1,3 +1,4 @@
+import { parseRecommendations } from "@/lib/siteContent";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,14 +32,14 @@ const Recursos = () => {
 
   useEffect(() => {
     (async () => {
-      const settingsRes = await (supabase.rpc as any)("get_public_settings");
+      const settingsRes = await supabase.rpc("get_public_settings");
       const s = Array.isArray(settingsRes.data) ? settingsRes.data[0] : settingsRes.data;
       const contact = s?.contact_email || "";
 
       // Libros publicados desde tu biblioteca privada
-      const modeRes = await (supabase.rpc as any)("get_payment_mode");
+      const modeRes = await supabase.rpc("get_payment_mode");
       const live = modeRes?.data === "live";
-      const { data: libraryBooks } = await (supabase as any)
+      const { data: libraryBooks } = await supabase
         .from("library_books")
         .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack")
         .eq("published", true)
@@ -46,7 +47,7 @@ const Recursos = () => {
         .order("sort_order", { ascending: true });
 
       const fromLibrary: Ebook[] = [];
-      for (const b of (libraryBooks as any[]) || []) {
+      for (const b of libraryBooks || []) {
         let cover = "";
         if (b.cover_path?.startsWith("http")) cover = b.cover_path;
         else if (b.cover_path) {
@@ -65,7 +66,7 @@ const Recursos = () => {
       }
 
       if (s) {
-        const dbRecos = Array.isArray(s.recommendations) ? s.recommendations : [];
+        const dbRecos = parseRecommendations(s.recommendations);
         setEbooks(fromLibrary);
         setRecos(dbRecos);
         setFlags({

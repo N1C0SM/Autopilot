@@ -7,7 +7,7 @@ export default function ImpersonateCallback() {
 
   useEffect(() => {
     // Aseguramos el flag (ya lo seteó index.html, pero por si acaso).
-    try { sessionStorage.setItem("lovable-impersonating", "1"); } catch {}
+    try { sessionStorage.setItem("lovable-impersonating", "1"); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
 
     const params = new URLSearchParams(window.location.search);
     const token_hash = params.get("th");
@@ -28,7 +28,7 @@ export default function ImpersonateCallback() {
         setError(error.message);
         return;
       }
-      try { sessionStorage.setItem("lovable-impersonating-email", email); } catch {}
+      try { sessionStorage.setItem("lovable-impersonating-email", email); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       window.location.replace(redirect);
     })();
   }, []);

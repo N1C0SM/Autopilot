@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
     const recoList = Array.isArray(recommendations) ? recommendations.slice(0, 24) : [];
     if (bookList.length === 0 && recoList.length === 0) return json({ error: "Nada que ordenar" }, 400);
 
-    const fmt = (items: any[]) =>
+    const fmt = (items: Array<{ id: string; title: string; description?: string; price?: string; is_pack?: boolean }>) =>
       items.map((b, i) => `${i + 1}. [${b.id}] ${b.title} — ${String(b.description || "").slice(0, 300)}${b.price ? ` (${b.price})` : ""}${b.is_pack ? " [PACK de varios libros]" : ""}`).join("\n");
 
     const prompt = `Eres experto en conversión de una web de fitness en España. Ordena estos productos de MAYOR a MENOR importancia para mostrar primero en la portada y vender más.
@@ -65,11 +65,11 @@ Devuelve los IDs ordenados usando la herramienta.`;
       return json({ error: r.status === 429 ? "Demasiadas peticiones" : r.status === 402 ? "Sin créditos de IA" : "AI error" }, r.status);
     }
     const d = await r.json();
-    const call = (d.output || []).find((o: any) => o.type === "function_call" && o.name === "rank_items");
+    const call = (d.output || []).find((o: { type?: string; name?: string; arguments?: string }) => o.type === "function_call" && o.name === "rank_items");
     const args = JSON.parse(call?.arguments || "{}");
 
     // Validar: solo IDs conocidos, sin duplicados; los que falten van al final en su orden original.
-    const clean = (ids: unknown, originals: any[]) => {
+    const clean = (ids: unknown, originals: Array<{ id: string }>) => {
       const known = new Set(originals.map((b) => b.id));
       const seen = new Set<string>();
       const out: string[] = [];

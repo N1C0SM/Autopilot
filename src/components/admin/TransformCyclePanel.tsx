@@ -32,7 +32,7 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
       .update({
         cycle_start_date: start || null,
         renewal_decision: decision ? decision : null,
-      } as any)
+      })
       .eq("user_id", userId);
     setSaving(false);
     if (error) {

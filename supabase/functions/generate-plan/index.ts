@@ -1,3 +1,5 @@
+import type { DayPlan, GymExerciseEntry } from "../_shared/training-types.ts";
+import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
 import { hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
@@ -687,7 +689,7 @@ function buildWeeklyPlan(
   rules: Rules,
   skillProfile: SkillProfile | null,
 ) {
-  const plan: any[] = [];
+  const plan: Array<Omit<DayPlan, "exercises"> & { exercises?: Array<Omit<GymExerciseEntry, "reps"> & { reps: string }> }> = [];
   const trainedMuscles: Record<string, number> = {};
   let gymDayIdx = 0;
   const sportDays: number[] = [];
@@ -868,7 +870,7 @@ serve(async (req) => {
     const scheduleDays = gymSlots.length > 0 ? gymSlots.length : null;
     const daysAvailable = scheduleDays ?? parseInt(
       typeof onb.availability === "object" && onb.availability !== null
-        ? (onb.availability as any).days || "4" : "4"
+        ? String(jsonObject(onb.availability).days || "4") : "4"
     );
     if (scheduleDays) {
       console.log(`[GENERATE-PLAN] Using user_schedule: ${scheduleDays} gym slots/week`);
@@ -878,7 +880,7 @@ serve(async (req) => {
     let equipmentType = onb.equipment_type || "Mixto";
 
     // ── Primary focus override (gimnasio | calistenia | mixto) ──
-    const primaryFocus = (onb as any).primary_focus || "mixto";
+    const primaryFocus = onb.primary_focus || "mixto";
     if (primaryFocus === "gimnasio") equipmentType = "Gimnasio";
     else if (primaryFocus === "calistenia") equipmentType = "Calistenia";
 
@@ -983,9 +985,9 @@ serve(async (req) => {
       }
     }
 
-    const diet = detectDiet((onb as any).nutrition_preferences);
+    const diet = detectDiet(onb.nutrition_preferences);
     const macros = includeNutrition && weight !== null ? calcMacros(weight, goal, diet) : null;
-    let meals = getMeals(goal, diet, (onb as any).allergies);
+    let meals = getMeals(goal, diet, onb.allergies);
 
     // Try AI-personalized meals based on user's actual food preferences
     if (macros && weight !== null) {
@@ -997,8 +999,8 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          preferences: (onb as any).nutrition_preferences || "",
-          allergies: (onb as any).allergies || "",
+          preferences: onb.nutrition_preferences || "",
+          allergies: onb.allergies || "",
           goal,
           macros,
           weight,
@@ -1070,8 +1072,8 @@ serve(async (req) => {
       skill_profile: skillProfile ? { muscles: skillProfile.priorityMuscles, patterns: skillProfile.priorityPatterns } : null,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error) {
-    console.error("[GENERATE-PLAN] Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("[GENERATE-PLAN] Error:", errorMessage(error));
+    return new Response(JSON.stringify({ error: errorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500,
     });
   }

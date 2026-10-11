@@ -44,7 +44,7 @@ const PaymentModeToggle = () => {
 
   useEffect(() => {
     (async () => {
-      const { data: lib } = await (supabase as any)
+      const { data: lib } = await supabase
         .from("library_books")
         .select("id, title, kind, price, buy_url_test, buy_url_live")
         .in("kind", ["book", "pack"])
@@ -52,10 +52,10 @@ const PaymentModeToggle = () => {
       setItems((lib as Item[]) || []);
       const { data } = await supabase.from("settings").select("*").limit(1).single();
       if (data) {
-        const d = data as any;
+        const d = data;
         const next: SettingsData = {
           id: d.id,
-          payment_mode: (d.payment_mode || "test") as Mode,
+          payment_mode: d.payment_mode === "live" ? "live" : "test",
           payment_link_training_test: d.payment_link_training_test || "",
           payment_link_training_live: d.payment_link_training_live || "",
           payment_link_full_test: d.payment_link_full_test || "",
@@ -75,7 +75,7 @@ const PaymentModeToggle = () => {
     if (!s) return;
     const newMode: Mode = s.payment_mode === "test" ? "live" : "test";
     setSaving(true);
-    const { error } = await supabase.from("settings").update({ payment_mode: newMode } as any).eq("id", s.id);
+    const { error } = await supabase.from("settings").update({ payment_mode: newMode }).eq("id", s.id);
     setSaving(false);
     if (error) return toast.error("Error al cambiar modo");
     setS({ ...s, payment_mode: newMode });
@@ -88,19 +88,19 @@ const PaymentModeToggle = () => {
   const saveAll = async () => {
     if (!s) return;
     setSaving(true);
-    const payload: any = {};
+    const payload: import("@/integrations/supabase/types").TablesUpdate<"settings"> = {};
     FIELDS.forEach((f) => (payload[f] = s[f]));
     const { error } = await supabase.from("settings").update(payload).eq("id", s.id);
     const results = await Promise.all(
       items.map((b) =>
-        (supabase as any).from("library_books").update({
+        supabase.from("library_books").update({
           buy_url_test: b.buy_url_test?.trim() || null,
           buy_url_live: b.buy_url_live?.trim() || null,
         }).eq("id", b.id),
       ),
     );
     setSaving(false);
-    if (error || results.some((r: any) => r.error)) return toast.error("Error al guardar");
+    if (error || results.some((r) => r.error)) return toast.error("Error al guardar");
     toast.success("Configuración guardada");
   };
 
@@ -152,8 +152,8 @@ const PaymentModeToggle = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Test</Label>
               <Input
-                value={(s as any)[`payment_link_${p.key}_test`]}
-                onChange={(e) => setField(`payment_link_${p.key}_test` as any, e.target.value)}
+                value={s[`payment_link_${p.key}_test`]}
+                onChange={(e) => setField(`payment_link_${p.key}_test`, e.target.value)}
                 placeholder="https://buy.stripe.com/test_..."
                 className="mt-1 text-sm font-mono"
               />
@@ -161,8 +161,8 @@ const PaymentModeToggle = () => {
             <div>
               <Label className="text-xs text-muted-foreground">Live</Label>
               <Input
-                value={(s as any)[`payment_link_${p.key}_live`]}
-                onChange={(e) => setField(`payment_link_${p.key}_live` as any, e.target.value)}
+                value={s[`payment_link_${p.key}_live`]}
+                onChange={(e) => setField(`payment_link_${p.key}_live`, e.target.value)}
                 placeholder="https://buy.stripe.com/..."
                 className="mt-1 text-sm font-mono"
               />

@@ -1,8 +1,7 @@
 /**
- * Stripe Payment Links forward `client_reference_id` (and `session_id`) to the
- * configured after-payment redirect URL. We tag book/pack buy links with
- * `client_reference_id=book-<uuid>` so /payment-success can tell a book
- * purchase apart from a subscription/plan purchase.
+ * Tag book/pack links so the retrieved Stripe session identifies the product.
+ * Configure each Payment Link redirect with session_id={CHECKOUT_SESSION_ID};
+ * a public reference or locally remembered book alone is never payment proof.
  */
 export const withBookRef = (url: string, bookId?: string | null): string => {
   if (!bookId || !url || !/^https?:\/\//i.test(url)) return url || "";

@@ -25,8 +25,10 @@ const EMAIL_SUBJECTS: Record<string, string> = {
   reauthentication: 'Your verification code',
 }
 
+type AuthEmailProps = { siteName: string; siteUrl: string; recipient: string; confirmationUrl: string; oldEmail: string; email: string; newEmail: string; token: string };
+
 // Template mapping
-const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
+const EMAIL_TEMPLATES: Record<string, React.ComponentType<AuthEmailProps>> = {
   signup: SignupEmail,
   invite: InviteEmail,
   magiclink: MagicLinkEmail,
@@ -48,7 +50,7 @@ const FROM_DOMAIN = "autopilotplan.com" // Domain shown in From address (may be 
 // even if the project's domain has changed since the template was scaffolded.
 const SAMPLE_PROJECT_URL = "https://autopilotv2.lovable.app"
 const SAMPLE_EMAIL = "user@example.test"
-const SAMPLE_DATA: Record<string, object> = {
+const SAMPLE_DATA: Record<string, Partial<AuthEmailProps>> = {
   signup: {
     siteName: SITE_NAME,
     siteUrl: SAMPLE_PROJECT_URL,
@@ -121,7 +123,7 @@ async function handlePreview(req: Request): Promise<Response> {
     })
   }
 
-  const sampleData = SAMPLE_DATA[type] || {}
+  const sampleData: AuthEmailProps = { siteName: SITE_NAME, siteUrl: SAMPLE_PROJECT_URL, recipient: SAMPLE_EMAIL, confirmationUrl: SAMPLE_PROJECT_URL, oldEmail: "", email: SAMPLE_EMAIL, newEmail: "", token: "", ...SAMPLE_DATA[type] }
   const html = await renderAsync(React.createElement(EmailTemplate, sampleData))
 
   return new Response(html, {
@@ -143,7 +145,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // Verify signature + timestamp, then parse payload.
-  let payload: any
+  let payload: ReturnType<typeof parseEmailWebhookPayload>
   let run_id = ''
   try {
     const verified = await verifyWebhookRequest({
@@ -152,7 +154,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       parser: parseEmailWebhookPayload,
     })
     payload = verified.payload
-    run_id = payload.run_id
+    run_id = payload.run_id || ""
   } catch (error) {
     if (error instanceof WebhookError) {
       switch (error.code) {
@@ -206,6 +208,11 @@ async function handleWebhook(req: Request): Promise<Response> {
 
   // The email action type is in payload.data.action_type (e.g., "signup", "recovery")
   // payload.type is the hook event type ("auth")
+  if (!payload.data?.action_type || !payload.data.email) {
+    return new Response(JSON.stringify({ error: 'Missing auth email data' }), {
+      status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
   const emailType = payload.data.action_type
   console.log('Received auth event', { emailType, email: payload.data.email, run_id })
 
@@ -219,15 +226,15 @@ async function handleWebhook(req: Request): Promise<Response> {
   }
 
   // Build template props from payload.data (HookData structure)
-  const templateProps = {
+  const templateProps: AuthEmailProps = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
-    confirmationUrl: payload.data.url,
-    token: payload.data.token,
+    confirmationUrl: payload.data.url || "",
+    token: payload.data.token || "",
     email: payload.data.email,
-    oldEmail: payload.data.old_email,
-    newEmail: payload.data.new_email,
+    oldEmail: typeof payload.data.old_email === "string" ? payload.data.old_email : "",
+    newEmail: payload.data.new_email || "",
   }
 
   // Render React Email to HTML and plain text

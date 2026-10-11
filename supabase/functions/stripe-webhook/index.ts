@@ -1,3 +1,4 @@
+import { errorMessage } from "../_shared/runtime-values.ts";
 import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
 import { hasCoaching, resolvePaidTier, subscriptionAllowsCoaching } from "../_shared/entitlements.ts";
 import { syncStripeEntitlement } from "../_shared/sync-entitlement.ts";
@@ -110,7 +111,7 @@ serve(async (req) => {
 
         let referrerCustomerId = referrerProfile?.stripe_customer_id;
         if (!referrerCustomerId && referrerProfile?.email) {
-          const found = await stripe.customers.list({ email: referrerProfile.email, limit: 1 });
+          const found = await stripe.customers.list({ email: referrerProfile?.email, limit: 1 });
           if (found.data[0]) referrerCustomerId = found.data[0].id;
         }
 
@@ -121,7 +122,7 @@ serve(async (req) => {
             currency: "eur",
             description: `Recompensa por referido: ${referredEmail}`,
           });
-          console.log(`Applied referral credit to referrer ${referrerProfile.email}`);
+          console.log(`Applied referral credit to referrer ${referrerProfile?.email}`);
         }
 
         await supabaseAdmin
@@ -156,7 +157,7 @@ serve(async (req) => {
           query = session.client_reference_id ? query.eq("user_id", session.client_reference_id) : query.eq("email", customerEmail || "");
           const { data: profile, error: profileError } = await query.single();
           if (profileError || !profile) throw profileError || new Error("Checkout account not found");
-          const periodEnd = (sub as any).current_period_end ?? sub.items.data[0]?.current_period_end;
+          const periodEnd = ("current_period_end" in sub && typeof sub.current_period_end === "number" ? sub.current_period_end : undefined) ?? sub.items.data[0]?.current_period_end;
           const { error } = await supabaseAdmin.from("profiles").update({
             payment_status: "paid", subscription_status: sub.status,
             stripe_customer_id: session.customer as string, subscription_tier: tier,
@@ -218,7 +219,7 @@ serve(async (req) => {
               .eq("user_id", profile.user_id).eq("source", "manual").in("status", ["active", "trialing"]).limit(1).maybeSingle();
             if (manualEnt) continue;
           }
-          const end = active && ((active as any).current_period_end ?? active.items.data[0]?.current_period_end);
+          const end = active && (("current_period_end" in active && typeof active.current_period_end === "number" ? active.current_period_end : undefined) ?? active.items.data[0]?.current_period_end);
           const updates: Record<string, unknown> = {
             subscription_status: active?.status || "inactive", subscription_end: end ? new Date(end * 1000).toISOString() : null,
             payment_status: active ? "paid" : "unpaid",
@@ -244,8 +245,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Webhook error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error("Webhook error:", errorMessage(error));
+    return new Response(JSON.stringify({ error: errorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });

@@ -54,7 +54,7 @@ const initial: Cfg = {
   meals: 3, avoid: "", cooking: "normal", weight: "", checkin_dow: 0, checkin_time: "19:30", style: "flexible",
 };
 
-const label = (arr: { v: any; l: string }[], v: any) => arr.find((x) => x.v === v)?.l ?? "—";
+const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
 
 const Pill = ({ on, onClick, children, sub }: { on: boolean; onClick: () => void; children: React.ReactNode; sub?: string }) => (
   <button type="button" onClick={onClick}
@@ -81,7 +81,7 @@ const Configurator = () => {
       if (Date.now() - (p.createdAt || 0) > 7 * 864e5) return localStorage.removeItem(KEY);
       setC({ ...initial, ...p.data });
       setStep(4);
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
   }, []);
 
   const valid = [
@@ -94,7 +94,7 @@ const Configurator = () => {
 
   const save = async () => {
     if (!user) {
-      try { localStorage.setItem(KEY, JSON.stringify({ data: c, createdAt: Date.now() })); } catch {}
+      try { localStorage.setItem(KEY, JSON.stringify({ data: c, createdAt: Date.now() })); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       track("onboarding_complete", { paid: false, anonymous: true });
       navigate("/signup?from=quiz");
       return;
@@ -119,14 +119,14 @@ const Configurator = () => {
       },
     }, { onConflict: "user_id" });
     if (error) { setSaving(false); toast.error("No se pudo guardar. Inténtalo de nuevo."); return; }
-    try { localStorage.removeItem(KEY); } catch {}
+    try { localStorage.removeItem(KEY); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     try {
       await Promise.all([
         logConsent("terms", true, { source: "configurator" }),
         logConsent("privacy", true, { source: "configurator" }),
         logConsent("health_data", true, { source: "configurator" }),
       ]);
-    } catch {}
+    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
     const { data: profile } = await supabase.from("profiles")
       .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")

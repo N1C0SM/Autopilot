@@ -1,3 +1,4 @@
+import { errorMessage, functionErrorMessage } from "@/lib/runtimeValues";
 import { getExerciseTrackingConfig, TRACKING_MODES } from "@/lib/exerciseTrackingConfig";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -151,13 +152,7 @@ const ExerciseFormDialog = ({
   const [genLoading, setGenLoading] = useState(false);
   const [genStatus, setGenStatus] = useState<string | null>(null);
 
-  const fnErrorMessage = async (err: any, fallback: string) => {
-    try {
-      const body = await err?.context?.json?.();
-      if (body?.error) return String(body.error);
-    } catch { /* ignore */ }
-    return fallback;
-  };
+  const fnErrorMessage = functionErrorMessage;
 
   const generateImageWithAI = async () => {
     const id = initial?.id;
@@ -174,8 +169,8 @@ const ExerciseFormDialog = ({
       set("image_url", data.image_url);
       onMediaChange?.();
       toast.success("Foto generada");
-    } catch (e: any) {
-      toast.error(e.message || "Error con IA");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Error con IA");
     } finally {
       setImgAiLoading(false);
     }
@@ -221,8 +216,8 @@ const ExerciseFormDialog = ({
         setGenStatus(pct > 0 ? `Generando vídeo… ${pct}%` : "Generando vídeo…");
       }
       throw new Error("El vídeo está tardando más de lo normal. Cierra y vuelve a abrir el ejercicio en un minuto.");
-    } catch (e: any) {
-      toast.error(e.message || "Error con IA");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Error con IA");
     } finally {
       setGenStatus(null);
       setGenLoading(false);
@@ -239,8 +234,8 @@ const ExerciseFormDialog = ({
       const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
       set("image_url", data.publicUrl);
       toast.success("Imagen subida");
-    } catch (e: any) {
-      toast.error(e.message || "Error al subir la imagen");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Error al subir la imagen");
     }
     setImgUploading(false);
   };
@@ -257,7 +252,7 @@ const ExerciseFormDialog = ({
     }
   }, [open, initial]);
 
-  const set = (k: keyof Exercise, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = <K extends keyof Exercise>(k: K, v: Exercise[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   const autofillWithAI = async () => {
     const name = form.name?.trim();
@@ -269,8 +264,8 @@ const ExerciseFormDialog = ({
       if (data?.error) throw new Error(data.error);
       setForm((f) => ({ ...f, ...data, name: f.name }));
       toast.success("Campos rellenados con IA");
-    } catch (e: any) {
-      toast.error(e.message || "Error con IA");
+    } catch (e: unknown) {
+      toast.error(errorMessage(e) || "Error con IA");
     }
     setAiLoading(false);
   };
@@ -392,12 +387,12 @@ const ExerciseFormDialog = ({
                 { key: "is_progressable" as const, label: "Progresable", hint: "Se puede aumentar carga/reps sesión a sesión" },
                 { key: "high_tension" as const, label: "Alta tensión", hint: "Genera mucha tensión en el músculo objetivo" },
               ].map(({ key, label, hint }) => {
-                const checked = (form as any)[key] ?? true;
+                const checked = form[key] ?? true;
                 return (
                   <button
                     key={key}
                     type="button"
-                    onClick={() => set(key as any, !checked)}
+                    onClick={() => set(key, !checked)}
                     title={hint}
                     className={`rounded-lg border p-2 text-left transition-colors ${
                       checked
@@ -428,7 +423,7 @@ const ExerciseFormDialog = ({
               ] as [string, string, string][]).map(([k, label, desc]) => {
                 const active = (form.tracking_mode || "") === k;
                 return (
-                  <button key={k || "auto"} type="button" onClick={() => set("tracking_mode", k || null)}
+                  <button key={k || "auto"} type="button" onClick={() => set("tracking_mode", k === "weighted_reps" || k === "bodyweight_reps" || k === "weighted_bodyweight" || k === "seconds_only" || k === "assisted_reps" ? k : null)}
                     className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
                     <span className="block text-sm font-medium">{label}</span>
                     <span className="block text-[11px] text-muted-foreground">{desc}</span>
@@ -864,7 +859,7 @@ const ExerciseLibrary = () => {
     }
     setLoading(true);
     const payload = {
-      name: form.name?.trim(),
+      name: form.name?.trim() || "",
       muscle_group: form.muscle_group || null,
       exercise_type: form.exercise_type || null,
       movement_pattern: form.movement_pattern || null,
@@ -886,10 +881,10 @@ const ExerciseLibrary = () => {
     };
 
     if (editingExercise) {
-      const { error } = await supabase.from("exercises").update(payload as any).eq("id", editingExercise.id);
+      const { error } = await supabase.from("exercises").update(payload).eq("id", editingExercise.id);
       if (!error) { toast.success("Ejercicio actualizado"); } else { toast.error("Error al actualizar"); }
     } else {
-      const { error } = await supabase.from("exercises").insert(payload as any);
+      const { error } = await supabase.from("exercises").insert(payload);
       if (!error) { toast.success("Ejercicio añadido"); } else { toast.error("Error al añadir"); }
     }
     setDialogOpen(false);

@@ -91,7 +91,7 @@ const TrainingRulesEditor = () => {
     if (!rules) return;
     setSaving(true);
     const { id, ...rest } = rules;
-    const { error } = await (supabase.from("training_rules") as any).update(rest).eq("id", id);
+    const { error } = await supabase.from("training_rules").update(rest).eq("id", id);
     if (error) toast.error("Error al guardar");
     else toast.success("Reglas actualizadas");
     setSaving(false);
@@ -157,7 +157,7 @@ const TrainingRulesEditor = () => {
                 <Label className="text-[10px] text-muted-foreground">Reps</Label>
                 <Input
                   value={rules[`reps_${s}`]}
-                  onChange={e => update(`reps_${s}` as keyof TrainingRules, e.target.value as any)}
+                  onChange={e => update(`reps_${s}`, e.target.value)}
                   className="h-8 text-sm"
                 />
               </div>
@@ -165,7 +165,7 @@ const TrainingRulesEditor = () => {
                 <Label className="text-[10px] text-muted-foreground">Descanso</Label>
                 <Input
                   value={rules[`rest_${s}`]}
-                  onChange={e => update(`rest_${s}` as keyof TrainingRules, e.target.value as any)}
+                  onChange={e => update(`rest_${s}`, e.target.value)}
                   className="h-8 text-sm"
                 />
               </div>

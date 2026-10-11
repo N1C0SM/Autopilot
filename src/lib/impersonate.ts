@@ -1,3 +1,4 @@
+import { errorMessage } from "./runtimeValues";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -23,9 +24,9 @@ export async function impersonateUser(targetUserId: string, redirectTo: string =
       toast.message("Tu navegador bloqueó la pestaña nueva. Abriendo aquí…");
       window.location.href = url;
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (win && !win.closed) win.close();
     toast.dismiss(t);
-    toast.error(e?.message || "No se pudo impersonar");
+    toast.error(errorMessage(e) || "No se pudo impersonar");
   }
 }
