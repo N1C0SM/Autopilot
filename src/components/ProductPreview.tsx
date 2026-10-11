@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { TIERS } from "@/config/tiers";
 import { track } from "@/lib/analytics";
 import { buildExerciseHistory } from "@/lib/workoutMetrics";
+import { supabase } from "@/integrations/supabase/client";
 
 const ExerciseProgressChart = lazy(() => import("@/components/dashboard/ExerciseProgressChart"));
 
@@ -86,6 +87,18 @@ const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
 /** Public, isolated example. Never reads or writes a customer's training data. */
 export default function ProductPreview({ onPlans, onFree }: { onPlans: () => void; onFree?: () => void }) {
   const [view, setView] = useState<View>("home");
+  // Nombre y foto reales de Ajustes (get_public_settings): si cambias la foto, la demo cambia.
+  const [owner, setOwner] = useState<{ name: string; photo: string | null }>({ name: "Nicolás", photo: null });
+  useEffect(() => {
+    let alive = true;
+    supabase.rpc("get_public_settings").then(({ data }) => {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (alive && row) setOwner({ name: row.trainer_name?.trim() || "Nicolás", photo: row.trainer_photo_url || null });
+    });
+    return () => { alive = false; };
+  }, []);
+  const ownerFirst = owner.name.split(" ")[0];
+  const ownerInitial = ownerFirst.charAt(0).toUpperCase();
   const [completed, setCompleted] = useState<string[]>([]);
   const [started, setStarted] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -189,7 +202,9 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
 
                 {/* app header (same as real app) */}
                 <header className="flex h-12 items-center gap-3 border-b border-border px-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-bold ring-1 ring-border">M</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary text-xs font-bold ring-1 ring-border">
+                    {owner.photo ? <img src={owner.photo} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : ownerInitial}
+                  </span>
                   <h1 className="flex-1 truncate text-center font-display text-sm font-bold">{titles[view]}</h1>
                   <span className="flex items-center gap-0.5 text-muted-foreground">
                     <Bell className="h-4 w-4" />
@@ -205,7 +220,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                       {view === "home" && (
                         <div className="space-y-3">
                           <p className="text-[11px] font-medium text-primary">Lunes 28 · Semana 3 de 12</p>
-                          <h4 className="font-display text-xl font-bold leading-tight">Hola, Nicolás.<br />Hoy toca fuerza.</h4>
+                          <h4 className="font-display text-xl font-bold leading-tight">Hola, {ownerFirst}.<br />Hoy toca fuerza.</h4>
                           <button type="button" onClick={() => changeView("training")} className="flex w-full items-center gap-3 rounded-2xl bg-primary p-4 text-left text-primary-foreground transition-opacity hover:opacity-90">
                             <Dumbbell className="h-6 w-6 shrink-0" />
                             <span className="min-w-0 flex-1">
@@ -390,9 +405,11 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                             <span className="text-[9px] text-muted-foreground">No incluido en Gratis</span>
                           </div>
                           <div className="flex items-center gap-2.5 border-b border-border pb-3">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">N</span>
+                            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-bold text-primary">
+                              {owner.photo ? <img src={owner.photo} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : ownerInitial}
+                            </span>
                             <div>
-                              <p className="text-sm font-semibold">Niko · tu entrenador</p>
+                              <p className="text-sm font-semibold">{ownerFirst} · fundador</p>
                               <p className="text-[10px] text-muted-foreground">Chat directo · plan Coach</p>
                             </div>
                           </div>
