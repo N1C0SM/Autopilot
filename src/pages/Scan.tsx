@@ -285,6 +285,7 @@ const ScoreCard = ({ label, value, highlight }: { label: string; value: number; 
 
 const Scan = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { userId: routeUserId } = useParams<{ userId?: string }>();
   const location = useLocation();
