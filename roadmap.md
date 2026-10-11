@@ -41,4 +41,5 @@
 - [x] Día 4: onboarding de 1 toque por decisión, sin perder datos.
 - [x] Día 5: admin con edición completa de planes (activar, nombre, precio, descripción, ventajas).
 - [x] Día 5: login con nombre o correo + foto del último usuario en el dispositivo.
+- [x] El scan no toca el plan por sí solo: la tarjeta «Tu plan sigue igual» y el botón «Aplicar a mi plan» dejan la decisión en el usuario.
 - [ ] Face ID / Touch ID en la app nativa (requiere plugin nativo y compilar en Xcode).
