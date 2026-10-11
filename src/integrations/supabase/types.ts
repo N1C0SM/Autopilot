@@ -2018,6 +2018,13 @@ export type Database = {
         }[]
       }
       get_contact_phone_public: { Args: never; Returns: string }
+      get_founder_public: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          name: string
+        }[]
+      }
       get_my_consumer_plan: {
         Args: never
         Returns: {
