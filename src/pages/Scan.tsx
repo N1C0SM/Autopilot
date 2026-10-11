@@ -57,6 +57,7 @@ import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
 import { MONTHLY_PRICE_EUR, TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
+import { toLocalDateString } from "@/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
@@ -947,6 +948,18 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
         emailed_to: userEmail,
       });
       if (insErr) console.warn("scan_history insert", insErr);
+
+      // La foto frontal del scan también queda en «Físico» (diario de progreso).
+      for (const [ph, label] of [[front, "Scan · frente"], [back, "Scan · espalda"]] as const) {
+        if (!ph) continue;
+        const { error: phErr } = await supabase.from("progress_photos").insert({
+          user_id: user.id,
+          photo_url: ph.path,
+          note: label,
+          taken_at: toLocalDateString(),
+        });
+        if (phErr) console.warn("progress_photos insert", phErr);
+      }
 
       const firstName = (userName || user.email?.split("@")[0] || "atleta").split(" ")[0];
       const cardImageUrl = await uploadScanCard();
