@@ -29,7 +29,11 @@ export async function initNative() {
 }
 
 export async function hapticTap() {
-  if (!isNative()) return;
+  if (!isNative()) {
+    // PWA / web móvil: vibración corta donde el navegador lo permita.
+    try { navigator.vibrate?.(12); } catch { /* sin soporte */ }
+    return;
+  }
   try {
     const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
     await Haptics.impact({ style: ImpactStyle.Light });
