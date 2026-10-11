@@ -72,6 +72,24 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
         </div>
       </div>
 
+      {values.length < 2 ? (
+        <div className={`mt-4 flex w-full flex-col justify-end rounded-2xl border border-border/60 bg-secondary/20 p-4 ${compact ? "min-h-[200px] flex-1" : "h-64"}`}>
+          <div className="flex flex-1 items-end gap-2" aria-hidden>
+            {[0.18, 0.26, 0.34, 0.42, 0.5].map((h, i) => (
+              <div key={i} className="flex-1 rounded-t-lg border border-dashed border-border" style={{ height: `${h * 100}%` }} />
+            ))}
+            <div className="relative flex-1 rounded-t-lg bg-primary" style={{ height: "58%" }}>
+              <span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-semibold tabular-nums text-primary">
+                {latest !== null ? round(latest) : "—"} {unit}
+              </span>
+            </div>
+          </div>
+          <div className="mt-3 border-t border-border/60 pt-3">
+            <p className="text-sm font-semibold">Punto de partida · {history[history.length - 1]?.sessionLabel}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Registra otra sesión de este ejercicio y aquí verás tu línea de progreso.</p>
+          </div>
+        </div>
+      ) : (
       <div className={`mt-4 w-full ${compact ? "min-h-[200px] flex-1" : "h-64"}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
