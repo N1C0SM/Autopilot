@@ -10,6 +10,8 @@ import {
   UserCog,
   Settings as SettingsIcon,
   LogOut,
+  Layers,
+  FolderOpen,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import autopilotLogo from "@/assets/autopilot-logo.png";
@@ -26,11 +28,13 @@ interface Props {
 const MENU: { label: string; section: AdminSection; icon: typeof Users }[] = [
   { label: "Usuarios", section: "users", icon: Users },
   { label: "Entrenadores", section: "trainers", icon: UserCog },
+  { label: "Planes y productos", section: "products", icon: Layers },
+  { label: "Pagos", section: "payments", icon: CreditCard },
+  { label: "Drive · Libros", section: "drive", icon: FolderOpen },
   { label: "Recordatorios", section: "reminders", icon: Mail },
   { label: "Landing", section: "landing", icon: Globe },
   { label: "Blog", section: "blog", icon: FileText },
   { label: "Emails", section: "emails", icon: MailOpen },
-  { label: "Pagos", section: "payments", icon: CreditCard },
 ];
 
 /** Cabecera del panel admin en pantallas estrechas: logo + menú Perfil/Admin. */
