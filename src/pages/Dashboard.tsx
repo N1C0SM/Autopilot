@@ -600,8 +600,8 @@ const Dashboard = () => {
           )}
           <div role="tablist" className="sticky top-0 z-10 grid grid-cols-4 gap-1 rounded-full border border-border/60 bg-card/90 p-1 backdrop-blur-xl">
             {([
-              ["evolution", "Evolución"],
-              ["photos", "Fotos"],
+              ["evolution", "Fuerza"],
+              ["photos", "Físico"],
               ["records", "Récords"],
             ] as const).map(([k, label]) => (
               <button
