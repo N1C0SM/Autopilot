@@ -104,8 +104,8 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => navigate("/recursos")}
-                  className="cursor-pointer hover:bg-sidebar-accent/50"
+                  onClick={() => onNavigate("resources")}
+                  className={`cursor-pointer transition-colors ${section === "resources" ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
                 >
                   <BookOpen className="mr-2 h-4 w-4" />
                   {!collapsed && <span>Recursos</span>}

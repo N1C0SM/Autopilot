@@ -20,7 +20,7 @@ interface Post { slug: string; title: string; excerpt: string | null; cover_url:
 // Sin contenido de reserva: si no hay libros o recomendaciones reales en la base de
 // datos, esas secciones simplemente no se muestran (nada de material inventado).
 
-const Recursos = () => {
+const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
@@ -91,28 +91,8 @@ const Recursos = () => {
   const nothing = false;
 
 
-  return (
-    <SidebarProvider>
-    <div className="min-h-screen bg-background text-foreground flex w-full">
-      {user && <UserSidebar section="resources" onNavigate={(s) => navigate(s === "resources" ? "/recursos" : "/dashboard")} onSignOut={() => { signOut(); navigate("/"); }} />}
-      <div className="flex-1 min-w-0">
-      <Helmet>
-        <title>Recursos · Autopilot</title>
-        <meta name="description" content="Ebooks, recomendaciones y artículos seleccionados por el equipo de Autopilot." />
-      </Helmet>
-
-      <header className="app-chrome sticky top-0 z-40 border-b">
-        <div className="container mx-auto max-w-7xl flex items-center justify-between h-14 px-4">
-          {user && <SidebarTrigger />}
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <span className="font-display font-bold text-gradient">{"\n"}</span>
-          <span className="w-16" />
-        </div>
-      </header>
-
-      <main className="container mx-auto max-w-7xl px-4 py-10 space-y-16">
+  const body = (
+      <main className={embedded ? "w-full space-y-12 py-2" : "container mx-auto max-w-7xl px-4 py-10 space-y-16"}>
         <div className="text-center max-w-xl mx-auto">
           <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-2">Biblioteca</p>
           <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
@@ -260,6 +240,29 @@ const Recursos = () => {
           </section>
         )}
       </main>
+  );
+
+  if (embedded) return body;
+
+  return (
+    <SidebarProvider>
+    <div className="min-h-screen bg-background text-foreground flex w-full">
+      {user && <UserSidebar section="resources" onNavigate={(s) => navigate(s === "resources" ? "/recursos" : "/dashboard")} onSignOut={() => { signOut(); navigate("/"); }} />}
+      <div className="flex-1 min-w-0">
+      <Helmet>
+        <title>Recursos · Autopilot</title>
+        <meta name="description" content="Ebooks, recomendaciones y artículos seleccionados por el equipo de Autopilot." />
+      </Helmet>
+      <header className="app-chrome sticky top-0 z-40 border-b">
+        <div className="container mx-auto max-w-7xl flex items-center justify-between h-14 px-4">
+          {user && <SidebarTrigger />}
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Volver">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <span className="w-16" />
+        </div>
+      </header>
+      {body}
       </div>
     </div>
     </SidebarProvider>

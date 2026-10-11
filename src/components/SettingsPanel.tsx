@@ -29,7 +29,8 @@ import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
 import type { Json } from "@/integrations/supabase/types";
 
-const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") => void } = {}) => {
+const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
+  const hideForAdmin = adminMode ? " hidden" : "";
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -326,7 +327,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
       {/* Workout preferences */}
-      <div className="order-3 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
+      <div className={`order-3 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-2">
           <Timer className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Tu forma de entrenar</h2>
@@ -398,7 +399,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
           <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar perfil"}
         </Button>
 
-        <div className="mt-8 pt-6 border-t border-border">
+        <div className={`mt-8 pt-6 border-t border-border${hideForAdmin}`}>
           <h3 className="font-display font-bold text-sm mb-1">Privacidad</h3>
           <p className="text-xs text-muted-foreground mb-4">Tu entrenador siempre te ve. Esto decide qué pueden ver los demás.</p>
           <div className="space-y-3">
@@ -420,7 +421,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
       </div>
 
       {/* Subscription */}
-      <div className="order-5 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
+      <div className={`order-5 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-6">
           <CreditCard className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Suscripción</h2>
@@ -511,7 +512,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
       </div>
 
       {/* Calendar */}
-      <div className="order-6 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
+      <div className={`order-6 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-4">
           <CalendarClock className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Google Calendar</h2>
@@ -577,7 +578,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
 
       {/* Onboarding data */}
       {hasOnboarding && (
-        <div className="order-2 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
+        <div className={`order-2 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
           <div className="flex items-center gap-2 mb-6">
             <ClipboardList className="w-5 h-5 text-primary" />
             <h2 className="font-bold font-display text-lg">Tus datos</h2>
@@ -617,7 +618,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
       )}
 
       {/* Privacy & Data (RGPD) */}
-      <div className="order-7 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
+      <div className={`order-7 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-2">
           <ShieldCheck className="w-5 h-5 text-primary" />
           <h2 className="font-bold font-display text-lg">Privacidad y mis datos</h2>
@@ -677,7 +678,7 @@ const SettingsPanel = ({ onUpgrade }: { onUpgrade?: (plan: "training" | "full") 
       </div>
 
       {/* Danger zone */}
-      <div className="order-9 bg-card rounded-2xl p-4 sm:p-6 border border-destructive/30 card-shadow">
+      <div className={`order-9 bg-card rounded-2xl p-4 sm:p-6 border border-destructive/30 card-shadow${hideForAdmin}`}>
         <h2 className="font-bold font-display text-lg text-destructive mb-4">Zona peligrosa</h2>
 
         <div className="space-y-4">

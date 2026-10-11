@@ -40,6 +40,7 @@ const WorkoutTracker = lazy(() => import("@/components/dashboard/WorkoutTracker"
 const TrainingPlanView = lazy(() => import("@/components/dashboard/TrainingPlanView"));
 const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgress"));
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
+const Recursos = lazy(() => import("@/pages/Recursos"));
 
 const SectionFallback = () => (
   <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
@@ -103,7 +104,7 @@ const Dashboard = () => {
   const [section, setSectionState] = useState<MobileTab>(() => {
     try {
       const saved = sessionStorage.getItem("autopilot_section");
-      if (saved && ["home", "training", "nutrition", "chat", "progress", "settings"].includes(saved)) return saved as MobileTab;
+      if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
     return "home";
   });
@@ -394,7 +395,7 @@ const Dashboard = () => {
     chat: "Chat",
     settings: "Ajustes",
     progress: "Progreso",
-    resources: " ",
+    resources: "Recursos",
   };
 
   const SECTION_HINTS: Record<MobileTab, string> = {
@@ -635,6 +636,10 @@ const Dashboard = () => {
 
       {section === "settings" && (
         <div className="w-full"><SettingsPanel onUpgrade={(plan) => handleCompletePayment(plan)} /></div>
+      )}
+
+      {section === "resources" && (
+        <Suspense fallback={<SectionFallback />}><Recursos embedded /></Suspense>
       )}
     </>
   );
