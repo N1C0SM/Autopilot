@@ -105,7 +105,7 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
               <div className="h-px bg-border my-2" />
               <button
                 type="button"
-                onClick={() => { setOpen(false); navigate("/settings"); }}
+                onClick={() => go("account")}
                 className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-left hover:bg-secondary/60 transition-colors"
               >
                 <SettingsIcon className="w-4 h-4 shrink-0" /> Mi cuenta
