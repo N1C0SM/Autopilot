@@ -283,11 +283,12 @@ const ScoreCard = ({ label, value, highlight }: { label: string; value: number; 
   </div>
 );
 
-const Scan = () => {
+const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const { userId: routeUserId } = useParams<{ userId?: string }>();
+  const { userId: paramUserId } = useParams<{ userId?: string }>();
+  const routeUserId = inline ? user?.id : paramUserId;
   const location = useLocation();
 
   useEffect(() => {
@@ -1083,7 +1084,7 @@ const Scan = () => {
     );
   }
 
-  const embedded = !!user && isMobile;
+  const embedded = inline || (!!user && isMobile);
   const scanBody = (
     <>
       <Helmet>
@@ -1138,7 +1139,7 @@ const Scan = () => {
               {user && routeUserId && <ScanProgressPanel userId={user.id} />}
               <div className="text-center max-w-3xl mx-auto mb-8">
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-3">
-                  Evolución física
+                  Análisis físico con IA
                 </h1>
                 <p className="text-base text-muted-foreground">
                   Sube tu foto frontal o de espalda para actualizar tu análisis
@@ -2609,6 +2610,8 @@ const Scan = () => {
       </main>
     </>
   );
+
+  if (inline) return <div className="relative w-full">{scanBody}</div>;
 
   if (embedded) {
     return (
