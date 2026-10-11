@@ -83,7 +83,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
               } p-2`}
             >
               {r.current_photo_url ? (
-                <img
+                <img loading="lazy" decoding="async"
                   src={r.current_photo_url}
                   alt={`Scan ${label}`}
                   className="w-full h-20 object-cover rounded-md mb-1.5"

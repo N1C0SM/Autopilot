@@ -334,6 +334,25 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     if (pendingIndex !== undefined) setExpandedExercise(pendingIndex);
   }, [restTimer, exerciseNames, started, workoutCompleted]);
 
+  // Precarga a 0 ms: mientras se entrena el ejercicio actual, se cargan en
+  // caché las fotos del anterior y del siguiente. Al cambiar de ejercicio la
+  // imagen ya está en memoria y la transición es instantánea.
+  useEffect(() => {
+    if (!started || workoutCompleted || expandedExercise === null) return;
+    const list = currentPlan?.exercises || [];
+    for (const idx of [expandedExercise - 1, expandedExercise + 1, expandedExercise + 2]) {
+      const ex = list[idx];
+      if (!ex) continue;
+      const meta = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
+      const url = ex.image_url || meta?.image_url;
+      if (url) {
+        const pre = new Image();
+        pre.decoding = "async";
+        pre.src = url;
+      }
+    }
+  }, [started, workoutCompleted, expandedExercise, currentPlan, exerciseMetadata]);
+
   const adjustRest = (delta: number) => {
     setRestTimer((prev) => {
       if (prev === null) return prev;

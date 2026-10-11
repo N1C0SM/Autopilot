@@ -58,8 +58,8 @@ const BeforeAfterCompare = ({ photos, signed, onClose }: Props) => {
         onPointerUp={() => { dragging.current = false; }}
         onPointerCancel={() => { dragging.current = false; }}
       >
-        <img src={signed.get(after.photo_url) || ""} alt="Después" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
-        <img
+        <img loading="lazy" decoding="async" src={signed.get(after.photo_url) || ""} alt="Después" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
+        <img loading="lazy" decoding="async"
           src={signed.get(before.photo_url) || ""}
           alt="Antes"
           draggable={false}

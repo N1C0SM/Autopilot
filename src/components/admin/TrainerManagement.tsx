@@ -217,7 +217,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
                     <Label>Foto de perfil</Label>
                     <div className="mt-1.5 flex items-center gap-4">
                       {profile.photo_url ? (
-                        <img src={profile.photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+                        <img loading="lazy" decoding="async" src={profile.photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
                       ) : (
                         <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
                           <User2 className="w-8 h-8" />

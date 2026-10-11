@@ -1193,7 +1193,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                   {/* Foto */}
                   <div className="flex items-start gap-5">
                     {trainerProfile.photo_url ? (
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={trainerProfile.photo_url}
                         alt={trainerProfile.display_name || profile.email}
                         className="w-24 h-24 rounded-2xl object-cover ring-1 ring-border"

@@ -352,7 +352,7 @@ const Index = () => {
             <div className="mt-10 grid gap-4 md:grid-cols-[1.35fr_0.65fr]">
               {heroVideo.url ? (
                 <div className="overflow-hidden rounded-lg border border-border bg-card premium-shadow">
-                  <video key={heroVideo.url} src={heroVideo.url} poster={heroVideo.poster || undefined} autoPlay muted loop playsInline controls preload="none" className="aspect-video w-full object-cover" />
+                  <video key={heroVideo.url} src={heroVideo.url} poster={heroVideo.poster || undefined} playsInline controls preload="metadata" className="aspect-video w-full object-cover" />
                 </div>
               ) : (
                 <div className="grid min-h-[220px] place-items-center rounded-lg border border-border bg-card p-7 text-center">

@@ -122,7 +122,7 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
           <div className="px-3 py-2 flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center overflow-hidden shrink-0">
               {profileAvatar ? (
-                <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="w-full h-full object-cover" />
               ) : (
                 <span className="text-[10px] font-bold text-sidebar-accent-foreground">
                   {profileName.charAt(0).toUpperCase()}

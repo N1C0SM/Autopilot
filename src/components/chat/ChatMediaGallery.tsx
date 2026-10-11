@@ -61,7 +61,7 @@ const ChatMediaGallery = ({ messages, onViewMedia }: Props) => {
                 </div>
               </>
             ) : (
-              <img src={resolve(msg.media_url)} alt="" className="w-full h-full object-cover" />
+              <img loading="lazy" decoding="async" src={resolve(msg.media_url)} alt="" className="w-full h-full object-cover" />
             )}
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
               <span className="text-[9px] text-white">

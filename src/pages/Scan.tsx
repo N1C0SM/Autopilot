@@ -212,7 +212,7 @@ const Dropzone = ({
       />
       {image ? (
         <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-primary/30 bg-card">
-          <img src={image} alt={label} className="w-full h-full object-cover" />
+          <img loading="lazy" decoding="async" src={image} alt={label} className="w-full h-full object-cover" />
           <button
             onClick={onClear}
             aria-label="Quitar foto"
@@ -444,7 +444,7 @@ const Scan = () => {
     if (!shareRef.current) return null;
     // Extra tick para que fuentes/layout se asienten
     await new Promise<void>((r) => setTimeout(r, 150));
-    // Asegurar que TODAS las <img> internas (foto del usuario, etc.) están decodificadas
+    // Asegurar que TODAS las <img loading="lazy" decoding="async"> internas (foto del usuario, etc.) están decodificadas
     // antes de capturar — si no, html-to-image las pinta vacías.
     try {
       const imgs = Array.from(shareRef.current.querySelectorAll("img"));
@@ -465,7 +465,7 @@ const Scan = () => {
     try {
       // Llamamos dos veces: la primera "calienta" caches de fuentes/imágenes y la
       // segunda devuelve la imagen final ya con todo embebido correctamente.
-      // Es un workaround conocido de html-to-image cuando hay <img> con data URLs.
+      // Es un workaround conocido de html-to-image cuando hay <img loading="lazy" decoding="async"> con data URLs.
       await toPng(shareRef.current, { cacheBust: true, pixelRatio: 1.5, backgroundColor: "#0a0a0a" });
       // Bajamos la resolución si el PNG supera el límite de subida (~4MB).
       for (const ratio of [1.5, 1, 0.75]) {
@@ -1167,7 +1167,7 @@ const Scan = () => {
               {/* Físico objetivo: presets del admin + opción de subir foto propia */}
               {user && savedObjectiveUrl && !editingObjective ? (
                 <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur p-4 sm:p-5 flex items-center gap-4">
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={savedObjectiveUrl}
                     alt="Tu objetivo"
                     className="w-20 h-24 object-cover rounded-lg border border-border flex-shrink-0"
@@ -1338,7 +1338,7 @@ const Scan = () => {
                           : "border-border hover:border-primary/60"
                       }`}>
                         {objectiveImg && !selectedPresetId ? (
-                          <img src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-lg" />
+                          <img loading="lazy" decoding="async" src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-lg" />
                         ) : (
                           <>
                             <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" />
@@ -1878,7 +1878,7 @@ const Scan = () => {
                             key={p.label}
                             className={`relative aspect-[3/4] rounded-2xl overflow-hidden border ${p.primary ? "border-primary/40 glow-shadow" : "border-border"}`}
                           >
-                            <img src={p.src} alt={p.label.toLowerCase()} className="w-full h-full object-cover" />
+                            <img loading="lazy" decoding="async" src={p.src} alt={p.label.toLowerCase()} className="w-full h-full object-cover" />
                             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
                               <div className={`text-[10px] uppercase tracking-widest ${p.primary ? "text-primary" : "text-muted-foreground"}`}>
                                 {p.label}
@@ -1967,9 +1967,9 @@ const Scan = () => {
                     </div>
                     <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-secondary">
                       {futureImg ? (
-                        <img src={futureImg} alt="futuro IA" className="w-full h-full object-cover" />
+                        <img loading="lazy" decoding="async" src={futureImg} alt="futuro IA" className="w-full h-full object-cover" />
                       ) : (currentImg || backImg) ? (
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={(currentImg || backImg)!}
                           alt="futuro"
                           className="w-full h-full object-cover scale-110"
@@ -2542,7 +2542,7 @@ const Scan = () => {
                               </div>
                             )}
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
-                              <img
+                              <img loading="lazy" decoding="async"
                                 src={p.src}
                                 style={{
                                   width: w,

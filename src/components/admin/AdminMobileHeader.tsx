@@ -64,7 +64,7 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
               aria-label="Menú de administración"
               className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-full border border-border bg-secondary/60 overflow-hidden active:opacity-70"
             >
-              <img src={autopilotLogo} alt="Autopilot" className="h-7 w-7 rounded-full object-cover" />
+              <img loading="lazy" decoding="async" src={autopilotLogo} alt="Autopilot" className="h-7 w-7 rounded-full object-cover" />
             </button>
           </SheetTrigger>
 

@@ -669,7 +669,7 @@ const SiteContentEditor = () => {
             <div key={r.id} className="border border-border rounded-xl p-4 space-y-2">
               <div className="flex items-start gap-3">
                 {r.image_url ? (
-                  <img src={r.image_url} alt="" className="w-16 h-16 rounded object-cover shrink-0" />
+                  <img loading="lazy" decoding="async" src={r.image_url} alt="" className="w-16 h-16 rounded object-cover shrink-0" />
                 ) : (
                   <div className="w-16 h-16 rounded bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
                 )}
@@ -825,7 +825,7 @@ const SiteContentEditor = () => {
         </div>
         <div className="flex items-center gap-4">
           {trainer.trainer_photo_url ? (
-            <img src={trainer.trainer_photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+            <img loading="lazy" decoding="async" src={trainer.trainer_photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
           ) : (
             <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground"><User className="w-8 h-8" /></div>
           )}
@@ -865,7 +865,7 @@ const SiteContentEditor = () => {
             <div key={t.id} className="border border-border rounded-xl p-4 space-y-3">
               <div className="flex items-start gap-3">
                 {t.photo_url ? (
-                  <img src={t.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
+                  <img loading="lazy" decoding="async" src={t.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
                 ) : (
                   <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-xs text-muted-foreground">Foto</div>
                 )}
@@ -887,7 +887,7 @@ const SiteContentEditor = () => {
                 <div className="space-y-2">
                   <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Antes</Label>
                   {t.photo_before_url ? (
-                    <img src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-md" />
+                    <img loading="lazy" decoding="async" src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-md" />
                   ) : (
                     <div className="w-full aspect-[3/4] rounded-md bg-secondary/50 flex items-center justify-center text-[11px] text-muted-foreground">Sin foto</div>
                   )}
@@ -902,7 +902,7 @@ const SiteContentEditor = () => {
                 <div className="space-y-2">
                   <Label className="text-[11px] uppercase tracking-wider text-primary">Después</Label>
                   {t.photo_after_url ? (
-                    <img src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-md" />
+                    <img loading="lazy" decoding="async" src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-md" />
                   ) : (
                     <div className="w-full aspect-[3/4] rounded-md bg-secondary/50 flex items-center justify-center text-[11px] text-muted-foreground">Sin foto</div>
                   )}
