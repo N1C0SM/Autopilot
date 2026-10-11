@@ -41,6 +41,7 @@ const TrainingPlanView = lazy(() => import("@/components/dashboard/TrainingPlanV
 const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgress"));
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/pages/Recursos"));
+const Scan = lazy(() => import("@/pages/Scan"));
 
 const SectionFallback = () => (
   <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
@@ -116,7 +117,7 @@ const Dashboard = () => {
   useEffect(() => {
     setVisited((v) => (v.includes(section) ? v : [...v, section]));
   }, [section]);
-  const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records">("evolution");
+  const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records" | "scan">("evolution");
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
@@ -618,10 +619,15 @@ const Dashboard = () => {
             ))}
             <button
               type="button"
-              onClick={() => navigate(`/scan/user/${user.id}`)}
-              className="flex h-9 items-center justify-center gap-1 rounded-full text-sm font-medium text-primary transition-transform active:scale-95"
+              role="tab"
+              aria-selected={progressTab === "scan"}
+              onClick={() => setProgressTab("scan")}
+              className={`relative flex h-9 items-center justify-center gap-1 rounded-full text-sm font-medium transition-colors duration-150 ${progressTab === "scan" ? "text-primary-foreground" : "text-primary"}`}
             >
-              <Sparkles className="h-3.5 w-3.5" /> Scan
+              {progressTab === "scan" && (
+                <motion.span layoutId="progress-pill" className="absolute inset-0 rounded-full bg-primary shadow-sm" transition={{ type: "spring", stiffness: 600, damping: 40 }} />
+              )}
+              <span className="relative flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Scan</span>
             </button>
           </div>
           <Suspense fallback={<SectionFallback />}>
@@ -630,6 +636,7 @@ const Dashboard = () => {
             </div>
             <div className={progressTab === "photos" ? "" : "hidden"}><ProgressPhotos userId={user.id} /></div>
             <div className={progressTab === "records" ? "" : "hidden"}><PRsList userId={user.id} /></div>
+            {progressTab === "scan" && <Scan inline />}
           </Suspense>
         </div>
       )}
