@@ -32,6 +32,7 @@ const EmailTemplatesEditor = lazy(() => import("@/components/admin/EmailTemplate
 const GoalPhysiquesEditor = lazy(() => import("@/components/admin/GoalPhysiquesEditor"));
 const ProductsAdmin = lazy(() => import("@/components/admin/ProductsAdmin"));
 const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
+const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 
 export interface Profile {
   user_id: string;
@@ -51,7 +52,7 @@ export interface Profile {
   renewal_decision?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account";
 
 const Admin = () => {
   const { user, signOut } = useAuth();
@@ -63,7 +64,8 @@ const Admin = () => {
   const [adminIds, setAdminIds] = useState<Set<string>>(new Set());
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
-  const [section, setSection] = useState<AdminSection>("dashboard");
+  const [section, setSection] = useState<AdminSection>(() =>
+    new URLSearchParams(window.location.search).get("s") === "account" ? "account" : "dashboard");
   const isMobile = useIsMobile();
 
   const refreshUsers = useCallback(async () => {
@@ -166,7 +168,8 @@ const Admin = () => {
     section === "physiques" ? "Físicos objetivo · AI Scan" :
     section === "payments" ? "Pagos · Stripe" :
     section === "products" ? "Planes y productos" :
-    section === "metrics" ? "Métricas" : "";
+    section === "metrics" ? "Métricas" :
+    section === "account" ? "Mi cuenta" : "";
 
   const handleSignOut = async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); };
 
@@ -368,6 +371,12 @@ const Admin = () => {
             )}
 
             {section === "products" && <ProductsAdmin />}
+
+            {section === "account" && (
+              <div className="max-w-2xl">
+                <SettingsPanel />
+              </div>
+            )}
 
             {section === "emails" && (
               <div className="max-w-4xl">
