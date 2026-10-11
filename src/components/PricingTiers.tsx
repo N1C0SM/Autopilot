@@ -104,10 +104,10 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
       <TrainerOffer />
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
-        Puedes quedarte en Free sin límite. Plus ({TIERS.training.price}€/mes) adapta Autopilot a ti; Coach ({TIERS.full.price}€/mes) añade una persona real. Sin permanencia. Cancela desde Ajustes → Suscripción.
+        Free no caduca y no pide tarjeta. Plus y Coach piden tarjeta al empezar la prueba de 7 días; el primer cobro llega el día 8 si no cancelas desde Ajustes → Suscripción. Sin permanencia.
       </p>
       <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
-        Plus funciona solo, sin entrenador humano. Coach incluye todo Plus y un entrenador asignado.
+        Plus funciona sin atención humana. En Coach te atiende Nicolás, el fundador: responde por chat en horario normal, no 24/7.
       </p>
       <p className="text-center text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía de devolución de 30 días en planes mensuales

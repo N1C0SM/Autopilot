@@ -24,7 +24,7 @@ const titles: Record<View, string> = {
   home: "Hoy",
   training: "Tu plan",
   nutrition: "Nutrición",
-  chat: "Tu entrenador",
+  chat: "Nicolás",
   progress: "Progreso",
 };
 
@@ -37,7 +37,7 @@ const exercises = [
 const side: Record<View, { title: string; points: string[] }> = {
   home: {
     title: "Abres la app y sabes qué toca hoy.",
-    points: ["Tu rutina y el progreso de tus sesiones están a mano.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "El chat con entrenador y la nutrición dependen del plan elegido."],
+    points: ["Tu rutina y el progreso de tus sesiones están a mano.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "La nutrición y el chat con Nicolás dependen del plan elegido."],
   },
   training: {
     title: "Sabes qué hacer al entrar al gimnasio.",
@@ -49,7 +49,7 @@ const side: Record<View, { title: string; points: string[] }> = {
   },
   chat: {
     title: "Una persona real al otro lado.",
-    points: ["Dudas, molestias o cambios: se lo dices a tu entrenador.", "Te responde y ajusta tu plan, no un robot.", "El chat con entrenador es exclusivo del plan Coach."],
+    points: ["Dudas, molestias o cambios: se los cuentas a Nicolás, el fundador.", "Te responde él y ajusta tu plan; no es un bot.", "El chat personal es exclusivo del plan Coach."],
   },
   progress: {
     title: "Comprueba tu evolución con datos de tus sesiones.",
@@ -509,7 +509,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          {onFree && <Button variant="hero" onClick={onFree}>Crear cuenta gratis y guardar mi progreso <ArrowRight className="h-4 w-4" /></Button>}
+          {onFree && <Button variant="hero" className="min-h-12" onClick={onFree}>Crear mi propia rutina gratis <ArrowRight className="h-4 w-4" /></Button>}
           <Button variant="outline" onClick={onPlans}>Ver qué incluye cada plan</Button>
         </div>
       </div>
