@@ -91,9 +91,10 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
   const [owner, setOwner] = useState<{ name: string; photo: string | null }>({ name: "Nicolás", photo: null });
   useEffect(() => {
     let alive = true;
-    supabase.rpc("get_public_settings").then(({ data }) => {
-      const row = Array.isArray(data) ? data[0] : data;
-      if (alive && row) setOwner({ name: row.trainer_name?.trim() || "Nicolás", photo: row.trainer_photo_url || null });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.rpc as any)("get_founder_public").then(({ data }: { data: { name: string | null; avatar_url: string | null }[] | null }) => {
+      const row = data?.[0];
+      if (alive && row) setOwner({ name: row.name?.trim() || "Nicolás", photo: row.avatar_url || null });
     });
     return () => { alive = false; };
   }, []);
