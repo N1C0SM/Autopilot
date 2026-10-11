@@ -37,8 +37,8 @@
       Fotos de progreso: renovación automática de URLs firmadas antes de caducar (y al volver el foco), borrado del objeto en el bucket antes que la fila (con reintento), rutas en lugar de URLs públicas inservibles en bucket privado, subida por lotes tolerante a ficheros inválidos, visor accesible (diálogo, Escape, flechas, aria-label) y orden determinista. Escáner: las fotos y el «antes vs. ahora» firmadas correctamente y reset que borra también los ficheros. Compartir: fallback a descarga cuando el menú nativo falla, y enlaces de invitación con base pública en móvil nativo.
 
 ## Días 3-5 (en curso)
-- [ ] Día 3: demo de la portada con ejercicio a pantalla completa y swipe, igual que la app.
-- [ ] Día 4: onboarding de 1 toque por decisión, sin perder datos.
-- [ ] Día 5: admin con edición completa de planes (activar, nombre, precio, descripción, ventajas).
-- [ ] Día 5: login con nombre o correo + foto del último usuario en el dispositivo.
+- [x] Día 3: demo de la portada con ejercicio a pantalla completa y swipe, igual que la app.
+- [x] Día 4: onboarding de 1 toque por decisión, sin perder datos.
+- [x] Día 5: admin con edición completa de planes (activar, nombre, precio, descripción, ventajas).
+- [x] Día 5: login con nombre o correo + foto del último usuario en el dispositivo.
 - [ ] Face ID / Touch ID en la app nativa (requiere plugin nativo y compilar en Xcode).
