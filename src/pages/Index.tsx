@@ -76,7 +76,7 @@ export default function Index() {
     <section className="px-5 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-16">
       <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
         <div className="motion-safe:animate-fade-in">
-          <h1 className="font-display text-[clamp(2.25rem,7vw,4rem)] font-bold leading-[1.04] tracking-tight"><span className="whitespace-nowrap">Tu entrenamiento.</span> <span className="whitespace-nowrap">Tu nutrición.</span> <span className="text-primary whitespace-nowrap">Tu progreso.</span></h1>
+          <h1 className="font-display text-[clamp(1.9rem,9vw,4rem)] font-bold leading-[1.04] tracking-tight"><span className="whitespace-nowrap">Tu entrenamiento.</span> <span className="whitespace-nowrap">Tu nutrición.</span> <span className="text-primary whitespace-nowrap">Tu progreso.</span></h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Button variant="hero" size="lg" asChild className="min-h-12"><Link to="/onboarding" onClick={() => track("cta_click", { cta: "free_signup", source: "hero" })}>Crear mi rutina gratis <ArrowRight className="h-4 w-4" /></Link></Button>
