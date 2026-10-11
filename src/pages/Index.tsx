@@ -73,10 +73,10 @@ export default function Index() {
         })}</script>
     </Helmet>
     {/* 1 · Hero */}
-    <section className="px-5 pb-10 pt-8 sm:px-8 sm:pb-14 sm:pt-16">
+    <section className="px-5 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-16">
       <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
         <div className="motion-safe:animate-fade-in">
-          <h1 className="font-display text-[clamp(2.25rem,7vw,4rem)] font-bold leading-[1.04] tracking-tight">Tu entrenamiento. Tu nutrición. <span className="text-primary">Tu progreso.</span></h1>
+          <h1 className="font-display text-[clamp(2.25rem,7vw,4rem)] font-bold leading-[1.04] tracking-tight"><span className="whitespace-nowrap">Tu entrenamiento.</span> <span className="whitespace-nowrap">Tu nutrición.</span> <span className="text-primary whitespace-nowrap">Tu progreso.</span></h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Button variant="hero" size="lg" asChild className="min-h-12"><Link to="/onboarding" onClick={() => track("cta_click", { cta: "free_signup", source: "hero" })}>Crear mi rutina gratis <ArrowRight className="h-4 w-4" /></Link></Button>
@@ -90,7 +90,7 @@ export default function Index() {
 
     {/* 2 · Demo */}
     <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 border-t border-border">
-      <p className="mx-auto max-w-6xl px-5 pt-8 text-sm text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
+      <p className="mx-auto max-w-6xl px-5 pt-5 text-sm text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
         <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
       </Suspense>
@@ -100,7 +100,7 @@ export default function Index() {
     <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 border-t border-border px-5 py-12 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-6xl">
         <h2 id="precios-titulo" className="font-display text-3xl font-bold sm:text-4xl">Empieza gratis. Paga solo si te aporta.</h2>
-        <p className="mt-3 max-w-2xl text-muted-foreground">Free sirve para registrar. Plus te dice qué comer y cuánto peso subir. Coach añade a Nicolás revisando tu plan.</p>
+        <p className="mt-3 max-w-2xl text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. Plus te dice qué comer y cuánto peso subir. Coach añade a Nicolás revisando tu plan.</p>
         <div className="mt-8">
           <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
             <PricingTiers onSelect={selectPlan} />
