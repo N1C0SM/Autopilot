@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { buildScanPlanUpdates, hasScanInferences } from "@/lib/scanApply";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
@@ -810,18 +811,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
         return;
       }
 
-      const updates: import("@/integrations/supabase/types").TablesUpdate<"onboarding"> = {};
-      if (r.inferred_goal) updates.goal = r.inferred_goal;
-      if (r.inferred_focus) {
-        updates.primary_focus = r.inferred_focus;
-        updates.equipment_type =
-          r.inferred_focus === "gimnasio" ? "Gimnasio" :
-          r.inferred_focus === "calistenia" ? "Calistenia" : "Mixto";
-      }
-      if (typeof r.inferred_intensity === "number") updates.intensity_level = r.inferred_intensity;
-      if (r.inferred_specific_goals?.length) {
-        updates.specific_goal = r.inferred_specific_goals.join(", ");
-      }
+      const updates = buildScanPlanUpdates(r);
 
       if (Object.keys(updates).length === 0) {
         setPlanApplyState("idle");
@@ -1798,7 +1788,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             El scan no cambia nada por sí solo. Aplícalo solo si te encaja.
                           </div>
                         </div>
-                        {(result.inferred_goal || result.inferred_focus || !!result.inferred_specific_goals?.length) ? (
+                        {hasScanInferences(result) ? (
                           <Button
                             size="sm"
                             variant="hero"
