@@ -367,7 +367,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
       {allPhotos.length > 0 && (
         <div className="bg-card rounded-xl p-5 border border-border">
           <h3 className="font-display font-bold text-sm mb-3">Evolución reciente ({allPhotos.length})</h3>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {allPhotos.map((p) => (
               <div key={p.id} className="aspect-[3/4] rounded-lg overflow-hidden border border-border relative">
                 {signed.get(p.photo_url) ? (

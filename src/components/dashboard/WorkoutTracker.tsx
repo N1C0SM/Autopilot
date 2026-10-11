@@ -1367,7 +1367,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                             )}
 
                             {/* Segmento principal de la serie */}
-                            <div className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 items-center">
+                            <div className="grid grid-cols-[22px_40px_minmax(0,1fr)_minmax(0,1fr)_44px] gap-1.5 sm:grid-cols-[32px_52px_1fr_1fr_44px] sm:gap-2 items-center">
                               {/* Set number */}
                               <span className={`text-xs font-bold text-center ${
                                 set.done && !isWarmup ? "text-primary" : "text-muted-foreground"
@@ -1392,7 +1392,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(mainError && set.weight.trim())}
-                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-1 sm:px-3 py-2 text-base sm:text-sm text-center font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight ? "text-muted-foreground" : ""} ${mainError && set.weight.trim() ? "border-destructive" : "border-border"}`}
                                 />
                                 )}
                               </div>
@@ -1410,7 +1410,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(mainError && (!Number.isInteger(set.reps) || set.reps <= 0))}
-                                  className={`min-h-11 w-full bg-background border rounded-lg px-3 py-2 text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${mainError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                  className={`min-h-11 w-full bg-background border rounded-lg px-1 sm:px-3 py-2 text-base sm:text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all ${isWarmup ? "text-muted-foreground" : ""} ${!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps ? "text-muted-foreground" : ""} ${mainError && (!Number.isInteger(set.reps) || set.reps <= 0) ? "border-destructive" : "border-border"}`}
                                 />
                               </div>
 
@@ -1433,7 +1433,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                               {drops.map((drop, di) => {
                                 const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
                                 return (
-                                <div key={di} className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 items-center">
+                                <div key={di} className="grid grid-cols-[22px_40px_minmax(0,1fr)_minmax(0,1fr)_44px] gap-1.5 sm:grid-cols-[32px_52px_1fr_1fr_44px] sm:gap-2 items-center">
                                   <span className="flex items-center justify-center text-muted-foreground" title={`Bajada ${di + 1}`}>
                                     <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
                                   </span>
