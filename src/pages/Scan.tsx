@@ -57,6 +57,7 @@ import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
 import { MONTHLY_PRICE_EUR, TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
+import { toLocalDateString } from "@/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";

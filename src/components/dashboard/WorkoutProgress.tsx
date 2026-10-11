@@ -39,7 +39,11 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       } else {
         const history = buildExerciseHistory((data || []) as WorkoutLogRecord[]);
         setHistoryByExercise(history);
-        const mostTracked = Object.entries(history).sort((a, b) => b[1].length - a[1].length)[0]?.[0] || "";
+        // Por defecto, el ejercicio con más sesiones (así la gráfica arranca con línea real).
+        const mostTracked = Object.entries(history).sort((a, b) =>
+          b[1].length - a[1].length ||
+          (b[1][b[1].length - 1]?.date || "").localeCompare(a[1][a[1].length - 1]?.date || ""),
+        )[0]?.[0] || "";
         setSelectedExercise((current) => current in history ? current : mostTracked);
       }
       setLoading(false);
@@ -50,8 +54,13 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     };
   }, [userId, reload]);
 
+  // Primero los ejercicios con 2+ sesiones (tienen gráfica), luego el resto; alfabético dentro.
   const exercises = useMemo(
-    () => Object.keys(historyByExercise).sort((a, b) => a.localeCompare(b, "es")),
+    () => Object.keys(historyByExercise).sort((a, b) => {
+      const ga = historyByExercise[a].length > 1 ? 0 : 1;
+      const gb = historyByExercise[b].length > 1 ? 0 : 1;
+      return ga - gb || a.localeCompare(b, "es");
+    }),
     [historyByExercise],
   );
   const history = historyByExercise[selectedExercise] || [];
