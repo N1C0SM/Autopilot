@@ -1,27 +1,45 @@
-import { ArrowRight, Play } from "lucide-react";
-import { Link, Navigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { ArrowRight, Dumbbell, LineChart, Play, SlidersHorizontal } from "lucide-react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import PublicLayout from "@/components/PublicLayout";
 import { track } from "@/lib/analytics";
-import { TIERS } from "@/config/tiers";
+import { TIERS, type PlanKey } from "@/config/tiers";
 import dashboardPreview from "@/assets/dashboard-preview.png";
 
+const ProductPreview = lazy(() => import("@/components/ProductPreview"));
+const PricingTiers = lazy(() => import("@/components/PricingTiers"));
+
 const legacySections: Record<string, string> = {
-  "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/como-funciona#demo",
+  "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/#demo",
   "#como-funciona": "/como-funciona", "#equipo": "/equipo", "#faq": "/preguntas-frecuentes",
 };
 
 export default function Index() {
   const { hash, search } = useLocation();
+  const navigate = useNavigate();
+  const pricingRef = useRef<HTMLElement>(null);
   const destination = legacySections[hash];
   useEffect(() => { if (!destination) track("landing_view"); }, [destination]);
-  if (destination) {
+  useEffect(() => {
+    const el = pricingRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { track("pricing_view", { source: "landing" }); io.disconnect(); } }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [destination]);
+  const selectPlan = (plan: PlanKey) => {
+    track("plan_select", { plan, source: "landing" });
+    navigate(plan === "free" ? "/onboarding" : `/signup?plan=${plan}`);
+  };
+  if (destination && destination !== "/#demo") {
     const [pathname, anchor] = destination.split("#");
     return <Navigate replace to={{ pathname, search, hash: anchor ? `#${anchor}` : "" }} />;
   }
-  return <PublicLayout title="Crea tu rutina. Empieza gratis" description="Crea tu rutina, registra tus entrenamientos y sigue tu progreso. Empieza gratis y sin tarjeta; añade nutrición o entrenador cuando lo necesites.">
+  return <PublicLayout title="Entrenamiento y nutrición. Empieza gratis" description="Crea tu rutina según tu objetivo, días y material, registra cada serie y sigue tu progreso. Free sin tarjeta; Plus añade nutrición y progresión de cargas.">
+
     <Helmet>
 <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
@@ -54,39 +72,91 @@ export default function Index() {
           inLanguage: "es-ES",
         })}</script>
     </Helmet>
-    <section className="relative isolate flex min-h-[min(620px,calc(100svh-4rem))] items-center overflow-hidden px-5 py-8 sm:px-8 sm:py-16">
-      <img src={dashboardPreview} alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 -z-20 h-full w-full object-cover object-right opacity-30" />
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-background via-background/90 to-background/30" />
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="max-w-xl motion-safe:animate-fade-in">
-          <p className="mb-5 font-display text-xl font-bold text-primary">Autopilot</p>
-          <h1 className="font-display text-[clamp(2.5rem,7vw,4.5rem)] font-bold leading-[1.02] tracking-tight">Crea tu rutina.<br /><span className="text-primary">Empieza gratis.</span></h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">Elige tus días. Entrena y guarda tu progreso.</p>
+    {/* 1 · Hero */}
+    <section className="px-5 pb-10 pt-8 sm:px-8 sm:pb-14 sm:pt-16">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
+        <div className="motion-safe:animate-fade-in">
+          <h1 className="font-display text-[clamp(2.25rem,7vw,4rem)] font-bold leading-[1.04] tracking-tight">Tu entrenamiento. Tu nutrición. <span className="text-primary">Tu progreso.</span></h1>
+          <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Button variant="hero" size="lg" asChild className="min-h-12"><Link to="/onboarding" onClick={() => track("cta_click", { cta: "free_signup", source: "hero" })}>Crear mi rutina gratis <ArrowRight className="h-4 w-4" /></Link></Button>
-            <Button variant="outline" size="lg" asChild className="min-h-12"><Link to="/como-funciona#demo" onClick={() => track("plan_preview_view", { source: "hero" })}><Play className="h-4 w-4" /> Ver la demo</Link></Button>
+            <Button variant="outline" size="lg" asChild className="min-h-12"><a href="#demo" onClick={() => track("plan_preview_view", { source: "hero" })}><Play className="h-4 w-4" /> Probar la demo</a></Button>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 text-sm text-muted-foreground">
-            <span>Sin tarjeta</span><Link to="/planes" className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">Ver planes y precios</Link>
-          </div>
+          <p className="mt-4 text-sm text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
         </div>
+        <img src={dashboardPreview} alt="Pantalla de Autopilot con el entrenamiento del día" width={1280} height={720} fetchPriority="high" decoding="async" className="aspect-video w-full rounded-lg border border-border object-cover" />
       </div>
     </section>
-    <section aria-labelledby="explora" className="border-t border-border px-5 py-8 sm:px-8 sm:py-10">
+
+    {/* 2 · Demo */}
+    <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 border-t border-border">
+      <p className="mx-auto max-w-6xl px-5 pt-8 text-sm text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
+      <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
+        <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
+      </Suspense>
+    </section>
+
+    {/* 3 · Precios */}
+    <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 border-t border-border px-5 py-12 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-6xl">
-        <h2 id="explora" className="font-display text-xl font-semibold">Lo que necesitas, a un clic</h2>
-        <div className="mt-4 grid gap-x-10 sm:grid-cols-2">
-          {[
-            { to: "/planes", title: "Planes y precios", text: `Gratis · Plus ${TIERS.training.price} €/mes · Coach ${TIERS.full.price} €/mes` },
-            { to: "/como-funciona", title: "Cómo funciona", text: "Conoce los pasos y prueba la app sin registrarte." },
-            { to: "/equipo", title: "Conoce a tu equipo", text: "Quién te acompaña si eliges el plan Coach." },
-            { to: "/recursos", title: "Guías y recursos", text: "Libros, artículos y recomendaciones." },
-          ].map(item => <Link key={item.to} to={item.to} className="group flex min-h-20 min-w-0 items-center justify-between gap-4 border-b border-border py-4">
-            <div className="min-w-0"><h3 className="font-medium transition-colors group-hover:text-primary">{item.title}</h3><p className="mt-1 text-sm text-muted-foreground">{item.text}</p></div>
-            <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0 text-primary transition-transform motion-safe:group-hover:translate-x-1" />
-          </Link>)}
+        <h2 id="precios-titulo" className="font-display text-3xl font-bold sm:text-4xl">Empieza gratis. Paga solo si te aporta.</h2>
+        <p className="mt-3 max-w-2xl text-muted-foreground">Free sirve para registrar. Plus te dice qué comer y cuánto peso subir. Coach añade a Nicolás revisando tu plan.</p>
+        <div className="mt-8">
+          <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
+            <PricingTiers onSelect={selectPlan} />
+          </Suspense>
         </div>
+        <p className="mt-6 text-center text-sm"><Link to="/planes" className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">Ver la comparativa completa</Link></p>
+      </div>
+    </section>
+
+    {/* 4 · Cómo funciona */}
+    <section aria-labelledby="como-titulo" className="border-t border-border px-5 py-12 sm:px-8 sm:py-16">
+      <div className="mx-auto max-w-6xl">
+        <h2 id="como-titulo" className="font-display text-3xl font-bold sm:text-4xl">Cómo funciona</h2>
+        <ol className="mt-8 grid gap-6 md:grid-cols-3">
+          {[
+            [SlidersHorizontal, "Personaliza", "Objetivo, nivel, días, lesiones y material: gimnasio, casa o calistenia."],
+            [Dumbbell, "Entrena", "Sigue tu sesión y apunta kg y repeticiones de cada serie."],
+            [LineChart, "Progresa", "Consulta récords, volumen y peso. En Plus, la carga siguiente se calcula con tus registros."],
+          ].map(([Icon, title, text], i) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="border-t border-border pt-5">
+            <div className="flex items-center gap-3"><I className="h-5 w-5 text-primary" aria-hidden="true" /><span className="text-sm text-muted-foreground">0{i + 1}</span></div>
+            <h3 className="mt-3 font-display text-xl font-bold">{title as string}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text as string}</p>
+          </li>; })}
+        </ol>
+        <p className="mt-8 max-w-2xl text-sm leading-relaxed text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: el análisis corporal por foto y el asistente de dudas.</p>
+      </div>
+    </section>
+
+    {/* 5 · Fundador + FAQ + CTA */}
+    <section aria-labelledby="fundador-titulo" className="border-t border-border px-5 py-12 sm:px-8 sm:py-16">
+      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <h2 id="fundador-titulo" className="font-display text-3xl font-bold sm:text-4xl">Quién está detrás</h2>
+          <p className="mt-4 leading-relaxed text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo, y en el plan Coach también soy yo quien revisa tu plan y te responde por chat. Quería una app que te diga qué hacer hoy sin complicarte.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Es un proyecto de una persona. Por eso el número de clientes de Coach es limitado y las respuestas no son inmediatas.</p>
+        </div>
+        <div>
+          <h2 className="font-display text-2xl font-bold">Dudas frecuentes</h2>
+          <Accordion type="single" collapsible className="mt-4">
+            {faqs.map((f, i) => <AccordionItem key={f.q} value={`f${i}`}><AccordionTrigger className="min-h-12 text-left">{f.q}</AccordionTrigger><AccordionContent className="leading-relaxed text-muted-foreground">{f.a}</AccordionContent></AccordionItem>)}
+          </Accordion>
+          <Link to="/preguntas-frecuentes" className="mt-3 inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">Ver todas las dudas</Link>
+        </div>
+      </div>
+      <div className="mx-auto mt-14 max-w-6xl border-t border-border pt-10 text-center">
+        <h2 className="font-display text-2xl font-bold sm:text-3xl">Empieza a entrenar con Autopilot</h2>
+        <p className="mt-2 text-muted-foreground">Gratis y sin tarjeta.</p>
+        <Button variant="hero" size="lg" asChild className="mt-6 min-h-12"><Link to="/onboarding" onClick={() => track("cta_click", { cta: "free_signup", source: "final" })}>Crear mi rutina gratis <ArrowRight className="h-4 w-4" /></Link></Button>
       </div>
     </section>
   </PublicLayout>;
 }
+
+const faqs = [
+  { q: "¿Qué incluye el plan Free?", a: "Rutina inicial según tu objetivo, días y material, registro de series, kg y repeticiones, historial, peso y récords. No pide tarjeta y no caduca." },
+  { q: "¿Qué diferencia hay entre Free, Plus y Coach?", a: `Free sirve para entrenar y registrar. Plus (${TIERS.training.price} €/mes) añade plan de nutrición con calorías y macros, progresión de cargas calculada con tus registros, análisis corporal por foto con IA y estadísticas avanzadas. Coach (${TIERS.full.price} €/mes) incluye todo Plus y a Nicolás revisando tu plan y respondiéndote por chat.` },
+  { q: "¿Puedo entrenar en casa o hacer calistenia?", a: "Sí. Indicas tu material exacto, o ninguno, y la rutina se construye con ejercicios que puedes hacer: gimnasio, mancuernas en casa o calistenia." },
+  { q: "¿Cómo funcionan los pagos y la cancelación?", a: "Plus y Coach piden tarjeta al empezar una prueba de 7 días. No se cobra nada hasta el día 8. Puedes cancelar antes desde Ajustes → Suscripción y no se te cobrará. Después se renueva cada mes, sin permanencia." },
+];
