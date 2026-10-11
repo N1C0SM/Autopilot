@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import UserSidebar from "@/components/UserSidebar";
+import MobileAppShell from "@/components/mobile/MobileAppShell";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Upload,
@@ -1080,10 +1082,9 @@ const Scan = () => {
     );
   }
 
-  return (
-    <SidebarProvider>
-    <div className="min-h-screen bg-background relative overflow-hidden flex">
-      {user && <UserSidebar section="progress" onNavigate={(s) => navigate(s === "progress" ? `/scan/user/${user.id}` : "/dashboard")} onSignOut={() => { void supabase.auth.signOut(); navigate("/"); }} />}
+  const embedded = !!user && isMobile;
+  const scanBody = (
+    <>
       <div className="flex-1 min-w-0 relative">
       <Helmet>
         <title>{routeUserId ? "Mi progreso · AI Scan" : "AI Body Scan · Autopilot"}</title>
@@ -1109,7 +1110,7 @@ const Scan = () => {
       </div>
 
       {/* Header */}
-      <header className="container mx-auto max-w-6xl px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 grid grid-cols-[1fr_auto_1fr] items-center">
+      {!embedded && <header className="container mx-auto max-w-7xl px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 grid grid-cols-[1fr_auto_1fr] items-center">
         <div className="flex items-center gap-1">
           {user && <SidebarTrigger className="hidden md:inline-flex" />}
           <Link
@@ -1122,9 +1123,9 @@ const Scan = () => {
         </div>
         <span className="text-sm font-semibold tracking-tight">Escáner corporal</span>
         <div />
-      </header>
+      </header>}
 
-      <main className="container mx-auto max-w-6xl px-4 pb-24">
+      <main className={embedded ? "w-full pb-6" : "container mx-auto max-w-7xl px-4 pb-24"}>
         <AnimatePresence mode="wait">
           {!result && phase === "upload" ? (
             <motion.div
@@ -1166,7 +1167,7 @@ const Scan = () => {
 
               {/* Físico objetivo: presets del admin + opción de subir foto propia */}
               {user && savedObjectiveUrl && !editingObjective ? (
-                <div className="max-w-4xl mx-auto mb-8 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur p-4 sm:p-5 flex items-center gap-4">
+                <div className="w-full mx-auto mb-8 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur p-4 sm:p-5 flex items-center gap-4">
                   <img loading="lazy" decoding="async"
                     src={savedObjectiveUrl}
                     alt="Tu objetivo"
@@ -1863,7 +1864,7 @@ const Scan = () => {
                 monthsWithPlan={result.months_with_plan}
               />
 
-              <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-6 w-full mx-auto">
                 {/* Photos + similarity */}
                 <div className="space-y-4">
                   {(() => {
@@ -2033,7 +2034,7 @@ const Scan = () => {
 
               {/* === CAPA DE DETALLE — lectura estimada por IA === */}
               {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
-                <div className="max-w-5xl mx-auto mt-10 space-y-4">
+                <div className="w-full mx-auto mt-10 space-y-4">
                   <div className="text-center mb-2">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
                       <Gauge className="w-3.5 h-3.5 text-primary" />
@@ -2329,7 +2330,7 @@ const Scan = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4, duration: 0.6 }}
-                className="relative max-w-4xl mx-auto mt-16"
+                className="relative w-full mx-auto mt-16"
               >
                 <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl opacity-70" />
                 <div className="relative bg-card/80 backdrop-blur-xl border border-primary/30 rounded-3xl p-8 sm:p-12 text-center overflow-hidden">
@@ -2606,6 +2607,29 @@ const Scan = () => {
           )}
         </AnimatePresence>
       </main>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <MobileAppShell
+        title="Análisis IA"
+        active="progress"
+        userId={user.id}
+        onChange={(t) => { try { sessionStorage.setItem("autopilot_section", t); } catch { /* sin storage */ } navigate("/dashboard"); }}
+        onSettings={() => { try { sessionStorage.setItem("autopilot_section", "settings"); } catch { /* sin storage */ } navigate("/dashboard"); }}
+      >
+        <div className="relative w-full">{scanBody}</div>
+      </MobileAppShell>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+    <div className="min-h-screen bg-background relative overflow-hidden flex w-full">
+      {user && <UserSidebar section="progress" onNavigate={(s) => navigate(s === "progress" ? `/scan/user/${user.id}` : "/dashboard")} onSignOut={() => { void supabase.auth.signOut(); navigate("/"); }} />}
+      <div className="flex-1 min-w-0 relative">
+      {scanBody}
       </div>
     </div>
     </SidebarProvider>
