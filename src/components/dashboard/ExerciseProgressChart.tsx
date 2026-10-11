@@ -125,7 +125,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
               dataKey="metricValue"
               connectNulls
               stroke="hsl(var(--primary))"
-              strokeWidth={2}
+              strokeWidth={2.5}
               fill={`url(#${gid})`}
               dot={{ r: 2.5, fill: "hsl(var(--background))", stroke: "hsl(var(--primary))", strokeWidth: 1.5 }}
               activeDot={{ r: 4, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
@@ -134,6 +134,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      )}
     </div>
   );
 };
