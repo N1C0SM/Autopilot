@@ -249,7 +249,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {goalUrl ? (
               goalSignedUrl ? (
-                <img src={goalSignedUrl} alt="Físico objetivo" className="w-full h-full object-contain" />
+                <img loading="lazy" decoding="async" src={goalSignedUrl} alt="Físico objetivo" className="w-full h-full object-contain" />
               ) : (
                 <div className="text-center p-6">
                   <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -286,7 +286,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
             {latestPhoto ? (
               latestSignedUrl ? (
-                <img src={latestSignedUrl} alt="Estado actual" className="w-full h-full object-contain" />
+                <img loading="lazy" decoding="async" src={latestSignedUrl} alt="Estado actual" className="w-full h-full object-contain" />
               ) : (
                 <div className="text-center p-6">
                   <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />

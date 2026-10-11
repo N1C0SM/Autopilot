@@ -300,7 +300,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
           <div className="shrink-0 px-3 py-2 flex items-center gap-2">
             <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
               {previewFile.type === "image" ? (
-                <img src={previewFile.url} alt="" className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={previewFile.url} alt="" className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full bg-secondary flex items-center justify-center">
                   <Video className="w-6 h-6 text-muted-foreground" />
@@ -357,7 +357,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
           </button>
           <div onClick={(e) => e.stopPropagation()} className="max-w-3xl max-h-[85vh]">
             {viewMedia.type === "image" ? (
-              <img src={viewMedia.url} alt="" className="max-h-[85vh] rounded-xl object-contain" />
+              <img loading="lazy" decoding="async" src={viewMedia.url} alt="" className="max-h-[85vh] rounded-xl object-contain" />
             ) : (
               // Sin autoPlay: se abre con los controles y el usuario pulsa play
               <video src={viewMedia.url} controls className="max-h-[85vh] rounded-xl" />

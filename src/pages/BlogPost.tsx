@@ -134,7 +134,7 @@ const BlogPost = () => {
 
         {post.cover_url && (
           <div className="mb-10 rounded-2xl overflow-hidden border border-border">
-            <img src={post.cover_url} alt={post.title} className="w-full h-auto object-cover" />
+            <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} className="w-full h-auto object-cover" />
           </div>
         )}
 

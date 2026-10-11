@@ -161,7 +161,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
               } p-2`}
             >
               {r.current_photo_url ? (
-                <img src={r.current_photo_url} alt={`Scan ${label}`} className="w-full h-20 object-cover rounded-md mb-1.5" />
+                <img loading="lazy" decoding="async" src={r.current_photo_url} alt={`Scan ${label}`} className="w-full h-20 object-cover rounded-md mb-1.5" />
               ) : (
                 <div className="w-full h-20 rounded-md mb-1.5 bg-muted/30" />
               )}

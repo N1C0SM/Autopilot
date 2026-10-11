@@ -366,7 +366,7 @@ const LibraryDrive = () => {
               </div>
               <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
                 {covers[open.id] ? (
-                  <img src={covers[open.id]} alt="Portada" className="w-full h-full object-cover" />
+                  <img loading="lazy" decoding="async" src={covers[open.id]} alt="Portada" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
                     <ImageIcon className="w-4 h-4" /> Sin portada
@@ -734,7 +734,7 @@ const LibraryDrive = () => {
             >
               <div className="flex items-start gap-3">
                 {thumb ? (
-                  <img src={thumb} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
+                  <img loading="lazy" decoding="async" src={thumb} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
                 ) : (
                   <div className="w-14 h-[74px] rounded bg-secondary shrink-0 flex items-center justify-center">
                     {kind === "pack" ? <Package className="w-5 h-5 text-primary" />

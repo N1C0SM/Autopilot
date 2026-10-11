@@ -210,7 +210,7 @@ const Signup = () => {
         {fromScan && scanCtx?.result && (
           <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 mb-4 flex items-center gap-3">
             {scanCtx.currentImg && (
-              <img
+              <img loading="lazy" decoding="async"
                 src={scanCtx.currentImg}
                 alt="Tu scan"
                 className="w-14 h-14 rounded-xl object-cover border border-primary/40 flex-shrink-0"

@@ -215,7 +215,7 @@ const BlogPostsEditor = () => {
             <Label>Portada</Label>
             <div className="mt-1.5 flex items-start gap-4">
               {editing.cover_url ? (
-                <img src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-lg border border-border" />
+                <img loading="lazy" decoding="async" src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-lg border border-border" />
               ) : (
                 <div className="w-32 h-20 rounded-lg bg-secondary flex items-center justify-center">
                   <ImageIcon className="w-6 h-6 text-muted-foreground" />
@@ -340,7 +340,7 @@ const BlogPostsEditor = () => {
           {posts.map((p) => (
             <div key={p.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
               {p.cover_url ? (
-                <img src={p.cover_url} alt="" className="w-16 h-12 rounded-md object-cover shrink-0" />
+                <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-md object-cover shrink-0" />
               ) : (
                 <div className="w-16 h-12 rounded-md bg-secondary shrink-0" />
               )}

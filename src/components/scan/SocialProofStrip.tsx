@@ -54,7 +54,7 @@ export default function SocialProofStrip() {
             <Quote className="absolute top-3 right-3 w-4 h-4 text-primary/30" />
             <div className="flex items-center gap-3 mb-3">
               {t.photo_url ? (
-                <img
+                <img loading="lazy" decoding="async"
                   src={t.photo_url}
                   alt={t.name}
                   className="w-10 h-10 rounded-full object-cover border border-primary/30"

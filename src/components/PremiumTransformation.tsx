@@ -192,7 +192,7 @@ const PremiumTransformation = ({ onSelect, availableSlots }: Props) => {
                 </p>
                 <div className="flex items-center gap-3">
                   {tw.photo_url ? (
-                    <img src={tw.photo_url} alt={tw.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/30" />
+                    <img loading="lazy" decoding="async" src={tw.photo_url} alt={tw.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/30" />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-primary/15" />
                   )}

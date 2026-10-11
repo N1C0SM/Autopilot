@@ -33,7 +33,7 @@ const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
       className="bg-card rounded-2xl p-4 border border-border flex items-center gap-4 flex-wrap"
     >
       {trainer.photo_url ? (
-        <img src={trainer.photo_url} alt={trainer.name} className="w-12 h-12 rounded-full object-cover" />
+        <img loading="lazy" decoding="async" src={trainer.photo_url} alt={trainer.name} className="w-12 h-12 rounded-full object-cover" />
       ) : (
         <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
           <UserCircle2 className="w-7 h-7 text-primary" />

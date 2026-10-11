@@ -122,7 +122,7 @@ const GoalPhysiquesEditor = () => {
               <div className="flex gap-3">
                 <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary">
                   {it.image_url ? (
-                    <img src={it.image_url} alt={it.name} className="w-full h-full object-cover" />
+                    <img loading="lazy" decoding="async" src={it.image_url} alt={it.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground text-center px-2">
                       Sin foto

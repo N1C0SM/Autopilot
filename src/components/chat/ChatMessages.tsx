@@ -65,7 +65,7 @@ const ChatMessages = ({ messages, onViewMedia, emptyMessage = "Escribe aquí tus
                   onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "image" })}
                   className="block mb-2 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
                 >
-                  <img src={resolve(msg.media_url)} alt="Foto" className="max-w-full max-h-48 rounded-lg object-cover" />
+                  <img loading="lazy" decoding="async" src={resolve(msg.media_url)} alt="Foto" className="max-w-full max-h-48 rounded-lg object-cover" />
                 </button>
               )}
               {msg.media_url && msg.media_type === "video" && (

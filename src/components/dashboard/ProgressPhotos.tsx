@@ -186,7 +186,7 @@ const ProgressPhotos = ({ userId }: Props) => {
     };
   }, [refreshSigned]);
 
-  /** Reintenta el firmado de una sola foto cuando su <img> falla. */
+  /** Reintenta el firmado de una sola foto cuando su <img loading="lazy" decoding="async"> falla. */
   const handleImageError = useCallback(async (photo: Photo) => {
     const key = photo.photo_url;
     if (!key || retriedRef.current.has(key)) return;
@@ -531,7 +531,7 @@ const ProgressPhotos = ({ userId }: Props) => {
 
             <div className="max-w-lg max-h-[85vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
               {signed.get(photos[viewingPhoto].photo_url) ? (
-                <img
+                <img loading="lazy" decoding="async"
                   src={signed.get(photos[viewingPhoto].photo_url)}
                   alt={`Foto de progreso del ${formatDate(photos[viewingPhoto].taken_at)}`}
                   onError={() => void handleImageError(photos[viewingPhoto])}

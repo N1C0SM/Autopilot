@@ -49,7 +49,7 @@ export default function ItemPreviewModal({ item, variant, onClose }: { item: Pre
         <div className="grid gap-0 sm:grid-cols-[0.8fr_1.2fr]">
           <div className="bg-secondary p-6 flex items-center justify-center">
             {item.image_url ? (
-              <img src={item.image_url} alt={item.title} className="w-full max-w-[240px] aspect-square rounded-xl object-cover" />
+              <img loading="lazy" decoding="async" src={item.image_url} alt={item.title} className="w-full max-w-[240px] aspect-square rounded-xl object-cover" />
             ) : (
               <ShoppingBag className="w-16 h-16 text-primary/50" />
             )}

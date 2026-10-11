@@ -26,7 +26,7 @@ const MobileHeader = ({ title, profileName, profileAvatar, userId, onSettings }:
           className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-border active:scale-95 active:opacity-80 transition-transform"
         >
           {profileAvatar ? (
-            <img src={profileAvatar} alt="" className="w-full h-full object-cover" />
+            <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="w-full h-full object-cover" />
           ) : (
             <span aria-hidden="true" className="text-xs font-bold text-foreground">
               {(profileName || "?").charAt(0).toUpperCase()}

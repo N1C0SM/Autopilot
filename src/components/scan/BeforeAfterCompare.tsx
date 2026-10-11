@@ -83,7 +83,7 @@ export default function BeforeAfterCompare({
       </div>
       <div className="grid grid-cols-[1fr,auto,1fr] gap-4 items-center">
         <div className="text-center">
-          <img
+          <img loading="lazy" decoding="async"
             src={photoUrl}
             alt="Scan anterior"
             className="w-full aspect-[3/4] object-cover rounded-xl border border-border mb-2"
@@ -94,7 +94,7 @@ export default function BeforeAfterCompare({
         <ArrowRight className="w-6 h-6 text-primary" />
         <div className="text-center">
           {currentPhoto ? (
-            <img
+            <img loading="lazy" decoding="async"
               src={currentPhoto}
               alt="Scan actual"
               className="w-full aspect-[3/4] object-cover rounded-xl border border-primary/40 mb-2 glow-shadow"
