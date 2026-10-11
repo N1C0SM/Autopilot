@@ -75,7 +75,7 @@ describe("public product preview", () => {
     const onFree = vi.fn();
     const onPlans = vi.fn();
     render(<ProductPreview onPlans={onPlans} onFree={onFree} />);
-    fireEvent.click(screen.getByRole("button", { name: "Crear cuenta gratis y guardar mi progreso" }));
+    fireEvent.click(screen.getByRole("button", { name: "Crear mi propia rutina gratis" }));
     expect(onFree).toHaveBeenCalledOnce();
     expect(onPlans).not.toHaveBeenCalled();
   });
