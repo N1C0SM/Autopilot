@@ -6,3 +6,5 @@
 - B2B trainer product lives in `product_configs` (key trainer_plan), off by default; flags are enforced server-side in SQL functions/RLS, never only in UI.
 - Edge functions call AI only through `supabase/functions/_shared/ai-provider.ts` (aiFetch/getAiConfig), which chains admin OpenAI key -> admin Claude key -> admin DeepSeek key -> Lovable AI (or Lovable only per `app_secrets.AI_PROVIDER`) — one switch for every AI feature. DeepSeek y Claude son SOLO texto: las imágenes y los vídeos de ejercicio exigen OpenAI o créditos de Lovable.
 - Every product-like landing section (books, recommendations, future ones) opens a preview modal before any external link: books use BookPreviewModal, everything else ItemPreviewModal with a PreviewVariant — keeps conversion UX consistent.
+- Public Free/Plus/Coach cards read `product_configs` (keys free/training/full) via `get_consumer_plans_public`, falling back to `src/config/tiers.ts` — admin edits plans without code changes.
+- Username login goes through the `login-identifier` edge function, which signs in server-side and never returns the email behind a username — avoids email enumeration.

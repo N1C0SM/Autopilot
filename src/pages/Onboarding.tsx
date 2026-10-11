@@ -851,64 +851,28 @@ const Onboarding = () => {
             <div>
               <Label className="mb-1.5 block">¿Cuál es tu nivel ahora?</Label>
               <p className="text-xs text-muted-foreground mb-5">
-                Solo lo relevante para tu enfoque. Déjalo en blanco si no lo sabes.
+                Un toque por prueba. Si no lo sabes, sáltalo.
               </p>
               <div className="space-y-3">
                 {(data.primary_focus === "calistenia" || data.primary_focus === "mixto" || !data.primary_focus) && (
                   <div>
                     <Label className="text-sm">Dominadas máximas</Label>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      value={data.initial_tests.pullups}
-                      onChange={(e) =>
-                        setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, pullups: e.target.value } }))
-                      }
-                      placeholder="0 si no haces ninguna"
-                      className="mt-1.5"
-                    />
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">{([["0", "0"], ["1-3", "2"], ["4-7", "5"], ["8-12", "10"], ["13+", "15"]] as const).map(([label, value]) => (<button key={label} type="button" onClick={() => setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, pullups: d.initial_tests.pullups === value ? "" : value } }))} className={`min-h-9 rounded-full border px-3.5 text-xs transition-all ${data.initial_tests.pullups === value ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"}`}>{label}</button>))}</div>
                   </div>
                 )}
                 <div>
                   <Label className="text-sm">Flexiones máximas</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={data.initial_tests.pushups}
-                    onChange={(e) =>
-                      setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, pushups: e.target.value } }))
-                    }
-                    placeholder="Ej: 15"
-                    className="mt-1.5"
-                  />
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">{([["0-5", "3"], ["6-15", "10"], ["16-30", "22"], ["31+", "35"]] as const).map(([label, value]) => (<button key={label} type="button" onClick={() => setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, pushups: d.initial_tests.pushups === value ? "" : value } }))} className={`min-h-9 rounded-full border px-3.5 text-xs transition-all ${data.initial_tests.pushups === value ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"}`}>{label}</button>))}</div>
                 </div>
                 {(data.primary_focus === "gimnasio" || data.primary_focus === "mixto") && (
                   <div>
                     <Label className="text-sm">Sentadilla con tu peso (reps)</Label>
-                    <Input
-                      type="number"
-                      inputMode="numeric"
-                      value={data.initial_tests.squat}
-                      onChange={(e) =>
-                        setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, squat: e.target.value } }))
-                      }
-                      placeholder="Ej: 30"
-                      className="mt-1.5"
-                    />
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">{([["0-15", "10"], ["16-30", "22"], ["31-50", "40"], ["51+", "60"]] as const).map(([label, value]) => (<button key={label} type="button" onClick={() => setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, squat: d.initial_tests.squat === value ? "" : value } }))} className={`min-h-9 rounded-full border px-3.5 text-xs transition-all ${data.initial_tests.squat === value ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"}`}>{label}</button>))}</div>
                   </div>
                 )}
                 <div>
                   <Label className="text-sm">Plancha frontal (segundos)</Label>
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    value={data.initial_tests.plank}
-                    onChange={(e) =>
-                      setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, plank: e.target.value } }))
-                    }
-                    placeholder="Ej: 60"
-                    className="mt-1.5"
-                  />
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">{([["<30", "20"], ["30-60", "45"], ["60-120", "90"], ["120+", "150"]] as const).map(([label, value]) => (<button key={label} type="button" onClick={() => setData((d) => ({ ...d, initial_tests: { ...d.initial_tests, plank: d.initial_tests.plank === value ? "" : value } }))} className={`min-h-9 rounded-full border px-3.5 text-xs transition-all ${data.initial_tests.plank === value ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/30"}`}>{label}</button>))}</div>
                 </div>
               </div>
             </div>

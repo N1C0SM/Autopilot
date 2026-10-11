@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Apple, ArrowRight, Bell, Check, Dumbbell, Home, LineChart, MessageCircle,
@@ -29,9 +29,9 @@ const titles: Record<View, string> = {
 };
 
 const exercises = [
-  { name: "Sentadilla goblet", sets: 3, reps: 9, load: "20 kg", last: "Última vez: 18 kg × 10" },
-  { name: "Remo con mancuerna", sets: 3, reps: 11, load: "16 kg", last: "Última vez: 14 kg × 12" },
-  { name: "Press con mancuernas", sets: 3, reps: 9, load: "14 kg", last: "Última vez: 14 kg × 8" },
+  { name: "Sentadilla goblet", sets: 3, reps: 9, load: "20 kg", last: "Última vez: 18 kg × 10", image: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/14988835-a004-49d6-95c5-63978dbce978-1791475887313.png" },
+  { name: "Remo con mancuerna", sets: 3, reps: 11, load: "16 kg", last: "Última vez: 14 kg × 12", image: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png" },
+  { name: "Press con mancuernas", sets: 3, reps: 9, load: "14 kg", last: "Última vez: 14 kg × 8", image: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png" },
 ];
 
 const side: Record<View, { title: string; points: string[] }> = {
@@ -88,7 +88,14 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
   const [view, setView] = useState<View>("home");
   const [completed, setCompleted] = useState<string[]>([]);
   const [started, setStarted] = useState(false);
-  const [expandedExercise, setExpandedExercise] = useState<string | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [rest, setRest] = useState<number | null>(null);
+  useEffect(() => {
+    if (rest === null) return;
+    if (rest <= 0) { setRest(null); return; }
+    const id = setTimeout(() => setRest((r) => (r === null ? null : r - 1)), 1000);
+    return () => clearTimeout(id);
+  }, [rest]);
   const [setValues, setSetValues] = useState<Record<string, { weight: string; reps: number }>>({});
   const [progressExercise, setProgressExercise] = useState(demoProgressExercises[0]);
   const [progressMetric, setProgressMetric] = useState<"volumeKg" | "bestEstimated1RmKg">("volumeKg");
@@ -101,7 +108,8 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
   const resetWorkout = () => {
     setCompleted([]);
     setStarted(false);
-    setExpandedExercise(null);
+    setActiveIdx(0);
+    setRest(null);
     setSetValues({});
   };
   const updateSetValue = (key: string, field: "weight" | "reps", value: string) => {
@@ -243,106 +251,100 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
 
                       {view === "training" && (
                         <div>
-                          <p className="text-[11px] font-medium text-primary">Lunes · Semana 3 de 12</p>
-                          <div className="mt-1 flex items-end justify-between">
+                          <div className="flex items-end justify-between">
                             <h4 className="font-display text-lg font-bold leading-tight">Fuerza cuerpo completo</h4>
                             <p role="status" className="text-xs font-semibold">{completed.length} de {totalSets} series</p>
                           </div>
-                          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} /></div>
+                          <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} /></div>
 
-                          {!started && (
-                            <Button type="button" variant="hero" className="mt-4 h-11 w-full" onClick={() => {
-                              setStarted(true);
-                              setExpandedExercise(exercises[0].name);
-                            }}>
-                              Empezar entrenamiento
-                            </Button>
-                          )}
-
-                          <div className="mt-4 space-y-2">
-                            {exercises.map(({ name, sets, reps, load, last }) => {
-                              const doneSets = Array.from({ length: sets }, (_, index) => completed.includes(`${name}::${index}`)).filter(Boolean).length;
-                              const allDone = doneSets === sets;
-                              const expanded = expandedExercise === name;
-                              return (
-                                <div key={name} className={`overflow-hidden rounded-2xl border ${allDone ? "border-primary/40" : "border-border"}`}>
-                                  <button
-                                    type="button"
-                                    aria-expanded={expanded}
-                                    onClick={() => {
-                                      setStarted(true);
-                                      setExpandedExercise(expanded ? null : name);
-                                    }}
-                                    className="flex w-full items-center gap-3 p-3 text-left"
-                                  >
-                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary"><Dumbbell className="h-5 w-5 text-muted-foreground" /></span>
+                          {!started ? (
+                            <>
+                              <div className="mt-3 divide-y divide-border">
+                                {exercises.map((ex, i) => (
+                                  <button key={ex.name} type="button" onClick={() => { setStarted(true); setActiveIdx(i); }} className="flex w-full items-center gap-3 py-2.5 text-left">
+                                    <img src={ex.image} alt="" loading="lazy" decoding="async" className="h-12 w-12 shrink-0 rounded-xl bg-card object-contain" />
                                     <span className="min-w-0 flex-1">
-                                      <span className="block truncate text-sm font-semibold">{name}</span>
-                                      <span className="block text-xs text-muted-foreground">{sets} series · {reps} reps · {load}</span>
-                                      <span className="block text-[10px] text-muted-foreground/80">{last}</span>
+                                      <span className="block truncate text-sm font-semibold">{ex.name}</span>
+                                      <span className="block text-xs text-muted-foreground">{ex.sets} × {ex.reps} · {ex.load}</span>
                                     </span>
-                                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold">{doneSets}/{sets}</span>
                                   </button>
-                                  {started && expanded && (
-                                    <div className="space-y-1.5 border-t border-border p-2">
-                                      {Array.from({ length: sets }, (_, setIndex) => {
-                                        const setKey = `${name}::${setIndex}`;
-                                        const isDone = completed.includes(setKey);
-                                        const currentSet = setValues[setKey] || { weight: load.replace(/\s*kg$/, ""), reps };
-                                        return (
-                                          <div key={setKey} className={`grid grid-cols-[1.5rem_1fr_1fr_2.5rem] items-center gap-1 rounded-xl p-2 ${isDone ? "bg-primary/10" : "bg-secondary/40"}`}>
-                                            <span className="text-center text-xs font-semibold text-muted-foreground">{setIndex + 1}</span>
-                                            <label className="min-w-0">
-                                              <span className="sr-only">Peso de la serie {setIndex + 1} de {name}</span>
-                                              <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={currentSet.weight}
-                                                onChange={(event) => updateSetValue(setKey, "weight", event.target.value)}
-                                                aria-label={`Peso de la serie ${setIndex + 1} de ${name}`}
-                                                className="w-full rounded-lg border border-border bg-background px-1.5 py-2 text-center text-xs"
-                                              />
-                                            </label>
-                                            <label className="min-w-0">
-                                              <span className="sr-only">Repeticiones de la serie {setIndex + 1} de {name}</span>
-                                              <input
-                                                type="number"
-                                                inputMode="numeric"
-                                                min="0"
-                                                value={currentSet.reps}
-                                                onChange={(event) => updateSetValue(setKey, "reps", event.target.value)}
-                                                aria-label={`Repeticiones de la serie ${setIndex + 1} de ${name}`}
-                                                className="w-full rounded-lg border border-border bg-background px-1.5 py-2 text-center text-xs"
-                                              />
-                                            </label>
-                                            <button
-                                              type="button"
-                                              aria-pressed={isDone}
-                                              aria-label={`${isDone ? "Desmarcar" : "Marcar"} serie ${setIndex + 1} de ${name}`}
-                                              onClick={() => toggleSet(name, setIndex)}
-                                              className={`flex h-9 w-9 items-center justify-center rounded-lg ${isDone ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
-                                            >
-                                              {isDone && <Check className="h-4 w-4" />}
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
+                                ))}
+                              </div>
+                              <Button type="button" variant="hero" className="mt-4 h-11 w-full" onClick={() => { setStarted(true); setActiveIdx(0); }}>
+                                Empezar entrenamiento
+                              </Button>
+                            </>
+                          ) : (() => {
+                            const ex = exercises[activeIdx];
+                            return (
+                              <div className="mt-3 space-y-3">
+                                <motion.div
+                                  key={ex.name}
+                                  initial={{ opacity: 0.4 }}
+                                  animate={{ opacity: 1 }}
+                                  transition={{ duration: 0.18 }}
+                                  drag="x"
+                                  dragConstraints={{ left: 0, right: 0 }}
+                                  dragElastic={0.35}
+                                  onDragEnd={(_, info) => {
+                                    const swipe = info.offset.x + info.velocity.x * 0.2;
+                                    if (swipe < -60 && activeIdx < exercises.length - 1) setActiveIdx(activeIdx + 1);
+                                    else if (swipe > 60 && activeIdx > 0) setActiveIdx(activeIdx - 1);
+                                  }}
+                                  style={{ touchAction: "pan-y" }}
+                                  aria-label="Desliza para cambiar de ejercicio"
+                                  className="relative flex aspect-[4/3] w-full cursor-grab items-center justify-center overflow-hidden rounded-3xl bg-card active:cursor-grabbing"
+                                >
+                                  <img src={ex.image} alt={ex.name} draggable={false} decoding="async" className="pointer-events-none h-full w-full object-contain" />
+                                  <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">{activeIdx + 1}/{exercises.length}</span>
+                                </motion.div>
+                                <div role="tablist" aria-label="Ejercicios de la sesión" className="flex gap-2">
+                                  {exercises.map((item, idx) => {
+                                    const done = Array.from({ length: item.sets }, (_, s) => completed.includes(`${item.name}::${s}`)).every(Boolean);
+                                    return (
+                                      <button key={item.name} type="button" role="tab" aria-selected={idx === activeIdx} aria-label={`${idx + 1}. ${item.name}${done ? " · hecho" : ""}`} onClick={() => setActiveIdx(idx)}
+                                        className={`relative rounded-2xl p-0.5 transition-all ${idx === activeIdx ? "ring-2 ring-primary" : "opacity-60"}`}>
+                                        <img src={item.image} alt="" className="h-11 w-11 rounded-xl bg-card object-contain" />
+                                        {done && <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="h-2.5 w-2.5" /></span>}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
-                              );
-                            })}
-                          </div>
-
-                          {completed.length > 0 && completed.length < totalSets && (
-                            <div className="mt-3 flex items-center gap-2 rounded-2xl bg-primary/10 p-3 text-xs"><Timer className="h-4 w-4 text-primary" /><span className="font-semibold">Descanso 1:30</span><span className="text-muted-foreground">· siguiente ejercicio</span></div>
-                          )}
-                          {completed.length === totalSets && (
-                            <div className="mt-3 rounded-2xl bg-primary/10 p-3 text-center text-xs font-semibold">Sesión de ejemplo completada · {totalSets} series registradas</div>
-                          )}
-                          <div className="mt-3 text-center">
-                            <Button variant="ghost" size="sm" onClick={resetWorkout}><RotateCcw className="h-3.5 w-3.5" /> Reiniciar demo</Button>
-                          </div>
+                                <div>
+                                  <p className="font-display text-base font-bold leading-tight">{ex.name}</p>
+                                  <p className="text-[11px] text-muted-foreground">{ex.last}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <div className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem] gap-1 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <span className="text-center">#</span><span className="text-center">KG</span><span className="text-center">Reps</span><span />
+                                  </div>
+                                  {Array.from({ length: ex.sets }, (_, setIndex) => {
+                                    const setKey = `${ex.name}::${setIndex}`;
+                                    const isDone = completed.includes(setKey);
+                                    const currentSet = setValues[setKey];
+                                    return (
+                                      <div key={setKey} className={`grid grid-cols-[1.5rem_1fr_1fr_2.25rem] items-center gap-1 rounded-xl p-1.5 ${isDone ? "bg-primary/10" : ""}`}>
+                                        <span className="text-center text-xs font-semibold text-muted-foreground">{setIndex + 1}</span>
+                                        <input type="text" inputMode="decimal" placeholder={ex.load.replace(/\s*kg$/, "")} value={currentSet?.weight ?? ""} onChange={(e) => updateSetValue(setKey, "weight", e.target.value)} aria-label={`Peso de la serie ${setIndex + 1} de ${ex.name}`} className="w-full rounded-lg bg-secondary px-1.5 py-2 text-center text-xs placeholder:text-muted-foreground/60" />
+                                        <input type="number" inputMode="numeric" min="0" placeholder={String(ex.reps)} value={currentSet?.reps ?? ""} onChange={(e) => updateSetValue(setKey, "reps", e.target.value)} aria-label={`Repeticiones de la serie ${setIndex + 1} de ${ex.name}`} className="w-full rounded-lg bg-secondary px-1.5 py-2 text-center text-xs placeholder:text-muted-foreground/60" />
+                                        <button type="button" aria-pressed={isDone} aria-label={`${isDone ? "Desmarcar" : "Marcar"} serie ${setIndex + 1} de ${ex.name}`}
+                                          onClick={() => { const wasDone = isDone; toggleSet(ex.name, setIndex); if (!wasDone) setRest(90); }}
+                                          className={`flex h-9 w-9 items-center justify-center rounded-lg ${isDone ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
+                                          <Check className="h-4 w-4" />
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {completed.length === totalSets && (
+                                  <div className="rounded-2xl bg-primary/10 p-3 text-center text-xs font-semibold">Sesión de ejemplo completada · {totalSets} series</div>
+                                )}
+                                <div className="text-center">
+                                  <Button variant="ghost" size="sm" onClick={resetWorkout}><RotateCcw className="h-3.5 w-3.5" /> Reiniciar demo</Button>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       )}
 
@@ -484,6 +486,16 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                   </AnimatePresence>
                 </div>
 
+                <AnimatePresence>
+                  {view === "training" && rest !== null && (
+                    <motion.div initial={{ opacity: 0, y: 12, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12, scale: 0.9 }}
+                      className="absolute inset-x-10 bottom-[5.25rem] z-10 flex items-center justify-between rounded-full bg-foreground px-3 py-2 text-background shadow-lg" role="timer" aria-label="Descanso">
+                      <button type="button" onClick={() => setRest((r) => Math.max(5, (r ?? 0) - 30))} className="h-7 rounded-full px-2 text-xs font-semibold opacity-80">−30</button>
+                      <span className="flex items-center gap-1.5 font-display text-sm font-bold tabular-nums"><Timer className="h-3.5 w-3.5" />{Math.floor(rest / 60)}:{String(rest % 60).padStart(2, "0")}</span>
+                      <button type="button" onClick={() => setRest((r) => (r ?? 0) + 30)} className="h-7 rounded-full px-2 text-xs font-semibold opacity-80">+30</button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {/* floating tab bar (same 5 tabs as the real app) */}
                 <nav className="absolute inset-x-3 bottom-5 rounded-full border border-border bg-background/85 px-1.5 py-1.5 shadow-lg backdrop-blur-xl" role="group" aria-label="Secciones de la demo">
                   <div className="grid grid-cols-5">
