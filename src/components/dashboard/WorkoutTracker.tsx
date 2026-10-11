@@ -1108,7 +1108,23 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
             const vid = active.video_url || meta?.video_url;
             return (
               <div className="mb-3 space-y-3">
-                <div className="relative flex aspect-[4/3] max-h-[34dvh] w-full items-center justify-center overflow-hidden rounded-3xl bg-card">
+                <motion.div
+                  key={expandedExercise}
+                  initial={{ opacity: 0.4, x: 0 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.18 }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.35}
+                  onDragEnd={(_, info) => {
+                    const total = currentPlan.exercises?.length || 0;
+                    const swipe = info.offset.x + info.velocity.x * 0.2;
+                    if (swipe < -60 && expandedExercise < total - 1) { setExpandedExercise(expandedExercise + 1); void hapticTap(); }
+                    else if (swipe > 60 && expandedExercise > 0) { setExpandedExercise(expandedExercise - 1); void hapticTap(); }
+                  }}
+                  style={{ touchAction: "pan-y" }}
+                  aria-label="Desliza para cambiar de ejercicio"
+                  className="relative flex aspect-[4/3] max-h-[34dvh] w-full cursor-grab items-center justify-center overflow-hidden rounded-3xl bg-card active:cursor-grabbing">
                   {img ? (
                     <img src={img} alt={active.name} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
                   ) : (
@@ -1124,7 +1140,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                       <Play className="h-5 w-5 fill-current" />
                     </button>
                   )}
-                </div>
+                </motion.div>
                 <div role="tablist" aria-label="Ejercicios de la sesión" className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 py-1">
                   {(currentPlan.exercises || []).map((item, idx) => {
                     const m = exerciseMetadata.byId[item.exercise_id] || exerciseMetadata.byName[item.name];
