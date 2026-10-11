@@ -1260,6 +1260,9 @@ export type Database = {
           referral_coupon_id: string | null
           show_blog: boolean
           show_ebooks: boolean
+          show_plan_coach: boolean
+          show_plan_free: boolean
+          show_plan_plus: boolean
           show_recommendations: boolean
           trainer_bio: string | null
           trainer_name: string | null
@@ -1307,6 +1310,9 @@ export type Database = {
           referral_coupon_id?: string | null
           show_blog?: boolean
           show_ebooks?: boolean
+          show_plan_coach?: boolean
+          show_plan_free?: boolean
+          show_plan_plus?: boolean
           show_recommendations?: boolean
           trainer_bio?: string | null
           trainer_name?: string | null
@@ -1354,6 +1360,9 @@ export type Database = {
           referral_coupon_id?: string | null
           show_blog?: boolean
           show_ebooks?: boolean
+          show_plan_coach?: boolean
+          show_plan_free?: boolean
+          show_plan_plus?: boolean
           show_recommendations?: boolean
           trainer_bio?: string | null
           trainer_name?: string | null
@@ -1994,6 +2003,14 @@ export type Database = {
         }[]
       }
       get_payment_mode: { Args: never; Returns: string }
+      get_plan_visibility: {
+        Args: never
+        Returns: {
+          show_plan_coach: boolean
+          show_plan_free: boolean
+          show_plan_plus: boolean
+        }[]
+      }
       get_public_settings: {
         Args: never
         Returns: {
