@@ -653,9 +653,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
       if (user && isPaid && routeUserId) {
         setTimeout(() => {
           setResult(r);
-          if (r.inferred_goal || r.inferred_focus || r.inferred_specific_goals?.length) {
-            applyScanToPlan(r);
-          }
+          // El plan NUNCA se toca solo: lo aplica el usuario con «Aplicar a mi plan».
           saveAndEmailScan(r, { silent: false });
         }, 400);
       } else if (user && isPaid) {
@@ -808,6 +806,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
       if (!existing) {
         // Sin onboarding previo no podemos generar plan (faltan edad/peso/etc.)
         setPlanApplyState("idle");
+        toast.error("Te falta completar tu perfil para poder aplicar el scan. Complétalo en Ajustes.");
         return;
       }
 
@@ -852,7 +851,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
     } catch (e: unknown) {
       console.error("applyScanToPlan", e);
       setPlanApplyState("error");
-      toast.error("No se pudo aplicar al plan automáticamente");
+      toast.error("No se pudo aplicar al plan. Tu plan no ha cambiado.");
     }
   };
 
@@ -1776,14 +1775,14 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               </div>
 
               {/* Estado de aplicación al plan */}
-              {routeUserId && planApplyState !== "idle" && (
+              {routeUserId && user && (
                 <motion.div
                   initial={{ opacity: 0, y: -8 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="max-w-3xl mx-auto mb-6"
                 >
                   <div
-                    className={`rounded-2xl px-5 py-4 flex items-center gap-3 border backdrop-blur ${
+                    className={`rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 border backdrop-blur ${
                       planApplyState === "success"
                         ? "bg-primary/10 border-primary/40"
                         : planApplyState === "error"
@@ -1791,12 +1790,37 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         : "bg-card/60 border-border"
                     }`}
                   >
+                    {planApplyState === "idle" && (
+                      <>
+                        <div className="text-sm flex-1">
+                          <div className="font-medium">Tu plan sigue igual</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            El scan no cambia nada por sí solo. Aplícalo solo si te encaja.
+                          </div>
+                        </div>
+                        {(result.inferred_goal || result.inferred_focus || !!result.inferred_specific_goals?.length) ? (
+                          <Button
+                            size="sm"
+                            variant="hero"
+                            onClick={() => applyScanToPlan(result)}
+                            className="w-full sm:w-auto"
+                          >
+                            Aplicar a mi plan
+                            <ArrowRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        ) : (
+                          <div className="text-[11px] text-muted-foreground">
+                            Este scan no propone cambios, así que no hay nada que aplicar.
+                          </div>
+                        )}
+                      </>
+                    )}
                     {planApplyState === "applying" && (
                       <>
                         <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
                         <div className="text-sm">
                           <div className="font-medium">Aplicando el scan a tu plan…</div>
-                          <div className="text-[11px] text-muted-foreground">Regenerando entrenamiento y nutrición con tus nuevas inferencias.</div>
+                          <div className="text-[11px] text-muted-foreground">Recalculando entrenamiento y nutrición con los datos del scan.</div>
                         </div>
                       </>
                     )}
@@ -1816,8 +1840,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       <>
                         <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
                         <div className="text-sm">
-                          <div className="font-medium">No se pudo aplicar al plan automáticamente</div>
-                          <div className="text-[11px] text-muted-foreground">Inténtalo desde el dashboard o repite el scan.</div>
+                          <div className="font-medium">No se pudo aplicar al plan</div>
+                          <div className="text-[11px] text-muted-foreground">Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras.</div>
                         </div>
                       </>
                     )}
