@@ -837,7 +837,15 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
       await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
 
       const { error: genErr } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
-      if (genErr) throw genErr;
+      if (genErr) {
+        // Coach: el plan lo revisa Nicolás; el scan queda guardado para él.
+        if ((genErr as { context?: Response }).context?.status === 403) {
+          setPlanApplyState("success");
+          toast.success("Scan enviado a tu entrenador para ajustar el plan ✓");
+          return;
+        }
+        throw genErr;
+      }
       setPlanApplyState("success");
       toast.success("Plan actualizado con tu scan ✓");
     } catch (e: unknown) {

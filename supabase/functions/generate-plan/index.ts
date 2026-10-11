@@ -1,6 +1,6 @@
 import type { DayPlan, GymExerciseEntry } from "../_shared/training-types.ts";
 import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
-import { hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
+import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -798,7 +798,8 @@ serve(async (req) => {
     if (billingError) throw billingError;
     const paidCoaching = hasCoaching(billing);
     const includeNutrition = hasNutrition(billing);
-    if (paidCoaching && targetUserId === user.id) {
+    // Only Coach has a human reviewer; Plus is self-service and regenerates its own plan.
+    if (getConsumerPlan(billing) === "coach" && targetUserId === user.id) {
       const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
       if (!isAdmin) return new Response(JSON.stringify({ error: "Tu entrenador prepara y revisa tu plan." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
