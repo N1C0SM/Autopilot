@@ -1025,7 +1025,11 @@ serve(async (req) => {
 
     // Reject inconsistent generated targets before writing either plan. Never
     // silently replace a generated prescription with capped/invented values.
-    const macroError = includeNutrition ? nutritionMacroError(macros) : null;
+    // Without a valid body weight there are no macros: keep the existing
+    // nutrition plan untouched instead of failing the whole training update.
+    const writeNutrition = includeNutrition && macros !== null;
+    if (includeNutrition && macros === null) console.log("[GENERATE-PLAN] No valid weight: nutrition plan left unchanged");
+    const macroError = writeNutrition ? nutritionMacroError(macros) : null;
     if (macroError) throw new Error(macroError);
 
     const { error: trainingError } = await supabase.from("training_plan").upsert(
@@ -1033,7 +1037,7 @@ serve(async (req) => {
       { onConflict: "user_id", ignoreDuplicates: !paidCoaching },
     );
     if (trainingError) throw trainingError;
-    if (includeNutrition) {
+    if (writeNutrition) {
       const { error } = await supabase.from("nutrition_plan").upsert(
         { user_id: targetUserId, macros_json: macros, meals_json: meals, updated_at: new Date().toISOString() },
         { onConflict: "user_id" },
