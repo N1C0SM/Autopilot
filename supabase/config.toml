@@ -45,3 +45,6 @@ project_id = "enebrcdrdnfkyduzyrzm"
     verify_jwt = false
   [functions.generate-future-self]
     verify_jwt = false
+
+[functions.login-identifier]
+verify_jwt = false

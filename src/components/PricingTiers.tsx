@@ -1,24 +1,25 @@
-import { TIERS, type PlanKey } from "@/config/tiers";
+import { type PlanKey } from "@/config/tiers";
 import { CheckCircle2, X, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { track } from "@/lib/analytics";
 import { Link } from "react-router-dom";
 import TrainerOffer from "@/components/TrainerOffer";
+import { usePlanCatalog } from "@/lib/planCatalog";
 
 interface PricingTiersProps {
   onSelect: (plan: PlanKey) => void;
   recommended?: PlanKey;
 }
 
-const ORDER: PlanKey[] = ["free", "training", "full"];
 
 const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
+  const plans = usePlanCatalog();
   return (
     <div className="max-w-6xl mx-auto">
       <div className="grid md:grid-cols-3 gap-5 md:gap-6 items-stretch max-w-6xl mx-auto">
-        {ORDER.map((key) => {
-          const t = TIERS[key];
+        {plans.map((t) => {
+          const key = t.key;
           const isRec = key === recommended;
           const price = t.price;
           return (
@@ -61,7 +62,7 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
                 </span>
               </div>
                  <div className="inline-flex items-center gap-1.5 text-[11px] text-primary font-semibold mb-6">
-                  {t.price === 0 ? "Sin tarjeta ni prueba que cancelar" : <><Sparkles className="w-3 h-3" /> 7 días de prueba</>}
+                  {t.price === 0 ? "Sin tarjeta ni prueba que cancelar" : t.trial_days > 0 ? <><Sparkles className="w-3 h-3" /> {t.trial_days} días de prueba</> : "Sin prueba"}
                </div>
 
               <ul className="space-y-2.5 mb-7 flex-1">
@@ -86,6 +87,7 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
                 variant={isRec ? "hero" : "outline"}
                 size="lg"
                 className="w-full hover-scale"
+                disabled={!t.accepting}
                 onClick={() => {
                   if (key === "free") {
                     track("plan_select", { plan: "free", source: "pricing" });
@@ -93,9 +95,9 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
                   } else onSelect(key);
                 }}
               >
-                {key === "free" ? "Empezar gratis" : t.cta}
+                {t.accepting ? t.cta : "Plazas cerradas"}
               </Button>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y pasa a Plus o Coach cuando tenga sentido." : `Tras 7 días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y pasa a Plus o Coach cuando tenga sentido." : `Tras ${t.trial_days} días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
             </motion.div>
           );
         })}

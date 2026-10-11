@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,9 @@ import { signInWithApple } from "@/lib/nativeAuth";
 import { Loader2, Apple } from "lucide-react";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("autopilot:last-login") || "null")?.id || ""; } catch { return ""; }
+  });
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
@@ -22,6 +25,11 @@ const Login = () => {
   const nextPath = /^\/[^/]/.test(rawNext) && !rawNext.startsWith("//") ? rawNext : "";
 
   const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  // Último usuario de ESTE dispositivo: la foto solo se muestra si ya entró aquí antes.
+  const [remembered, setRemembered] = useState<{ id: string; name: string; avatar: string } | null>(() => {
+    try { return JSON.parse(localStorage.getItem("autopilot:last-login") || "null"); } catch { return null; }
+  });
+  const known = remembered && email.trim() && email.trim().toLowerCase() === remembered.id.toLowerCase() ? remembered : null;
 
   const handleApple = async () => {
     const result = await signInWithApple(nextPath || "/dashboard");
@@ -35,28 +43,39 @@ const Login = () => {
     setLoading(true);
 
     const cleaned = email.trim();
-    if (!isEmail(cleaned)) {
-      setLoading(false);
-      toast.error("Introduce un correo electrónico válido");
-      return;
-    }
+    if (!cleaned) { setLoading(false); return; }
 
-    const { error } = await signIn(cleaned, password);
+    let error: Error | null = null;
+    if (isEmail(cleaned)) {
+      ({ error } = await signIn(cleaned, password));
+    } else {
+      const { data, error: fnError } = await supabase.functions.invoke("login-identifier", { body: { identifier: cleaned, password } });
+      if (fnError || !data?.access_token) {
+        let code = "invalid_credentials";
+        try { code = (await (fnError as { context?: Response })?.context?.json())?.error || code; } catch { /* noop */ }
+        error = new Error(code === "email_not_confirmed" ? "Email not confirmed" : code);
+      } else {
+        const { error: sessionError } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+        error = sessionError;
+      }
+    }
     setLoading(false);
     if (error) {
       if (error.message.includes("Email not confirmed")) {
         toast.error("Debes verificar tu correo electrónico antes de iniciar sesión");
+      } else if (error.message === "rate_limited") {
+        toast.error("Demasiados intentos. Espera un minuto");
       } else {
-        toast.error("Credenciales incorrectas");
+        toast.error("Usuario o contraseña incorrectos");
       }
     } else {
-      if (nextPath) {
-        navigate(nextPath);
-        return;
-      }
       // Resolve destination based on role
       const { data: { user: authedUser } } = await supabase.auth.getUser();
       if (authedUser) {
+        const { data: prof } = await supabase.from("profiles").select("name, avatar_url").eq("user_id", authedUser.id).maybeSingle();
+        const memo = { id: cleaned, name: prof?.name || "", avatar: prof?.avatar_url || "" };
+        try { localStorage.setItem("autopilot:last-login", JSON.stringify(memo)); } catch { /* noop */ }
+        if (nextPath) { navigate(nextPath); return; }
         const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
           supabase.rpc("has_role", { _user_id: authedUser.id, _role: "admin" }),
           supabase.rpc("has_role", { _user_id: authedUser.id, _role: "trainer" }),
@@ -83,20 +102,32 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>
-          <h1 className="text-2xl font-bold font-display mt-6 mb-2">Bienvenido de vuelta</h1>
+          <AnimatePresence>
+            {known && (
+              <motion.div key="avatar" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ type: "spring", stiffness: 260, damping: 20 }} className="mt-6 flex justify-center">
+                {known.avatar
+                  ? <img src={known.avatar} alt="" className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/60" />
+                  : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-secondary font-display text-2xl font-bold ring-2 ring-primary/60">{(known.name || known.id).charAt(0).toUpperCase()}</span>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <h1 className="text-2xl font-bold font-display mt-6 mb-2">{known?.name ? `Hola, ${known.name.split(" ")[0]}` : "Bienvenido de vuelta"}</h1>
           <p className="text-muted-foreground text-sm">Inicia sesión para acceder a tu plan</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-8 border border-border card-shadow space-y-5">
           <div>
-            <Label htmlFor="email">Correo electrónico</Label>
-            <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1.5" placeholder="tu@ejemplo.com" />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="email">Usuario o correo</Label>
+              {remembered && known && <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { localStorage.removeItem("autopilot:last-login"); setRemembered(null); setEmail(""); }}>No soy yo</button>}
+            </div>
+            <Input id="email" type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1.5" placeholder="tu nombre o tu@ejemplo.com" />
           </div>
           <div>
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Contraseña</Label>
               <Link to="/forgot-password" className="text-xs text-primary hover:underline">¿Olvidaste tu contraseña?</Link>
             </div>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1.5" />
+            <Input id="password" type="password" autoComplete="current-password" autoFocus={!!remembered} value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1.5" />
           </div>
           <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
             {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Iniciando sesión...</> : "Iniciar Sesión"}

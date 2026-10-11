@@ -35,7 +35,7 @@ describe("public product preview", () => {
     render(<ProductPreview onPlans={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Plan" }));
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
-    fireEvent.click(screen.getByRole("button", { name: /Remo con mancuerna/ }));
+    fireEvent.click(screen.getByRole("tab", { name: /Remo con mancuerna/ }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo con mancuerna" }));
     fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
     await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());

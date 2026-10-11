@@ -904,6 +904,7 @@ export type Database = {
           accepting_new_subscriptions: boolean
           billing_interval: string
           created_at: string
+          cta: string
           currency: string
           description: string
           enabled: boolean
@@ -911,16 +912,21 @@ export type Database = {
           key: string
           max_clients: number
           name: string
+          not_included: Json
           price: number
           publicly_visible: boolean
+          sort_order: number
           stripe_price_id_live: string | null
           stripe_price_id_test: string | null
+          tagline: string
+          trial_days: number
           updated_at: string
         }
         Insert: {
           accepting_new_subscriptions?: boolean
           billing_interval?: string
           created_at?: string
+          cta?: string
           currency?: string
           description?: string
           enabled?: boolean
@@ -928,16 +934,21 @@ export type Database = {
           key: string
           max_clients?: number
           name: string
+          not_included?: Json
           price?: number
           publicly_visible?: boolean
+          sort_order?: number
           stripe_price_id_live?: string | null
           stripe_price_id_test?: string | null
+          tagline?: string
+          trial_days?: number
           updated_at?: string
         }
         Update: {
           accepting_new_subscriptions?: boolean
           billing_interval?: string
           created_at?: string
+          cta?: string
           currency?: string
           description?: string
           enabled?: boolean
@@ -945,10 +956,14 @@ export type Database = {
           key?: string
           max_clients?: number
           name?: string
+          not_included?: Json
           price?: number
           publicly_visible?: boolean
+          sort_order?: number
           stripe_price_id_live?: string | null
           stripe_price_id_test?: string | null
+          tagline?: string
+          trial_days?: number
           updated_at?: string
         }
         Relationships: []
@@ -1983,6 +1998,24 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_consumer_plans_public: {
+        Args: never
+        Returns: {
+          accepting_new_subscriptions: boolean
+          billing_interval: string
+          cta: string
+          currency: string
+          description: string
+          features: Json
+          key: string
+          name: string
+          not_included: Json
+          price: number
+          sort_order: number
+          tagline: string
+          trial_days: number
+        }[]
       }
       get_contact_phone_public: { Args: never; Returns: string }
       get_my_consumer_plan: {

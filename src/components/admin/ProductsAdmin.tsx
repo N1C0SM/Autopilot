@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import type { Database } from "@/integrations/supabase/types";
+import ConsumerPlansAdmin from "./ConsumerPlansAdmin";
 
 type Config = Database["public"]["Tables"]["product_configs"]["Row"];
 type Row = { user_id: string; email: string; name: string | null; plan: ConsumerPlan; trainer: string | null };
@@ -70,7 +71,8 @@ export default function ProductsAdmin() {
   const pendingCount = rows.filter((r) => r.plan === "coach" && !r.trainer).length;
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 max-w-5xl">
+      <ConsumerPlansAdmin />
       <section className="rounded-xl border border-border bg-card p-5 space-y-4">
         <div className="flex flex-wrap gap-2 text-sm">
           {([["pending", `Coach sin entrenador (${pendingCount})`], ["free", `Free (${count("free")})`], ["plus", `Plus (${count("plus")})`], ["coach", `Coach (${count("coach")})`], ["all", "Todos"]] as const).map(([k, l]) => (
