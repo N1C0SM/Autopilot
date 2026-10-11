@@ -374,7 +374,7 @@ const Admin = () => {
 
             {section === "account" && (
               <div className="max-w-2xl">
-                <SettingsPanel />
+                <SettingsPanel adminMode />
               </div>
             )}
 
