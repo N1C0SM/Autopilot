@@ -28,6 +28,7 @@ interface Photo {
 
 interface Props {
   userId: string;
+  onGoScan?: () => void;
 }
 
 const BUCKET = "progress-photos";
@@ -62,7 +63,7 @@ const PhotoPlaceholder = ({ label = "Cargando foto..." }: { label?: string }) =>
   </div>
 );
 
-const ProgressPhotos = ({ userId }: Props) => {
+const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [signed, setSigned] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -365,23 +366,6 @@ const ProgressPhotos = ({ userId }: Props) => {
           <Camera className="w-5 h-5 text-primary" />
           <h2 className="text-xl font-bold font-display">Fotos de Progreso</h2>
         </div>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-        >
-          <Plus className="w-4 h-4" />
-          <span className="ml-1">{uploading ? "Subiendo..." : "Añadir foto"}</span>
-        </Button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleUpload}
-        />
       </div>
 
       {loading && (
@@ -412,11 +396,13 @@ const ProgressPhotos = ({ userId }: Props) => {
           </div>
           <h3 className="font-display font-bold text-lg mb-1">Empieza a documentar tu progreso</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Sube fotos semanales para ver tu evolución. Frente, lateral y espalda.
+            Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.
           </p>
-          <Button variant="hero" className="rounded-2xl active:scale-[0.98]" onClick={() => fileRef.current?.click()}>
-            <Camera className="w-4 h-4 mr-1" /> Subir primera foto
-          </Button>
+          {onGoScan && (
+            <Button variant="hero" className="rounded-2xl active:scale-[0.98]" onClick={onGoScan}>
+              <Camera className="w-4 h-4 mr-1" /> Hacer mi primer scan
+            </Button>
+          )}
         </motion.div>
       )}
 
