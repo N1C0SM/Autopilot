@@ -53,10 +53,11 @@ import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/components/scan/ScanCoverageCard";
 import ScanRecommendations, { recommendFor } from "@/components/scan/ScanRecommendations";
+import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
-import { MONTHLY_PRICE_EUR, TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
+import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
@@ -286,6 +287,7 @@ const ScoreCard = ({ label, value, highlight }: { label: string; value: number; 
 );
 
 const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
+  const plans = usePlanAvailability();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -1086,6 +1088,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
         bottleneck: result.bottleneck,
         improvements: result.improvements,
         monthsWithPlan: result.months_with_plan,
+        plans,
       });
       if (rec.kind === "plan") return `${rec.to}&from=scan`;
     }
@@ -1104,8 +1107,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
   const scanBody = (
     <>
       <Helmet>
-        <title>{routeUserId ? "Mi progreso · AI Scan" : "AI Body Scan · Autopilot"}</title>
-        <meta name="description" content="Sube una foto y recibe un análisis IA de tu físico con recomendaciones personalizadas." />
+        <title>{routeUserId ? "Mi progreso · AI Scan" : "Análisis corporal gratis con IA · Autopilot"}</title>
+        <meta name="description" content="Sube una foto y recibe un análisis estimado por IA de tu físico, con lo que más te limita y por dónde empezar. Gratis y sin tarjeta." />
         {routeUserId ? (
           <meta name="robots" content="noindex,nofollow" />
         ) : (
@@ -2418,7 +2421,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       lo más probable es que el siguiente scan siga pareciéndose a este.
                     </p>
                     <div className="flex items-baseline justify-center gap-3 mb-5">
-                      <span className="text-3xl font-bold font-display text-gradient">Desde {MONTHLY_PRICE_EUR}€/mes</span>
+                      <span className="text-3xl font-bold font-display text-gradient">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
                       <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días de prueba</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -2427,6 +2430,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           bottleneck: result.bottleneck,
                           improvements: result.improvements,
                           monthsWithPlan: result.months_with_plan,
+                          plans,
                         });
                         const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
                         return (

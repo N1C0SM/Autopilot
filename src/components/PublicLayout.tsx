@@ -42,6 +42,11 @@ export default function PublicLayout({ title, description, children }: { title: 
       <meta property="og:title" content={`${title} · Autopilot`} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={`https://autopilotplan.com${pathname}`} />
+      <meta property="og:type" content="website" />
+      <meta property="og:image" content="https://autopilotplan.com/og-image.png" />
+      <meta name="twitter:title" content={`${title} · Autopilot`} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content="https://autopilotplan.com/og-image.png" />
     </Helmet>
     <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-2 focus:z-[60] focus:bg-background focus:p-3">Saltar al contenido</a>
     <header className="app-chrome sticky top-0 z-50 border-b">

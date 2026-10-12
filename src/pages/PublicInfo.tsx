@@ -4,7 +4,8 @@ import { Helmet } from "react-helmet-async";
 import PublicLayout from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { publicFaqs } from "@/lib/publicFaqs";
+import { publicFaqs, publicPageMeta } from "@/lib/publicCopy";
+import { usePlanAvailability } from "@/lib/planCatalog";
 import { track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import type { PlanKey } from "@/config/tiers";
@@ -13,13 +14,7 @@ const PricingTiers = lazy(() => import("@/components/PricingTiers"));
 const ComparisonTable = lazy(() => import("@/components/ComparisonTable"));
 const ProductPreview = lazy(() => import("@/components/ProductPreview"));
 const TrainersSection = lazy(() => import("@/components/TrainersSection"));
-const pages = {
-  plans: { title: "Planes y precios", description: "Empieza gratis. Elige Plus para adaptación con IA y nutrición, o Coach para añadir un entrenador real." },
-  how: { title: "Así funciona Autopilot", description: "Tu objetivo, tu rutina y tu progreso. Mira cómo se utiliza antes de crear tu cuenta." },
-  team: { title: "El equipo de Autopilot", description: "Conoce a las personas que te acompañan con el plan Coach." },
-  faq: { title: "Preguntas frecuentes", description: "Resuelve tus dudas sobre los planes, el entrenamiento y tu cuenta." },
-};
-type Page = keyof typeof pages;
+type Page = keyof ReturnType<typeof publicPageMeta>;
 
 function TeamTestimonials() {
   const [items, setItems] = useState<Array<{ name: string; result: string; text: string }>>([]);
@@ -51,7 +46,9 @@ function ExplainerVideo() {
 
 export default function PublicInfo({ page }: { page: Page }) {
   const navigate = useNavigate();
-  const info = pages[page];
+  const plans = usePlanAvailability();
+  const info = publicPageMeta(plans)[page];
+  const faqs = page === "faq" ? publicFaqs(plans) : [];
   useEffect(() => { if (page === "plans") track("pricing_view", { source: "plans_page" }); }, [page]);
   const selectPlan = (plan: PlanKey) => {
     track("plan_select", { plan, source: "plans_page" });
@@ -66,14 +63,14 @@ export default function PublicInfo({ page }: { page: Page }) {
     <Suspense fallback={<p role="status" className="px-5 py-10 text-center text-muted-foreground">Cargando…</p>}>
       {page === "plans" && <section className="mx-auto max-w-6xl px-5 pb-10" aria-label="Elige tu plan">
         <PricingTiers onSelect={selectPlan} />
-        <details className="mt-8 border-y border-border"><summary className="min-h-11 cursor-pointer py-4 font-medium">¿Qué tipo de ayuda necesito?</summary><ComparisonTable /></details>
+        {plans.coach && <details className="mt-8 border-y border-border"><summary className="min-h-11 cursor-pointer py-4 font-medium">¿Qué tipo de ayuda necesito?</summary><ComparisonTable /></details>}
         <p className="mt-6 text-sm text-muted-foreground">Los planes mensuales se renuevan automáticamente. Gestiona la cancelación desde Ajustes → Suscripción. <Link to="/preguntas-frecuentes" className="text-primary underline">Resolver dudas</Link></p>
       </section>}
       {page === "how" && <>
         <ol className="mx-auto grid max-w-6xl gap-6 px-5 pb-10 md:grid-cols-3">
           {[
             ["Cuéntanos tu objetivo", "Indica tu nivel, el material y los días que puedes entrenar."],
-            ["Crea tu rutina", "Empieza gratis. Si necesitas adaptación con IA y nutrición, elige Plus; Coach añade entrenador."],
+            ["Crea tu rutina", `Empieza gratis.${plans.plus ? ` Si quieres nutrición y progresión de cargas automática, elige ${plans.plusName}.` : ""}${plans.coach ? ` ${plans.coachName} añade a Nicolás revisando tu plan.` : ""}`],
             ["Registra y progresa", "Guarda tus series y compara tus entrenamientos para ver cómo avanzas."],
           ].map(([title, text], index) => <li key={title} className="border-t border-border pt-4"><span className="text-sm text-primary">0{index + 1}</span><h2 className="mt-2 font-display text-xl font-bold">{title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text}</p></li>)}
         </ol>
@@ -83,8 +80,8 @@ export default function PublicInfo({ page }: { page: Page }) {
       </>}
       {page === "team" && <><TrainersSection /><TeamTestimonials /></>}
       {page === "faq" && <section className="mx-auto max-w-3xl px-5 pb-10" aria-label="Respuestas">
-        <Helmet><script type="application/ld+json">{JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: publicFaqs.map(faq => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } })) })}</script></Helmet>
-        <Accordion type="single" collapsible>{publicFaqs.map((faq, index) => <AccordionItem key={faq.q} value={`faq-${index}`}><AccordionTrigger className="min-h-11 text-left">{faq.q}</AccordionTrigger><AccordionContent className="leading-relaxed text-muted-foreground">{faq.a}</AccordionContent></AccordionItem>)}</Accordion>
+        <Helmet><script type="application/ld+json">{JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map(faq => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } })) })}</script></Helmet>
+        <Accordion type="single" collapsible>{faqs.map((faq, index) => <AccordionItem key={faq.q} value={`faq-${index}`}><AccordionTrigger className="min-h-11 text-left">{faq.q}</AccordionTrigger><AccordionContent className="leading-relaxed text-muted-foreground">{faq.a}</AccordionContent></AccordionItem>)}</Accordion>
       </section>}
     </Suspense>
     <div className="border-t border-border px-5 py-8 text-center"><Button variant="hero" size="lg" asChild><Link to="/onboarding">Crear mi rutina gratis</Link></Button></div>

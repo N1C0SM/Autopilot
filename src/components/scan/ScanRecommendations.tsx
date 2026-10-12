@@ -1,7 +1,10 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Dumbbell } from "lucide-react";
+import { euro, usePlanAvailability, type PlanAvailability } from "@/lib/planCatalog";
 
 type Props = {
+  /** Published plans; Coach is never recommended while it is hidden in Admin. */
+  plans?: Pick<PlanAvailability, "coach" | "plus" | "coachName" | "plusName" | "coachPrice" | "plusPrice">;
   bottleneck?: string;
   improvements?: { label: string; priority: string }[];
   monthsWithPlan?: number;
@@ -43,49 +46,53 @@ const GUIDES: Record<string, Item> = {
   },
 };
 
-const PLANS: Record<string, Item> = {
+const DEFAULT_PLANS: NonNullable<Props["plans"]> = { coach: true, plus: true, coachName: "Coach", plusName: "Plus", coachPrice: 49, plusPrice: 29 };
+
+const plansFor = (p: NonNullable<Props["plans"]>): Record<"training" | "full", Item> => ({
   training: {
-    name: "Plus",
-    price: "29 €/mes",
-    why: "Autopilot genera tu entrenamiento y lo adapta automáticamente según tus avances, con IA avanzada y nutrición.",
+    name: p.plusName,
+    price: `${euro(p.plusPrice)}/mes`,
+    why: "Autopilot genera tu entrenamiento, calcula la progresión de cargas con tus registros y añade tu plan de nutrición.",
     to: "/signup?plan=training",
-    cta: "Empezar con Plus",
+    cta: `Empezar con ${p.plusName}`,
     kind: "plan",
   },
   full: {
-    name: "Coach",
-    price: "49 €/mes",
-    why: "Todo lo de Plus y, además, un entrenador real asignado: revisa tu plan y te responde por chat.",
+    name: p.coachName,
+    price: `${euro(p.coachPrice)}/mes`,
+    why: `Todo lo de ${p.plus ? p.plusName : "Free"} y, además, Nicolás revisa tu plan y te responde por chat.`,
     to: "/signup?plan=full",
-    cta: "Empezar con Coach",
+    cta: `Empezar con ${p.coachName}`,
     kind: "plan",
   },
-};
+});
 
 // Una sola recomendación: el plan que encaja, y si no toca plan, un libro.
-const pick = (text: string, monthsWithPlan?: number): Item => {
+const pick = (text: string, _monthsWithPlan: number | undefined, p: NonNullable<Props["plans"]>): Item => {
+  const PLANS = plansFor(p);
+  const paid = p.coach ? PLANS.full : PLANS.training;
+  const base = p.plus ? PLANS.training : p.coach ? PLANS.full : GUIDES.blueprint;
   const t = text.toLowerCase();
   const nutrition = /(grasa|graso|abdomen|cintura|definic|peso|dieta|nutric|aliment|barriga)/.test(t);
-  const long = typeof monthsWithPlan === "number" && monthsWithPlan >= 6;
 
-  if (nutrition && long) return PLANS.full;
-  if (nutrition) return PLANS.full;
+  if (nutrition && (p.plus || p.coach)) return paid;
   if (/(técnica|tecnica|básic|basic|postura|principiante|empez)/.test(t)) return GUIDES.base;
   if (/(estanc|plateau|progres|variant)/.test(t)) return GUIDES.atlas;
   if (/(organiz|planific|constan|rutina|frecuenc|volumen)/.test(t)) return GUIDES.blueprint;
-  return PLANS.training;
+  return base;
 };
 
 /** Misma lógica que el bloque de recomendación, reutilizable por la página de resultados. */
-export function recommendFor({ bottleneck, improvements, monthsWithPlan }: Props) {
+export function recommendFor({ bottleneck, improvements, monthsWithPlan, plans = DEFAULT_PLANS }: Props) {
   const priority =
     improvements?.find((i) => /alta/i.test(i.priority))?.label ?? improvements?.[0]?.label ?? bottleneck ?? "";
   const limitation = bottleneck || priority || "tu punto de partida actual";
-  return { priority, limitation, rec: pick(`${limitation} ${priority}`, monthsWithPlan) };
+  return { priority, limitation, rec: pick(`${limitation} ${priority}`, monthsWithPlan, plans) };
 }
 
 export default function ScanRecommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
-  const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan });
+  const plans = usePlanAvailability();
+  const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan, plans });
 
   return (
     <div className="max-w-3xl mx-auto mb-12">
@@ -124,10 +131,10 @@ export default function ScanRecommendations({ bottleneck, improvements, monthsWi
 
         <p className="mt-4 text-[11px] text-muted-foreground">
           {rec.kind === "guia"
-            ? "Si prefieres que tu plan lo genere y lo adapte Autopilot, o que además lo lleve un entrenador real, mira los planes."
+            ? plans.coach ? "Si prefieres que Autopilot adapte tu plan, o que además lo revise Nicolás, mira los planes." : "Si prefieres que Autopilot adapte tu plan y tu nutrición, mira los planes."
             : "Si por ahora prefieres ir por tu cuenta, tienes las guías en PDF en Recursos."}{" "}
           <Link
-            to={rec.kind === "guia" ? "/#pricing" : "/recursos"}
+            to={rec.kind === "guia" ? "/planes" : "/recursos"}
             className="underline underline-offset-2 hover:text-foreground"
           >
             {rec.kind === "guia" ? "Ver planes" : "Ver guías"}

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { User, ShieldCheck } from "lucide-react";
 import CertificateLink from "@/components/CertificateLink";
 import type { Database } from "@/integrations/supabase/types";
+import { usePlanAvailability } from "@/lib/planCatalog";
 
 type Trainer = Database["public"]["Views"]["trainer_profiles_public"]["Row"];
 type Certificate = Database["public"]["Tables"]["trainer_certificates"]["Row"];
@@ -30,6 +31,7 @@ export function TrainerPresentation({ trainer, certificates }: { trainer: Traine
 }
 
 export default function TrainersSection() {
+  const { coach, coachName } = usePlanAvailability();
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   useEffect(() => {
@@ -49,8 +51,8 @@ export default function TrainersSection() {
     <div className="container mx-auto max-w-4xl">
       <p className="text-xs uppercase tracking-widest text-primary">Quién te acompaña</p>
       <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Conoce al equipo de entrenamiento</h2>
-      <p className="mt-4 mb-8 max-w-2xl text-muted-foreground">Nicolás es el fundador y dirige Autopilot. Los entrenadores del equipo se encargan de preparar y ajustar tu entrenamiento.</p>
-      {trainers.length ? trainers.map(t => <TrainerPresentation key={t.id} trainer={t} certificates={certificates.filter(c => c.trainer_profile_id === t.id)} />) : <div className="border-t border-border pt-6"><h3 className="font-display text-xl font-semibold">Un equipo para acompañarte</h3><p className="mt-3 text-muted-foreground">En los planes con seguimiento, tu entrenador prepara tu plan y atiende tus dudas por chat. La dirección de Autopilot se ocupa de coordinar el servicio.</p></div>}
+      <p className="mt-4 mb-8 max-w-2xl text-muted-foreground">{coach ? `Nicolás es el fundador y dirige Autopilot. En el plan ${coachName}, el equipo prepara y ajusta tu entrenamiento.` : "Nicolás San Marcos es el fundador y desarrollador de Autopilot."}</p>
+      {trainers.length ? trainers.map(t => <TrainerPresentation key={t.id} trainer={t} certificates={certificates.filter(c => c.trainer_profile_id === t.id)} />) : <div className="border-t border-border pt-6"><h3 className="font-display text-xl font-semibold">Un equipo para acompañarte</h3><p className="mt-3 text-muted-foreground">{coach ? `En el plan ${coachName}, tu entrenador prepara tu plan y atiende tus dudas por chat. La dirección de Autopilot se ocupa de coordinar el servicio.` : "Autopilot es un proyecto independiente: la rutina, el registro y la progresión los diseña y mantiene su fundador."}</p></div>}
     </div>
   </section>;
 }

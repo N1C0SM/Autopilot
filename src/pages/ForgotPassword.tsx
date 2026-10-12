@@ -35,6 +35,7 @@ const ForgotPassword = () => {
           title="Recuperar contraseña · Autopilot"
           description="Te enviamos un enlace para restablecer tu contraseña de Autopilot."
           path="/forgot-password"
+          noindex
         />
         <div className="w-full max-w-md text-center space-y-4">
           <Mail className="w-12 h-12 text-primary mx-auto" />
@@ -52,6 +53,7 @@ const ForgotPassword = () => {
         title="Recuperar contraseña · Autopilot"
         description="Introduce tu correo y te enviaremos un enlace para restablecer la contraseña."
         path="/forgot-password"
+          noindex
       />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">

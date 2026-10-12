@@ -72,7 +72,7 @@ const BlogPost = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>{title} — Autopilot</title>
+        <title>{`${title} · Autopilot`}</title>
         <meta name="description" content={desc} />
         <link rel="canonical" href={url} />
         <meta property="og:title" content={title} />

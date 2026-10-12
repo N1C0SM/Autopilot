@@ -8,6 +8,8 @@ interface Props {
   active: MobileTab;
   onChange: (tab: MobileTab) => void;
   lockedTabs?: MobileTab[];
+  /** Tabs not offered at all (e.g. chat while Coach is hidden in Admin). */
+  hiddenTabs?: MobileTab[];
 }
 
 const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
@@ -18,12 +20,12 @@ const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
   { key: "progress", label: "Progreso", icon: Sparkles },
 ];
 
-const MobileTabBar = ({ active, onChange, lockedTabs = [] }: Props) => {
+const MobileTabBar = ({ active, onChange, lockedTabs = [], hiddenTabs = [] }: Props) => {
   return (
     <FloatingMobileNav
       className="mobile-tabbar"
       active={active}
-      items={TABS.map((tab) => ({ ...tab, locked: lockedTabs.includes(tab.key) }))}
+      items={TABS.filter((tab) => !hiddenTabs.includes(tab.key)).map((tab) => ({ ...tab, locked: lockedTabs.includes(tab.key) }))}
       label="Navegación principal"
       layoutId="client-mobile-tab"
       onChange={(tab) => onChange(tab as MobileTab)}

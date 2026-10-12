@@ -24,7 +24,7 @@ const Connect = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Conectar Autopilot a tu asistente · MCP</title>
+        <title>Conectar Autopilot con ChatGPT o Claude (MCP) · Autopilot</title>
         <meta
           name="description"
           content="Conecta Autopilot a ChatGPT o Claude en menos de un minuto para consultar tu plan de entrenamiento y nutrición desde tu asistente favorito."

@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { usePlanAvailability } from "@/lib/planCatalog";
 
 interface Props {
   variant?: "default" | "compact";
@@ -12,6 +13,7 @@ interface Props {
  * real. No sustituye consejo médico.
  */
 const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
+  const plans = usePlanAvailability();
   if (variant === "compact") {
     return (
       <p className={`flex items-center gap-1 text-xs text-muted-foreground ${className}`}>
@@ -34,8 +36,8 @@ const AIDisclaimer = ({ variant = "default", className = "" }: Props) => {
       <Sparkles className="w-4 h-4 text-primary mt-0.5 shrink-0" />
       <p className="leading-snug">
         El análisis inicial se apoya en <strong className="text-foreground">IA</strong>. Tu plan se genera y se adapta
-        automáticamente a lo que registras; con el plan <strong className="text-foreground">Coach</strong>, además, un
-        entrenador real lo revisa y lo ajusta. No sustituye el consejo de un médico ni de un profesional sanitario.{" "}
+        automáticamente a lo que registras{plans.coach ? <>; con el plan <strong className="text-foreground">{plans.coachName}</strong>, además, Nicolás
+        lo revisa y lo ajusta</> : null}. No sustituye el consejo de un médico ni de un profesional sanitario.{" "}
         <Link to="/legal/disclaimer-medico" className="underline hover:text-foreground">
           Leer aviso completo
         </Link>

@@ -1,22 +1,31 @@
 # Autopilot
 
-> Entrenador personal online con plan personalizado de entrenamiento y nutrición + chat con un entrenador real. Desde 29€/mes, 7 días gratis.
+> Autopilot (autopilotplan.com) es una app web y móvil en español para crear tu rutina de entrenamiento según tu objetivo, días y material (gimnasio, casa o calistenia), registrar cada serie y seguir tu progreso. El plan Free es gratis, sin tarjeta y sin caducidad. Plus añade plan de nutrición y progresión de cargas calculada con tus registros.
 
-Autopilot crea un plan vivo para ti: entrenamiento + nutrición ajustados a tu nivel, equipamiento, horarios y objetivos. El plan se genera con IA y lo revisa y ajusta un entrenador humano cada semana a través del chat.
+Creada y mantenida por Nicolás San Marcos (fundador y desarrollador), España. La rutina y la progresión usan reglas de entrenamiento fijas; la IA se usa para el análisis corporal por foto y el asistente de dudas. No sustituye el consejo médico.
 
-Planes: Entrenamiento 29€/mes · Completo (entrenamiento + nutrición) 49€/mes · Transformación 12 semanas 299€ (pago único). 7 días de prueba gratuita en los planes mensuales y garantía de 30 días.
+## Planes
 
-## Pages
+- **Free** — gratis, sin tarjeta y sin caducidad: Rutina inicial según tu objetivo, días y material; Registro de series, repeticiones y kg; Historial, peso y récords.
+- **Plus** — 29 €/mes, 7 días de prueba: Todo Free; Plan de nutrición: calorías y macros para tu objetivo; Progresión de cargas calculada con tus registros; Análisis corporal por foto con IA; Estadísticas avanzadas de tu evolución.
 
-- [Inicio](/): Cómo funciona, precios, testimonios y FAQ.
-- [AI Body Scan](/scan): Análisis IA gratuito de tu físico a partir de una foto.
-- [Recursos](/recursos): Guías, ebooks, recomendaciones y artículos del equipo.
-- [Crear cuenta](/signup): Registro con 7 días gratis.
-- [Iniciar sesión](/login): Acceso a tu plan.
+Los planes de pago piden tarjeta al empezar 7 días de prueba; el primer cobro llega el día 8 si no se cancela desde Ajustes → Suscripción. Sin permanencia. Garantía de devolución de 30 días en planes mensuales.
+
+## Páginas
+
+- [App de entrenamiento y nutrición. Empieza gratis](https://autopilotplan.com/): Crea tu rutina según tu objetivo, días y material, registra cada serie y sigue tu progreso en el gimnasio o en casa. Free sin tarjeta; Plus añade nutrición y progresión de cargas.
+- [Planes y precios](https://autopilotplan.com/planes): Empieza gratis, sin tarjeta. Plus añade nutrición y progresión de cargas. 7 días de prueba y sin permanencia.
+- [Así funciona Autopilot](https://autopilotplan.com/como-funciona): Tu objetivo, tu rutina y tu progreso. Mira cómo se usa la app antes de crear tu cuenta.
+- [Quién está detrás de Autopilot](https://autopilotplan.com/equipo): Conoce a Nicolás San Marcos, fundador y desarrollador de Autopilot.
+- [Preguntas frecuentes](https://autopilotplan.com/preguntas-frecuentes): Resuelve tus dudas sobre los planes, el entrenamiento, la prueba de 7 días y tu cuenta.
+- [Análisis corporal gratis con IA](https://autopilotplan.com/scan): Sube una foto y recibe un análisis estimado por IA de tu físico, con lo que más te limita y por dónde empezar. Gratis y sin tarjeta.
+- [Recursos: guías y artículos de entrenamiento](https://autopilotplan.com/recursos): Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot.
+- [Blog de entrenamiento, nutrición e hipertrofia](https://autopilotplan.com/blog): Guías prácticas en español sobre entrenamiento de fuerza, hipertrofia, nutrición y progreso en el gimnasio o en casa.
+- [Conectar Autopilot con ChatGPT o Claude (MCP)](https://autopilotplan.com/connect): Conecta Autopilot a ChatGPT o Claude para consultar tu plan de entrenamiento y nutrición desde tu asistente.
 
 ## Optional
 
-- [Conectar con IA (MCP)](/connect): Conecta ChatGPT o Claude con tu plan.
-- [Términos](/legal/terminos): Términos y condiciones del servicio.
-- [Privacidad](/legal/privacidad): Política de privacidad y RGPD.
-- [Aviso médico](/legal/disclaimer-medico): Contenido generado con IA y supervisión humana; no sustituye consejo médico.
+- [Términos](https://autopilotplan.com/legal/terminos): condiciones del servicio, prueba, cancelación y devolución.
+- [Privacidad](https://autopilotplan.com/legal/privacidad): RGPD y LOPDGDD.
+- [Información de salud](https://autopilotplan.com/legal/disclaimer-medico): aviso médico.
+- [Versión completa para IA](https://autopilotplan.com/llms-full.txt)

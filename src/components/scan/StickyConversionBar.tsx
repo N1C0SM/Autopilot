@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Zap } from "lucide-react";
+import { euro, usePlanAvailability } from "@/lib/planCatalog";
 
 export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
   const [show, setShow] = useState(false);
+  const plans = usePlanAvailability();
 
   useEffect(() => {
     const onScroll = () => {
@@ -32,7 +34,7 @@ export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-semibold truncate">Tu plan, adaptado a ti · 7 días de prueba</div>
-              <div className="text-[10px] text-muted-foreground truncate">Plus desde 29€/mes · entrenador real en Coach · no se cobra hasta el día 8</div>
+              <div className="text-[10px] text-muted-foreground truncate">{[plans.plus && `${plans.plusName} desde ${euro(plans.plusPrice)}/mes`, plans.coach && `Nicolás en ${plans.coachName}`, "no se cobra hasta el día 8"].filter(Boolean).join(" · ")}</div>
             </div>
             <button
               onClick={onCta}
