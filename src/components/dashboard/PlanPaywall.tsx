@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, Lock, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TIERS } from "@/config/tiers";
+import { usePlanAvailability } from "@/lib/planCatalog";
 
 type TierKey = "training" | "full";
 
@@ -37,7 +38,9 @@ export const PlanPaywall = ({
   onSeeOther?: () => void;
   otherLabel?: string;
 }) => {
-  const options: TierKey[] = allowCoach ? ["training", "full"] : [plan === "plus" ? "training" : "full"];
+  const { coach } = usePlanAvailability();
+  // Coach is only offered while it is published in Admin → Planes.
+  const options: TierKey[] = allowCoach && coach ? ["training", "full"] : [plan === "plus" || !coach ? "training" : "full"];
   const [selected, setSelected] = useState<TierKey>(defaultPlan && options.includes(defaultPlan) ? defaultPlan : options[0]);
   const t = TIERS[selected];
 

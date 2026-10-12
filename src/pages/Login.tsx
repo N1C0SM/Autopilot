@@ -93,7 +93,8 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Helmet>
         <title>Iniciar sesión · Autopilot</title>
-        <meta name="description" content="Accede a tu plan de Autopilot: entrenamiento, nutrición y chat con tu entrenador." />
+        <meta name="description" content="Accede a tu cuenta de Autopilot: tu rutina, tu registro y tu progreso." />
+        <meta name="robots" content="noindex,follow" />
         <link rel="canonical" href="https://autopilotplan.com/login" />
         <meta property="og:title" content="Iniciar sesión · Autopilot" />
         <meta property="og:description" content="Entra a tu cuenta de Autopilot." />

@@ -10,6 +10,7 @@ interface Props {
   profileAvatar?: string;
   userId?: string;
   lockedTabs?: MobileTab[];
+  hiddenTabs?: MobileTab[];
   onSettings?: () => void;
   workoutMode?: boolean;
   children: ReactNode;
@@ -23,6 +24,7 @@ const MobileAppShell = ({
   profileAvatar,
   userId,
   lockedTabs,
+  hiddenTabs,
   onSettings,
   workoutMode = false,
   children,
@@ -51,7 +53,7 @@ const MobileAppShell = ({
         {children}
       </main>
 
-      {!workoutMode && <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} />}
+      {!workoutMode && <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} hiddenTabs={hiddenTabs} />}
     </div>
   );
 };

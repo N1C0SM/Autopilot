@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { track } from "@/lib/analytics";
 import { Link } from "react-router-dom";
 import TrainerOffer from "@/components/TrainerOffer";
-import { usePlanCatalog } from "@/lib/planCatalog";
+import { availabilityFrom, euro, usePlanCatalog } from "@/lib/planCatalog";
 
 interface PricingTiersProps {
   onSelect: (plan: PlanKey) => void;
@@ -15,6 +15,8 @@ interface PricingTiersProps {
 
 const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
   const plans = usePlanCatalog();
+  const a = availabilityFrom(plans);
+  const upgradeNames = [a.plus && a.plusName, a.coach && a.coachName].filter(Boolean).join(" o ");
   return (
     <div className="max-w-6xl mx-auto">
       <div
@@ -63,7 +65,7 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
                     isRec ? "text-gradient" : "text-foreground"
                   }`}
                 >
-                  {price === 0 ? "Gratis" : `€${price}`}
+                  {price === 0 ? "Gratis" : euro(price)}
                 </span>
                 <span className="text-muted-foreground text-sm">
                   {price === 0 ? "" : " al mes"}
@@ -105,7 +107,7 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
               >
                 {t.accepting ? t.cta : "Plazas cerradas"}
               </Button>
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? "Empieza desde el móvil y pasa a Plus o Coach cuando tenga sentido." : `Tras ${t.trial_days} días: ${t.price}€/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t.price === 0 ? (upgradeNames ? `Empieza desde el móvil y pasa a ${upgradeNames} cuando tenga sentido.` : "Empieza desde el móvil, sin tarjeta.") : t.trial_days > 0 ? `Tras ${t.trial_days} días: ${euro(t.price)}/mes, con renovación automática. Cancela desde Ajustes → Suscripción.` : `${euro(t.price)}/mes, con renovación automática. Cancela desde Ajustes → Suscripción.`}</p>
             </motion.div>
           );
         })}
@@ -114,11 +116,17 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
       <TrainerOffer />
 
       <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto leading-relaxed">
-        Free no caduca y no pide tarjeta. Plus y Coach piden tarjeta al empezar la prueba de 7 días; el primer cobro llega el día 8 si no cancelas desde Ajustes → Suscripción. Sin permanencia.
+        Free no caduca y no pide tarjeta.{(a.plus || a.coach) && <> {a.paidNames} {a.plus && a.coach ? "piden" : "pide"} tarjeta al empezar la prueba de 7 días; el primer cobro llega el día 8 si no cancelas desde Ajustes → Suscripción. Sin permanencia.</>}
       </p>
-      <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
-        Plus funciona sin atención humana. En Coach te atiende Nicolás, el fundador: responde por chat en horario normal, no 24/7.
-      </p>
+      {a.coach ? (
+        <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
+          {a.plus && <>{a.plusName} funciona sin atención humana. </>}En {a.coachName} te atiende Nicolás, el fundador: responde por chat en horario normal, no 24/7.
+        </p>
+      ) : a.plus ? (
+        <p className="text-center text-xs text-foreground/80 mt-2 max-w-lg mx-auto leading-relaxed">
+          {a.plusName} funciona de forma automática con tus registros, sin atención humana.
+        </p>
+      ) : null}
       <p className="text-center text-xs text-muted-foreground mt-2 flex items-center justify-center gap-1.5">
         <ShieldCheck className="w-3.5 h-3.5 text-success" /> Garantía de devolución de 30 días en planes mensuales
       </p>

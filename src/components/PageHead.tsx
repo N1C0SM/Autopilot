@@ -25,6 +25,8 @@ export default function PageHead({ title, description, path, noindex }: PageHead
       <meta property="og:url" content={url} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
+      <meta property="og:image" content={`${BASE}/og-image.png`} />
+      <meta name="twitter:image" content={`${BASE}/og-image.png`} />
       {noindex ? <meta name="robots" content="noindex,nofollow" /> : null}
     </Helmet>
   );

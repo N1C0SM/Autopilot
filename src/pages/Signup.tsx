@@ -13,6 +13,7 @@ import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { authRedirect } from "@/lib/authRedirect";
 import { signInWithApple } from "@/lib/nativeAuth";
+import { usePlanAvailability } from "@/lib/planCatalog";
 import { readAnonScanId } from "@/lib/scanAttribution";
 
 const Signup = () => {
@@ -38,8 +39,10 @@ const Signup = () => {
   const fromQuiz = searchParams.get("from") === "quiz";
   const fromScan = searchParams.get("from") === "scan";
   const planParam = (searchParams.get("plan") || "").toLowerCase();
+  const plans = usePlanAvailability();
+  // A Coach link from an old email or ad falls back to Plus while Coach is hidden in Admin.
   const selectedPlan: "training" | "full" | null =
-    isFree ? null : planParam === "training" ? "training" : planParam === "full" ? "full" : null;
+    isFree ? null : planParam === "training" ? "training" : planParam === "full" ? (plans.coach ? "full" : "training") : null;
   const [scanCtx, setScanCtx] = useState<{ currentImg?: string; result?: { potential: number; improvements?: unknown[] } } | null>(null);
   const { signUp } = useAuth();
 
@@ -175,10 +178,10 @@ const Signup = () => {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
-        <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar; entrenador real solo en el plan Coach." />
+        <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar." />
         <link rel="canonical" href="https://autopilotplan.com/signup" />
         <meta property="og:title" content="Crear cuenta · Autopilot" />
-        <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Plus adapta el plan y Coach añade un entrenador real." />
+        <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Sin tarjeta para empezar." />
         <meta property="og:url" content="https://autopilotplan.com/signup" />
       </Helmet>
       <div className="w-full max-w-md">

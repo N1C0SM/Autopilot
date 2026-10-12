@@ -29,7 +29,7 @@ import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
-import { TIERS } from "@/config/tiers";
+import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { getFirstWeekJourney } from "@/lib/firstWeek";
 
 const Chat = lazy(() => import("@/components/Chat"));
@@ -87,6 +87,9 @@ const Dashboard = () => {
   const [paymentStatus, setPaymentStatus] = useState<string>("unpaid");
   const [coaching, setCoaching] = useState(false);
   const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
+  const plans = usePlanAvailability();
+  // Coach customers keep their chat; everyone else stops seeing it while Coach is hidden in Admin.
+  const hideChat = !plans.coach && consumerPlan !== "coach";
   const [coachAssigned, setCoachAssigned] = useState(true);
   const [nutrition, setNutrition] = useState(false);
   const [preparingRoutine, setPreparingRoutine] = useState(false);
@@ -330,6 +333,9 @@ const Dashboard = () => {
     }
   };
 
+  // Wait for the profile: before it loads every user looks like "free".
+  useEffect(() => { if (!loading && hideChat && section === "chat") setSectionState("home"); }, [loading, hideChat, section]);
+
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
     const { data, error } = await supabase.functions.invoke("customer-portal");
@@ -436,7 +442,7 @@ const Dashboard = () => {
           plan="coach"
           onChoose={() => handleCompletePayment("full")}
           onSeeOther={() => setSection("nutrition")}
-          otherLabel={`Ver Plus · ${TIERS.training.price} €/mes`}
+          otherLabel={`Ver ${plans.plusName} · ${euro(plans.plusPrice)}/mes`}
         />
       )}
 
@@ -552,7 +558,7 @@ const Dashboard = () => {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
           <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
           <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
-          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Elegir Coach — {TIERS.full.price}€/mes</Button>
+          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Elegir {plans.coachName} — {euro(plans.coachPrice)}/mes</Button>
         </div>
       )}
 
@@ -679,6 +685,7 @@ const Dashboard = () => {
         profileAvatar={profileAvatar}
         userId={user?.id}
         lockedTabs={!coaching ? ["nutrition", "chat"] : consumerPlan !== "coach" ? ["chat"] : []}
+        hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         workoutMode={workoutMode}
       >
@@ -705,6 +712,7 @@ const Dashboard = () => {
             profileName={profileName}
             profileAvatar={profileAvatar}
             lockedSections={!coaching ? ["nutrition", "chat"] : consumerPlan !== "coach" ? ["chat"] : []}
+            hiddenSections={hideChat ? ["chat"] : []}
           />
         </div>
 

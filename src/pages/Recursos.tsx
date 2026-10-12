@@ -11,6 +11,7 @@ import BookPreviewModal from "@/components/BookPreviewModal";
 import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/components/ItemPreviewModal";
 import { useAuth } from "@/contexts/AuthContext";
 import UserSidebar from "@/components/UserSidebar";
+import { usePlanAvailability } from "@/lib/planCatalog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string; is_pack?: boolean }
@@ -21,6 +22,7 @@ interface Post { slug: string; title: string; excerpt: string | null; cover_url:
 // datos, esas secciones simplemente no se muestran (nada de material inventado).
 
 const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
+  const plans = usePlanAvailability();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
@@ -156,8 +158,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
               </p>
               <h2 className="text-2xl font-bold font-display">Material para estudiar por tu cuenta</h2>
               <p className="text-xs text-muted-foreground mt-2 max-w-xl leading-relaxed">
-                Son documentos PDF para leer tú solo. No incluyen entrenador, plan personalizado ni seguimiento:
-                eso es el plan Coach.
+                Son documentos PDF para leer tú solo. No incluyen plan personalizado ni seguimiento{plans.coach ? `: eso es el plan ${plans.coachName}` : ""}.
               </p>
             </div>
 
@@ -250,8 +251,9 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
       {user && <UserSidebar section="resources" onNavigate={(s) => navigate(s === "resources" ? "/recursos" : "/dashboard")} onSignOut={() => { signOut(); navigate("/"); }} />}
       <div className="flex-1 min-w-0">
       <Helmet>
-        <title>Recursos · Autopilot</title>
-        <meta name="description" content="Ebooks, recomendaciones y artículos seleccionados por el equipo de Autopilot." />
+        <title>Recursos: guías y artículos de entrenamiento · Autopilot</title>
+        <meta name="description" content="Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot." />
+        <link rel="canonical" href="https://autopilotplan.com/recursos" />
       </Helmet>
       <header className="app-chrome sticky top-0 z-40 border-b">
         <div className="container mx-auto max-w-7xl flex items-center justify-between h-14 px-4">

@@ -33,6 +33,8 @@ interface Props {
   profileName?: string;
   profileAvatar?: string;
   lockedSections?: UserSection[];
+  /** Sections not offered at all (e.g. chat while Coach is hidden in Admin). */
+  hiddenSections?: UserSection[];
 }
 
 const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = [
@@ -44,7 +46,7 @@ const NAV_ITEMS: { title: string; section: UserSection; icon: typeof Home }[] = 
   { title: "Ajustes", section: "settings", icon: Settings },
 ];
 
-const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvatar, lockedSections = [] }: Props) => {
+const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvatar, lockedSections = [], hiddenSections = [] }: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const navigate = useNavigate();
@@ -65,7 +67,7 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
           <SidebarGroupLabel>Menú</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => {
+              {NAV_ITEMS.filter((item) => !hiddenSections.includes(item.section)).map((item) => {
                 const isActive = section === item.section;
                 const isLocked = lockedSections.includes(item.section);
                 return (

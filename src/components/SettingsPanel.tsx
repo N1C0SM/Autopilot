@@ -27,9 +27,11 @@ import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/li
 import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
+import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import type { Json } from "@/integrations/supabase/types";
 
 const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
+  const plans = usePlanAvailability();
   const hideForAdmin = adminMode ? " hidden" : "";
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -495,15 +497,17 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               {onUpgrade && (
                 <>
                   <Button variant="hero" className="w-full" onClick={() => onUpgrade("training")}>
-                    <Zap className="mr-2 h-4 w-4" /> Mejorar a Plus · {MONTHLY_PRICE_EUR} €/mes
+                    <Zap className="mr-2 h-4 w-4" /> Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes
                   </Button>
-                  <button
-                    type="button"
-                    onClick={() => onUpgrade("full")}
-                    className="min-h-11 w-full text-xs font-medium text-primary underline underline-offset-4"
-                  >
-                    Ver Coach · entrenador real asignado
-                  </button>
+                  {plans.coach && (
+                    <button
+                      type="button"
+                      onClick={() => onUpgrade("full")}
+                      className="min-h-11 w-full text-xs font-medium text-primary underline underline-offset-4"
+                    >
+                      Ver {plans.coachName} · Nicolás revisa tu plan
+                    </button>
+                  )}
                 </>
               )}
             </div>

@@ -5,7 +5,7 @@ import {
   RotateCcw, Send, Settings as SettingsIcon, Sparkles, Timer, Utensils, Lock, Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { TIERS } from "@/config/tiers";
+import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { track } from "@/lib/analytics";
 import { buildExerciseHistory } from "@/lib/workoutMetrics";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,10 +35,10 @@ const exercises = [
   { name: "Press con mancuernas", sets: 3, reps: 9, load: "14 kg", last: "Última vez: 14 kg × 8", image: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png" },
 ];
 
-const side: Record<View, { title: string; points: string[] }> = {
+const baseSide: Record<View, { title: string; points: string[] }> = {
   home: {
     title: "Abres la app y sabes qué toca hoy.",
-    points: ["Tu rutina y el progreso de tus sesiones están a mano.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "La nutrición y el chat con Nicolás dependen del plan elegido."],
+    points: ["Tu rutina y el progreso de tus sesiones están a mano.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "La nutrición y la progresión automática dependen del plan elegido."],
   },
   training: {
     title: "Sabes qué hacer al entrar al gimnasio.",
@@ -87,6 +87,17 @@ const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
 /** Public, isolated example. Never reads or writes a customer's training data. */
 export default function ProductPreview({ onPlans, onFree }: { onPlans: () => void; onFree?: () => void }) {
   const [view, setView] = useState<View>("home");
+  const plans = usePlanAvailability();
+  // The chat tab sells Coach: it disappears when Coach is hidden in Admin → Planes.
+  const shownViews = views.filter((v) => v.key !== "chat" || plans.coach);
+  useEffect(() => { if (view === "chat" && !plans.coach) setView("home"); }, [view, plans.coach]);
+  const paidLabel = [plans.plus && plans.plusName, plans.coach && plans.coachName].filter(Boolean).join(" y ") || "planes de pago";
+  const side: Record<View, { title: string; points: string[] }> = {
+    ...baseSide,
+    home: { ...baseSide.home, points: [baseSide.home.points[0], baseSide.home.points[1], plans.coach ? `La nutrición y el chat con Nicolás dependen del plan elegido.` : baseSide.home.points[2]] },
+    nutrition: { ...baseSide.nutrition, title: `Tu plan de nutrición, incluido desde ${plans.plus ? plans.plusName : plans.coachName}.` },
+    chat: { ...baseSide.chat, points: [baseSide.chat.points[0], baseSide.chat.points[1], `El chat personal es exclusivo del plan ${plans.coachName}.`] },
+  };
   // Nombre y foto reales de Ajustes (get_public_settings): si cambias la foto, la demo cambia.
   const [owner, setOwner] = useState<{ name: string; photo: string | null }>({ name: "Nicolás", photo: null });
   useEffect(() => {
@@ -161,7 +172,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
           <div className="max-w-xl">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Antes de decidir</p>
             <h2 id="preview-heading" className="font-display text-3xl font-bold sm:text-4xl">Prueba cómo sería tu día.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos. La nutrición está incluida desde Plus y el chat con entrenador en Coach. Free incluye rutina inicial, registro y progreso. Sin cuenta ni tarjeta.</p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos.{plans.plus ? ` La nutrición está incluida desde ${plans.plusName}.` : ""}{plans.coach ? ` El chat con Nicolás, en ${plans.coachName}.` : ""} Free incluye rutina inicial, registro y progreso. Sin cuenta ni tarjeta.</p>
           </div>
           <span className="text-xs text-muted-foreground">Demo con datos ficticios · no es un plan personal</span>
         </div>
@@ -176,7 +187,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                     <li key={p} className="flex gap-3 text-sm text-muted-foreground"><Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}</li>
                   ))}
                 </ul>
-                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? `El plan de nutrición está incluido desde Plus · ${TIERS.training.price}€/mes tras la prueba. No forma parte del plan Gratis.` : view === "chat" ? `El chat con entrenador real es exclusivo del plan Coach · ${TIERS.full.price}€/mes tras la prueba. No está incluido en Gratis ni en Plus.` : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
+                <p className="mt-6 max-w-md text-sm text-muted-foreground">{view === "nutrition" ? `El plan de nutrición está incluido desde ${plans.plus ? plans.plusName : plans.coachName} · ${euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" ? `El chat con Nicolás es exclusivo del plan ${plans.coachName} · ${euro(plans.coachPrice)}/mes tras la prueba. No está incluido en Free${plans.plus ? ` ni en ${plans.plusName}` : ""}.` : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -221,7 +232,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                       {view === "home" && (
                         <div className="space-y-3">
                           <p className="text-[11px] font-medium text-primary">Lunes 28 · Semana 3 de 12</p>
-                          <h4 className="font-display text-xl font-bold leading-tight">Hola, {ownerFirst}.<br />Hoy toca fuerza.</h4>
+                          <h4 className="font-display text-xl font-bold leading-tight">Hola, Laura.<br />Hoy toca fuerza.</h4>
                           <button type="button" onClick={() => changeView("training")} className="flex w-full items-center gap-3 rounded-2xl bg-primary p-4 text-left text-primary-foreground transition-opacity hover:opacity-90">
                             <Dumbbell className="h-6 w-6 shrink-0" />
                             <span className="min-w-0 flex-1">
@@ -259,7 +270,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                           </div>
                           <div className="flex gap-2.5 rounded-2xl bg-secondary p-3">
                             <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                            <p className="text-xs leading-relaxed"><span className="font-semibold">En Coach:</span> <span className="text-muted-foreground">recibes seguimiento humano y ajustes de tu plan. Gratis tienes registro y progreso.</span></p>
+                            <p className="text-xs leading-relaxed">{plans.coach ? <><span className="font-semibold">En {plans.coachName}:</span> <span className="text-muted-foreground">recibes seguimiento humano y ajustes de tu plan. Gratis tienes registro y progreso.</span></> : <span className="text-muted-foreground">Gratis tienes rutina, registro y progreso{plans.plus ? `; ${plans.plusName} añade nutrición y progresión automática` : ""}.</span>}</p>
                           </div>
                         </div>
                       )}
@@ -366,9 +377,9 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
 
                       {view === "nutrition" && (
                         <div>
-                          <p className="text-[11px] font-medium text-primary">Hoy · plan Plus</p>
+                          <p className="text-[11px] font-medium text-primary">Hoy · plan {plans.plus ? plans.plusName : plans.coachName}</p>
                           <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-secondary p-3">
-                            <span className="flex items-center gap-2 text-xs font-semibold"><Lock className="h-4 w-4 text-primary" />Plus y Coach</span>
+                            <span className="flex items-center gap-2 text-xs font-semibold"><Lock className="h-4 w-4 text-primary" />{paidLabel}</span>
                             <span className="text-[10px] text-muted-foreground">Función de pago</span>
                           </div>
                           <div className="mt-3 flex items-center gap-4 rounded-2xl bg-secondary p-4">
@@ -402,7 +413,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                       {view === "chat" && (
                         <div className="flex h-full flex-col">
                           <div className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/5 p-2">
-                            <span className="flex items-center gap-1.5 text-[10px] font-semibold"><Lock className="h-3.5 w-3.5 text-primary" />Plan Coach</span>
+                            <span className="flex items-center gap-1.5 text-[10px] font-semibold"><Lock className="h-3.5 w-3.5 text-primary" />Plan {plans.coachName}</span>
                             <span className="text-[9px] text-muted-foreground">No incluido en Gratis</span>
                           </div>
                           <div className="flex items-center gap-2.5 border-b border-border pb-3">
@@ -411,7 +422,7 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                             </span>
                             <div>
                               <p className="text-sm font-semibold">{ownerFirst} · fundador</p>
-                              <p className="text-[10px] text-muted-foreground">Chat directo · plan Coach</p>
+                              <p className="text-[10px] text-muted-foreground">Chat directo · plan {plans.coachName}</p>
                             </div>
                           </div>
                           <div className="mt-3 space-y-2.5">
@@ -516,8 +527,8 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
                 </AnimatePresence>
                 {/* floating tab bar (same 5 tabs as the real app) */}
                 <nav className="absolute inset-x-3 bottom-5 rounded-full border border-border bg-background/85 px-1.5 py-1.5 shadow-lg backdrop-blur-xl" role="group" aria-label="Secciones de la demo">
-                  <div className="grid grid-cols-5">
-                    {views.map(({ key, label, icon: Icon }) => {
+                  <div className={`grid ${shownViews.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
+                    {shownViews.map(({ key, label, icon: Icon }) => {
                       const active = view === key;
                       return (
                         <button key={key} type="button" aria-pressed={active} onClick={() => changeView(key)}

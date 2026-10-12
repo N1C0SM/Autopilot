@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import PublicLayout from "@/components/PublicLayout";
 import { track } from "@/lib/analytics";
-import { TIERS, type PlanKey } from "@/config/tiers";
+import { type PlanKey } from "@/config/tiers";
+import { usePlanAvailability } from "@/lib/planCatalog";
+import { LANDING_META, landingDescription, landingFaqs } from "@/lib/publicCopy";
 import dashboardPreview from "@/assets/dashboard-preview.png";
 
 const ProductPreview = lazy(() => import("@/components/ProductPreview"));
@@ -21,6 +23,8 @@ export default function Index() {
   const { hash, search } = useLocation();
   const navigate = useNavigate();
   const pricingRef = useRef<HTMLElement>(null);
+  const plans = usePlanAvailability();
+  const faqs = landingFaqs(plans);
   const destination = legacySections[hash];
   useEffect(() => { if (!destination) track("landing_view"); }, [destination]);
   useEffect(() => {
@@ -38,27 +42,30 @@ export default function Index() {
     const [pathname, anchor] = destination.split("#");
     return <Navigate replace to={{ pathname, search, hash: anchor ? `#${anchor}` : "" }} />;
   }
-  return <PublicLayout title="Entrenamiento y nutrición. Empieza gratis" description="Crea tu rutina según tu objetivo, días y material, registra cada serie y sigue tu progreso. Free sin tarjeta; Plus añade nutrición y progresión de cargas.">
+  return <PublicLayout title={LANDING_META.title} description={landingDescription(plans)}>
 
     <Helmet>
 <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Service",
-          serviceType: "Entrenamiento y nutrición online con IA y, en el plan Coach, atención personal del fundador",
+          name: "Autopilot",
+          serviceType: plans.coach
+            ? "Entrenamiento y nutrición online personalizados, con atención personal del fundador en el plan Coach"
+            : "Entrenamiento y nutrición online personalizados",
           provider: { "@type": "Organization", name: "Autopilot", url: "https://autopilotplan.com/" },
-          areaServed: "ES",
-          offers: [
-            { "@type": "Offer", name: "Free", price: "0", priceCurrency: "EUR" },
-            { "@type": "Offer", name: "Plus", price: "29", priceCurrency: "EUR" },
-            { "@type": "Offer", name: "Coach", price: "49", priceCurrency: "EUR" },
-          ],
+          areaServed: { "@type": "Country", name: "España" },
+          offers: plans.plans.map((p) => ({ "@type": "Offer", name: p.name, price: String(p.price), priceCurrency: "EUR", url: "https://autopilotplan.com/planes" })),
         })}</script>
 <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "Autopilot",
           url: "https://autopilotplan.com/",
-          description: "Entrenamiento y nutrición que se adaptan a tu progreso, con análisis corporal por IA y atención personal del fundador en el plan Coach, para toda España.",
+          description: plans.coach
+            ? "App de entrenamiento y nutrición que se adapta a tu progreso, con análisis corporal por IA y atención personal del fundador en el plan Coach, para toda España."
+            : "App de entrenamiento y nutrición que se adapta a tu progreso, con análisis corporal por IA, para toda España.",
+          founder: { "@type": "Person", name: "Nicolás San Marcos" },
+          logo: "https://autopilotplan.com/pwa-512.png",
           areaServed: { "@type": "Country", name: "España" },
           address: { "@type": "PostalAddress", addressCountry: "ES" },
           availableLanguage: ["es"],
@@ -70,6 +77,11 @@ export default function Index() {
           name: "Autopilot",
           url: "https://autopilotplan.com/",
           inLanguage: "es-ES",
+        })}</script>
+<script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
         })}</script>
     </Helmet>
     {/* 1 · Hero */}
@@ -100,7 +112,7 @@ export default function Index() {
     <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 border-t border-border px-5 py-12 sm:px-8 sm:py-16">
       <div className="mx-auto max-w-6xl">
         <h2 id="precios-titulo" className="font-display text-3xl font-bold sm:text-4xl">Empieza gratis. Paga solo si te aporta.</h2>
-        <p className="mt-3 max-w-2xl text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. Plus te dice qué comer y cuánto peso subir. Coach añade a Nicolás revisando tu plan.</p>
+        <p className="mt-3 max-w-2xl text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
         <div className="mt-8">
           <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
             <PricingTiers onSelect={selectPlan} />
@@ -134,8 +146,8 @@ export default function Index() {
       <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
         <div>
           <h2 id="fundador-titulo" className="font-display text-3xl font-bold sm:text-4xl">Quién está detrás</h2>
-          <p className="mt-4 leading-relaxed text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo, y en el plan Coach también soy yo quien revisa tu plan y te responde por chat. Quería una app que te diga qué hacer hoy sin complicarte.</p>
-          <p className="mt-3 text-sm text-muted-foreground">Es un proyecto de una persona. Por eso las respuestas por chat no son inmediatas ni 24/7.</p>
+          <p className="mt-4 leading-relaxed text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde por chat</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
+          <p className="mt-3 text-sm text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas por chat no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
         </div>
         <div>
           <h2 className="font-display text-2xl font-bold">Dudas frecuentes</h2>
@@ -153,10 +165,3 @@ export default function Index() {
     </section>
   </PublicLayout>;
 }
-
-const faqs = [
-  { q: "¿Qué incluye el plan Free?", a: "Rutina inicial según tu objetivo, días y material, registro de series, kg y repeticiones, historial, peso y récords. No pide tarjeta y no caduca." },
-  { q: "¿Qué diferencia hay entre Free, Plus y Coach?", a: `Free sirve para entrenar y registrar. Plus (${TIERS.training.price} €/mes) añade plan de nutrición con calorías y macros, progresión de cargas calculada con tus registros, análisis corporal por foto con IA y estadísticas avanzadas. Coach (${TIERS.full.price} €/mes) incluye todo Plus y a Nicolás revisando tu plan y respondiéndote por chat.` },
-  { q: "¿Puedo entrenar en casa o hacer calistenia?", a: "Sí. Indicas tu material exacto, o ninguno, y la rutina se construye con ejercicios que puedes hacer: gimnasio, mancuernas en casa o calistenia." },
-  { q: "¿Cómo funcionan los pagos y la cancelación?", a: "Plus y Coach piden tarjeta al empezar una prueba de 7 días. No se cobra nada hasta el día 8. Puedes cancelar antes desde Ajustes → Suscripción y no se te cobrará. Después se renueva cada mes, sin permanencia." },
-];

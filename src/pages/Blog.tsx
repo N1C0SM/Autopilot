@@ -34,13 +34,13 @@ const Blog = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Blog Autopilot — Entrenamiento, nutrición e hipertrofia</title>
+        <title>Blog de entrenamiento, nutrición e hipertrofia · Autopilot</title>
         <meta
           name="description"
-          content="Guías prácticas sobre entrenamiento, nutrición e hipertrofia para hombres de 25 a 40 años. Escritas por entrenadores reales."
+          content="Guías prácticas en español sobre entrenamiento de fuerza, hipertrofia, nutrición y progreso en el gimnasio o en casa."
         />
         <link rel="canonical" href="https://autopilotplan.com/blog" />
-        <meta property="og:title" content="Blog Autopilot" />
+        <meta property="og:title" content="Blog de entrenamiento, nutrición e hipertrofia · Autopilot" />
         <meta property="og:description" content="Guías prácticas sobre entrenamiento, nutrición e hipertrofia." />
         <meta property="og:url" content="https://autopilotplan.com/blog" />
         <meta property="og:type" content="website" />
