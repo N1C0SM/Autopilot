@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     }
     await sb.from("rate_limits").insert({ key });
 
-    const { currentImage, months, goal } = await req.json();
+    const { currentImage, months, goal, pose } = await req.json();
     if (!currentImage) {
       return new Response(JSON.stringify({ error: "Falta la imagen" }), {
         status: 400,
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
 
-    const prompt = `Edita esta foto mostrando a la misma persona ${months ?? 6} meses después tras seguir un plan de entrenamiento y nutrición personalizado, con ${goal === "lose_weight" ? "menos grasa corporal y más definición" : goal === "gain_muscle" ? "más masa muscular en hombros, espalda y pecho" : "mejor composición corporal y postura"}. Mantén identidad facial, fondo y pose idénticos. Realista, no caricaturesco.`;
+    const prompt = `Edita esta foto mostrando a la misma persona ${months ?? 6} meses después tras seguir un plan de entrenamiento y nutrición personalizado, con ${goal === "lose_weight" ? "menos grasa corporal y más definición" : goal === "gain_muscle" ? "más masa muscular en hombros, espalda y pecho" : "mejor composición corporal y postura"}. ${pose === "back" ? "Es una foto de ESPALDA: muestra la misma vista dorsal, con más densidad de dorsales, deltoides posteriores, trapecios, zona lumbar limpia y mejor postura escapular." : "Es una foto de FRENTE: muestra la misma vista frontal, con mejor pectoral, hombros y definición abdominal."} Mantén identidad, fondo, fondo y pose idénticos. Realista, no caricaturesco.`;
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

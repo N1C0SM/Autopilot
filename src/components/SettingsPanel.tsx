@@ -252,9 +252,9 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         : originalAvailability,
       nutrition_preferences: onboarding.nutrition_preferences,
       allergies: onboarding.allergies,
-    });
+    }, { onConflict: "user_id" });
     if (!error) toast.success("Datos actualizados");
-    else toast.error("Error al guardar");
+    else { console.error("saveOnboarding", error); toast.error(`No se pudo guardar: ${error.message}`); }
     setSaving(false);
   };
 
