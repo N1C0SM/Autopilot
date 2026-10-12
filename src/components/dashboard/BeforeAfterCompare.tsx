@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 interface Photo {
   id: string;
+  note?: string | null;
   photo_url: string;
   taken_at: string;
 }
@@ -17,17 +18,34 @@ interface Props {
 const fmt = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
-const BeforeAfterCompare = ({ photos, signed, onClose }: Props) => {
-  const [beforeId, setBeforeId] = useState(photos[photos.length - 1].id);
-  const [afterId, setAfterId] = useState(photos[0].id);
+type Pose = "front" | "back" | "all";
+export const photoPose = (note?: string | null): "front" | "back" | "other" => {
+  const n = (note || "").toLowerCase();
+  if (/espalda|dorsal|back/.test(n)) return "back";
+  if (/frente|pecho|front/.test(n)) return "front";
+  return "other";
+};
+const POSE_LABEL: Record<Pose, string> = { front: "Frente", back: "Espalda", all: "Todas" };
+
+const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
+  const counts = { front: allPhotos.filter((p) => photoPose(p.note) === "front").length, back: allPhotos.filter((p) => photoPose(p.note) === "back").length };
+  const [pose, setPoseState] = useState<Pose>(counts.front >= 2 ? "front" : counts.back >= 2 ? "back" : "all");
+  const photos = pose === "all" ? allPhotos : allPhotos.filter((p) => photoPose(p.note) === pose);
+  const [beforeId, setBeforeId] = useState(photos[photos.length - 1]?.id);
+  const [afterId, setAfterId] = useState(photos[0]?.id);
+  const setPose = (p: Pose) => {
+    const list = p === "all" ? allPhotos : allPhotos.filter((x) => photoPose(x.note) === p);
+    setPoseState(p); setBeforeId(list[list.length - 1]?.id); setAfterId(list[0]?.id);
+  };
   const [pos, setPos] = useState(50);
   const boxRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
 
-  const before = photos.find((p) => p.id === beforeId)!;
-  const after = photos.find((p) => p.id === afterId)!;
+  const before = photos.find((p) => p.id === beforeId);
+  const after = photos.find((p) => p.id === afterId);
 
   const weeks = useMemo(() => {
+    if (!before || !after) return "";
     const ms = Math.abs(new Date(after.taken_at).getTime() - new Date(before.taken_at).getTime());
     const days = Math.round(ms / 86400000);
     if (days < 14) return `${days} ${days === 1 ? "día" : "días"} de evolución`;
@@ -48,6 +66,19 @@ const BeforeAfterCompare = ({ photos, signed, onClose }: Props) => {
       </Button>
 
       <h3 className="font-display font-bold text-lg mb-1">Antes / Después</h3>
+      <div className="flex gap-1 mb-3 p-1 rounded-full bg-secondary" role="tablist" aria-label="Ángulo">
+        {(["front", "back", "all"] as Pose[]).map((p) => (
+          <button key={p} role="tab" aria-selected={pose === p} onClick={() => setPose(p)}
+            className={`min-h-9 px-4 rounded-full text-xs font-semibold transition ${pose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            {POSE_LABEL[p]}
+          </button>
+        ))}
+      </div>
+      {photos.length < 2 || !before || !after ? (
+        <p className="text-sm text-muted-foreground text-center max-w-xs mt-6">
+          Necesitas al menos 2 fotos de {pose === "front" ? "frente" : pose === "back" ? "espalda" : "progreso"} para comparar este ángulo.
+        </p>
+      ) : (<>
       <p className="text-xs text-muted-foreground mb-3">{weeks} · Arrastra la barra</p>
 
       <div
@@ -99,6 +130,7 @@ const BeforeAfterCompare = ({ photos, signed, onClose }: Props) => {
           </select>
         </label>
       </div>
+      </>)}
     </div>
   );
 };

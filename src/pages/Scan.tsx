@@ -317,7 +317,12 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
   const [loading, setLoading] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  const [futureImg, setFutureImg] = useState<string | null>(null);
+  const [futureImgs, setFutureImgs] = useState<{ front?: string; back?: string }>({});
+  const [simPoseChoice, setSimPose] = useState<"front" | "back">("front");
+  // Simulamos solo las vistas subidas: si solo hay espalda, espalda; si solo frente, frente.
+  const simPose: "front" | "back" = currentImg && backImg ? simPoseChoice : backImg && !currentImg ? "back" : "front";
+  const simBase = simPose === "back" ? backImg : currentImg;
+  const futureImg = futureImgs[simPose] ?? null;
   const [genLoading, setGenLoading] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
@@ -518,8 +523,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
     }
   };
 
-  const generateFuture = async () => {
-    const baseImg = currentImg || backImg;
+  const generateFuture = async (pose: "front" | "back" = simPose) => {
+    const baseImg = pose === "back" ? backImg : currentImg;
     if (!baseImg || !result) return;
     setGenLoading(true);
     try {
@@ -528,11 +533,12 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
           currentImage: baseImg,
           months: result.months_with_plan ?? result.estimated_months ?? 6,
           goal: result.inferred_goal,
+          pose,
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      setFutureImg(data.imageUrl);
+      setFutureImgs((m) => ({ ...m, [pose]: data.imageUrl }));
     } catch (e: unknown) {
       toast.error(errorMessage(e) || "Error generando la simulación");
     } finally {
@@ -2002,12 +2008,22 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         ? <>Tu yo en {result.months_with_plan ?? result.estimated_months} meses</>
                         : <>Tu yo transformado</>}
                     </div>
+                    {currentImg && backImg && (
+                      <div className="flex gap-1 mb-3 p-1 rounded-full bg-secondary w-fit" role="tablist" aria-label="Vista de la simulación">
+                        {(["front", "back"] as const).map((p) => (
+                          <button key={p} role="tab" aria-selected={simPose === p} onClick={() => setSimPose(p)}
+                            className={`min-h-9 px-4 rounded-full text-xs font-semibold transition ${simPose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                            {p === "front" ? "Frente" : "Espalda"}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-secondary">
                       {futureImg ? (
                         <img loading="lazy" decoding="async" src={futureImg} alt="futuro IA" className="w-full h-full object-cover" />
-                      ) : (currentImg || backImg) ? (
+                      ) : simBase ? (
                         <img loading="lazy" decoding="async"
-                          src={(currentImg || backImg)!}
+                          src={simBase}
                           alt="futuro"
                           className="w-full h-full object-cover scale-110"
                           style={{
@@ -2033,7 +2049,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                                 <Button
                                   variant="hero"
                                   size="sm"
-                                  onClick={generateFuture}
+                                  onClick={() => generateFuture()}
                                   disabled={genLoading}
                                 >
                                   {genLoading ? "Generando con IA..." : "Generar simulación IA"}
