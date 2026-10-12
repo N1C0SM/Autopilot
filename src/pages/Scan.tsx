@@ -323,7 +323,6 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
   const simPose: "front" | "back" = currentImg && backImg ? simPoseChoice : backImg && !currentImg ? "back" : "front";
   const simBase = simPose === "back" ? backImg : currentImg;
   const futureImg = futureImgs[simPose] ?? null;
-  const setFutureImg = (v: string | null) => { if (v === null) setFutureImgs({}); };
   const [genLoading, setGenLoading] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
