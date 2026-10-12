@@ -18,23 +18,23 @@ interface Props {
 const fmt = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
-type Pose = "front" | "back" | "all";
+type Pose = "front" | "back";
 export const photoPose = (note?: string | null): "front" | "back" | "other" => {
   const n = (note || "").toLowerCase();
   if (/espalda|dorsal|back/.test(n)) return "back";
   if (/frente|pecho|front/.test(n)) return "front";
   return "other";
 };
-const POSE_LABEL: Record<Pose, string> = { front: "Frente", back: "Espalda", all: "Todas" };
+const POSE_LABEL: Record<Pose, string> = { front: "Frente", back: "Espalda" };
 
 const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
   const counts = { front: allPhotos.filter((p) => photoPose(p.note) === "front").length, back: allPhotos.filter((p) => photoPose(p.note) === "back").length };
-  const [pose, setPoseState] = useState<Pose>(counts.front >= 2 ? "front" : counts.back >= 2 ? "back" : "all");
-  const photos = pose === "all" ? allPhotos : allPhotos.filter((p) => photoPose(p.note) === pose);
+  const [pose, setPoseState] = useState<Pose>(counts.front >= 2 ? "front" : counts.back >= 2 ? "back" : "front");
+  const photos = allPhotos.filter((p) => photoPose(p.note) === pose);
   const [beforeId, setBeforeId] = useState(photos[photos.length - 1]?.id);
   const [afterId, setAfterId] = useState(photos[0]?.id);
   const setPose = (p: Pose) => {
-    const list = p === "all" ? allPhotos : allPhotos.filter((x) => photoPose(x.note) === p);
+    const list = allPhotos.filter((x) => photoPose(x.note) === p);
     setPoseState(p); setBeforeId(list[list.length - 1]?.id); setAfterId(list[0]?.id);
   };
   const [pos, setPos] = useState(50);
@@ -67,7 +67,7 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
 
       <h3 className="font-display font-bold text-lg mb-1">Antes / Después</h3>
       <div className="flex gap-1 mb-3 p-1 rounded-full bg-secondary" role="tablist" aria-label="Ángulo">
-        {(["front", "back", "all"] as Pose[]).map((p) => (
+        {(["front", "back"] as Pose[]).map((p) => (
           <button key={p} role="tab" aria-selected={pose === p} onClick={() => setPose(p)}
             className={`min-h-9 px-4 rounded-full text-xs font-semibold transition ${pose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
             {POSE_LABEL[p]}
@@ -76,7 +76,7 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
       </div>
       {photos.length < 2 || !before || !after ? (
         <p className="text-sm text-muted-foreground text-center max-w-xs mt-6">
-          Necesitas al menos 2 fotos de {pose === "front" ? "frente" : pose === "back" ? "espalda" : "progreso"} para comparar este ángulo.
+          Necesitas al menos 2 fotos de {pose === "front" ? "frente" : "espalda"} para comparar este ángulo.
         </p>
       ) : (<>
       <p className="text-xs text-muted-foreground mb-3">{weeks} · Arrastra la barra</p>
