@@ -670,14 +670,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       {/* Sign out */}
-      <div
-        className={`bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}
-        style={{ order: 7.5 }}
-      >
-        <h2 className="font-bold font-display text-lg mb-1">Modo viaje</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Adapta tu plan cuando estés fuera unos días: ejercicios según el equipamiento que tengas y vuelta a lo tuyo al volver.
-        </p>
+      <div className={`order-[7] ${hideForAdmin}`}>
         <TravelModeCard userId={user.id} />
       </div>
 
