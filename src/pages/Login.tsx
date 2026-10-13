@@ -10,7 +10,8 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithApple } from "@/lib/nativeAuth";
-import { Loader2, Apple } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 
 const Login = () => {
   const [email, setEmail] = useState(() => {
@@ -137,9 +138,7 @@ const Login = () => {
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
             <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
           </div>
-          <Button type="button" variant="outline" size="lg" className="w-full" onClick={handleApple}>
-            <Apple className="w-4 h-4 mr-2" /> Continuar con Apple
-          </Button>
+          <AppleSignInButton label="sign-in" onClick={handleApple} />
           <p className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta? <Link to="/signup" className="text-primary hover:underline">Regístrate</Link>
           </p>
