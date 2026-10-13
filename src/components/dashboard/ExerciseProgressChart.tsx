@@ -42,11 +42,11 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
     <div className={compact ? "flex h-full min-h-0 flex-col" : "flex flex-col"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-3xl font-semibold leading-none tabular-nums tracking-tight sm:text-4xl">
+          <p className="font-display text-5xl font-bold leading-none tabular-nums tracking-[-0.045em] sm:text-6xl">
             {latest !== null ? round(latest) : "—"}
-            <span className="ml-1 text-sm font-medium text-muted-foreground">{unit}</span>
+            <span className="ml-1.5 align-top text-base font-medium tracking-normal text-muted-foreground">{unit}</span>
           </p>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] tabular-nums text-muted-foreground">
+          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[12px] tabular-nums text-muted-foreground">
             {totalChange !== null && values.length > 1 && (
               <span className={totalChange >= 0 ? "font-semibold text-primary" : "font-semibold"}>
                 {totalChange > 0 ? "+" : ""}{round(totalChange)}% desde el inicio
