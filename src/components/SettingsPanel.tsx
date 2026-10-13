@@ -28,6 +28,7 @@ import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
+import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import type { Json } from "@/integrations/supabase/types";
 
 const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
@@ -669,6 +670,17 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       {/* Sign out */}
+      <div
+        className={`bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}
+        style={{ order: 7.5 }}
+      >
+        <h2 className="font-bold font-display text-lg mb-1">Modo viaje</h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Adapta tu plan cuando estés fuera unos días: ejercicios según el equipamiento que tengas y vuelta a lo tuyo al volver.
+        </p>
+        <TravelModeCard userId={user.id} />
+      </div>
+
       <div className="order-8 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
         <h2 className="font-bold font-display text-lg mb-1">Sesión</h2>
         <p className="text-sm text-muted-foreground mb-4">Cierra tu sesión en este dispositivo.</p>

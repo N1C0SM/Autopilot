@@ -289,19 +289,6 @@ const HomeOverview = ({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => onNavigate("progress")}
-            className="flex w-full items-start gap-3 rounded-2xl bg-secondary p-5 text-left transition-colors hover:bg-secondary/80"
-          >
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1 text-sm leading-relaxed">
-              <span className="font-semibold">Tu progreso: </span>
-              <span className="text-muted-foreground">tus series, peso y fotos quedan guardados en un mismo lugar.</span>
-            </span>
-            <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          </button>
-
           {!scheduledDays.length && (
             <Button type="button" variant="outline" className="w-full" onClick={() => onNavigate("training")}>
               <Dumbbell className="mr-2 h-4 w-4" /> Ver mi plan de entrenamiento

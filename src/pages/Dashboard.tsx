@@ -16,7 +16,6 @@ import { motion } from "framer-motion";
 import type { DayPlan } from "@/types/training";
 import WeeklyProgress from "@/components/WeeklyProgress";
 import HomeOverview from "@/components/dashboard/HomeOverview";
-import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import RenewalFlow from "@/components/dashboard/RenewalFlow";
 import UserSidebar from "@/components/UserSidebar";
 import type { UserSection } from "@/components/UserSidebar";
@@ -480,12 +479,8 @@ const Dashboard = () => {
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
           />
-          {coaching && user && (
-            <details className="mx-auto w-full max-w-3xl rounded-xl border border-border bg-card px-4 py-3">
-              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">Más opciones de tu plan</summary>
-              <div className="pt-3"><TravelModeCard userId={user.id} /></div>
-            </details>
-          )}
+          {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
+              aparecería como estado activo (próxima iteración). */}
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (

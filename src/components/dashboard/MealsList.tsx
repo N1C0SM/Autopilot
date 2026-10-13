@@ -85,14 +85,14 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
         <Surface padding="sm" className="flex flex-wrap items-start gap-2">
           <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Aún no hay objetivos de macros personalizados</p>
+            <p className="text-sm font-semibold">Tus macros aún no están personalizados</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Actualiza tu peso en Perfil y coméntaselo a tu entrenador. Las comidas de abajo son orientativas.
+              Añade tu peso actual para calcularlos. Mientras tanto, las comidas de abajo son orientativas.
             </p>
           </div>
           {onOpenProfile && (
             <Button variant="outline" size="sm" className="ml-auto shrink-0" onClick={onOpenProfile}>
-              Actualizar peso en Perfil
+              Añadir peso
             </Button>
           )}
         </Surface>
