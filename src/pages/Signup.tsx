@@ -201,24 +201,29 @@ const Signup = () => {
         <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Sin tarjeta para empezar." />
         <meta property="og:url" content="https://autopilotplan.com/signup" />
       </Helmet>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-10">
+          <div className="mx-auto w-16 h-16 rounded-[22%] bg-background border border-primary/20 flex items-center justify-center shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]">
+            <svg viewBox="0 0 100 100" aria-hidden="true" className="w-[62%] h-[62%] text-primary" fill="none">
+              <path d="M14 86 L50 14 L86 86" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M56 46 L36 66 L48 66 L44 86 L62 60 L50 60 L55 46 Z" fill="currentColor" />
+            </svg>
+          </div>
+          <h1 className="text-[28px] font-bold font-display mt-6 tracking-[-0.03em] leading-[1.1]">Crea tu cuenta</h1>
+          <p className="text-muted-foreground text-[15px] mt-2 leading-snug">
+            {isFree
+              ? "Gratis, sin tarjeta. Prueba una sesión desde el móvil."
+              : fromQuiz
+              ? "Último paso para desbloquear tu plan."
+              : fromScan
+              ? "Último paso para desbloquear tu AI Report y plan completo."
+               : "Empieza hoy."}
+          </p>
           {!fromQuiz && (
-            <Link to="/onboarding" className="mt-6 block rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
-              ¿Aún no has configurado tu plan? <span className="font-semibold text-primary underline">Diséñalo en 1 minuto gratis</span>
+            <Link to="/onboarding" className="mt-5 inline-flex items-center gap-1.5 text-[14px] text-primary font-medium">
+              ¿Aún no has configurado tu plan? Diséñalo gratis →
             </Link>
           )}
-          <h1 className="text-2xl font-bold font-display mt-6 mb-2">Crea tu cuenta</h1>
-          <p className="text-muted-foreground text-sm">
-            {isFree
-              ? "Crea tu cuenta gratis y prueba una sesión desde el móvil"
-              : fromQuiz
-              ? "Último paso para desbloquear tu plan"
-              : fromScan
-              ? "Último paso para desbloquear tu AI Report y plan completo"
-               : "Empieza hoy"}
-          </p>
         </div>
 
         {isFree && (
@@ -267,22 +272,22 @@ const Signup = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-8 border border-border card-shadow space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="name">Tu nombre</Label>
+            <Label htmlFor="name" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Tu nombre</Label>
             <Input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="mt-1.5"
+              className="h-12 bg-secondary border-0 text-[16px]"
               autoComplete="given-name"
               placeholder="Tu nombre"
             />
           </div>
           <div>
-            <Label htmlFor="email">Correo electrónico</Label>
+            <Label htmlFor="email" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Correo electrónico</Label>
             <Input
               id="email"
               type="email"
@@ -293,17 +298,17 @@ const Signup = () => {
               autoCapitalize="none"
               spellCheck={false}
               required
-              className={`mt-1.5 ${emailTaken ? "border-destructive" : ""}`}
+              className={`h-12 bg-secondary border-0 text-[16px] ${emailTaken ? "ring-1 ring-destructive" : ""}`}
               placeholder="tu@ejemplo.com"
             />
-            {checkingEmail && <p className="text-xs text-muted-foreground mt-1">Verificando...</p>}
-            {emailTaken && <p className="text-xs text-destructive mt-1">Este correo ya está registrado</p>}
+            {checkingEmail && <p className="text-xs text-muted-foreground mt-1.5">Verificando…</p>}
+            {emailTaken && <p className="text-xs text-destructive mt-1.5">Este correo ya está registrado</p>}
           </div>
           <div>
-            <Label htmlFor="password">Contraseña</Label>
-            <div className="relative mt-1.5">
-              <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pr-12" placeholder="Mínimo 6 caracteres" minLength={6} />
-              <button type="button" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-muted-foreground" onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+            <Label htmlFor="password" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Contraseña</Label>
+            <div className="relative">
+              <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 bg-secondary border-0 text-[16px] pr-12" placeholder="Mínimo 6 caracteres" minLength={6} />
+              <button type="button" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-muted-foreground" onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
             </div>
           </div>
 

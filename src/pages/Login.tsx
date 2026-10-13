@@ -117,53 +117,64 @@ const Login = () => {
         <meta property="og:description" content="Entra a tu cuenta de Autopilot." />
         <meta property="og:url" content="https://autopilotplan.com/login" />
       </Helmet>
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="font-display text-2xl font-bold text-gradient">Autopilot</Link>
-          <AnimatePresence>
-            {known && (
-              <motion.div key="avatar" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={{ type: "spring", stiffness: 260, damping: 20 }} className="mt-6 flex justify-center">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-10">
+          <AnimatePresence mode="wait">
+            {known ? (
+              <motion.div key="avatar" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ type: "spring", stiffness: 340, damping: 32 }} className="mx-auto">
                 {known.avatar
-                  ? <img src={known.avatar} alt="" className="h-20 w-20 rounded-full object-cover ring-2 ring-primary/60" />
-                  : <span className="flex h-20 w-20 items-center justify-center rounded-full bg-secondary font-display text-2xl font-bold ring-2 ring-primary/60">{(known.name || known.id).charAt(0).toUpperCase()}</span>}
+                  ? <img src={known.avatar} alt="" className="mx-auto h-20 w-20 rounded-full object-cover ring-2 ring-primary/60" />
+                  : <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-secondary font-display text-2xl font-bold ring-2 ring-primary/60">{(known.name || known.id).charAt(0).toUpperCase()}</span>}
+              </motion.div>
+            ) : (
+              <motion.div key="mark" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ type: "spring", stiffness: 340, damping: 32 }} className="mx-auto w-16 h-16 rounded-[22%] bg-background border border-primary/20 flex items-center justify-center shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]">
+                <svg viewBox="0 0 100 100" aria-hidden="true" className="w-[62%] h-[62%] text-primary" fill="none">
+                  <path d="M14 86 L50 14 L86 86" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M56 46 L36 66 L48 66 L44 86 L62 60 L50 60 L55 46 Z" fill="currentColor" />
+                </svg>
               </motion.div>
             )}
           </AnimatePresence>
-          <h1 className="text-2xl font-bold font-display mt-6 mb-2">{known?.name ? `Hola, ${known.name.split(" ")[0]}` : "Bienvenido de vuelta"}</h1>
-          <p className="text-muted-foreground text-sm">Inicia sesión para acceder a tu plan</p>
+          <h1 className="text-[28px] font-bold font-display mt-6 tracking-[-0.03em] leading-[1.1]">
+            {known?.name ? `Hola, ${known.name.split(" ")[0]}` : "Bienvenido de vuelta"}
+          </h1>
+          <p className="text-muted-foreground text-[15px] mt-2 leading-snug">
+            {known?.name ? "Introduce tu contraseña para continuar." : "Inicia sesión para acceder a tu plan."}
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-card rounded-2xl p-8 border border-border card-shadow space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="email">Usuario o correo</Label>
-              {remembered && known && <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => { localStorage.removeItem("autopilot:last-login"); setRemembered(null); setEmail(""); }}>No soy yo</button>}
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="email" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider">Usuario o correo</Label>
+              {remembered && known && <button type="button" className="text-xs text-primary" onClick={() => { localStorage.removeItem("autopilot:last-login"); setRemembered(null); setEmail(""); }}>No soy yo</button>}
             </div>
-            <Input id="email" type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1.5" placeholder="tu nombre o tu@ejemplo.com" />
+            <Input id="email" type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-12 bg-secondary border-0 text-[16px]" placeholder="tu nombre o tu@ejemplo.com" />
           </div>
           <div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Contraseña</Label>
-              <Link to="/forgot-password" className="text-xs text-primary hover:underline">¿Olvidaste tu contraseña?</Link>
+            <div className="flex items-center justify-between mb-1.5">
+              <Label htmlFor="password" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider">Contraseña</Label>
+              <Link to="/forgot-password" className="text-xs text-primary">¿La olvidaste?</Link>
             </div>
-            <Input id="password" type="password" autoComplete="current-password" autoFocus={!!remembered} value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1.5" />
+            <Input id="password" type="password" autoComplete="current-password" autoFocus={!!remembered} value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 bg-secondary border-0 text-[16px]" />
           </div>
-          <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
-            {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Iniciando sesión...</> : "Iniciar Sesión"}
+          <Button variant="hero" size="lg" className="w-full h-[52px] text-[17px] font-semibold tracking-[-0.015em] mt-2" type="submit" disabled={loading}>
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Iniciando sesión…</> : "Iniciar sesión"}
           </Button>
           {appleSignInEnabled() && (
             <>
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/60" /></div>
+                <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-background px-3 text-muted-foreground">o</span></div>
               </div>
               <AppleSignInButton label="sign-in" onClick={handleApple} />
             </>
           )}
-          <p className="text-center text-sm text-muted-foreground">
-            ¿No tienes cuenta? <Link to="/signup" className="text-primary hover:underline">Regístrate</Link>
-          </p>
         </form>
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-[15px] text-muted-foreground mt-8">
+          ¿No tienes cuenta?{" "}
+          <Link to="/signup" className="text-primary font-medium">Regístrate</Link>
+        </p>
+        <p className="text-center text-[12px] text-muted-foreground mt-10">
           <Link to="/legal/terminos" className="hover:text-foreground">Términos</Link>
           {" · "}
           <Link to="/legal/privacidad" className="hover:text-foreground">Privacidad</Link>
