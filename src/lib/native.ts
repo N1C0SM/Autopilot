@@ -1,15 +1,35 @@
 // Wrappers ligeros sobre Capacitor. En web son no-ops para que el código
 // funcione exactamente igual desde el navegador.
 import { Capacitor } from "@capacitor/core";
+import { isIOSNative, isNativeApp } from "@/lib/platform";
 
 export const isNative = () => Capacitor.isNativePlatform();
+
+/**
+ * Marca <html> con la plataforma para que el CSS pueda comportarse como app
+ * (`html.native`, `html.ios`): sin selección de texto en el chrome, sin callout
+ * al mantener pulsado, sin zoom por doble toque ni pellizco. Síncrono y barato:
+ * se llama antes del primer render para que no haya salto.
+ */
+export function initPlatformClasses() {
+  if (typeof document === "undefined" || !isNativeApp()) return;
+  const root = document.documentElement;
+  root.classList.add("native");
+  if (isIOSNative()) root.classList.add("ios");
+  // Una app no se amplía con pellizco; el tamaño de texto lo decide el sistema.
+  const viewport = document.querySelector('meta[name="viewport"]');
+  viewport?.setAttribute(
+    "content",
+    "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
+  );
+}
 
 export async function initNative() {
   if (!isNative()) return;
   try {
     const { StatusBar, Style } = await import("@capacitor/status-bar");
     await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: "#090909" });
+    await StatusBar.setBackgroundColor({ color: "#000000" });
   } catch { /* This native capability may be unavailable on the current platform. */ }
   try {
     const { SplashScreen } = await import("@capacitor/splash-screen");
@@ -28,15 +48,61 @@ export async function initNative() {
   } catch { /* This native capability may be unavailable on the current platform. */ }
 }
 
+const webVibrate = (pattern: number | number[]) => {
+  try { navigator.vibrate?.(pattern); } catch { /* sin soporte */ }
+};
+
+/** Toque ligero: pulsar un botón, una fila o una pestaña. */
 export async function hapticTap() {
   if (!isNative()) {
     // PWA / web móvil: vibración corta donde el navegador lo permita.
-    try { navigator.vibrate?.(12); } catch { /* sin soporte */ }
+    webVibrate(12);
     return;
   }
   try {
     const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
     await Haptics.impact({ style: ImpactStyle.Light });
+  } catch { /* This native capability may be unavailable on the current platform. */ }
+}
+
+/** Impacto con peso: confirmar una acción física (completar una serie, soltar un elemento). */
+export async function hapticImpact(weight: "light" | "medium" | "heavy" = "medium") {
+  if (!isNative()) {
+    webVibrate(weight === "heavy" ? 24 : weight === "medium" ? 16 : 12);
+    return;
+  }
+  try {
+    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+    const style = weight === "heavy" ? ImpactStyle.Heavy : weight === "medium" ? ImpactStyle.Medium : ImpactStyle.Light;
+    await Haptics.impact({ style });
+  } catch { /* This native capability may be unavailable on the current platform. */ }
+}
+
+/** Cambio de selección: control segmentado, selector, interruptor, paso de un stepper. */
+export async function hapticSelection() {
+  if (!isNative()) {
+    webVibrate(8);
+    return;
+  }
+  try {
+    const { Haptics } = await import("@capacitor/haptics");
+    await Haptics.selectionStart();
+    await Haptics.selectionChanged();
+    await Haptics.selectionEnd();
+  } catch { /* This native capability may be unavailable on the current platform. */ }
+}
+
+/** Resultado de una tarea: guardado correcto, aviso antes de algo destructivo, error. */
+export async function hapticNotify(result: "success" | "warning" | "error") {
+  if (!isNative()) {
+    webVibrate(result === "success" ? [12, 60, 12] : result === "warning" ? [16, 80, 16] : [24, 60, 24, 60, 24]);
+    return;
+  }
+  try {
+    const { Haptics, NotificationType } = await import("@capacitor/haptics");
+    const type =
+      result === "success" ? NotificationType.Success : result === "warning" ? NotificationType.Warning : NotificationType.Error;
+    await Haptics.notification({ type });
   } catch { /* This native capability may be unavailable on the current platform. */ }
 }
 

@@ -22,13 +22,13 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 0,
       launchAutoHide: true,
-      backgroundColor: "#090909",
+      backgroundColor: "#000000",
       showSpinner: false,
       fadeOutDuration: 0,
     },
     StatusBar: {
       style: "DARK",
-      backgroundColor: "#090909",
+      backgroundColor: "#000000",
     },
     Keyboard: {
       // "native" redimensiona el WebView: los inputs y la barra inferior

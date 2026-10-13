@@ -6,6 +6,11 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // `hover:` only applies on devices that can actually hover. On a touch screen a
+  // hover style sticks after the tap, which is the clearest "this is a web page" tell.
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     container: {
       center: true,
@@ -15,10 +20,14 @@ export default {
       },
     },
     extend: {
+      // The platform's system font everywhere: San Francisco on Apple devices, with its
+      // own optical sizing and tracking. The stacks live in index.css as CSS variables.
       fontFamily: {
-        display: ["Space Grotesk", "sans-serif"],
-        sans: ["Space Grotesk", "sans-serif"],
-        body: ["Inter", "sans-serif"],
+        display: ["var(--font-display)"],
+        sans: ["var(--font-sans)"],
+        body: ["var(--font-body)"],
+        rounded: ["var(--font-rounded)"],
+        mono: ["ui-monospace", "SF Mono", "SFMono-Regular", "Menlo", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -74,6 +83,12 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      // UIKit's own curves: `ios` is the sheet / push / spring-settle curve,
+      // `ios-standard` the default ease-in-out used for fades and small moves.
+      transitionTimingFunction: {
+        ios: "cubic-bezier(0.32, 0.72, 0, 1)",
+        "ios-standard": "cubic-bezier(0.25, 0.1, 0.25, 1)",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -91,12 +106,39 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(48 100% 50% / 0.15)" },
           "50%": { boxShadow: "0 0 40px hsl(48 100% 50% / 0.3)" },
         },
+        // UIActivityIndicatorView: each blade fades from full to faint in turn.
+        "ios-spinner": {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0.15" },
+        },
+        "sheet-up": {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "translateY(0)" },
+        },
+        "sheet-down": {
+          from: { transform: "translateY(0)" },
+          to: { transform: "translateY(100%)" },
+        },
+        // UIAlertController settles in from slightly larger.
+        "alert-in": {
+          from: { opacity: "0", transform: "scale(1.12)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "alert-out": {
+          from: { opacity: "1" },
+          to: { opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.6s ease-out forwards",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "ios-spinner": "ios-spinner 0.8s linear infinite",
+        "sheet-up": "sheet-up 0.42s cubic-bezier(0.32, 0.72, 0, 1) both",
+        "sheet-down": "sheet-down 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
+        "alert-in": "alert-in 0.24s cubic-bezier(0.32, 0.72, 0, 1) both",
+        "alert-out": "alert-out 0.16s ease-out both",
       },
     },
   },
