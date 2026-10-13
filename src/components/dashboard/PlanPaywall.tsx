@@ -3,6 +3,8 @@ import { Check, Lock, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TIERS } from "@/config/tiers";
 import { usePlanAvailability } from "@/lib/planCatalog";
+import { isIOSNative } from "@/lib/platform";
+import { IosFeatureLocked } from "@/components/platform/IosFeatureLocked";
 
 type TierKey = "training" | "full";
 
@@ -38,6 +40,9 @@ export const PlanPaywall = ({
   onSeeOther?: () => void;
   otherLabel?: string;
 }) => {
+  // iOS v1 (reader app, App Store §3.1.3(a)): replace the paywall with a neutral
+  // "visit autopilotplan.com" card. No pricing, no checkout CTA.
+  if (isIOSNative()) return <IosFeatureLocked />;
   const { coach } = usePlanAvailability();
   // Coach is only offered while it is published in Admin → Planes.
   const options: TierKey[] = allowCoach && coach ? ["training", "full"] : [plan === "plus" || !coach ? "training" : "full"];

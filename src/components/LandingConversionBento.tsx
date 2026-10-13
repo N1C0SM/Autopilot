@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import ScrollReveal from "@/components/ScrollReveal";
 import { TIERS } from "@/config/tiers";
+import { isIOSNative } from "@/lib/platform";
 
 interface Trainer {
   trainer_name: string;
@@ -55,6 +56,8 @@ const steps = [
 ];
 
 const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no pricing / upsell bento in the native build.
+  if (isIOSNative()) return null;
   const coachName = trainer.trainer_name?.trim() || "tu entrenador";
   const visibleTestimonials = testimonials.slice(0, 3);
 

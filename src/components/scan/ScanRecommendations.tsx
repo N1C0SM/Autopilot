@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Dumbbell } from "lucide-react";
 import { euro, usePlanAvailability, type PlanAvailability } from "@/lib/planCatalog";
+import { isIOSNative } from "@/lib/platform";
 
 type Props = {
   /** Published plans; Coach is never recommended while it is hidden in Admin. */
@@ -91,6 +92,8 @@ export function recommendFor({ bottleneck, improvements, monthsWithPlan, plans =
 }
 
 export default function ScanRecommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no plan recommendations in the native build.
+  if (isIOSNative()) return null;
   const plans = usePlanAvailability();
   const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan, plans });
 

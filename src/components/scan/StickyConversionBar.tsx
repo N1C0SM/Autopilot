@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Zap } from "lucide-react";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
+import { isIOSNative } from "@/lib/platform";
 
 export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no sticky upsell inside the native build.
+  if (isIOSNative()) return null;
   const [show, setShow] = useState(false);
   const plans = usePlanAvailability();
 

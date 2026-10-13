@@ -1,8 +1,11 @@
 import ScrollReveal from "@/components/ScrollReveal";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
+import { isIOSNative } from "@/lib/platform";
 
 /** "App or accompaniment?" — only meaningful while Coach is published, so it hides itself otherwise. */
 const ComparisonTable = () => {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no pricing comparison in the native build.
+  if (isIOSNative()) return null;
   const p = usePlanAvailability();
   if (!p.coach) return null;
   return (
