@@ -134,25 +134,33 @@ En https://appstoreconnect.apple.com:
 | App Store Connect | Ficha, capturas, App Privacy, cuenta de prueba. |
 | Google Calendar | La conexión de calendario vuelve a la web (`autopilotplan.com`). Si la quieres dentro de la app hay que añadir el retorno nativo al OAuth de Google. |
 
-## 9. Pagos en iOS (pendiente de decisión)
+## 9. Pagos en iOS v1 — ruta Reader App (sin IAP)
 
-Hoy los planes (Entrenamiento 29 €/mes, Completo 49 €/mes, Transformación
-299 €) se cobran con **enlaces de pago de Stripe** abiertos en el navegador,
-y el acceso se activa por webhook. Eso es válido en la web, pero Apple exige
-compras dentro de la app para desbloquear contenido dentro de la app.
+La v1 iOS **no integra StoreKit ni IAP**. Se envía como *reader app* bajo
+la App Store Review Guideline §3.1.3(a): la app da acceso a contenido ya
+contratado fuera y no muestra precios, botones de compra ni comparativas
+de planes dentro del binario iOS.
 
-Propuesta (a implementar cuando la apruebes):
+- Planes vigentes (contratados en web): **Plus (Entrenamiento) 29 €/mes**
+  y **Coach (Completo) 49 €/mes**. El plan Coach queda oculto en los
+  canales públicos y se habilita a mano.
+- Los usuarios que ya pagaron en web conservan su acceso porque el
+  `subscription_tier` vive en Supabase, no en la tienda.
+- Dentro de la app iOS, los puntos donde la web muestra upsell se
+  reemplazan por copy neutro: *"Esta función está disponible en los
+  planes de pago. Visita autopilotplan.com desde tu navegador."* — sin
+  link clicable a checkout.
+- La gestión de suscripción (`customer-portal`) se abre siempre con
+  `Browser.open` del plugin `@capacitor/browser` cuando `isIOSNative`,
+  nunca con `window.open` ni dentro del WebView.
 
-1. Crear en App Store Connect las suscripciones auto-renovables equivalentes
-   (mensual/anual) con prueba de 7 días.
-2. Integrar un plugin de compras nativo, mostrar los precios de Apple en el
-   muro de pago **solo en iOS** y mantener el checkout de Stripe en la web.
-3. Botón **"Restaurar compras"** (obligatorio) en Ajustes.
-4. Función de backend que valide el recibo/transacción con Apple y escriba
-   `payment_status` y `subscription_tier` en el perfil, más notificaciones
-   server-to-server de Apple para renovaciones y cancelaciones.
-5. Un usuario que ya pagó por web mantiene el acceso: el estado vive en el
-   perfil, no en la tienda.
+Cualquier retorno a IAP se evalúa después de validar retención y de que
+la cuenta Apple Developer esté activa. En ese escenario habría que:
+
+1. Crear suscripciones auto-renovables en App Store Connect.
+2. Integrar un plugin IAP nativo y mostrar precios Apple **solo en iOS**.
+3. Añadir "Restaurar compras" en Ajustes (requisito Apple).
+4. Validar recibos vía función de backend y Server-to-Server Notifications.
 
 ---
 
