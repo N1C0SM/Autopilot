@@ -18,3 +18,30 @@ export const isNativeApp = (): boolean => {
     return false;
   }
 };
+
+/**
+ * True cuando la app corre como build nativa iOS empaquetada por Capacitor.
+ *
+ * Se usa como feature flag para esconder CTAs de compra y precios: la app
+ * iOS v1 opera en modo "reader app" (App Store Review Guideline §3.1.3(a)).
+ *
+ * Overrides de debug (en orden de prioridad):
+ *   `?native=1&platform=ios`  → fuerza isIOSNative=true desde la web.
+ *   `?platform=web`           → fuerza isIOSNative=false aunque Capacitor
+ *                               reporte iOS (útil para probar la web dentro
+ *                               de la WebView de iOS en depuración).
+ */
+export const isIOSNative = (): boolean => {
+  try {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("platform") === "web") return false;
+      if (params.get("native") === "1" && params.get("platform") === "ios") {
+        return true;
+      }
+    }
+    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
+  } catch {
+    return false;
+  }
+};
