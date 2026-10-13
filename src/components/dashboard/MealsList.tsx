@@ -148,32 +148,40 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
           description="Tu entrenador las añadirá en cuanto cierre el plan."
         />
       ) : (
-        <Surface padding="none" className="divide-y divide-border overflow-hidden">
-          {meals.map((meal, i) => {
-            const isDone = done.has(meal.name);
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => toggle(meal.name)}
-                aria-pressed={isDone}
-                className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/40"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">{meal.name}</span>
-                  <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-muted-foreground">
-                    {meal.description}
-                  </span>
-                </span>
-                <span
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors ${isDone ? "border-primary bg-primary" : "border-border"}`}
+        <section>
+          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground pl-4 mb-2">
+            Comidas de hoy
+          </h2>
+          <div className="rounded-2xl bg-card overflow-hidden">
+            {meals.map((meal, i) => {
+              const isDone = done.has(meal.name);
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => toggle(meal.name)}
+                  aria-pressed={isDone}
+                  className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-secondary/50 ${i > 0 ? "border-t border-border/50" : ""}`}
                 >
-                  {isDone && <Check className="h-4 w-4 text-primary-foreground" />}
-                </span>
-              </button>
-            );
-          })}
-        </Surface>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-[16px] font-semibold leading-tight transition-colors ${isDone ? "text-muted-foreground line-through decoration-muted-foreground/50" : "text-foreground"}`}>
+                      {meal.name}
+                    </span>
+                    <span className="mt-1 line-clamp-2 block text-[13px] leading-snug text-muted-foreground">
+                      {meal.description}
+                    </span>
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
+                  >
+                    {isDone && <Check className="h-4 w-4 text-primary-foreground" strokeWidth={3} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );
