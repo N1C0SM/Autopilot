@@ -35,8 +35,15 @@ const Welcome = () => {
       {/* Top bar — same visual language as Inicio */}
       <header className="flex items-center justify-between pt-4 pb-4">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center">
-            <span className="font-display font-bold text-primary text-sm">A</span>
+          <div className="w-9 h-9 rounded-[22%] bg-background border border-primary/25 flex items-center justify-center overflow-hidden">
+            <svg
+              viewBox="0 0 100 100"
+              aria-hidden="true"
+              className="w-[62%] h-[62%] text-primary"
+              fill="currentColor"
+            >
+              <path d="M57 12 L24 54 L45 54 L39 88 L74 44 L54 44 L61 12 Z" />
+            </svg>
           </div>
           <span className="font-display font-semibold text-[15px] tracking-tight">
             Autopilot
