@@ -370,6 +370,8 @@ const OWNED_HEAD = [
   /<script\s+type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>\s*/gi,
 ];
 
+const CONTENT_MARKER = "<!--prerender:content-->";
+
 export function renderRoute(template: string, r: Route): string {
   let html = template;
   for (const re of OWNED_HEAD) html = html.replace(re, "");
@@ -391,7 +393,10 @@ export function renderRoute(template: string, r: Route): string {
   ].join("\n    ");
   html = html.replace("</head>", `    ${head}\n  </head>`);
   // Real content inside #root; the splash stays on top until React mounts and replaces everything.
-  html = html.replace(/(<div id="root">)([\s\S]*?)(<\/div>\s*<script type="module")/, (_m, open, splash, close) => `${open}${splash}<div data-prerender-content>${r.body}</div>\n    ${close}`);
+  // Vite moves the entry <script> into <head> when building, so anchor on a marker, not on the script.
+  const content = `<div data-prerender-content>${r.body}</div>`;
+  if (html.includes(CONTENT_MARKER)) html = html.replace(CONTENT_MARKER, content);
+  else html = html.replace(/<div id="root">/, (open) => `${open}${content}`);
   return html;
 }
 

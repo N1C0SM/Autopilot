@@ -43,6 +43,14 @@ describe("build-time prerender", () => {
     expect(new Set(routes.map((r) => r.title)).size).toBe(routes.length);
   });
 
+  it("fills the body of a Vite-built page, where the entry script lives in <head>", () => {
+    const built = `<!doctype html><html><head><title>x</title><script type="module" crossorigin src="/assets/index-abc.js"></script></head><body><div id="root"><div role="status">splash</div><!--prerender:content--></div></body></html>`;
+    const html = renderRoute(built, __test.buildRoutes(withoutCoach, []).find((r) => r.path === "/planes")!);
+    expect(html).toContain("<h1>Planes y precios</h1>");
+    expect(html).toContain('<div role="status">splash</div><div data-prerender-content>');
+    expect(html).not.toContain("<!--prerender:content-->");
+  });
+
   it("keeps hidden plans out of the HTML, sitemap and llms.txt", () => {
     const routes = __test.buildRoutes(withoutCoach, []);
     const pages = routes.filter((r) => !r.path.startsWith("/legal/")).map((r) => renderRoute(template, r)).join("");
