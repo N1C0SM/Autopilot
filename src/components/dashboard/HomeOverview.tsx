@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Dumbbell, LockKeyhole, MessageCircle, Moon, Sparkles, Activity, LineChart, Utensils } from "lucide-react";
+import { ArrowRight, Check, Dumbbell, LockKeyhole, MessageCircle, Moon, Sparkles, Activity, LineChart, Utensils, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import type { DayPlan } from "@/types/training";
@@ -249,19 +249,22 @@ const HomeOverview = ({
                 </span>
               </span>
               {nutrition && macros && !macroError ? (
-                <span className="flex w-full justify-between gap-1 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-                  {[
-                    { label: "P", value: macros.protein },
-                    { label: "C", value: macros.carbs },
-                    { label: "G", value: macros.fats },
-                  ].map((macro) => (
-                    <span key={macro.label} className="whitespace-nowrap"><span className="font-semibold text-foreground">{macro.label}</span> {macro.value}g</span>
-                  ))}
+                <span className="flex w-full items-center justify-between gap-1 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                  <span className="flex flex-1 justify-between gap-1">
+                    {[
+                      { label: "P", value: macros.protein },
+                      { label: "C", value: macros.carbs },
+                      { label: "G", value: macros.fats },
+                    ].map((macro) => (
+                      <span key={macro.label} className="whitespace-nowrap"><span className="font-semibold text-foreground">{macro.label}</span> {macro.value}g</span>
+                    ))}
+                  </span>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
                 </span>
               ) : (
                 <span className="flex w-full items-center justify-between border-t border-border/70 pt-3 text-xs">
                   <span className="text-muted-foreground">{macroError ? "Objetivos por revisar" : nutrition ? "Ver plan de hoy" : "Incluido en Plus"}</span>
-                  <span className="font-medium text-primary">Ver →</span>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
                 </span>
               )}
             </button>
@@ -275,7 +278,7 @@ const HomeOverview = ({
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                   <LineChart className="h-5 w-5 text-primary" />
                 </span>
-                <span className="text-base font-semibold">Progreso semanal</span>
+                <span className="text-base font-semibold">Progreso</span>
               </span>
               <span className="block truncate text-sm text-muted-foreground">
                   {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
