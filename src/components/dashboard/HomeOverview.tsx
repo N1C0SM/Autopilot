@@ -291,38 +291,13 @@ const HomeOverview = ({
 
           <button
             type="button"
-            onClick={() => onNavigate(coaching ? "chat" : "progress")}
+            onClick={() => onNavigate("progress")}
             className="flex w-full items-start gap-3 rounded-2xl bg-secondary p-5 text-left transition-colors hover:bg-secondary/80"
           >
-            {coaching ? <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> : <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span className="min-w-0 flex-1 text-sm leading-relaxed">
-              {coaching ? (
-                chatMessages.length > 0 ? (
-                  <>
-                    <span className="block font-semibold">Tu entrenador</span>
-                    {chatMessages.slice(-2).map((message) => (
-                      <span key={message.id} className="mt-1 block truncate text-muted-foreground">
-                        {message.sender_id === userId && <span className="font-medium">Tú: </span>}
-                        {message.content || (message.media_type === "video" ? "Vídeo" : "Foto")}
-                      </span>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold">{chatError && chatLoaded ? "Chat: " : "En planes con entrenador: "}</span>
-                    <span className="text-muted-foreground">
-                      {chatError && chatLoaded
-                        ? "no se pudieron cargar los mensajes."
-                        : "recibes seguimiento humano y ajustes de tu plan."}
-                    </span>
-                  </>
-                )
-              ) : (
-                <>
-                  <span className="font-semibold">Tu progreso: </span>
-                  <span className="text-muted-foreground">tus series, peso y fotos quedan guardados en un mismo lugar.</span>
-                </>
-              )}
+              <span className="font-semibold">Tu progreso: </span>
+              <span className="text-muted-foreground">tus series, peso y fotos quedan guardados en un mismo lugar.</span>
             </span>
             <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           </button>

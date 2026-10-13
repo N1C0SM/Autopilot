@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Mail, Apple, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
@@ -175,7 +176,19 @@ const Signup = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div
+      className="relative min-h-screen flex items-center justify-center bg-background px-4 py-12"
+      style={{ paddingTop: "calc(var(--safe-top, 0px) + 3rem)", paddingBottom: "calc(var(--safe-bottom, 0px) + 3rem)" }}
+    >
+      <Link
+        to="/"
+        aria-label="Volver a Bienvenido"
+        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 active:bg-secondary/60 transition-colors no-underline"
+        style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
+      >
+        <ChevronLeft className="w-5 h-5" />
+        <span className="text-[15px] font-medium">Atrás</span>
+      </Link>
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
         <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar." />
@@ -301,21 +314,16 @@ const Signup = () => {
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
             <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
+          <AppleSignInButton
+            label="sign-up"
             onClick={async () => {
-               if (selectedPlan) {
-                 try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
-               }
+              if (selectedPlan) {
+                try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+              }
               const result = await signInWithApple("/onboarding");
               if (result.error) toast.error("No se pudo continuar con Apple");
             }}
-          >
-            <Apple className="w-4 h-4 mr-2" /> Continuar con Apple
-          </Button>
+          />
           <p className="text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta? <Link to="/login" className="text-primary hover:underline">Inicia sesión</Link>
           </p>

@@ -10,7 +10,8 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithApple } from "@/lib/nativeAuth";
-import { Loader2, Apple } from "lucide-react";
+import { Loader2, ChevronLeft } from "lucide-react";
+import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 
 const Login = () => {
   const [email, setEmail] = useState(() => {
@@ -90,7 +91,20 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div
+      className="relative min-h-screen flex items-center justify-center bg-background px-4"
+      style={{ paddingTop: "var(--safe-top, 0px)", paddingBottom: "var(--safe-bottom, 0px)" }}
+    >
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        aria-label="Volver a Bienvenido"
+        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 active:bg-secondary/60 transition-colors"
+        style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
+      >
+        <ChevronLeft className="w-5 h-5" />
+        <span className="text-[15px] font-medium">Atrás</span>
+      </button>
       <Helmet>
         <title>Iniciar sesión · Autopilot</title>
         <meta name="description" content="Accede a tu cuenta de Autopilot: tu rutina, tu registro y tu progreso." />
@@ -137,9 +151,7 @@ const Login = () => {
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
             <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
           </div>
-          <Button type="button" variant="outline" size="lg" className="w-full" onClick={handleApple}>
-            <Apple className="w-4 h-4 mr-2" /> Continuar con Apple
-          </Button>
+          <AppleSignInButton label="sign-in" onClick={handleApple} />
           <p className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta? <Link to="/signup" className="text-primary hover:underline">Regístrate</Link>
           </p>
