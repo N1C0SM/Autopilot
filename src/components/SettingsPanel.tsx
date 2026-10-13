@@ -333,7 +333,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className={`order-3 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-2">
           <Timer className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Tu forma de entrenar</h2>
+          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Tu forma de entrenar</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-5">
           Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.
@@ -382,7 +382,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className="order-1 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-6">
           <User className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Perfil</h2>
+          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Perfil</h2>
         </div>
         <div className="flex items-center gap-6 mb-6">
           <div className="relative w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
@@ -427,7 +427,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className={`order-5 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-6">
           <CreditCard className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Suscripción</h2>
+          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Suscripción</h2>
         </div>
 
         <div className="space-y-4">
@@ -520,7 +520,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className={`order-6 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-4">
           <CalendarClock className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Google Calendar</h2>
+          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Google Calendar</h2>
         </div>
         {gcalConnected ? (
           <div className="space-y-3">
@@ -570,7 +570,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className="order-4 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
         <div className="flex items-center gap-2 mb-6">
           <Lock className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Cambiar contraseña</h2>
+          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Cambiar contraseña</h2>
         </div>
         <div className="space-y-4">
           <div><Label className="text-sm">Nueva contraseña</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="mt-1" /></div>
@@ -586,7 +586,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         <div className={`order-2 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
           <div className="flex items-center gap-2 mb-6">
             <ClipboardList className="w-5 h-5 text-primary" />
-            <h2 className="font-bold font-display text-lg">Tus datos</h2>
+            <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Tus datos</h2>
           </div>
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
@@ -626,7 +626,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className={`order-7 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
         <div className="flex items-center gap-2 mb-2">
           <ShieldCheck className="w-5 h-5 text-primary" />
-          <h2 className="font-bold font-display text-lg">Privacidad y mis datos</h2>
+          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Privacidad y mis datos</h2>
         </div>
         <p className="text-sm text-muted-foreground mb-5">
           Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.
@@ -675,7 +675,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       <div className="order-8 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
-        <h2 className="font-bold font-display text-lg mb-1">Sesión</h2>
+        <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground mb-2">Sesión</h2>
         <p className="text-sm text-muted-foreground mb-4">Cierra tu sesión en este dispositivo.</p>
         <Button
           variant="outline"
@@ -688,7 +688,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
       {/* Danger zone */}
       <div className={`order-9 bg-card rounded-2xl p-4 sm:p-6 border border-destructive/30 card-shadow${hideForAdmin}`}>
-        <h2 className="font-bold font-display text-lg text-destructive mb-4">Zona peligrosa</h2>
+        <h2 className="font-semibold text-[13px] uppercase tracking-wider text-destructive mb-3">Zona peligrosa</h2>
 
         <div className="space-y-4">
           <Separator />
