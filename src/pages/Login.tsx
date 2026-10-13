@@ -10,7 +10,7 @@ import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithApple } from "@/lib/nativeAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 
 const Login = () => {
@@ -91,7 +91,20 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div
+      className="relative min-h-screen flex items-center justify-center bg-background px-4"
+      style={{ paddingTop: "var(--safe-top, 0px)", paddingBottom: "var(--safe-bottom, 0px)" }}
+    >
+      <button
+        type="button"
+        onClick={() => navigate("/")}
+        aria-label="Volver a Bienvenido"
+        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 active:bg-secondary/60 transition-colors"
+        style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
+      >
+        <ChevronLeft className="w-5 h-5" />
+        <span className="text-[15px] font-medium">Atrás</span>
+      </button>
       <Helmet>
         <title>Iniciar sesión · Autopilot</title>
         <meta name="description" content="Accede a tu cuenta de Autopilot: tu rutina, tu registro y tu progreso." />

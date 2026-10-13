@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Mail, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sparkles, Zap } from "lucide-react";
@@ -176,7 +176,19 @@ const Signup = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div
+      className="relative min-h-screen flex items-center justify-center bg-background px-4 py-12"
+      style={{ paddingTop: "calc(var(--safe-top, 0px) + 3rem)", paddingBottom: "calc(var(--safe-bottom, 0px) + 3rem)" }}
+    >
+      <Link
+        to="/"
+        aria-label="Volver a Bienvenido"
+        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 active:bg-secondary/60 transition-colors no-underline"
+        style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
+      >
+        <ChevronLeft className="w-5 h-5" />
+        <span className="text-[15px] font-medium">Atrás</span>
+      </Link>
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
         <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar." />
