@@ -25,3 +25,9 @@ dist-ssr
 
 # Estado local del CLI de Supabase (enlaces, caché)
 supabase/.temp/
+
+# Variables de entorno locales (NUNCA commitear valores reales)
+.env
+.env.local
+.env.*.local
+!.env.example
