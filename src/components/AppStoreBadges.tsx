@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isIOSNative } from "@/lib/platform";
 
 interface Props {
   className?: string;
@@ -53,6 +54,8 @@ const AppStoreBadges = ({
   label,
   size = "default",
 }: Props) => {
+  // iOS v1: ya estás dentro de la app; no mostramos badges de descarga.
+  if (isIOSNative()) return null;
   // Sin URLs configuradas en Ajustes no se muestra ningún badge: nunca enlazamos
   // a una app de terceros como valor por defecto.
   const [appStoreUrl, setAppStoreUrl] = useState("");

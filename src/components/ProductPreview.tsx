@@ -9,6 +9,7 @@ import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { track } from "@/lib/analytics";
 import { buildExerciseHistory } from "@/lib/workoutMetrics";
 import { supabase } from "@/integrations/supabase/client";
+import { isIOSNative } from "@/lib/platform";
 
 const ExerciseProgressChart = lazy(() => import("@/components/dashboard/ExerciseProgressChart"));
 
@@ -86,6 +87,10 @@ const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
 
 /** Public, isolated example. Never reads or writes a customer's training data. */
 export default function ProductPreview({ onPlans, onFree }: { onPlans: () => void; onFree?: () => void }) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): preview includes plan copy and prices.
+  // Only ever rendered from public landing pages (already route-blocked), but we
+  // keep the belt-and-braces guard in case a future screen imports it.
+  if (isIOSNative()) return null;
   const [view, setView] = useState<View>("home");
   const plans = usePlanAvailability();
   // The chat tab sells Coach: it disappears when Coach is hidden in Admin → Planes.

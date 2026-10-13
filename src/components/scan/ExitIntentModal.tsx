@@ -2,9 +2,13 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, ShieldCheck } from "lucide-react";
 
+import { isIOSNative } from "@/lib/platform";
+
 const STORAGE_KEY = "scan_exit_intent_shown";
 
 export default function ExitIntentModal({ onCta }: { onCta: () => void }) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no exit-intent upsell inside the native build.
+  if (isIOSNative()) return null;
   const [open, setOpen] = useState(false);
 
   useEffect(() => {

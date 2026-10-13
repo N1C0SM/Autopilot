@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
+import { isIOSNative } from "@/lib/platform";
 
 type Plan = { name: string; description: string; features: unknown; accepting_new_subscriptions: boolean };
 
@@ -128,6 +129,8 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 
 /** Tarjeta bajo los planes. Solo aparece si el admin activó y hizo visible el producto. */
 export default function TrainerOffer() {
+  // iOS v1 (reader app, App Store §3.1.3(a)): hide B2B upsell inside the native build.
+  if (isIOSNative()) return null;
   const plan = useTrainerPlan();
   const [open, setOpen] = useState(false);
   if (!plan) return null;

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { TIERS } from "@/config/tiers";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { track } from "@/lib/analytics";
+import { isIOSNative } from "@/lib/platform";
 
 export default function CoachingOffer({ onChoose, nutrition = false, compact = false, defaultPlan }: {
   onChoose: (plan: "training" | "full") => Promise<void>;
@@ -11,6 +12,8 @@ export default function CoachingOffer({ onChoose, nutrition = false, compact = f
   /** Plan que el usuario ya eligió en la web, para destacarlo aquí. */
   defaultPlan?: "training" | "full";
 }) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no upsell inside the native build.
+  if (isIOSNative()) return null;
   const [pending, setPending] = useState(false);
   const choose = async (plan: "training" | "full") => {
     setPending(true);

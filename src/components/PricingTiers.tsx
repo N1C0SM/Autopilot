@@ -6,6 +6,7 @@ import { track } from "@/lib/analytics";
 import { Link } from "react-router-dom";
 import TrainerOffer from "@/components/TrainerOffer";
 import { availabilityFrom, euro, usePlanCatalog } from "@/lib/planCatalog";
+import { isIOSNative } from "@/lib/platform";
 
 interface PricingTiersProps {
   onSelect: (plan: PlanKey) => void;
@@ -14,6 +15,8 @@ interface PricingTiersProps {
 
 
 const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no pricing UI inside the native build.
+  if (isIOSNative()) return null;
   const plans = usePlanCatalog();
   const a = availabilityFrom(plans);
   const upgradeNames = [a.plus && a.plusName, a.coach && a.coachName].filter(Boolean).join(" o ");

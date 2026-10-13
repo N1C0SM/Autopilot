@@ -5,7 +5,7 @@ import { Gift, Copy, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { MONTHLY_PRICE_EUR } from "@/config/pricing";
-import { isNativeApp } from "@/lib/platform";
+import { isIOSNative, isNativeApp } from "@/lib/platform";
 
 /** Dominio público real: en la app nativa `window.location.origin` es `capacitor://localhost`. */
 const PUBLIC_WEB_ORIGIN = "https://autopilotplan.com";
@@ -16,6 +16,9 @@ const referralBaseUrl = () => {
 };
 
 const ReferralShare = () => {
+  // iOS v1 (reader app, App Store §3.1.3(a)): referral copy announces monthly credit in €;
+  // hide to stay within the "no pricing UI" rule.
+  if (isIOSNative()) return null;
   const { user } = useAuth();
   const [referralCode, setReferralCode] = useState("");
   const [referralCount, setReferralCount] = useState(0);
