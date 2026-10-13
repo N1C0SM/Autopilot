@@ -1,15 +1,18 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { ChevronLeft } from "lucide-react";
 import { LEGAL_DOCS, LEGAL_VERSION, LEGAL_LAST_UPDATED, type LegalSlug } from "@/content/legal";
+import { hapticTap } from "@/lib/native";
 
 const Legal = () => {
   const { slug } = useParams<{ slug: LegalSlug }>();
+  const navigate = useNavigate();
   const key = (slug && slug in LEGAL_DOCS ? slug : "terminos") as LegalSlug;
   const doc = LEGAL_DOCS[key];
   const path = `/legal/${key}`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={{ paddingBottom: "var(--safe-bottom, 0px)" }}>
       <Helmet>
         <title>{`${doc.title} · Autopilot`}</title>
         <meta name="description" content={doc.summary} />
@@ -20,30 +23,35 @@ const Legal = () => {
         <meta name="robots" content="index,follow" />
       </Helmet>
 
-      <nav className="app-chrome border-b sticky top-0 z-10">
-        <div className="container mx-auto h-16 flex items-center justify-between px-4">
-          <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Volver</Link>
-        </div>
-      </nav>
+      <header
+        className="sticky top-0 z-10 flex h-12 items-center border-b border-border/60 bg-background/85 px-2 backdrop-blur-xl"
+        style={{ paddingTop: "var(--safe-top, 0px)" }}
+      >
+        <button
+          type="button"
+          onClick={() => { void hapticTap(); navigate(-1); }}
+          className="inline-flex h-10 items-center gap-0.5 rounded-full pl-1 pr-2.5 text-foreground/85 transition-colors active:bg-secondary/60"
+        >
+          <ChevronLeft className="h-5 w-5" />
+          <span className="text-[15px] font-medium">Atrás</span>
+        </button>
+      </header>
 
-      <main className="container mx-auto max-w-3xl px-4 py-12 sm:py-16">
-        <header className="mb-10">
-          <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Información legal</p>
-          <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-3">{doc.title}</h1>
-          <p className="text-muted-foreground">{doc.summary}</p>
-          <p className="text-xs text-muted-foreground mt-3">
-            Versión {LEGAL_VERSION} · Última actualización: {LEGAL_LAST_UPDATED}
-          </p>
-        </header>
+      <main className="mx-auto max-w-xl px-4 pb-16 pt-8">
+        <p className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground">Información legal</p>
+        <h1 className="mt-1 text-[34px] font-bold font-display leading-[1.05] tracking-[-0.035em]">{doc.title}</h1>
+        <p className="mt-3 text-[15px] leading-snug text-muted-foreground">{doc.summary}</p>
+        <p className="mt-2 text-[13px] text-muted-foreground">Versión {LEGAL_VERSION} · Actualizado {LEGAL_LAST_UPDATED}</p>
 
-        <article className="prose prose-invert max-w-none prose-headings:font-display prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-2 prose-p:text-foreground/85 prose-li:text-foreground/85 prose-strong:text-foreground">
+        <article className="mt-8 space-y-7">
           {doc.sections.map((s, i) => (
             <section key={i}>
-              {s.heading && <h2>{s.heading}</h2>}
-              {s.paragraphs?.map((p, j) => <p key={j}>{p}</p>)}
+              {s.heading && <h2 className="mb-2 text-[20px] font-semibold font-display tracking-[-0.02em]">{s.heading}</h2>}
+              {s.paragraphs?.map((p, j) => (
+                <p key={j} className="mb-3 text-[16px] leading-relaxed text-foreground/85">{p}</p>
+              ))}
               {s.list && (
-                <ul>
+                <ul className="space-y-2 pl-5 text-[16px] leading-relaxed text-foreground/85 list-disc marker:text-muted-foreground">
                   {s.list.map((it, j) => <li key={j}>{it}</li>)}
                 </ul>
               )}
@@ -51,23 +59,24 @@ const Legal = () => {
           ))}
         </article>
 
-        <aside className="mt-14 p-5 border border-border rounded-2xl bg-card/40">
-          <p className="text-xs uppercase tracking-widest text-primary font-semibold mb-3">Otros documentos</p>
-          <ul className="grid sm:grid-cols-2 gap-2 text-sm">
-            {(Object.keys(LEGAL_DOCS) as LegalSlug[]).map((s) => (
-              <li key={s}>
-                <Link
-                  to={`/legal/${s}`}
-                  className={`block px-3 py-2 rounded-md transition-colors ${s === key ? "bg-primary/10 text-primary" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"}`}
-                >
-                  {LEGAL_DOCS[s].title}
-                </Link>
-              </li>
+        <section className="mt-12">
+          <h2 className="mb-2 pl-1 text-[13px] font-medium uppercase tracking-wider text-muted-foreground">Otros documentos</h2>
+          <div className="overflow-hidden rounded-2xl bg-card">
+            {(Object.keys(LEGAL_DOCS) as LegalSlug[]).map((s, i) => (
+              <Link
+                key={s}
+                to={`/legal/${s}`}
+                onClick={() => void hapticTap()}
+                className={`flex items-center justify-between px-4 py-3.5 text-[16px] transition-colors active:bg-secondary/50 ${i > 0 ? "border-t border-border/50" : ""} ${s === key ? "font-semibold text-primary" : "text-foreground"}`}
+              >
+                {LEGAL_DOCS[s].title}
+                {s === key && <span className="text-[13px] text-muted-foreground">Leyendo</span>}
+              </Link>
             ))}
-          </ul>
-        </aside>
+          </div>
+        </section>
 
-        <p className="text-[11px] text-muted-foreground mt-10 leading-relaxed">
+        <p className="mt-10 text-[12px] leading-relaxed text-muted-foreground">
           Este documento es un borrador adaptado al servicio actual de Autopilot. Antes de su publicación definitiva debe ser revisado por un abogado o tu Delegado de Protección de Datos (DPO).
         </p>
       </main>

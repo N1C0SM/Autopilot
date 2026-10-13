@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, MailX } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { hapticTap } from "@/lib/native";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -31,6 +32,7 @@ const Unsubscribe = () => {
 
   const confirm = async () => {
     if (!token) return;
+    void hapticTap();
     setState("submitting");
     try {
       const r = await fetch(`${SUPABASE_URL}/functions/v1/handle-email-unsubscribe`, {
@@ -44,24 +46,72 @@ const Unsubscribe = () => {
     } catch { setState("error"); }
   };
 
+  const Shell = ({ children }: { children: React.ReactNode }) => (
+    <main
+      className="min-h-screen bg-background flex items-center justify-center px-4"
+      style={{ paddingTop: "var(--safe-top, 0px)", paddingBottom: "var(--safe-bottom, 0px)" }}
+    >
+      <div className="w-full max-w-sm text-center">{children}</div>
+    </main>
+  );
+
+  const Icon = ({ children }: { children: React.ReactNode }) => (
+    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22%] bg-secondary">{children}</div>
+  );
+
+  if (state === "loading" || state === "submitting") {
+    return (
+      <Shell>
+        <Loader2 className="mx-auto h-7 w-7 animate-spin text-primary" />
+        <p className="mt-4 text-[15px] text-muted-foreground">{state === "loading" ? "Verificando…" : "Dando de baja…"}</p>
+      </Shell>
+    );
+  }
+
+  if (state === "valid") {
+    return (
+      <Shell>
+        <Icon><MailX className="h-7 w-7 text-primary" strokeWidth={1.75} /></Icon>
+        <h1 className="mt-6 text-[28px] font-bold font-display leading-[1.1] tracking-[-0.03em]">¿Dejar de recibir emails?</h1>
+        <p className="mt-2 text-[15px] leading-snug text-muted-foreground">No recibirás más recordatorios por email de Autopilot.</p>
+        <Button variant="hero" size="lg" onClick={confirm} className="mt-10 h-[52px] w-full text-[17px] font-semibold tracking-[-0.015em]">
+          Confirmar baja
+        </Button>
+      </Shell>
+    );
+  }
+
+  if (state === "done") {
+    return (
+      <Shell>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary">
+          <CheckCircle2 className="h-8 w-8 text-primary-foreground" strokeWidth={2.5} />
+        </div>
+        <h1 className="mt-6 text-[28px] font-bold font-display leading-[1.1] tracking-[-0.03em]">Listo</h1>
+        <p className="mt-2 text-[15px] leading-snug text-muted-foreground">Te hemos dado de baja de los emails.</p>
+      </Shell>
+    );
+  }
+
+  if (state === "already") {
+    return (
+      <Shell>
+        <Icon><CheckCircle2 className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} /></Icon>
+        <h1 className="mt-6 text-[28px] font-bold font-display leading-[1.1] tracking-[-0.03em]">Ya estabas dado de baja</h1>
+      </Shell>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-card border border-border rounded-2xl p-8 text-center">
-        {state === "loading" && (<><Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" /><p className="text-muted-foreground">Verificando...</p></>)}
-        {state === "valid" && (
-          <>
-            <h1 className="font-display text-2xl font-bold mb-3">¿Cancelar suscripción a emails?</h1>
-            <p className="text-muted-foreground text-sm mb-6">No recibirás más recordatorios por email de Autopilot.</p>
-            <Button onClick={confirm} className="w-full">Confirmar baja</Button>
-          </>
-        )}
-        {state === "submitting" && (<Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />)}
-        {state === "done" && (<><CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" /><h1 className="font-display text-xl font-bold mb-2">Listo</h1><p className="text-muted-foreground text-sm">Has sido dado de baja de los emails.</p></>)}
-        {state === "already" && (<><CheckCircle2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" /><p className="text-muted-foreground">Ya estabas dado de baja.</p></>)}
-        {state === "invalid" && (<><XCircle className="w-12 h-12 text-destructive mx-auto mb-4" /><p className="text-muted-foreground">Enlace inválido o caducado.</p></>)}
-        {state === "error" && (<><XCircle className="w-12 h-12 text-destructive mx-auto mb-4" /><p className="text-muted-foreground">Error. Inténtalo más tarde.</p></>)}
-      </div>
-    </div>
+    <Shell>
+      <Icon><XCircle className="h-7 w-7 text-destructive" strokeWidth={1.75} /></Icon>
+      <h1 className="mt-6 text-[28px] font-bold font-display leading-[1.1] tracking-[-0.03em]">
+        {state === "invalid" ? "Enlace no válido" : "Algo salió mal"}
+      </h1>
+      <p className="mt-2 text-[15px] leading-snug text-muted-foreground">
+        {state === "invalid" ? "El enlace está caducado o es incorrecto." : "Inténtalo de nuevo más tarde."}
+      </p>
+    </Shell>
   );
 };
 
