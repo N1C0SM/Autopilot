@@ -1320,7 +1320,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                         {/* Minimal: la sugerencia (sobrecarga progresiva / entrenador) va en gris dentro de cada casilla */}
 
                         {/* Column headers */}
-                        <div className="grid grid-cols-[32px_52px_1fr_1fr_44px] gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-1 pb-1">
+                        <div className="grid grid-cols-[22px_40px_minmax(0,1fr)_minmax(0,1fr)_44px] gap-1.5 sm:grid-cols-[32px_52px_1fr_1fr_44px] sm:gap-2 text-[10px] text-muted-foreground font-semibold uppercase px-2 pb-1">
                           <span>Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="flex items-center gap-1">
@@ -1447,7 +1447,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                     onFocus={(e) => e.currentTarget.select()}
                                     aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     aria-invalid={Boolean(dropError && drop.weight.trim())}
-                                    className={`min-h-11 w-full rounded-lg border bg-background px-3 py-2 text-center font-mono text-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${dropError && drop.weight.trim() ? "border-destructive" : "border-border"}`}
+                                    className={`min-h-11 min-w-0 w-full rounded-lg border bg-background px-1 sm:px-3 py-2 text-center font-mono text-base sm:text-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${dropError && drop.weight.trim() ? "border-destructive" : "border-border"}`}
                                   />
                                   <input
                                     type="text"
@@ -1460,7 +1460,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                     onFocus={(e) => e.currentTarget.select()}
                                     aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     aria-invalid={Boolean(dropError && (!Number.isInteger(drop.reps) || drop.reps <= 0))}
-                                    className={`min-h-11 w-full rounded-lg border bg-background px-3 py-2 text-center font-mono text-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${dropError && (!Number.isInteger(drop.reps) || drop.reps <= 0) ? "border-destructive" : "border-border"}`}
+                                    className={`min-h-11 min-w-0 w-full rounded-lg border bg-background px-1 sm:px-3 py-2 text-center font-mono text-base sm:text-sm transition-all focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 ${dropError && (!Number.isInteger(drop.reps) || drop.reps <= 0) ? "border-destructive" : "border-border"}`}
                                   />
                                   <button
                                     type="button"
