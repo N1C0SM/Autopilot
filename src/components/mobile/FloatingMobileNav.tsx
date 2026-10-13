@@ -20,6 +20,8 @@ interface Props {
   className: string;
 }
 
+// Barra de pestañas flotante de iOS: cápsula de material, la pestaña activa lleva
+// el tinte y una cápsula de realce que se desliza entre pestañas.
 const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className }: Props) => createPortal(
   <nav
     className={`${className} fixed z-50 md:hidden`}
@@ -37,7 +39,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
     }}
     aria-label={label}
   >
-    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-center gap-1 rounded-[1.75rem] border border-border/70 bg-background/80 p-1.5 shadow-[0_10px_32px_-18px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/72">
+    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 rounded-full bg-card/70 p-1 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-[0.5px] ring-white/10 backdrop-blur-2xl backdrop-saturate-[1.8]">
       {items.map(({ key, label: itemLabel, icon: Icon, locked }) => {
         const isActive = active === key;
         return (
@@ -50,33 +52,24 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
               }}
               aria-current={isActive ? "page" : undefined}
               aria-label={itemLabel}
-              className={`relative flex h-full w-full flex-col items-center justify-center gap-1 rounded-full px-0.5 transition-transform duration-150 active:scale-95 ${
+              className={`relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full px-0.5 transition-transform duration-150 ease-ios-standard active:scale-[0.94] ${
                 isActive ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <span className="relative z-10 flex h-11 w-12 items-center justify-center">
-                {isActive && (
-                  <motion.span
-                    layoutId={`${layoutId}-active`}
-                    className="absolute inset-0 rounded-[1.1rem] border border-primary/25 bg-primary/10"
-                    transition={{ type: "spring", stiffness: 360, damping: 32 }}
-                  />
-                )}
-                <Icon
-                  className={`relative z-10 h-[21px] w-[21px] transition-transform duration-200 ${
-                    isActive ? "scale-105 text-primary" : "text-current"
-                  }`}
-                  strokeWidth={isActive ? 2.35 : 1.9}
+              {isActive && (
+                <motion.span
+                  layoutId={`${layoutId}-active`}
+                  className="absolute inset-0 rounded-full bg-white/10"
+                  transition={{ type: "spring", stiffness: 380, damping: 36 }}
                 />
+              )}
+              <span className="relative z-10 flex h-7 items-center justify-center">
+                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.25 : 2} />
                 {locked && (
-                  <Lock className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-background p-[1px] text-muted-foreground" />
+                  <Lock className="absolute -bottom-0.5 -right-2 h-3 w-3 rounded-full bg-card p-[1px] text-muted-foreground" />
                 )}
               </span>
-              <span
-                className={`relative z-10 max-w-full truncate px-0.5 text-[9px] leading-none min-[380px]:text-[10px] ${
-                  isActive ? "font-semibold text-primary" : "font-medium text-current"
-                }`}
-              >
+              <span className="relative z-10 max-w-full truncate px-0.5 text-[10px] font-medium leading-none">
                 {itemLabel}
               </span>
             </button>

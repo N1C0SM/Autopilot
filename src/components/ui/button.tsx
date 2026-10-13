@@ -4,25 +4,33 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+// Sizes come from the `.btn-*` component classes in index.css (UIKit metrics on the
+// phone, compact from `md` up) so a utility passed at the call site still wins.
+const filled = "bg-primary text-primary-foreground hover:bg-primary/90 active:opacity-80";
+const tinted = "bg-primary/15 text-primary hover:bg-primary/20 active:bg-primary/25";
+const plain = "text-primary active:opacity-60";
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98] [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 font-display",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold ring-offset-background transition-[background-color,color,opacity,transform] duration-150 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40 active:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-primary/50 text-primary bg-primary/[0.035] hover:border-primary hover:bg-primary/10",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-secondary hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-        hero: "bg-primary text-primary-foreground hover:bg-primary/90 text-base font-bold tracking-wide",
+        default: filled,
+        hero: filled,
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:opacity-80",
+        tinted,
+        outline: tinted,
+        secondary: "bg-secondary text-secondary-foreground hover:bg-accent active:bg-accent",
+        plain,
+        link: `${plain} underline-offset-4 hover:underline`,
+        ghost: "hover:bg-secondary active:bg-secondary active:opacity-70",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-lg px-3",
-        lg: "h-12 rounded-xl px-6 text-base",
-        xl: "h-14 rounded-xl px-8 text-base",
-        icon: "h-10 w-10",
+        default: "btn-md",
+        sm: "btn-sm",
+        lg: "btn-lg [&_svg]:size-[18px]",
+        xl: "btn-lg [&_svg]:size-[18px]",
+        icon: "btn-icon",
       },
     },
     defaultVariants: {

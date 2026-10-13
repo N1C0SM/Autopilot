@@ -15,10 +15,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast !rounded-full !px-5 !py-3 group-[.toaster]:bg-background/85 group-[.toaster]:backdrop-blur-xl group-[.toaster]:text-foreground group-[.toaster]:border-border/60 group-[.toaster]:shadow-2xl",
-          title: "group-[.toast]:text-sm group-[.toast]:font-medium",
-          description: "group-[.toast]:text-muted-foreground group-[.toast]:text-xs",
-          success: "group-[.toast]:[&_[data-icon]]:text-primary",
+            "group toast material !rounded-[22px] !border-0 !px-4 !py-3 group-[.toaster]:text-foreground group-[.toaster]:shadow-[0_10px_40px_rgba(0,0,0,0.5)]",
+          title: "group-[.toast]:text-[15px] group-[.toast]:font-medium",
+          description: "group-[.toast]:text-muted-foreground group-[.toast]:text-[13px]",
+          success: "group-[.toast]:[&_[data-icon]]:text-success",
           error: "group-[.toast]:[&_[data-icon]]:text-destructive",
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:rounded-full",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:rounded-full",

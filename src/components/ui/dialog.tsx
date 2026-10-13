@@ -19,7 +19,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/50 duration-300 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className,
     )}
     {...props}
@@ -27,37 +27,121 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-1rem)] max-w-lg max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+const DISMISS_DISTANCE = 120;
+const DISMISS_VELOCITY = 0.5; // px/ms
+
+/**
+ * Arrastrar el tirador hacia abajo mueve la hoja con el dedo; al soltar pasado el
+ * umbral (o con impulso) se cierra, si no vuelve a su sitio. Solo el tirador inicia
+ * el gesto, así el scroll del contenido nunca se secuestra.
+ */
+function useSheetDrag(onDismiss: () => void) {
+  const [offset, setOffset] = React.useState(0);
+  const [dragging, setDragging] = React.useState(false);
+  const start = React.useRef<number | null>(null);
+  const last = React.useRef({ y: 0, t: 0, v: 0 });
+  const mounted = React.useRef(true);
+  React.useEffect(() => () => { mounted.current = false; }, []);
+
+  const handleProps = {
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
+      start.current = e.clientY;
+      last.current = { y: e.clientY, t: e.timeStamp, v: 0 };
+      setDragging(true);
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    },
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+      if (start.current === null) return;
+      const dt = e.timeStamp - last.current.t;
+      if (dt > 0) last.current = { y: e.clientY, t: e.timeStamp, v: (e.clientY - last.current.y) / dt };
+      setOffset(Math.max(0, e.clientY - start.current));
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => {
+      if (start.current === null) return;
+      const distance = Math.max(0, e.clientY - start.current);
+      start.current = null;
+      setDragging(false);
+      if (distance > DISMISS_DISTANCE || (distance > 24 && last.current.v > DISMISS_VELOCITY)) {
+        onDismiss();
+        // Si quien controla `open` decide no cerrar, la hoja vuelve a su sitio.
+        window.setTimeout(() => { if (mounted.current) setOffset(0); }, 400);
+      } else {
+        setOffset(0);
+      }
+    },
+    onPointerCancel: () => {
+      start.current = null;
+      setDragging(false);
+      setOffset(0);
+    },
+  };
+
+  const style = {
+    "--sheet-offset": `${offset}px`,
+    ...(offset > 0 ? { transform: `translateY(${offset}px)` } : {}),
+    transition: dragging ? "none" : "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)",
+  } as React.CSSProperties;
+
+  return { handleProps, style };
+}
+
+const closeButtonClass =
+  "absolute right-3 top-3 z-20 inline-flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-muted-foreground transition-opacity before:absolute before:-inset-[7px] before:content-[''] active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none";
+
+interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** En móvil, permite cerrar la hoja arrastrando el tirador. Por defecto, sí. */
+  dismissible?: boolean;
+}
+
+/**
+ * En el móvil es una hoja inferior (tirador, esquinas superiores redondeadas, sube
+ * desde abajo, se cierra arrastrando). Desde `sm` es un diálogo centrado.
+ */
+const DialogContent = React.forwardRef<React.ElementRef<typeof DialogPrimitive.Content>, DialogContentProps>(
+  ({ className, children, dismissible = true, style, ...props }, ref) => {
+    const closeRef = React.useRef<HTMLButtonElement>(null);
+    const drag = useSheetDrag(() => closeRef.current?.click());
+    return (
+      <DialogPortal>
+        <DialogOverlay />
+        <DialogPrimitive.Content
+          ref={ref}
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-50 grid max-h-[calc(100dvh-var(--safe-top)-10px)] w-full gap-4 overflow-y-auto overscroll-contain rounded-t-[20px] bg-card px-4 pb-[max(1rem,var(--safe-bottom))] pt-3 shadow-[0_-8px_40px_rgba(0,0,0,0.45)] outline-none data-[state=open]:animate-sheet-up data-[state=closed]:animate-sheet-down",
+            "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl sm:p-6 sm:shadow-2xl sm:duration-200 sm:data-[state=open]:animate-in sm:data-[state=closed]:animate-out sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
+            className,
+          )}
+          style={{ ...drag.style, ...style }}
+          {...props}
+        >
+          {dismissible ? (
+            <div
+              aria-hidden="true"
+              className="sticky -top-3 z-10 -mx-4 -mb-2 -mt-3 flex h-7 cursor-grab touch-none items-start justify-center bg-card pt-2 active:cursor-grabbing sm:hidden"
+              {...drag.handleProps}
+            >
+              <span className="h-[5px] w-9 rounded-full bg-muted-foreground/40" />
+            </div>
+          ) : null}
+          {children}
+          <DialogPrimitive.Close ref={closeRef} className={closeButtonClass}>
+            <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+            <span className="sr-only">Cerrar</span>
+          </DialogPrimitive.Close>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    );
+  },
+);
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 px-8 text-center sm:px-0 sm:pr-8 sm:text-left", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
+  <div className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)} {...props} />
 );
 DialogFooter.displayName = "DialogFooter";
 
@@ -65,11 +149,7 @@ const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title
-    ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
+  <DialogPrimitive.Title ref={ref} className={cn("type-headline sm:type-title3", className)} {...props} />
 ));
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
 
@@ -77,7 +157,7 @@ const DialogDescription = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description ref={ref} className={cn("text-sm text-muted-foreground", className)} {...props} />
+  <DialogPrimitive.Description ref={ref} className={cn("type-subhead text-muted-foreground", className)} {...props} />
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
@@ -92,4 +172,5 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
+  closeButtonClass,
 };

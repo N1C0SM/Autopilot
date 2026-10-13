@@ -115,8 +115,9 @@ export default {
           from: { transform: "translateY(100%)" },
           to: { transform: "translateY(0)" },
         },
+        // Starts where the finger left the sheet when it is dragged to dismiss.
         "sheet-down": {
-          from: { transform: "translateY(0)" },
+          from: { transform: "translateY(var(--sheet-offset, 0px))" },
           to: { transform: "translateY(100%)" },
         },
         // UIAlertController settles in from slightly larger.

@@ -7,7 +7,7 @@ const TONE: Record<StatusTone, string> = {
   neutral: "bg-secondary text-muted-foreground",
   accent: "bg-primary/15 text-primary",
   danger: "bg-destructive/15 text-destructive",
-  success: "bg-primary/15 text-primary",
+  success: "bg-success/15 text-success",
 };
 
 export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -18,7 +18,7 @@ export interface StatusBadgeProps extends React.HTMLAttributes<HTMLSpanElement> 
 const StatusBadge = ({ tone = "neutral", className, ...props }: StatusBadgeProps) => (
   <span
     className={cn(
-      "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+      "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-xs font-medium",
       TONE[tone],
       className,
     )}

@@ -49,26 +49,25 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
 
   return (
     <header
-      className="app-chrome sticky top-0 z-40 border-b md:hidden"
+      className="app-chrome sticky top-0 z-40 border-b-[0.5px] md:hidden"
       style={{
         paddingTop: "var(--safe-top, 0px)",
         paddingLeft: "var(--safe-left, 0px)",
         paddingRight: "var(--safe-right, 0px)",
       }}
     >
-      <div className="h-14 px-3 flex items-center gap-2">
-        <span className="font-display text-base font-bold text-gradient shrink-0">Autopilot</span>
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground truncate flex-1">
+      <div className="relative flex h-11 items-center justify-end px-2">
+        <h1 className="pointer-events-none absolute inset-x-0 mx-auto max-w-[60%] truncate text-center type-headline">
           {title}
-        </span>
+        </h1>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
               type="button"
               aria-label="Menú de administración"
-              className="shrink-0 h-11 w-11 inline-flex items-center justify-center rounded-full border border-border bg-secondary/60 overflow-hidden active:opacity-70"
+              className="relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center transition-opacity active:opacity-60"
             >
-              <img loading="lazy" decoding="async" src={autopilotLogo} alt="Autopilot" className="h-7 w-7 rounded-full object-cover" />
+              <img loading="lazy" decoding="async" src={autopilotLogo} alt="Autopilot" className="h-[30px] w-[30px] rounded-full object-cover" />
             </button>
           </SheetTrigger>
 
@@ -81,11 +80,10 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
               paddingRight: "var(--safe-right, 0px)",
             }}
           >
-            <div className="px-5 py-4 border-b border-border">
-              <span className="font-display text-lg font-bold text-gradient">Autopilot</span>
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground ml-2">Admin</span>
+            <div className="px-5 pb-2 pt-4">
+              <span className="type-title2">Admin</span>
             </div>
-            <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            <nav className="flex-1 overflow-y-auto px-3 pb-3">
               {MENU.map((m) => {
                 const isActive = section === m.section;
                 return (
@@ -93,29 +91,29 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut }: Props) => 
                     key={m.section}
                     type="button"
                     onClick={() => go(m.section)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-left transition-colors ${
-                      isActive ? "bg-secondary text-primary font-semibold" : "hover:bg-secondary/60"
+                    className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left type-body transition-colors active:bg-accent ${
+                      isActive ? "bg-secondary font-semibold" : ""
                     }`}
                   >
-                    <m.icon className="w-4 h-4 shrink-0" />
+                    <m.icon className="h-5 w-5 shrink-0 text-primary" />
                     {m.label}
                   </button>
                 );
               })}
-              <div className="h-px bg-border my-2" />
+              <div className="my-2 h-[0.5px] bg-border" />
               <button
                 type="button"
                 onClick={() => go("account")}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-left hover:bg-secondary/60 transition-colors"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left type-body transition-colors active:bg-accent"
               >
-                <SettingsIcon className="w-4 h-4 shrink-0" /> Mi cuenta
+                <SettingsIcon className="h-5 w-5 shrink-0 text-primary" /> Mi cuenta
               </button>
               <button
                 type="button"
                 onClick={() => { setOpen(false); onSignOut(); }}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-left text-muted-foreground hover:text-destructive transition-colors"
+                className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left type-body text-destructive transition-colors active:bg-accent"
               >
-                <LogOut className="w-4 h-4 shrink-0" /> Cerrar sesión
+                <LogOut className="h-5 w-5 shrink-0" /> Cerrar sesión
               </button>
             </nav>
           </SheetContent>

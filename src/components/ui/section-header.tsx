@@ -7,15 +7,23 @@ interface SectionHeaderProps {
   hint?: React.ReactNode;
   /** Nodo alineado a la derecha (botón, filtro, acción). */
   action?: React.ReactNode;
+  /** lg = sección principal (22), md = sección (20), sm = subsección (17). */
+  size?: "lg" | "md" | "sm";
   className?: string;
 }
 
-/** Título de sección único de la app: 18px, semibold, tracking cerrado. */
-const SectionHeader = ({ title, hint, action, className }: SectionHeaderProps) => (
-  <div className={cn("flex items-start justify-between gap-3", className)}>
+const TITLE: Record<NonNullable<SectionHeaderProps["size"]>, string> = {
+  lg: "type-title2",
+  md: "type-title3",
+  sm: "type-headline",
+};
+
+/** Título de sección único de la app. */
+const SectionHeader = ({ title, hint, action, size = "md", className }: SectionHeaderProps) => (
+  <div className={cn("flex items-end justify-between gap-3", className)}>
     <div className="min-w-0">
-      <h2 className="font-display text-lg font-semibold tracking-tight">{title}</h2>
-      {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
+      <h2 className={TITLE[size]}>{title}</h2>
+      {hint ? <p className="mt-0.5 type-footnote text-muted-foreground">{hint}</p> : null}
     </div>
     {action ? <div className="shrink-0">{action}</div> : null}
   </div>
