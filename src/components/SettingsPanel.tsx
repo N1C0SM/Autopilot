@@ -693,8 +693,33 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                <AlertDialogDescription>Esta acción eliminará permanentemente tu cuenta y todos tus datos. No se puede deshacer.</AlertDialogDescription>
+                <AlertDialogTitle>¿Eliminar tu cuenta?</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-3">
+                    {isActive && (
+                      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-left">
+                        <p className="text-sm font-semibold text-destructive">
+                          {subscriptionStatus === "trialing"
+                            ? "Tienes una prueba activa"
+                            : "Tienes una suscripción activa"}
+                        </p>
+                        <p className="mt-1 text-sm text-foreground/90">
+                          {subscriptionStatus === "trialing"
+                            ? "Al eliminar la cuenta cancelas la prueba y pierdes el acceso de inmediato — aunque aún no se te haya cobrado."
+                            : "Al eliminar la cuenta se cancela la suscripción y pierdes el acceso de inmediato, aunque hayas pagado hasta el final del periodo."}
+                        </p>
+                        {subscriptionEnd && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Fecha prevista: {new Date(subscriptionEnd).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      Esta acción elimina permanentemente tu cuenta, tus planes, tu progreso, tus fotos y tus mensajes. No se puede deshacer.
+                    </p>
+                  </div>
+                </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
