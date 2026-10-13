@@ -9,6 +9,34 @@ html, body, #root {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
 }
+
+/* Apple HIG §14 — Reduced motion: respect the user's system preference.
+   Short cross-fades replace slides/springs/parallax. Interruptibility and
+   information remain; vestibular motion is softened or removed. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.12s !important;
+    transition-timing-function: ease-out !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Apple HIG §14 — Reduced transparency: frostier/solid surfaces. */
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
 /* Zonas seguras reales del dispositivo (notch, Dynamic Island, home indicator) */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);

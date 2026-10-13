@@ -179,7 +179,7 @@ const HomeOverview = ({
                 else onNavigate("training");
               } else onNavigate("training");
             }}
-            className="group flex min-h-[5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform hover:brightness-105 active:scale-[0.99]"
+            className="group flex min-h-[5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform duration-100 ease-out hover:brightness-105 active:scale-[0.98]"
             aria-label={completedToday ? "Ver progreso de la sesión" : todayPlan ? `Empezar ${sessionTitle}` : "Ver rutina semanal"}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
@@ -203,8 +203,8 @@ const HomeOverview = ({
           <div className="flex items-stretch gap-4">
             <button
               type="button"
-              onClick={() => onNavigate("nutrition")}
-              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
+              onClick={() => { void hapticTap(); onNavigate("nutrition"); }}
+              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-transform duration-100 ease-out hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.98]"
             >
               <span className="flex min-w-0 items-center gap-3">
                 {nutrition && meals.length > 0 ? (
@@ -268,8 +268,8 @@ const HomeOverview = ({
 
             <button
               type="button"
-              onClick={() => onNavigate("progress")}
-              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-all hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.99]"
+              onClick={() => { void hapticTap(); onNavigate("progress"); }}
+              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-transform duration-100 ease-out hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.98]"
             >
               <span className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">

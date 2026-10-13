@@ -17,6 +17,7 @@ import { signInWithApple } from "@/lib/nativeAuth";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { readAnonScanId } from "@/lib/scanAttribution";
 import { appleSignInEnabled } from "@/lib/platform";
+import { hapticTap } from "@/lib/native";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -95,6 +96,7 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    void hapticTap();
     if (emailTaken) {
       toast.error("Corrige los campos marcados antes de continuar");
       return;
@@ -183,8 +185,9 @@ const Signup = () => {
     >
       <Link
         to="/"
+        onClick={() => { void hapticTap(); }}
         aria-label="Volver a Bienvenido"
-        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 active:bg-secondary/60 transition-colors no-underline"
+        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 transition-colors active:bg-secondary/60 no-underline"
         style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
       >
         <ChevronLeft className="w-5 h-5" />

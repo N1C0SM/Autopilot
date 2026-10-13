@@ -2,6 +2,7 @@ import { useNavigate, Navigate, Link } from "react-router-dom";
 import { ArrowRight, Loader2, Dumbbell, Apple } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Helmet } from "react-helmet-async";
+import { hapticTap } from "@/lib/native";
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -91,16 +92,16 @@ const Welcome = () => {
       <footer className="pb-6 pt-4 space-y-2.5">
         <button
           type="button"
-          onClick={() => navigate("/signup?free=true")}
-          className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold text-[16px] flex items-center justify-center gap-2 active:opacity-90 transition-opacity"
+          onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
+          className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold text-[16px] flex items-center justify-center gap-2 transition-transform duration-100 ease-out active:scale-[0.98]"
         >
           Crear cuenta gratis
           <ArrowRight className="w-4 h-4" />
         </button>
         <button
           type="button"
-          onClick={() => navigate("/login")}
-          className="w-full h-11 rounded-2xl text-foreground/80 font-medium text-[14px] active:bg-secondary/40 transition-colors"
+          onClick={() => { void hapticTap(); navigate("/login"); }}
+          className="w-full h-11 rounded-2xl text-foreground/80 font-medium text-[14px] transition-colors active:bg-secondary/40"
         >
           Ya tengo cuenta
         </button>

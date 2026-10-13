@@ -13,6 +13,7 @@ import { signInWithApple } from "@/lib/nativeAuth";
 import { Loader2, ChevronLeft } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { appleSignInEnabled } from "@/lib/platform";
+import { hapticTap } from "@/lib/native";
 
 const Login = () => {
   const [email, setEmail] = useState(() => {
@@ -42,6 +43,7 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    void hapticTap();
     setLoading(true);
 
     const cleaned = email.trim();
@@ -98,9 +100,9 @@ const Login = () => {
     >
       <button
         type="button"
-        onClick={() => navigate("/")}
+        onClick={() => { void hapticTap(); navigate("/"); }}
         aria-label="Volver a Bienvenido"
-        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 active:bg-secondary/60 transition-colors"
+        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 transition-colors active:bg-secondary/60"
         style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
       >
         <ChevronLeft className="w-5 h-5" />
