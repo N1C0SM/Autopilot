@@ -155,16 +155,16 @@ const HomeOverview = ({
             <p className="text-xs font-semibold capitalize text-primary">
               {greetingDate}
             </p>
-            <h2 className="mt-1.5 font-display text-xl sm:text-2xl font-bold leading-tight tracking-tight">
+            <h2 className="mt-1.5 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
               {firstName ? `Hola, ${firstName}.` : "Hola."}
-              <span className="block">
+              <span className="block text-muted-foreground">
                 {completedToday
-                  ? "Sesión hecha. Buen trabajo."
+                  ? "Buen trabajo."
                   : todayPlan?.type === "gimnasio"
-                    ? `Hoy toca ${formatTrainingTitle(todayPlan.routine_name, todayPlan.muscle_focus)}.`
+                    ? "A entrenar."
                     : todayPlan?.type === "actividad"
-                      ? `Hoy toca ${todayPlan.sport || "moverte"}.`
-                      : "Hoy toca recuperar."}
+                      ? `A ${todayPlan.sport || "moverte"}.`
+                      : "Hoy, a recuperar."}
               </span>
             </h2>
           </div>
