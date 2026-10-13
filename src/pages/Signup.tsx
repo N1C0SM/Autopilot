@@ -16,6 +16,7 @@ import { authRedirect } from "@/lib/authRedirect";
 import { signInWithApple } from "@/lib/nativeAuth";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { readAnonScanId } from "@/lib/scanAttribution";
+import { appleSignInEnabled } from "@/lib/platform";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -310,20 +311,24 @@ const Signup = () => {
               isFree ? "Crear cuenta gratis" : "Crear cuenta"
             )}
           </Button>
-          <div className="relative my-2">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
-          </div>
-          <AppleSignInButton
-            label="sign-up"
-            onClick={async () => {
-              if (selectedPlan) {
-                try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
-              }
-              const result = await signInWithApple("/onboarding");
-              if (result.error) toast.error("No se pudo continuar con Apple");
-            }}
-          />
+          {appleSignInEnabled() && (
+            <>
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
+              </div>
+              <AppleSignInButton
+                label="sign-up"
+                onClick={async () => {
+                  if (selectedPlan) {
+                    try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+                  }
+                  const result = await signInWithApple("/onboarding");
+                  if (result.error) toast.error("No se pudo continuar con Apple");
+                }}
+              />
+            </>
+          )}
           <p className="text-center text-sm text-muted-foreground">
             ¿Ya tienes cuenta? <Link to="/login" className="text-primary hover:underline">Inicia sesión</Link>
           </p>

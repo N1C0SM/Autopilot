@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { signInWithApple } from "@/lib/nativeAuth";
 import { Loader2, ChevronLeft } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
+import { appleSignInEnabled } from "@/lib/platform";
 
 const Login = () => {
   const [email, setEmail] = useState(() => {
@@ -147,11 +148,15 @@ const Login = () => {
           <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading}>
             {loading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Iniciando sesión...</> : "Iniciar Sesión"}
           </Button>
-          <div className="relative my-2">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-            <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
-          </div>
-          <AppleSignInButton label="sign-in" onClick={handleApple} />
+          {appleSignInEnabled() && (
+            <>
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+                <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
+              </div>
+              <AppleSignInButton label="sign-in" onClick={handleApple} />
+            </>
+          )}
           <p className="text-center text-sm text-muted-foreground">
             ¿No tienes cuenta? <Link to="/signup" className="text-primary hover:underline">Regístrate</Link>
           </p>

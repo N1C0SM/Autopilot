@@ -45,3 +45,18 @@ export const isIOSNative = (): boolean => {
     return false;
   }
 };
+
+/**
+ * True cuando Sign in with Apple está realmente operativo end-to-end.
+ *
+ * Hoy devuelve `false` porque el provider Apple no está configurado en
+ * Supabase (requiere Team ID, Services ID, Key ID y .p8 del Apple
+ * Developer Program, aún no contratado). Mostrar el botón hoy abriría
+ * Safari con el error `{"code":400,"error_code":"validation_failed",
+ * "msg":"Unsupported provider: missing OAuth secret"}` — mala UX y
+ * motivo de rechazo potencial en App Review (§2.1 completeness).
+ *
+ * Cuando el CEO contrate Apple Developer y QA confirme el flujo
+ * funcional, cambiar a `true` (o leer un env flag).
+ */
+export const appleSignInEnabled = (): boolean => false;
