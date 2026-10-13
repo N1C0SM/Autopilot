@@ -39,10 +39,11 @@ const Welcome = () => {
             <svg
               viewBox="0 0 100 100"
               aria-hidden="true"
-              className="w-[62%] h-[62%] text-primary"
-              fill="currentColor"
+              className="w-[70%] h-[70%] text-primary"
+              fill="none"
             >
-              <path d="M57 12 L24 54 L45 54 L39 88 L74 44 L54 44 L61 12 Z" />
+              <path d="M14 86 L50 14 L86 86" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M56 46 L36 66 L48 66 L44 86 L62 60 L50 60 L55 46 Z" fill="currentColor" />
             </svg>
           </div>
           <span className="font-display font-semibold text-[15px] tracking-tight">
