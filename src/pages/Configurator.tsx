@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { hasCoaching } from "@/lib/entitlements";
 import { logConsent } from "@/lib/consents";
 import { track } from "@/lib/analytics";
+import { hapticTap } from "@/lib/native";
 import PageHead from "@/components/PageHead";
 import PlanPreview from "@/components/PlanPreview";
 
@@ -57,10 +58,10 @@ const initial: Cfg = {
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
 
 const Pill = ({ on, onClick, children, sub }: { on: boolean; onClick: () => void; children: React.ReactNode; sub?: string }) => (
-  <button type="button" onClick={onClick}
-    className={`text-left rounded-xl border px-4 py-3 transition-colors ${on ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/50"}`}>
-    <div className="font-medium text-sm">{children}</div>
-    {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+  <button type="button" onClick={() => { void hapticTap(); onClick(); }} aria-pressed={on}
+    className={`text-left rounded-2xl px-4 py-3.5 transition-colors active:opacity-70 ${on ? "bg-primary/10 ring-2 ring-inset ring-primary" : "bg-secondary"}`}>
+    <div className="font-semibold text-[15px] tracking-[-0.01em]">{children}</div>
+    {sub && <div className="text-[13px] leading-snug text-muted-foreground mt-0.5">{sub}</div>}
   </button>
 );
 
@@ -143,24 +144,39 @@ const Configurator = () => {
   const titles = ["¿Qué quieres conseguir?", "Horarios y disponibilidad", "Tu nutrición", "Tu seguimiento", "Tu plan Autopilot"];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div
+      className="min-h-screen bg-background flex flex-col"
+      style={{ paddingTop: "var(--safe-top, 0px)", paddingBottom: "var(--safe-bottom, 0px)" }}
+    >
       <PageHead title="Diseña tu plan · Autopilot" description="Configura tu plan de entrenamiento y nutrición en un minuto." path="/onboarding" />
-      <div className="max-w-xl w-full mx-auto px-5 py-8 flex-1">
-        <div className="flex gap-1.5 mb-8">
-          {titles.map((_, i) => <div key={i} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-primary" : "bg-secondary"}`} />)}
+      <div className="max-w-xl w-full mx-auto px-4 pb-8 pt-3 flex-1">
+        <div className="flex h-11 items-center justify-between">
+          <button
+            type="button"
+            onClick={() => { void hapticTap(); if (step === 0) navigate("/"); else setStep((s) => s - 1); }}
+            disabled={saving}
+            aria-label="Atrás"
+            className="-ml-2 inline-flex h-10 items-center gap-0.5 rounded-full pl-1 pr-2.5 text-foreground/85 transition-colors active:bg-secondary/60"
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="text-[15px] font-medium">Atrás</span>
+          </button>
+          <span className="text-[13px] font-medium tabular-nums text-muted-foreground">{step + 1} de {titles.length}</span>
         </div>
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">Paso {step + 1} de 5</p>
-        <h1 className="text-2xl md:text-3xl font-bold font-display mt-1 mb-6">{titles[step]}</h1>
+        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
+          <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
+        </div>
+        <h1 className="mt-8 mb-8 text-[28px] font-bold font-display tracking-[-0.03em] leading-[1.1]">{titles[step]}</h1>
 
         {step === 0 && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-2">{MODE.map((m) => <Pill key={m.v} on={c.mode === m.v} sub={m.d} onClick={() => set("mode", m.v)}>{m.l}</Pill>)}</div>
             {c.mode === "pareja" && (
-              <Input type="email" placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} />
+              <Input type="email" placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} className="h-12 border-0 bg-secondary text-[16px]" />
             )}
             <div className="grid grid-cols-2 gap-2">{GOALS.map((g) => <Pill key={g.v} on={c.goal === g.v} onClick={() => set("goal", g.v)}>{g.l}</Pill>)}</div>
             <div>
-              <p className="text-sm font-medium mb-2">¿Dónde entrenas?</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Dónde entrenas?</p>
               <div className="grid grid-cols-3 gap-2">{FOCUS.map((f) => <Pill key={f.v} on={c.focus === f.v} onClick={() => set("focus", f.v)}>{f.l}</Pill>)}</div>
             </div>
           </div>
@@ -169,14 +185,14 @@ const Configurator = () => {
         {step === 1 && (
           <div className="space-y-6">
             <div>
-              <p className="text-sm font-medium mb-2">¿Qué días vas a entrenar? <span className="text-muted-foreground">(mínimo 2)</span></p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Qué días vas a entrenar? <span className="normal-case tracking-normal">(mínimo 2)</span></p>
               <div className="grid grid-cols-7 gap-1.5">
                 {DOW.map((d) => {
                   const on = c.days.includes(d.v);
                   return (
                     <button key={d.v} type="button" aria-label={d.l} aria-pressed={on}
-                      onClick={() => set("days", on ? c.days.filter((x) => x !== d.v) : [...c.days, d.v])}
-                      className={`aspect-square rounded-xl border font-semibold ${on ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}>
+                      onClick={() => { void hapticTap(); set("days", on ? c.days.filter((x) => x !== d.v) : [...c.days, d.v]); }}
+                      className={`aspect-square rounded-full text-[15px] font-semibold transition-colors active:opacity-70 ${on ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
                       {d.s}
                     </button>
                   );
@@ -184,11 +200,11 @@ const Configurator = () => {
               </div>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Tiempo por sesión</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Tiempo por sesión</p>
               <div className="grid grid-cols-3 gap-2">{DURATION.map((d) => <Pill key={d.v} on={c.minutes === d.v} onClick={() => set("minutes", d.v)}>{d.l}</Pill>)}</div>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Estructura</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Estructura</p>
               <div className="grid grid-cols-2 gap-2">{STRUCTURE.map((s) => <Pill key={s.v} on={c.structure === s.v} onClick={() => set("structure", s.v)}>{s.l}</Pill>)}</div>
             </div>
           </div>
@@ -197,20 +213,20 @@ const Configurator = () => {
         {step === 2 && (
           <div className="space-y-6">
             <div>
-              <p className="text-sm font-medium mb-2">Comidas al día</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Comidas al día</p>
               <div className="grid grid-cols-4 gap-2">{[2, 3, 4, 5].map((n) => <Pill key={n} on={c.meals === n} onClick={() => set("meals", n)}>{n}</Pill>)}</div>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">¿Te gusta cocinar?</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Te gusta cocinar?</p>
               <div className="grid gap-2">{COOKING.map((o) => <Pill key={o.v} on={c.cooking === o.v} sub={o.d} onClick={() => set("cooking", o.v)}>{o.l}</Pill>)}</div>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">¿Algo que no quieras ver en tu plan? <span className="text-muted-foreground">(opcional)</span></p>
-              <Input placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Algo que no quieras ver en tu plan? <span className="normal-case tracking-normal">(opcional)</span></p>
+              <Input placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} className="h-12 border-0 bg-secondary text-[16px]" />
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">Tu peso para calcular la nutrición <span className="text-muted-foreground">(opcional)</span></p>
-              <Input type="number" inputMode="decimal" min="30" max="350" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} />
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Tu peso para calcular la nutrición <span className="normal-case tracking-normal">(opcional)</span></p>
+              <Input type="number" inputMode="decimal" min="30" max="350" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} className="h-12 border-0 bg-secondary text-[16px]" />
             </div>
           </div>
         )}
@@ -218,25 +234,25 @@ const Configurator = () => {
         {step === 3 && (
           <div className="space-y-6">
             <div>
-              <p className="text-sm font-medium mb-2">¿Qué día prefieres tu revisión semanal?</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Qué día prefieres tu revisión semanal?</p>
               <div className="grid grid-cols-7 gap-1.5">
                 {DOW.map((d) => (
-                  <button key={d.v} type="button" aria-label={d.l} onClick={() => set("checkin_dow", d.v)}
-                    className={`aspect-square rounded-xl border font-semibold ${c.checkin_dow === d.v ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card"}`}>
+                  <button key={d.v} type="button" aria-label={d.l} onClick={() => { void hapticTap(); set("checkin_dow", d.v); }}
+                    className={`aspect-square rounded-full text-[15px] font-semibold transition-colors active:opacity-70 ${c.checkin_dow === d.v ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
                     {d.s}
                   </button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">¿A qué hora?</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿A qué hora?</p>
               <select value={c.checkin_time} onChange={(e) => set("checkin_time", e.target.value)}
-                className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm">
+                className="w-full h-12 rounded-xl border-0 bg-secondary px-3 text-[16px]">
                 {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <p className="text-sm font-medium mb-2">¿Cómo quieres que te acompañemos?</p>
+              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Cómo quieres que te acompañemos?</p>
               <div className="grid gap-2">{STYLE.map((s) => <Pill key={s.v} on={c.style === s.v} onClick={() => set("style", s.v)}>{s.l}</Pill>)}</div>
             </div>
           </div>
@@ -245,31 +261,28 @@ const Configurator = () => {
         {step === 4 && (
           <div className="space-y-5">
             <div className="text-center">
-              <p className="text-[10px] font-semibold uppercase text-primary">Cuestionario completado</p>
-              <p className="mt-1 text-sm text-muted-foreground">Esta muestra usa tus respuestas; el plan completo se genera al guardarlo.</p>
+              <p className="text-[13px] font-semibold uppercase tracking-wider text-primary">Cuestionario completado</p>
+              <p className="mt-1 text-[15px] text-muted-foreground">Esta muestra usa tus respuestas; el plan completo se genera al guardarlo.</p>
             </div>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} />
-            <div className="rounded-xl border border-border bg-secondary/25 p-3 text-xs text-muted-foreground">
+            <div className="rounded-2xl bg-secondary p-4 text-[13px] leading-relaxed text-muted-foreground">
               <p><span className="font-semibold text-foreground">Horarios:</span> {c.days.length} días ({dayNames}) · {label(DURATION, c.minutes)} · {label(STRUCTURE, c.structure)}.</p>
               <p className="mt-1"><span className="font-semibold text-foreground">Tu revisión:</span> {DOW.find((d) => d.v === c.checkin_dow)?.l} a las {c.checkin_time} · {label(STYLE, c.style)}.</p>
             </div>
-            <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <label className="flex items-start gap-3 text-[13px] leading-snug text-muted-foreground">
               <Checkbox checked={accept} onCheckedChange={(v) => setAccept(!!v)} className="mt-0.5" />
               <span>Acepto los <Link to="/legal/terminos" className="underline">términos</Link>, la <Link to="/legal/privacidad" className="underline">privacidad</Link> y el tratamiento de mis datos de salud para preparar mi plan.</span>
             </label>
           </div>
         )}
 
-        <div className="flex justify-between mt-8">
-          <Button variant="ghost" onClick={() => (step === 0 ? navigate("/") : setStep((s) => s - 1))} disabled={saving}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Atrás
-          </Button>
+        <div className="mt-10">
           {step < 4 ? (
-            <Button onClick={() => setStep((s) => s + 1)} disabled={!valid[step]}>
-              Siguiente <ArrowRight className="w-4 h-4 ml-1" />
+            <Button variant="hero" size="lg" className="h-[52px] w-full text-[17px] font-semibold tracking-[-0.015em]" onClick={() => { void hapticTap(); setStep((s) => s + 1); }} disabled={!valid[step]}>
+              Continuar
             </Button>
           ) : (
-            <Button onClick={save} disabled={!accept || saving}>
+            <Button variant="hero" size="lg" className="h-[52px] w-full text-[17px] font-semibold tracking-[-0.015em]" onClick={() => { void hapticTap(); void save(); }} disabled={!accept || saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
             </Button>
