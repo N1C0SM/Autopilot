@@ -156,9 +156,14 @@ body.keyboard-open main {
     --sidebar-border: 225 9% 16%;
     --sidebar-ring: 43 61% 60%;
 
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-sans: 'Space Grotesk', sans-serif;
-    --font-body: 'Inter', sans-serif;
+    /* Apple HIG §15 — default to the platform's system font. On iOS this
+       resolves to San Francisco Pro (SF Pro Display for headlines, SF Pro
+       Text for body) with its own optical sizing and tracking tables; on
+       other platforms Inter is the near-visual-twin fallback. No HTTP
+       request, no fallback flash on first paint. */
+    --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
 
     --gradient-hero: linear-gradient(135deg, hsl(44 78% 72%) 0%, hsl(38 66% 52%) 100%);
     --gradient-gold: linear-gradient(180deg, hsl(44 78% 74%) 0%, hsl(40 66% 52%) 100%);
@@ -184,16 +189,24 @@ body.keyboard-open main {
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Una sola luz de fondo: el mínimo para que la app no sea un plano negro. */
-    background-image: radial-gradient(ellipse at 12% -14%, hsl(var(--primary) / 0.06), transparent 34rem);
-    background-attachment: scroll;
+    /* Apple HIG §15 — enable the system font's own optical sizing table so a
+       48 px headline is tight and a 13 px label gets a hair of positive
+       tracking automatically. */
+    font-optical-sizing: auto;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    letter-spacing: -0.02em;
     font-weight: 700;
+    /* Apple HIG §15 — size-specific tracking: large display text tightens
+       as it grows, body stays near 0. Fine-tune per heading if a case needs
+       it; this is the baseline. */
+    letter-spacing: -0.02em;
+    text-wrap: balance;
   }
+  h1 { letter-spacing: -0.035em; line-height: 1.05; }
+  h2 { letter-spacing: -0.028em; line-height: 1.1; }
+  h3 { letter-spacing: -0.022em; line-height: 1.2; }
 
   :focus-visible {
     outline: 2px solid hsl(var(--primary) / 0.9);
