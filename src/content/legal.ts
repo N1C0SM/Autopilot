@@ -172,7 +172,6 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
         list: [
           "Plus (Entrenamiento): 29 €/mes. Plan de entrenamiento y nutrición que se adapta a ti, con IA avanzada y análisis corporal. No incluye entrenador humano.",
           "Coach (Completo): 49 €/mes. Todo lo de Plus más un entrenador real asignado: revisiones, check-ins y chat directo.",
-          "Transformación 12 semanas: 299 € pago único. Programa intensivo con llamada de seguimiento.",
           "7 días de prueba en los planes mensuales: se solicita tarjeta al contratar y no se cobra nada si cancelas antes del día 8.",
           "Los precios incluyen los impuestos aplicables. Cualquier cambio futuro se comunicará con al menos 30 días de antelación.",
         ],
@@ -196,7 +195,6 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
         heading: "7. Reembolsos",
         paragraphs: [
           "Garantía de 30 días: si no estás satisfecho con el servicio recibido en los primeros 30 días desde el primer cobro, puedes solicitar un reembolso íntegro escribiendo a " + COMPANY.contactEmail + ". Tras ese plazo no se reembolsan periodos ya consumidos.",
-          "El programa de Transformación 12 semanas, al ser pago único intensivo, sólo admite reembolso dentro de los primeros 14 días desde la compra y siempre que no hayas asistido a la llamada de bienvenida.",
         ],
       },
       {
