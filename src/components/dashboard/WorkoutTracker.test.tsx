@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import type { DayPlan } from "@/types/training";
+import { hapticImpact, hapticNotify } from "@/lib/native";
 import WorkoutTracker from "./WorkoutTracker";
 
 const mocks = vi.hoisted(() => ({ writes: [] as { table: string; rows: unknown }[], completedDays: [] as string[], saveFails: false, toastError: vi.fn() }));
@@ -19,7 +20,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   },
 } }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: mocks.toastError } }));
-vi.mock("@/lib/native", () => ({ hapticTap: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), hapticSelection: vi.fn(), hapticImpact: vi.fn(), hapticNotify: vi.fn() }));
 vi.mock("@/hooks/useExerciseMetadata", () => ({ useExerciseMetadata: () => ({ byId: {}, byName: {} }) }));
 vi.mock("@/components/ExerciseMedia", () => ({ ExerciseThumb: () => null }));
 vi.mock("@/components/ExerciseFocus", () => ({ default: () => null }));
@@ -75,8 +76,10 @@ describe("routine week navigation and saved session dates", () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Viernes", "Press banca")]} initialDay="Viernes" onSessionModeChange={onSessionModeChange} />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
+    expect(hapticImpact).toHaveBeenCalledWith("medium");
     fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cerrar resumen" }));
+    expect(hapticNotify).toHaveBeenCalledWith("success");
     await waitFor(() => expect(screen.getByRole("tablist", { name: week })).toBeVisible());
     expect(mocks.writes.find((write) => write.table === "day_completions")?.rows).toEqual({ user_id: "user", day_label: "Viernes", completed_at: "2026-10-04", rpe: null });
     expect(onSessionModeChange).toHaveBeenLastCalledWith(false);
@@ -120,5 +123,16 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salir" }));
     await waitFor(() => expect(mocks.writes).toHaveLength(1));
     expect(mocks.writes[0].rows).toEqual([expect.objectContaining({ day_label: "Lunes", logged_at: "2026-10-05" })]);
+  });
+
+  it("asks for the decimal and numeric keypads and keeps set fields at a size iOS will not zoom", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    const weight = screen.getByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" });
+    const reps = screen.getByRole("textbox", { name: "Repeticiones de la serie 1 de Sentadilla" });
+    expect(weight).toHaveAttribute("inputmode", "decimal");
+    expect(reps).toHaveAttribute("inputmode", "numeric");
+    expect(reps).toHaveAttribute("pattern", "[0-9]*");
+    for (const field of [weight, reps]) expect(field.className).toMatch(/\btype-headline\b/);
   });
 });
