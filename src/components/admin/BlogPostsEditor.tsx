@@ -22,7 +22,15 @@ interface Post {
   published: boolean;
   published_at: string | null;
   reading_minutes: number | null;
+  category?: string | null;
+  level?: string | null;
+  order_index?: number | null;
+  evidence_level?: string | null;
+  references?: unknown;
+  review_status?: string | null;
 }
+
+const selectCls = "mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-base sm:text-sm";
 
 const slugify = (s: string) =>
   s.toLowerCase()
@@ -105,6 +113,14 @@ const BlogPostsEditor = () => {
   const save = async () => {
     if (!editing) return;
     if (!editing.title.trim()) { toast.error("Falta el título"); return; }
+    let refs: unknown = [];
+    try { refs = JSON.parse(refsText || "[]"); if (!Array.isArray(refs)) throw new Error(); }
+    catch { toast.error("Las referencias deben ser una lista válida"); return; }
+    const candidate = { ...editing, references: refs };
+    if (editing.published && !canPublishAcademy(candidate)) {
+      toast.error("Para publicar en la Academia: márcalo como Verificado y añade al menos una referencia");
+      return;
+    }
     const slug = editing.slug.trim() || slugify(editing.title);
     setSaving(true);
     const payload = {
@@ -118,7 +134,13 @@ const BlogPostsEditor = () => {
       author_name: editing.author_name || "Autopilot",
       published: editing.published,
       published_at: editing.published ? (editing.published_at || new Date().toISOString()) : null,
-      reading_minutes: editing.reading_minutes || Math.max(1, Math.round((editing.body_markdown || "").split(/\s+/).length / 220)),
+      reading_minutes: readingMinutes(editing.body_markdown),
+      category: editing.category || null,
+      level: editing.level || null,
+      order_index: editing.order_index ?? null,
+      evidence_level: editing.evidence_level || null,
+      references: refs as never,
+      review_status: editing.review_status || "draft",
     };
     const { error } = editing.id
       ? await supabase.from("blog_posts").update(payload).eq("id", editing.id)
