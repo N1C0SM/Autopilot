@@ -462,6 +462,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     if (!wasDone) {
       const inputError = getWorkoutSetInputError(set) ?? getWorkoutSetDropsInputError(set);
       if (inputError) {
+        void hapticNotify("error");
         toast.error(inputError);
         return;
       }
@@ -1351,8 +1352,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                         {sets.map((set, si) => {
                           const mainError = !set.done ? getWorkoutSetInputError(set) : null;
                           const dropsError = !set.done ? getWorkoutSetDropsInputError(set) : null;
-                          const inputError = mainError ?? dropsError;
                           const drops = getWorkoutSetDrops(set);
+                          // Una serie sin repeticiones todavía no es un error: es una serie por rellenar.
+                          // Ese caso se avisa al intentar marcarla; aquí solo se señala lo mal escrito.
+                          const repsMissing = !Number.isInteger(set.reps) || set.reps <= 0;
+                          const dropRepsMissing = drops.some((drop) => !Number.isInteger(drop.reps) || drop.reps <= 0);
+                          const inputError = (repsMissing ? null : mainError) ?? (dropRepsMissing ? null : dropsError);
                           const isWarmup = isWorkoutSetWarmup(set);
                           const livePR = livePRs[`${ex.name}#${si}`];
                           // Serie hecha: la fila se atenúa y el círculo se rellena con el tinte.
@@ -1393,7 +1398,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   placeholder={String(progression?.weight || prevSets?.[si]?.weight || ex.weight || trackingConfig.weightPlaceholder || "kg")}
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
-                                  aria-invalid={Boolean(mainError && set.weight.trim())}
+                                  aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
                                   className={`${NUMBER_FIELD} ${isWarmup ? "text-muted-foreground" : ""}`}
                                 />
                                 )}
@@ -1414,7 +1419,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   }}
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
-                                  aria-invalid={Boolean(mainError && (!Number.isInteger(set.reps) || set.reps <= 0))}
                                   className={`${NUMBER_FIELD} ${isWarmup ? "text-muted-foreground" : ""}`}
                                 />
                               </div>
@@ -1458,7 +1462,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                     placeholder="kg"
                                     onFocus={(e) => e.currentTarget.select()}
                                     aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
-                                    aria-invalid={Boolean(dropError && drop.weight.trim())}
+                                    aria-invalid={Boolean(dropError && drop.weight.trim() && Number.isInteger(drop.reps) && drop.reps > 0)}
                                     className={`${NUMBER_FIELD} ${dim}`}
                                   />
                                   <input
@@ -1474,7 +1478,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                     }}
                                     onFocus={(e) => e.currentTarget.select()}
                                     aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
-                                    aria-invalid={Boolean(dropError && (!Number.isInteger(drop.reps) || drop.reps <= 0))}
                                     className={`${NUMBER_FIELD} ${dim}`}
                                   />
                                   <button
