@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Plus, Trash2, X, ChevronLeft, ChevronRight, RefreshCw, Columns2, ImageOff } from "lucide-react";
+import { Camera, Trash2, X, ChevronLeft, ChevronRight, RefreshCw, Columns2, ImageOff, WifiOff } from "lucide-react";
 import BeforeAfterCompare from "./BeforeAfterCompare";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
+import { Skeleton } from "@/components/ui/skeleton";
+import { hapticTap } from "@/lib/native";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,10 +60,10 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 };
 
 /** Marcador para fotos cuya URL firmada aún no está lista (nunca `src=""`). */
-const PhotoPlaceholder = ({ label = "Cargando foto..." }: { label?: string }) => (
-  <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-secondary/60 text-muted-foreground">
+const PhotoPlaceholder = ({ label = "Cargando foto…" }: { label?: string }) => (
+  <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-secondary text-muted-foreground">
     <ImageOff className="h-5 w-5" aria-hidden="true" />
-    <span className="px-1 text-center text-[10px] leading-tight">{label}</span>
+    <span className="px-1 text-center type-caption2">{label}</span>
   </div>
 );
 
@@ -262,7 +266,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         );
       }
       if (uploadedCount > 0) {
-        toast.success(uploadedCount === 1 ? "Foto subida correctamente 📸" : `${uploadedCount} fotos subidas correctamente 📸`);
+        toast.success(uploadedCount === 1 ? "Foto subida correctamente" : `${uploadedCount} fotos subidas correctamente`);
       }
       if (failures.length > 0) {
         toast.error(
@@ -359,56 +363,64 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Camera className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-bold font-display">Fotos de Progreso</h2>
-        </div>
-      </div>
+    <div className="mx-auto w-full max-w-2xl space-y-6">
+      <SectionHeader title="Fotos de progreso" />
 
       {loading && (
-        <div className="grid grid-cols-3 gap-2" aria-label="Cargando fotos de progreso">
-          {[0, 1, 2].map((item) => <div key={item} className="aspect-[3/4] animate-pulse rounded-xl bg-secondary/70" />)}
+        <div className="grid grid-cols-3 gap-1.5" role="status" aria-label="Cargando fotos de progreso">
+          {[0, 1, 2].map((item) => <Skeleton key={item} className="aspect-[3/4] rounded-xl" />)}
         </div>
       )}
 
       {loadError && (
-        <div role="alert" className="rounded-2xl border border-destructive/30 bg-card p-5 text-center">
-          <p className="text-sm font-semibold">No se han podido cargar tus fotos</p>
-          <p className="mt-1 text-xs text-muted-foreground">Tus fotos no se han modificado.</p>
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadPhotos()}>
-            <RefreshCw className="mr-1 h-4 w-4" /> Reintentar
-          </Button>
+        <div role="alert">
+          <EmptyState
+            icon={WifiOff}
+            title="No se han podido cargar tus fotos"
+            description="Tus fotos no se han modificado."
+            className="py-8"
+            action={
+              <Button type="button" variant="tinted" size="sm" onClick={() => void loadPhotos()}>
+                <RefreshCw aria-hidden="true" /> Reintentar
+              </Button>
+            }
+          />
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !loadError && photos.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex min-h-[55dvh] flex-col items-center justify-center rounded-[1.75rem] border border-border bg-card p-10 text-center"
-        >
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Camera className="h-7 w-7 text-primary" />
-          </div>
-          <h3 className="font-display font-bold text-lg mb-1">Empieza a documentar tu progreso</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Tus fotos se guardan solas cada vez que haces un análisis físico en Scan.
-          </p>
-          {onGoScan && (
-            <Button variant="hero" className="rounded-2xl active:scale-[0.98]" onClick={onGoScan}>
-              <Camera className="w-4 h-4 mr-1" /> Hacer mi primer scan
-            </Button>
-          )}
-        </motion.div>
+        <EmptyState
+          icon={Camera}
+          title="Empieza a documentar tu progreso"
+          description="Tus fotos se guardan solas cada vez que haces un análisis físico en Scan."
+          className="min-h-[55dvh]"
+          action={
+            onGoScan ? (
+              <Button
+                onClick={() => {
+                  void hapticTap();
+                  onGoScan();
+                }}
+              >
+                Hacer mi primer scan
+              </Button>
+            ) : undefined
+          }
+        />
       )}
 
       {!loading && !loadError && photos.length >= 2 && (
-        <Button variant="outline" className="w-full" onClick={() => setComparing(true)}>
-          <Columns2 className="w-4 h-4 mr-1" /> Comparar Antes / Después
+        <Button
+          variant="tinted"
+          size="lg"
+          className="w-full"
+          onClick={() => {
+            void hapticTap();
+            setComparing(true);
+          }}
+        >
+          <Columns2 aria-hidden="true" /> Comparar antes y después
         </Button>
       )}
       {comparing && photos.length >= 2 && (
@@ -417,22 +429,21 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
 
       {/* Photo grid by month */}
       {!loading && !loadError && Object.entries(grouped).map(([month, monthPhotos]) => (
-        <div key={month}>
-          <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 capitalize">
-            {monthLabel(month)}
-          </h3>
-          <div className="grid grid-cols-3 gap-2">
-            {monthPhotos.map((photo, i) => {
+        <section key={month}>
+          <h3 className="mb-2.5 type-headline capitalize">{monthLabel(month)}</h3>
+          <div className="grid grid-cols-3 gap-1.5">
+            {monthPhotos.map((photo) => {
               const photoUrl = signed.get(photo.photo_url);
               return (
-                <motion.button
+                <button
                   key={photo.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => setViewingPhoto(photos.indexOf(photo))}
+                  type="button"
+                  onClick={() => {
+                    void hapticTap();
+                    setViewingPhoto(photos.indexOf(photo));
+                  }}
                   aria-label={`Progreso: ver foto del ${formatDate(photo.taken_at)}`}
-                  className="aspect-[3/4] rounded-xl overflow-hidden border border-border hover:border-primary/40 transition-all group relative"
+                  className="relative aspect-[3/4] overflow-hidden rounded-xl bg-secondary transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {photoUrl ? (
                     <img
@@ -441,19 +452,19 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                       loading="lazy"
                       decoding="async"
                       onError={() => void handleImageError(photo)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     <PhotoPlaceholder />
                   )}
-                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-                    <span className="text-[10px] text-white font-medium">{formatDate(photo.taken_at)}</span>
-                  </div>
-                </motion.button>
+                  <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 px-2 py-0.5 type-caption2 font-medium text-white backdrop-blur-md">
+                    {formatDate(photo.taken_at)}
+                  </span>
+                </button>
               );
             })}
           </div>
-        </div>
+        </section>
       ))}
 
       {/* Lightbox */}
@@ -466,30 +477,35 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4"
             onClick={() => setViewingPhoto(null)}
           >
-            <div className="absolute top-4 right-4 flex gap-2 z-10">
+            <div className="absolute right-[max(1rem,var(--safe-right))] top-[max(1rem,var(--safe-top))] z-10 flex gap-2">
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label="Eliminar foto"
                 onClick={(e) => {
                   e.stopPropagation();
+                  void hapticTap();
                   setPhotoToDelete(photos[viewingPhoto]);
                 }}
-                className="h-11 w-11 text-white/70 hover:text-destructive hover:bg-white/10"
+                className="bg-white/15 text-destructive backdrop-blur-md hover:bg-white/25 active:bg-white/25"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="h-5 w-5" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 aria-label="Cerrar visor"
-                onClick={() => setViewingPhoto(null)}
-                className="h-11 w-11 text-white/70 hover:text-white hover:bg-white/10"
+                onClick={() => {
+                  void hapticTap();
+                  setViewingPhoto(null);
+                }}
+                className="bg-white/15 text-white backdrop-blur-md hover:bg-white/25 active:bg-white/25"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
 
@@ -497,10 +513,10 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
               <button
                 type="button"
                 aria-label="Foto anterior"
-                onClick={(e) => { e.stopPropagation(); setViewingPhoto(viewingPhoto - 1); }}
-                className="absolute left-4 flex h-11 w-11 items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10"
+                onClick={(e) => { e.stopPropagation(); void hapticTap(); setViewingPhoto(viewingPhoto - 1); }}
+                className="absolute left-[max(1rem,var(--safe-left))] flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-colors active:bg-white/25"
               >
-                <ChevronLeft className="w-8 h-8" />
+                <ChevronLeft className="h-6 w-6" strokeWidth={1.75} />
               </button>
             )}
 
@@ -508,27 +524,27 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
               <button
                 type="button"
                 aria-label="Foto siguiente"
-                onClick={(e) => { e.stopPropagation(); setViewingPhoto(viewingPhoto + 1); }}
-                className="absolute right-4 flex h-11 w-11 items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10"
+                onClick={(e) => { e.stopPropagation(); void hapticTap(); setViewingPhoto(viewingPhoto + 1); }}
+                className="absolute right-[max(1rem,var(--safe-right))] flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition-colors active:bg-white/25"
               >
-                <ChevronRight className="w-8 h-8" />
+                <ChevronRight className="h-6 w-6" strokeWidth={1.75} />
               </button>
             )}
 
-            <div className="max-w-lg max-h-[85vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <div className="flex max-h-[85dvh] max-w-lg flex-col items-center" onClick={(e) => e.stopPropagation()}>
               {signed.get(photos[viewingPhoto].photo_url) ? (
                 <img loading="lazy" decoding="async"
                   src={signed.get(photos[viewingPhoto].photo_url)}
                   alt={`Foto de progreso del ${formatDate(photos[viewingPhoto].taken_at)}`}
                   onError={() => void handleImageError(photos[viewingPhoto])}
-                  className="max-h-[75vh] rounded-xl object-contain"
+                  className="max-h-[75dvh] rounded-xl object-contain"
                 />
               ) : (
-                <div className="flex h-[60vh] w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-xl bg-white/5">
-                  <PhotoPlaceholder label="Preparando la foto..." />
+                <div className="flex h-[60dvh] w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-xl bg-secondary">
+                  <PhotoPlaceholder label="Preparando la foto…" />
                 </div>
               )}
-              <p className="text-white/70 text-sm mt-3">
+              <p className="mt-3 type-subhead text-white/70">
                 {formatDate(photos[viewingPhoto].taken_at)}
               </p>
             </div>
@@ -552,8 +568,8 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
+              destructive
               disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(e) => {
                 // Mantenemos el diálogo abierto hasta confirmar el borrado real,
                 // para poder reintentar si el archivo no se pudo eliminar.
@@ -561,7 +577,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                 if (photoToDelete) void handleDelete(photoToDelete);
               }}
             >
-              {deleting ? "Eliminando..." : "Eliminar foto"}
+              {deleting ? "Eliminando…" : "Eliminar foto"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

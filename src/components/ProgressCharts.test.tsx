@@ -61,7 +61,7 @@ describe("weight progress", () => {
     fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
 
     await waitFor(() => expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ weight: 72.5 })));
-    expect(mocks.success).toHaveBeenCalledWith("Peso registrado ✅");
+    expect(mocks.success).toHaveBeenCalledWith("Peso registrado");
   });
 
   it("rejects malformed weights instead of partially parsing them", async () => {

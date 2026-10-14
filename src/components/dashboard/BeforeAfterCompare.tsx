@@ -1,6 +1,9 @@
 import { useRef, useState, useCallback, useMemo } from "react";
-import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronsLeftRight, ImageOff } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { hapticSelection } from "@/lib/native";
 
 interface Photo {
   id: string;
@@ -59,79 +62,92 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
     setPos(Math.min(100, Math.max(0, ((clientX - r.left) / r.width) * 100)));
   }, []);
 
+  const canCompare = photos.length >= 2 && before && after;
+
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur flex flex-col items-center justify-center p-4 overflow-y-auto">
-      <Button variant="ghost" size="icon" aria-label="Cerrar" onClick={onClose} className="absolute top-4 right-4">
-        <X className="w-5 h-5" />
-      </Button>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Antes / Después</DialogTitle>
+          <DialogDescription className={canCompare ? undefined : "sr-only"}>
+            {canCompare ? `${weeks} · Arrastra la barra` : "Compara dos fotos de tu progreso"}
+          </DialogDescription>
+        </DialogHeader>
 
-      <h3 className="font-display font-bold text-lg mb-1">Antes / Después</h3>
-      <div className="flex gap-1 mb-3 p-1 rounded-full bg-secondary" role="tablist" aria-label="Ángulo">
-        {(["front", "back"] as Pose[]).map((p) => (
-          <button key={p} role="tab" aria-selected={pose === p} onClick={() => setPose(p)}
-            className={`min-h-9 px-4 rounded-full text-xs font-semibold transition ${pose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-            {POSE_LABEL[p]}
-          </button>
-        ))}
-      </div>
-      {photos.length < 2 || !before || !after ? (
-        <p className="text-sm text-muted-foreground text-center max-w-xs mt-6">
-          Necesitas al menos 2 fotos de {pose === "front" ? "frente" : "espalda"} para comparar este ángulo.
-        </p>
-      ) : (<>
-      <p className="text-xs text-muted-foreground mb-3">{weeks} · Arrastra la barra</p>
+        <Tabs
+          value={pose}
+          onValueChange={(next) => {
+            void hapticSelection();
+            setPose(next as Pose);
+          }}
+        >
+          <TabsList aria-label="Ángulo" className="w-full">
+            {(["front", "back"] as Pose[]).map((p) => (
+              <TabsTrigger key={p} value={p}>{POSE_LABEL[p]}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-      <div
-        ref={boxRef}
-        className="relative w-full max-w-sm aspect-[3/4] rounded-2xl overflow-hidden border border-border select-none touch-none cursor-ew-resize"
-        onPointerDown={(e) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); move(e.clientX); }}
-        onPointerMove={(e) => dragging.current && move(e.clientX)}
-        onPointerUp={() => { dragging.current = false; }}
-        onPointerCancel={() => { dragging.current = false; }}
-      >
-        <img loading="lazy" decoding="async" src={signed.get(after.photo_url) || ""} alt="Después" draggable={false} className="absolute inset-0 w-full h-full object-cover" />
-        <img loading="lazy" decoding="async"
-          src={signed.get(before.photo_url) || ""}
-          alt="Antes"
-          draggable={false}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
-        />
-        <div className="absolute inset-y-0 w-0.5 bg-primary-foreground shadow" style={{ left: `${pos}%` }}>
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 left-1/2 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-lg">
-            ‹›
+        {!canCompare ? (
+          <EmptyState
+            icon={ImageOff}
+            title="Faltan fotos"
+            description={`Necesitas al menos 2 fotos de ${pose === "front" ? "frente" : "espalda"} para comparar este ángulo.`}
+            className="py-6"
+          />
+        ) : (<>
+        <div
+          ref={boxRef}
+          className="relative mx-auto aspect-[3/4] h-[50dvh] max-w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-2xl bg-secondary"
+          onPointerDown={(e) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); move(e.clientX); }}
+          onPointerMove={(e) => dragging.current && move(e.clientX)}
+          onPointerUp={() => { dragging.current = false; }}
+          onPointerCancel={() => { dragging.current = false; }}
+        >
+          <img loading="lazy" decoding="async" src={signed.get(after.photo_url) || ""} alt="Después" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+          <img loading="lazy" decoding="async"
+            src={signed.get(before.photo_url) || ""}
+            alt="Antes"
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
+          />
+          <div className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-white" style={{ left: `${pos}%` }}>
+            <div className="absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-black shadow-lg">
+              <ChevronsLeftRight className="h-5 w-5" aria-hidden="true" />
+            </div>
           </div>
+          <span className="absolute left-2 top-2 rounded-full bg-black/50 px-2.5 py-1 type-caption1 font-semibold text-white backdrop-blur-md">Antes · {fmt(before.taken_at)}</span>
+          <span className="absolute right-2 top-2 rounded-full bg-black/50 px-2.5 py-1 type-caption1 font-semibold text-white backdrop-blur-md">Después · {fmt(after.taken_at)}</span>
         </div>
-        <span className="absolute top-2 left-2 text-[10px] font-semibold px-2 py-1 rounded-full bg-background/80">Antes · {fmt(before.taken_at)}</span>
-        <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-1 rounded-full bg-background/80">Después · {fmt(after.taken_at)}</span>
-      </div>
 
-      <input
-        type="range"
-        min={0}
-        max={100}
-        value={pos}
-        onChange={(e) => setPos(Number(e.target.value))}
-        aria-label="Posición de la comparación"
-        className="w-full max-w-sm mt-3 accent-primary"
-      />
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={pos}
+          onChange={(e) => setPos(Number(e.target.value))}
+          aria-label="Posición de la comparación"
+          className="h-11 w-full accent-primary"
+        />
 
-      <div className="grid grid-cols-2 gap-2 w-full max-w-sm mt-3">
-        <label className="text-xs text-muted-foreground">
-          Antes
-          <select value={beforeId} onChange={(e) => setBeforeId(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-card p-2 text-sm text-foreground">
-            {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
-          </select>
-        </label>
-        <label className="text-xs text-muted-foreground">
-          Después
-          <select value={afterId} onChange={(e) => setAfterId(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-card p-2 text-sm text-foreground">
-            {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
-          </select>
-        </label>
-      </div>
-      </>)}
-    </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="type-subhead text-muted-foreground">
+            Antes
+            <select value={beforeId} onChange={(e) => { void hapticSelection(); setBeforeId(e.target.value); }} className="field mt-1.5 w-full text-foreground">
+              {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
+            </select>
+          </label>
+          <label className="type-subhead text-muted-foreground">
+            Después
+            <select value={afterId} onChange={(e) => { void hapticSelection(); setAfterId(e.target.value); }} className="field mt-1.5 w-full text-foreground">
+              {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
+            </select>
+          </label>
+        </div>
+        </>)}
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -2,8 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Surface } from "@/components/ui/surface";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { Scale, TrendingDown, TrendingUp, Minus, RefreshCw } from "lucide-react";
+import { hapticTap } from "@/lib/native";
+import { Scale, TrendingDown, TrendingUp, Minus, RefreshCw, WifiOff } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { parseLocalDate, toLocalDateString } from "@/lib/localDates";
 import { parsePositiveWeight } from "@/lib/weight";
@@ -12,6 +16,17 @@ interface Props {
   userId: string;
   compact?: boolean;
 }
+
+const AXIS_TICK = { fontSize: 11, fill: "hsl(var(--muted-foreground))" };
+const TOOLTIP_STYLE = {
+  background: "hsl(var(--accent) / 0.92)",
+  backdropFilter: "blur(20px)",
+  border: "none",
+  borderRadius: 12,
+  boxShadow: "0 8px 24px rgba(0,0,0,0.45)",
+  padding: "8px 12px",
+  fontSize: 13,
+};
 
 const ProgressCharts = ({ userId, compact = false }: Props) => {
   const [weightLogs, setWeightLogs] = useState<{ logged_at: string; weight: number }[]>([]);
@@ -71,7 +86,7 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
         logged_at: today,
       });
       if (error) throw error;
-      toast.success("Peso registrado ✅");
+      toast.success("Peso registrado");
       setWeightLogs((prev) => {
         const filtered = prev.filter((l) => l.logged_at !== today);
         return [...filtered, { logged_at: today, weight: w }].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
@@ -85,6 +100,11 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
     }
   };
 
+  const handleSaveClick = () => {
+    void hapticTap();
+    void logWeight();
+  };
+
   const firstWeight = weightLogs[0];
   const latestWeight = weightLogs[weightLogs.length - 1];
   const weightDiff = weightLogs.length >= 2 ? latestWeight.weight - firstWeight.weight : null;
@@ -93,6 +113,10 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
     month: "short",
     year: "numeric",
   });
+  const formatKg = (kg: number) => kg.toLocaleString("es-ES", { maximumFractionDigits: 1 });
+  const formatKgDelta = (kg: number) =>
+    `${kg > 0 ? "+" : ""}${kg.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`;
+  const TrendIcon = weightDiff === null || weightDiff === 0 ? Minus : weightDiff < 0 ? TrendingDown : TrendingUp;
 
   const chartData = weightLogs.map((w) => ({
     date: parseLocalDate(w.logged_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
@@ -101,130 +125,170 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
 
   if (compact) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-3 card-shadow">
-        <div className="flex items-center gap-3">
-          <Scale className="h-4 w-4 shrink-0 text-primary" />
+      <Surface>
+        <div className="flex items-center gap-4">
           <div className="min-w-0">
-            <p className="font-display text-lg font-bold leading-none tabular-nums">{latestWeight ? `${latestWeight.weight} kg` : "—"}</p>
-            <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
-              {weightDiff === null ? "Peso actual" : <>{weightDiff < 0 ? <TrendingDown className="h-3 w-3" /> : weightDiff > 0 ? <TrendingUp className="h-3 w-3" /> : <Minus className="h-3 w-3" />}{weightDiff > 0 ? "+" : ""}{weightDiff.toFixed(1)} kg desde el inicio</>}
+            <p className="font-rounded text-[28px] font-bold leading-8 tabular-nums">
+              {latestWeight ? <>{formatKg(latestWeight.weight)}<span className="ml-1 type-callout font-semibold text-muted-foreground">kg</span></> : "—"}
+            </p>
+            <p className="mt-0.5 flex items-center gap-1 type-footnote text-muted-foreground tabular-nums">
+              {weightDiff === null ? "Peso actual" : <><TrendIcon className="h-3.5 w-3.5" aria-hidden="true" />{formatKgDelta(weightDiff)} kg desde el inicio</>}
             </p>
           </div>
           {chartData.length >= 2 && (
-            <div className="h-9 min-w-0 flex-1" aria-hidden>
+            <div className="h-11 min-w-0 flex-1" aria-hidden>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} />
-                  <Line type="monotone" dataKey="peso" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="peso" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
-          <div className="ml-auto flex shrink-0 gap-1.5">
-            <Input
-              aria-label="Peso en kilogramos"
-              disabled={saving || loading}
-              type="text"
-              inputMode="decimal"
-              value={newWeight}
-              onChange={(e) => setNewWeight(e.target.value)}
-              placeholder="kg"
-              className="h-8 w-16 px-2 text-xs"
-              onKeyDown={(e) => e.key === "Enter" && logWeight()}
-            />
-            <Button size="sm" className="h-8 px-2.5 text-xs" onClick={logWeight} disabled={saving || loading}>
-              {saving ? "…" : "Guardar"}
-            </Button>
-          </div>
         </div>
-      </div>
+        <div className="mt-3 flex gap-2">
+          <Input
+            aria-label="Peso en kilogramos"
+            disabled={saving || loading}
+            type="text"
+            inputMode="decimal"
+            enterKeyHint="done"
+            value={newWeight}
+            onChange={(e) => setNewWeight(e.target.value)}
+            placeholder="kg"
+            className="min-w-0 flex-1"
+            onKeyDown={(e) => e.key === "Enter" && logWeight()}
+          />
+          <Button variant="tinted" className="shrink-0" onClick={handleSaveClick} disabled={saving || loading}>
+            {saving ? "Guardando…" : "Guardar"}
+          </Button>
+        </div>
+      </Surface>
     );
   }
 
   return (
     <div className="space-y-6">
       {/* Weight log input */}
-      <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
-        <div className="flex items-center gap-2 mb-4">
-          <Scale className="w-5 h-5 text-primary" />
-          <h3 className="font-bold font-display">Registra tu peso</h3>
-        </div>
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Input
-              aria-label="Peso en kilogramos"
-              disabled={saving || loading}
-                type="text"
-                inputMode="decimal"
-              value={newWeight}
-              onChange={(e) => setNewWeight(e.target.value)}
-              placeholder="Ej: 72.5"
-              onKeyDown={(e) => e.key === "Enter" && logWeight()}
-            />
-          </div>
-          <Button onClick={logWeight} disabled={saving || loading}>
-            {saving ? "Guardando..." : "Registrar"}
+      <Surface>
+        <h3 className="type-headline">Registra tu peso</h3>
+        <div className="mt-3 flex gap-2">
+          <Input
+            aria-label="Peso en kilogramos"
+            disabled={saving || loading}
+            type="text"
+            inputMode="decimal"
+            enterKeyHint="done"
+            value={newWeight}
+            onChange={(e) => setNewWeight(e.target.value)}
+            placeholder="Ej: 72,5"
+            className="min-w-0 flex-1"
+            onKeyDown={(e) => e.key === "Enter" && logWeight()}
+          />
+          <Button className="shrink-0" onClick={handleSaveClick} disabled={saving || loading}>
+            {saving ? "Guardando…" : "Registrar"}
           </Button>
         </div>
-      </div>
+      </Surface>
 
       {loading && (
-        <div className="h-52 animate-pulse rounded-2xl border border-border bg-card" aria-label="Cargando historial de peso" />
+        <Skeleton className="h-64 rounded-2xl" role="status" aria-label="Cargando historial de peso" />
       )}
 
       {loadError && (
-        <div role="alert" className="rounded-2xl border border-destructive/30 bg-card p-5 text-center">
-          <p className="text-sm font-semibold">No se ha podido cargar tu historial de peso</p>
-          <p className="mt-1 text-xs text-muted-foreground">Tus registros no se han modificado.</p>
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Reintentar
-          </Button>
+        <div role="alert">
+          <EmptyState
+            icon={WifiOff}
+            title="No se ha podido cargar tu historial de peso"
+            description="Tus registros no se han modificado."
+            className="py-8"
+            action={
+              <Button
+                type="button"
+                variant="tinted"
+                size="sm"
+                onClick={() => {
+                  void hapticTap();
+                  setReload((value) => value + 1);
+                }}
+              >
+                <RefreshCw aria-hidden="true" /> Reintentar
+              </Button>
+            }
+          />
         </div>
       )}
 
       {/* Weight chart */}
       {!loading && !loadError && weightLogs.length >= 2 && (
-        <div className="bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold font-display">Evolución de peso</h3>
-            {weightDiff !== null && firstWeight && latestWeight && (
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-1 text-sm font-medium text-muted-foreground">
-                  {weightDiff < 0 ? <TrendingDown className="w-4 h-4" /> : weightDiff > 0 ? <TrendingUp className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
-                  {weightDiff > 0 ? "+" : ""}{weightDiff.toFixed(1)} kg
-                </div>
-                <p className="text-[10px] text-muted-foreground">
-                  {formatWeightDate(firstWeight.logged_at)} — {formatWeightDate(latestWeight.logged_at)}
-                </p>
-              </div>
-            )}
+        <Surface>
+          <h3 className="type-subhead font-semibold text-primary">Evolución de peso</h3>
+          <p className="mt-1 font-rounded text-[34px] font-bold leading-10 tabular-nums">
+            {formatKg(latestWeight.weight)}
+            <span className="ml-1 type-body font-semibold text-muted-foreground">kg</span>
+          </p>
+          {weightDiff !== null && firstWeight && (
+            <p className="flex flex-wrap items-center gap-x-2 type-footnote text-muted-foreground tabular-nums">
+              <span className="inline-flex items-center gap-1">
+                <TrendIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                {formatKgDelta(weightDiff)} kg
+              </span>
+              <span>{formatWeightDate(firstWeight.logged_at)} — {formatWeightDate(latestWeight.logged_at)}</span>
+            </p>
+          )}
+          <div className="mt-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={24} tick={AXIS_TICK} />
+                <YAxis
+                  orientation="right"
+                  width={40}
+                  axisLine={false}
+                  tickLine={false}
+                  tickCount={4}
+                  domain={["dataMin - 1", "dataMax + 1"]}
+                  tickFormatter={(value: number) => formatKg(value)}
+                  tick={AXIS_TICK}
+                />
+                <Tooltip
+                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.4 }}
+                  contentStyle={TOOLTIP_STYLE}
+                  labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: 2 }}
+                  itemStyle={{ color: "hsl(var(--foreground))", padding: 0, fontWeight: 600 }}
+                  formatter={(value: number) => [`${formatKg(value)} kg`, "Peso"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="peso"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--card))", strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-              <YAxis domain={["dataMin - 1", "dataMax + 1"]} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
-              <Tooltip
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
-              />
-              <Line type="monotone" dataKey="peso" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: "hsl(var(--primary))", r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        </Surface>
       )}
 
       {/* Weight log placeholder */}
       {!loading && !loadError && weightLogs.length === 1 && (
-        <div className="bg-card rounded-xl p-5 border border-border text-center text-sm text-muted-foreground">
-          Registra tu peso al menos 2 días para ver el gráfico de evolución 📈
-        </div>
+        <EmptyState
+          icon={TrendingUp}
+          title="Aún no hay gráfica"
+          description="Registra tu peso al menos 2 días para ver el gráfico de evolución."
+          className="py-8"
+        />
       )}
 
       {!loading && !loadError && weightLogs.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border bg-card p-5 text-center text-sm text-muted-foreground">
-          Registra tu peso para empezar a ver tu evolución.
-        </div>
+        <EmptyState
+          icon={Scale}
+          title="Sin registros todavía"
+          description="Registra tu peso para empezar a ver tu evolución."
+          className="py-8"
+        />
       )}
     </div>
   );

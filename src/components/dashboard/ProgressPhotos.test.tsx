@@ -123,7 +123,7 @@ describe("progress photos", () => {
 
     await waitFor(() => expect(mocks.insert).toHaveBeenCalled());
     expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ photo_url: "user/photo-id.jpg" }));
-    expect(mocks.success).toHaveBeenCalledWith("Foto subida correctamente 📸");
+    expect(mocks.success).toHaveBeenCalledWith("Foto subida correctamente");
   });
 
   it("continúa con el resto del lote cuando un archivo no es válido", async () => {
@@ -137,7 +137,7 @@ describe("progress photos", () => {
 
     await waitFor(() => expect(mocks.upload).toHaveBeenCalledTimes(1));
     expect(mocks.warning).toHaveBeenCalledWith(expect.stringContaining("Se omitió 1 archivo"));
-    expect(mocks.success).toHaveBeenCalledWith("Foto subida correctamente 📸");
+    expect(mocks.success).toHaveBeenCalledWith("Foto subida correctamente");
   });
 
   it("muestra un marcador en vez de un src vacío si no hay URL firmada", async () => {

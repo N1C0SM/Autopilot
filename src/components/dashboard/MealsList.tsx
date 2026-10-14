@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Check, Clock, UserRound } from "lucide-react";
+import { Check, Clock, TriangleAlert, UserRound, Utensils } from "lucide-react";
 import { hapticTap } from "@/lib/native";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup } from "@/components/ui/list";
 import type { MacroTargets } from "@/lib/nutrition";
 import { nutritionMacroError } from "@/lib/nutritionValidation";
 
@@ -39,8 +40,8 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
       next.delete(name);
     } else {
       next.add(name);
-      void hapticTap();
     }
+    void hapticTap();
     setDone(next);
     try { localStorage.setItem(todayKey(), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
   };
@@ -67,75 +68,87 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
     );
   }
 
-  const chips = [
-    { l: "Proteína", short: "Prot.", v: p },
-    { l: "Carbos", short: "Carb.", v: c },
-    { l: "Grasas", short: "Gras.", v: f },
+  const macroSummary = [
+    { label: "Proteína", value: p },
+    { label: "Carbos", value: c },
+    { label: "Grasas", value: f },
   ];
+  const doneCount = meals.filter((meal) => done.has(meal.name)).length;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-6">
       {targetError && (
-        <Surface padding="sm" role="alert">
-          <p className="text-sm font-semibold">Objetivos pendientes de revisión</p>
-          <p className="mt-1 text-xs text-muted-foreground">{targetError} Las comidas guardadas siguen disponibles.</p>
+        <Surface role="alert" className="flex items-start gap-3">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="type-subhead font-semibold">Objetivos pendientes de revisión</p>
+            <p className="mt-0.5 type-footnote text-muted-foreground">{targetError} Las comidas guardadas siguen disponibles.</p>
+          </div>
         </Surface>
       )}
       {meals.length > 0 && !macros && (
-        <Surface padding="sm" className="flex flex-wrap items-start gap-2">
-          <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <Surface className="flex items-start gap-3">
+          <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Tus macros aún no están personalizados</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <p className="type-subhead font-semibold">Tus macros aún no están personalizados</p>
+            <p className="mt-0.5 type-footnote text-muted-foreground">
               Añade tu peso actual para calcularlos. Mientras tanto, las comidas de abajo son orientativas.
             </p>
+            {onOpenProfile && (
+              <Button
+                variant="tinted"
+                size="sm"
+                className="mt-3"
+                onClick={() => {
+                  void hapticTap();
+                  onOpenProfile();
+                }}
+              >
+                Añadir peso
+              </Button>
+            )}
           </div>
-          {onOpenProfile && (
-            <Button variant="outline" size="sm" className="ml-auto shrink-0" onClick={onOpenProfile}>
-              Añadir peso
-            </Button>
-          )}
         </Surface>
       )}
 
       {macros && kcal > 0 && !targetError && (
-        <Surface padding="sm">
+        <Surface>
           <div className="flex items-center gap-4">
             {/* La rueda: de un vistazo, cuánto llevas del día */}
-            <svg
-              viewBox="0 0 100 100"
-              className="h-20 w-20 shrink-0 -rotate-90"
-              role="img"
-              aria-label={`${Math.round(ratio * 100)} % de tus comidas de hoy`}
-            >
-              <circle cx="50" cy="50" r={R} fill="none" strokeWidth="9" className="stroke-muted" />
-              <circle
-                cx="50" cy="50" r={R} fill="none" strokeWidth="9" strokeLinecap="round"
-                className="stroke-primary transition-all duration-700"
-                strokeDasharray={C}
-                strokeDashoffset={C * (1 - ratio)}
-              />
-            </svg>
+            <div className="relative h-[88px] w-[88px] shrink-0">
+              <svg
+                viewBox="0 0 100 100"
+                className="h-full w-full -rotate-90"
+                role="img"
+                aria-label={`${Math.round(ratio * 100)} % de tus comidas de hoy`}
+              >
+                <circle cx="50" cy="50" r={R} fill="none" strokeWidth="11" className="stroke-primary/20" />
+                <circle
+                  cx="50" cy="50" r={R} fill="none" strokeWidth="11" strokeLinecap="round"
+                  className="stroke-primary transition-[stroke-dashoffset] duration-500 ease-ios"
+                  strokeDasharray={C}
+                  strokeDashoffset={C * (1 - ratio)}
+                />
+              </svg>
+              <Utensils className="absolute inset-0 m-auto h-6 w-6 text-primary" aria-hidden="true" />
+            </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-display text-2xl font-bold tabular-nums">{fmt(kcal)}</span>
-                <span className="text-xs text-muted-foreground">kcal de objetivo diario</span>
-              </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {meals.filter((meal) => done.has(meal.name)).length} de {meals.length} comidas marcadas. Marcar comidas no mide las calorías consumidas.
-              </p>
+              <p className="font-rounded text-[34px] font-bold leading-none tabular-nums">{fmt(kcal)}</p>
+              <p className="mt-1.5 type-footnote text-muted-foreground">kcal de objetivo diario</p>
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
-            {chips.map((m) => (
-              <span
-                key={m.l}
-                aria-label={`${m.l}: objetivo diario de ${fmt(m.v)} gramos`}
-                className="flex items-baseline justify-center gap-1 rounded-full bg-secondary/60 px-1.5 py-1 text-xs"
-              >
-                <span className="text-muted-foreground">{m.short}</span>
-                <span className="font-semibold tabular-nums">{fmt(m.v)}g</span>
-              </span>
+          <p className="mt-3 type-footnote text-muted-foreground">
+            {doneCount} de {meals.length} comidas marcadas. Marcar comidas no mide las calorías consumidas.
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-3 pt-3 sep-t">
+            {macroSummary.map((m) => (
+              <div key={m.label} role="group" aria-label={`${m.label}: objetivo diario de ${fmt(m.value)} gramos`}>
+                <p className="type-footnote text-muted-foreground">{m.label}</p>
+                <p className="mt-0.5 font-rounded text-[22px] font-bold leading-7 tabular-nums">
+                  {fmt(m.value)}
+                  <span className="ml-0.5 type-subhead font-semibold text-muted-foreground">g</span>
+                </p>
+              </div>
             ))}
           </div>
         </Surface>
@@ -148,40 +161,36 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
           description="Tu entrenador las añadirá en cuanto cierre el plan."
         />
       ) : (
-        <section>
-          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-muted-foreground pl-4 mb-2">
-            Comidas de hoy
-          </h2>
-          <div className="rounded-2xl bg-card overflow-hidden">
-            {meals.map((meal, i) => {
-              const isDone = done.has(meal.name);
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => toggle(meal.name)}
-                  aria-pressed={isDone}
-                  className={`flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-secondary/50 ${i > 0 ? "border-t border-border/50" : ""}`}
+        <ListGroup header="Comidas de hoy">
+          {meals.map((meal, i) => {
+            const isDone = done.has(meal.name);
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => toggle(meal.name)}
+                aria-pressed={isDone}
+                className="group/row flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors duration-150 ${isDone ? "bg-primary" : "border-[1.5px] border-muted-foreground/50"}`}
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className={`block text-[16px] font-semibold leading-tight transition-colors ${isDone ? "text-muted-foreground line-through decoration-muted-foreground/50" : "text-foreground"}`}>
-                      {meal.name}
-                    </span>
-                    <span className="mt-1 line-clamp-2 block text-[13px] leading-snug text-muted-foreground">
-                      {meal.description}
-                    </span>
+                  {isDone && <Check className="h-3.5 w-3.5 text-primary-foreground" strokeWidth={3} />}
+                </span>
+                {/* El separador nace donde empieza el texto, como en ListRow. */}
+                <span className="block min-w-0 flex-1 py-3 group-[:not(:last-child)]/row:sep-b">
+                  <span className={`block type-body transition-colors ${isDone ? "text-muted-foreground line-through decoration-muted-foreground/50" : "text-foreground"}`}>
+                    {meal.name}
                   </span>
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isDone ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
-                  >
-                    {isDone && <Check className="h-4 w-4 text-primary-foreground" strokeWidth={3} />}
+                  <span className="mt-0.5 line-clamp-2 block type-footnote text-muted-foreground">
+                    {meal.description}
                   </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                </span>
+              </button>
+            );
+          })}
+        </ListGroup>
       )}
     </div>
   );

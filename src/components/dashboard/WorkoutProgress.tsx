@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Dumbbell, RefreshCw } from "lucide-react";
+import { ChevronsUpDown, Dumbbell, RefreshCw, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
 import { toast } from "sonner";
+import { hapticSelection, hapticTap } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
 import { buildExerciseHistory, type ExerciseHistoryEntry, type WorkoutLogRecord } from "@/lib/workoutMetrics";
 import ExerciseProgressChart from "@/components/dashboard/ExerciseProgressChart";
@@ -69,38 +73,72 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     ? "reps"
     : metric;
 
+  const tiles = latest
+    ? [
+        { value: latest.completedSets, label: "series completadas" },
+        { value: latest.reps, label: "repeticiones" },
+        { value: latest.loadedSets > 0 ? `${Math.round(latest.volumeKg)} kg` : "—", label: "volumen con carga" },
+        { value: latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—", label: "1RM estimado" },
+      ]
+    : [];
+
   return (
-    <section className={compact ? "flex min-h-0 flex-1 flex-col rounded-3xl border border-border bg-card p-4 card-shadow" : "rounded-3xl border border-border bg-card p-5 card-shadow sm:p-6"} aria-label="Progresión por ejercicio">
+    <Surface
+      role="region"
+      aria-label="Progresión por ejercicio"
+      className={compact ? "flex min-h-0 flex-1 flex-col overflow-y-auto" : "sm:p-6"}
+    >
       {exercises.length > 0 && (
-        <select
-          aria-label="Ejercicio"
-          value={selectedExercise}
-          onChange={(event) => setSelectedExercise(event.target.value)}
-          className="-ml-1 w-full min-w-0 truncate bg-transparent font-display text-base font-bold focus:outline-none"
-        >
-          {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise} · {historyByExercise[exercise].length} {historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}</option>)}
-        </select>
+        <div className="relative">
+          <select
+            aria-label="Ejercicio"
+            value={selectedExercise}
+            onChange={(event) => {
+              void hapticSelection();
+              setSelectedExercise(event.target.value);
+            }}
+            className="field w-full min-w-0 appearance-none truncate pr-9 font-semibold focus-visible:outline-none"
+          >
+            {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise} · {historyByExercise[exercise].length} {historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}</option>)}
+          </select>
+          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        </div>
       )}
 
       {loading ? (
-        <div className="mt-6 h-52 animate-pulse rounded-xl bg-secondary/50" aria-label="Cargando historial" />
+        <Skeleton className="mt-4 h-52 rounded-xl" role="status" aria-label="Cargando historial" />
       ) : loadError ? (
-        <div className="mt-5 rounded-xl border border-destructive/30 p-6 text-center">
-          <p className="text-sm font-semibold">No se ha podido cargar tu evolución</p>
-          <p className="mt-1 text-xs text-muted-foreground">Tus entrenamientos siguen guardados. Comprueba la conexión y vuelve a intentarlo.</p>
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Reintentar
-          </Button>
+        <div role="alert">
+          <EmptyState
+            icon={WifiOff}
+            title="No se ha podido cargar tu evolución"
+            description="Tus entrenamientos siguen guardados. Comprueba la conexión y vuelve a intentarlo."
+            className="py-8"
+            action={
+              <Button
+                type="button"
+                variant="tinted"
+                size="sm"
+                onClick={() => {
+                  void hapticTap();
+                  setReload((value) => value + 1);
+                }}
+              >
+                <RefreshCw aria-hidden="true" /> Reintentar
+              </Button>
+            }
+          />
         </div>
       ) : exercises.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-border p-6 text-center">
-          <Dumbbell className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
-          <p className="text-sm font-semibold">Aún no hay sesiones registradas</p>
-          <p className="mt-1 text-xs text-muted-foreground">Completa series en Entrenamiento y aquí aparecerá tu evolución por ejercicio.</p>
-        </div>
+        <EmptyState
+          icon={Dumbbell}
+          title="Aún no hay sesiones registradas"
+          description="Completa series en Entrenamiento y aquí aparecerá tu evolución por ejercicio."
+          className="py-8"
+        />
       ) : (
         <>
-          <div className={compact ? "mt-2 min-h-0 flex-1" : "mt-4"}>
+          <div className={compact ? "mt-4 flex-1" : "mt-5"}>
             <ExerciseProgressChart
               compact={compact}
               exerciseName={selectedExercise}
@@ -110,28 +148,18 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
             />
           </div>
           {latest && (
-            <div className={compact ? "mt-2 grid grid-cols-4 gap-1.5 [&>div]:p-2 [&_p:first-child]:text-sm [&_p:last-child]:text-[10px] [&_p:last-child]:leading-tight" : "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"}>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.completedSets}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">series completadas</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.reps}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">repeticiones</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.loadedSets > 0 ? `${Math.round(latest.volumeKg)} kg` : "—"}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">volumen con carga</p>
-              </div>
-              <div className="rounded-xl bg-secondary/40 p-3">
-                <p className="text-base font-bold tabular-nums sm:text-lg">{latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—"}</p>
-                <p className="text-[11px] text-muted-foreground sm:text-xs">1RM estimado</p>
-              </div>
+            <div className={compact ? "mt-3 grid grid-cols-2 gap-2 min-[390px]:grid-cols-4 min-[390px]:gap-1.5" : "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"}>
+              {tiles.map((tile) => (
+                <div key={tile.label} className={`min-w-0 break-words rounded-xl bg-secondary ${compact ? "p-2" : "p-3"}`}>
+                  <p className={`font-rounded font-bold tabular-nums ${compact ? "type-subhead" : "text-xl leading-6"}`}>{tile.value}</p>
+                  <p className={`text-muted-foreground ${compact ? "type-caption2" : "type-caption1"}`}>{tile.label}</p>
+                </div>
+              ))}
             </div>
           )}
         </>
       )}
-    </section>
+    </Surface>
   );
 };
 

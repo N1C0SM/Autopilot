@@ -48,10 +48,10 @@ describe("meal check-ins", () => {
       />,
     );
 
-    expect(screen.getByText("Aún no hay objetivos de macros personalizados")).toBeVisible();
-    expect(screen.getByText(/coméntaselo a tu entrenador/)).toBeVisible();
-    expect(screen.getByText(/Las comidas de abajo son orientativas/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Actualizar peso en Perfil" }));
+    expect(screen.getByText("Tus macros aún no están personalizados")).toBeVisible();
+    expect(screen.getByText(/Añade tu peso actual para calcularlos/)).toBeVisible();
+    expect(screen.getByText(/las comidas de abajo son orientativas/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Añadir peso" }));
     expect(onOpenProfile).toHaveBeenCalledOnce();
     expect(screen.queryByText(/kcal/)).not.toBeInTheDocument();
   });
