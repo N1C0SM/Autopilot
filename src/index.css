@@ -407,3 +407,11 @@ body.keyboard-open main {
 /* Tabs deslizables en móvil sin barra de scroll visible */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Sonner ignores `offset` under 600px and pins toasts 20px from the top, which puts
+   them over the clock and the Dynamic Island. Keep them below the status bar. */
+@media (max-width: 600px) {
+  [data-sonner-toaster][data-y-position="top"] {
+    top: calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 8px) !important;
+  }
+}
