@@ -1136,6 +1136,30 @@ export type Database = {
         }
         Relationships: []
       }
+      scan_card_uploads: {
+        Row: {
+          anon_session_id: string | null
+          created_at: string
+          id: string
+          storage_path: string
+          user_id: string | null
+        }
+        Insert: {
+          anon_session_id?: string | null
+          created_at?: string
+          id?: string
+          storage_path: string
+          user_id?: string | null
+        }
+        Update: {
+          anon_session_id?: string | null
+          created_at?: string
+          id?: string
+          storage_path?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       scan_history: {
         Row: {
           aesthetic_age: number | null
