@@ -76,9 +76,8 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
   );
   const history = historyByExercise[selectedExercise] || [];
   const latest = history[history.length - 1];
-  const selectedMetric = metric === "volumeKg" && history.length > 0 && history.every((entry) => entry.loadedSets === 0)
-    ? "reps"
-    : metric;
+  // Respeta siempre la métrica elegida: sin series con peso, la gráfica explica por qué no hay volumen.
+  const selectedMetric = metric;
 
   const stats = latest
     ? [
