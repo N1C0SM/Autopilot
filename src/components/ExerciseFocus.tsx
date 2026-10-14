@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Dumbbell, TrendingUp } from "lucide-react";
 import ExerciseMedia from "@/components/ExerciseMedia";
+import ExerciseTechnique from "@/components/ExerciseTechnique";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Spinner } from "@/components/ui/spinner";
@@ -47,9 +48,9 @@ const shortDate = (value: string) => {
 };
 
 /**
- * Un ejercicio, a pantalla completa y sin nada más alrededor: el vídeo, las
- * series, en qué punto vas y tus últimas sesiones. Se abre desde cualquier
- * sitio donde aparezca un ejercicio.
+ * Un ejercicio en una hoja, sin nada más alrededor: el vídeo, las series, en qué
+ * punto vas y tus últimas sesiones. Se abre desde cualquier sitio donde aparezca
+ * un ejercicio.
  */
 export const ExerciseFocus = ({
   exercise,
@@ -126,7 +127,8 @@ export const ExerciseFocus = ({
   return (
     <Dialog open={!!exercise} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="gap-0">
-        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} className="mt-2 rounded-[14px]" />
+        {/* Bajo el botón de cerrar, no debajo de él: los controles del vídeo quedan libres. */}
+        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} className="mt-7 rounded-[14px] sm:mt-6" />
 
         <div className="mt-5 pr-8">
           <DialogTitle className="type-title2 sm:type-title2">{name}</DialogTitle>
@@ -147,6 +149,8 @@ export const ExerciseFocus = ({
             ))}
           </dl>
         )}
+
+        <ExerciseTechnique name={name} muscleGroup={exercise?.muscleGroup} />
 
         {(suggestion || best1Rm > 0) && (
           <ul className="mt-7 space-y-5">
