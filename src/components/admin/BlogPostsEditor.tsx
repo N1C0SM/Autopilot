@@ -407,13 +407,27 @@ const BlogPostsEditor = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          <select className={selectCls} value={catFilter} onChange={(e) => setCatFilter(e.target.value)} aria-label="Filtrar por categoría">
-            <option value="all">Todos los artículos</option>
-            <option value="none">Blog (sin categoría)</option>
-            {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>Academia · {c.name}</option>)}
-          </select>
-          {posts
-            .filter((p) => catFilter === "all" || (catFilter === "none" ? !p.category : p.category === catFilter))
+          {catFilter === "all" ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {[...CATEGORIES.map((c) => ({ slug: c.slug, name: c.name })), { slug: "none", name: "Blog (sin categoría)" }].map((c) => {
+                const list = posts.filter((p) => (c.slug === "none" ? !p.category : p.category === c.slug));
+                const pub = list.filter((p) => p.published).length;
+                return (
+                  <button key={c.slug} type="button" onClick={() => setCatFilter(c.slug)}
+                    className="text-left rounded-2xl border border-border bg-card p-4 min-h-[110px] flex flex-col justify-between hover:border-primary/60 transition-colors">
+                    <span className="font-semibold leading-tight">{c.name}</span>
+                    <span className="text-xs text-muted-foreground mt-3">{list.length} artículos · {pub} publicados</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <button type="button" onClick={() => setCatFilter("all")} className="h-11 text-sm text-muted-foreground hover:text-foreground">
+              ← Todas las carpetas · <span className="text-foreground font-medium">{catFilter === "none" ? "Blog (sin categoría)" : CATEGORIES.find((c) => c.slug === catFilter)?.name}</span>
+            </button>
+          )}
+          {catFilter !== "all" && posts
+            .filter((p) => (catFilter === "none" ? !p.category : p.category === catFilter))
             .sort((a, b) => (a.order_index ?? 1e9) - (b.order_index ?? 1e9))
             .map((p) => (
             <div key={p.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
