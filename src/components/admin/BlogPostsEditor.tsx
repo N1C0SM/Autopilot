@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, ExternalLink, Loader2, Image as ImageIcon, Sparkles } from "lucide-react";
+import { CATEGORIES, EVIDENCE_LABEL, LEVEL_LABEL, REVIEW_LABEL, canPublishAcademy, categoryBySlug, readingMinutes } from "@/lib/academy";
 
 interface Post {
   id: string;
@@ -22,7 +23,15 @@ interface Post {
   published: boolean;
   published_at: string | null;
   reading_minutes: number | null;
+  category?: string | null;
+  level?: string | null;
+  order_index?: number | null;
+  evidence_level?: string | null;
+  references?: unknown;
+  review_status?: string | null;
 }
+
+const selectCls = "mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-base sm:text-sm";
 
 const slugify = (s: string) =>
   s.toLowerCase()
@@ -42,6 +51,9 @@ const BlogPostsEditor = () => {
   const [aiTopic, setAiTopic] = useState("");
   const [aiAudience, setAiAudience] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [refsText, setRefsText] = useState("[]");
+  const [catFilter, setCatFilter] = useState("all");
+  const openEdit = (p: Post) => { setRefsText(JSON.stringify(Array.isArray(p.references) ? p.references : [], null, 2)); setEditing(p); };
 
   const generateWithAI = async () => {
     if (!aiTopic.trim()) { toast.error("Escribe de qué quieres que hable el artículo"); return; }
@@ -55,6 +67,7 @@ const BlogPostsEditor = () => {
       return;
     }
     const d = jsonObject(data);
+    setRefsText("[]");
     setEditing({
       id: "",
       slug: slugify(jsonString(d.title) || aiTopic),
@@ -86,6 +99,7 @@ const BlogPostsEditor = () => {
   useEffect(() => { reload(); }, []);
 
   const createNew = () => {
+    setRefsText("[]");
     setEditing({
       id: "",
       slug: "",
@@ -105,6 +119,14 @@ const BlogPostsEditor = () => {
   const save = async () => {
     if (!editing) return;
     if (!editing.title.trim()) { toast.error("Falta el título"); return; }
+    let refs: unknown = [];
+    try { refs = JSON.parse(refsText || "[]"); if (!Array.isArray(refs)) throw new Error(); }
+    catch { toast.error("Las referencias deben ser una lista válida"); return; }
+    const candidate = { ...editing, references: refs };
+    if (editing.published && !canPublishAcademy(candidate)) {
+      toast.error("Para publicar en la Academia: márcalo como Verificado y añade al menos una referencia");
+      return;
+    }
     const slug = editing.slug.trim() || slugify(editing.title);
     setSaving(true);
     const payload = {
@@ -118,7 +140,13 @@ const BlogPostsEditor = () => {
       author_name: editing.author_name || "Autopilot",
       published: editing.published,
       published_at: editing.published ? (editing.published_at || new Date().toISOString()) : null,
-      reading_minutes: editing.reading_minutes || Math.max(1, Math.round((editing.body_markdown || "").split(/\s+/).length / 220)),
+      reading_minutes: readingMinutes(editing.body_markdown),
+      category: editing.category || null,
+      level: editing.level || null,
+      order_index: editing.order_index ?? null,
+      evidence_level: editing.evidence_level || null,
+      references: refs as never,
+      review_status: editing.review_status || "draft",
     };
     const { error } = editing.id
       ? await supabase.from("blog_posts").update(payload).eq("id", editing.id)
@@ -239,6 +267,48 @@ const BlogPostsEditor = () => {
             </div>
           </div>
 
+          <div className="border-t border-border pt-4">
+            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">Academia</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs">Categoría</Label>
+                <select className={selectCls} value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value || null })}>
+                  <option value="">Sin categoría (blog normal)</option>
+                  {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Nivel</Label>
+                <select className={selectCls} value={editing.level || ""} onChange={(e) => setEditing({ ...editing, level: e.target.value || null })}>
+                  <option value="">—</option>
+                  {Object.entries(LEVEL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Nivel de evidencia</Label>
+                <select className={selectCls} value={editing.evidence_level || ""} onChange={(e) => setEditing({ ...editing, evidence_level: e.target.value || null })}>
+                  <option value="">—</option>
+                  {Object.entries(EVIDENCE_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Estado de revisión</Label>
+                <select className={selectCls} value={editing.review_status || "draft"} onChange={(e) => setEditing({ ...editing, review_status: e.target.value })}>
+                  {Object.entries(REVIEW_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs">Orden en el temario</Label>
+                <Input className="mt-1.5" type="number" value={editing.order_index ?? ""} onChange={(e) => setEditing({ ...editing, order_index: e.target.value ? Number(e.target.value) : null })} />
+              </div>
+            </div>
+            <div className="mt-4">
+              <Label className="text-xs">Referencias (lista JSON: authors, year, title, journal, doi)</Label>
+              <Textarea className="mt-1.5 font-mono text-xs" rows={6} value={refsText} onChange={(e) => setRefsText(e.target.value)} />
+              <p className="text-[10px] text-muted-foreground mt-1">Comprueba cada DOI en doi.org antes de marcar como Verificado. Sin verificar y sin referencias no se puede publicar.</p>
+            </div>
+          </div>
+
           <div>
             <Label>Contenido (Markdown)</Label>
             <Textarea
@@ -337,7 +407,15 @@ const BlogPostsEditor = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          {posts.map((p) => (
+          <select className={selectCls} value={catFilter} onChange={(e) => setCatFilter(e.target.value)} aria-label="Filtrar por categoría">
+            <option value="all">Todos los artículos</option>
+            <option value="none">Blog (sin categoría)</option>
+            {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>Academia · {c.name}</option>)}
+          </select>
+          {posts
+            .filter((p) => catFilter === "all" || (catFilter === "none" ? !p.category : p.category === catFilter))
+            .sort((a, b) => (a.order_index ?? 1e9) - (b.order_index ?? 1e9))
+            .map((p) => (
             <div key={p.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
               {p.cover_url ? (
                 <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-md object-cover shrink-0" />
@@ -351,14 +429,16 @@ const BlogPostsEditor = () => {
                     {p.published ? "Publicado" : "Borrador"}
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground truncate">/blog/{p.slug}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {p.category ? `${categoryBySlug(p.category)?.name} · ${REVIEW_LABEL[(p.review_status || "draft") as keyof typeof REVIEW_LABEL]} · ` : ""}/blog/{p.slug}
+                </p>
               </div>
               {p.published && (
                 <a href={`/blog/${p.slug}`} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary" title="Ver">
                   <ExternalLink className="w-4 h-4" />
                 </a>
               )}
-              <Button variant="ghost" size="sm" onClick={() => setEditing(p)}>Editar</Button>
+              <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>Editar</Button>
               <Button variant="ghost" size="icon" onClick={() => remove(p.id)} aria-label="Eliminar">
                 <Trash2 className="w-4 h-4 text-destructive" />
               </Button>
