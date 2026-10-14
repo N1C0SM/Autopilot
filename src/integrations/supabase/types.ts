@@ -37,6 +37,7 @@ export type Database = {
           author_name: string | null
           body_markdown: string
           category: string | null
+          cover_alt: string | null
           cover_url: string | null
           created_at: string
           evidence_level: string | null
@@ -48,6 +49,7 @@ export type Database = {
           published_at: string | null
           reading_minutes: number | null
           references: Json
+          related_slugs: string[]
           review_status: string
           seo_description: string | null
           seo_title: string | null
@@ -59,6 +61,7 @@ export type Database = {
           author_name?: string | null
           body_markdown?: string
           category?: string | null
+          cover_alt?: string | null
           cover_url?: string | null
           created_at?: string
           evidence_level?: string | null
@@ -70,6 +73,7 @@ export type Database = {
           published_at?: string | null
           reading_minutes?: number | null
           references?: Json
+          related_slugs?: string[]
           review_status?: string
           seo_description?: string | null
           seo_title?: string | null
@@ -81,6 +85,7 @@ export type Database = {
           author_name?: string | null
           body_markdown?: string
           category?: string | null
+          cover_alt?: string | null
           cover_url?: string | null
           created_at?: string
           evidence_level?: string | null
@@ -92,6 +97,7 @@ export type Database = {
           published_at?: string | null
           reading_minutes?: number | null
           references?: Json
+          related_slugs?: string[]
           review_status?: string
           seo_description?: string | null
           seo_title?: string | null

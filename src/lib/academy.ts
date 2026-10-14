@@ -36,15 +36,17 @@ export interface Category { slug: string; name: string; summary: string }
 
 export const CATEGORIES: Category[] = [
   { slug: "fundamentos", name: "Fundamentos", summary: "Los principios que explican por qué el entrenamiento funciona." },
-  { slug: "volumen-frecuencia", name: "Volumen y frecuencia", summary: "Cuánto, cuántas veces y con qué intensidad entrenar." },
+  { slug: "sobrecarga-progresiva", name: "Sobrecarga progresiva", summary: "Cómo y cuándo progresar, y qué cuenta de verdad como progreso." },
+  { slug: "hipertrofia", name: "Hipertrofia", summary: "Qué hace crecer el músculo y cómo aprovecharlo." },
   { slug: "biomecanica", name: "Biomecánica", summary: "Cómo la física del movimiento decide qué músculo trabaja." },
-  { slug: "fuerza", name: "Fuerza", summary: "Adaptaciones neuromusculares y cómo ganar fuerza máxima." },
+  { slug: "sistema-nervioso-fuerza", name: "Sistema nervioso y fuerza", summary: "Adaptaciones neurales, fatiga y especificidad." },
+  { slug: "programacion", name: "Programación", summary: "Volumen, frecuencia, esfuerzo y periodización." },
+  { slug: "tecnica", name: "Técnica", summary: "Fases, tempo, pausas, descansos y ejecución eficiente." },
   { slug: "calistenia", name: "Calistenia", summary: "Progresar con el peso corporal: palancas, técnica y carga." },
-  { slug: "programacion", name: "Programación", summary: "Estructurar rutinas, descargas y salir de estancamientos." },
-  { slug: "nutricion", name: "Nutrición", summary: "Proteína, energía y composición corporal." },
-  { slug: "recuperacion", name: "Recuperación", summary: "Sueño, estrés y lo que de verdad ayuda a recuperar." },
+  { slug: "nutricion", name: "Nutrición", summary: "Energía, proteína y composición corporal." },
+  { slug: "recuperacion", name: "Recuperación", summary: "Sueño, fatiga, tendones y descargas." },
   { slug: "mitos", name: "Mitos frecuentes", summary: "Creencias populares contrastadas con la evidencia." },
-  { slug: "salud-longevidad", name: "Salud y longevidad", summary: "Articulaciones, adherencia y entrenar muchos años." },
+  { slug: "entrenamiento-avanzado", name: "Entrenamiento avanzado", summary: "Fuerza máxima, potencia y diseño de programas completos." },
 ];
 
 export const categoryBySlug = (slug?: string | null) => CATEGORIES.find((c) => c.slug === slug);

@@ -4,7 +4,7 @@ import { canPublishAcademy, CATEGORIES, extractToc } from "./academy";
 const ref = [{ authors: "A", year: 2020, title: "T" }];
 
 describe("Academia", () => {
-  it("tiene 10 categorías", () => expect(CATEGORIES).toHaveLength(10));
+  it("tiene 12 categorías", () => expect(CATEGORIES).toHaveLength(12));
   it("un borrador de la Academia no se puede publicar", () =>
     expect(canPublishAcademy({ category: "fuerza", review_status: "draft", references: ref })).toBe(false));
   it("verificado sin referencias no se puede publicar", () =>

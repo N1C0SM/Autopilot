@@ -43,3 +43,19 @@
 - [x] Día 5: login con nombre o correo + foto del último usuario en el dispositivo.
 - [x] El scan no toca el plan por sí solo: la tarjeta «Tu plan sigue igual» y el botón «Aplicar a mi plan» dejan la decisión en el usuario.
 - [ ] Face ID / Touch ID en la app nativa (requiere plugin nativo y compilar en Xcode).
+
+## Academia: 60 artículos (borradores, revisión antes de publicar)
+- [x] Lote 1 (Fundamentos 1-5): texto completo, portada, alt, SEO, relacionados, fuentes — en borrador
+- [ ] Lote 2: Sobrecarga progresiva (6-10)
+- [ ] Lote 3: Hipertrofia (11-15)
+- [ ] Lote 4: Biomecánica (16-20)
+- [ ] Lote 5: Sistema nervioso y fuerza (21-25)
+- [ ] Lote 6: Programación (26-30)
+- [ ] Lote 7: Técnica (31-35)
+- [ ] Lote 8: Calistenia (36-40)
+- [ ] Lote 9: Nutrición (41-45)
+- [ ] Lote 10: Recuperación (46-50)
+- [ ] Lote 11: Mitos (51-55)
+- [ ] Lote 12: Entrenamiento avanzado (56-60)
+- [ ] Revisión humana: comprobar cada DOI y marcar «Verificado» antes de publicar
+- [ ] Fusionar o retirar los 40 esquemas antiguos cuando su artículo nuevo equivalente esté escrito
