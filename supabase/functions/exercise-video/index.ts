@@ -263,7 +263,11 @@ Deno.serve(async (req) => {
           ? "Ya hay un vídeo generándose, espera unos segundos"
           : (r.status === 402 || body?.error?.code === "insufficient_quota")
             ? noCredit
-            : msg;
+            : r.status === 404
+              ? (openaiKey
+                ? "Vídeos no disponibles: tu cuenta de OpenAI no tiene acceso al modelo de vídeo (sora-2)"
+                : "Vídeos no disponibles ahora mismo en la IA de Lovable")
+              : msg;
         console.error(`video create failed [${r.status}]: ${msg}`);
         await svc.from("exercises").update({ media_error: message }).eq("id", exerciseId);
         return json({ error: message }, r.status);
