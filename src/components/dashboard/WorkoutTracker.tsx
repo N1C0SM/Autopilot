@@ -1419,7 +1419,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   }}
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
-                                  className={`${NUMBER_FIELD} ${isWarmup ? "text-muted-foreground" : ""}`}
+                                  className={`${NUMBER_FIELD} ${isWarmup || repsMissing ? "text-muted-foreground" : ""}`}
                                 />
                               </div>
 
