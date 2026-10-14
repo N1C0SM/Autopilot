@@ -36,13 +36,19 @@ export type Database = {
         Row: {
           author_name: string | null
           body_markdown: string
+          category: string | null
           cover_url: string | null
           created_at: string
+          evidence_level: string | null
           excerpt: string | null
           id: string
+          level: string | null
+          order_index: number | null
           published: boolean
           published_at: string | null
           reading_minutes: number | null
+          references: Json
+          review_status: string
           seo_description: string | null
           seo_title: string | null
           slug: string
@@ -52,13 +58,19 @@ export type Database = {
         Insert: {
           author_name?: string | null
           body_markdown?: string
+          category?: string | null
           cover_url?: string | null
           created_at?: string
+          evidence_level?: string | null
           excerpt?: string | null
           id?: string
+          level?: string | null
+          order_index?: number | null
           published?: boolean
           published_at?: string | null
           reading_minutes?: number | null
+          references?: Json
+          review_status?: string
           seo_description?: string | null
           seo_title?: string | null
           slug: string
@@ -68,13 +80,19 @@ export type Database = {
         Update: {
           author_name?: string | null
           body_markdown?: string
+          category?: string | null
           cover_url?: string | null
           created_at?: string
+          evidence_level?: string | null
           excerpt?: string | null
           id?: string
+          level?: string | null
+          order_index?: number | null
           published?: boolean
           published_at?: string | null
           reading_minutes?: number | null
+          references?: Json
+          review_status?: string
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
