@@ -19,12 +19,14 @@ import { hapticTap } from "@/lib/native";
 interface ListGroupProps extends Omit<React.HTMLAttributes<HTMLElement>, "title"> {
   header?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Dentro de una hoja o tarjeta (que ya son `bg-card`): el grupo sube un tono. */
+  inset?: boolean;
 }
 
-const ListGroup = ({ header, footer, className, children, ...props }: ListGroupProps) => (
+const ListGroup = ({ header, footer, inset, className, children, ...props }: ListGroupProps) => (
   <section className={className} {...props}>
     {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
-    <div className="overflow-hidden rounded-2xl bg-card">{children}</div>
+    <div className={cn("overflow-hidden rounded-2xl", inset ? "bg-secondary" : "bg-card")}>{children}</div>
     {footer ? <p className="px-4 pt-1.5 type-footnote text-muted-foreground">{footer}</p> : null}
   </section>
 );
@@ -34,6 +36,8 @@ interface ListRowProps {
   subtitle?: React.ReactNode;
   /** Icono inicial (20 px, en el tinte de la app salvo que traiga su color). */
   icon?: React.ReactNode;
+  /** Elemento inicial de tamaño libre (miniatura, avatar). Sustituye a `icon`. */
+  leading?: React.ReactNode;
   /** Valor actual, en gris a la derecha. */
   value?: React.ReactNode;
   /** Control a la derecha (Switch, botón pequeño). Sus clics no activan la fila. */
@@ -52,6 +56,7 @@ const ListRow = ({
   title,
   subtitle,
   icon,
+  leading,
   value,
   trailing,
   chevron,
@@ -72,7 +77,9 @@ const ListRow = ({
   );
   const body = (
     <>
-      {icon ? (
+      {leading ? (
+        <span className="flex shrink-0 items-center py-2">{leading}</span>
+      ) : icon ? (
         <span className="flex w-7 shrink-0 items-center justify-center text-primary [&_svg]:size-5">{icon}</span>
       ) : null}
       {/* El separador nace donde empieza el texto, no en el borde de la tarjeta. */}

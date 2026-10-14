@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 
 interface NavBarProps {
   title?: ReactNode;
+  /** Segunda línea bajo el título (12 pt, gris): "3 de 18 series". */
+  subtitle?: ReactNode;
   /** El título pequeño solo se ve cuando no hay título grande a la vista. */
   titleVisible?: boolean;
   /** Con contenido debajo: material translúcido y línea inferior. */
@@ -19,7 +21,7 @@ interface NavBarProps {
  * 17 pt, transparente arriba del todo y con material cuando el contenido pasa por debajo.
  */
 const NavBar = forwardRef<HTMLElement, NavBarProps>(
-  ({ title, titleVisible = true, solid = true, titleAsHeading = true, leading, trailing, className }, ref) => {
+  ({ title, subtitle, titleVisible = true, solid = true, titleAsHeading = true, leading, trailing, className }, ref) => {
     const Title = titleAsHeading ? "h1" : "div";
     return (
       <header
@@ -45,7 +47,14 @@ const NavBar = forwardRef<HTMLElement, NavBarProps>(
                 titleVisible ? "opacity-100" : "opacity-0",
               )}
             >
-              {title}
+              {subtitle ? (
+                <>
+                  <span className="block truncate">{title}</span>
+                  <span className="block truncate type-caption1 font-normal text-muted-foreground">{subtitle}</span>
+                </>
+              ) : (
+                title
+              )}
             </Title>
           ) : null}
           <div className="relative z-10 flex min-w-0 items-center gap-0.5">{trailing}</div>

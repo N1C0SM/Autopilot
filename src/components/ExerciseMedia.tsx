@@ -46,7 +46,7 @@ export const ExerciseThumb = ({
 
   return (
     <div
-      className={`relative ${box} shrink-0 overflow-hidden rounded-xl border border-border/60 ${
+      className={`relative ${box} shrink-0 overflow-hidden rounded-[10px] ${
         completed ? "bg-primary/15" : "bg-secondary"
       } ${className}`}
     >
