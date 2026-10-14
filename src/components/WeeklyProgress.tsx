@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Surface } from "@/components/ui/surface";
+import { hapticTap } from "@/lib/native";
 import type { DayPlan } from "@/types/training";
 import { toLocalDateString } from "@/lib/localDates";
 
@@ -153,7 +154,7 @@ const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
 
       if (!error) {
         setCompletedDays((prev) => new Set(prev).add(dayLabel));
-        toast.success(`¡${dayLabel} completado! 💪`);
+        toast.success(`${dayLabel} completado`);
       } else {
         toast.error(`No se pudo actualizar el progreso del ${dayLabel}.`);
       }
@@ -166,34 +167,41 @@ const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
   if (loading) return null;
 
   return (
-    <div className={compact ? "bg-card rounded-2xl p-3 border border-border card-shadow" : "bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow mb-5 sm:mb-8"}>
+    <Surface padding={compact ? "sm" : "md"} className={compact ? undefined : "mb-6"}>
       {loadError ? (
-        <div role="alert" className="py-3 text-center">
-          <p className="text-sm font-semibold">No se ha podido cargar tu semana</p>
-          <p className="mt-1 text-xs text-muted-foreground">Tus entrenamientos no se han modificado.</p>
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setReload((value) => value + 1)}>
-            <RefreshCw className="mr-2 h-3.5 w-3.5" /> Reintentar
+        <div role="alert" className="py-2">
+          <p className="type-headline">No se ha podido cargar tu semana</p>
+          <p className="mt-0.5 type-footnote text-muted-foreground">Tus entrenamientos no se han modificado.</p>
+          <Button
+            type="button"
+            variant="tinted"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              void hapticTap();
+              setReload((value) => value + 1);
+            }}
+          >
+            Reintentar
           </Button>
         </div>
       ) : <>
       {compact ? (
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <h2 className="font-bold font-display text-sm">Esta semana</h2>
-          <p className="text-xs tabular-nums text-muted-foreground">{completedCount}/{totalDays} sesiones{streak > 0 ? ` · ${streak} d racha` : ""}</p>
+        <div className="mb-3 flex items-baseline justify-between gap-2">
+          <h2 className="type-headline">Esta semana</h2>
+          <p className="type-footnote tabular-nums text-muted-foreground">{completedCount}/{totalDays} sesiones{streak > 0 ? ` · ${streak} d racha` : ""}</p>
         </div>
       ) : (
       <div className="mb-3">
-        <div>
-          <h2 className="font-bold font-display text-sm">Sesiones esta semana</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {completedCount} de {totalDays} sesiones previstas · la rutina marca tus días
-            {streak > 0 ? ` · ${streak} días de racha` : ""}
-          </p>
-        </div>
+        <h2 className="type-headline">Sesiones esta semana</h2>
+        <p className="mt-0.5 type-footnote tabular-nums text-muted-foreground">
+          {completedCount} de {totalDays} sesiones previstas · la rutina marca tus días
+          {streak > 0 ? ` · ${streak} días de racha` : ""}
+        </p>
       </div>
       )}
 
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {DAYS_ORDER.map((day, index) => {
           const hasPlan = planDays.includes(day);
           const canSelfReport = dayPlans.some((plan) => plan.day === day && plan.type === "actividad");
@@ -210,19 +218,22 @@ const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
           return (
             <button
               key={day}
-              onClick={() => canSelfReport && toggleDay(day)}
+              type="button"
+              onClick={() => {
+                if (!canSelfReport) return;
+                void hapticTap();
+                void toggleDay(day);
+              }}
               disabled={!canSelfReport}
               aria-pressed={isCompleted}
               aria-label={label}
-              className={`flex ${compact ? "h-8" : "h-10"} items-center justify-center rounded-xl text-xs font-semibold transition-all duration-200 ${
+              className={`flex h-11 items-center justify-center rounded-full type-footnote font-semibold transition-[background-color,opacity] duration-150 ease-ios-standard ${
+                compact ? "md:h-8" : "md:h-10"
+              } ${
                 isCompleted
                   ? "bg-primary text-primary-foreground"
-                  : hasPlan
-                    ? "bg-secondary text-muted-foreground"
-                    : "bg-secondary/50 text-muted-foreground/50"
-              } ${canSelfReport ? "cursor-pointer hover:brightness-110" : "cursor-default"} ${
-                isToday && !isCompleted ? "border border-dashed border-primary text-foreground" : "border border-transparent"
-              }`}
+                  : `${hasPlan ? "bg-secondary" : ""} ${isToday ? "text-primary" : hasPlan ? "text-muted-foreground" : "text-muted-foreground/60"}`
+              } ${canSelfReport ? "active:opacity-60" : "cursor-default"}`}
             >
               {DAYS_SHORT[index]}
             </button>
@@ -230,20 +241,17 @@ const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
         })}
       </div>
 
-      {/* Celebration */}
       {!compact && completedCount === totalDays && totalDays > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 text-center bg-primary/10 rounded-xl p-4 border border-primary/20"
-        >
-          <Trophy className="w-8 h-8 text-primary mx-auto mb-2" />
-          <p className="font-bold font-display text-primary">¡Semana completada! 🎉</p>
-          <p className="text-xs text-muted-foreground mt-1">Increíble trabajo, ¡sigue así!</p>
-        </motion.div>
+        <div className="mt-4 flex items-center gap-3 pt-4 sep-t">
+          <Trophy className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="type-headline">Semana completada</p>
+            <p className="type-footnote text-muted-foreground">Increíble trabajo, sigue así.</p>
+          </div>
+        </div>
       )}
       </>}
-    </div>
+    </Surface>
   );
 };
 

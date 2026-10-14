@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Dumbbell, LockKeyhole, MessageCircle, Moon, Sparkles, Activity, LineChart, Utensils, ChevronRight } from "lucide-react";
+import { Check, Dumbbell, LockKeyhole, Moon, Activity, LineChart, Utensils, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Surface } from "@/components/ui/surface";
 import { supabase } from "@/integrations/supabase/client";
 import type { DayPlan } from "@/types/training";
 import type { UserSection } from "@/components/UserSidebar";
@@ -36,6 +37,12 @@ interface Props {
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+// Tarjeta pulsable: se separa del fondo por color y se resalta al pulsar, como una fila.
+const CARD_CLASS =
+  "rounded-2xl bg-card p-4 text-left transition-[background-color,filter] duration-100 ease-ios-standard hover:brightness-110 active:bg-accent";
+const ICON_BOX_CLASS = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary";
+const CHEVRON_CLASS = "h-4 w-4 shrink-0 text-muted-foreground/60";
 
 interface ChatPreviewMessage {
   id: string;
@@ -87,6 +94,24 @@ const HomeOverview = ({
       : todayPlan?.type === "actividad"
         ? todayPlan.sport || "Actividad"
         : "Día de recuperación";
+  const sessionDetail = completedToday
+    ? "Tu registro ya está guardado"
+    : todayPlan?.type === "gimnasio"
+      ? `${exerciseCount} ${exerciseCount === 1 ? "ejercicio" : "ejercicios"}`
+      : todayPlan?.type === "actividad"
+        ? [todayPlan.intensity, todayPlan.duration].filter(Boolean).join(" · ")
+        : "";
+  const nutritionSummary = nutrition
+    ? meals.length
+      ? `${doneMealCount}/${meals.length} comidas`
+      : calorieTarget
+        ? `${calorieTarget.toLocaleString("es-ES")} kcal objetivo`
+        : "Ver plan de hoy"
+    : "Plan de nutrición";
+  const nutritionNote = macroError ? "Objetivos por revisar" : nutrition ? "Ver plan de hoy" : "Incluido en Plus";
+  const canStart = !completedToday && Boolean(todayPlan);
+  const sessionAction = completedToday ? "Ver progreso" : todayPlan ? "Empezar" : "Ver rutina semanal";
+  const SessionIcon = completedToday ? Check : todayPlan?.type === "actividad" ? Activity : todayPlan ? Dumbbell : Moon;
 
   useEffect(() => {
     const date = new Date();
@@ -143,19 +168,19 @@ const HomeOverview = ({
   }, [userId, coaching]);
 
   return (
-    <div className="mx-auto w-full max-w-none space-y-5 sm:space-y-6 lg:max-w-3xl">
+    <div className="mx-auto w-full max-w-none space-y-6 lg:max-w-3xl">
       {planStatus === "plan_pending" ? (
-        <div className="rounded-2xl border border-border bg-card px-4 py-3 text-sm">
-          <p className="font-semibold">Tu entrenador está preparando tu plan</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Te avisaremos cuando esté listo.</p>
-        </div>
+        <Surface>
+          <p className="type-headline">Tu entrenador está preparando tu plan</p>
+          <p className="mt-0.5 type-footnote text-muted-foreground">Te avisaremos cuando esté listo.</p>
+        </Surface>
       ) : (
         <>
-          <div className="px-1">
-            <p className="text-xs font-semibold capitalize text-primary">
+          <div>
+            <p className="type-group-header font-semibold">
               {greetingDate}
             </p>
-            <h2 className="mt-1.5 font-display text-2xl sm:text-3xl font-bold leading-tight tracking-tight">
+            <h2 className="mt-0.5 type-large-title">
               {firstName ? `Hola, ${firstName}.` : "Hola."}
               <span className="block text-muted-foreground">
                 {completedToday
@@ -169,88 +194,78 @@ const HomeOverview = ({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              void hapticTap();
-              if (completedToday) onNavigate("progress");
-              else if (todayPlan) {
-                if (onStartWorkout) onStartWorkout();
-                else onNavigate("training");
-              } else onNavigate("training");
-            }}
-            className="group flex min-h-[5rem] w-full items-center gap-3 rounded-2xl border border-primary/40 bg-primary p-5 text-left text-primary-foreground transition-transform duration-100 ease-out hover:brightness-105 active:scale-[0.98]"
-            aria-label={completedToday ? "Ver progreso de la sesión" : todayPlan ? `Empezar ${sessionTitle}` : "Ver rutina semanal"}
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center">
-                {completedToday ? <Check className="h-5 w-5" /> : todayPlan?.type === "actividad" ? <Activity className="h-5 w-5" /> : todayPlan ? <Dumbbell className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block line-clamp-2 text-base font-bold leading-tight">{sessionTitle}</span>
-              <span className="block truncate text-sm text-primary-foreground/85">
-                  {completedToday
-                    ? "Tu registro ya está guardado"
-                    : todayPlan?.type === "gimnasio"
-                      ? `${exerciseCount} ${exerciseCount === 1 ? "ejercicio" : "ejercicios"}`
-                      : todayPlan?.type === "actividad"
-                        ? [todayPlan.intensity, todayPlan.duration].filter(Boolean).join(" · ")
-                        : "Ver rutina semanal"}
-              </span>
-            </span>
-            <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
-          </button>
-
-          <div className="flex items-stretch gap-4">
+          <div className="space-y-3">
             <button
               type="button"
-              onClick={() => { void hapticTap(); onNavigate("nutrition"); }}
-              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-transform duration-100 ease-out hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.98]"
+              onClick={() => {
+                void hapticTap();
+                if (completedToday) onNavigate("progress");
+                else if (todayPlan) {
+                  if (onStartWorkout) onStartWorkout();
+                  else onNavigate("training");
+                } else onNavigate("training");
+              }}
+              className={`${CARD_CLASS} block w-full sm:flex sm:items-center sm:gap-4`}
+              aria-label={completedToday ? "Ver progreso de la sesión" : todayPlan ? `Empezar ${sessionTitle}` : "Ver rutina semanal"}
             >
-              <span className="flex min-w-0 items-center gap-3">
-                {nutrition && meals.length > 0 ? (
-                  <span className="relative h-11 w-11 shrink-0">
-                    <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90">
-                      <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-border" strokeWidth="3" />
-                      <circle
-                        cx="18"
-                        cy="18"
-                        r="15.5"
-                        fill="none"
-                        className="stroke-primary"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeDasharray="97.4"
-                        strokeDashoffset={97.4 * (1 - mealProgress)}
-                      />
-                    </svg>
-                    <Utensils className="absolute inset-0 m-auto h-4 w-4 text-primary" />
-                  </span>
-                ) : (
-                  // Misma forma que la tarjeta de al lado: icono en caja, sin donut vacío.
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                    {nutrition
-                      ? <Utensils className="h-5 w-5 text-primary" />
-                      : <LockKeyhole className="h-5 w-5 text-primary" />}
-                  </span>
-                )}
-                <span className="min-w-0">
-                  <span className="flex items-center gap-1 text-base font-semibold leading-tight">
-                    Nutrición
-                  </span>
-                  <span className="mt-1 block text-xs leading-tight text-muted-foreground">
-                    {nutrition
-                      ? meals.length
-                        ? `${doneMealCount}/${meals.length} comidas`
-                        : calorieTarget
-                          ? `${calorieTarget.toLocaleString("es-ES")} kcal objetivo`
-                          : "Ver plan de hoy"
-                      : "Plan de nutrición"}
-                  </span>
+              <span className="flex min-w-0 flex-1 items-center gap-3">
+                <span className={ICON_BOX_CLASS}>
+                  <SessionIcon className="h-[22px] w-[22px]" strokeWidth={2} aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="line-clamp-2 type-title3">{sessionTitle}</span>
+                  {sessionDetail && (
+                    <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{sessionDetail}</span>
+                  )}
                 </span>
               </span>
-              {nutrition && macros && !macroError ? (
-                <span className="flex w-full items-center justify-between gap-1 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-                  <span className="flex flex-1 justify-between gap-1">
+              <span
+                className={`mt-4 flex h-[50px] w-full shrink-0 items-center justify-center rounded-[14px] px-5 type-headline sm:mt-0 sm:h-11 sm:w-auto sm:min-w-[9rem] sm:rounded-xl ${
+                  canStart ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary"
+                }`}
+              >
+                {sessionAction}
+              </span>
+            </button>
+
+            <div className="flex items-stretch gap-3">
+              <button
+                type="button"
+                onClick={() => { void hapticTap(); onNavigate("nutrition"); }}
+                className={`${CARD_CLASS} flex min-w-0 flex-1 flex-col`}
+              >
+                <span className="flex w-full items-start justify-between">
+                  {nutrition && meals.length > 0 ? (
+                    <span className="relative h-11 w-11 shrink-0">
+                      <svg viewBox="0 0 36 36" className="h-11 w-11 -rotate-90" aria-hidden="true">
+                        <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-secondary" strokeWidth="3" />
+                        <circle
+                          cx="18"
+                          cy="18"
+                          r="15.5"
+                          fill="none"
+                          className="stroke-primary"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeDasharray="97.4"
+                          strokeDashoffset={97.4 * (1 - mealProgress)}
+                        />
+                      </svg>
+                      <Utensils className="absolute inset-0 m-auto h-[18px] w-[18px] text-primary" strokeWidth={2} aria-hidden="true" />
+                    </span>
+                  ) : (
+                    <span className={ICON_BOX_CLASS}>
+                      {nutrition
+                        ? <Utensils className="h-[22px] w-[22px]" strokeWidth={2} aria-hidden="true" />
+                        : <LockKeyhole className="h-[22px] w-[22px]" strokeWidth={2} aria-hidden="true" />}
+                    </span>
+                  )}
+                  <ChevronRight className={CHEVRON_CLASS} strokeWidth={2.5} aria-hidden="true" />
+                </span>
+                <span className="mt-3 block type-headline">Nutrición</span>
+                <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{nutritionSummary}</span>
+                {nutrition && macros && !macroError ? (
+                  <span className="mt-auto flex w-full flex-wrap gap-x-2 gap-y-0.5 pt-3 type-caption1 tabular-nums text-muted-foreground">
                     {[
                       { label: "P", value: macros.protein },
                       { label: "C", value: macros.carbs },
@@ -259,42 +274,41 @@ const HomeOverview = ({
                       <span key={macro.label} className="whitespace-nowrap"><span className="font-semibold text-foreground">{macro.label}</span> {macro.value}g</span>
                     ))}
                   </span>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                </span>
-              ) : (
-                <span className="flex w-full items-center justify-between border-t border-border/70 pt-3 text-xs">
-                  <span className="text-muted-foreground">{macroError ? "Objetivos por revisar" : nutrition ? "Ver plan de hoy" : "Incluido en Plus"}</span>
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                </span>
-              )}
-            </button>
+                ) : nutritionNote !== nutritionSummary ? (
+                  <span className="mt-auto block pt-3 type-caption1 text-muted-foreground">{nutritionNote}</span>
+                ) : null}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => { void hapticTap(); onNavigate("progress"); }}
-              className="flex min-h-24 min-w-0 flex-1 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-transform duration-100 ease-out hover:border-primary/30 hover:bg-secondary/40 active:scale-[0.98]"
-            >
-              <span className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <LineChart className="h-5 w-5 text-primary" />
+              <button
+                type="button"
+                onClick={() => { void hapticTap(); onNavigate("progress"); }}
+                className={`${CARD_CLASS} flex min-w-0 flex-1 flex-col`}
+              >
+                <span className="flex w-full items-start justify-between">
+                  <span className={ICON_BOX_CLASS}>
+                    <LineChart className="h-[22px] w-[22px]" strokeWidth={2} aria-hidden="true" />
+                  </span>
+                  <ChevronRight className={CHEVRON_CLASS} strokeWidth={2.5} aria-hidden="true" />
                 </span>
-                <span className="text-base font-semibold">Progreso</span>
-              </span>
-              <span className="block truncate text-sm text-muted-foreground">
+                <span className="mt-3 block type-headline">Progreso</span>
+                <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">
                   {sessionCount} de {scheduledDays.length} {scheduledDays.length === 1 ? "sesión" : "sesiones"}
-              </span>
-              <span className="block h-2 overflow-hidden rounded-full bg-secondary">
-                <span
-                  className="block h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
-                />
-              </span>
-            </button>
+                </span>
+                <span className="mt-auto block w-full pt-3">
+                  <span className="block h-1 overflow-hidden rounded-full bg-secondary">
+                    <span
+                      className="block h-full rounded-full bg-primary transition-[width] duration-300 ease-ios"
+                      style={{ width: `${scheduledDays.length ? Math.min(sessionCount / scheduledDays.length * 100, 100) : 0}%` }}
+                    />
+                  </span>
+                </span>
+              </button>
+            </div>
           </div>
 
           {!scheduledDays.length && (
-            <Button type="button" variant="outline" className="w-full" onClick={() => onNavigate("training")}>
-              <Dumbbell className="mr-2 h-4 w-4" /> Ver mi plan de entrenamiento
+            <Button type="button" variant="tinted" className="w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>
+              Ver mi plan de entrenamiento
             </Button>
           )}
         </>

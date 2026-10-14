@@ -8,11 +8,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Apple, Clock, Loader2, Crown, Dumbbell, UtensilsCrossed, MessageCircle, Lock, Video, Sparkles, BookOpen } from "lucide-react";
-import { Download } from "lucide-react";
+import { Clock, Lock } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Surface } from "@/components/ui/surface";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { hapticSelection, hapticTap } from "@/lib/native";
 import NotificationsBell from "@/components/NotificationsBell";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
 import type { DayPlan } from "@/types/training";
 import WeeklyProgress from "@/components/WeeklyProgress";
 import HomeOverview from "@/components/dashboard/HomeOverview";
@@ -42,8 +46,13 @@ const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/pages/Recursos"));
 const Scan = lazy(() => import("@/pages/Scan"));
 
+// El panel de fuerza llena justo lo que queda en el móvil: pantalla menos la barra, el
+// título grande (53 px), el control segmentado con sus márgenes (60 px) y la barra de pestañas.
+const STRENGTH_PANEL_HEIGHT =
+  "h-[calc(100dvh-var(--nav-bar-height)-var(--safe-top,0px)-var(--mobile-nav-content-padding,6rem)-113px)]";
+
 const SectionFallback = () => (
-  <div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />
+  <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
 );
 
 /** Plan que el usuario eligió en la web antes de registrarse (si lo hay). */
@@ -366,10 +375,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        </motion.div>
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -414,13 +421,37 @@ const Dashboard = () => {
     resources: "Biblioteca, guías y recomendaciones",
   };
 
+  // Títulos de la barra en el móvil: cortos, los mismos que en la barra de pestañas.
+  const MOBILE_TITLES: Record<MobileTab, string> = {
+    home: "Hoy",
+    training: "Plan",
+    nutrition: "Nutrición",
+    chat: "Chat",
+    progress: "Progreso",
+    settings: "Ajustes",
+    resources: "Recursos",
+  };
+  // En Hoy el título grande es el saludo de HomeOverview.
+  const LARGE_TITLE_TABS: MobileTab[] = ["training", "nutrition", "chat", "progress"];
+  // En el móvil la conversación ocupa justo el alto que queda bajo el título, con el campo de texto a la vista.
+  const chatFills = isMobile && consumerPlan === "coach" && coachAssigned;
+  // Ayuda de la sección: en escritorio va junto al título de la barra.
+  const sectionHelp = hasPlan && section === "nutrition" && nutrition
+    ? macros
+      ? "Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante."
+      : "Las comidas son orientativas hasta que tu entrenador calcule objetivos con tu peso actual."
+    : hasPlan && section === "progress" && user
+      ? "Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio."
+      : null;
+
   const renderContent = (section: MobileTab) => (
     <>
       {!coaching && !hasPlan && (section === "home" || section === "training") && (
-        <div className="rounded-xl border border-border p-6">
-          <h2 className="font-display text-xl font-bold">Prepara tu rutina inicial gratis</h2>
-          <p className="my-3 text-sm text-muted-foreground">No necesitas contratar un entrenador para empezar.</p>
-          <Button disabled={preparingRoutine} onClick={async () => {
+        <Surface>
+          <h2 className="type-title3">Prepara tu rutina inicial gratis</h2>
+          <p className="mt-1 type-subhead text-muted-foreground">No necesitas contratar un entrenador para empezar.</p>
+          <Button size="lg" className="mt-4 w-full md:w-auto" disabled={preparingRoutine} onClick={async () => {
+            void hapticTap();
             setPreparingRoutine(true);
             try {
               const { data, error } = await supabase.functions.invoke("generate-plan", { body: { user_id: user?.id } });
@@ -429,7 +460,7 @@ const Dashboard = () => {
             } catch { toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo."); }
             finally { setPreparingRoutine(false); }
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
-        </div>
+        </Surface>
       )}
       {!coaching && section === "nutrition" && (
         // Plus preseleccionado siempre: es el plan que queremos vender primero.
@@ -446,16 +477,17 @@ const Dashboard = () => {
       )}
 
       {coaching && planStatus === "plan_pending" && (section === "home" || section === "training") && (
-        <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Clock className="w-8 h-8 text-primary" /></div>
-          <h2 className="text-xl font-bold font-display mb-2">Tu plan se está creando 🔥</h2>
-          <p className="text-muted-foreground mb-2">No tienes que hacer nada: tu entrenador está preparando tu entrenamiento{nutrition ? " y tu nutrición" : ""} con los datos que nos has dado.</p>
-          <p className="text-sm text-primary font-medium">Recibirás una notificación en menos de 48h.</p>
-        </div>
+        <EmptyState
+          className="flex-1"
+          icon={Clock}
+          title="Tu plan se está creando"
+          description={`No tienes que hacer nada: tu entrenador está preparando tu entrenamiento${nutrition ? " y tu nutrición" : ""} con los datos que nos has dado.`}
+          action={<p className="type-footnote text-muted-foreground">Recibirás una notificación en menos de 48h.</p>}
+        />
       )}
 
       {hasPlan && section === "home" && (
-        <div className="w-full space-y-3">
+        <div className="w-full space-y-6">
           {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           <HomeOverview
             userId={user?.id}
@@ -486,7 +518,7 @@ const Dashboard = () => {
           {!coaching && (
             <div className="mx-auto w-full max-w-3xl space-y-2">
               {firstWeek && (
-                <p className="text-center text-xs text-muted-foreground">
+                <p className="px-4 type-footnote tabular-nums text-muted-foreground">
                   Primera semana · día {firstWeek.dayNumber} de 7 · {firstWeek.completed} de {firstWeek.target} entrenos
                 </p>
               )}
@@ -501,71 +533,65 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "training" && user && (
-        <div className="w-full min-w-0">
+        <Tabs
+          value={trainingView}
+          onValueChange={(view) => {
+            void hapticSelection();
+            setTrainingView(view as "tracker" | "plan");
+          }}
+          className="w-full min-w-0"
+        >
           {/* El plan de la semana estaba a 4 toques (Progreso). Ahora es un toque,
               y solo se ofrece cuando no hay una sesión en marcha. */}
           {!workoutMode && !autoStartWorkout && (
-            <div role="tablist" aria-label="Entrenar o ver el plan" className="mx-auto mb-3 flex w-full max-w-md gap-1 rounded-full bg-secondary p-1">
-              {([["tracker", "Entrenar"], ["plan", "Rutina semanal"]] as const).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={trainingView === key}
-                  onClick={() => setTrainingView(key)}
-                  className={`h-10 flex-1 rounded-full text-sm font-medium transition-colors ${
-                    trainingView === key ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            <TabsList aria-label="Entrenar o ver el plan" className="mx-auto mb-4 flex w-full max-w-md">
+              <TabsTrigger value="tracker">Entrenar</TabsTrigger>
+              <TabsTrigger value="plan">Rutina semanal</TabsTrigger>
+            </TabsList>
           )}
-          <Suspense fallback={<SectionFallback />}>
-            {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-              <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
-                setTrainingDay(day);
-                setTrainingView("tracker");
-              }} />
-            ) : (
-              <WorkoutTracker
-                userId={user.id}
-                dayPlans={dayPlans}
-                initialDay={trainingDay}
-                autoStart={autoStartWorkout}
-                onAutoStartConsumed={() => setAutoStartWorkout(false)}
-                onSessionModeChange={setWorkoutMode}
-                onCancel={() => setWorkoutMode(false)}
-                onExit={() => {
-                  setWorkoutMode(false);
-                  setSection("home");
-                  void fetchData();
-                }}
-              />
-            )}
-          </Suspense>
-        </div>
+          {/* Un solo panel: lo que se ve depende también de si hay una sesión en marcha. */}
+          <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
+            <Suspense fallback={<SectionFallback />}>
+              {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
+                <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
+                  setTrainingDay(day);
+                  setTrainingView("tracker");
+                }} />
+              ) : (
+                <WorkoutTracker
+                  userId={user.id}
+                  dayPlans={dayPlans}
+                  initialDay={trainingDay}
+                  autoStart={autoStartWorkout}
+                  onAutoStartConsumed={() => setAutoStartWorkout(false)}
+                  onSessionModeChange={setWorkoutMode}
+                  onCancel={() => setWorkoutMode(false)}
+                  onExit={() => {
+                    setWorkoutMode(false);
+                    setSection("home");
+                    void fetchData();
+                  }}
+                />
+              )}
+            </Suspense>
+          </TabsContent>
+        </Tabs>
       )}
 
       {hasPlan && section === "nutrition" && isTrainingOnly && (
-        <div className="bg-card rounded-2xl p-6 md:p-10 border border-border card-shadow text-center max-w-2xl mx-auto md:w-full md:max-w-none">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6"><Lock className="w-8 h-8 text-primary" /></div>
-          <h2 className="text-xl font-bold font-display mb-2">Nutrición no incluida en tu plan</h2>
-          <p className="text-muted-foreground mb-6 text-sm md:text-base">Tu plan actual es <span className="text-foreground font-semibold">Entrenamiento</span>. Cambia a <span className="text-foreground font-semibold">Completo</span> para desbloquear tu plan de nutrición personalizado.</p>
-          <Button variant="hero" size="lg" onClick={handleUpgradeToFull} className="w-full md:w-auto">Elegir {plans.coachName} — {euro(plans.coachPrice)}/mes</Button>
+        <div className="flex w-full flex-1 flex-col">
+          <EmptyState
+            className="flex-1"
+            icon={Lock}
+            title="Nutrición no incluida en tu plan"
+            description="Tu plan actual es Entrenamiento. Cambia a Completo para desbloquear tu plan de nutrición personalizado."
+          />
+          <Button size="lg" onClick={() => { void hapticTap(); void handleUpgradeToFull(); }} className="w-full md:w-auto md:self-center">Elegir {plans.coachName} — {euro(plans.coachPrice)}/mes</Button>
         </div>
       )}
 
       {hasPlan && section === "nutrition" && nutrition && (
-        <div className="w-full space-y-6">
-          {!isMobile && <div className="flex items-center gap-2 mb-2">
-            <Apple className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-bold font-display">Plan de Nutrición</h2>
-            <InfoHint text={macros
-              ? "Estos son tus objetivos diarios. No hace falta clavarlos al gramo: acércate y sé constante."
-              : "Las comidas son orientativas hasta que tu entrenador calcule objetivos con tu peso actual."} />
-          </div>}
+        <div className="w-full">
           <Suspense fallback={<SectionFallback />}>
             <MealsList meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
           </Suspense>
@@ -577,13 +603,14 @@ const Dashboard = () => {
       )}
       {consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
       {consumerPlan === "coach" && coachAssigned && section === "chat" && (
-        <div className="w-full">
+        <div className={chatFills ? "flex min-h-0 w-full flex-1 flex-col" : "w-full"}>
           {user && (
             <Suspense fallback={<SectionFallback />}>
               <Chat
                 conversationUserId={user.id}
                 onRequestVideoCall={requestVideoCall}
                 callLabel={paymentStatus === "unpaid" ? "Pedir llamada gratis" : "Videollamada"}
+                layout={chatFills ? "fill" : "panel"}
               />
             </Suspense>
           )}
@@ -591,55 +618,40 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "progress" && user && (
-        <div className="w-full space-y-4">
-          {!isMobile && (
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-bold font-display">Tu progreso</h2>
-              <InfoHint text="Sube una foto cada 2 semanas, misma luz y misma hora. Es la forma más fiable de ver el cambio." />
-            </div>
-          )}
-          <div role="tablist" className="sticky top-0 z-10 grid grid-cols-4 gap-1 rounded-full border border-border/60 bg-card/90 p-1 backdrop-blur-xl">
-            {([
-              ["evolution", "Fuerza"],
-              ["photos", "Físico"],
-              ["records", "Récords"],
-            ] as const).map(([k, label]) => (
-              <button
-                key={k}
-                role="tab"
-                aria-selected={progressTab === k}
-                onClick={() => setProgressTab(k)}
-                className={`relative h-9 rounded-full text-sm font-medium transition-colors duration-150 ${progressTab === k ? "text-primary-foreground" : "text-muted-foreground"}`}
-              >
-                {progressTab === k && (
-                  <motion.span layoutId="progress-pill" className="absolute inset-0 rounded-full bg-primary shadow-sm" transition={{ type: "spring", stiffness: 600, damping: 40 }} />
-                )}
-                <span className="relative">{label}</span>
-              </button>
-            ))}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={progressTab === "scan"}
-              onClick={() => setProgressTab("scan")}
-              className={`relative flex h-9 items-center justify-center gap-1 rounded-full text-sm font-medium transition-colors duration-150 ${progressTab === "scan" ? "text-primary-foreground" : "text-primary"}`}
-            >
-              {progressTab === "scan" && (
-                <motion.span layoutId="progress-pill" className="absolute inset-0 rounded-full bg-primary shadow-sm" transition={{ type: "spring", stiffness: 600, damping: 40 }} />
-              )}
-              <span className="relative flex items-center gap-1"><Sparkles className="h-3.5 w-3.5" /> Scan</span>
-            </button>
-          </div>
+        <Tabs
+          value={progressTab}
+          onValueChange={(tab) => {
+            void hapticSelection();
+            setProgressTab(tab as typeof progressTab);
+          }}
+          className="w-full min-w-0 space-y-4"
+        >
+          <TabsList aria-label="Tu progreso" className="flex w-full md:max-w-md">
+            <TabsTrigger value="evolution">Fuerza</TabsTrigger>
+            <TabsTrigger value="photos">Físico</TabsTrigger>
+            <TabsTrigger value="records">Récords</TabsTrigger>
+            <TabsTrigger value="scan">Scan</TabsTrigger>
+          </TabsList>
           <Suspense fallback={<SectionFallback />}>
-            <div className={progressTab === "evolution" ? "flex h-[calc(100dvh-18.5rem)] min-h-[420px] flex-col overflow-hidden md:h-[calc(100dvh-12rem)]" : "hidden"}>
+            <TabsContent
+              value="evolution"
+              forceMount
+              tabIndex={-1}
+              className={`mt-0 flex min-h-[420px] flex-col overflow-hidden data-[state=inactive]:hidden md:h-[calc(100dvh-12rem)] ${STRENGTH_PANEL_HEIGHT}`}
+            >
               <WorkoutProgress userId={user.id} compact />
-            </div>
-            <div className={progressTab === "photos" ? "" : "hidden"}><ProgressPhotos userId={user.id} onGoScan={() => setProgressTab("scan")} /></div>
-            <div className={progressTab === "records" ? "" : "hidden"}><PRsList userId={user.id} /></div>
-            {progressTab === "scan" && <Scan inline />}
+            </TabsContent>
+            <TabsContent value="photos" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
+              <ProgressPhotos userId={user.id} onGoScan={() => setProgressTab("scan")} />
+            </TabsContent>
+            <TabsContent value="records" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
+              <PRsList userId={user.id} />
+            </TabsContent>
+            <TabsContent value="scan" tabIndex={-1} className="mt-0">
+              <Scan inline />
+            </TabsContent>
           </Suspense>
-        </div>
+        </Tabs>
       )}
 
       {section === "settings" && (
@@ -655,7 +667,12 @@ const Dashboard = () => {
   const pageContent = (
     <>
       {visited.map((s) => (
-        <div key={s} className={s === section ? "flex min-w-0 flex-1 flex-col justify-start pt-2" : "hidden"}>
+        <div
+          key={s}
+          className={s === section
+            ? `flex min-w-0 flex-1 flex-col justify-start pt-2${s === "chat" && chatFills ? " min-h-0" : ""}`
+            : "hidden"}
+        >
           {renderContent(s)}
         </div>
       ))}
@@ -673,7 +690,8 @@ const Dashboard = () => {
         noindex
       />
       <MobileAppShell
-        title={SECTION_LABELS[section]}
+        title={MOBILE_TITLES[section]}
+        largeTitle={LARGE_TITLE_TABS.includes(section)}
         active={section}
         onChange={setSection}
         profileName={profileName}
@@ -713,13 +731,16 @@ const Dashboard = () => {
 
         <div className={`flex min-w-0 flex-1 flex-col ${workoutMode ? "h-dvh overflow-hidden" : ""}`}>
           {/* Top bar */}
-          <header className={`app-chrome h-14 border-b sticky top-0 z-50 flex items-center px-4 gap-3 ${workoutMode ? "hidden" : ""}`}>
+          <header className={`app-chrome sticky top-0 z-50 flex h-14 items-center gap-3 border-b-[0.5px] px-4 ${workoutMode ? "hidden" : ""}`}>
             <SidebarTrigger />
-            <div className="flex-1 min-w-0">
-              <h1 className="font-display font-bold text-sm uppercase tracking-wider text-foreground truncate">
-                {SECTION_LABELS[section]}
-              </h1>
-              <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <h1 className="truncate type-headline">
+                  {SECTION_LABELS[section]}
+                </h1>
+                {sectionHelp && <InfoHint text={sectionHelp} />}
+              </div>
+              <p className="hidden truncate type-caption1 text-muted-foreground sm:block">
                 {SECTION_HINTS[section]}
               </p>
             </div>

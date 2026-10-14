@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeOverview from "./HomeOverview";
 
@@ -23,13 +23,22 @@ describe("dashboard home overview", () => {
     );
 
     expect(screen.getByText("Hola, Nicolás.")).toBeVisible();
-    expect(screen.getByText("Hoy toca Pull B · Espalda y bíceps.")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" }));
+    expect(screen.getByText("A entrenar.")).toBeVisible();
+    const greeting = screen.getByRole("heading", { level: 2 });
+    expect(greeting).toHaveTextContent("Hola, Nicolás.");
+    expect(greeting).toHaveTextContent("A entrenar.");
+    // El saludo es corto: la sesión se nombra solo en su tarjeta.
+    expect(screen.queryByText(/Hoy toca/)).not.toBeInTheDocument();
+    const startButton = screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" });
+    expect(within(startButton).getByText("Pull B · Espalda y bíceps")).toBeVisible();
+    expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
+    expect(within(startButton).getByText("Empezar")).toBeVisible();
+    fireEvent.click(startButton);
     expect(onNavigate).toHaveBeenCalledWith("training");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
-  it("matches the demo's weekly and nutrition cards while keeping paid nutrition reachable", () => {
+  it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
     const onNavigate = vi.fn();
     render(
       <HomeOverview
@@ -45,18 +54,24 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("Progreso semanal")).toBeVisible();
+    expect(screen.getByText("Progreso")).toBeVisible();
     expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
     expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    expect(nutritionCard).toHaveClass("min-h-24", "p-4", "flex-1", "flex-col");
-    expect(nutritionCard.parentElement).toHaveClass("flex", "items-stretch");
-    expect(screen.getByRole("button", { name: /Progreso semanal/ })).toHaveClass("min-h-24", "p-4", "flex-1", "flex-col");
+    const progressCard = screen.getByRole("button", { name: /Progreso/ });
+    expect(nutritionCard).toBeVisible();
+    expect(progressCard).toBeVisible();
+    // Las dos tarjetas secundarias van juntas, después de la acción principal.
+    expect(nutritionCard.parentElement).toBe(progressCard.parentElement);
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
-    expect(startButton).toHaveClass("bg-primary", "text-primary-foreground");
+    expect(within(startButton).getByText("Empezar")).toBeVisible();
+    expect(screen.getAllByRole("button")[0]).toBe(startButton);
     fireEvent.click(nutritionCard);
-    expect(onNavigate).toHaveBeenCalledWith("nutrition");
+    expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
+    fireEvent.click(progressCard);
+    expect(onNavigate).toHaveBeenLastCalledWith("progress");
+    expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
   it("opens the routine week on a rest Sunday", () => {
