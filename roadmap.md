@@ -46,7 +46,7 @@
 
 ## Academia: 60 artículos (borradores, revisión antes de publicar)
 - [x] Lote 1 (Fundamentos 1-5): texto completo, portada, alt, SEO, relacionados, fuentes — en borrador
-- [ ] Lote 2: Sobrecarga progresiva (6-10)
+- [x] Lote 2: Sobrecarga progresiva (6-10) — en borrador
 - [ ] Lote 3: Hipertrofia (11-15)
 - [ ] Lote 4: Biomecánica (16-20)
 - [ ] Lote 5: Sistema nervioso y fuerza (21-25)
