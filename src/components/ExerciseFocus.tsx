@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Dumbbell, TrendingUp } from "lucide-react";
 import ExerciseMedia from "@/components/ExerciseMedia";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { buildExerciseHistory, type WorkoutLogRecord } from "@/lib/workoutMetrics";
@@ -105,110 +107,106 @@ export const ExerciseFocus = ({
 
   const lastSets = logs[0] ? asSets((logs[0] as WorkoutLogRecord).sets_completed).filter((s) => s.done) : [];
 
+  const stats = [
+    { label: "Series", value: exercise?.series },
+    { label: "Reps", value: exercise?.reps },
+    { label: "Descanso", value: exercise?.rest },
+  ];
+
+  const suggestionTitle = !suggestion
+    ? ""
+    : suggestion.label === "Subir"
+      ? `Sube a ${suggestion.weight} kg`
+      : suggestion.label === "Añadir rep"
+        ? "Suma una repetición por serie"
+        : suggestion.label === "Mantener"
+          ? suggestion.weight ? `Mantén ${suggestion.weight} kg` : "Mantén el objetivo"
+          : suggestion.weight ? `Repite ${suggestion.weight} kg` : "Repite el ejercicio";
+
   return (
     <Dialog open={!!exercise} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-0 overflow-y-auto rounded-none border-0 bg-background p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[92vh] sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border">
-        <DialogTitle className="sr-only">{name}</DialogTitle>
+      <DialogContent className="gap-0">
+        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} className="mt-2 rounded-[14px]" />
 
-        <div className="w-full overflow-hidden bg-black">
-          <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} />
+        <div className="mt-5 pr-8">
+          <DialogTitle className="type-title2 sm:type-title2">{name}</DialogTitle>
+          {(exercise?.muscleGroup || exercise?.exerciseType) && (
+            <p className="mt-1 type-subhead text-muted-foreground">
+              {[exercise?.muscleGroup, exercise?.exerciseType].filter(Boolean).join(" · ")}
+            </p>
+          )}
         </div>
 
-        <div className="space-y-5 px-5 pb-12 pt-5">
-          <div>
-            <h2 className="font-display text-2xl font-bold leading-tight">{name}</h2>
-            {(exercise?.muscleGroup || exercise?.exerciseType) && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                {[exercise?.muscleGroup, exercise?.exerciseType].filter(Boolean).join(" · ")}
-              </p>
-            )}
-          </div>
-
-          {(exercise?.series || exercise?.reps || exercise?.rest) && (
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Series", value: exercise?.series ?? "—" },
-                { label: "Reps", value: exercise?.reps ?? "—" },
-                { label: "Descanso", value: exercise?.rest ?? "—" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl border border-border bg-card px-3 py-2.5 text-center">
-                  <p className="text-xs text-muted-foreground">{item.label}</p>
-                  <p className="font-display text-lg font-bold tabular-nums">{item.value}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {suggestion && (
-            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-primary">
-                <TrendingUp className="h-4 w-4" />
-                <p className="text-xs font-semibold uppercase tracking-wider">Progresión</p>
+        {(exercise?.series || exercise?.reps || exercise?.rest) && (
+          <dl className="mt-5 grid grid-cols-3">
+            {stats.map((item, i) => (
+              <div key={item.label} className={`px-3 first:pl-0 ${i > 0 ? "sep-l" : ""}`}>
+                <dt className="type-footnote text-muted-foreground">{item.label}</dt>
+                <dd className="mt-0.5 font-rounded type-title2 tabular-nums">{item.value ?? "—"}</dd>
               </div>
-              <p className="mt-2 font-display text-lg font-bold">
-                {suggestion.label === "Subir"
-                  ? `Sube a ${suggestion.weight} kg`
-                  : suggestion.label === "Añadir rep"
-                    ? "Suma una repetición por serie"
-                    : suggestion.label === "Mantener"
-                      ? suggestion.weight ? `Mantén ${suggestion.weight} kg` : "Mantén el objetivo"
-                      : suggestion.weight ? `Repite ${suggestion.weight} kg` : "Repite el ejercicio"}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">{suggestion.reason}</p>
-            </div>
-          )}
+            ))}
+          </dl>
+        )}
 
-          {best1Rm > 0 && (
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
-              <Dumbbell className="h-4 w-4 shrink-0 text-primary" />
-              <p className="text-sm">
-                Tu mejor 1RM estimado en este ejercicio:{" "}
-                <span className="font-semibold tabular-nums">{best1Rm.toFixed(1)} kg</span>
-              </p>
-            </div>
-          )}
-
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
-              <p className="text-xs font-semibold uppercase tracking-wider">Tus últimas sesiones</p>
-            </div>
-
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Cargando…</p>
-            ) : history.length === 0 ? (
-              <p className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-                Aún no has registrado este ejercicio. La primera vez que lo hagas aparecerá aquí tu progreso.
-              </p>
-            ) : (
-              <ul className="space-y-1.5">
-                {/* Las más recientes primero: si hay 20 sesiones, se ven las últimas */}
-                {history.slice(-6).reverse().map((entry) => (
-                  <li
-                    key={entry.date}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium capitalize">{shortDate(entry.date)}</p>
-                      <p className="truncate text-xs text-muted-foreground">{entry.bestSetLabel ?? `${entry.completedSets} series`}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      {entry.bestEstimated1RmKg ? (
-                        <p className="text-sm font-semibold tabular-nums">{entry.bestEstimated1RmKg.toFixed(1)} kg</p>
-                      ) : null}
-                      <p className="text-xs text-muted-foreground tabular-nums">{Math.round(entry.volumeKg)} kg vol.</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+        {(suggestion || best1Rm > 0) && (
+          <ul className="mt-7 space-y-5">
+            {suggestion && (
+              <li className="flex items-start gap-4">
+                <TrendingUp className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="type-headline">{suggestionTitle}</p>
+                  <p className="mt-0.5 type-subhead text-muted-foreground">{suggestion.reason}</p>
+                </div>
+              </li>
             )}
-
-            {lastSets.length > 0 && history.length > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Última vez: {lastSets.map(setLabel).join(" · ")}
-              </p>
+            {best1Rm > 0 && (
+              <li className="flex items-start gap-4">
+                <Dumbbell className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="type-headline tabular-nums">{best1Rm.toFixed(1)} kg</p>
+                  <p className="mt-0.5 type-subhead text-muted-foreground">Tu mejor 1RM estimado en este ejercicio</p>
+                </div>
+              </li>
             )}
-          </div>
+          </ul>
+        )}
+
+        <div className="mt-7 pb-2">
+          {loading ? (
+            <div className="flex justify-center py-6">
+              <Spinner />
+            </div>
+          ) : history.length === 0 ? (
+            <div className="flex items-start gap-4">
+              <CalendarDays className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="type-headline">Tus últimas sesiones</p>
+                <p className="mt-0.5 type-subhead text-muted-foreground">
+                  Aún no has registrado este ejercicio. La primera vez que lo hagas aparecerá aquí tu progreso.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <ListGroup
+              inset
+              header="Tus últimas sesiones"
+              footer={lastSets.length > 0 ? `Última vez: ${lastSets.map(setLabel).join(" · ")}` : undefined}
+            >
+              {/* Las más recientes primero: si hay 20 sesiones, se ven las últimas */}
+              {history.slice(-6).reverse().map((entry) => (
+                <ListRow
+                  key={entry.date}
+                  title={<span className="capitalize">{shortDate(entry.date)}</span>}
+                  subtitle={entry.bestSetLabel ?? `${entry.completedSets} series`}
+                  value={
+                    <span className="tabular-nums">
+                      {entry.bestEstimated1RmKg ? `${entry.bestEstimated1RmKg.toFixed(1)} kg` : `${Math.round(entry.volumeKg)} kg vol.`}
+                    </span>
+                  }
+                />
+              ))}
+            </ListGroup>
+          )}
         </div>
       </DialogContent>
     </Dialog>
