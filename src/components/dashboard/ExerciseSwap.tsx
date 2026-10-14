@@ -1,7 +1,19 @@
 import { useState } from "react";
-import { ArrowLeftRight, Loader2, RotateCcw } from "lucide-react";
+import { ArrowLeftRight, Check, Dumbbell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ExerciseThumb } from "@/components/ExerciseMedia";
+import { hapticTap } from "@/lib/native";
 
 interface Props {
   original: string;
@@ -11,59 +23,92 @@ interface Props {
   onSelect: (name: string | null) => void;
 }
 
+type Option = { name: string; image: string | null };
+
 export function ExerciseSwap({ original, current, movementPattern, muscleGroup, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [options, setOptions] = useState<string[] | null>(null);
+  const [options, setOptions] = useState<Option[] | null>(null);
 
   const load = async () => {
     if (options || loading) return;
     setLoading(true);
-    let query = supabase.from("exercises").select("name").neq("name", original).limit(4);
+    let query = supabase.from("exercises").select("name, image_url").neq("name", original).limit(4);
     if (movementPattern) query = query.eq("movement_pattern", movementPattern);
     else if (muscleGroup) query = query.eq("muscle_group", muscleGroup);
     const { data } = await query;
-    setOptions((data || []).map((row) => row.name));
+    setOptions((data || []).map((row) => ({ name: row.name, image: row.image_url })));
     setLoading(false);
+  };
+
+  const choose = (name: string | null) => {
+    onSelect(name);
+    setOpen(false);
   };
 
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (v) void load(); }}>
-      <PopoverTrigger asChild>
-        <span
-          role="button"
-          tabIndex={0}
-          aria-label="Cambiar ejercicio"
-          onClick={stop}
-          onKeyDown={stop}
-          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-        >
-          <ArrowLeftRight className="h-4 w-4" />
-        </span>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2" onClick={stop}>
-        <p className="px-2 pb-1 pt-1 text-xs font-semibold">¿Máquina ocupada o molestia?</p>
-        <p className="px-2 pb-2 text-[11px] text-muted-foreground">Cambia por una alternativa. Tus series se mantienen.</p>
-        {loading && <div className="flex justify-center py-3"><Loader2 className="h-4 w-4 animate-spin" /></div>}
-        {options?.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground">No hay alternativas en la biblioteca.</p>}
-        {options?.map((name) => (
-          <button
-            key={name}
-            type="button"
-            onClick={() => { onSelect(name); setOpen(false); }}
-            className={`block w-full truncate rounded-lg px-2 py-2 text-left text-sm hover:bg-secondary ${current === name ? "text-primary font-semibold" : ""}`}
+    // The trigger lives inside the exercise row's <button>: no click from the trigger or the
+    // portalled sheet (overlay included) may reach it, or the workout would start.
+    <span className="contents" onClick={stop} onKeyDown={stop}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (v) void load(); }}>
+        <DialogTrigger asChild>
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label="Cambiar ejercicio"
+            onClick={() => { void hapticTap(); }}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-opacity duration-100 active:opacity-60"
           >
-            {name}
-          </button>
-        ))}
-        {current && (
-          <button type="button" onClick={() => { onSelect(null); setOpen(false); }} className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-muted-foreground hover:bg-secondary">
-            <RotateCcw className="h-3.5 w-3.5" /> Volver a {original}
-          </button>
-        )}
-      </PopoverContent>
-    </Popover>
+            <ArrowLeftRight className="h-5 w-5" strokeWidth={2} />
+          </span>
+        </DialogTrigger>
+        <DialogContent className="gap-6 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="type-title2 sm:type-title2">Cambiar ejercicio</DialogTitle>
+            <DialogDescription>
+              ¿Máquina ocupada o molestia? Elige una alternativa. Tus series se mantienen.
+            </DialogDescription>
+          </DialogHeader>
+
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Spinner label="Buscando alternativas" />
+            </div>
+          ) : options?.length === 0 ? (
+            <EmptyState
+              icon={Dumbbell}
+              title="Sin alternativas"
+              description="No hay alternativas en la biblioteca."
+              className="py-6 [&>div:first-child]:bg-secondary"
+            />
+          ) : options ? (
+            <ListGroup inset header="Alternativas">
+              {options.map((option) => (
+                <ListRow
+                  key={option.name}
+                  leading={<ExerciseThumb image={option.image} name={option.name} size="sm" />}
+                  title={<span className="line-clamp-2 whitespace-normal">{option.name}</span>}
+                  value={current === option.name ? (
+                    <Check className="h-5 w-5 text-primary" strokeWidth={2.5} aria-label="Seleccionado" />
+                  ) : undefined}
+                  onClick={() => choose(option.name)}
+                />
+              ))}
+            </ListGroup>
+          ) : null}
+
+          {current && (
+            <ListGroup inset>
+              <ListRow
+                title={<span className="line-clamp-2 whitespace-normal text-primary">Volver a {original}</span>}
+                onClick={() => choose(null)}
+              />
+            </ListGroup>
+          )}
+        </DialogContent>
+      </Dialog>
+    </span>
   );
 }

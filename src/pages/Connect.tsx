@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ListGroup } from "@/components/ui/list";
+import { SectionHeader } from "@/components/ui/section-header";
 import Screen from "@/components/native/Screen";
 import { toast } from "sonner";
 import { hapticNotify } from "@/lib/native";
@@ -11,14 +12,15 @@ const mcpUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/
 
 const linkClass = "text-primary transition-opacity active:opacity-60";
 
+// Pasos sobre negro, sin caja: la cifra en dorado como firma y el texto al lado.
 const Steps = ({ items }: { items: ReactNode[] }) => (
-  <ol>
+  <ol className="space-y-5">
     {items.map((step, i) => (
-      <li key={i} className="group/row flex items-start gap-3 px-4">
-        <span className="mt-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 type-footnote font-semibold tabular-nums text-primary">
+      <li key={i} className="flex items-start gap-4">
+        <span aria-hidden="true" className="w-7 shrink-0 text-center font-rounded type-title3 tabular-nums text-primary">
           {i + 1}
         </span>
-        <span className="min-w-0 flex-1 py-3 type-subhead group-[:not(:last-child)]/row:sep-b">{step}</span>
+        <span className="min-w-0 flex-1 pt-px type-body">{step}</span>
       </li>
     ))}
   </ol>
@@ -54,23 +56,24 @@ const Connect = () => {
 
       <Screen title="Conectar con IA" largeTitle onBack={() => navigate("/")} backLabel="Inicio" maxWidth="md">
         <div className="space-y-8 pb-6">
-          <p className="px-1 type-callout text-muted-foreground">
+          <p className="type-body text-muted-foreground">
             En un minuto tendrás tu plan de entrenamiento, tu nutrición y tus registros de peso disponibles desde ChatGPT o Claude. Solo hace falta pegar esta URL.
           </p>
 
-          <ListGroup
-            header="URL del servidor MCP"
-            footer="Cuando tu asistente te pida iniciar sesión, entra con tu cuenta de Autopilot: verá solo tus propios datos."
-          >
-            <div className="flex items-center gap-3 py-2 pl-4 pr-2">
-              <code className="selectable min-w-0 flex-1 break-all font-mono type-footnote">{mcpUrl}</code>
-              <Button variant="plain" size="sm" className="shrink-0" onClick={copyUrl} aria-live="polite">
-                {copied ? "Copiada" : "Copiar"}
-              </Button>
-            </div>
-          </ListGroup>
+          <section className="space-y-3">
+            <SectionHeader title="URL del servidor MCP" size="md" />
+            <ListGroup footer="Cuando tu asistente te pida iniciar sesión, entra con tu cuenta de Autopilot: verá solo tus propios datos.">
+              <div className="flex items-center gap-3 py-1 pl-4 pr-1">
+                <code className="selectable min-w-0 flex-1 break-all py-2 font-mono type-footnote">{mcpUrl}</code>
+                <Button variant="plain" className="shrink-0" onClick={copyUrl} aria-live="polite">
+                  {copied ? "Copiada" : "Copiar"}
+                </Button>
+              </div>
+            </ListGroup>
+          </section>
 
-          <ListGroup header="Conectar desde ChatGPT">
+          <section className="space-y-4">
+            <SectionHeader title="Conectar desde ChatGPT" size="md" />
             <Steps
               items={[
                 <>
@@ -91,9 +94,10 @@ const Connect = () => {
                 <>Pide a ChatGPT que use Autopilot: por ejemplo, "enséñame mi plan de entrenamiento".</>,
               ]}
             />
-          </ListGroup>
+          </section>
 
-          <ListGroup header="Conectar desde Claude">
+          <section className="space-y-4">
+            <SectionHeader title="Conectar desde Claude" size="md" />
             <Steps
               items={[
                 <>
@@ -112,9 +116,9 @@ const Connect = () => {
                 <>Actívalo desde el composer del chat y pídele a Claude que use Autopilot.</>,
               ]}
             />
-          </ListGroup>
+          </section>
 
-          <p className="px-4 type-footnote text-muted-foreground">
+          <p className="type-footnote text-muted-foreground">
             <strong className="font-semibold text-foreground">¿Problemas?</strong> Asegúrate de estar en la cuenta correcta de Autopilot al iniciar sesión durante la conexión. Tu asistente solo podrá leer tu perfil, tu plan y registrar tu peso — nunca datos de otros usuarios.
           </p>
         </div>

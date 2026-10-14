@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Surface } from "@/components/ui/surface";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Progress } from "@/components/ui/progress";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -73,7 +72,9 @@ const MUSCLE_INTENSITY = {
 
 // Misma rejilla para la cabecera, las series y sus bajadas: n.º, previa, carga, valor, check.
 const SET_GRID = "grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2";
-const NUMBER_FIELD = "h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
+const NUMBER_FIELD = "scroll-mb-40 h-11 w-full min-w-0 rounded-[10px] border-0 bg-secondary px-1 text-center font-rounded type-headline tabular-nums outline-none transition-colors duration-150 placeholder:font-normal placeholder:text-muted-foreground/60 focus:bg-accent aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-inset aria-[invalid=true]:ring-destructive";
+// La serie en curso: cifras más grandes que el resto.
+const CURRENT_FIGURE = "!text-[22px] !font-bold !leading-7";
 // Cápsula de 34 pt con el objetivo táctil ampliado a 44 pt.
 const CAPSULE_HIT = "relative before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']";
 
@@ -882,13 +883,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
         // -mt-2 compensa el pt-2 del contenedor de sección: la barra nace pegada al borde superior.
         <div className="sticky top-0 z-30 -mt-2">
           <NavBar
-            title={
-              // Dos líneas dentro de los 44 pt de la barra, con aire respecto a «Salir».
-              <span className="mx-auto block max-w-[84%]">
-                <span className="block truncate type-subhead font-semibold">{trainingTitle || "Entrenamiento"}</span>
-                <span className="block type-caption2 tabular-nums text-muted-foreground">{completedSets} de {totalSets} series</span>
-              </span>
-            }
+            title={trainingTitle || "Entrenamiento"}
+            subtitle={<span className="tabular-nums">{completedSets} de {totalSets} series</span>}
             leading={
               <button
                 type="button"
@@ -989,6 +985,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       {/* Rest day */}
       {!currentPlan && (
         <EmptyState
+          className="min-h-[50dvh] md:min-h-0"
           icon={Moon}
           title="Día de descanso"
           description="Recupera, o elige otra sesión de tu semana"
@@ -1025,9 +1022,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       {currentPlan?.type === "gimnasio" && (
         <div className={`flex flex-col gap-4 ${started ? "mx-auto w-full max-w-2xl flex-1 px-4 pt-3" : ""}`}>
           {/* Today's workout summary */}
-          <Surface className={workoutCompleted || !completionReady || loadError || started ? "hidden" : ""}>
-            <p className="type-subhead text-muted-foreground">Rutina del {selectedDay.toLocaleLowerCase("es-ES")}</p>
-            <h2 className="mt-0.5 type-title2">{trainingTitle || selectedDay}</h2>
+          <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
+            <h2 className="type-title1">{trainingTitle || selectedDay}</h2>
             {selectedDay !== today && <p className="mt-1 type-footnote text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
 
             <div className="mt-4 flex items-center gap-3">
@@ -1053,22 +1049,28 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                 </p>
               )
             )}
-          </Surface>
+          </section>
 
           {!completionReady && !loadError && (
-            <div className="flex flex-col items-center gap-3 py-12">
+            <div className="flex min-h-[50dvh] flex-col items-center justify-center gap-3 py-12 md:min-h-0">
               <Spinner label="Comprobando tu sesión" />
               <p aria-hidden="true" className="type-subhead text-muted-foreground">Comprobando tu sesión…</p>
             </div>
           )}
           {loadError && (
-            <Surface role="alert" className="py-6 text-center">
-              <p className="type-headline">No pudimos cargar tu entrenamiento</p>
-              <p className="mt-1 type-subhead text-muted-foreground">No hemos cambiado ni reemplazado tus registros. Comprueba la conexión y vuelve a intentarlo.</p>
-              <Button type="button" variant="tinted" className="mt-4" onClick={() => { void hapticTap(); setReloadLogs((value) => value + 1); }}>
-                Reintentar
-              </Button>
-            </Surface>
+            <div role="alert">
+              <EmptyState
+                className="min-h-[50dvh] md:min-h-0"
+                icon={CloudOff}
+                title="No pudimos cargar tu entrenamiento"
+                description="No hemos cambiado ni reemplazado tus registros. Comprueba la conexión y vuelve a intentarlo."
+                action={
+                  <Button type="button" variant="plain" onClick={() => { void hapticTap(); setReloadLogs((value) => value + 1); }}>
+                    Reintentar
+                  </Button>
+                }
+              />
+            </div>
           )}
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
@@ -1083,7 +1085,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
           </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
-            <div className="flex h-[calc(100dvh-var(--nav-bar-height)-var(--safe-top,0px)-var(--mobile-nav-content-padding,6rem)-9.5rem)] min-h-[26rem] flex-col overflow-hidden md:h-auto md:min-h-0 md:overflow-visible">
+            <div className="flex h-[calc(100dvh-var(--nav-bar-height)-var(--safe-top,0px)-var(--mobile-nav-content-padding,6rem)-11.3125rem)] flex-col overflow-hidden [@media(max-height:700px)]:h-auto [@media(max-height:700px)]:overflow-visible md:h-auto md:min-h-0 md:overflow-visible">
               <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
                 <div className="mb-3 flex shrink-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -1133,11 +1135,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                   }}
                   style={{ touchAction: "pan-y" }}
                   aria-label="Desliza para cambiar de ejercicio"
-                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img ? "aspect-[4/3] max-h-[24dvh] md:max-h-[34dvh]" : "h-24"}`}>
+                  className={`relative flex w-full items-center justify-center overflow-hidden rounded-2xl bg-card md:cursor-grab md:active:cursor-grabbing ${img ? "aspect-[4/3] max-h-[24dvh] [@media(max-height:700px)]:max-h-[14dvh] md:max-h-[34dvh]" : "h-12"}`}>
                   {img ? (
                     <img src={img} alt={active.name} draggable={false} decoding="async" fetchPriority="high" loading="eager" className="h-full w-full object-contain" />
                   ) : (
-                    <Dumbbell className="h-7 w-7 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+                    <Dumbbell className="h-6 w-6 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
                   )}
                   {vid && (
                     <button
@@ -1312,9 +1314,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                           });
                         }
                       }}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-full text-primary transition-opacity active:opacity-60"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-opacity active:opacity-60"
                     >
-                      <Info className="h-[22px] w-[22px]" aria-hidden="true" />
+                      <Info className="h-5 w-5" aria-hidden="true" />
                     </span>
                   </div>
                   </div>
@@ -1376,7 +1378,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
                               {/* Set number */}
-                              <span className={`text-center font-rounded type-headline tabular-nums text-muted-foreground ${dim}`}>
+                              <span className={`text-center font-rounded type-headline tabular-nums ${si === firstPendingIndex ? "text-primary" : "text-muted-foreground"} ${dim}`}>
                                 {isWarmup ? <Flame className="mx-auto h-4 w-4" aria-hidden="true" /> : si + 1}
                               </span>
                               <span className={`truncate text-center type-caption1 tabular-nums text-muted-foreground ${dim}`}>
@@ -1399,7 +1401,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
-                                  className={`${NUMBER_FIELD} ${isWarmup ? "text-muted-foreground" : ""}`}
+                                  className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
                                 />
                                 )}
                               </div>
@@ -1419,7 +1421,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                   }}
                                   onFocus={(e) => e.currentTarget.select()}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
-                                  className={`${NUMBER_FIELD} ${isWarmup || repsMissing ? "text-muted-foreground" : ""}`}
+                                  className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || repsMissing || (!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps) ? "text-muted-foreground" : ""}`}
                                 />
                               </div>
 
@@ -1447,7 +1449,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                               {drops.map((drop, di) => {
                                 const dropError = !set.done ? getWorkoutSetDropInputError(drop) : null;
                                 return (
-                                <div key={di} className={`mt-2 ${SET_GRID}`}>
+                                <div key={di} className={`mt-3 ${SET_GRID}`}>
                                   <span className={`flex items-center justify-center text-muted-foreground ${dim}`}>
                                     <TrendingDown className="h-4 w-4" aria-hidden="true" />
                                   </span>
@@ -1549,7 +1551,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
           )}
 
           {/* Finish workout. Pie fijo: descanso, estado de guardado y la única acción principal, sobre el indicador de inicio */}
-          {!workoutCompleted && completionReady && !loadError && started && <div className="app-chrome sticky bottom-0 z-20 -mx-4 mt-auto border-t-[0.5px] px-4 pb-[max(0.75rem,var(--safe-bottom))] pt-3">
+          {!workoutCompleted && completionReady && ((started && !loadError) || restTimer !== null) && <div className="app-chrome sticky bottom-0 z-20 -mx-4 mt-auto border-t-[0.5px] px-4 pb-[max(0.75rem,var(--safe-bottom))] pt-3">
             <AnimatePresence initial={false}>
               {restTimer !== null && (
                 <motion.div
@@ -1560,10 +1562,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                   className="overflow-hidden"
                 >
                   <div role="timer" aria-label="Descanso entre series" className="pb-3">
-                    <div className="flex items-end">
+                    <div className="flex items-center">
                       <div className="min-w-0 flex-1">
-                        <p className="type-footnote text-muted-foreground">Descanso</p>
-                        <p className="font-rounded text-[40px] font-bold leading-[44px] tabular-nums">
+                        <p className="sr-only">Descanso</p>
+                        <p className="font-rounded text-[34px] font-bold leading-[44px] tabular-nums">
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>
@@ -1583,7 +1585,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                 </motion.div>
               )}
             </AnimatePresence>
-            <p role="status" aria-live="polite" className={`mb-2 text-center type-footnote ${saveError ? "text-destructive" : "text-muted-foreground"}`}>
+            {started && !loadError && <>
+            <p role="status" aria-live="polite" className={`mb-2 text-center type-footnote [.keyboard-open_&]:hidden ${restTimer !== null && !saveError ? "sr-only" : ""} ${saveError ? "text-destructive" : "text-muted-foreground"}`}>
               {saveStatus === "error"
                 ? "Error al guardar. Comprueba tu conexión."
                 : saveStatus === "pending"
@@ -1595,18 +1598,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                       : "Se guarda automáticamente"}
             </p>
             {completedSets === totalSets && totalSets > 0 && (
-              <Button type="button" variant="plain" className="mb-1 w-full" onClick={() => { void hapticTap(); setRpeOpen(true); }} disabled={saving}>
+              <Button type="button" variant="plain" className="mb-4 w-full [.keyboard-open_&]:hidden" onClick={() => { void hapticTap(); setRpeOpen(true); }} disabled={saving}>
                 Valorar el esfuerzo (opcional)
               </Button>
             )}
             <Button
               onClick={() => { void hapticTap(); void finishWorkout(); }}
               disabled={saving || completedSets === 0}
-              className="w-full"
+              className="w-full [.keyboard-open_&]:hidden"
               size="lg"
             >
               {saving ? <><Spinner size="sm" className="text-primary-foreground [&>svg]:!size-full" label="Guardando" /> Guardando…</> : "Terminar entrenamiento"}
             </Button>
+            </>}
           </div>}
         </div>
       )}

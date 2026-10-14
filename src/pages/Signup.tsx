@@ -3,21 +3,24 @@ import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import Screen from "@/components/native/Screen";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Loader2, Mail, Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { Mail, Eye, EyeOff, Gift, Smartphone, Sparkles, Zap } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
+import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthNotice, AuthSymbol } from "@/components/auth/AuthScreenParts";
+import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
 import { useAuth } from "@/contexts/AuthContext";
-import { Sparkles, Zap } from "lucide-react";
 import { track } from "@/lib/analytics";
 import { authRedirect } from "@/lib/authRedirect";
 import { signInWithApple } from "@/lib/nativeAuth";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { readAnonScanId } from "@/lib/scanAttribution";
 import { appleSignInEnabled } from "@/lib/platform";
-import { hapticTap } from "@/lib/native";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
 
 const Signup = () => {
   const [searchParams] = useSearchParams();
@@ -31,7 +34,9 @@ const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [formError, setFormError] = useState<string | null>(null);
   const emailCheck = useRef(0);
+  const navigate = useNavigate();
   useEffect(() => {
     if (resendCooldown <= 0) return;
     const timer = window.setTimeout(() => setResendCooldown(value => value - 1), 1000);
@@ -94,15 +99,22 @@ const Signup = () => {
     }
   };
 
+  const fail = (message: string) => {
+    setFormError(message);
+    void hapticNotify("error");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     void hapticTap();
+    setFormError(null);
     if (emailTaken) {
-      toast.error("Corrige los campos marcados antes de continuar");
+      // The note under the fields already says why.
+      void hapticNotify("error");
       return;
     }
     if (!name.trim()) {
-      toast.error("El nombre es obligatorio");
+      fail("El nombre es obligatorio.");
       return;
     }
     setLoading(true);
@@ -114,7 +126,7 @@ const Signup = () => {
       });
       if (avail?.emailTaken) {
         setEmailTaken(true);
-        toast.error("Ese correo ya está registrado");
+        void hapticNotify("error");
         setLoading(false);
         return;
       }
@@ -130,7 +142,7 @@ const Signup = () => {
         ...(anonScanId ? { anon_scan_id: anonScanId } : {}),
       });
       if (error) {
-        toast.error(error.message);
+        fail(error.message);
         setLoading(false);
         return;
       }
@@ -138,61 +150,127 @@ const Signup = () => {
       // Email verification required — show confirmation screen
       track("register", { from: fromQuiz ? "quiz" : fromScan ? "scan" : "direct", plan: isFree ? "free" : selectedPlan || undefined });
       setResendCooldown(60);
+      void hapticNotify("success");
       setEmailSent(true);
     } catch {
-      toast.error("No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo.");
+      fail("No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo.");
     } finally {
       setLoading(false);
     }
   };
 
+  const resend = async () => {
+    void hapticTap();
+    setResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: authRedirect("/onboarding") } });
+      if (error) { void hapticNotify("error"); toast.error("No se ha podido reenviar. Espera un momento y vuelve a intentarlo."); }
+      else { setResendCooldown(60); void hapticNotify("success"); toast.success("Enlace reenviado. Revisa tu correo."); }
+    } catch { void hapticNotify("error"); toast.error("No se ha podido reenviar el correo."); }
+    finally { setResending(false); }
+  };
+
   if (emailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md text-center space-y-4">
-          <Mail className="w-12 h-12 text-primary mx-auto" />
-          <h1 className="text-2xl font-bold font-display">Verifica tu correo</h1>
-          <p className="text-muted-foreground text-sm">
-            Te hemos enviado un enlace de verificación a <span className="text-foreground font-medium">{email}</span>. 
-            Haz clic en él para activar tu cuenta.
-          </p>
-          <p className="text-xs text-muted-foreground">Revisa también la carpeta de spam. El enlace te llevará a preparar tu rutina.</p>
-          <Button variant="outline" disabled={resending || resendCooldown > 0} onClick={async () => {
-            setResending(true);
-            try {
-              const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: authRedirect("/onboarding") } });
-              if (error) toast.error("No se ha podido reenviar. Espera un momento y vuelve a intentarlo.");
-              else { setResendCooldown(60); toast.success("Enlace reenviado. Revisa tu correo."); }
-            } catch { toast.error("No se ha podido reenviar el correo."); }
-            finally { setResending(false); }
-          }}>{resending ? "Reenviando…" : resendCooldown > 0 ? `Reenviar en ${resendCooldown}s` : "Reenviar enlace"}</Button>
-          <button type="button" className="block mx-auto text-sm underline underline-offset-4" onClick={() => setEmailSent(false)}>Corregir mi correo</button>
-          <Link to="/login" className="text-primary hover:underline text-sm block mt-4">Ya lo he verificado: iniciar sesión</Link>
-          <div className="mt-6 rounded-2xl border border-border bg-card p-5 space-y-3">
-            <p className="font-semibold">Llévate tu plan al gimnasio</p>
-            <p className="text-sm text-muted-foreground">Puedes usar Autopilot desde la web o descargar la app para registrar series y descansos desde el móvil.</p>
-            <AppStoreBadges size="compact" />
+      <Screen
+        hideBack
+        centered
+        maxWidth="sm"
+        contentClassName="py-6"
+        footer={
+          <div className="space-y-3 pb-2">
+            <Button asChild size="lg" className="w-full">
+              <Link to="/login" onClick={() => void hapticTap()}>Iniciar sesión</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="plain"
+              size="sm"
+              className={cn(authSecondaryActionClass, "tabular-nums")}
+              disabled={resending || resendCooldown > 0}
+              onClick={resend}
+            >
+              {resending ? "Reenviando…" : resendCooldown > 0 ? `Reenviar en ${resendCooldown} s` : "Reenviar enlace"}
+            </Button>
           </div>
-        </div>
-      </div>
+        }
+      >
+        <AuthHero
+          mark={<AuthSymbol icon={Mail} size="lg" />}
+          title="Verifica tu correo"
+          description={
+            <>
+              Te hemos enviado un enlace de verificación a <span className="break-all text-foreground">{email}</span>. Ábrelo para activar tu cuenta.
+            </>
+          }
+        >
+          <Button type="button" variant="plain" size="sm" className="mt-1 h-11 font-medium" onClick={() => { void hapticTap(); setEmailSent(false); }}>
+            Corregir mi correo
+          </Button>
+        </AuthHero>
+        <p className="mx-auto mt-4 max-w-[34ch] text-center type-footnote text-muted-foreground">
+          Revisa también la carpeta de spam. El enlace te llevará a preparar tu rutina.
+        </p>
+        <AppStoreBadges
+          size="compact"
+          align="start"
+          className="mt-10"
+          wrap={(badges) => (
+            <AuthNotice icon={<Smartphone strokeWidth={1.75} />} title="Llévate tu plan al gimnasio">
+              <p>Puedes usar Autopilot desde la web o descargar la app para registrar series y descansos desde el móvil.</p>
+              <div className="mt-3">{badges}</div>
+            </AuthNotice>
+          )}
+        />
+      </Screen>
     );
   }
 
-  return (
-    <div
-      className="relative min-h-screen flex items-center justify-center bg-background px-4 py-12"
-      style={{ paddingTop: "calc(var(--safe-top, 0px) + 3rem)", paddingBottom: "calc(var(--safe-bottom, 0px) + 3rem)" }}
-    >
-      <Link
-        to="/"
-        onClick={() => { void hapticTap(); }}
-        aria-label="Volver a Bienvenido"
-        className="absolute left-3 inline-flex items-center gap-0.5 h-10 pl-1 pr-2.5 rounded-full text-foreground/85 transition-colors active:bg-secondary/60 no-underline"
-        style={{ top: "calc(var(--safe-top, 0px) + 12px)" }}
+  const fieldError = emailTaken ? "Este correo ya está registrado." : formError;
+
+  const footer = (
+    <div className="space-y-3 pb-2">
+      <Button
+        type="submit"
+        form="signup-form"
+        size="lg"
+        className={cn("w-full", loading && "disabled:opacity-100")}
+        disabled={loading || emailTaken}
       >
-        <ChevronLeft className="w-5 h-5" />
-        <span className="text-[15px] font-medium">Atrás</span>
-      </Link>
+        {loading ? (
+          <><Spinner size="sm" className="text-primary-foreground" aria-hidden="true" /> Creando cuenta…</>
+        ) : (
+          isFree ? "Crear cuenta gratis" : "Crear cuenta"
+        )}
+      </Button>
+      {appleSignInEnabled() && (
+        <AppleSignInButton
+          label="sign-up"
+          onClick={async () => {
+            if (selectedPlan) {
+              try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+            }
+            const result = await signInWithApple("/onboarding");
+            if (result.error) { void hapticNotify("error"); toast.error("No se pudo continuar con Apple"); }
+          }}
+        />
+      )}
+      <Button asChild variant="plain" size="sm" className={cn(authSecondaryActionClass, hideWithKeyboardClass)}>
+        <Link to="/login" onClick={() => void hapticTap()}>Ya tengo cuenta</Link>
+      </Button>
+      <p className="text-center type-footnote text-muted-foreground">
+        Al crear una cuenta aceptas nuestros{" "}
+        <Link to="/legal/terminos" className="underline underline-offset-2 active:opacity-60">Términos</Link>
+        {" y "}
+        <Link to="/legal/privacidad" className="underline underline-offset-2 active:opacity-60">Política de privacidad</Link>.
+      </p>
+    </div>
+  );
+
+  const hasNotices = (fromScan && Boolean(scanCtx?.result)) || fromQuiz || (Boolean(referralCode) && !isFree);
+
+  return (
+    <Screen onBack={() => navigate("/")} centered maxWidth="sm" contentClassName="py-6" footer={footer}>
       <Helmet>
         <title>Crear cuenta · Autopilot</title>
         <meta name="description" content="Crea tu cuenta gratis, empieza tu rutina y registra tu progreso. Sin tarjeta para empezar." />
@@ -201,154 +279,146 @@ const Signup = () => {
         <meta property="og:description" content="Rutina inicial y registro de progreso gratis. Sin tarjeta para empezar." />
         <meta property="og:url" content="https://autopilotplan.com/signup" />
       </Helmet>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <div className="mx-auto w-16 h-16 rounded-[22%] bg-background border border-primary/20 flex items-center justify-center shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]">
-            <svg viewBox="0 0 100 100" aria-hidden="true" className="w-[62%] h-[62%] text-primary" fill="none">
-              <path d="M14 86 L50 14 L86 86" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M56 46 L36 66 L48 66 L44 86 L62 60 L50 60 L55 46 Z" fill="currentColor" />
-            </svg>
-          </div>
-          <h1 className="text-[28px] font-bold font-display mt-6 tracking-[-0.03em] leading-[1.1]">Crea tu cuenta</h1>
-          <p className="text-muted-foreground text-[15px] mt-2 leading-snug">
-            {isFree
-              ? "Gratis, sin tarjeta. Prueba una sesión desde el móvil."
-              : fromQuiz
-              ? "Último paso para desbloquear tu plan."
-              : fromScan
-              ? "Último paso para desbloquear tu AI Report y plan completo."
-               : "Empieza hoy."}
-          </p>
-          {!fromQuiz && (
-            <Link to="/onboarding" className="mt-5 inline-flex items-center gap-1.5 text-[14px] text-primary font-medium">
-              ¿Aún no has configurado tu plan? Diséñalo gratis →
-            </Link>
+
+      <AuthHero
+        mark={<AuthAppMark />}
+        title="Crea tu cuenta"
+        description={
+          isFree
+            ? "Gratis, sin tarjeta. Prueba una sesión desde el móvil."
+            : fromQuiz
+            ? "Último paso para desbloquear tu plan."
+            : fromScan
+            ? "Último paso para desbloquear tu AI Report y plan completo."
+            : "Empieza hoy."
+        }
+      />
+
+      {hasNotices && (
+        <div className="mt-8 space-y-6">
+          {fromScan && scanCtx?.result && (
+            <AuthNotice
+              icon={
+                scanCtx.currentImg ? (
+                  <img loading="lazy" decoding="async" src={scanCtx.currentImg} alt="Tu scan" className="h-10 w-10 rounded-[10px] object-cover" />
+                ) : (
+                  <Zap strokeWidth={1.75} />
+                )
+              }
+              title="Tu AI Report está reservado"
+            >
+              <p>
+                Potencial <span className="tabular-nums text-foreground">{scanCtx.result.potential.toFixed(1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
+              </p>
+              <p className="mt-1">7 días de prueba · no se cobra hasta el día 8 · cancelas cuando quieras</p>
+            </AuthNotice>
           )}
-        </div>
 
-        {isFree && (
-          <p className="mb-5 text-center text-sm text-muted-foreground">
-            Sin tarjeta ni prueba que cancelar. El seguimiento de un entrenador es opcional y de pago.
-          </p>
-        )}
-
-        {fromScan && scanCtx?.result && (
-          <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-2xl p-4 mb-4 flex items-center gap-3">
-            {scanCtx.currentImg && (
-              <img loading="lazy" decoding="async"
-                src={scanCtx.currentImg}
-                alt="Tu scan"
-                className="w-14 h-14 rounded-xl object-cover border border-primary/40 flex-shrink-0"
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="text-sm text-primary font-medium flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5" /> Tu AI Report está reservado
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Potencial <span className="font-bold text-foreground">{scanCtx.result.potential.toFixed(1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                7 días de prueba · no se cobra hasta el día 8 · cancelas cuando quieras
-              </p>
-            </div>
-          </div>
-        )}
-
-        {fromQuiz && (
-          <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 mb-4 text-center">
-            <p className="text-sm text-primary font-medium flex items-center justify-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> Tu plan personalizado está reservado
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
+          {fromQuiz && (
+            <AuthNotice icon={<Sparkles strokeWidth={1.75} />} title="Tu plan personalizado está reservado">
               7 días de prueba · se pide tarjeta al contratar, no se cobra hasta el día 8
-            </p>
-          </div>
-        )}
+            </AuthNotice>
+          )}
 
-        {referralCode && !isFree && (
-          <div className="bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 mb-4 text-center">
-            <p className="text-sm text-primary font-medium">🎁 ¡Invitación aplicada!</p>
-          </div>
-        )}
+          {referralCode && !isFree && <AuthNotice icon={<Gift strokeWidth={1.75} />} title="Invitación aplicada" />}
+        </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Tu nombre</Label>
+      <form id="signup-form" onSubmit={handleSubmit} className={hasNotices ? "mt-8" : "mt-10"}>
+        <AuthFieldGroup
+          footer={
+            <>
+              {fieldError ? <AuthFieldNote id="signup-error" tone="error">{fieldError}</AuthFieldNote> : null}
+              {isFree ? (
+                <AuthFieldNote>Sin tarjeta ni prueba que cancelar. El seguimiento de un entrenador es opcional y de pago.</AuthFieldNote>
+              ) : null}
+            </>
+          }
+        >
+          <AuthFieldRow label="Tu nombre" htmlFor="name">
             <Input
               id="name"
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setFormError(null); }}
               required
-              className="h-12 bg-secondary border-0 text-[16px]"
+              autoCapitalize="words"
               autoComplete="given-name"
-              placeholder="Tu nombre"
+              enterKeyHint="next"
+              onKeyDown={focusNextOnEnter("email")}
+              className={authFieldInputClass()}
+              placeholder="Nombre"
             />
-          </div>
-          <div>
-            <Label htmlFor="email" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Correo electrónico</Label>
+          </AuthFieldRow>
+          <AuthFieldRow
+            label="Correo electrónico"
+            htmlFor="email"
+            trailing={checkingEmail ? <Spinner size="sm" label="Verificando correo" className="mr-4" /> : null}
+          >
             <Input
               id="email"
               type="email"
+              inputMode="email"
               value={email}
-              onChange={(e) => { emailCheck.current++; setCheckingEmail(false); setEmail(e.target.value); setEmailTaken(false); }}
+              onChange={(e) => { emailCheck.current++; setCheckingEmail(false); setEmail(e.target.value); setEmailTaken(false); setFormError(null); }}
               onBlur={() => void checkEmail(email)}
               autoComplete="email"
               autoCapitalize="none"
+              autoCorrect="off"
               spellCheck={false}
+              enterKeyHint="next"
+              onKeyDown={focusNextOnEnter("password")}
               required
-              className={`h-12 bg-secondary border-0 text-[16px] ${emailTaken ? "ring-1 ring-destructive" : ""}`}
-              placeholder="tu@ejemplo.com"
+              aria-invalid={emailTaken || undefined}
+              aria-describedby={fieldError ? "signup-error" : undefined}
+              className={authFieldInputClass(checkingEmail)}
+              placeholder="Correo electrónico"
             />
-            {checkingEmail && <p className="text-xs text-muted-foreground mt-1.5">Verificando…</p>}
-            {emailTaken && <p className="text-xs text-destructive mt-1.5">Este correo ya está registrado</p>}
-          </div>
-          <div>
-            <Label htmlFor="password" className="text-[13px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Contraseña</Label>
-            <div className="relative">
-              <Input id="password" type={showPassword ? "text" : "password"} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-12 bg-secondary border-0 text-[16px] pr-12" placeholder="Mínimo 6 caracteres" minLength={6} />
-              <button type="button" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} aria-pressed={showPassword} className="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-muted-foreground" onClick={() => setShowPassword(value => !value)}>{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-            </div>
-          </div>
+          </AuthFieldRow>
+          <AuthFieldRow
+            label="Contraseña"
+            htmlFor="password"
+            trailing={
+              <button
+                type="button"
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+                className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground transition-opacity active:opacity-60"
+                onClick={() => { void hapticSelection(); setShowPassword(value => !value); }}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            }
+          >
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="go"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setFormError(null); }}
+              required
+              minLength={6}
+              aria-describedby={fieldError ? "signup-error" : undefined}
+              className={authFieldInputClass(true)}
+              placeholder="Contraseña, mínimo 6 caracteres"
+            />
+          </AuthFieldRow>
+        </AuthFieldGroup>
+      </form>
 
-          <Button variant="hero" size="lg" className="w-full" type="submit" disabled={loading || emailTaken}>
-            {loading ? (
-              <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Procesando...</>
-            ) : (
-              isFree ? "Crear cuenta gratis" : "Crear cuenta"
-            )}
-          </Button>
-          {appleSignInEnabled() && (
-            <>
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                <div className="relative flex justify-center text-[11px] uppercase tracking-wider"><span className="bg-card px-2 text-muted-foreground">o</span></div>
-              </div>
-              <AppleSignInButton
-                label="sign-up"
-                onClick={async () => {
-                  if (selectedPlan) {
-                    try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
-                  }
-                  const result = await signInWithApple("/onboarding");
-                  if (result.error) toast.error("No se pudo continuar con Apple");
-                }}
-              />
-            </>
-          )}
-          <p className="text-center text-sm text-muted-foreground">
-            ¿Ya tienes cuenta? <Link to="/login" className="text-primary hover:underline">Inicia sesión</Link>
-          </p>
-        </form>
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          Al crear una cuenta aceptas nuestros{" "}
-          <Link to="/legal/terminos" className="hover:text-foreground underline">Términos</Link>
-          {" y "}
-          <Link to="/legal/privacidad" className="hover:text-foreground underline">Política de privacidad</Link>.
+      {!fromQuiz && (
+        <p className="mt-6 text-center type-subhead text-muted-foreground">
+          ¿Aún no has configurado tu plan?{" "}
+          <Link to="/onboarding" onClick={() => void hapticTap()} className="inline-flex min-h-11 items-center font-medium text-primary transition-opacity active:opacity-60">
+            Diséñalo gratis
+          </Link>
         </p>
-      </div>
-    </div>
+      )}
+    </Screen>
   );
 };
 

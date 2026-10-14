@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import Screen from "@/components/native/Screen";
 
 export default function ImpersonateCallback() {
   const [error, setError] = useState<string | null>(null);
@@ -35,18 +38,15 @@ export default function ImpersonateCallback() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="max-w-md text-center space-y-3">
-          <h1 className="text-xl font-bold text-destructive">No se pudo impersonar</h1>
-          <p className="text-sm text-muted-foreground">{error}</p>
-        </div>
-      </div>
+      <Screen hideBack centered maxWidth="sm">
+        <EmptyState icon={ShieldAlert} title="No se pudo impersonar" description={error} />
+      </Screen>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Loader2 className="w-8 h-8 text-primary animate-spin" />
-    </div>
+    <main className="flex h-dvh items-center justify-center bg-background">
+      <Spinner size="lg" />
+    </main>
   );
 }

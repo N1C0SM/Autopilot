@@ -2,10 +2,14 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeOverview from "./HomeOverview";
 
-const mocks = vi.hoisted(() => ({ hapticTap: vi.fn() }));
+const mocks = vi.hoisted(() => ({ hapticTap: vi.fn(), ios: false }));
 vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap }));
+vi.mock("@/lib/platform", () => ({ isIOSNative: () => mocks.ios }));
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.ios = false;
+});
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 const DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -92,5 +96,57 @@ describe("dashboard home overview", () => {
     fireEvent.click(screen.getByRole("button", { name: /Empezar Entrenamiento/ }));
     expect(onStartWorkout).toHaveBeenCalledOnce();
     expect(onNavigate).not.toHaveBeenCalled();
+  });
+
+  it("sums up today's session with its series and an approximate length", () => {
+    render(
+      <HomeOverview
+        dayPlans={[{
+          day: today,
+          type: "gimnasio",
+          routine_name: "Pull B",
+          exercises: [
+            { exercise_id: "row", name: "Remo", series: 4, reps: 8, weight: "", rest: "2 min" },
+            { exercise_id: "curl", name: "Curl", series: 3, reps: 12, weight: "", rest: "90 s" },
+          ],
+        }]}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Empezar Pull B" })).toHaveTextContent("2 ejercicios · 7 series · unos 20 min");
+  });
+
+  it("tells the next session on a rest day", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-07T12:00:00"));
+    render(<HomeOverview dayPlans={[{ day: "Viernes", type: "gimnasio", routine_name: "Pull B", exercises: [] }]} onNavigate={vi.fn()} />);
+
+    expect(screen.getByText("Día de recuperación")).toBeVisible();
+    expect(screen.getByText("Tu próxima sesión es el viernes: Pull B.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^Empezar/ })).not.toBeInTheDocument();
+  });
+
+  it("marks today as done and opens progress once the session is logged", () => {
+    const onNavigate = vi.fn();
+    render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} completedToday />);
+
+    expect(screen.getByText("Entrenamiento completado")).toBeVisible();
+    expect(screen.getByRole("list", { name: "Tu semana" })).toHaveTextContent(`${today}, hoy: completado`);
+    fireEvent.click(screen.getByRole("button", { name: "Ver progreso de la sesión" }));
+    expect(onNavigate).toHaveBeenCalledWith("progress");
+    expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
+  });
+
+  it("never mentions the paid plan on iOS", () => {
+    const props = { dayPlans: [{ day: today, type: "gimnasio" as const, exercises: [] }], onNavigate: vi.fn(), nutrition: false, coaching: false };
+    render(<HomeOverview {...props} />);
+    expect(screen.getByText(/Incluido en Plus/)).toBeVisible();
+    cleanup();
+
+    mocks.ios = true;
+    render(<HomeOverview {...props} />);
+    expect(screen.getByText("Plan de nutrición")).toBeVisible();
+    expect(screen.queryByText(/Incluido en Plus/)).not.toBeInTheDocument();
   });
 });

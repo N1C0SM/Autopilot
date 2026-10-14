@@ -5,12 +5,14 @@ import SettingsPanel from "./SettingsPanel";
 const mocks = vi.hoisted(() => ({
   user: { id: "user", email: "test@example.com" },
   tier: "full", paid: "paid", status: "active", end: null as string | null, travelUntil: null as string | null,
+  ios: false, plan: null as string | null,
   availability: { days: "2", hours: "0.92", training_days: [1, 3], auto_calculated: true, sport_schedules: { running: "18:00" } } as Record<string, unknown>,
   saves: [] as Record<string, unknown>[],
   updates: [] as { table: string; row: Record<string, unknown> }[],
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
 vi.mock("sonner", () => ({ toast: mocks.toast }));
+vi.mock("@/lib/platform", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/platform")>()), isIOSNative: () => mocks.ios }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: (table: string) => {
@@ -20,10 +22,12 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
       update: (row: Record<string, unknown>) => { mocks.updates.push({ table, row }); return query; },
     }; return query;
   },
-  rpc: () => Promise.resolve({ data: {} }), functions: { invoke: () => Promise.resolve({ data: {} }) },
+  rpc: () => Promise.resolve({ data: {} }),
+  functions: { invoke: (name: string) => Promise.resolve({ data: name === "check-subscription" && mocks.plan ? { plan: mocks.plan } : {} }) },
 } }));
 beforeEach(() => {
   mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.travelUntil = null; mocks.saves = []; mocks.updates = [];
+  mocks.ios = false; mocks.plan = null;
   mocks.toast.error.mockClear(); mocks.toast.success.mockClear(); mocks.toast.info.mockClear();
 });
 afterEach(cleanup);
@@ -122,5 +126,38 @@ describe("settings travel mode", () => {
     await waitFor(() => expect(toggle).toBeChecked());
     fireEvent.click(toggle);
     await waitFor(() => expect(mocks.updates).toContainEqual({ table: "profiles", row: { travel_mode_until: null, travel_equipment: null } }));
+  });
+});
+
+describe("settings purchase surfaces", () => {
+  const showWithUpgrade = () => render(<MemoryRouter><SettingsPanel onUpgrade={vi.fn()} /></MemoryRouter>);
+  it("shows prices, the offer and the billing portal outside iOS", async () => {
+    mocks.plan = "monthly"; show();
+    expect(await screen.findByText(/^Mensual \(.+€\/mes\)$/)).toBeVisible();
+    expect(screen.getByText(/ahorra .+€\/año/)).toBeVisible();
+    expect(screen.getByText("Gestionar suscripción")).toBeVisible();
+  });
+  it("offers the upgrade and the trial to a free account outside iOS", async () => {
+    mocks.tier = "free"; showWithUpgrade();
+    expect(await screen.findByRole("button", { name: /^Mejorar a/ })).toBeVisible();
+    expect(screen.getByText(/7 días de prueba/)).toBeVisible();
+  });
+  it("keeps the plan name but no price, offer or billing entry on iOS for a paid account", async () => {
+    mocks.ios = true; mocks.plan = "monthly";
+    const { container } = showWithUpgrade();
+    expect(await screen.findByText("Plan Coach")).toBeVisible();
+    expect(await screen.findByText("Mensual")).toBeVisible();
+    expect(screen.queryByText("Gestionar suscripción")).not.toBeInTheDocument();
+    expect(screen.queryByText(/ahorra/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/portal de gestión/)).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent("€");
+  });
+  it("shows no upgrade, trial or price on iOS for a free account", async () => {
+    mocks.ios = true; mocks.tier = "free";
+    const { container } = showWithUpgrade();
+    expect(await screen.findByText("Plan Free")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Mejorar a|Ver /i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/7 días de prueba/)).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent("€");
   });
 });

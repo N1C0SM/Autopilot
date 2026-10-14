@@ -1,4 +1,5 @@
 import { Video } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 /**
  * Convierte una URL de YouTube/Vimeo en una URL embebible.
@@ -34,23 +35,23 @@ const VideoEmbed = ({ url, className = "" }: Props) => {
 
   if (!embed) {
     return (
-      <div className={`flex flex-col items-center justify-center bg-secondary/30 rounded-lg p-6 text-muted-foreground ${className}`}>
-        <Video className="w-8 h-8 mb-2 opacity-50" />
-        <p className="text-xs">Sin vídeo</p>
+      <div className={cn("flex flex-col items-center justify-center gap-2 rounded-xl bg-secondary p-6 text-muted-foreground", className)}>
+        <Video className="h-7 w-7 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+        <p className="type-footnote">Sin vídeo</p>
       </div>
     );
   }
 
   if (embed.type === "video") {
     return (
-      <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
+      <div className={cn("relative w-full overflow-hidden rounded-xl bg-black", className)} style={{ aspectRatio: "16/9" }}>
         <video src={embed.src} controls playsInline className="absolute inset-0 h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-xl bg-black ${className}`} style={{ aspectRatio: "16/9" }}>
+    <div className={cn("relative w-full overflow-hidden rounded-xl bg-black", className)} style={{ aspectRatio: "16/9" }}>
       <iframe
         src={embed.src}
         title="Vídeo del ejercicio"

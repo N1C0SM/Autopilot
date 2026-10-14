@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { Surface } from "@/components/ui/surface";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { signedUrlFor } from "@/lib/storageSign";
 
@@ -66,40 +65,43 @@ export default function BeforeAfterCompare({
   const dateLabel = new Date(prev.taken_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <Surface className="mx-auto mb-8 max-w-4xl">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="type-headline">Antes vs. ahora</h3>
-        <div className={`flex items-center gap-1.5 type-subhead font-semibold tabular-nums ${trendColor}`}>
+    <section aria-labelledby="scan-before-after" className="mx-auto mb-10 w-full max-w-md text-left">
+      <div className="mb-4 flex items-end justify-between gap-3">
+        <h3 id="scan-before-after" className="type-title3">Antes vs. ahora</h3>
+        <p className={`flex items-center gap-1 type-subhead font-semibold tabular-nums ${trendColor}`}>
           <TrendIcon className="h-4 w-4" aria-hidden="true" />
           {delta > 0 ? "+" : ""}
           {delta.toFixed(1)} físico
-        </div>
+        </p>
       </div>
-      <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-3">
-        <div className="text-center">
+      <div className="grid grid-cols-2 gap-3">
+        <figure className="min-w-0">
           <img loading="lazy" decoding="async"
             src={photoUrl}
             alt="Scan anterior"
-            className="mb-2 aspect-[3/4] w-full rounded-xl object-cover"
+            className="aspect-[3/4] w-full rounded-xl bg-secondary object-cover"
           />
-          <p className="type-footnote text-muted-foreground">Antes · {dateLabel}</p>
-          <p className="mt-0.5 font-rounded text-[28px] font-bold leading-8 tabular-nums">{pPhys.toFixed(1)}</p>
-        </div>
-        <ChevronRight className="h-5 w-5 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
-        <div className="text-center">
+          <figcaption className="mt-2">
+            <span className="block type-subhead text-muted-foreground">Antes · {dateLabel}</span>
+            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{pPhys.toFixed(1)}</span>
+          </figcaption>
+        </figure>
+        <figure className="min-w-0">
           {currentPhoto ? (
             <img loading="lazy" decoding="async"
               src={currentPhoto}
               alt="Scan actual"
-              className="mb-2 aspect-[3/4] w-full rounded-xl object-cover"
+              className="aspect-[3/4] w-full rounded-xl bg-secondary object-cover"
             />
           ) : (
-            <div className="mb-2 aspect-[3/4] w-full rounded-xl bg-secondary" />
+            <div className="aspect-[3/4] w-full rounded-xl bg-secondary" />
           )}
-          <p className="type-footnote font-semibold text-primary">Ahora</p>
-          <p className="mt-0.5 font-rounded text-[28px] font-bold leading-8 tabular-nums">{currentScores.physique.toFixed(1)}</p>
-        </div>
+          <figcaption className="mt-2">
+            <span className="block type-subhead font-semibold text-primary">Ahora</span>
+            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{currentScores.physique.toFixed(1)}</span>
+          </figcaption>
+        </figure>
       </div>
-    </Surface>
+    </section>
   );
 }

@@ -9,7 +9,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import Screen from "@/components/native/Screen";
-import { Plus, Trash2 } from "lucide-react";
+import { CalendarClock, Plus, Trash2 } from "lucide-react";
 import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import PageHead from "@/components/PageHead";
@@ -210,10 +210,18 @@ const MySchedule = () => {
         }
       >
         <div className="space-y-8 pb-4">
-          <p className="type-subhead text-muted-foreground">
-            Configura aquí cómo es tu semana de verdad. Tu plan de entrenos y tus comidas se sincronizarán a tu Google Calendar{" "}
-            <strong className="font-semibold text-foreground">respetando estos horarios</strong>.
-          </p>
+          <div className="flex items-start gap-4 px-1">
+            <div className="flex w-10 shrink-0 items-center justify-center pt-0.5">
+              <CalendarClock className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="type-headline">Configura aquí cómo es tu semana de verdad.</p>
+              <p className="mt-1 type-subhead text-muted-foreground">
+                Tu plan de entrenos y tus comidas se sincronizarán a tu Google Calendar{" "}
+                <strong className="font-semibold text-foreground">respetando estos horarios</strong>.
+              </p>
+            </div>
+          </div>
 
           {/* Comidas */}
           <Section title="Tus horarios de comidas">

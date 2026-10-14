@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy, TrendingUp } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Surface } from "@/components/ui/surface";
 
 interface PR {
   id: string;
@@ -48,13 +47,26 @@ const PRsList = ({ userId }: Props) => {
     load();
   }, [userId]);
 
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
+
   if (loading) {
     return (
-      <Surface role="status" className="space-y-3" aria-label="Cargando récords personales">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-4 w-56" />
-        <Skeleton className="h-4 w-32" />
-      </Surface>
+      <div role="status" aria-label="Cargando récords personales" className="space-y-8">
+        <div>
+          <Skeleton className="h-7 w-7 rounded-lg" />
+          <Skeleton className="mt-4 h-14 w-36" />
+          <Skeleton className="mt-3 h-5 w-52" />
+        </div>
+        <div className="overflow-hidden rounded-2xl bg-card">
+          {[0, 1, 2].map((row) => (
+            <div key={row} className="flex min-h-[60px] items-center justify-between gap-4 px-4 [&:not(:last-child)]:sep-b">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
@@ -69,33 +81,46 @@ const PRsList = ({ userId }: Props) => {
     );
   }
 
+  const top = prs[0];
+  const topHasEstimate = top.estimated_1rm != null;
+
   return (
-    <ListGroup header="Tus récords personales">
-      {prs.slice(0, 10).map((pr) => (
-        <ListRow
-          key={pr.id}
-          title={pr.exercise_name}
-          subtitle={new Date(pr.achieved_at).toLocaleDateString("es-ES", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
-          trailing={
-            <span className="block text-right">
-              <span className="block type-body font-rounded font-bold tabular-nums text-primary">
-                {pr.weight} kg × {pr.reps}
-              </span>
-              {pr.estimated_1rm != null && (
-                <span className="flex items-center justify-end gap-1 type-footnote tabular-nums text-muted-foreground">
-                  <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                  1RM ~{pr.estimated_1rm} kg
+    <div className="space-y-8">
+      <section aria-label="Tu mejor marca" className="pt-1">
+        <Trophy className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />
+        <p className="mt-3 font-rounded text-[56px] font-bold leading-none tabular-nums">
+          {topHasEstimate ? top.estimated_1rm : top.weight}
+          <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>
+        </p>
+        <p className="mt-2 type-body text-muted-foreground">
+          {topHasEstimate
+            ? `1RM estimado en ${top.exercise_name}`
+            : `Tu mejor serie en ${top.exercise_name}, ${top.reps} reps`}
+        </p>
+      </section>
+
+      <ListGroup header="Tus récords personales">
+        {prs.slice(0, 10).map((pr) => (
+          <ListRow
+            key={pr.id}
+            title={pr.exercise_name}
+            subtitle={formatDate(pr.achieved_at)}
+            trailing={
+              <span className="block text-right">
+                <span className="block type-body font-rounded font-semibold tabular-nums">
+                  {pr.weight} kg × {pr.reps}
                 </span>
-              )}
-            </span>
-          }
-        />
-      ))}
-    </ListGroup>
+                {pr.estimated_1rm != null && (
+                  <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">
+                    1RM ~{pr.estimated_1rm} kg
+                  </span>
+                )}
+              </span>
+            }
+          />
+        ))}
+      </ListGroup>
+    </div>
   );
 };
 

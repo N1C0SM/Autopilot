@@ -1,8 +1,10 @@
 import { useRef, useState, useCallback, useMemo } from "react";
-import { ChevronsLeftRight, ImageOff } from "lucide-react";
+import { ChevronsLeftRight, ChevronsUpDown, ImageOff } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProgressInlineState } from "@/components/progress/ProgressInlineState";
+import { evolutionLabel, photoPose } from "@/components/progress/progressPhotos";
 import { hapticSelection } from "@/lib/native";
 
 interface Photo {
@@ -22,13 +24,32 @@ const fmt = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
 
 type Pose = "front" | "back";
-export const photoPose = (note?: string | null): "front" | "back" | "other" => {
-  const n = (note || "").toLowerCase();
-  if (/espalda|dorsal|back/.test(n)) return "back";
-  if (/frente|pecho|front/.test(n)) return "front";
-  return "other";
-};
 const POSE_LABEL: Record<Pose, string> = { front: "Frente", back: "Espalda" };
+
+/** Selector de fecha en una fila de lista: valor gris a la derecha que abre el selector del sistema. */
+const DateSelect = ({
+  label,
+  value,
+  photos,
+  onChange,
+}: {
+  label: string;
+  value: string | undefined;
+  photos: Photo[];
+  onChange: (id: string) => void;
+}) => (
+  <span className="relative flex h-11 items-center">
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-11 cursor-pointer appearance-none bg-transparent pr-6 text-right type-body tabular-nums text-muted-foreground focus-visible:outline-none focus-visible:text-foreground"
+    >
+      {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
+    </select>
+    <ChevronsUpDown className="pointer-events-none absolute right-0 h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+  </span>
+);
 
 const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
   const counts = { front: allPhotos.filter((p) => photoPose(p.note) === "front").length, back: allPhotos.filter((p) => photoPose(p.note) === "back").length };
@@ -49,10 +70,7 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
 
   const weeks = useMemo(() => {
     if (!before || !after) return "";
-    const ms = Math.abs(new Date(after.taken_at).getTime() - new Date(before.taken_at).getTime());
-    const days = Math.round(ms / 86400000);
-    if (days < 14) return `${days} ${days === 1 ? "día" : "días"} de evolución`;
-    return `${Math.round(days / 7)} semanas de evolución`;
+    return evolutionLabel(before.taken_at, after.taken_at);
   }, [before, after]);
 
   const move = useCallback((clientX: number) => {
@@ -89,16 +107,17 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
         </Tabs>
 
         {!canCompare ? (
-          <EmptyState
+          <ProgressInlineState
+            inset
             icon={ImageOff}
             title="Faltan fotos"
             description={`Necesitas al menos 2 fotos de ${pose === "front" ? "frente" : "espalda"} para comparar este ángulo.`}
-            className="py-6"
+            className="py-8"
           />
         ) : (<>
         <div
           ref={boxRef}
-          className="relative mx-auto aspect-[3/4] h-[50dvh] max-w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-2xl bg-secondary"
+          className="relative mx-auto aspect-[3/4] h-[45dvh] max-w-full cursor-ew-resize touch-none select-none overflow-hidden rounded-xl bg-secondary"
           onPointerDown={(e) => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); move(e.clientX); }}
           onPointerMove={(e) => dragging.current && move(e.clientX)}
           onPointerUp={() => { dragging.current = false; }}
@@ -117,8 +136,8 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
               <ChevronsLeftRight className="h-5 w-5" aria-hidden="true" />
             </div>
           </div>
-          <span className="absolute left-2 top-2 rounded-full bg-black/50 px-2.5 py-1 type-caption1 font-semibold text-white backdrop-blur-md">Antes · {fmt(before.taken_at)}</span>
-          <span className="absolute right-2 top-2 rounded-full bg-black/50 px-2.5 py-1 type-caption1 font-semibold text-white backdrop-blur-md">Después · {fmt(after.taken_at)}</span>
+          <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2.5 py-1 type-caption1 font-semibold text-white backdrop-blur-md">Antes</span>
+          <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2.5 py-1 type-caption1 font-semibold text-white backdrop-blur-md">Después</span>
         </div>
 
         <input
@@ -131,20 +150,30 @@ const BeforeAfterCompare = ({ photos: allPhotos, signed, onClose }: Props) => {
           className="h-11 w-full accent-primary"
         />
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="type-subhead text-muted-foreground">
-            Antes
-            <select value={beforeId} onChange={(e) => { void hapticSelection(); setBeforeId(e.target.value); }} className="field mt-1.5 w-full text-foreground">
-              {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
-            </select>
-          </label>
-          <label className="type-subhead text-muted-foreground">
-            Después
-            <select value={afterId} onChange={(e) => { void hapticSelection(); setAfterId(e.target.value); }} className="field mt-1.5 w-full text-foreground">
-              {photos.map((p) => <option key={p.id} value={p.id}>{fmt(p.taken_at)}</option>)}
-            </select>
-          </label>
-        </div>
+        <ListGroup inset>
+          <ListRow
+            title="Antes"
+            trailing={
+              <DateSelect
+                label="Fecha de antes"
+                value={beforeId}
+                photos={photos}
+                onChange={(id) => { void hapticSelection(); setBeforeId(id); }}
+              />
+            }
+          />
+          <ListRow
+            title="Después"
+            trailing={
+              <DateSelect
+                label="Fecha de después"
+                value={afterId}
+                photos={photos}
+                onChange={(id) => { void hapticSelection(); setAfterId(id); }}
+              />
+            }
+          />
+        </ListGroup>
         </>)}
       </DialogContent>
     </Dialog>

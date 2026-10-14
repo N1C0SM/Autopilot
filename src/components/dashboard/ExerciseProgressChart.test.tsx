@@ -65,6 +65,22 @@ describe("exercise progress chart", () => {
     expect(screen.queryByRole("img", { name: "Gráfica de Press banca" })).not.toBeInTheDocument();
   });
 
+  it("says there is no load to chart instead of drawing placeholder bars", () => {
+    render(
+      <Harness
+        history={[
+          entry({ bestEstimated1RmKg: null, loadedSets: 0, volumeKg: 0 }),
+          entry({ date: "2026-10-08", sessionLabel: "8 oct", bestEstimated1RmKg: null, loadedSets: 0, volumeKg: 0 }),
+        ]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Sin carga registrada")).toBeVisible();
+    expect(screen.queryByText(/Punto de partida/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "Gráfica de Press banca" })).not.toBeInTheDocument();
+  });
+
   it("renders the chart region once there are two sessions", () => {
     render(
       <Harness

@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Surface } from "@/components/ui/surface";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProgressInlineState } from "@/components/progress/ProgressInlineState";
 import { toast } from "sonner";
 import { hapticTap } from "@/lib/native";
-import { Scale, TrendingDown, TrendingUp, Minus, RefreshCw, WifiOff } from "lucide-react";
+import { Flag, Scale, TrendingDown, TrendingUp, Minus, WifiOff } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { parseLocalDate, toLocalDateString } from "@/lib/localDates";
 import { parsePositiveWeight } from "@/lib/weight";
@@ -17,7 +17,7 @@ interface Props {
   compact?: boolean;
 }
 
-const AXIS_TICK = { fontSize: 11, fill: "hsl(var(--muted-foreground))" };
+const AXIS_TICK = { fontSize: 12, fill: "hsl(var(--muted-foreground))" };
 const TOOLTIP_STYLE = {
   background: "hsl(var(--accent) / 0.92)",
   backdropFilter: "blur(20px)",
@@ -123,15 +123,17 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
     peso: w.weight,
   }));
 
+  const ready = !loading && !loadError;
+
   if (compact) {
     return (
-      <Surface>
+      <div>
         <div className="flex items-center gap-4">
           <div className="min-w-0">
-            <p className="font-rounded text-[28px] font-bold leading-8 tabular-nums">
-              {latestWeight ? <>{formatKg(latestWeight.weight)}<span className="ml-1 type-callout font-semibold text-muted-foreground">kg</span></> : "—"}
+            <p className="font-rounded text-[34px] font-bold leading-none tabular-nums">
+              {latestWeight ? <>{formatKg(latestWeight.weight)}<span className="ml-1 type-headline text-muted-foreground">kg</span></> : "—"}
             </p>
-            <p className="mt-0.5 flex items-center gap-1 type-footnote text-muted-foreground tabular-nums">
+            <p className="mt-1.5 flex items-center gap-1 type-footnote text-muted-foreground tabular-nums">
               {weightDiff === null ? "Peso actual" : <><TrendIcon className="h-3.5 w-3.5" aria-hidden="true" />{formatKgDelta(weightDiff)} kg desde el inicio</>}
             </p>
           </div>
@@ -163,15 +165,119 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
             {saving ? "Guardando…" : "Guardar"}
           </Button>
         </div>
-      </Surface>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Weight log input */}
-      <Surface>
-        <h3 className="type-headline">Registra tu peso</h3>
+    <div className="flex flex-col gap-8">
+      {loading && (
+        <div role="status" aria-label="Cargando historial de peso">
+          <Skeleton className="h-14 w-40" />
+          <Skeleton className="mt-3 h-5 w-56" />
+          <Skeleton className="mt-6 h-[200px] rounded-xl" />
+        </div>
+      )}
+
+      {loadError && (
+        <div role="alert">
+          <EmptyState
+            icon={WifiOff}
+            title="No se ha podido cargar tu historial de peso"
+            description="Tus registros no se han modificado."
+            className="py-8"
+            action={
+              <Button
+                type="button"
+                variant="plain"
+                onClick={() => {
+                  void hapticTap();
+                  setReload((value) => value + 1);
+                }}
+              >
+                Reintentar
+              </Button>
+            }
+          />
+        </div>
+      )}
+
+      {ready && latestWeight && (
+        <section aria-label="Evolución de peso">
+          <p className="font-rounded text-[56px] font-bold leading-none tabular-nums">
+            {formatKg(latestWeight.weight)}
+            <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>
+          </p>
+          <p className="mt-2 flex flex-wrap items-center gap-x-1.5 type-subhead text-muted-foreground tabular-nums">
+            {weightDiff !== null && firstWeight ? (
+              <>
+                <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                  <TrendIcon className="h-4 w-4" aria-hidden="true" />
+                  {formatKgDelta(weightDiff)} kg
+                </span>
+                <span>desde el {formatWeightDate(firstWeight.logged_at)}</span>
+              </>
+            ) : (
+              <span>Registrado el {formatWeightDate(latestWeight.logged_at)}</span>
+            )}
+          </p>
+
+          {weightLogs.length >= 2 ? (
+            <div className="mt-6 h-[200px]" role="img" aria-label="Gráfica de evolución de peso">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                  <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={24} tick={AXIS_TICK} />
+                  <YAxis
+                    orientation="right"
+                    width={40}
+                    axisLine={false}
+                    tickLine={false}
+                    tickCount={4}
+                    domain={["dataMin - 1", "dataMax + 1"]}
+                    tickFormatter={(value: number) => formatKg(value)}
+                    tick={AXIS_TICK}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.4 }}
+                    contentStyle={TOOLTIP_STYLE}
+                    labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: 2 }}
+                    itemStyle={{ color: "hsl(var(--foreground))", padding: 0, fontWeight: 600 }}
+                    formatter={(value: number) => [`${formatKg(value)} kg`, "Peso"]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="peso"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    dot={false}
+                    activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <ProgressInlineState
+              icon={Flag}
+              title="Punto de partida"
+              description="Registra tu peso otro día y aquí verás tu línea de evolución."
+              className="mt-6 h-[200px]"
+            />
+          )}
+        </section>
+      )}
+
+      {ready && weightLogs.length === 0 && (
+        <EmptyState
+          icon={Scale}
+          title="Sin registros todavía"
+          description="Registra tu peso para empezar a ver tu evolución."
+          className="py-8"
+        />
+      )}
+
+      <section aria-labelledby="weight-log-title">
+        <h3 id="weight-log-title" className="type-headline">Registra tu peso</h3>
         <div className="mt-3 flex gap-2">
           <Input
             aria-label="Peso en kilogramos"
@@ -189,107 +295,7 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
             {saving ? "Guardando…" : "Registrar"}
           </Button>
         </div>
-      </Surface>
-
-      {loading && (
-        <Skeleton className="h-64 rounded-2xl" role="status" aria-label="Cargando historial de peso" />
-      )}
-
-      {loadError && (
-        <div role="alert">
-          <EmptyState
-            icon={WifiOff}
-            title="No se ha podido cargar tu historial de peso"
-            description="Tus registros no se han modificado."
-            className="py-8"
-            action={
-              <Button
-                type="button"
-                variant="tinted"
-                size="sm"
-                onClick={() => {
-                  void hapticTap();
-                  setReload((value) => value + 1);
-                }}
-              >
-                <RefreshCw aria-hidden="true" /> Reintentar
-              </Button>
-            }
-          />
-        </div>
-      )}
-
-      {/* Weight chart */}
-      {!loading && !loadError && weightLogs.length >= 2 && (
-        <Surface>
-          <h3 className="type-subhead font-semibold text-primary">Evolución de peso</h3>
-          <p className="mt-1 font-rounded text-[34px] font-bold leading-10 tabular-nums">
-            {formatKg(latestWeight.weight)}
-            <span className="ml-1 type-body font-semibold text-muted-foreground">kg</span>
-          </p>
-          {weightDiff !== null && firstWeight && (
-            <p className="flex flex-wrap items-center gap-x-2 type-footnote text-muted-foreground tabular-nums">
-              <span className="inline-flex items-center gap-1">
-                <TrendIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                {formatKgDelta(weightDiff)} kg
-              </span>
-              <span>{formatWeightDate(firstWeight.logged_at)} — {formatWeightDate(latestWeight.logged_at)}</span>
-            </p>
-          )}
-          <div className="mt-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={chartData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeWidth={0.5} />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} minTickGap={24} tick={AXIS_TICK} />
-                <YAxis
-                  orientation="right"
-                  width={40}
-                  axisLine={false}
-                  tickLine={false}
-                  tickCount={4}
-                  domain={["dataMin - 1", "dataMax + 1"]}
-                  tickFormatter={(value: number) => formatKg(value)}
-                  tick={AXIS_TICK}
-                />
-                <Tooltip
-                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeOpacity: 0.4 }}
-                  contentStyle={TOOLTIP_STYLE}
-                  labelStyle={{ color: "hsl(var(--muted-foreground))", marginBottom: 2 }}
-                  itemStyle={{ color: "hsl(var(--foreground))", padding: 0, fontWeight: 600 }}
-                  formatter={(value: number) => [`${formatKg(value)} kg`, "Peso"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="peso"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={2.5}
-                  dot={false}
-                  activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--card))", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Surface>
-      )}
-
-      {/* Weight log placeholder */}
-      {!loading && !loadError && weightLogs.length === 1 && (
-        <EmptyState
-          icon={TrendingUp}
-          title="Aún no hay gráfica"
-          description="Registra tu peso al menos 2 días para ver el gráfico de evolución."
-          className="py-8"
-        />
-      )}
-
-      {!loading && !loadError && weightLogs.length === 0 && (
-        <EmptyState
-          icon={Scale}
-          title="Sin registros todavía"
-          description="Registra tu peso para empezar a ver tu evolución."
-          className="py-8"
-        />
-      )}
+      </section>
     </div>
   );
 };

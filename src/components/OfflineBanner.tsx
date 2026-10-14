@@ -24,10 +24,13 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-0 left-0 right-0 z-[60] flex items-center justify-center gap-2 bg-destructive px-4 py-2 text-center text-xs font-medium text-destructive-foreground sm:text-sm"
+      className="pointer-events-none fixed inset-x-0 z-[60] flex justify-center px-4"
+      style={{ bottom: "calc(var(--safe-bottom, 0px) + 96px)" }}
     >
-      <WifiOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-      Sin conexión. Tus cambios se guardarán cuando vuelvas a tener internet.
+      <div className="material flex max-w-full items-center gap-2 rounded-full border border-border px-3.5 py-1.5 type-footnote">
+        <WifiOff className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span className="truncate">Sin conexión. Guardaremos tus cambios al volver.</span>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Trash2, X, ChevronLeft, ChevronRight, RefreshCw, Columns2, ImageOff, WifiOff } from "lucide-react";
+import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff } from "lucide-react";
 import BeforeAfterCompare from "./BeforeAfterCompare";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SectionHeader } from "@/components/ui/section-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hapticTap } from "@/lib/native";
 import {
@@ -21,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { signedUrlsWithExpiry, storagePathFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
+import { evolutionLabel, photoPose } from "@/components/progress/progressPhotos";
 
 interface Photo {
   id: string;
@@ -362,13 +362,50 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
     return date.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
   };
 
-  return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <SectionHeader title="Fotos de progreso" />
+  const shortDate = (d: string) =>
+    new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 
+  // Antes y ahora del mismo ángulo que abre la comparación (frente si hay dos, si no espalda).
+  const frontPhotos = photos.filter((p) => photoPose(p.note) === "front");
+  const backPhotos = photos.filter((p) => photoPose(p.note) === "back");
+  const posePhotos = frontPhotos.length >= 2 ? frontPhotos : backPhotos.length >= 2 ? backPhotos : [];
+  const heroAfter = posePhotos[0];
+  const heroBefore = posePhotos[posePhotos.length - 1];
+  const ready = !loading && !loadError;
+
+  const openCompare = () => {
+    void hapticTap();
+    setComparing(true);
+  };
+
+  const heroPhoto = (photo: Photo, caption: string) => {
+    const url = signed.get(photo.photo_url);
+    return (
+      <span className="block min-w-0">
+        <span className="block aspect-[3/4] overflow-hidden rounded-xl bg-secondary">
+          {url ? (
+            <img
+              src={url}
+              alt={`${caption}: foto del ${formatDate(photo.taken_at)}`}
+              decoding="async"
+              onError={() => void handleImageError(photo)}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <PhotoPlaceholder />
+          )}
+        </span>
+        <span className="mt-2 block type-headline">{caption}</span>
+        <span className="block type-footnote text-muted-foreground tabular-nums">{formatDate(photo.taken_at)}</span>
+      </span>
+    );
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-2xl space-y-8">
       {loading && (
-        <div className="grid grid-cols-3 gap-1.5" role="status" aria-label="Cargando fotos de progreso">
-          {[0, 1, 2].map((item) => <Skeleton key={item} className="aspect-[3/4] rounded-xl" />)}
+        <div className="grid grid-cols-3 gap-2" role="status" aria-label="Cargando fotos de progreso">
+          {[0, 1, 2, 3, 4, 5].map((item) => <Skeleton key={item} className="aspect-[3/4] rounded-[10px]" />)}
         </div>
       )}
 
@@ -378,10 +415,17 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             icon={WifiOff}
             title="No se han podido cargar tus fotos"
             description="Tus fotos no se han modificado."
-            className="py-8"
+            className="min-h-[55dvh]"
             action={
-              <Button type="button" variant="tinted" size="sm" onClick={() => void loadPhotos()}>
-                <RefreshCw aria-hidden="true" /> Reintentar
+              <Button
+                type="button"
+                variant="plain"
+                onClick={() => {
+                  void hapticTap();
+                  void loadPhotos();
+                }}
+              >
+                Reintentar
               </Button>
             }
           />
@@ -389,7 +433,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       )}
 
       {/* Empty state */}
-      {!loading && !loadError && photos.length === 0 && (
+      {ready && photos.length === 0 && (
         <EmptyState
           icon={Camera}
           title="Empieza a documentar tu progreso"
@@ -398,6 +442,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           action={
             onGoScan ? (
               <Button
+                size="lg"
                 onClick={() => {
                   void hapticTap();
                   onGoScan();
@@ -410,28 +455,61 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         />
       )}
 
-      {!loading && !loadError && photos.length >= 2 && (
-        <Button
-          variant="tinted"
-          size="lg"
-          className="w-full"
-          onClick={() => {
-            void hapticTap();
-            setComparing(true);
-          }}
-        >
-          <Columns2 aria-hidden="true" /> Comparar antes y después
-        </Button>
+      {/* Protagonista: el antes y el ahora del mismo ángulo */}
+      {ready && heroBefore && heroAfter && heroBefore.id !== heroAfter.id && (
+        <section aria-labelledby="progress-photos-evolution">
+          <h2 id="progress-photos-evolution" className="type-title2">
+            {heroBefore.taken_at === heroAfter.taken_at ? "Tu evolución" : evolutionLabel(heroBefore.taken_at, heroAfter.taken_at)}
+          </h2>
+          <button
+            type="button"
+            onClick={openCompare}
+            aria-label="Abrir comparación"
+            className="mt-4 grid w-full grid-cols-2 gap-3 text-left transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {heroPhoto(heroBefore, "Antes")}
+            {heroPhoto(heroAfter, "Ahora")}
+          </button>
+          <Button size="lg" className="mt-6 w-full" onClick={openCompare}>
+            Comparar antes y después
+          </Button>
+        </section>
       )}
+
+      {/* Aún no hay dos fotos del mismo ángulo: aviso con el patrón de la bienvenida */}
+      {ready && photos.length > 0 && posePhotos.length < 2 && (
+        <section className="flex items-start gap-4">
+          <Columns2 className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <h2 className="type-headline">Compara tu evolución</h2>
+            <p className="mt-1 type-subhead text-muted-foreground">
+              Con dos scans del mismo ángulo verás el antes y el después lado a lado.
+            </p>
+            {onGoScan && (
+              <Button
+                variant="plain"
+                className="-ml-4 mt-0.5"
+                onClick={() => {
+                  void hapticTap();
+                  onGoScan();
+                }}
+              >
+                Hacer un scan
+              </Button>
+            )}
+          </div>
+        </section>
+      )}
+
       {comparing && photos.length >= 2 && (
         <BeforeAfterCompare photos={photos} signed={signed} onClose={() => setComparing(false)} />
       )}
 
       {/* Photo grid by month */}
-      {!loading && !loadError && Object.entries(grouped).map(([month, monthPhotos]) => (
+      {ready && Object.entries(grouped).map(([month, monthPhotos]) => (
         <section key={month}>
-          <h3 className="mb-2.5 type-headline capitalize">{monthLabel(month)}</h3>
-          <div className="grid grid-cols-3 gap-1.5">
+          <h3 className="mb-3 type-headline first-letter:uppercase">{monthLabel(month)}</h3>
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
             {monthPhotos.map((photo) => {
               const photoUrl = signed.get(photo.photo_url);
               return (
@@ -443,7 +521,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                     setViewingPhoto(photos.indexOf(photo));
                   }}
                   aria-label={`Progreso: ver foto del ${formatDate(photo.taken_at)}`}
-                  className="relative aspect-[3/4] overflow-hidden rounded-xl bg-secondary transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="relative aspect-[3/4] overflow-hidden rounded-[10px] bg-secondary transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {photoUrl ? (
                     <img
@@ -457,8 +535,8 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   ) : (
                     <PhotoPlaceholder />
                   )}
-                  <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 px-2 py-0.5 type-caption2 font-medium text-white backdrop-blur-md">
-                    {formatDate(photo.taken_at)}
+                  <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-1.5 py-0.5 type-caption2 font-medium tabular-nums text-white backdrop-blur-md">
+                    {shortDate(photo.taken_at)}
                   </span>
                 </button>
               );
@@ -491,7 +569,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   void hapticTap();
                   setPhotoToDelete(photos[viewingPhoto]);
                 }}
-                className="bg-white/15 text-destructive backdrop-blur-md hover:bg-white/25 active:bg-white/25"
+                className="bg-white/15 text-destructive backdrop-blur-md active:bg-white/25"
               >
                 <Trash2 className="h-5 w-5" />
               </Button>
@@ -503,7 +581,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   void hapticTap();
                   setViewingPhoto(null);
                 }}
-                className="bg-white/15 text-white backdrop-blur-md hover:bg-white/25 active:bg-white/25"
+                className="bg-white/15 text-white backdrop-blur-md active:bg-white/25"
               >
                 <X className="h-5 w-5" />
               </Button>

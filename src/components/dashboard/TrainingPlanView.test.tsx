@@ -64,4 +64,24 @@ describe("weekly plan access", () => {
     fireEvent.click(thursday);
     expect(screen.getByText("Elige un día")).toBeVisible();
   });
+
+  it("sums up the session and offers the next session from a rest day", () => {
+    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
+    render(
+      <TrainingPlanView
+        dayPlans={[
+          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat, { ...squat, exercise_id: "lunge", name: "Zancada" }] },
+          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] },
+        ]}
+        onOpenWorkout={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Ver el jueves" }));
+    expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("heading", { name: "Empuje" })).toBeVisible();
+    expect(screen.getByText("1 ejercicio · 3 series")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Lunes, Piernas" }));
+    expect(screen.getByText("2 ejercicios · 6 series")).toBeVisible();
+  });
 });

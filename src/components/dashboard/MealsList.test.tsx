@@ -53,6 +53,54 @@ describe("meal check-ins", () => {
     expect(screen.getByText(/las comidas de abajo son orientativas/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Añadir peso" }));
     expect(onOpenProfile).toHaveBeenCalledOnce();
+    expect(mocks.hapticTap).toHaveBeenCalledOnce();
     expect(screen.queryByText(/kcal/)).not.toBeInTheDocument();
+  });
+});
+
+describe("day summary", () => {
+  const meals = [
+    { name: "Desayuno", description: "Avena" },
+    { name: "Cena", description: "Pescado" },
+  ];
+
+  it("fills the ring with the meals checked today and says how many are left", () => {
+    render(<MealsList meals={meals} macros={null} />);
+
+    expect(screen.getByRole("progressbar", { name: "0 de 2 comidas hechas hoy" })).toHaveAttribute("aria-valuenow", "0");
+    expect(screen.getByText("Te quedan 2 comidas")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: /Desayuno/ }));
+    expect(screen.getByRole("progressbar", { name: "1 de 2 comidas hechas hoy" })).toHaveAttribute("aria-valuenow", "50");
+    expect(screen.getByText("Te queda 1 comida")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: /Cena/ }));
+    expect(screen.getByRole("progressbar", { name: "2 de 2 comidas hechas hoy" })).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByText("Día completo")).toBeVisible();
+  });
+
+  it("shows each macro target with its real share of the day's energy", () => {
+    render(<MealsList meals={meals} macros={{ protein: 140, carbs: 220, fats: 65 }} />);
+
+    expect(screen.getByText("2025")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Proteína: objetivo diario de 140 gramos, 28 % de las calorías" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Carbos: objetivo diario de 220 gramos, 43 % de las calorías" })).toBeVisible();
+    expect(screen.getByRole("group", { name: "Grasas: objetivo diario de 65 gramos, 29 % de las calorías" })).toBeVisible();
+  });
+
+  it("keeps the plan's calorie target when it is set explicitly", () => {
+    render(<MealsList meals={[]} macros={{ protein: 140, carbs: 220, fats: 65, calories: 2000 }} />);
+
+    expect(screen.getByText("2000")).toBeVisible();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.getByText("Sin comidas todavía")).toBeVisible();
+  });
+
+  it("does not draw a summary while the plan is still being prepared", () => {
+    render(<MealsList meals={[]} macros={null} />);
+
+    expect(screen.getByText("Tu plan está en preparación")).toBeVisible();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group")).not.toBeInTheDocument();
   });
 });

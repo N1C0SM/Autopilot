@@ -13,4 +13,17 @@ describe("workout effort check-in", () => {
 
     expect(onConfirm).toHaveBeenCalledWith(null);
   });
+
+  it("saves the effort the user picks on the 1 to 10 scale", () => {
+    const onConfirm = vi.fn();
+    render(<RPEDialog open onConfirm={onConfirm} />);
+
+    const nine = screen.getByRole("radio", { name: /^9,/ });
+    fireEvent.click(nine);
+    expect(nine).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar esfuerzo y completar" }));
+
+    expect(onConfirm).toHaveBeenCalledWith(9);
+  });
 });

@@ -29,9 +29,6 @@ const REMINDERS = [
   { value: 120, label: "2 horas antes" },
 ];
 
-// Los grupos viven dentro de una hoja que ya es bg-card: sobre ella van en bg-secondary.
-const sheetGroup = "[&>div]:bg-secondary";
-
 interface PickerRowProps {
   title: string;
   value: number;
@@ -53,7 +50,7 @@ const PickerRow = ({ title, value, options, onChange }: PickerRowProps) => (
       >
         <SelectTrigger
           aria-label={title}
-          className="h-auto w-auto gap-1 bg-transparent px-0 text-[17px] leading-[22px] text-muted-foreground before:absolute before:inset-0 before:content-['']"
+          className="h-auto w-auto gap-1 bg-transparent px-0 type-body text-muted-foreground before:absolute before:inset-0 before:content-['']"
         >
           <SelectValue />
         </SelectTrigger>
@@ -230,7 +227,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
             </Button>
           ) : (
             <div className="space-y-3">
-              <ListGroup className={sheetGroup} header="Google Calendar">
+              <ListGroup inset header="Google Calendar">
                 <ListRow
                   icon={<Check />}
                   title="Conectado"
@@ -271,7 +268,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
             </div>
             <CollapsibleContent className="space-y-6 pt-6">
               {/* Configuración */}
-              <ListGroup className={sheetGroup} header="Horario">
+              <ListGroup inset header="Horario">
                 <PickerRow
                   title="Hora gimnasio"
                   value={hourGym}
@@ -294,13 +291,13 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
               </ListGroup>
 
               {/* Descarga */}
-              <ListGroup className={sheetGroup} footer="Compatible con Google, Apple y Outlook. Una sola vez.">
+              <ListGroup inset footer="Compatible con Google, Apple y Outlook. Una sola vez.">
                 <ListRow icon={<Download />} title="Descargar archivo .ics" onClick={handleDownload} />
               </ListGroup>
 
               {/* Suscripción */}
               {!token ? (
-                <ListGroup className={sheetGroup} header="Suscripción auto-actualizable" footer="Se actualiza solo cuando cambia tu plan. Recomendado.">
+                <ListGroup inset header="Suscripción auto-actualizable" footer="Se actualiza solo cuando cambia tu plan. Recomendado.">
                   <ListRow
                     icon={<Link2 />}
                     title="Generar enlace"
@@ -311,7 +308,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
                 </ListGroup>
               ) : (
                 <ListGroup
-                  className={sheetGroup}
+                  inset
                   header="Suscripción auto-actualizable"
                   footer={
                     <>

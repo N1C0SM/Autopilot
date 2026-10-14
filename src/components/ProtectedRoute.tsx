@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, useLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -28,8 +28,8 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (loading || checking) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="flex h-dvh items-center justify-center bg-background">
+        <Spinner size="lg" />
       </div>
     );
   }

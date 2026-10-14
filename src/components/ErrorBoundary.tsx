@@ -1,5 +1,8 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { CloudOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 
 interface Props {
   children: ReactNode;
@@ -8,6 +11,7 @@ interface State {
   error: Error | null;
   retryKey: number;
   attempts: number;
+  reloading: boolean;
 }
 
 const MAX_AUTO_RETRIES = 3;
@@ -17,7 +21,7 @@ const MAX_AUTO_RETRIES = 3;
  * en lugar de mostrar una pantalla de error al usuario.
  */
 export default class ErrorBoundary extends Component<Props, State> {
-  state: State = { error: null, retryKey: 0, attempts: 0 };
+  state: State = { error: null, retryKey: 0, attempts: 0, reloading: false };
   private timer: number | null = null;
 
   static getDerivedStateFromError(error: Error): Partial<State> {
@@ -46,6 +50,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       const reloads = Number(sessionStorage.getItem("autopilot_auto_reload") || "0");
       if (reloads < 1) {
         sessionStorage.setItem("autopilot_auto_reload", String(reloads + 1));
+        this.setState({ reloading: true });
         window.setTimeout(() => window.location.reload(), 400);
       }
     } catch {
@@ -60,11 +65,29 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.error) {
-      // Recuperación silenciosa: solo un indicador de carga, sin mensajes de error.
+      // Mientras quedan reintentos automáticos, solo el indicador de carga.
+      if (this.state.attempts < MAX_AUTO_RETRIES || this.state.reloading) {
+        return (
+          <main className="flex h-dvh items-center justify-center bg-background">
+            <Spinner size="lg" />
+          </main>
+        );
+      }
       return (
-        <main className="min-h-screen bg-background flex items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
-          <span className="sr-only">Cargando</span>
+        <main
+          className="flex h-dvh items-center justify-center bg-background px-4"
+          style={{ paddingTop: "var(--safe-top, 0px)", paddingBottom: "var(--safe-bottom, 0px)" }}
+        >
+          <EmptyState
+            icon={CloudOff}
+            title="Algo no ha cargado bien"
+            description="Vuelve a intentarlo. Tus datos están a salvo."
+            action={
+              <Button variant="plain" size="lg" onClick={() => window.location.reload()}>
+                Reintentar
+              </Button>
+            }
+          />
         </main>
       );
     }

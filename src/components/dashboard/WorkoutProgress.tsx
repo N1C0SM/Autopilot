@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronsUpDown, Dumbbell, RefreshCw, WifiOff } from "lucide-react";
+import { ChevronsUpDown, Dumbbell, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Surface } from "@/components/ui/surface";
 import { toast } from "sonner";
 import { hapticSelection, hapticTap } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +13,14 @@ interface Props {
   userId: string;
   compact?: boolean;
 }
+
+// Hairlines between stats: two columns under 390 px (second row with a top rule), four from 390 px.
+const STAT_CELL = [
+  "pr-3",
+  "pl-3 sep-l",
+  "pr-3 sep-t min-[390px]:border-t-0 min-[390px]:pl-3 min-[390px]:sep-l",
+  "pl-3 sep-l sep-t min-[390px]:border-t-0",
+];
 
 const WorkoutProgress = ({ userId, compact = false }: Props) => {
   const [historyByExercise, setHistoryByExercise] = useState<Record<string, ExerciseHistoryEntry[]>>({});
@@ -73,23 +80,27 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     ? "reps"
     : metric;
 
-  const tiles = latest
+  const stats = latest
     ? [
-        { value: latest.completedSets, label: "series completadas" },
-        { value: latest.reps, label: "repeticiones" },
-        { value: latest.loadedSets > 0 ? `${Math.round(latest.volumeKg)} kg` : "—", label: "volumen con carga" },
-        { value: latest.bestEstimated1RmKg !== null ? `${latest.bestEstimated1RmKg} kg` : "—", label: "1RM estimado" },
+        { label: "Series", value: String(latest.completedSets) },
+        { label: "Reps", value: String(latest.reps) },
+        { label: "Volumen", value: latest.loadedSets > 0 ? String(Math.round(latest.volumeKg)) : "—", unit: latest.loadedSets > 0 ? "kg" : undefined },
+        { label: "1RM", value: latest.bestEstimated1RmKg !== null ? String(latest.bestEstimated1RmKg) : "—", unit: latest.bestEstimated1RmKg !== null ? "kg" : undefined },
       ]
     : [];
+  const fill = compact ? "flex flex-1 flex-col" : undefined;
 
   return (
-    <Surface
+    <div
       role="region"
       aria-label="Progresión por ejercicio"
-      className={compact ? "flex min-h-0 flex-1 flex-col overflow-y-auto" : "sm:p-6"}
+      className={compact ? "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" : "flex flex-col"}
     >
       {exercises.length > 0 && (
-        <div className="relative">
+        // Botón de menú sobre negro: el <select> nativo transparente encima abre el selector del sistema.
+        <div className="relative flex min-h-[44px] max-w-full items-center gap-1 self-start rounded-lg transition-opacity duration-100 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+          <span className="min-w-0 truncate type-title3">{selectedExercise}</span>
+          <ChevronsUpDown className="h-[18px] w-[18px] shrink-0 text-primary" strokeWidth={2.25} aria-hidden="true" />
           <select
             aria-label="Ejercicio"
             value={selectedExercise}
@@ -97,34 +108,36 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
               void hapticSelection();
               setSelectedExercise(event.target.value);
             }}
-            className="field w-full min-w-0 appearance-none truncate pr-9 font-semibold focus-visible:outline-none"
+            className="absolute inset-0 h-full w-full cursor-pointer appearance-none opacity-0 type-body focus-visible:outline-none"
           >
             {exercises.map((exercise) => <option key={exercise} value={exercise}>{exercise} · {historyByExercise[exercise].length} {historyByExercise[exercise].length === 1 ? "sesión" : "sesiones"}</option>)}
           </select>
-          <ChevronsUpDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         </div>
       )}
 
       {loading ? (
-        <Skeleton className="mt-4 h-52 rounded-xl" role="status" aria-label="Cargando historial" />
+        <div role="status" aria-label="Cargando historial" className={fill}>
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="mt-4 h-12 w-32" />
+          <Skeleton className={`mt-6 rounded-xl ${compact ? "min-h-[160px] flex-1" : "h-52"}`} />
+        </div>
       ) : loadError ? (
-        <div role="alert">
+        <div role="alert" className={fill}>
           <EmptyState
             icon={WifiOff}
             title="No se ha podido cargar tu evolución"
             description="Tus entrenamientos siguen guardados. Comprueba la conexión y vuelve a intentarlo."
-            className="py-8"
+            className={compact ? "flex-1 py-8" : "py-8"}
             action={
               <Button
                 type="button"
-                variant="tinted"
-                size="sm"
+                variant="plain"
                 onClick={() => {
                   void hapticTap();
                   setReload((value) => value + 1);
                 }}
               >
-                <RefreshCw aria-hidden="true" /> Reintentar
+                Reintentar
               </Button>
             }
           />
@@ -134,11 +147,11 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           icon={Dumbbell}
           title="Aún no hay sesiones registradas"
           description="Completa series en Entrenamiento y aquí aparecerá tu evolución por ejercicio."
-          className="py-8"
+          className={compact ? "flex-1 py-8" : "py-8"}
         />
       ) : (
         <>
-          <div className={compact ? "mt-4 flex-1" : "mt-5"}>
+          <div className={compact ? "mt-2 flex flex-1 flex-col" : "mt-2"}>
             <ExerciseProgressChart
               compact={compact}
               exerciseName={selectedExercise}
@@ -148,18 +161,25 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
             />
           </div>
           {latest && (
-            <div className={compact ? "mt-3 grid grid-cols-2 gap-2 min-[390px]:grid-cols-4 min-[390px]:gap-1.5" : "mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"}>
-              {tiles.map((tile) => (
-                <div key={tile.label} className={`min-w-0 break-words rounded-xl bg-secondary ${compact ? "p-2" : "p-3"}`}>
-                  <p className={`font-rounded font-bold tabular-nums ${compact ? "type-subhead" : "text-xl leading-6"}`}>{tile.value}</p>
-                  <p className={`text-muted-foreground ${compact ? "type-caption2" : "type-caption1"}`}>{tile.label}</p>
-                </div>
-              ))}
-            </div>
+            <section aria-label="Última sesión" className="mt-6 shrink-0">
+              <h3 className="type-footnote text-muted-foreground">Última sesión · {latest.sessionLabel}</h3>
+              {/* Fila de estadísticas al estilo Salud: cifra + etiqueta, separadas por hairlines. 2 × 2 bajo 390 px. */}
+              <dl className="mt-2 grid grid-cols-2 min-[390px]:grid-cols-4">
+                {stats.map((stat, index) => (
+                  <div key={stat.label} className={`flex min-w-0 flex-col-reverse py-2 ${STAT_CELL[index]}`}>
+                    <dt className="truncate type-footnote text-muted-foreground">{stat.label}</dt>
+                    <dd className="flex flex-wrap items-baseline gap-x-0.5">
+                      <span className="font-rounded type-title3 font-bold tabular-nums">{stat.value}</span>
+                      {stat.unit && <span className="type-footnote text-muted-foreground">{stat.unit}</span>}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
           )}
         </>
       )}
-    </Surface>
+    </div>
   );
 };
 

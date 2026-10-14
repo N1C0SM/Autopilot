@@ -232,6 +232,40 @@ describe("progress photos", () => {
     expect(mocks.error).toHaveBeenCalledWith(expect.stringContaining("No se pudo eliminar el archivo"));
   });
 
+  it("muestra el antes y el ahora del mismo ángulo y abre la comparación", async () => {
+    mocks.orderByCreatedAt.mockResolvedValue({
+      data: [
+        photoRow({ id: "photo-2", photo_url: "user/b.png", taken_at: "2025-03-01", note: "Scan · frente" }),
+        photoRow({ id: "photo-1", photo_url: "user/a.png", taken_at: "2025-01-01", note: "Scan · frente" }),
+      ],
+      error: null,
+    });
+    render(<ProgressPhotos userId="user" />);
+
+    expect(await screen.findByRole("heading", { name: "8 semanas de evolución" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Comparar antes y después" }));
+
+    const sheet = await screen.findByRole("dialog");
+    expect(within(sheet).getByRole("tab", { name: "Frente" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("explica cómo comparar cuando aún no hay dos fotos del mismo ángulo", async () => {
+    mocks.orderByCreatedAt.mockResolvedValue({
+      data: [
+        photoRow({ id: "photo-2", photo_url: "user/b.png", note: "Scan · espalda" }),
+        photoRow({ id: "photo-1", photo_url: "user/a.png", note: "Scan · frente" }),
+      ],
+      error: null,
+    });
+    const onGoScan = vi.fn();
+    render(<ProgressPhotos userId="user" onGoScan={onGoScan} />);
+
+    expect(await screen.findByText("Compara tu evolución")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Comparar antes y después" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Hacer un scan" }));
+    expect(onGoScan).toHaveBeenCalledTimes(1);
+  });
+
   it("cierra el visor con Escape y navega con las flechas", async () => {
     mocks.orderByCreatedAt.mockResolvedValue({
       data: [

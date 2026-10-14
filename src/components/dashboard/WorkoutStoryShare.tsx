@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Share2, Download } from "lucide-react";
+import { Share, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
@@ -268,16 +270,33 @@ export function WorkoutStoryShare(props: Props) {
       if ((e as Error)?.name !== "AbortError") toast.error("No se pudo crear la imagen");
     } finally { setBusy(false); }
   };
+  // Tintado, no relleno: el botón dorado macizo de la pantalla es la acción principal de abajo.
   return (
-    <div className="w-full min-w-0 space-y-2">
-    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_3rem] gap-2">
-      <Button type="button" variant="hero" disabled={busy} onClick={() => run("share")} className="h-12 min-w-0 px-3 text-sm">
-        <Share2 className="h-4 w-4" /> <span className="truncate">Compartir en historias</span>
+    <div className="flex w-full min-w-0 gap-2">
+      <Button
+        type="button"
+        variant="tinted"
+        size="lg"
+        disabled={busy}
+        onClick={() => { void hapticTap(); void run("share"); }}
+        className="min-w-0 flex-1 px-4"
+      >
+        {busy
+          ? <Spinner size="sm" label="Creando imagen" className="text-primary [&>svg]:!size-full" />
+          : <Share aria-hidden="true" />}
+        <span className="truncate">Compartir en historias</span>
       </Button>
-      <Button type="button" variant="outline" disabled={busy} onClick={() => run("download")} className="h-12 w-12 px-0" aria-label="Descargar imagen">
-        <Download className="h-4 w-4" />
+      <Button
+        type="button"
+        variant="secondary"
+        size="lg"
+        disabled={busy}
+        onClick={() => { void hapticTap(); void run("download"); }}
+        className="w-[50px] shrink-0 px-0"
+        aria-label="Descargar imagen"
+      >
+        <Download aria-hidden="true" />
       </Button>
-    </div>
     </div>
   );
 }

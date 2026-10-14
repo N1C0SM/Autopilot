@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
@@ -8,7 +7,7 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { Plane } from "lucide-react";
 import { toast } from "sonner";
 import { toLocalDateString } from "@/lib/localDates";
-import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import { hapticNotify, hapticSelection } from "@/lib/native";
 
 interface Props {
   userId: string;
@@ -109,81 +108,60 @@ const TravelModeCard = ({ userId }: Props) => {
   };
 
   return (
-    <div className="space-y-3">
-      <ListGroup
-        footer={editing ? "Equipamiento disponible, por ejemplo: solo gomas, gym del hotel, ninguno." : undefined}
-      >
-        <ListRow
-          icon={<Plane />}
-          title={showActive ? "Modo viaje activo" : "Modo viaje"}
-          subtitle={showActive ? undefined : "Adapta tu plan cuando estás fuera de tu rutina habitual"}
-          trailing={
-            <>
-              {saving && !editing ? <Spinner size="sm" className="mr-3" /> : null}
-              <Switch checked={switchedOn} onCheckedChange={toggle} disabled={saving} aria-label="Modo viaje" />
-            </>
-          }
-        />
-        {showActive ? (
+    <ListGroup footer={editing ? "Equipamiento disponible, por ejemplo: solo gomas, gym del hotel, ninguno." : undefined}>
+      <ListRow
+        icon={<Plane />}
+        title={showActive ? "Modo viaje activo" : "Modo viaje"}
+        subtitle={showActive ? undefined : "Adapta tu plan cuando estás fuera de tu rutina habitual"}
+        trailing={
           <>
-            <ListRow
-              title="Hasta"
-              value={new Date(until).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
-            />
-            <ListRow title="Equipamiento" value={equipment || "ninguno"} />
+            {saving && !editing ? <Spinner size="sm" className="mr-3" /> : null}
+            <Switch checked={switchedOn} onCheckedChange={toggle} disabled={saving} aria-label="Modo viaje" />
           </>
-        ) : null}
-        {editing ? (
-          <>
-            <FieldRow label="Hasta cuándo" htmlFor="travel-until">
-              <Input
-                id="travel-until"
-                type="date"
-                value={until}
-                onChange={(e) => setUntil(e.target.value)}
-                min={toLocalDateString()}
-                className="ml-auto h-11 w-auto min-w-0 bg-transparent px-0"
-              />
-            </FieldRow>
-            <FieldRow label="Equipamiento" htmlFor="travel-equipment">
-              <Input
-                id="travel-equipment"
-                value={equipment}
-                onChange={(e) => setEquipment(e.target.value)}
-                placeholder="Opcional"
-                aria-label="Equipamiento disponible"
-                enterKeyHint="done"
-                className={rowInput}
-              />
-            </FieldRow>
-          </>
-        ) : null}
-      </ListGroup>
-      {editing ? (
-        <div className="flex gap-2">
-          <Button
-            variant="hero"
-            className="flex-1"
-            onClick={() => {
-              void hapticTap();
-              void activate();
-            }}
-            disabled={saving}
-          >
-            {saving ? <Spinner size="sm" className="text-primary-foreground" label="Activando" /> : "Activar"}
-          </Button>
-          <Button
-            variant="plain"
-            onClick={() => {
-              void hapticTap();
-              setEditing(false);
-            }}
-          >
-            Cancelar
-          </Button>
-        </div>
+        }
+      />
+      {showActive ? (
+        <>
+          <ListRow
+            title="Hasta"
+            value={new Date(until).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+          />
+          <ListRow title="Equipamiento" value={equipment || "ninguno"} />
+        </>
       ) : null}
-    </div>
+      {editing ? (
+        <>
+          <FieldRow label="Hasta cuándo" htmlFor="travel-until">
+            <Input
+              id="travel-until"
+              type="date"
+              value={until}
+              onChange={(e) => setUntil(e.target.value)}
+              min={toLocalDateString()}
+              className="ml-auto h-11 w-auto min-w-0 bg-transparent px-0"
+            />
+          </FieldRow>
+          <FieldRow label="Equipamiento" htmlFor="travel-equipment">
+            <Input
+              id="travel-equipment"
+              value={equipment}
+              onChange={(e) => setEquipment(e.target.value)}
+              placeholder="Opcional"
+              aria-label="Equipamiento disponible"
+              enterKeyHint="done"
+              className={rowInput}
+            />
+          </FieldRow>
+          <ListRow
+            title={<span className="font-semibold text-primary">Activar</span>}
+            trailing={saving ? <Spinner size="sm" label="Activando" /> : undefined}
+            disabled={saving}
+            onClick={() => void activate()}
+          />
+          <ListRow title="Cancelar" onClick={() => setEditing(false)} />
+        </>
+      ) : null}
+    </ListGroup>
   );
 };
 

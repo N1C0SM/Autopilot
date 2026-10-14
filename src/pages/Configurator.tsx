@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,7 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { hasCoaching } from "@/lib/entitlements";
 import { logConsent } from "@/lib/consents";
 import { track } from "@/lib/analytics";
-import { hapticTap } from "@/lib/native";
+import { hapticImpact, hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
+import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import Screen from "@/components/native/Screen";
 import PageHead from "@/components/PageHead";
 import PlanPreview from "@/components/PlanPreview";
 
@@ -57,12 +61,61 @@ const initial: Cfg = {
 
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
 
-const Pill = ({ on, onClick, children, sub }: { on: boolean; onClick: () => void; children: React.ReactNode; sub?: string }) => (
-  <button type="button" onClick={() => { void hapticTap(); onClick(); }} aria-pressed={on}
-    className={`text-left rounded-2xl px-4 py-3.5 transition-colors active:opacity-70 ${on ? "bg-primary/10 ring-2 ring-inset ring-primary" : "bg-secondary"}`}>
-    <div className="font-semibold text-[15px] tracking-[-0.01em]">{children}</div>
-    {sub && <div className="text-[13px] leading-snug text-muted-foreground mt-0.5">{sub}</div>}
-  </button>
+type Option = { v: string | number; l: string; d?: string };
+
+const Choices = ({ header, options, value, onChange }: {
+  header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;
+}) => (
+  <section>
+    {header ? <h2 className="type-group-header px-4 pb-1.5">{header}</h2> : null}
+    <div className="overflow-hidden rounded-2xl bg-card">
+      {options.map((o) => {
+        const on = o.v === value;
+        return (
+          <button key={o.v} type="button" aria-pressed={on}
+            onClick={() => { void hapticSelection(); onChange(o.v); }}
+            className="group/row flex min-h-[56px] w-full items-center gap-3 pl-4 text-left transition-colors duration-100 active:bg-accent">
+            <span className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-3 pr-4 group-[:not(:last-child)]/row:sep-b">
+              <span className="min-w-0 flex-1">
+                <span className="block type-headline">{o.l}</span>
+                {o.d ? <span className="mt-0.5 block type-subhead text-muted-foreground">{o.d}</span> : null}
+              </span>
+              <Check aria-hidden="true" strokeWidth={2.75}
+                className={cn("h-5 w-5 shrink-0 text-primary", on ? "opacity-100" : "opacity-0")} />
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  </section>
+);
+
+const DayPicker = ({ header, isOn, onToggle, pressed }: {
+  header: string; isOn: (v: number) => boolean; onToggle: (v: number) => void; pressed: boolean;
+}) => (
+  <section>
+    <h2 className="type-group-header px-4 pb-2">{header}</h2>
+    <div className="grid grid-cols-7 gap-1">
+      {DOW.map((d) => {
+        const on = isOn(d.v);
+        return (
+          <button key={d.v} type="button" aria-label={d.l} aria-pressed={pressed ? on : undefined}
+            onClick={() => { void hapticSelection(); onToggle(d.v); }}
+            className={cn("mx-auto flex aspect-square w-full min-w-[44px] max-w-[52px] items-center justify-center rounded-full type-headline transition-colors active:opacity-70",
+              on ? "bg-primary text-primary-foreground" : "bg-card")}>
+            {d.s}
+          </button>
+        );
+      })}
+    </div>
+  </section>
+);
+
+const Field = ({ header, children }: { header: string; children: React.ReactNode }) => (
+  <section>
+    <h2 className="type-group-header px-4 pb-1.5">{header}</h2>
+    {children}
+  </section>
 );
 
 const Configurator = () => {
@@ -142,154 +195,102 @@ const Configurator = () => {
 
   const dayNames = DOW.filter((d) => c.days.includes(d.v)).map((d) => d.s).join(", ");
   const titles = ["¿Qué quieres conseguir?", "Horarios y disponibilidad", "Tu nutrición", "Tu seguimiento", "Tu plan Autopilot"];
+  const leads = [
+    "Con quién entrenas, tu objetivo y dónde.",
+    "Elige al menos dos días. Ajustamos el plan a tu semana.",
+    "Para que las comidas encajen con tu día.",
+    "Una revisión a la semana para ajustar el plan.",
+    user ? "Una muestra con tus respuestas. Confirma para generar y guardar tu plan completo." : "Una muestra con tus respuestas. Crea tu cuenta para generar y guardar el plan completo.",
+  ];
+  const last = titles.length - 1;
+  const goBack = () => { if (saving) return; if (step === 0) navigate("/"); else setStep((s) => s - 1); };
+
+  const footer = step < last ? (
+    <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); setStep((s) => s + 1); }} disabled={!valid[step]}>
+      Continuar
+    </Button>
+  ) : (
+    <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticImpact(); void save(); }} disabled={!accept || saving}>
+      {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" label="Guardando" />}
+      {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
+    </Button>
+  );
 
   return (
-    <div
-      className="min-h-screen bg-background flex flex-col"
-      style={{ paddingTop: "var(--safe-top, 0px)", paddingBottom: "var(--safe-bottom, 0px)" }}
-    >
+    <Screen title={`${step + 1} de ${titles.length}`} onBack={goBack} footer={footer}>
       <PageHead title="Diseña tu plan · Autopilot" description="Configura tu plan de entrenamiento y nutrición en un minuto." path="/onboarding" />
-      <div className="max-w-xl w-full mx-auto px-4 pb-8 pt-3 flex-1">
-        <div className="flex h-11 items-center justify-between">
-          <button
-            type="button"
-            onClick={() => { void hapticTap(); if (step === 0) navigate("/"); else setStep((s) => s - 1); }}
-            disabled={saving}
-            aria-label="Atrás"
-            className="-ml-2 inline-flex h-10 items-center gap-0.5 rounded-full pl-1 pr-2.5 text-foreground/85 transition-colors active:bg-secondary/60"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="text-[15px] font-medium">Atrás</span>
-          </button>
-          <span className="text-[13px] font-medium tabular-nums text-muted-foreground">{step + 1} de {titles.length}</span>
-        </div>
-        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
-          <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
-        </div>
-        <h1 className="mt-8 mb-8 text-[28px] font-bold font-display tracking-[-0.03em] leading-[1.1]">{titles[step]}</h1>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
+        <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-ios" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
+      </div>
+      <h1 className="mt-7 type-title1">{titles[step]}</h1>
+      <p className="mt-2 type-subhead text-muted-foreground">{leads[step]}</p>
 
+      <div className="mt-8 space-y-8 pb-4">
         {step === 0 && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-2">{MODE.map((m) => <Pill key={m.v} on={c.mode === m.v} sub={m.d} onClick={() => set("mode", m.v)}>{m.l}</Pill>)}</div>
+          <>
+            <Choices options={MODE} value={c.mode} onChange={(v) => set("mode", String(v))} />
             {c.mode === "pareja" && (
-              <Input type="email" placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} className="h-12 border-0 bg-secondary text-[16px]" />
+              <Field header="Tu pareja de entreno">
+                <Input type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} />
+              </Field>
             )}
-            <div className="grid grid-cols-2 gap-2">{GOALS.map((g) => <Pill key={g.v} on={c.goal === g.v} onClick={() => set("goal", g.v)}>{g.l}</Pill>)}</div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Dónde entrenas?</p>
-              <div className="grid grid-cols-3 gap-2">{FOCUS.map((f) => <Pill key={f.v} on={c.focus === f.v} onClick={() => set("focus", f.v)}>{f.l}</Pill>)}</div>
-            </div>
-          </div>
+            <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
+            <Choices header="¿Dónde entrenas?" options={FOCUS} value={c.focus} onChange={(v) => set("focus", String(v))} />
+          </>
         )}
 
         {step === 1 && (
-          <div className="space-y-6">
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Qué días vas a entrenar? <span className="normal-case tracking-normal">(mínimo 2)</span></p>
-              <div className="grid grid-cols-7 gap-1.5">
-                {DOW.map((d) => {
-                  const on = c.days.includes(d.v);
-                  return (
-                    <button key={d.v} type="button" aria-label={d.l} aria-pressed={on}
-                      onClick={() => { void hapticTap(); set("days", on ? c.days.filter((x) => x !== d.v) : [...c.days, d.v]); }}
-                      className={`aspect-square rounded-full text-[15px] font-semibold transition-colors active:opacity-70 ${on ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
-                      {d.s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Tiempo por sesión</p>
-              <div className="grid grid-cols-3 gap-2">{DURATION.map((d) => <Pill key={d.v} on={c.minutes === d.v} onClick={() => set("minutes", d.v)}>{d.l}</Pill>)}</div>
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Estructura</p>
-              <div className="grid grid-cols-2 gap-2">{STRUCTURE.map((s) => <Pill key={s.v} on={c.structure === s.v} onClick={() => set("structure", s.v)}>{s.l}</Pill>)}</div>
-            </div>
-          </div>
+          <>
+            <DayPicker header="¿Qué días vas a entrenar?" pressed isOn={(v) => c.days.includes(v)}
+              onToggle={(v) => set("days", c.days.includes(v) ? c.days.filter((x) => x !== v) : [...c.days, v])} />
+            <Choices header="Tiempo por sesión" options={DURATION} value={c.minutes} onChange={(v) => set("minutes", Number(v))} />
+            <Choices header="Estructura" options={STRUCTURE} value={c.structure} onChange={(v) => set("structure", String(v))} />
+          </>
         )}
 
         {step === 2 && (
-          <div className="space-y-6">
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Comidas al día</p>
-              <div className="grid grid-cols-4 gap-2">{[2, 3, 4, 5].map((n) => <Pill key={n} on={c.meals === n} onClick={() => set("meals", n)}>{n}</Pill>)}</div>
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Te gusta cocinar?</p>
-              <div className="grid gap-2">{COOKING.map((o) => <Pill key={o.v} on={c.cooking === o.v} sub={o.d} onClick={() => set("cooking", o.v)}>{o.l}</Pill>)}</div>
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Algo que no quieras ver en tu plan? <span className="normal-case tracking-normal">(opcional)</span></p>
-              <Input placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} className="h-12 border-0 bg-secondary text-[16px]" />
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">Tu peso para calcular la nutrición <span className="normal-case tracking-normal">(opcional)</span></p>
-              <Input type="number" inputMode="decimal" min="30" max="350" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} className="h-12 border-0 bg-secondary text-[16px]" />
-            </div>
-          </div>
+          <>
+            <Choices header="Comidas al día" options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
+            <Choices header="¿Te gusta cocinar?" options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
+            <Field header="¿Algo que no quieras ver? (opcional)">
+              <Input autoComplete="off" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
+            </Field>
+            <Field header="Tu peso en kg (opcional)">
+              <Input type="number" inputMode="decimal" min="30" max="350" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} />
+            </Field>
+          </>
         )}
 
         {step === 3 && (
-          <div className="space-y-6">
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Qué día prefieres tu revisión semanal?</p>
-              <div className="grid grid-cols-7 gap-1.5">
-                {DOW.map((d) => (
-                  <button key={d.v} type="button" aria-label={d.l} onClick={() => { void hapticTap(); set("checkin_dow", d.v); }}
-                    className={`aspect-square rounded-full text-[15px] font-semibold transition-colors active:opacity-70 ${c.checkin_dow === d.v ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
-                    {d.s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿A qué hora?</p>
-              <select value={c.checkin_time} onChange={(e) => set("checkin_time", e.target.value)}
-                className="w-full h-12 rounded-xl border-0 bg-secondary px-3 text-[16px]">
+          <>
+            <DayPicker header="Día de tu revisión semanal" pressed={false} isOn={(v) => c.checkin_dow === v} onToggle={(v) => set("checkin_dow", v)} />
+            <Field header="¿A qué hora?">
+              <select value={c.checkin_time} onChange={(e) => set("checkin_time", e.target.value)} className="field w-full rounded-xl px-3">
                 {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-            </div>
-            <div>
-              <p className="text-[13px] font-medium uppercase tracking-wider text-muted-foreground mb-2 pl-1">¿Cómo quieres que te acompañemos?</p>
-              <div className="grid gap-2">{STYLE.map((s) => <Pill key={s.v} on={c.style === s.v} onClick={() => set("style", s.v)}>{s.l}</Pill>)}</div>
-            </div>
-          </div>
+            </Field>
+            <Choices header="¿Cómo quieres que te acompañemos?" options={STYLE} value={c.style} onChange={(v) => set("style", String(v))} />
+          </>
         )}
 
         {step === 4 && (
-          <div className="space-y-5">
-            <div className="text-center">
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-primary">Cuestionario completado</p>
-              <p className="mt-1 text-[15px] text-muted-foreground">Esta muestra usa tus respuestas; el plan completo se genera al guardarlo.</p>
-            </div>
-            <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} />
-            <div className="rounded-2xl bg-secondary p-4 text-[13px] leading-relaxed text-muted-foreground">
-              <p><span className="font-semibold text-foreground">Horarios:</span> {c.days.length} días ({dayNames}) · {label(DURATION, c.minutes)} · {label(STRUCTURE, c.structure)}.</p>
-              <p className="mt-1"><span className="font-semibold text-foreground">Tu revisión:</span> {DOW.find((d) => d.v === c.checkin_dow)?.l} a las {c.checkin_time} · {label(STYLE, c.style)}.</p>
-            </div>
-            <label className="flex items-start gap-3 text-[13px] leading-snug text-muted-foreground">
-              <Checkbox checked={accept} onCheckedChange={(v) => setAccept(!!v)} className="mt-0.5" />
-              <span>Acepto los <Link to="/legal/terminos" className="underline">términos</Link>, la <Link to="/legal/privacidad" className="underline">privacidad</Link> y el tratamiento de mis datos de salud para preparar mi plan.</span>
+          <>
+            <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
+            <ListGroup header="Tu semana">
+              <ListRow title="Días" value={`${c.days.length} · ${dayNames}`} />
+              <ListRow title="Sesión" value={label(DURATION, c.minutes)} />
+              <ListRow title="Estructura" value={label(STRUCTURE, c.structure)} />
+              <ListRow title="Revisión" value={`${DOW.find((d) => d.v === c.checkin_dow)?.l} a las ${c.checkin_time}`} />
+              <ListRow title="Estilo" value={label(STYLE, c.style)} />
+            </ListGroup>
+            <label className="flex min-h-[44px] items-start gap-3 px-1 type-footnote text-muted-foreground">
+              <Checkbox checked={accept} onCheckedChange={(v) => { void hapticSelection(); setAccept(!!v); }} className="mt-0.5" />
+              <span>Acepto los <Link to="/legal/terminos" className="text-primary">términos</Link>, la <Link to="/legal/privacidad" className="text-primary">privacidad</Link> y el tratamiento de mis datos de salud para preparar mi plan.</span>
             </label>
-          </div>
+          </>
         )}
-
-        <div className="mt-10">
-          {step < 4 ? (
-            <Button variant="hero" size="lg" className="h-[52px] w-full text-[17px] font-semibold tracking-[-0.015em]" onClick={() => { void hapticTap(); setStep((s) => s + 1); }} disabled={!valid[step]}>
-              Continuar
-            </Button>
-          ) : (
-            <Button variant="hero" size="lg" className="h-[52px] w-full text-[17px] font-semibold tracking-[-0.015em]" onClick={() => { void hapticTap(); void save(); }} disabled={!accept || saving}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
-            </Button>
-          )}
-        </div>
       </div>
-    </div>
+    </Screen>
   );
 };
 

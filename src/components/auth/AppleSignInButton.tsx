@@ -1,5 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { hapticTap } from "@/lib/native";
 
 type AppleSignInButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   label?: "sign-in" | "sign-up" | "continue";
@@ -18,18 +19,23 @@ const AppleLogo = ({ className }: { className?: string }) => (
 );
 
 export const AppleSignInButton = forwardRef<HTMLButtonElement, AppleSignInButtonProps>(
-  ({ label = "continue", className, children, ...props }, ref) => {
+  ({ label = "continue", className, children, onClick, ...props }, ref) => {
     const text = children ?? LABELS[label];
     return (
       <button
         ref={ref}
         type="button"
         {...props}
+        onClick={(event) => {
+          void hapticTap();
+          onClick?.(event);
+        }}
+        // Same metrics as the gold CTA (`btn-lg`: 50 pt, radius 14, 17 pt) so both stack as equals (HIG).
         className={cn(
-          "inline-flex w-full h-12 items-center justify-center gap-2 rounded-2xl",
+          "btn-lg inline-flex w-full items-center justify-center gap-2",
           "bg-white text-black",
-          "font-semibold text-[15px] tracking-[-0.01em]",
-          "transition-colors active:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed",
+          "font-semibold",
+          "transition-[background-color,transform] duration-150 ease-ios-standard active:scale-[0.97] active:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           className,
         )}

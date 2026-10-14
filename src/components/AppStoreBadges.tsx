@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isIOSNative } from "@/lib/platform";
+import { hapticTap } from "@/lib/native";
 
 interface Props {
   className?: string;
@@ -8,6 +9,8 @@ interface Props {
   label?: string;
   /** compact = badges más pequeños (hero); default = tamaño estándar (footer). */
   size?: "default" | "compact";
+  /** Envuelve los badges con su contexto (título, texto), que así solo aparece si hay alguno que enseñar. */
+  wrap?: (badges: ReactNode) => ReactNode;
 }
 
 /**
@@ -48,14 +51,19 @@ const PlayGlyph = ({ className = "" }: { className?: string }) => (
   </svg>
 );
 
-const AppStoreBadges = ({
+const AppStoreBadges = (props: Props) => {
+  // iOS v1: ya estás dentro de la app; no mostramos badges de descarga.
+  if (isIOSNative()) return null;
+  return <StoreBadges {...props} />;
+};
+
+const StoreBadges = ({
   className = "",
   align = "center",
   label,
   size = "default",
+  wrap,
 }: Props) => {
-  // iOS v1: ya estás dentro de la app; no mostramos badges de descarga.
-  if (isIOSNative()) return null;
   // Sin URLs configuradas en Ajustes no se muestra ningún badge: nunca enlazamos
   // a una app de terceros como valor por defecto.
   const [appStoreUrl, setAppStoreUrl] = useState("");
@@ -83,72 +91,56 @@ const AppStoreBadges = ({
 
   if (!appStoreUrl && !playStoreUrl) return null;
 
-  const wrap =
-    align === "center"
-      ? "flex flex-col items-center gap-3"
-      : "flex flex-col items-start gap-3";
-
   const isCompact = size === "compact";
-  const btnH = isCompact ? "h-11" : "h-[52px]";
-  const btnPx = isCompact ? "px-3.5" : "px-4";
   const iconSize = isCompact ? "w-5 h-5" : "w-6 h-6";
-  const smallText = isCompact ? "text-[9px]" : "text-[10px]";
-  const bigText = isCompact ? "text-[13px]" : "text-sm";
+  const bigText = isCompact ? "type-footnote" : "type-subhead";
 
-  // Apple: negro con brillo sutil. Google Play: negro con acento coloreado del glifo.
-  const baseBtn = `group relative inline-flex items-center gap-2.5 ${btnH} ${btnPx} rounded-xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 ring-1 ring-white/10`;
-  const appleBg =
-    "bg-[linear-gradient(180deg,#1f1f1f_0%,#000_100%)] text-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.9)] hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,1)]";
-  const playBg =
-    "bg-[linear-gradient(180deg,#1f1f1f_0%,#000_100%)] text-white shadow-[0_10px_30px_-12px_rgba(0,135,255,0.6)] hover:shadow-[0_16px_40px_-10px_rgba(0,230,118,0.55)]";
+  // Badge oficial: negro, filo gris claro, sin brillos ni sombras.
+  const badge = `inline-flex items-center gap-2.5 ${isCompact ? "h-11 px-3.5" : "h-12 px-4"} rounded-xl bg-black text-white ring-1 ring-white/25 transition-[opacity,transform] duration-150 ease-ios-standard active:scale-[0.97] active:opacity-80`;
+
+  const badges = (
+    <div className={`flex flex-wrap gap-2.5 ${align === "center" ? "justify-center" : "justify-start"}`}>
+      {appStoreUrl && (
+        <a
+          href={appStoreUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Descargar en la App Store"
+          onClick={() => void hapticTap()}
+          className={badge}
+        >
+          <AppleGlyph className={`${iconSize} shrink-0`} />
+          <span className="flex flex-col text-left">
+            <span className="type-caption2 opacity-70">Descarga en</span>
+            <span className={`${bigText} font-semibold`}>App Store</span>
+          </span>
+        </a>
+      )}
+      {playStoreUrl && (
+        <a
+          href={playStoreUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Disponible en Google Play"
+          onClick={() => void hapticTap()}
+          className={badge}
+        >
+          <PlayGlyph className={`${iconSize} shrink-0`} />
+          <span className="flex flex-col text-left">
+            <span className="type-caption2 opacity-70">Disponible en</span>
+            <span className={`${bigText} font-semibold`}>Google Play</span>
+          </span>
+        </a>
+      )}
+    </div>
+  );
+
+  if (wrap) return <div className={className}>{wrap(badges)}</div>;
 
   return (
-    <div className={`${wrap} ${className}`}>
-      {label && (
-        <span className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground">
-          {label}
-        </span>
-      )}
-      <div className="flex flex-wrap gap-2.5 justify-center">
-        {appStoreUrl && (
-          <a
-            href={appStoreUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Descargar en la App Store"
-            className={`${baseBtn} ${appleBg}`}
-          >
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"
-            />
-            <AppleGlyph className={`${iconSize} shrink-0`} />
-            <span className="flex flex-col leading-tight text-left">
-              <span className={`${smallText} opacity-70`}>Descarga en</span>
-              <span className={`${bigText} font-semibold tracking-tight`}>App Store</span>
-            </span>
-          </a>
-        )}
-        {playStoreUrl && (
-          <a
-            href={playStoreUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Disponible en Google Play"
-            className={`${baseBtn} ${playBg}`}
-          >
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent"
-            />
-            <PlayGlyph className={`${iconSize} shrink-0`} />
-            <span className="flex flex-col leading-tight text-left">
-              <span className={`${smallText} opacity-70`}>Disponible en</span>
-              <span className={`${bigText} font-semibold tracking-tight`}>Google Play</span>
-            </span>
-          </a>
-        )}
-      </div>
+    <div className={`flex flex-col gap-3 ${align === "center" ? "items-center" : "items-start"} ${className}`}>
+      {label && <span className="type-footnote text-muted-foreground">{label}</span>}
+      {badges}
     </div>
   );
 };

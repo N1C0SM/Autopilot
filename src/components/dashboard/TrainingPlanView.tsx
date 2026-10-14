@@ -1,10 +1,9 @@
-import { useState } from "react";
-import { Calendar as CalendarIcon, CalendarDays, Check, ChevronRight, Clock, Copy, Download, Flame, Moon } from "lucide-react";
+import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListRow } from "@/components/ui/list";
-import { SectionHeader } from "@/components/ui/section-header";
-import { Surface } from "@/components/ui/surface";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { cn } from "@/lib/utils";
 import { hapticSelection, hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
@@ -48,6 +47,50 @@ const sessionTitle = (plan: DayPlan) =>
   plan.type === "gimnasio"
     ? formatTrainingTitle(plan.routine_name, plan.muscle_focus) || "Entrenamiento"
     : plan.sport || "Actividad";
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+const sessionSummary = (plan: DayPlan) => {
+  const exercises = plan.exercises ?? [];
+  if (exercises.length === 0) return null;
+  const sets = exercises.reduce((total, ex) => total + (Number(ex.series) || 0), 0);
+  return [plural(exercises.length, "ejercicio", "ejercicios"), sets > 0 ? plural(sets, "serie", "series") : null]
+    .filter(Boolean)
+    .join(" · ");
+};
+
+// La sesión elegida es el protagonista: día, nombre grande y su detalle, sobre negro y sin caja.
+const SessionHeader = ({ day, isToday, title, summary }: { day: string; isToday: boolean; title: string; summary?: string | null }) => (
+  <div>
+    <p className="type-subhead text-muted-foreground">{isToday ? `${day} · hoy` : day}</p>
+    <h3 className="mt-1 type-title1">{title}</h3>
+    {summary ? <p className="mt-1.5 type-subhead text-muted-foreground">{summary}</p> : null}
+  </div>
+);
+
+interface ToolRowProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: ReactNode;
+  label: string;
+}
+
+// Fila de lista que acepta ref y props de Radix: es el disparador del diálogo de calendario.
+const ToolRow = forwardRef<HTMLButtonElement, ToolRowProps>(({ icon, label, className, ...props }, ref) => (
+  <button
+    ref={ref}
+    type="button"
+    {...props}
+    className={cn(
+      "group/row relative flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+      className,
+    )}
+  >
+    <span className="flex w-7 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-5">{icon}</span>
+    <span className="flex min-h-[44px] min-w-0 flex-1 items-center py-[11px] group-[:not(:last-child)]/row:sep-b">
+      <span className="truncate type-body">{label}</span>
+    </span>
+  </button>
+));
+ToolRow.displayName = "ToolRow";
 
 const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
@@ -95,41 +138,20 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
   const selectedDay = expandedDay ?? "";
   const selectedIsToday = selectedDay === todayName;
 
-  const actionClass = "[&_svg]:size-5 sm:w-auto sm:gap-1.5 sm:px-3";
+  const nextWorkDay = expandedDay
+    ? DAYS_ORDER.map((_, i) => DAYS_ORDER[(DAYS_ORDER.indexOf(expandedDay) + 1 + i) % DAYS_ORDER.length]).find((day) => workPlanFor(day))
+    : undefined;
+  const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div className="space-y-1">
-        <SectionHeader
-          title="Rutina semanal"
-          size="md"
-          className="items-center"
-          action={
-            <div className="-mr-3 flex items-center sm:mr-0 sm:gap-1">
-              <Button variant="plain" size="icon" aria-label={copied ? "Plan copiado" : "Copiar plan"} onClick={handleCopy} className={actionClass}>
-                {copied ? <Check /> : <Copy />}
-                <span className="hidden type-subhead font-medium sm:inline">{copied ? "Copiado" : "Copiar"}</span>
-              </Button>
-              <Button variant="plain" size="icon" aria-label="Descargar plan" onClick={handleDownload} className={actionClass}>
-                <Download />
-                <span className="hidden type-subhead font-medium sm:inline">Descargar</span>
-              </Button>
-              <CalendarExportDialog
-                dayPlans={dayPlans}
-                trigger={
-                  <Button variant="plain" size="icon" aria-label="Exportar plan al calendario" onClick={() => void hapticTap()} className={actionClass}>
-                    <CalendarIcon />
-                    <span className="hidden type-subhead font-medium sm:inline">Calendario</span>
-                  </Button>
-                }
-              />
-            </div>
-          }
-        />
-        <AIDisclaimer variant="compact" />
-      </div>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <h2 className="sr-only">Rutina semanal</h2>
 
-      <div role="group" aria-label="Días de la semana" className="grid grid-cols-7 gap-1">
+      <div
+        role="group"
+        aria-label="Días de la semana"
+        className="-mx-1 -my-1 flex justify-between gap-1 overflow-x-auto px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {DAYS_ORDER.map((day) => {
           const plan = workPlanFor(day);
           const isToday = day === todayName;
@@ -154,7 +176,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
                 void hapticSelection();
                 setExpandedDay(isExpanded ? null : day);
               }}
-              className={`mx-auto flex aspect-square w-full max-w-11 items-center justify-center rounded-full type-subhead font-semibold transition-colors duration-100 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full type-subhead font-semibold transition-colors duration-100 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 plan ? "active:opacity-60" : "cursor-default"
               } ${tone}`}
             >
@@ -165,104 +187,104 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
       </div>
 
       {selectedPlan?.type === "gimnasio" && (
-        <section aria-label={`Sesión del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-3">
-          <Surface padding="none">
-            <div className="px-4 pb-3 pt-4">
-              <p className="type-group-header">{selectedIsToday ? `${selectedDay} · hoy` : selectedDay}</p>
-              <h3 className="mt-1 type-title3">{sessionTitle(selectedPlan)}</h3>
-            </div>
-            {selectedPlan.exercises && selectedPlan.exercises.length > 0 && (
-              <div className="sep-t">
-                {selectedPlan.exercises.map((ex, i) => {
-                  const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
-                  const video = ex.video_url || metadata?.video_url;
-                  const image = ex.image_url || metadata?.image_url;
-                  const category = ex.muscle_group || metadata?.muscle_group;
-                  const exerciseType = ex.exercise_type || metadata?.exercise_type;
-                  const videoKey = `${selectedDay}-${ex.exercise_id || ex.name}-${i}`;
-                  const info = [ex.rest, category, exerciseType].filter(Boolean).join(" · ");
-                  const openDetail = () => {
-                    void hapticTap();
-                    setDetail({
-                      name: ex.name,
-                      image,
-                      video,
-                      series: ex.series ? String(ex.series) : undefined,
-                      reps: ex.reps ? String(ex.reps) : undefined,
-                      rest: ex.rest,
-                      category,
-                      type: exerciseType,
-                    });
-                  };
-
-                  return (
-                    <div
-                      key={videoKey}
-                      role="button"
-                      tabIndex={0}
-                      onClick={openDetail}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          openDetail();
-                        }
-                      }}
-                      className="group/row relative flex min-h-[60px] w-full cursor-pointer items-center gap-3 pl-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
-                    >
-                      {/* La miniatura es la portada del vídeo (con su marca de play):
-                          al tocar la fila se abre la ficha, cuyo héroe es el vídeo. */}
-                      <ExerciseThumb image={image} video={video} name={ex.name} size="sm" />
-                      <span className="flex min-w-0 flex-1 items-center gap-3 self-stretch py-2 pr-4 group-[:not(:last-child)]/row:sep-b">
-                        <span className="min-w-0 flex-1">
-                          <span className="line-clamp-2 type-body">{ex.name}</span>
-                          {info ? <span className="mt-0.5 block truncate type-footnote text-muted-foreground">{info}</span> : null}
-                        </span>
-                        <span className="shrink-0 type-body tabular-nums text-muted-foreground">
-                          {ex.series} × {ex.reps}
-                        </span>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </Surface>
-          {onOpenWorkout && selectedPlan.exercises && selectedPlan.exercises.length > 0 && (
+        <section aria-label={`Sesión del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-6">
+          <SessionHeader day={selectedDay} isToday={selectedIsToday} title={sessionTitle(selectedPlan)} summary={sessionSummary(selectedPlan)} />
+          {onOpenWorkout && hasExercises && (
             <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedDay)}>
               Abrir sesión del {selectedDay.toLocaleLowerCase("es-ES")}
             </Button>
+          )}
+          {hasExercises && (
+            <ListGroup aria-label="Ejercicios">
+              {selectedPlan.exercises?.map((ex, i) => {
+                const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
+                const video = ex.video_url || metadata?.video_url;
+                const image = ex.image_url || metadata?.image_url;
+                const category = ex.muscle_group || metadata?.muscle_group;
+                const exerciseType = ex.exercise_type || metadata?.exercise_type;
+                const info = [ex.rest, category, exerciseType].filter(Boolean).join(" · ");
+
+                return (
+                  <ListRow
+                    key={`${selectedDay}-${ex.exercise_id || ex.name}-${i}`}
+                    // La miniatura es la portada del vídeo: al tocar la fila se abre la ficha, cuyo héroe es el vídeo.
+                    leading={<ExerciseThumb image={image} video={video} name={ex.name} size="sm" />}
+                    title={<span className="line-clamp-2 whitespace-normal">{ex.name}</span>}
+                    subtitle={info ? <span className="block truncate">{info}</span> : undefined}
+                    value={<span className="tabular-nums">{ex.series} × {ex.reps}</span>}
+                    chevron
+                    onClick={() =>
+                      setDetail({
+                        name: ex.name,
+                        image,
+                        video,
+                        series: ex.series ? String(ex.series) : undefined,
+                        reps: ex.reps ? String(ex.reps) : undefined,
+                        rest: ex.rest,
+                        category,
+                        type: exerciseType,
+                      })
+                    }
+                  />
+                );
+              })}
+            </ListGroup>
           )}
         </section>
       )}
 
       {selectedPlan?.type === "actividad" && (
-        <section aria-label={`Actividad del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-3">
-          <Surface padding="none">
-            <div className="px-4 pb-3 pt-4">
-              <p className="type-group-header">{selectedIsToday ? `${selectedDay} · hoy` : selectedDay}</p>
-              <h3 className="mt-1 type-title3">{sessionTitle(selectedPlan)}</h3>
-            </div>
-            <div className="sep-t">
-              <ListRow icon={<Flame />} title="Intensidad" value={selectedPlan.intensity} />
-              <ListRow icon={<Clock />} title="Duración" value={selectedPlan.duration} />
-            </div>
-          </Surface>
+        <section aria-label={`Actividad del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-6">
+          <SessionHeader day={selectedDay} isToday={selectedIsToday} title={sessionTitle(selectedPlan)} />
           {onOpenWorkout && (
-            <Button type="button" variant="tinted" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedDay)}>
+            <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedDay)}>
               Abrir actividad del {selectedDay.toLocaleLowerCase("es-ES")}
             </Button>
           )}
+          <ListGroup>
+            <ListRow icon={<Flame className="text-muted-foreground" />} title="Intensidad" value={selectedPlan.intensity} />
+            <ListRow icon={<Clock className="text-muted-foreground" />} title="Duración" value={selectedPlan.duration} />
+          </ListGroup>
         </section>
       )}
 
       {!selectedPlan && (
         expandedDay ? (
-          <EmptyState icon={Moon} title={selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`} description="Toca otro día para ver su sesión." />
+          <EmptyState
+            className="min-h-[50dvh]"
+            icon={Moon}
+            title={selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`}
+            description="Toca otro día para ver su sesión."
+            action={
+              nextWorkDay ? (
+                <Button
+                  type="button"
+                  variant="plain"
+                  onClick={() => {
+                    void hapticSelection();
+                    setExpandedDay(nextWorkDay);
+                  }}
+                >
+                  {`Ver el ${nextWorkDay.toLocaleLowerCase("es-ES")}`}
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
-          <EmptyState icon={CalendarDays} title="Elige un día" description="Toca un día de la semana para ver su sesión." />
+          <EmptyState className="min-h-[50dvh]" icon={CalendarDays} title="Elige un día" description="Toca un día de la semana para ver su sesión." />
         )
       )}
+
+      <ListGroup>
+        <ToolRow icon={copied ? <Check /> : <Copy />} label={copied ? "Plan copiado" : "Copiar plan"} onClick={handleCopy} />
+        <ToolRow icon={<Download />} label="Descargar plan" onClick={handleDownload} />
+        <CalendarExportDialog
+          dayPlans={dayPlans}
+          trigger={<ToolRow icon={<CalendarIcon />} label="Exportar plan al calendario" onClick={() => void hapticTap()} />}
+        />
+      </ListGroup>
+
+      <AIDisclaimer variant="compact" className="px-4 text-center" />
 
       {/* El ejercicio a pantalla completa: nada más alrededor */}
       <ExerciseFocus

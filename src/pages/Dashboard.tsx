@@ -8,10 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Clock, Lock } from "lucide-react";
+import { Clock, Dumbbell, Flag, Lock } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Surface } from "@/components/ui/surface";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { hapticSelection, hapticTap } from "@/lib/native";
@@ -34,6 +33,7 @@ import PageHead from "@/components/PageHead";
 import InfoHint from "@/components/InfoHint";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { getFirstWeekJourney } from "@/lib/firstWeek";
+import { isIOSNative } from "@/lib/platform";
 
 const Chat = lazy(() => import("@/components/Chat"));
 const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
@@ -45,11 +45,6 @@ const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgres
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/pages/Recursos"));
 const Scan = lazy(() => import("@/pages/Scan"));
-
-// El panel de fuerza llena justo lo que queda en el móvil: pantalla menos la barra, el
-// título grande (53 px), el control segmentado con sus márgenes (60 px) y la barra de pestañas.
-const STRENGTH_PANEL_HEIGHT =
-  "h-[calc(100dvh-var(--nav-bar-height)-var(--safe-top,0px)-var(--mobile-nav-content-padding,6rem)-113px)]";
 
 const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
@@ -431,8 +426,8 @@ const Dashboard = () => {
     settings: "Ajustes",
     resources: "Recursos",
   };
-  // En Hoy el título grande es el saludo de HomeOverview.
-  const LARGE_TITLE_TABS: MobileTab[] = ["training", "nutrition", "chat", "progress"];
+  // En Hoy el título grande es el saludo de HomeOverview: la barra solo muestra "Hoy" al pasarlo.
+  const LARGE_TITLE_TABS: MobileTab[] = ["training", "nutrition", "chat", "progress", "settings"];
   // En el móvil la conversación ocupa justo el alto que queda bajo el título, con el campo de texto a la vista.
   const chatFills = isMobile && consumerPlan === "coach" && coachAssigned;
   // Ayuda de la sección: en escritorio va junto al título de la barra.
@@ -447,10 +442,14 @@ const Dashboard = () => {
   const renderContent = (section: MobileTab) => (
     <>
       {!coaching && !hasPlan && (section === "home" || section === "training") && (
-        <Surface>
-          <h2 className="type-title3">Prepara tu rutina inicial gratis</h2>
-          <p className="mt-1 type-subhead text-muted-foreground">No necesitas contratar un entrenador para empezar.</p>
-          <Button size="lg" className="mt-4 w-full md:w-auto" disabled={preparingRoutine} onClick={async () => {
+        <div className="flex w-full flex-1 flex-col">
+          <EmptyState
+            className="flex-1"
+            icon={Dumbbell}
+            title="Prepara tu rutina inicial gratis"
+            description="No necesitas contratar un entrenador para empezar."
+          />
+          <Button size="lg" className="w-full md:w-auto md:self-center" disabled={preparingRoutine} onClick={async () => {
             void hapticTap();
             setPreparingRoutine(true);
             try {
@@ -460,7 +459,7 @@ const Dashboard = () => {
             } catch { toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo."); }
             finally { setPreparingRoutine(false); }
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
-        </Surface>
+        </div>
       )}
       {!coaching && section === "nutrition" && (
         // Plus preseleccionado siempre: es el plan que queremos vender primero.
@@ -487,8 +486,8 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "home" && (
-        <div className="w-full space-y-6">
-          {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
+        // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo.
+        <div className="flex w-full flex-1 flex-col gap-8">
           <HomeOverview
             userId={user?.id}
             meals={meals}
@@ -511,16 +510,25 @@ const Dashboard = () => {
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
           />
+          {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
               aparecería como estado activo (próxima iteración). */}
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
-            <div className="mx-auto w-full max-w-3xl space-y-2">
+            <div className="mx-auto w-full max-w-3xl space-y-6 empty:hidden">
               {firstWeek && (
-                <p className="px-4 type-footnote tabular-nums text-muted-foreground">
-                  Primera semana · día {firstWeek.dayNumber} de 7 · {firstWeek.completed} de {firstWeek.target} entrenos
-                </p>
+                <div className="flex items-start gap-4">
+                  <span aria-hidden="true" className="flex w-10 shrink-0 justify-center pt-0.5">
+                    <Flag className="h-7 w-7 text-primary" strokeWidth={1.75} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="type-headline">Tu primera semana</p>
+                    <p className="mt-0.5 type-subhead tabular-nums text-muted-foreground">
+                      Día {firstWeek.dayNumber} de 7 · {firstWeek.completed} de {firstWeek.target} entrenos
+                    </p>
+                  </div>
+                </div>
               )}
               <CoachingOffer
                 onChoose={handleCompletePayment}
@@ -586,7 +594,9 @@ const Dashboard = () => {
             title="Nutrición no incluida en tu plan"
             description="Tu plan actual es Entrenamiento. Cambia a Completo para desbloquear tu plan de nutrición personalizado."
           />
-          <Button size="lg" onClick={() => { void hapticTap(); void handleUpgradeToFull(); }} className="w-full md:w-auto md:self-center">Elegir {plans.coachName} — {euro(plans.coachPrice)}/mes</Button>
+          {!isIOSNative() && (
+            <Button size="lg" onClick={() => { void hapticTap(); void handleUpgradeToFull(); }} className="w-full md:w-auto md:self-center">Elegir {plans.coachName} — {euro(plans.coachPrice)}/mes</Button>
+          )}
         </div>
       )}
 
@@ -637,7 +647,8 @@ const Dashboard = () => {
               value="evolution"
               forceMount
               tabIndex={-1}
-              className={`mt-0 flex min-h-[420px] flex-col overflow-hidden data-[state=inactive]:hidden md:h-[calc(100dvh-12rem)] ${STRENGTH_PANEL_HEIGHT}`}
+              // En el móvil el panel crece con su contenido (con un suelo para la gráfica) y la página hace scroll.
+              className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden md:h-[calc(100dvh-12rem)] md:overflow-hidden"
             >
               <WorkoutProgress userId={user.id} compact />
             </TabsContent>
@@ -692,6 +703,7 @@ const Dashboard = () => {
       <MobileAppShell
         title={MOBILE_TITLES[section]}
         largeTitle={LARGE_TITLE_TABS.includes(section)}
+        titleInContent={section === "home"}
         active={section}
         onChange={setSection}
         profileName={profileName}

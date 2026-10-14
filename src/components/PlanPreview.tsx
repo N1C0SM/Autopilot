@@ -1,4 +1,5 @@
-import { Dumbbell, Utensils, Lock, Sparkles, Flame, Check } from "lucide-react";
+import { Dumbbell, Utensils, Sparkles } from "lucide-react";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import { resolveNutritionPreview } from "@/lib/nutrition";
 
 interface Props {
@@ -8,6 +9,8 @@ interface Props {
   sex?: string;
   days?: number;
   registered?: boolean;
+  /** The host screen already shows the reveal headline. */
+  hideHeader?: boolean;
 }
 
 function sampleWorkout(focus?: string) {
@@ -47,101 +50,60 @@ function sampleWorkout(focus?: string) {
   };
 }
 
-const PlanPreview = ({ focus, goal, weight, sex, days = 4, registered = false }: Props) => {
+const PlanPreview = ({ focus, goal, weight, sex, days = 4, registered = false, hideHeader = false }: Props) => {
   const workout = sampleWorkout(focus);
   const nutritionPreview = resolveNutritionPreview({ weight, sex, goal });
 
   return (
-    <div className="mb-5 space-y-3">
-      <div className="rounded-2xl border border-primary/25 bg-primary/5 px-4 py-4 text-center">
-        <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Check className="h-4 w-4" />
+    <div className="space-y-8">
+      {hideHeader ? null : (
+      <div className="flex flex-col items-center text-center">
+        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">
+          <Sparkles className="h-8 w-8 text-primary" strokeWidth={1.75} aria-hidden="true" />
         </div>
-        <div className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-primary">
-          <Sparkles className="h-4 w-4" />
-          Tu plan de arranque está definido
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">Esta es una muestra basada en tus respuestas.</p>
+        <p className="mt-5 type-title2">Tu plan de arranque está definido</p>
+        <p className="mt-1.5 max-w-[32ch] type-subhead text-muted-foreground">
+          {registered ? "Confirma para generar y guardar tu plan completo." : "Crea tu cuenta para generar y guardar el plan completo."}
+        </p>
       </div>
+      )}
 
-      <div className="grid md:grid-cols-2 gap-3">
-        {/* Entrenamiento */}
-        <div className="bg-card rounded-2xl border border-border p-4 card-shadow">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
-              <Dumbbell className="w-4 h-4 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">{workout.title}</p>
-              <p className="text-[11px] text-muted-foreground truncate">{workout.muscle}</p>
-            </div>
-          </div>
-          <ul className="space-y-1.5">
-            {workout.exercises.map((ex, i) => (
-              <li
-                key={i}
-                className="flex items-center justify-between text-xs bg-secondary/30 px-2.5 py-1.5 rounded-lg"
-              >
-                <span className="truncate pr-2">{ex.name}</span>
-                <span className="text-muted-foreground shrink-0">{ex.sets}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-[11px] text-muted-foreground mt-3">
-            +{Math.max(days - 1, 2)} sesiones que se completarán al crear el plan
-          </p>
+      <ListGroup
+        header={workout.title}
+        footer={`${workout.muscle} · +${Math.max(days - 1, 2)} sesiones que se completarán al crear el plan`}
+      >
+        {workout.exercises.map((ex) => (
+          <ListRow key={ex.name} icon={<Dumbbell className="text-muted-foreground" />} title={ex.name} value={<span className="tabular-nums">{ex.sets}</span>} />
+        ))}
+      </ListGroup>
+
+      <div className="flex items-start gap-4 px-1">
+        <div className="flex w-10 shrink-0 justify-center pt-0.5">
+          <Utensils className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />
         </div>
-
-        {/* Nutrición */}
-        <div className="bg-card rounded-2xl border border-border p-4 card-shadow">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
-              <Utensils className="w-4 h-4 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-sm truncate">Tu nutrición diaria</p>
-              <p className="text-[11px] text-muted-foreground truncate">
-                Calculada según tu peso y objetivo
-              </p>
-            </div>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="type-headline">Tu nutrición diaria</p>
           {nutritionPreview.hasWeight ? (
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div className="bg-secondary/30 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Kcal/día</p>
-                <p className="font-bold text-base flex items-center justify-center gap-1">
-                  <Flame className="w-3.5 h-3.5 text-primary" />
-                  {nutritionPreview.calories}
-                </p>
+            <>
+              <div className="mt-2 flex gap-8">
+                <div>
+                  <p className="type-title1 font-rounded leading-none tabular-nums">{nutritionPreview.calories}</p>
+                  <p className="mt-1 type-subhead text-muted-foreground">kcal al día</p>
+                </div>
+                <div>
+                  <p className="type-title1 font-rounded leading-none tabular-nums">{nutritionPreview.protein} g</p>
+                  <p className="mt-1 type-subhead text-muted-foreground">proteína</p>
+                </div>
               </div>
-              <div className="bg-secondary/30 rounded-lg p-2 text-center">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Proteína</p>
-                <p className="font-bold text-base">{nutritionPreview.protein}g</p>
-              </div>
-            </div>
+              <p className="mt-3 type-subhead text-muted-foreground">Menús y cantidades al generar el plan.</p>
+            </>
           ) : (
-            <div className="mb-3 rounded-lg border border-dashed border-primary/30 bg-secondary/20 p-3 text-center">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Peso pendiente</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Añade tu peso para ver kcal y proteína personalizadas.
-              </p>
-            </div>
+            <p className="mt-1 type-subhead text-muted-foreground">
+              Añade tu peso para ver kcal y proteína personalizadas. Menús y cantidades al generar el plan.
+            </p>
           )}
-          <div className="space-y-1.5">
-            <div className="text-xs bg-secondary/30 px-2.5 py-1.5 rounded-lg flex items-center justify-between text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Lock className="w-3 h-3" />
-                Menús y cantidades
-              </span>
-              <span>al generar</span>
-            </div>
-          </div>
         </div>
       </div>
-
-      <p className="text-center text-[11px] text-muted-foreground">
-        {registered ? "Confirma para generar y guardar tu plan completo." : "Crea tu cuenta para generar y guardar el plan completo."}
-      </p>
     </div>
   );
 };

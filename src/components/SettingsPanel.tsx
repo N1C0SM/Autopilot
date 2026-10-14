@@ -12,7 +12,7 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  Camera, User, Crown, ExternalLink, Calendar, CalendarClock, Check, Zap, Unplug, RefreshCw,
+  User, Crown, ExternalLink, Calendar, CalendarClock, Check, Zap, Unplug, RefreshCw,
   Download, FileText,
 } from "lucide-react";
 import {
@@ -26,6 +26,7 @@ import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import { isIOSNative } from "@/lib/platform";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -369,18 +370,25 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     return <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>;
   }
 
+  const iosReader = isIOSNative();
+  const initial = (name || email).trim().charAt(0).toLocaleUpperCase("es");
   const hasPaidAccess = consumerPlan !== "free";
   const isActive = hasPaidAccess && ["active", "trialing"].includes(subscriptionStatus);
   const planName = consumerPlan === "coach" ? TIERS.full.name : consumerPlan === "plus" ? TIERS.training.name : TIERS.free.name;
   const longDate = (value: string) =>
     new Date(value).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
-  const subscriptionFooter = hasPaidAccess
-    ? currentPlan === "monthly"
-      ? `Cambia a Anual y ahorra ${MONTHLY_PRICE_EUR * 12 - yearlyPriceEur}€/año desde el portal de gestión.`
-      : currentPlan
-        ? "Puedes cambiar a Mensual desde el portal de gestión cuando quieras."
-        : undefined
-    : "No tienes una suscripción activa. Empieza cuando quieras: 7 días de prueba.";
+  const planCycle = currentPlan === "monthly" ? "Mensual" : "Anual";
+  const planCyclePrice = currentPlan === "monthly" ? `${MONTHLY_PRICE_EUR}€/mes` : `${yearlyPriceEur}€/año`;
+  // iOS es una app de lectura: ni precios, ni ofertas, ni portal de pago.
+  const subscriptionFooter = iosReader
+    ? undefined
+    : hasPaidAccess
+      ? currentPlan === "monthly"
+        ? `Cambia a Anual y ahorra ${MONTHLY_PRICE_EUR * 12 - yearlyPriceEur}€/año desde el portal de gestión.`
+        : currentPlan
+          ? "Puedes cambiar a Mensual desde el portal de gestión cuando quieras."
+          : undefined
+      : "No tienes una suscripción activa. Empieza cuando quieras: 7 días de prueba.";
 
   const setAvailability = (field: "days" | "hours", value: string) => {
     setAvailabilityEdited(true);
@@ -411,14 +419,20 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       {/* Profile */}
       <div className="order-1 flex flex-col gap-6">
-        <div className="flex items-center gap-4 px-1">
+        <div className="flex flex-col items-center px-4 pt-2 text-center">
           <button
             type="button"
             aria-label="Cambiar foto de perfil"
             onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}
-            className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary transition-opacity active:opacity-70"
+            className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary transition-opacity active:opacity-70"
           >
-            {avatarUrl ? <img loading="lazy" decoding="async" src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <User className="h-7 w-7 text-muted-foreground" />}
+            {avatarUrl ? (
+              <img loading="lazy" decoding="async" src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : initial ? (
+              <span aria-hidden="true" className="font-rounded type-large-title text-muted-foreground">{initial}</span>
+            ) : (
+              <User className="h-9 w-9 text-muted-foreground" />
+            )}
             {uploading ? (
               <span className="absolute inset-0 flex items-center justify-center bg-background/60">
                 <Spinner size="md" className="text-foreground" label="Subiendo foto" />
@@ -426,54 +440,49 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             ) : null}
           </button>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-          <div className="min-w-0">
-            <p className="truncate type-title2">{name || "Tu perfil"}</p>
-            {email ? <p className="truncate type-subhead text-muted-foreground">{email}</p> : null}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <ListGroup header="Perfil">
-            <FieldRow label="Nombre" htmlFor="settings-name">
-              <Input
-                id="settings-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Tu nombre"
-                autoCapitalize="words"
-                autoComplete="name"
-                enterKeyHint="next"
-                className={rowInput}
-              />
-            </FieldRow>
-            <FieldRow label="Correo" htmlFor="settings-email">
-              <Input
-                id="settings-email"
-                type="email"
-                inputMode="email"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                autoComplete="email"
-                enterKeyHint="done"
-                aria-label="Correo electrónico"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@ejemplo.com"
-                className={rowInput}
-              />
-            </FieldRow>
-            <ListRow
-              icon={<Camera />}
-              title="Cambiar foto"
-              trailing={uploading ? <Spinner size="sm" label="Subiendo foto" /> : undefined}
-              onClick={() => fileInputRef.current?.click()}
-            />
-          </ListGroup>
-          <Button variant="tinted" className="w-full" onClick={() => { void hapticTap(); void saveProfile(); }} disabled={saving}>
-            {saving ? "Guardando…" : "Guardar perfil"}
+          <p className="mt-3 max-w-full truncate type-title2">{name || "Tu perfil"}</p>
+          {email ? <p className="max-w-full truncate type-body text-muted-foreground">{email}</p> : null}
+          <Button variant="plain" className="mt-1" onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}>
+            Cambiar foto
           </Button>
         </div>
+
+        <ListGroup header="Perfil">
+          <FieldRow label="Nombre" htmlFor="settings-name">
+            <Input
+              id="settings-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Tu nombre"
+              autoCapitalize="words"
+              autoComplete="name"
+              enterKeyHint="next"
+              className={rowInput}
+            />
+          </FieldRow>
+          <FieldRow label="Correo" htmlFor="settings-email">
+            <Input
+              id="settings-email"
+              type="email"
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              autoComplete="email"
+              enterKeyHint="done"
+              aria-label="Correo electrónico"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@ejemplo.com"
+              className={rowInput}
+            />
+          </FieldRow>
+          <ListRow
+            title={<span className="text-primary">{saving ? "Guardando…" : "Guardar perfil"}</span>}
+            disabled={saving}
+            onClick={() => void saveProfile()}
+          />
+        </ListGroup>
 
         <ListGroup
           className={hideForAdmin.trim()}
@@ -549,9 +558,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             <Textarea aria-label="Alergias" value={onboarding.allergies} onChange={(e) => setOnboarding((o) => ({ ...o, allergies: e.target.value }))} className={blockTextarea} rows={2} />
           </ListGroup>
 
-          <Button variant="tinted" className="w-full" onClick={() => { void hapticTap(); void saveOnboarding(); }} disabled={saving}>
-            {saving ? "Guardando…" : "Guardar datos"}
-          </Button>
+          <ListGroup>
+            <ListRow
+              title={<span className="text-primary">{saving ? "Guardando…" : "Guardar datos"}</span>}
+              disabled={saving}
+              onClick={() => void saveOnboarding()}
+            />
+          </ListGroup>
         </div>
       )}
 
@@ -608,7 +621,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </ListGroup>
 
       {/* Password */}
-      <div className="order-4 space-y-3">
+      <div className="order-4">
         <ListGroup header="Cambiar contraseña">
           <FieldRow label="Nueva" htmlFor="settings-new-password">
             <Input
@@ -636,10 +649,12 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               className={rowInput}
             />
           </FieldRow>
+          <ListRow
+            title={<span className="text-primary">{changingPassword ? "Cambiando…" : "Cambiar contraseña"}</span>}
+            disabled={changingPassword}
+            onClick={() => void changePassword()}
+          />
         </ListGroup>
-        <Button variant="tinted" className="w-full" onClick={() => { void hapticTap(); void changePassword(); }} disabled={changingPassword}>
-          {changingPassword ? "Cambiando…" : "Cambiar contraseña"}
-        </Button>
       </div>
 
       {/* Subscription */}
@@ -662,12 +677,9 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             />
           ) : null}
           {hasPaidAccess && currentPlan ? (
-            <ListRow
-              title="Plan actual"
-              value={currentPlan === "monthly" ? `Mensual (${MONTHLY_PRICE_EUR}€/mes)` : `Anual (${yearlyPriceEur}€/año)`}
-            />
+            <ListRow title="Plan actual" value={iosReader ? planCycle : `${planCycle} (${planCyclePrice})`} />
           ) : null}
-          {hasPaidAccess ? (
+          {hasPaidAccess && !iosReader ? (
             <ListRow
               icon={<ExternalLink />}
               title="Gestionar suscripción"
@@ -677,7 +689,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             />
           ) : null}
         </ListGroup>
-        {!hasPaidAccess && onUpgrade && (
+        {!iosReader && !hasPaidAccess && onUpgrade && (
           <div className="space-y-1">
             <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); onUpgrade("training"); }}>
               Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes
@@ -797,19 +809,19 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               <AlertDialogDescription asChild>
                 <div className="space-y-3">
                   {isActive && (
-                    <div className="rounded-xl bg-destructive/15 p-3 text-left">
+                    <div className="space-y-1">
                       <p className="type-footnote font-semibold text-destructive">
                         {subscriptionStatus === "trialing"
                           ? "Tienes una prueba activa"
                           : "Tienes una suscripción activa"}
                       </p>
-                      <p className="mt-1 type-footnote text-foreground">
+                      <p className="type-footnote text-foreground">
                         {subscriptionStatus === "trialing"
                           ? "Al eliminar la cuenta cancelas la prueba y pierdes el acceso de inmediato — aunque aún no se te haya cobrado."
                           : "Al eliminar la cuenta se cancela la suscripción y pierdes el acceso de inmediato, aunque hayas pagado hasta el final del periodo."}
                       </p>
                       {subscriptionEnd && (
-                        <p className="mt-1 type-caption1 text-muted-foreground">
+                        <p className="type-caption1 text-muted-foreground">
                           Fecha prevista: {longDate(subscriptionEnd)}
                         </p>
                       )}

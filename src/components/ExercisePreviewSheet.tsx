@@ -1,5 +1,7 @@
+import { Video } from "lucide-react";
 import ExerciseMedia from "@/components/ExerciseMedia";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { FeatureRow } from "@/components/workout-parts/FeatureRow";
 
 export type ExercisePreviewData = {
   name: string;
@@ -21,24 +23,32 @@ export const ExercisePreviewSheet = ({
   exercise: ExercisePreviewData | null;
   onClose: () => void;
 }) => (
-  <Sheet open={!!exercise} onOpenChange={(open) => { if (!open) onClose(); }}>
-    <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl p-0">
-      <div className="w-full overflow-hidden bg-black">
-        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={exercise?.name} />
+  <Dialog open={!!exercise} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <DialogContent
+      className="gap-0 sm:max-w-lg"
+      {...(exercise?.detail ? {} : { "aria-describedby": undefined })}
+    >
+      {/* Bajo el botón de cerrar, no debajo de él: los controles del vídeo quedan libres. */}
+      <ExerciseMedia video={exercise?.video} image={exercise?.image} name={exercise?.name} className="mt-7 rounded-[14px] sm:mt-6" />
+
+      <div className="mt-5 pr-8">
+        <DialogTitle className="type-title2 sm:type-title2">{exercise?.name}</DialogTitle>
+        {exercise?.detail && <DialogDescription className="mt-1">{exercise.detail}</DialogDescription>}
       </div>
-      <div className="space-y-3 p-4 pb-8">
-        <SheetHeader className="space-y-0 p-0 text-left">
-          <SheetTitle className="font-display text-xl font-bold">{exercise?.name}</SheetTitle>
-        </SheetHeader>
-        {exercise?.detail && <p className="text-sm text-muted-foreground">{exercise.detail}</p>}
-        {!exercise?.video && (
-          <p className="rounded-xl bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
-            Este ejercicio todavía no tiene vídeo de técnica.
-          </p>
-        )}
-      </div>
-    </SheetContent>
-  </Sheet>
+
+      {/* Sin imagen, el propio hueco del vídeo ya lo dice: no se repite. */}
+      {!exercise?.video && exercise?.image && (
+        <FeatureRow
+          className="mt-6"
+          icon={Video}
+          title="Todavía sin vídeo"
+          description="Este ejercicio solo tiene imagen de técnica por ahora."
+        />
+      )}
+
+      <div className="h-2" aria-hidden="true" />
+    </DialogContent>
+  </Dialog>
 );
 
 export default ExercisePreviewSheet;
