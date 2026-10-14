@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Trash2, Save, ExternalLink, Loader2, Image as ImageIcon, Sparkles } from "lucide-react";
+import { CATEGORIES, EVIDENCE_LABEL, LEVEL_LABEL, REVIEW_LABEL, canPublishAcademy, categoryBySlug, readingMinutes } from "@/lib/academy";
 
 interface Post {
   id: string;
@@ -50,6 +51,9 @@ const BlogPostsEditor = () => {
   const [aiTopic, setAiTopic] = useState("");
   const [aiAudience, setAiAudience] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [refsText, setRefsText] = useState("[]");
+  const [catFilter, setCatFilter] = useState("all");
+  const openEdit = (p: Post) => { setRefsText(JSON.stringify(Array.isArray(p.references) ? p.references : [], null, 2)); setEditing(p); };
 
   const generateWithAI = async () => {
     if (!aiTopic.trim()) { toast.error("Escribe de qué quieres que hable el artículo"); return; }
