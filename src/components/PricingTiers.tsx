@@ -14,9 +14,13 @@ interface PricingTiersProps {
 }
 
 
-const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
+const PricingTiers = (props: PricingTiersProps) => {
   // iOS v1 (reader app, App Store §3.1.3(a)): no pricing UI inside the native build.
   if (isIOSNative()) return null;
+  return <PricingTiersContent {...props} />;
+};
+
+const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
   const plans = usePlanCatalog();
   const a = availabilityFrom(plans);
   const upgradeNames = [a.plus && a.plusName, a.coach && a.coachName].filter(Boolean).join(" o ");
@@ -45,12 +49,12 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
               transition={{ duration: 0.4 }}
               className={`relative rounded-lg p-7 sm:p-8 flex flex-col h-full overflow-hidden ${
                 isRec
-                  ? "bg-secondary border-2 border-primary premium-shadow"
-                  : "bg-card/60 border border-border"
+                  ? "bg-secondary border-2 border-primary"
+                  : "bg-card/60"
               }`}
             >
               {isRec && (
-                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
+                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[11px] font-bold px-3 py-1 rounded-bl-lg">
                   Recomendado
                 </div>
               )}
@@ -65,7 +69,7 @@ const PricingTiers = ({ onSelect, recommended = "training" }: PricingTiersProps)
               <div className="mt-5 mb-1 flex items-baseline gap-1">
                 <span
                   className={`text-5xl font-bold font-display ${
-                    isRec ? "text-gradient" : "text-foreground"
+                    isRec ? "text-primary" : "text-foreground"
                   }`}
                 >
                   {price === 0 ? "Gratis" : euro(price)}

@@ -1,6 +1,7 @@
-import { Check, ArrowRight, ShoppingBag } from "lucide-react";
+import { Check, ShoppingBag } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { hapticTap } from "@/lib/native";
 import { track, type EventName } from "@/lib/analytics";
 
 /**
@@ -45,48 +46,46 @@ export default function ItemPreviewModal({ item, variant, onClose }: { item: Pre
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-        <div className="grid gap-0 sm:grid-cols-[0.8fr_1.2fr]">
-          <div className="bg-secondary p-6 flex items-center justify-center">
-            {item.image_url ? (
-              <img loading="lazy" decoding="async" src={item.image_url} alt={item.title} className="w-full max-w-[240px] aspect-square rounded-xl object-cover" />
-            ) : (
-              <ShoppingBag className="w-16 h-16 text-primary/50" />
-            )}
-          </div>
-          <div className="p-6 flex flex-col">
-            <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-2">{item.badge || variant.label}</p>
-            <DialogTitle className="font-display text-2xl font-bold leading-tight">{item.title}</DialogTitle>
-            {intro && <DialogDescription className="mt-3 text-sm leading-relaxed text-muted-foreground">{intro}</DialogDescription>}
-            {bullets.length > 0 && (
-              <div className="mt-5">
-                <p className="text-xs font-semibold mb-2">{variant.bulletsTitle}</p>
-                <ul className="space-y-2">
-                  {bullets.map((b, i) => (
-                    <li key={i} className="flex gap-2 text-sm">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <div className="mt-6 pt-5 border-t border-border">
-              <div className="flex items-center justify-between gap-3">
-                {item.price ? <span className="font-display text-2xl font-bold">{item.price}</span> : <span />}
-                {item.url ? (
-                  <Button asChild variant="hero" size="lg">
-                    <a href={item.url} target="_blank" rel="noreferrer sponsored" onClick={() => track(variant.event, { item: item.title })}>
-                      {variant.cta} <ArrowRight className="w-4 h-4" />
-                    </a>
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Disponible próximamente</span>
-                )}
-              </div>
-              {variant.note && <p className="mt-2 text-[11px] text-muted-foreground">{variant.note}</p>}
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex flex-col items-center text-center">
+          {item.image_url ? (
+            <img loading="lazy" decoding="async" src={item.image_url} alt={item.title} className="h-28 w-28 rounded-[22%] object-cover" />
+          ) : (
+            <div className="flex h-28 w-28 items-center justify-center rounded-[22%] bg-secondary">
+              <ShoppingBag className="h-10 w-10 text-primary" strokeWidth={1.75} />
             </div>
+          )}
+          <p className="mt-5 type-subhead text-primary">{item.badge || variant.label}</p>
+          <DialogTitle className="mt-1 type-title1">{item.title}</DialogTitle>
+          {intro && <DialogDescription className="mt-2 type-subhead text-muted-foreground">{intro}</DialogDescription>}
+        </div>
+
+        {bullets.length > 0 && (
+          <div>
+            <p className="type-headline mb-3">{variant.bulletsTitle}</p>
+            <ul className="space-y-3">
+              {bullets.map((b, i) => (
+                <li key={i} className="flex gap-3 type-subhead">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={2} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
           </div>
+        )}
+
+        <div className="space-y-2">
+          {item.price && <p className="text-center font-rounded text-3xl font-bold tabular-nums">{item.price}</p>}
+          {item.url ? (
+            <Button asChild variant="hero" size="lg" className="w-full">
+              <a href={item.url} target="_blank" rel="noreferrer sponsored" onClick={() => { void hapticTap(); track(variant.event, { item: item.title }); }}>
+                {variant.cta}
+              </a>
+            </Button>
+          ) : (
+            <p className="text-center type-subhead text-muted-foreground">Disponible próximamente</p>
+          )}
+          {variant.note && <p className="text-center type-footnote text-muted-foreground">{variant.note}</p>}
         </div>
       </DialogContent>
     </Dialog>

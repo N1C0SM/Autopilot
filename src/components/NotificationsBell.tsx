@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, BellOff, CalendarSync, Dumbbell, Inbox, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 
 interface Notification {
   id: string;
@@ -84,56 +82,52 @@ const NotificationsBell = ({ userId }: Props) => {
 
   const typeIcon = (type: string) => {
     switch (type) {
-      case "plan_renewed": return "🔄";
-      case "macros_adjusted": return "⚡";
-      case "reminder": return "💪";
-      default: return "📬";
+      case "plan_renewed": return <CalendarSync />;
+      case "macros_adjusted": return <Zap />;
+      case "reminder": return <Dumbbell />;
+      default: return <Inbox />;
     }
   };
 
   return (
-    <Popover open={open} onOpenChange={handleOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-8 w-8">
-          <Bell className="h-4 w-4" />
+    <Sheet open={open} onOpenChange={handleOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative" onClick={() => void hapticTap()}>
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-primary text-primary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 type-caption2 font-bold tabular-nums text-primary-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
-        <div className="px-4 py-3 border-b border-border">
-          <h3 className="font-display font-bold text-sm">Notificaciones</h3>
-        </div>
-        <ScrollArea className="max-h-80">
-          {notifications.length === 0 ? (
-            <div className="p-6 text-center text-sm text-muted-foreground">
-              Sin notificaciones
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {notifications.map((n) => (
-                <div
-                  key={n.id}
-                  className={`px-4 py-3 text-sm transition-colors ${!n.read ? "bg-primary/5" : ""}`}
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-base mt-0.5">{typeIcon(n.type)}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-xs">{n.title}</div>
-                      <div className="text-muted-foreground text-xs mt-0.5 leading-relaxed">{n.message}</div>
-                      <div className="text-[10px] text-muted-foreground/60 mt-1">{timeAgo(n.created_at)}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </ScrollArea>
-      </PopoverContent>
-    </Popover>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="min-h-[50dvh] sm:mx-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Notificaciones</SheetTitle>
+          <SheetDescription className="sr-only">Tus avisos recientes</SheetDescription>
+        </SheetHeader>
+        {notifications.length === 0 ? (
+          <EmptyState
+            icon={BellOff}
+            title="Sin notificaciones"
+            description="Aquí verás los cambios en tu plan y los recordatorios."
+            className="py-16"
+          />
+        ) : (
+          <ListGroup inset className="mt-4">
+            {notifications.map((n) => (
+              <ListRow
+                key={n.id}
+                icon={typeIcon(n.type)}
+                title={n.title}
+                subtitle={n.message}
+                value={timeAgo(n.created_at)}
+              />
+            ))}
+          </ListGroup>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 };
 

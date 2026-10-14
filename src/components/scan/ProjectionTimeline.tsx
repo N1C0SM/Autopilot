@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Sparkles } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { hapticTap } from "@/lib/native";
 
 type Props = {
   currentScore: number; // 0-10 (physique)
@@ -37,92 +37,65 @@ export default function ProjectionTimeline({
   const milestones = milestonesFor(priorities, m);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6 }}
-      className="max-w-5xl mx-auto mt-10"
-    >
-      <div className="text-center mb-5">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
-            Proyección a {m} meses
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Mismo punto de partida, dos escenarios. Proyección orientativa: no es una promesa de resultados.
-        </p>
-      </div>
+    <section className="max-w-3xl mx-auto mt-10 px-4">
+      <h2 className="type-title1 text-center">Proyección a {m} meses</h2>
+      <p className="type-subhead text-muted-foreground text-center mt-2 max-w-md mx-auto">
+        Mismo punto de partida, dos escenarios. Proyección orientativa: no es una promesa de resultados.
+      </p>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* SIN PLAN */}
-        <div className="relative bg-card/40 backdrop-blur border border-border rounded-2xl p-5 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-muted/10 to-transparent pointer-events-none" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">
-                  Sin plan · {mNo} meses
-                </span>
-              </div>
-              <span className="text-[10px] text-muted-foreground">Score {without.toFixed(1)}</span>
+      <div className="grid md:grid-cols-2 gap-10 md:gap-12 mt-8">
+        <div>
+          <div className="flex items-center gap-3">
+            <TrendingDown className="w-7 h-7 text-muted-foreground shrink-0" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <div className="type-headline">Sin plan · {mNo} meses</div>
+              <div className="type-subhead text-muted-foreground tabular-nums">Puntuación {without.toFixed(1)}</div>
             </div>
-            <div className="h-2 rounded-full bg-muted/30 overflow-hidden mb-4">
-              <div className="h-full bg-muted-foreground/40" style={{ width: `${without * 10}%` }} />
-            </div>
-            <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>• Mismo cuello de botella: <span className="italic">{bottleneck || "falta de estructura"}</span></li>
-              <li>• Volumen mal distribuido → fatiga sin progreso</li>
-              <li>• Macros a ojo → recompuesta más lenta</li>
-              <li>• Probablemente el siguiente scan seguiría igual</li>
-            </ul>
           </div>
+          <div className="h-1 rounded-full bg-secondary overflow-hidden mt-4 mb-5">
+            <div className="h-full bg-muted-foreground/60" style={{ width: `${without * 10}%` }} />
+          </div>
+          <ul className="space-y-3 type-subhead text-muted-foreground">
+            <li>
+              Mismo cuello de botella: <span className="text-foreground">{bottleneck || "falta de estructura"}</span>
+            </li>
+            <li>Volumen mal distribuido: fatiga sin progreso</li>
+            <li>Macros a ojo: recomposición más lenta</li>
+            <li>Probablemente el siguiente scan seguiría igual</li>
+          </ul>
         </div>
 
-        {/* CON PLAN */}
-        <div className="relative bg-card/80 backdrop-blur border border-primary/40 rounded-2xl p-5 overflow-hidden">
-          <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl pointer-events-none" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-xs uppercase tracking-widest text-primary font-semibold">
-                  Con plan · {m} meses
-                </span>
-              </div>
-              <span className="text-[10px] text-primary">Objetivo orientativo</span>
+        <div>
+          <div className="flex items-center gap-3">
+            <TrendingUp className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <div className="type-headline">Con plan · {m} meses</div>
+              <div className="type-subhead text-muted-foreground">Objetivo orientativo</div>
             </div>
-            <div className="h-2 rounded-full bg-muted/30 overflow-hidden mb-4">
-              <motion.div
-                initial={{ width: `${without * 10}%` }}
-                whileInView={{ width: `${target * 10}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                className="h-full bg-gradient-to-r from-primary/70 to-primary"
-              />
-            </div>
-            <ol className="space-y-2 text-xs">
-              {milestones.map((mile, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="flex-shrink-0 w-10 text-[10px] font-mono uppercase tracking-wider text-primary">
-                    Mes {mile.month}
-                  </span>
-                  <span className="text-foreground/90">{mile.label}</span>
-                </li>
-              ))}
-            </ol>
-            <button
-              onClick={onCta}
-              className="mt-4 w-full text-xs font-semibold uppercase tracking-wider text-primary hover:underline"
-            >
-              Empezar mi plan →
-            </button>
           </div>
+          <div className="h-1 rounded-full bg-secondary overflow-hidden mt-4 mb-5">
+            <div className="h-full bg-primary" style={{ width: `${target * 10}%` }} />
+          </div>
+          <ol className="space-y-3">
+            {milestones.map((mile, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="w-14 shrink-0 type-subhead font-semibold text-primary tabular-nums">Mes {mile.month}</span>
+                <span className="type-subhead text-muted-foreground">{mile.label}</span>
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            onClick={() => {
+              void hapticTap();
+              onCta();
+            }}
+            className="mt-4 min-h-[44px] type-headline text-primary active:opacity-60 transition-opacity"
+          >
+            Empezar mi plan
+          </button>
         </div>
       </div>
-    </motion.div>
+    </section>
   );
 }

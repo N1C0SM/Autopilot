@@ -1,9 +1,11 @@
-import { Check, FileText, Smartphone, Mail, Infinity as InfinityIcon, ArrowRight, Package } from "lucide-react";
+import { Check, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import BookCover from "@/components/BookCover";
 import { rememberBookPurchase } from "@/lib/buyLink";
 import { track } from "@/lib/analytics";
+import { hapticTap } from "@/lib/native";
 
 export interface PreviewBook {
   id?: string;
@@ -37,83 +39,75 @@ export default function BookPreviewModal({
   const showPack = pack && pack.url && pack.id !== book.id && !book.is_pack;
 
   const buy = (item: PreviewBook, source: string) => {
+    void hapticTap();
     rememberBookPurchase(item.id);
     track("book_buy_click", { book: item.title, source });
   };
 
   return (
     <Dialog open={!!book} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-        <div className="grid gap-0 sm:grid-cols-[0.8fr_1.2fr]">
-          <div className="bg-secondary p-6 flex items-center justify-center">
-            <div className="w-full max-w-[220px]">
-              <BookCover title={book.title} src={book.cover_url} />
-            </div>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex flex-col items-center text-center">
+          <div className="w-36">
+            <BookCover title={book.title} src={book.cover_url} />
           </div>
-          <div className="p-6 flex flex-col">
-            <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-2">
-              {book.is_pack ? "Pack de guías" : "Guía en PDF"}
-            </p>
-            <DialogTitle className="font-display text-2xl font-bold leading-tight">{book.title}</DialogTitle>
-            {intro && (
-              <DialogDescription className="mt-3 text-sm leading-relaxed text-muted-foreground">{intro}</DialogDescription>
-            )}
-
-            {bullets.length > 0 && (
-              <div className="mt-5">
-                <p className="text-xs font-semibold mb-2">Qué vas a aprender</p>
-                <ul className="space-y-2">
-                  {bullets.map((b, i) => (
-                    <li key={i} className="flex gap-2 text-sm">
-                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <div className="mt-5 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-primary" /> PDF descargable</span>
-              <span className="flex items-center gap-1.5"><Smartphone className="w-3.5 h-3.5 text-primary" /> Móvil y ordenador</span>
-              <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-primary" /> Entrega tras el pago</span>
-              <span className="flex items-center gap-1.5"><InfinityIcon className="w-3.5 h-3.5 text-primary" /> Tuyo para siempre</span>
-            </div>
-
-            <div className="mt-6 pt-5 border-t border-border">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-display text-2xl font-bold">{book.price || "Gratis"}</span>
-                {book.url ? (
-                  <Button asChild variant="hero" size="lg">
-                    <a href={book.url} target="_blank" rel="noreferrer" onClick={() => buy(book, "preview_modal")}>
-                      Comprar ahora <ArrowRight className="w-4 h-4" />
-                    </a>
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Disponible próximamente</span>
-                )}
-              </div>
-              <p className="mt-2 text-[11px] text-muted-foreground">Pago seguro con Stripe. Material autodidacta, no incluye entrenador.</p>
-            </div>
-
-            {showPack && (
-              <a
-                href={pack!.url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => buy(pack!, "preview_modal_pack")}
-                className="mt-4 flex items-center gap-3 rounded-lg border border-primary/40 bg-primary/[0.06] p-3 hover:border-primary transition-colors"
-              >
-                <Package className="w-5 h-5 text-primary shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">¿Quieres todas las guías?</p>
-                  <p className="text-xs text-muted-foreground truncate">{pack!.title}{pack!.price ? ` · ${pack!.price}` : ""}</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-primary shrink-0" />
-              </a>
-            )}
-          </div>
+          <p className="mt-5 type-subhead text-primary">{book.is_pack ? "Pack de guías" : "Guía en PDF"}</p>
+          <DialogTitle className="mt-1 type-title1">{book.title}</DialogTitle>
+          {intro && <DialogDescription className="mt-2 type-subhead text-muted-foreground">{intro}</DialogDescription>}
         </div>
+
+        {bullets.length > 0 && (
+          <div>
+            <p className="type-headline mb-3">Qué vas a aprender</p>
+            <ul className="space-y-3">
+              {bullets.map((b, i) => (
+                <li key={i} className="flex gap-3 type-subhead">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={2} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <ListGroup inset>
+          <ListRow title="Formato" value="PDF descargable" />
+          <ListRow title="Dónde leerlo" value="Móvil y ordenador" />
+          <ListRow title="Entrega" value="Tras el pago" />
+          <ListRow title="Acceso" value="Para siempre" />
+        </ListGroup>
+
+        <div className="space-y-2">
+          {book.url ? (
+            <>
+              <p className="text-center font-rounded text-3xl font-bold tabular-nums">{book.price || "Gratis"}</p>
+              <Button asChild variant="hero" size="lg" className="w-full">
+                <a href={book.url} target="_blank" rel="noreferrer" onClick={() => buy(book, "preview_modal")}>
+                  Comprar ahora
+                </a>
+              </Button>
+            </>
+          ) : (
+            <p className="text-center type-subhead text-muted-foreground">Disponible próximamente</p>
+          )}
+          <p className="text-center type-footnote text-muted-foreground">Pago seguro con Stripe. Material autodidacta, no incluye entrenador.</p>
+        </div>
+
+        {showPack && (
+          <a
+            href={pack!.url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => buy(pack!, "preview_modal_pack")}
+            className="flex min-h-[44px] items-center gap-3 rounded-2xl bg-secondary p-3 transition-colors active:bg-accent"
+          >
+            <Package className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <p className="type-headline">¿Quieres todas las guías?</p>
+              <p className="truncate type-footnote text-muted-foreground">{pack!.title}{pack!.price ? ` · ${pack!.price}` : ""}</p>
+            </div>
+          </a>
+        )}
       </DialogContent>
     </Dialog>
   );

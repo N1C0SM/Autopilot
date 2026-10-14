@@ -4,7 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Calendar, Clock, ArrowLeft, Loader2 } from "lucide-react";
+import { FileQuestion, ChevronLeft } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
+import { hapticTap } from "@/lib/native";
 
 interface Post {
   id: string;
@@ -44,23 +48,25 @@ const BlogPost = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   if (notFound || !post) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4">
         <Helmet>
           <title>Artículo no encontrado — Autopilot</title>
           <meta name="robots" content="noindex" />
         </Helmet>
-        <p className="text-muted-foreground mb-4">Este artículo no existe.</p>
-        <button onClick={() => navigate("/blog")} className="text-primary hover:underline text-sm">
-          ← Volver al blog
-        </button>
+        <EmptyState
+          icon={FileQuestion}
+          title="Este artículo no existe"
+          description="Puede que se haya movido o que el enlace esté mal."
+          action={<Button variant="plain" onClick={() => { void hapticTap(); navigate("/blog"); }}>Volver al blog</Button>}
+        />
       </div>
     );
   }
@@ -98,62 +104,48 @@ const BlogPost = () => {
         })}</script>
       </Helmet>
 
-      <nav className="app-chrome border-b sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
-          <Link to="/scan" className="text-sm text-primary font-medium hover:underline">
-            Diagnóstico gratis →
+      <nav className="app-chrome sticky top-0 z-50 border-b">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4 pt-safe">
+          <Link to="/blog" onClick={() => void hapticTap()} className="-ml-2 flex min-h-[44px] items-center gap-0.5 pr-2 type-body text-primary transition-opacity active:opacity-60">
+            <ChevronLeft className="h-6 w-6" strokeWidth={2.25} /> Blog
+          </Link>
+          <Link to="/scan" className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
+            Diagnóstico gratis
           </Link>
         </div>
       </nav>
 
-      <article className="container mx-auto max-w-3xl px-4 py-12 sm:py-16">
-        <Link to="/blog" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-8">
-          <ArrowLeft className="w-3 h-3" /> Volver al blog
-        </Link>
-
+      <article className="container mx-auto max-w-3xl px-4 pb-safe pt-8 sm:pt-12">
         <header className="mb-8">
-          <h1 className="text-3xl sm:text-5xl font-bold font-display tracking-tight leading-[1.1] mb-4">
-            {post.title}
-          </h1>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {post.author_name && <span>Por {post.author_name}</span>}
-            {post.published_at && (
-              <span className="inline-flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {new Date(post.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-              </span>
-            )}
-            {post.reading_minutes ? (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="w-3 h-3" /> {post.reading_minutes} min
-              </span>
-            ) : null}
-          </div>
+          <h1 className="type-large-title sm:text-5xl sm:leading-[1.1]">{post.title}</h1>
+          <p className="mt-3 type-footnote text-muted-foreground">
+            {[
+              post.author_name ? `Por ${post.author_name}` : "",
+              post.published_at ? new Date(post.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "",
+              post.reading_minutes ? `${post.reading_minutes} min` : "",
+            ].filter(Boolean).join(" · ")}
+          </p>
         </header>
 
         {post.cover_url && (
-          <div className="mb-10 rounded-2xl overflow-hidden border border-border">
-            <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} className="w-full h-auto object-cover" />
+          <div className="mb-10 overflow-hidden rounded-2xl">
+            <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} className="h-auto w-full object-cover" />
           </div>
         )}
 
-        <div className="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-headings:tracking-tight prose-a:text-primary prose-strong:text-foreground">
+        <div className="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-a:text-primary prose-strong:text-foreground">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body_markdown}</ReactMarkdown>
         </div>
 
-        <div className="mt-16 p-6 sm:p-8 bg-card border border-primary/30 rounded-2xl text-center">
-          <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-2">¿Listo para empezar?</p>
-          <h3 className="text-xl sm:text-2xl font-bold font-display mb-3">
-            Diagnóstico físico con IA en menos de un minuto
-          </h3>
-          <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
+        <aside className="mx-auto mt-16 max-w-sm text-center">
+          <h3 className="type-title2">Diagnóstico físico con IA en menos de un minuto</h3>
+          <p className="mt-2 type-subhead text-muted-foreground">
             Sube una foto y la IA te dirá por dónde empezar. Gratis, sin tarjeta.
           </p>
-          <Link to="/scan" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
-            Hacer mi diagnóstico gratis →
-          </Link>
-        </div>
+          <Button asChild variant="hero" size="lg" className="mt-6 w-full">
+            <Link to="/scan" onClick={() => void hapticTap()}>Hacer mi diagnóstico gratis</Link>
+          </Button>
+        </aside>
       </article>
     </div>
   );

@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, CircleAlert, Loader2, Download, ArrowRight, BookOpen } from "lucide-react";
+import { CheckCircle2, CircleAlert, BookOpen } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { ResourcesStatus, ResourcesStatusScreen } from "@/components/ResourcesStatus";
+import { hapticTap, hapticNotify } from "@/lib/native";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
 import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
@@ -65,88 +68,78 @@ export const BookSuccess = ({
 
   if (state === "verifying") {
     return (
-      <div className="text-center max-w-md">
+      <ResourcesStatus
+        mark={<Spinner size="lg" className="text-primary" />}
+        title="Confirmando tu compra…"
+        description="Estamos verificando el pago con Stripe. Suele tardar unos segundos."
+      >
         <PageHead title="Confirmando tu compra · Autopilot" description="Estamos confirmando tu compra." path="/payment-success" noindex />
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
-        </div>
-        <h1 className="text-2xl font-bold font-display mb-3">Confirmando tu compra...</h1>
-        <p className="text-muted-foreground text-sm">Estamos verificando el pago con Stripe. Esto suele tardar unos segundos.</p>
-      </div>
+      </ResourcesStatus>
     );
   }
 
   if (state === "ready") {
     return (
-      <div className="text-center max-w-md">
+      <ResourcesStatus
+        icon={CheckCircle2}
+        title="¡Pago Exitoso!"
+        description="Gracias por tu compra. Aquí tienes tu libro."
+      >
         <PageHead title="¡Pago exitoso! · Autopilot" description="Tu compra se ha realizado correctamente." path="/payment-success" noindex />
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold font-display mb-3">¡Pago Exitoso!</h1>
-        <p className="text-muted-foreground mb-6">
-          Gracias por tu compra. Aquí tienes tu libro:
-        </p>
-        <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3 text-left mb-6">
-          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-            <BookOpen className="w-5 h-5 text-primary" />
-          </div>
+        <div className="mb-5 flex items-center gap-3 text-left">
+          <BookOpen className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
           <div className="min-w-0">
-            <div className="font-semibold text-sm truncate">{title}</div>
-            <div className="text-xs text-muted-foreground">PDF · descarga disponible 24 h</div>
+            <p className="truncate type-headline">{title}</p>
+            <p className="type-subhead text-muted-foreground">PDF · descarga disponible 24 h</p>
           </div>
         </div>
-        <Button variant="hero" size="lg" asChild className="w-full mb-3">
-          <a href={fileUrl} target="_blank" rel="noreferrer">
-            <Download className="w-4 h-4 mr-2" /> Descargar mi libro
+        <Button variant="hero" size="lg" asChild className="w-full">
+          <a href={fileUrl} target="_blank" rel="noreferrer" onClick={() => void hapticNotify("success")}>
+            Descargar mi libro
           </a>
         </Button>
-        <Button variant="ghost" size="sm" className="w-full" onClick={() => navigate("/recursos")}>
-          Ver más recursos <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+        <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); navigate("/recursos"); }}>
+          Ver más recursos
         </Button>
-      </div>
+      </ResourcesStatus>
     );
   }
 
   if (state === "nofile") {
     return (
-      <div className="text-center max-w-md">
+      <ResourcesStatus
+        icon={CheckCircle2}
+        title="¡Pago Exitoso!"
+        description={<>Gracias por tu compra de <span className="font-semibold text-foreground">{title}</span>.</>}
+      >
         <PageHead title="¡Pago exitoso! · Autopilot" description="Tu compra se ha realizado correctamente." path="/payment-success" noindex />
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold font-display mb-3">¡Pago Exitoso!</h1>
-        <p className="text-muted-foreground mb-6">
-          Gracias por tu compra de <span className="font-semibold text-foreground">{title}</span>.
-        </p>
-        <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/recursos")}>
-          Ver mis recursos <ArrowRight className="w-4 h-4 ml-2" />
+        <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); navigate("/recursos"); }}>
+          Ver mis recursos
         </Button>
-      </div>
+      </ResourcesStatus>
     );
   }
 
   return (
-    <div className="text-center max-w-md">
-      <PageHead title="Compra sin confirmar · Autopilot" description="Todavía no hemos podido confirmar esta compra." path="/payment-success" noindex />
-      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-        <CircleAlert className="w-10 h-10 text-primary" />
-      </div>
-      <h1 className="text-3xl font-bold font-display mb-3">No hemos podido confirmar tu compra</h1>
-      <p className="text-muted-foreground mb-8 text-sm">
-        {state === "missing"
+    <ResourcesStatus
+      icon={CircleAlert}
+      title="No hemos podido confirmar tu compra"
+      description={
+        state === "missing"
           ? "Falta la confirmación de Stripe. Si ya has pagado, contacta con nosotros con tu recibo para recuperar el libro."
-          : "Espera unos segundos y comprueba de nuevo. Si ya has pagado y sigue fallando, contacta con nosotros con tu recibo."}
-      </p>
+          : "Espera unos segundos y comprueba de nuevo. Si ya has pagado y sigue fallando, contacta con nosotros con tu recibo."
+      }
+    >
+      <PageHead title="Compra sin confirmar · Autopilot" description="Todavía no hemos podido confirmar esta compra." path="/payment-success" noindex />
       {state === "error" && (
-        <Button variant="outline" size="lg" className="w-full mb-3" onClick={() => window.location.reload()}>
+        <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); window.location.reload(); }}>
           Comprobar de nuevo
         </Button>
       )}
-      <Button variant="ghost" size="sm" className="w-full" onClick={() => navigate("/recursos")}>
-        Ver más recursos <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+      <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); navigate("/recursos"); }}>
+        Ver más recursos
       </Button>
-    </div>
+    </ResourcesStatus>
   );
 };
 
@@ -233,78 +226,66 @@ const PaymentSuccess = () => {
 
   if (isBook) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <ResourcesStatusScreen>
         <BookSuccess bookRef={bookRef} sessionId={sessionId} onNotBook={() => setNotBook(true)} />
-      </div>
+      </ResourcesStatusScreen>
     );
-
   }
 
   if (loading || checking) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+      <ResourcesStatusScreen>
         <PageHead title="Confirmando pago · Autopilot" description="Estamos confirmando tu pago." path="/payment-success" noindex />
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <p className="text-muted-foreground text-sm">Verificando tu pago...</p>
-      </div>
+        <ResourcesStatus mark={<Spinner size="lg" className="text-primary" />} title="Verificando tu pago…" />
+      </ResourcesStatusScreen>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <ResourcesStatusScreen>
         <PageHead title="Confirma tu plan · Autopilot" description="Inicia sesión para comprobar el estado de tu plan." path="/payment-success" noindex />
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CircleAlert className="w-10 h-10 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold font-display mb-3">Inicia sesión para confirmar tu plan</h1>
-          <p className="text-muted-foreground mb-8">
-            Por favor inicia sesión para continuar con la configuración de tu plan personalizado.
-          </p>
-          <Button variant="hero" size="lg" onClick={() => navigate("/login")}>
-            Iniciar Sesión para Continuar
+        <ResourcesStatus
+          icon={CircleAlert}
+          title="Inicia sesión para confirmar tu plan"
+          description="Inicia sesión para continuar con la configuración de tu plan personalizado."
+        >
+          <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); navigate("/login"); }}>
+            Iniciar sesión para continuar
           </Button>
-        </div>
-      </div>
+        </ResourcesStatus>
+      </ResourcesStatusScreen>
     );
   }
 
   if (!paid) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <ResourcesStatusScreen>
         <PageHead title="Pago en proceso · Autopilot" description="Estamos confirmando tu pago con Stripe." path="/payment-success" noindex />
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Loader2 className="w-10 h-10 text-primary animate-spin" />
-          </div>
-          <h1 className="text-2xl font-bold font-display mb-3">Pago en proceso</h1>
-          <p className="text-muted-foreground mb-6 text-sm">
-            Estamos confirmando tu pago con Stripe. Esto suele tardar unos segundos. Si en 1 minuto sigues viendo esto, refresca esta página.
-          </p>
-          <Button variant="hero" size="lg" onClick={() => window.location.reload()}>
+        <ResourcesStatus
+          mark={<Spinner size="lg" className="text-primary" />}
+          title="Pago en proceso"
+          description="Estamos confirmando tu pago con Stripe. Suele tardar unos segundos. Si en 1 minuto sigues viendo esto, refresca la página."
+        >
+          <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); window.location.reload(); }}>
             Comprobar de nuevo
           </Button>
-        </div>
-      </div>
+        </ResourcesStatus>
+      </ResourcesStatusScreen>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <ResourcesStatusScreen>
       <PageHead title="¡Pago exitoso! · Autopilot" description="Tu plan personalizado se está preparando." path="/payment-success" noindex />
-      <div className="text-center max-w-md">
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-primary" />
-        </div>
-        <h1 className="text-3xl font-bold font-display mb-3">¡Pago Exitoso!</h1>
-        <p className="text-muted-foreground mb-4">
-          ¡Gracias! Tu plan personalizado se está preparando.
-        </p>
-        <p className="text-xs text-muted-foreground mb-8">Redirigiendo al dashboard...</p>
-        <Loader2 className="w-5 h-5 text-primary animate-spin mx-auto" />
-      </div>
-    </div>
+      <ResourcesStatus
+        icon={CheckCircle2}
+        title="¡Pago Exitoso!"
+        description="Gracias. Tu plan personalizado se está preparando y te llevamos al panel en un momento."
+      >
+        <Spinner size="md" className="mx-auto block" label="Redirigiendo" />
+      </ResourcesStatus>
+    </ResourcesStatusScreen>
   );
 };
 

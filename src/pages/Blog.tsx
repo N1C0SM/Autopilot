@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
-import { Calendar, Clock, ArrowRight } from "lucide-react";
+import { Newspaper } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { hapticTap } from "@/lib/native";
 
 interface Post {
   id: string;
@@ -46,74 +49,50 @@ const Blog = () => {
         <meta property="og:type" content="website" />
       </Helmet>
 
-      <nav className="app-chrome border-b sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
-          <Link to="/scan" className="text-sm text-primary font-medium hover:underline">
-            Diagnóstico gratis →
+      <nav className="app-chrome sticky top-0 z-50 border-b">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4 pt-safe">
+          <Link to="/" className="type-headline text-primary">Autopilot</Link>
+          <Link to="/scan" className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
+            Diagnóstico gratis
           </Link>
         </div>
       </nav>
 
-      <main className="container mx-auto max-w-4xl px-4 py-16 sm:py-24">
-        <header className="mb-12 text-center">
-          <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Blog</p>
-          <h1 className="text-4xl sm:text-5xl font-bold font-display tracking-tight mb-4">
-            Entrenamiento, nutrición e <span className="text-gradient">hipertrofia real</span>
+      <main className="container mx-auto max-w-4xl px-4 pb-safe pt-8 sm:pt-16">
+        <header className="mb-10 max-w-xl">
+          <h1 className="type-large-title">
+            Entrenamiento, nutrición e <span className="text-primary">hipertrofia real</span>
           </h1>
-          <p className="text-base text-muted-foreground max-w-xl mx-auto">
+          <p className="mt-2 type-body text-muted-foreground">
             Guías prácticas para hombres de 25 a 40 años. Sin humo, sin programas mágicos.
           </p>
         </header>
 
         {loading ? (
-          <p className="text-center text-muted-foreground">Cargando…</p>
+          <div className="flex justify-center py-20"><Spinner size="lg" /></div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-20 bg-card border border-dashed border-border rounded-2xl">
-            <p className="text-sm text-muted-foreground">Aún no hay artículos publicados.</p>
-          </div>
+          <EmptyState icon={Newspaper} title="Aún no hay artículos" description="Publicaremos guías nuevas muy pronto." />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-9 sm:grid-cols-2">
             {posts.map((p) => (
               <Link
                 key={p.id}
                 to={`/blog/${p.slug}`}
-                className="group bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/50 transition-colors flex flex-col"
+                onClick={() => void hapticTap()}
+                className="group block transition-opacity duration-100 active:opacity-70"
               >
-                {p.cover_url && (
-                  <div className="aspect-video bg-secondary overflow-hidden">
-                    <img
-                      src={p.cover_url}
-                      alt={p.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                    />
-                  </div>
-                )}
-                <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-3">
-                    {p.published_at && (
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(p.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-                      </span>
-                    )}
-                    {p.reading_minutes ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {p.reading_minutes} min
-                      </span>
-                    ) : null}
-                  </div>
-                  <h2 className="text-lg font-bold font-display leading-snug mb-2 group-hover:text-primary transition-colors">
-                    {p.title}
-                  </h2>
-                  {p.excerpt && (
-                    <p className="text-sm text-muted-foreground leading-relaxed flex-1">{p.excerpt}</p>
+                <div className="aspect-video overflow-hidden rounded-2xl bg-card">
+                  {p.cover_url && (
+                    <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover" />
                   )}
-                  <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold mt-4">
-                    Leer artículo <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
-                  </span>
                 </div>
+                <p className="mt-3 type-footnote text-muted-foreground">
+                  {p.published_at && new Date(p.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                  {p.published_at && p.reading_minutes ? " · " : ""}
+                  {p.reading_minutes ? `${p.reading_minutes} min` : ""}
+                </p>
+                <h2 className="mt-1 type-title3">{p.title}</h2>
+                {p.excerpt && <p className="mt-1 line-clamp-3 type-subhead text-muted-foreground">{p.excerpt}</p>}
               </Link>
             ))}
           </div>

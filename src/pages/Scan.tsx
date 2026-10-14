@@ -19,7 +19,6 @@ import {
   TrendingUp,
   Zap,
   Target,
-  Loader2,
   X,
   Lock,
   Users,
@@ -42,6 +41,7 @@ import {
   Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { buildScanPlanUpdates, hasScanInferences } from "@/lib/scanApply";
 import { toast } from "sonner";
@@ -221,12 +221,12 @@ const Dropzone = ({
           <button
             onClick={onClear}
             aria-label="Quitar foto"
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background transition"
+            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center transition"
           >
             <X className="w-4 h-4" />
           </button>
-          <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-3">
-            <div className="text-xs font-semibold uppercase tracking-widest text-primary">
+          <div className="absolute bottom-0 inset-x-0 bg-background/80 p-3">
+            <div className="type-headline text-primary">
               {label}
             </div>
           </div>
@@ -235,7 +235,7 @@ const Dropzone = ({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="relative aspect-[3/4] w-full rounded-2xl border-2 border-dashed border-border hover:border-primary/60 hover:bg-card/40 transition-all flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-6 group overflow-hidden"
+          className="relative aspect-[3/4] w-full rounded-2xl border-2 border-dashed border-border transition-all flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-6 group overflow-hidden"
         >
           {placeholder && (
             <img
@@ -246,7 +246,7 @@ const Dropzone = ({
               className="absolute inset-0 w-full h-full object-contain opacity-15 pointer-events-none select-none"
             />
           )}
-          <div className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:scale-110 transition">
+          <div className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center transition">
             <Upload className="w-6 h-6 text-primary" />
           </div>
           <div className="relative text-center">
@@ -262,15 +262,15 @@ const Dropzone = ({
 const ScoreCard = ({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) => (
   <div
     className={`relative bg-card/60 backdrop-blur rounded-2xl p-4 border ${
-      highlight ? "border-primary/40 glow-shadow" : "border-border"
+      highlight ? "border-primary/40" : "border-border"
     }`}
   >
-    <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1">
+    <div className="type-group-header text-muted-foreground mb-1 flex items-center gap-1">
       {highlight && <Zap className="w-3 h-3 text-primary" />}
       {label}
     </div>
     <div className="flex items-baseline gap-1">
-      <span className="text-3xl font-bold font-display text-gradient">
+      <span className="text-3xl font-bold font-display text-primary">
         {value.toFixed(1)}
       </span>
       <span className="text-xs text-muted-foreground">/10</span>
@@ -280,7 +280,7 @@ const ScoreCard = ({ label, value, highlight }: { label: string; value: number; 
         initial={{ width: 0 }}
         animate={{ width: `${value * 10}%` }}
         transition={{ duration: 1, ease: "easeOut" }}
-        className="h-full bg-gradient-to-r from-primary to-primary/60"
+        className="h-full bg-primary"
       />
     </div>
   </div>
@@ -1125,7 +1125,6 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
       )}
       {/* Glow background */}
       <div className="absolute inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full bg-primary/10 blur-[160px]" />
         <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[140px]" />
       </div>
 
@@ -1136,12 +1135,12 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
           <Link
             to={user ? "/dashboard" : "/"}
             aria-label="Volver"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary transition"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition active:opacity-60"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
         </div>
-        <span className="text-sm font-semibold tracking-tight">Escáner corporal</span>
+        <span className="type-headline">Escáner corporal</span>
         <div />
       </header>}
 
@@ -1219,7 +1218,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         setSelectedPresetId(null);
                         setEditingObjective(true);
                       }}
-                      className="text-[11px] text-muted-foreground hover:text-foreground"
+                      className="text-[11px] text-muted-foreground"
                     >
                       Quitar para este scan
                     </button>
@@ -1291,7 +1290,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     <button
                       type="button"
                       onClick={() => { setObjectiveImg(null); setSelectedPresetId(null); }}
-                      className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      className="text-xs text-muted-foreground flex items-center gap-1"
                     >
                       <X className="w-3 h-3" /> Quitar
                     </button>
@@ -1312,7 +1311,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             setSelectedPresetId(p.id);
                           }}
                           className={`relative aspect-[3/4] overflow-hidden rounded-xl border-2 transition group ${
-                            isSel ? "border-primary" : "border-border hover:border-primary/50"
+                            isSel ? "border-primary" : "border-border"
                           }`}
                         >
                           <img
@@ -1321,7 +1320,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             className="h-full w-full object-cover"
                             loading="lazy"
                           />
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/95 via-background/60 to-transparent p-2">
+                          <div className="absolute inset-x-0 bottom-0 bg-background/80 p-2">
                             <div className="line-clamp-2 text-xs font-semibold leading-tight">
                               {p.name}
                             </div>
@@ -1356,7 +1355,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       <div className={`cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition ${
                         objectiveImg && !selectedPresetId
                           ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/60"
+                          : "border-border"
                       }`}>
                         {objectiveImg && !selectedPresetId ? (
                           <img loading="lazy" decoding="async" src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-lg" />
@@ -1395,7 +1394,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 </div>
                 <div className="grid sm:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-1.5">Distancia</div>
+                    <div className="type-headline text-primary mb-1.5">Distancia</div>
                     <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
                       <li>· Cámara a 2-3 m, a la altura del ombligo</li>
                       <li>· Cuerpo entero (de la cabeza a los pies)</li>
@@ -1403,7 +1402,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     </ul>
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-1.5">Luz y fondo</div>
+                    <div className="type-headline text-primary mb-1.5">Luz y fondo</div>
                     <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
                       <li>· Luz natural de día, frontal y uniforme</li>
                       <li>· Evita contraluz, sombras duras y flash</li>
@@ -1411,7 +1410,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     </ul>
                   </div>
                   <div>
-                    <div className="text-xs uppercase tracking-widest text-primary font-semibold mb-1.5">Postura y ropa</div>
+                    <div className="type-headline text-primary mb-1.5">Postura y ropa</div>
                     <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
                       <li>· Ropa ajustada (sin camiseta o top + short)</li>
                       <li>· Pies a la anchura de los hombros</li>
@@ -1421,14 +1420,14 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 </div>
                 <div className="mt-4 pt-4 border-t border-border/60 grid sm:grid-cols-2 gap-4 text-[13px]">
                   <div className="flex gap-2">
-                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">1</div>
+                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[11px] font-bold text-primary shrink-0 mt-0.5">1</div>
                     <div>
                       <div className="font-semibold mb-0.5">Foto de delante</div>
                       <div className="text-muted-foreground">Mira al frente, hombros relajados y palmas hacia el cuerpo. Que se te vea de cabeza a pies.</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 mt-0.5">2</div>
+                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[11px] font-bold text-primary shrink-0 mt-0.5">2</div>
                     <div>
                       <div className="font-semibold mb-0.5">Foto de atrás</div>
                       <div className="text-muted-foreground">Date la vuelta sin moverte de sitio. Misma postura, brazos relajados y mirada al frente para no curvar la espalda.</div>
@@ -1443,11 +1442,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   size="xl"
                   onClick={() => setPhase("analyzing")}
                   disabled={!currentImg && !backImg}
-                  className="hover-scale group min-w-[280px]"
+                  className="min-w-[280px]"
                 >
                   <ScanLine className="w-5 h-5 mr-1" />
                   Analizar mi físico
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="w-4 h-4 transition-transform" />
                 </Button>
                 <p className="text-xs text-muted-foreground text-center max-w-md">
                   Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos
@@ -1481,10 +1480,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-4">
                   <Target className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-primary">Paso 2 · Tu objetivo</span>
+                  <span className="type-headline text-primary">Paso 2 · Tu objetivo</span>
                 </div>
                 <h1 className="text-3xl sm:text-5xl font-bold font-display leading-[1.05] mb-3">
-                  ¿Cuál es tu <span className="text-gradient">objetivo principal</span>?
+                  ¿Cuál es tu <span className="text-primary">objetivo principal</span>?
                 </h1>
                 <p className="text-muted-foreground">
                   La IA prioriza tu diagnóstico en función de lo que más te importa.
@@ -1500,10 +1499,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       key={g.id}
                       type="button"
                       onClick={() => setGoal(g.id)}
-                      className={`text-left rounded-2xl border p-5 transition-all flex items-start gap-4 hover-scale ${
+                      className={`text-left rounded-2xl border p-5 transition-all flex items-start gap-4 ${
                         active
-                          ? "border-primary bg-primary/10 glow-shadow"
-                          : "border-border bg-card/40 hover:border-primary/50"
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-card/40"
                       }`}
                     >
                       <div
@@ -1532,11 +1531,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   size="xl"
                   disabled={!goal}
                   onClick={() => setPhase("analyzing")}
-                  className="hover-scale group min-w-[280px]"
+                  className="min-w-[280px]"
                 >
                   <ScanLine className="w-5 h-5 mr-1" />
                   Analizar mi físico
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="w-4 h-4 transition-transform" />
                 </Button>
               </div>
             </motion.div>
@@ -1553,7 +1552,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 <div className="absolute inset-0 rounded-full border border-primary/30 animate-ping" />
                 <div className="absolute inset-2 rounded-full border border-primary/40" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Brain className="w-10 h-10 text-primary animate-pulse" />
+                  <Brain className="w-10 h-10 text-primary" />
                 </div>
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold font-display mb-3">
@@ -1568,7 +1567,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   transition={{ duration: 0.4 }}
                   className="text-primary font-medium flex items-center justify-center gap-2"
                 >
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Spinner size="sm" />
                   {LOADING_MESSAGES[loadingMsgIdx]}
                 </motion.div>
               </AnimatePresence>
@@ -1576,7 +1575,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 <div className="h-1 bg-secondary rounded-full overflow-hidden">
                   <motion.div
                     animate={{ width: `${scanProgress}%` }}
-                    className="h-full bg-gradient-to-r from-primary to-primary/60"
+                    className="h-full bg-primary"
                   />
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-2">{Math.round(scanProgress)}%</div>
@@ -1594,12 +1593,12 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               <div className="text-center mb-8">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-success">
+                  <span className="type-footnote font-semibold text-success">
                     Diagnóstico listo
                   </span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-3">
-                  Hemos detectado tus <span className="text-gradient">principales prioridades físicas</span>.
+                  Hemos detectado tus <span className="text-primary">principales prioridades físicas</span>.
                 </h2>
                 <p className="text-muted-foreground">
                   Dinos tu nombre y tu email y te lo mostramos ahora mismo. También te lo
@@ -1609,7 +1608,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
               <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 space-y-4">
                 <div>
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">
+                  <label className="type-footnote text-muted-foreground mb-1.5 block">
                     Nombre
                   </label>
                   <input
@@ -1622,7 +1621,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   />
                 </div>
                 <div>
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground mb-1.5 block">
+                  <label className="type-footnote text-muted-foreground mb-1.5 block">
                     Email
                   </label>
                   <div className="relative">
@@ -1650,7 +1649,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   />
                   <span className="text-xs text-muted-foreground leading-relaxed">
                     Acepto que Autopilot use mi foto solo para generar mi diagnóstico físico y acepto la{" "}
-                    <Link to="/legal/privacidad" className="text-primary hover:underline">
+                    <Link to="/legal/privacidad" className="text-primary">
                       política de privacidad
                     </Link>
                     .
@@ -1662,22 +1661,22 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   size="xl"
                   onClick={submitLead}
                   disabled={submittingLead || !pendingResult}
-                  className="w-full hover-scale group"
+                  className="w-full group"
                 >
                   {submittingLead ? (
                     <>
-                      <Loader2 className="w-5 h-5 mr-1 animate-spin" />
+                      <Spinner className="mr-1" />
                       Enviando…
                     </>
                   ) : !pendingResult ? (
                     <>
-                      <Loader2 className="w-5 h-5 mr-1 animate-spin" />
+                      <Spinner className="mr-1" />
                       Generando tu diagnóstico…
                     </>
                   ) : (
                     <>
                       Ver mi diagnóstico ahora
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                      <ArrowRight className="w-4 h-4 transition-transform" />
                     </>
                   )}
                 </Button>
@@ -1713,12 +1712,12 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               <div className="text-center mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-success">
+                  <span className="type-footnote font-semibold text-success">
                     Análisis completo
                   </span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-3">
-                  Tu <span className="text-gradient">AI Physique Report</span>
+                  Tu <span className="text-primary">AI Physique Report</span>
                 </h2>
                 {result.headline_diagnosis ? (
                   <p className="text-lg sm:text-xl text-foreground max-w-2xl mx-auto font-medium leading-snug">
@@ -1734,9 +1733,9 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       size="sm"
                       onClick={resendByEmail}
                       disabled={emailSending || autoSaving}
-                      className="hover-scale mr-2"
+                      className="mr-2"
                     >
-                      {emailSending || autoSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Mail className="w-4 h-4 mr-1" />}
+                      {emailSending || autoSaving ? <Spinner size="sm" className="mr-1" /> : <Mail className="w-4 h-4 mr-1" />}
                       {autoSaved ? "Reenviar por email" : "Enviar por email"}
                     </Button>
                   )}
@@ -1745,10 +1744,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     size="sm"
                     onClick={handleShare}
                     disabled={sharing}
-                    className="hover-scale"
+                    className="active:opacity-70"
                   >
                     {sharing ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      <Spinner size="sm" className="mr-1" />
                     ) : (
                       <Share2 className="w-4 h-4 mr-1" />
                     )}
@@ -1760,10 +1759,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       size="sm"
                       onClick={resetProgress}
                       disabled={resettingProgress}
-                      className="hover-scale ml-2 text-destructive hover:text-destructive"
+                      className="ml-2 text-destructive"
                     >
                       {resettingProgress ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        <Spinner size="sm" className="mr-1" />
                       ) : (
                         <RefreshCw className="w-4 h-4 mr-1" />
                       )}
@@ -1816,7 +1815,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     )}
                     {planApplyState === "applying" && (
                       <>
-                        <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
+                        <Spinner size="sm" />
                         <div className="text-sm">
                           <div className="font-medium">Aplicando el scan a tu plan…</div>
                           <div className="text-[11px] text-muted-foreground">Recalculando entrenamiento y nutrición con los datos del scan.</div>
@@ -1859,13 +1858,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 text-center glow-shadow"
+                    className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 text-center"
                   >
                     <Clock className="w-4 h-4 text-primary mx-auto mb-2" />
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                    <div className="type-group-header text-muted-foreground mb-1">
                       A tu objetivo
                     </div>
-                    <div className="text-4xl font-bold font-display text-gradient">
+                    <div className="text-4xl font-bold font-display text-primary">
                       {Math.max(1, result.months_with_plan!)}m
                     </div>
                     {result.months_without_plan !== undefined && (
@@ -1887,7 +1886,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   <div className="bg-card/40 backdrop-blur border border-border rounded-2xl px-5 py-4 flex items-start gap-3">
                     <AlertTriangle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                     <div>
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-0.5">
+                      <div className="type-group-header text-muted-foreground mb-0.5">
                         Lo que más te frena
                       </div>
                       <div className="text-sm font-medium">{result.bottleneck}</div>
@@ -1922,11 +1921,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         {shots.map((p) => (
                           <div
                             key={p.label}
-                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden border ${p.primary ? "border-primary/40 glow-shadow" : "border-border"}`}
+                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden border ${p.primary ? "border-primary/40" : "border-border"}`}
                           >
                             <img loading="lazy" decoding="async" src={p.src} alt={p.label.toLowerCase()} className="w-full h-full object-cover" />
-                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background/90 to-transparent p-2">
-                              <div className={`text-[10px] uppercase tracking-widest ${p.primary ? "text-primary" : "text-muted-foreground"}`}>
+                            <div className="absolute bottom-0 inset-x-0 bg-background/80 p-2">
+                              <div className={`type-group-header ${p.primary ? "text-primary" : "text-muted-foreground"}`}>
                                 {p.label}
                               </div>
                             </div>
@@ -1947,7 +1946,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           initial={{ width: 0 }}
                           animate={{ width: `${result.similarity}%` }}
                           transition={{ duration: 1.2, ease: "easeOut" }}
-                          className="h-full bg-gradient-to-r from-primary to-primary/60"
+                          className="h-full bg-primary"
                         />
                       </div>
                       <div className="mt-3 text-[11px] text-muted-foreground">
@@ -1971,7 +1970,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   </div>
 
                   <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-4">
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                    <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                       <TrendingUp className="w-3 h-3" /> Mejoras detectadas
                     </div>
                     <ul className="space-y-2">
@@ -1988,7 +1987,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             {m.label}
                           </span>
                           <span
-                            className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            className={`type-caption2 px-2 py-0.5 rounded-full ${
                               m.priority === "Alta"
                                 ? "bg-primary/15 text-primary"
                                 : m.priority === "Media"
@@ -2005,7 +2004,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
                   {/* Yo futuro bloqueado — gancho visceral */}
                   <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-4 relative overflow-hidden">
-                    <div className="text-[10px] uppercase tracking-widest text-primary mb-3 flex items-center gap-1.5">
+                    <div className="type-group-header text-primary mb-3 flex items-center gap-1.5">
                       {isPaid ? <Sparkles className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                       {result.months_with_plan ?? result.estimated_months
                         ? <>Tu yo en {result.months_with_plan ?? result.estimated_months} meses</>
@@ -2038,13 +2037,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       ) : null}
                       {!futureImg && (
                         <>
-                          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+                          <div className="absolute inset-0 bg-background/80" />
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-4">
                             {isPaid ? (
                               <>
                                 <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur border border-primary/40 flex items-center justify-center">
                                   {genLoading ? (
-                                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                                    <Spinner />
                                   ) : (
                                     <Sparkles className="w-5 h-5 text-primary" />
                                   )}
@@ -2093,7 +2092,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   <div className="text-center mb-2">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
                       <Gauge className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                      <span className="type-headline text-primary">
                         Lectura estimada por IA
                       </span>
                     </div>
@@ -2107,45 +2106,45 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     {/* Composición corporal */}
                     {result.body_composition && (
                       <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                           <Activity className="w-3 h-3" /> Composición corporal estimada
                         </div>
                         <div className="grid grid-cols-3 gap-3 text-center">
                           {result.body_composition.body_fat_pct !== undefined && (
                             <div>
-                              <div className="text-2xl font-bold font-display text-gradient">{result.body_composition.body_fat_pct}%</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Grasa</div>
+                              <div className="text-2xl font-bold font-display text-primary">{result.body_composition.body_fat_pct}%</div>
+                              <div className="type-caption1 text-muted-foreground">Grasa</div>
                             </div>
                           )}
                           {result.body_composition.lean_mass_kg !== undefined && (
                             <div>
-                              <div className="text-2xl font-bold font-display text-gradient">{result.body_composition.lean_mass_kg}kg</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Masa magra</div>
+                              <div className="text-2xl font-bold font-display text-primary">{result.body_composition.lean_mass_kg}kg</div>
+                              <div className="type-caption1 text-muted-foreground">Masa magra</div>
                             </div>
                           )}
                           {result.body_composition.weight_kg !== undefined && (
                             <div>
                               <div className="text-2xl font-bold font-display">{result.body_composition.weight_kg}kg</div>
-                              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Peso est.</div>
+                              <div className="type-caption1 text-muted-foreground">Peso est.</div>
                             </div>
                           )}
                         </div>
                         <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                           {result.body_composition.somatotype && (
                             <div className="bg-secondary/60 rounded-lg px-3 py-2">
-                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Somatotipo</div>
+                              <div className="type-caption1 text-muted-foreground">Somatotipo</div>
                               <div className="font-medium capitalize">{result.body_composition.somatotype}</div>
                             </div>
                           )}
                           {result.body_composition.frame_size && (
                             <div className="bg-secondary/60 rounded-lg px-3 py-2">
-                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Estructura</div>
+                              <div className="type-caption1 text-muted-foreground">Estructura</div>
                               <div className="font-medium capitalize">{result.body_composition.frame_size}</div>
                             </div>
                           )}
                           {result.body_composition.fat_distribution && (
                             <div className="bg-secondary/60 rounded-lg px-3 py-2 col-span-2">
-                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Distribución de grasa</div>
+                              <div className="type-caption1 text-muted-foreground">Distribución de grasa</div>
                               <div className="font-medium capitalize">{result.body_composition.fat_distribution}</div>
                             </div>
                           )}
@@ -2156,7 +2155,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     {/* Proporciones */}
                     {result.proportions && (
                       <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                           <Ruler className="w-3 h-3" /> Proporciones y simetría
                         </div>
                         <div className="space-y-3 text-sm">
@@ -2167,7 +2166,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                                 <span className="font-semibold">{result.proportions.shoulder_to_waist_ratio.toFixed(2)} <span className="text-muted-foreground font-normal">/ ideal ~1.60</span></span>
                               </div>
                               <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: `${Math.min(100, (result.proportions.shoulder_to_waist_ratio / 1.8) * 100)}%` }} />
+                                <div className="h-full bg-primary" style={{ width: `${Math.min(100, (result.proportions.shoulder_to_waist_ratio / 1.8) * 100)}%` }} />
                               </div>
                             </div>
                           )}
@@ -2178,7 +2177,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                                 <span className="font-semibold">{result.proportions.v_taper_score}/10</span>
                               </div>
                               <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: `${result.proportions.v_taper_score * 10}%` }} />
+                                <div className="h-full bg-primary" style={{ width: `${result.proportions.v_taper_score * 10}%` }} />
                               </div>
                             </div>
                           )}
@@ -2189,7 +2188,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                                 <span className="font-semibold">{result.proportions.symmetry_score}/10</span>
                               </div>
                               <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-primary to-primary/60" style={{ width: `${result.proportions.symmetry_score * 10}%` }} />
+                                <div className="h-full bg-primary" style={{ width: `${result.proportions.symmetry_score * 10}%` }} />
                               </div>
                             </div>
                           )}
@@ -2212,7 +2211,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   {/* Breakdown por grupo muscular */}
                   {result.muscle_breakdown && result.muscle_breakdown.length > 0 && (
                     <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-1.5">
+                      <div className="type-group-header text-muted-foreground mb-4 flex items-center gap-1.5">
                         <Dumbbell className="w-3 h-3" /> Lectura por grupo muscular
                       </div>
                       <div className="grid md:grid-cols-2 gap-x-6 gap-y-3">
@@ -2249,10 +2248,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     {/* Postura */}
                     {result.posture && (result.posture.issues?.length || result.posture.note) && (
                       <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center justify-between">
+                        <div className="type-group-header text-muted-foreground mb-3 flex items-center justify-between">
                           <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> Postura</span>
                           {result.posture.severity && (
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            <span className={`type-caption1 px-2 py-0.5 rounded-full ${
                               result.posture.severity === "severa" ? "bg-destructive/15 text-destructive" :
                               result.posture.severity === "moderada" ? "bg-primary/15 text-primary" :
                               "bg-secondary text-muted-foreground"
@@ -2278,7 +2277,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     {/* Marcadores visuales (no genéticos) */}
                     {result.genetic_markers && result.genetic_markers.length > 0 && (
                       <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                           <Dna className="w-3 h-3" /> Rasgos visuales que juegan a tu favor (o en contra)
                         </div>
                         <ul className="space-y-2">
@@ -2298,47 +2297,47 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
                   {/* Protocolo accionable */}
                   {result.protocol && (
-                    <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 glow-shadow">
-                      <div className="text-[10px] uppercase tracking-widest text-primary mb-4 flex items-center gap-1.5">
+                    <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5">
+                      <div className="type-group-header text-primary mb-4 flex items-center gap-1.5">
                         <ClipboardList className="w-3 h-3" /> Protocolo recomendado por la IA
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         {result.protocol.training_days_per_week !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.training_days_per_week}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Días/sem</div>
+                            <div className="text-xl font-bold font-display text-primary">{result.protocol.training_days_per_week}</div>
+                            <div className="type-caption1 text-muted-foreground">Días/sem</div>
                           </div>
                         )}
                         {result.protocol.weekly_sets_priority !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.weekly_sets_priority}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Sets prioridad</div>
+                            <div className="text-xl font-bold font-display text-primary">{result.protocol.weekly_sets_priority}</div>
+                            <div className="type-caption1 text-muted-foreground">Sets prioridad</div>
                           </div>
                         )}
                         {result.protocol.protein_g_per_kg !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.protein_g_per_kg}g</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Proteína/kg</div>
+                            <div className="text-xl font-bold font-display text-primary">{result.protocol.protein_g_per_kg}g</div>
+                            <div className="type-caption1 text-muted-foreground">Proteína/kg</div>
                           </div>
                         )}
                         {result.protocol.calorie_adjustment_kcal !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-gradient">
+                            <div className="text-xl font-bold font-display text-primary">
                               {result.protocol.calorie_adjustment_kcal > 0 ? "+" : ""}{result.protocol.calorie_adjustment_kcal}
                             </div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">kcal vs mant.</div>
+                            <div className="type-caption1 text-muted-foreground">kcal vs mant.</div>
                           </div>
                         )}
                         {result.protocol.cardio_minutes_per_week !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-gradient">{result.protocol.cardio_minutes_per_week}</div>
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">min cardio/sem</div>
+                            <div className="text-xl font-bold font-display text-primary">{result.protocol.cardio_minutes_per_week}</div>
+                            <div className="type-caption1 text-muted-foreground">min cardio/sem</div>
                           </div>
                         )}
                       </div>
                       {result.protocol.key_lifts && result.protocol.key_lifts.length > 0 && (
                         <div className="mb-3">
-                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Ejercicios clave</div>
+                          <div className="type-caption1 text-muted-foreground mb-1.5">Ejercicios clave</div>
                           <div className="flex flex-wrap gap-1.5">
                             {result.protocol.key_lifts.map((l, i) => (
                               <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
@@ -2350,7 +2349,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       )}
                       {result.protocol.avoid && result.protocol.avoid.length > 0 && (
                         <div>
-                          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Evita</div>
+                          <div className="type-caption1 text-muted-foreground mb-1.5">Evita</div>
                           <ul className="space-y-1">
                             {result.protocol.avoid.map((a, i) => (
                               <li key={i} className="text-xs flex items-start gap-2 text-muted-foreground">
@@ -2387,13 +2386,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="relative w-full mx-auto mt-16"
               >
-                <div className="absolute -inset-4 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent rounded-3xl blur-2xl opacity-70" />
                 <div className="relative bg-card/80 backdrop-blur-xl border border-primary/30 rounded-3xl p-8 sm:p-12 text-center overflow-hidden">
-                  <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/10 blur-3xl" />
                   <div className="relative">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-5">
                       <Target className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                      <span className="type-headline text-primary">
                         Siguiente paso
                       </span>
                     </div>
@@ -2401,7 +2398,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       {(result.months_with_plan ?? result.estimated_months) ? (
                         <>
                           Llega ahí en{" "}
-                          <span className="text-gradient">
+                          <span className="text-primary">
                             {result.months_with_plan ?? result.estimated_months} meses
                           </span>
                           {result.months_without_plan !== undefined && (
@@ -2411,7 +2408,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       ) : (
                         <>
                           Convierte el diagnóstico en{" "}
-                          <span className="text-gradient">resultados reales</span>
+                          <span className="text-primary">resultados reales</span>
                         </>
                       )}
                     </h3>
@@ -2421,8 +2418,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       lo más probable es que el siguiente scan siga pareciéndose a este.
                     </p>
                     <div className="flex items-baseline justify-center gap-3 mb-5">
-                      <span className="text-3xl font-bold font-display text-gradient">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
-                      <span className="text-xs uppercase tracking-wider text-primary font-semibold px-2 py-0.5 rounded-full bg-primary/10 border border-primary/30">{TRIAL_DAYS} días de prueba</span>
+                      <span className="text-3xl font-bold font-display text-primary">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
+                      <span className="type-footnote text-primary">{TRIAL_DAYS} días de prueba</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       {(() => {
@@ -2434,9 +2431,9 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         });
                         const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
                         return (
-                          <Button variant="hero" size="xl" onClick={() => navigate(to)} className="hover-scale group">
+                          <Button variant="hero" size="xl" onClick={() => navigate(to)} className="active:scale-[0.98]">
                             {user ? "Volver a mi cuenta" : `Empezar con ${rec.name}`}
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            <ArrowRight className="w-4 h-4 transition-transform" />
                           </Button>
                         );
                       })()}

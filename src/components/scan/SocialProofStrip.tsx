@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Quote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Testimonial = {
@@ -29,55 +27,34 @@ export default function SocialProofStrip() {
   if (items.length === 0) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5 }}
-      className="max-w-5xl mx-auto mt-12"
-    >
-      <div className="text-center mb-5">
-        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-          Otros con tu mismo punto de partida
-        </div>
-      </div>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((t, i) => (
-          <motion.div
-            key={t.id}
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1 }}
-            className="relative bg-card/60 backdrop-blur border border-border rounded-2xl p-4"
-          >
-            <Quote className="absolute top-3 right-3 w-4 h-4 text-primary/30" />
+    <section className="max-w-3xl mx-auto mt-12 px-4">
+      <h2 className="type-title2 text-center">Otros con tu mismo punto de partida</h2>
+      <div className="grid sm:grid-cols-3 gap-8 mt-8">
+        {items.map((t) => (
+          <figure key={t.id}>
             <div className="flex items-center gap-3 mb-3">
               {t.photo_url ? (
-                <img loading="lazy" decoding="async"
+                <img
+                  loading="lazy"
+                  decoding="async"
                   src={t.photo_url}
                   alt={t.name}
-                  className="w-10 h-10 rounded-full object-cover border border-primary/30"
+                  className="w-11 h-11 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-sm font-bold text-primary">
+                <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center type-headline text-primary">
                   {t.name.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="min-w-0">
-                <div className="text-xs font-semibold truncate">{t.name}</div>
-                {t.result && (
-                  <div className="text-[10px] uppercase tracking-wider text-primary font-bold truncate">
-                    {t.result}
-                  </div>
-                )}
-              </div>
+              <figcaption className="min-w-0">
+                <div className="type-headline truncate">{t.name}</div>
+                {t.result && <div className="type-subhead text-primary truncate">{t.result}</div>}
+              </figcaption>
             </div>
-            <p className="text-xs text-foreground/80 leading-relaxed line-clamp-4">{t.text}</p>
-
-          </motion.div>
+            <blockquote className="type-subhead text-muted-foreground line-clamp-4">{t.text}</blockquote>
+          </figure>
         ))}
       </div>
-    </motion.div>
+    </section>
   );
 }

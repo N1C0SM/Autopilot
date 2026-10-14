@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, BookOpen, Sparkles, Newspaper, ExternalLink, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { rememberBookPurchase, withBookRef } from "@/lib/buyLink";
+import { withBookRef } from "@/lib/buyLink";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 import BookCover from "@/components/BookCover";
 import BookPreviewModal from "@/components/BookPreviewModal";
 import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/components/ItemPreviewModal";
@@ -90,104 +92,61 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
     })();
   }, []);
 
-  const nothing = false;
-
-
   const body = (
-      <main className={embedded ? "w-full space-y-12 py-2" : "container mx-auto max-w-7xl px-4 py-10 space-y-16"}>
-        <div className="text-center max-w-xl mx-auto">
-          <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-2">Biblioteca</p>
-          <h1 className="text-3xl sm:text-4xl font-bold font-display leading-tight">
-            Todo lo que <span className="text-gradient">complementa</span> tu plan
+      <main className={embedded ? "w-full space-y-10 py-2" : "mx-auto w-full max-w-5xl space-y-10 px-4 pb-safe pt-6 md:py-10"}>
+        <header>
+          <h1 className="type-large-title">
+            Todo lo que <span className="text-primary">complementa</span> tu plan
           </h1>
-          <p className="text-sm text-muted-foreground mt-3">
-            Ebooks, recomendaciones de material y los últimos artículos del equipo.
+          <p className="mt-2 max-w-xl type-body text-muted-foreground">
+            Guías, material recomendado y los últimos artículos del equipo.
           </p>
-        </div>
-
-        {nothing && (
-          <div className="text-center text-sm text-muted-foreground py-16">
-            Pronto añadiremos nuevo material aquí.
-          </div>
-        )}
+        </header>
 
         {flags.recos && recos.length > 0 && (
           <section>
-            <div className="mb-6">
-              <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5 flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3" /> Recomendaciones
-              </p>
-              <h2 className="text-2xl font-bold font-display">Lo que sí funciona</h2>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <h2 className="type-title2 mb-3">Lo que sí funciona</h2>
+            <ListGroup>
               {recos.map((r, i) => (
-                <button
-                  type="button"
+                <ListRow
                   key={r.id || i}
-                  onClick={() => setPreviewReco(r)}
-                  className="group text-left w-full block bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    {r.image_url ? (
-                      <img src={r.image_url} alt={r.title} loading="lazy" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                  leading={
+                    r.image_url ? (
+                      <img src={r.image_url} alt={r.title} loading="lazy" className="h-14 w-14 rounded-xl object-cover" />
                     ) : (
-                      <div className="w-16 h-16 rounded-xl bg-secondary shrink-0" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      {r.badge && (
-                        <span className="inline-block text-[9px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full mb-1">
-                          {r.badge}
-                        </span>
-                      )}
-                      <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">{r.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{previewIntro(r.description)}</p>
-                    </div>
-                  </div>
-                </button>
+                      <span className="block h-14 w-14 rounded-xl bg-secondary" />
+                    )
+                  }
+                  title={r.title}
+                  subtitle={<span className="line-clamp-2">{previewIntro(r.description)}</span>}
+                  value={r.badge || undefined}
+                  chevron
+                  onClick={() => setPreviewReco(r)}
+                />
               ))}
-            </div>
+            </ListGroup>
             <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
           </section>
         )}
 
         {flags.ebooks && ebooks.length > 0 && (
           <section>
-            <div className="mb-6">
-              <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5 flex items-center gap-1.5">
-                <BookOpen className="w-3 h-3" /> Guías en PDF
-              </p>
-              <h2 className="text-2xl font-bold font-display">Material para estudiar por tu cuenta</h2>
-              <p className="text-xs text-muted-foreground mt-2 max-w-xl leading-relaxed">
-                Son documentos PDF para leer tú solo. No incluyen plan personalizado ni seguimiento{plans.coach ? `: eso es el plan ${plans.coachName}` : ""}.
-              </p>
-            </div>
+            <h2 className="type-title2">Guías en PDF</h2>
+            <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
+              Documentos para leer por tu cuenta. No incluyen plan personalizado ni seguimiento{plans.coach ? `: eso es el plan ${plans.coachName}` : ""}.
+            </p>
 
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
               {ebooks.map((e, i) => (
                 <button
                   type="button"
                   key={e.id || i}
-                  onClick={() => setPreviewBook(e)}
-                  className="group text-left w-full bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors flex flex-col"
+                  onClick={() => { void hapticTap(); setPreviewBook(e); }}
+                  className="group min-w-0 text-left transition-transform duration-100 active:scale-[0.97]"
                 >
-
-                  <div className="px-4 pt-4">
-                    <BookCover title={e.title} src={e.cover_url} />
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <span className="inline-block self-start text-[9px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2 py-0.5 rounded-full mb-2">
-                      PDF autodidacta · sin entrenador
-                    </span>
-                    <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors">{e.title}</h3>
-
-                    <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed flex-1">{e.description}</p>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                      <span className="text-sm font-semibold text-primary">{e.price || "Gratis"}</span>
-                      <span className="text-xs text-muted-foreground inline-flex items-center gap-1 group-hover:text-primary transition-colors">
-                        Vista previa <ExternalLink className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </div>
+                  <BookCover title={e.title} src={e.cover_url} />
+                  <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>
+                  <p className="mt-0.5 type-subhead font-semibold text-primary">{e.price || "Gratis"}</p>
                 </button>
               ))}
             </div>
@@ -201,45 +160,33 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
         {flags.blog && posts.length > 0 && (
           <section>
-            <div className="flex items-end justify-between mb-6 gap-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-1.5 flex items-center gap-1.5">
-                  <Newspaper className="w-3 h-3" /> Blog
-                </p>
-                <h2 className="text-2xl font-bold font-display">Últimos artículos</h2>
-              </div>
-              <Link to="/blog" className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1">
-                Ver todos <ArrowRight className="w-3.5 h-3.5" />
+            <div className="mb-3 flex items-baseline justify-between gap-4">
+              <h2 className="type-title2">Últimos artículos</h2>
+              <Link to="/blog" onClick={() => void hapticTap()} className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
+                Ver todos
               </Link>
             </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <ListGroup>
               {posts.map((p) => (
-                <Link
+                <ListRow
                   key={p.slug}
                   to={`/blog/${p.slug}`}
-                  className="group block bg-card border border-border rounded-2xl overflow-hidden hover:border-primary/40 transition-colors flex flex-col"
-                >
-                  {p.cover_url ? (
-                    <div className="aspect-video bg-secondary overflow-hidden">
-                      <img src={p.cover_url} alt={p.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
-                    </div>
-                  ) : (
-                    <div className="aspect-video bg-gradient-to-br from-primary/10 to-secondary" />
-                  )}
-                  <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-bold font-display leading-snug group-hover:text-primary transition-colors line-clamp-2">{p.title}</h3>
-                    {p.excerpt && (
-                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed flex-1 line-clamp-3">{p.excerpt}</p>
-                    )}
-                    <span className="inline-flex items-center gap-1 text-xs text-primary font-semibold mt-3">
-                      Leer <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-1" />
-                    </span>
-                  </div>
-                </Link>
+                  leading={
+                    p.cover_url ? (
+                      <img src={p.cover_url} alt={p.title} loading="lazy" className="h-14 w-14 rounded-xl object-cover" />
+                    ) : (
+                      <span className="block h-14 w-14 rounded-xl bg-secondary" />
+                    )
+                  }
+                  title={p.title}
+                  subtitle={p.excerpt ? <span className="line-clamp-2">{p.excerpt}</span> : undefined}
+                  chevron
+                />
               ))}
-            </div>
+            </ListGroup>
           </section>
         )}
+
       </main>
   );
 
@@ -258,10 +205,10 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
       <header className="app-chrome sticky top-0 z-40 border-b">
         <div className="container mx-auto max-w-7xl flex items-center justify-between h-14 px-4">
           {user && <SidebarTrigger />}
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Volver">
-            <ArrowLeft className="w-4 h-4" />
+          <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); navigate(-1); }} aria-label="Volver">
+            <ArrowLeft className="w-5 h-5" />
           </Button>
-          <span className="w-16" />
+          <span className="w-11" />
         </div>
       </header>
       {body}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { hapticTap } from "@/lib/native";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, MicOff, Video, VideoOff, PhoneOff } from "lucide-react";
 import type { CallState } from "@/hooks/useVideoCall";
@@ -69,16 +70,16 @@ const CallOverlay = ({
               ref={remoteRef}
               autoPlay
               playsInline
-              className="w-full h-full object-cover bg-secondary"
+              className="h-full w-full bg-background object-cover"
             />
 
             {(!remoteStream || state !== "connected") && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
-                <div className="w-20 h-20 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-                  <Video className="w-8 h-8 text-primary" />
+                <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">
+                  <Video className="h-8 w-8 text-primary" strokeWidth={1.75} />
                 </div>
-                <p className="text-xl font-semibold text-foreground">{peerName}</p>
-                <p className="text-sm text-muted-foreground">{statusText}</p>
+                <p className="mt-2 type-title1 text-foreground">{peerName}</p>
+                <p className="type-body text-muted-foreground">{statusText}</p>
               </div>
             )}
 
@@ -88,25 +89,27 @@ const CallOverlay = ({
                 autoPlay
                 playsInline
                 muted
-                className="absolute bottom-4 right-4 w-28 h-40 sm:w-36 sm:h-52 object-cover rounded-2xl border border-border shadow-lg bg-secondary"
+                className="absolute bottom-4 right-4 w-28 h-40 sm:w-36 sm:h-52 object-cover rounded-2xl bg-secondary"
               />
             )}
           </div>
 
-          <div className="p-6 flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-6 px-6 pb-4 pt-6">
             {state === "incoming" ? (
               <>
                 <button
-                  onClick={onDecline}
+                  type="button"
+                  onClick={() => { void hapticTap(); onDecline(); }}
                   aria-label="Rechazar llamada"
-                  className="w-16 h-16 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg"
+                  className="w-16 h-16 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center transition-transform active:scale-95"
                 >
                   <PhoneOff className="w-6 h-6" />
                 </button>
                 <button
-                  onClick={onAccept}
+                  type="button"
+                  onClick={() => { void hapticTap(); onAccept(); }}
                   aria-label="Responder llamada"
-                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg"
+                  className="w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-transform active:scale-95"
                 >
                   <Video className="w-6 h-6" />
                 </button>
@@ -114,23 +117,26 @@ const CallOverlay = ({
             ) : (
               <>
                 <button
-                  onClick={onToggleMic}
+                  type="button"
+                  onClick={() => { void hapticTap(); onToggleMic(); }}
                   aria-label={micOn ? "Silenciar micrófono" : "Activar micrófono"}
-                  className="w-14 h-14 rounded-full bg-secondary text-foreground border border-border flex items-center justify-center"
+                  className="w-14 h-14 rounded-full bg-secondary text-foreground flex items-center justify-center transition-transform active:scale-95"
                 >
                   {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5 text-muted-foreground" />}
                 </button>
                 <button
-                  onClick={onHangup}
+                  type="button"
+                  onClick={() => { void hapticTap(); onHangup(); }}
                   aria-label="Colgar"
-                  className="w-16 h-16 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-lg"
+                  className="w-16 h-16 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center transition-transform active:scale-95"
                 >
                   <PhoneOff className="w-6 h-6" />
                 </button>
                 <button
-                  onClick={onToggleCam}
+                  type="button"
+                  onClick={() => { void hapticTap(); onToggleCam(); }}
                   aria-label={camOn ? "Apagar cámara" : "Encender cámara"}
-                  className="w-14 h-14 rounded-full bg-secondary text-foreground border border-border flex items-center justify-center"
+                  className="w-14 h-14 rounded-full bg-secondary text-foreground flex items-center justify-center transition-transform active:scale-95"
                 >
                   {camOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5 text-muted-foreground" />}
                 </button>

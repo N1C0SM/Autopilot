@@ -55,11 +55,11 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
     <Sidebar collapsible="icon">
       <SidebarContent>
         {/* Brand */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="px-4 py-5">
           {!collapsed ? (
-            <span className="font-display text-lg font-bold text-gradient">Autopilot</span>
+            <span className="type-title3 text-primary">Autopilot</span>
           ) : (
-            <span className="font-display text-lg font-bold text-gradient">A</span>
+            <span className="type-title3 text-primary">A</span>
           )}
         </div>
 
@@ -76,18 +76,18 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
                       <TooltipTrigger asChild>
                         <SidebarMenuButton
                           onClick={() => onNavigate(item.section)}
-                          className={`cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                          className={`transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : ""}`}
                         >
                           <item.icon className="mr-2 h-4 w-4" />
                           {!collapsed && (
                             <span className="flex-1 flex items-center justify-between">
                               <span className={isLocked ? "text-muted-foreground" : ""}>{item.title}</span>
-                              {isLocked && <Lock className="w-3 h-3 text-muted-foreground" />}
+                              {isLocked && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
                             </span>
                           )}
                         </SidebarMenuButton>
                       </TooltipTrigger>
-                      <TooltipContent side="right" className="text-xs max-w-[220px]">
+                      <TooltipContent side="right" className="type-footnote max-w-[220px]">
                         {isLocked
                           ? `${item.title} — no incluido en tu plan actual`
                           : TOOLTIPS[item.section] || item.title}
@@ -107,7 +107,7 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => onNavigate("resources")}
-                  className={`cursor-pointer transition-colors ${section === "resources" ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                  className={`transition-colors active:bg-sidebar-accent ${section === "resources" ? "bg-sidebar-accent text-sidebar-primary font-medium" : ""}`}
                 >
                   <BookOpen className="mr-2 h-4 w-4" />
                   {!collapsed && <span>Recursos</span>}
@@ -122,21 +122,21 @@ const UserSidebar = ({ section, onNavigate, onSignOut, profileName, profileAvata
         {/* Profile mini */}
         {!collapsed && profileName && (
           <div className="px-3 py-2 flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-sidebar-accent flex items-center justify-center overflow-hidden shrink-0">
+            <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center overflow-hidden shrink-0">
               {profileAvatar ? (
                 <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[10px] font-bold text-sidebar-accent-foreground">
+                <span className="type-caption2 font-bold text-sidebar-accent-foreground">
                   {profileName.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
-            <span className="text-xs text-sidebar-foreground truncate">{profileName}</span>
+            <span className="type-footnote text-sidebar-foreground truncate">{profileName}</span>
           </div>
         )}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="cursor-pointer text-muted-foreground hover:text-destructive">
+            <SidebarMenuButton onClick={onSignOut} className="text-muted-foreground active:text-destructive hover:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>

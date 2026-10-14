@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Gift, Copy, Check, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { hapticNotify, hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import { MONTHLY_PRICE_EUR } from "@/config/pricing";
 import { isIOSNative, isNativeApp } from "@/lib/platform";
@@ -16,9 +17,6 @@ const referralBaseUrl = () => {
 };
 
 const ReferralShare = () => {
-  // iOS v1 (reader app, App Store §3.1.3(a)): referral copy announces monthly credit in €;
-  // hide to stay within the "no pricing UI" rule.
-  if (isIOSNative()) return null;
   const { user } = useAuth();
   const [referralCode, setReferralCode] = useState("");
   const [referralCount, setReferralCount] = useState(0);
@@ -26,7 +24,7 @@ const ReferralShare = () => {
   const linkRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (isIOSNative() || !user) return;
     let active = true;
 
     const loadReferralData = async () => {
@@ -80,7 +78,8 @@ const ReferralShare = () => {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard API no disponible");
       await navigator.clipboard.writeText(referralLink);
       setCopied(true);
-      toast.success("¡Enlace copiado!");
+      void hapticNotify("success");
+      toast.success("Enlace copiado");
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error("Failed to copy referral link", error);
@@ -93,40 +92,47 @@ const ReferralShare = () => {
     }
   };
 
-  if (!referralCode) return null;
+  // iOS v1 (reader app, App Store §3.1.3(a)): referral copy announces monthly credit in €;
+  // hide to stay within the "no pricing UI" rule.
+  if (isIOSNative() || !referralCode) return null;
 
   return (
-    <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
-      <div className="flex items-center gap-2 mb-3">
-        <Gift className="w-5 h-5 text-primary" />
-        <h3 className="font-bold font-display">Invita y Gana</h3>
+    <section>
+      <div className="flex items-start gap-4">
+        <Gift className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+        <div className="min-w-0">
+          <h3 className="type-headline">Invita y gana</h3>
+          <p className="mt-0.5 type-subhead text-muted-foreground">
+            Tu amigo recibe <span className="font-semibold text-foreground">20% off</span> el primer mes. Cuando pague, tú ganas <span className="font-semibold text-foreground">1 mes gratis</span> ({MONTHLY_PRICE_EUR}€ de crédito en tu próxima factura).
+          </p>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Tu amigo recibe <span className="text-primary font-semibold">20% off</span> el primer mes. Cuando pague, tú ganas <span className="text-primary font-semibold">1 mes gratis</span> ({MONTHLY_PRICE_EUR}€ de crédito en tu próxima factura).
-      </p>
 
-      <div className="flex gap-2 mb-4">
-        <div ref={linkRef} className="flex-1 bg-secondary rounded-lg px-4 py-2.5 text-sm font-mono truncate">
+      <div className="mt-4 flex items-center gap-2">
+        <div ref={linkRef} className="selectable min-h-11 flex-1 truncate rounded-xl bg-card px-4 py-2.5 type-subhead">
           {referralLink}
         </div>
         <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void handleCopy()}
+          variant="tinted"
+          size="icon"
+          onClick={() => {
+            void hapticTap();
+            void handleCopy();
+          }}
           aria-label="Copiar enlace"
-          className="flex-shrink-0"
+          className="shrink-0"
         >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
         </Button>
       </div>
 
       {referralCount > 0 && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="w-4 h-4" />
+        <div className="mt-3 flex items-center gap-2 type-subhead text-muted-foreground">
+          <Users className="h-4 w-4" />
           <span>{referralCount} amigo{referralCount !== 1 ? "s" : ""} referido{referralCount !== 1 ? "s" : ""}</span>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

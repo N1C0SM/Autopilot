@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
-import { Play } from "lucide-react";
+import { MessageCircle, Play } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useState, useEffect, useRef } from "react";
 import { signedUrlsFor } from "@/lib/storageSign";
 
@@ -43,27 +44,25 @@ const ChatMessages = ({ messages, onViewMedia, emptyMessage = "Escribe aquí tus
   const resolve = (u?: string | null) => (u ? signed.get(u) || "" : "");
 
   return (
-    <div role="log" aria-label="Mensajes de la conversación" aria-live="polite" className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-4">
+    <div role="log" aria-label="Mensajes de la conversación" aria-live="polite" className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain px-4 py-4">
       {messages.length === 0 && (
-        <div className="text-center text-sm text-muted-foreground py-10">
-          {emptyMessage}
-        </div>
+        <EmptyState icon={MessageCircle} title="Sin mensajes todavía" description={emptyMessage} className="my-auto" />
       )}
       {messages.map((msg) => {
         const isMine = msg.sender_id === user?.id;
         return (
           <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
             <div
-              className={`min-w-0 max-w-[88%] break-words rounded-2xl px-4 py-2.5 text-sm ${
+              className={`min-w-0 max-w-[78%] break-words rounded-[20px] px-3.5 py-2 type-body ${
                 isMine
-                  ? "bg-primary text-primary-foreground rounded-br-md"
-                  : "bg-secondary text-foreground rounded-bl-md"
+                  ? "bg-primary text-primary-foreground rounded-br-[6px]"
+                  : "bg-secondary text-foreground rounded-bl-[6px]"
               }`}
             >
               {msg.media_url && msg.media_type === "image" && (
                 <button type="button" aria-label="Ver foto adjunta"
                   onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "image" })}
-                  className="block mb-2 rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+                  className="block mb-2 rounded-xl overflow-hidden transition-opacity active:opacity-80"
                 >
                   <img loading="lazy" decoding="async" src={resolve(msg.media_url)} alt="Foto" className="max-w-full max-h-48 rounded-lg object-cover" />
                 </button>
@@ -71,10 +70,10 @@ const ChatMessages = ({ messages, onViewMedia, emptyMessage = "Escribe aquí tus
               {msg.media_url && msg.media_type === "video" && (
                 <button type="button" aria-label="Ver vídeo adjunto"
                   onClick={() => onViewMedia({ url: resolve(msg.media_url), type: "video" })}
-                  className="block mb-2 rounded-lg overflow-hidden relative group"
+                  className="block mb-2 rounded-xl overflow-hidden relative active:opacity-80"
                 >
                   <video src={resolve(msg.media_url)} className="max-w-full max-h-48 rounded-lg object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                     <Play className="w-10 h-10 text-white" />
                   </div>
                 </button>
@@ -82,7 +81,7 @@ const ChatMessages = ({ messages, onViewMedia, emptyMessage = "Escribe aquí tus
               {(!msg.media_url || (msg.content !== "📷 Foto" && msg.content !== "📹 Video")) && (
                 <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{msg.content}</span>
               )}
-              <div className={`text-[10px] mt-1 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
+              <div className={`mt-0.5 text-right type-caption2 ${isMine ? "text-primary-foreground/60" : "text-muted-foreground"}`}>
                 {new Date(msg.created_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
               </div>
             </div>

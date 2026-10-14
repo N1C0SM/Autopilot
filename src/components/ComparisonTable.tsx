@@ -6,13 +6,17 @@ import { isIOSNative } from "@/lib/platform";
 const ComparisonTable = () => {
   // iOS v1 (reader app, App Store §3.1.3(a)): no pricing comparison in the native build.
   if (isIOSNative()) return null;
+  return <ComparisonTableContent />;
+};
+
+const ComparisonTableContent = () => {
   const p = usePlanAvailability();
   if (!p.coach) return null;
   return (
     <section className="px-4 py-16">
       <div className="container mx-auto max-w-5xl">
         <ScrollReveal>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary">Elige el tipo de ayuda</p>
+          <p className="mb-3 text-xs font-semibold text-primary">Elige el tipo de ayuda</p>
           <h2 className="max-w-2xl font-display text-3xl font-bold sm:text-4xl">¿Te basta una app o buscas acompañamiento?</h2>
           <div className="mt-8 grid gap-8 md:grid-cols-2">
             <div className="border-t border-border pt-5">

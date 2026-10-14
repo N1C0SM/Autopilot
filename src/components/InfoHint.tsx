@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { HelpCircle } from "lucide-react";
+import { hapticTap } from "@/lib/native";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
@@ -26,14 +27,15 @@ const InfoHint = ({ text, label, className = "" }: Props) => {
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
+            void hapticTap();
             setOpen((o) => !o);
           }}
-          className={`inline-flex items-center justify-center text-muted-foreground/70 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full transition-colors ${className}`}
+          className={`relative inline-flex items-center justify-center rounded-full text-muted-foreground/60 transition-colors before:absolute before:-inset-3.5 before:content-[''] active:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}
         >
-          <HelpCircle className="w-3.5 h-3.5" />
+          <HelpCircle className="h-4 w-4" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[240px] text-xs leading-relaxed">
+      <TooltipContent side="top" className="max-w-[240px] type-footnote">
         {text}
       </TooltipContent>
     </Tooltip>

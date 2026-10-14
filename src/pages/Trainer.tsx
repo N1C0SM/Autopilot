@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
+import { MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -13,8 +13,9 @@ import UserDetail from "@/components/admin/UserDetail";
 import TrainerSelfProfile from "@/components/trainer/TrainerSelfProfile";
 import type { Profile } from "@/pages/Admin";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Surface } from "@/components/ui/surface";
-import { SectionHeader } from "@/components/ui/section-header";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticTap } from "@/lib/native";
 import { PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -58,11 +59,11 @@ const TrainerSidebar = ({
         <div className="p-4 border-b border-sidebar-border">
           {!collapsed ? (
             <>
-              <span className="font-display text-lg font-bold text-gradient">Autopilot</span>
-              <span className="text-xs uppercase tracking-widest text-muted-foreground ml-2">Entrenador</span>
+              <span className="type-headline text-primary">Autopilot</span>
+              <span className="type-footnote text-muted-foreground ml-2">Entrenador</span>
             </>
           ) : (
-            <span className="font-display text-lg font-bold text-gradient">A</span>
+            <span className="type-headline text-primary">A</span>
           )}
         </div>
         <SidebarGroup>
@@ -75,14 +76,14 @@ const TrainerSidebar = ({
                   <SidebarMenuItem key={item.section}>
                     <SidebarMenuButton
                       onClick={() => { onNavigate(item.section); if (isMobile) setOpenMobile(false); }}
-                      className={`min-h-11 cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                      className={`min-h-11 cursor-pointer transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && (
                         <span className="flex-1 flex items-center justify-between">
                           {item.title}
                           {item.section === "users" && (
-                            <span className="text-xs bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
+                            <span className="type-caption1 tabular-nums bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
                               {userCount}
                             </span>
                           )}
@@ -99,7 +100,7 @@ const TrainerSidebar = ({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="min-h-11 cursor-pointer text-muted-foreground hover:text-destructive">
+            <SidebarMenuButton onClick={onSignOut} className="min-h-11 cursor-pointer text-muted-foreground active:text-destructive hover:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>
@@ -194,7 +195,7 @@ const TrainerPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <Spinner size="lg" className="text-primary" />
       </div>
     );
   }
@@ -221,16 +222,16 @@ const TrainerPage = () => {
           <header className="app-chrome border-b sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
             <div className="h-14 flex items-center px-4 gap-3">
               <SidebarTrigger className="hidden md:inline-flex" />
-              <span className="min-w-0 flex-1 truncate text-center md:text-left text-sm font-semibold md:font-medium md:text-muted-foreground">
-                {selected ? (selected.name?.trim() || selected.email) : sectionTitle}
+              <span className="min-w-0 flex-1 truncate text-center md:text-left type-headline md:type-subhead md:font-medium md:text-muted-foreground">
+                {selected ? (selected.name?.trim() || selected.email) : <><span className="md:hidden">{section === "chat" ? sectionTitle : ""}</span><span className="max-md:hidden">{sectionTitle}</span></>}
               </span>
               <button
                 type="button"
-                onClick={handleSignOut}
+                onClick={() => { void hapticTap(); void handleSignOut(); }}
                 aria-label="Cerrar sesión"
-                className="md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-destructive"
+                className="md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-accent active:text-destructive"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </header>
@@ -250,34 +251,38 @@ const TrainerPage = () => {
                 />
               </div>
             ) : section === "users" ? (
-              <div className="space-y-3">
-                <SectionHeader
-                  className="flex-wrap"
-                  title={
-                    <span className="flex flex-wrap items-center gap-2">
-                      Clientes asignados ({users.length})
+              <div className="space-y-6">
+                <div className="flex items-end justify-between gap-3 pt-2">
+                  <div className="min-w-0">
+                    <h1 className="type-large-title flex items-center gap-2">
+                      Clientes
                       <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />
+                    </h1>
+                    <p className="mt-1 type-subhead text-muted-foreground">
+                      {users.length === 0
+                        ? "Tus clientes y sus cambios aparecen aquí en directo."
+                        : `${users.length} ${users.length === 1 ? "asignado" : "asignados"}. Sus cambios aparecen aquí en directo.`}
+                    </p>
+                  </div>
+                  {/* Solo se anuncia cuando está conectado: un «Conectando…» eterno
+                      es ruido y promete algo que puede no llegar. */}
+                  {realtimeConnected ? (
+                    <span className="flex shrink-0 items-center gap-1.5 pb-1 type-footnote text-muted-foreground" aria-live="polite">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      En directo
                     </span>
-                  }
-                  hint="Tus clientes y sus cambios aparecen aquí en directo."
-                  action={
-                    // Solo se anuncia cuando está conectado: un «Conectando…» eterno
-                    // es ruido y promete algo que puede no llegar.
-                    realtimeConnected ? (
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        En directo
-                      </span>
-                    ) : null
-                  }
-                />
+                  ) : null}
+                </div>
                 {users.length > 3 && (
                   <Input
                     type="search"
+                    enterKeyHint="search"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
                     placeholder="Buscar por email…"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="h-11"
                     aria-label="Buscar usuario asignado"
                   />
                 )}
@@ -286,35 +291,36 @@ const TrainerPage = () => {
                     icon={UsersIcon}
                     title="Aún no tienes clientes asignados"
                     description="Pide al administrador que te asigne clientes para empezar a seguir su progreso."
+                    className="py-20"
                   />
                 ) : visibleUsers.length === 0 ? (
-                  <EmptyState icon={Search} title="Sin coincidencias" description="Prueba con otro email." />
+                  <EmptyState icon={Search} title="Sin coincidencias" description="Prueba con otro email." className="py-16" />
                 ) : (
-                  <Surface padding="none" className="divide-y divide-border overflow-hidden">
+                  <ListGroup>
                     {visibleUsers.map((u) => (
-                      <button
+                      <ListRow
                         key={u.user_id}
-                        type="button"
                         onClick={() => setSelected(u)}
-                        className="flex min-h-16 w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
-                      >
-                        <Avatar className="h-9 w-9 shrink-0">
-                          <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
-                          <AvatarFallback className="bg-secondary text-xs font-semibold text-muted-foreground">
-                            {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="min-w-0 flex-1">
-                          {/* Sin nombre no repetimos el email dos veces. */}
-                          <span className="block break-all text-sm font-semibold">{u.name?.trim() || u.email}</span>
-                          {u.name?.trim() ? (
-                            <span className="block break-all text-xs text-muted-foreground">{u.email}</span>
-                          ) : null}
-                        </span>
-                        <span className="shrink-0"><PlanStatusBadge planStatus={u.plan_status} /></span>
-                      </button>
+                        chevron
+                        leading={
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
+                            <AvatarFallback className="bg-secondary type-subhead font-semibold text-muted-foreground">
+                              {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                        }
+                        title={<span className="block truncate type-headline">{u.name?.trim() || u.email}</span>}
+                        subtitle={
+                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {/* Sin nombre no repetimos el email dos veces. */}
+                            {u.name?.trim() ? <span className="break-all">{u.email}</span> : null}
+                            <PlanStatusBadge planStatus={u.plan_status} />
+                          </span>
+                        }
+                      />
                     ))}
-                  </Surface>
+                  </ListGroup>
                 )}
               </div>
             ) : section === "profile" ? (
@@ -322,12 +328,12 @@ const TrainerPage = () => {
             ) : (
               user && (
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="flex items-center gap-1.5 mb-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 mb-3 type-footnote text-muted-foreground">
                     <span>Chat interno con el equipo</span>
                     <InfoHint text="Canal privado con el administrador para dudas, incidencias o cambios en los planes de tus usuarios. Tus usuarios no ven esta conversación." />
                   </div>
                   <div className="min-h-0 flex-1"><Chat conversationUserId={user.id} audience="team" layout="fill" /></div>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">Conversación privada con el administrador.</p>
+                  <p className="type-footnote text-muted-foreground mt-3 text-center">Conversación privada con el administrador.</p>
                 </div>
               )
             )}

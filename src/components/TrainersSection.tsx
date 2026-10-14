@@ -12,7 +12,7 @@ export function TrainerPresentation({ trainer, certificates }: { trainer: Traine
   return <article className="grid gap-6 border-t border-border py-8 sm:grid-cols-[96px_1fr]">
     {trainer.photo_url ? <img src={trainer.photo_url} alt={trainer.display_name || "Entrenador del equipo"} loading="lazy" className="h-24 w-24 rounded-lg object-cover" /> : <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-secondary"><User className="h-9 w-9 text-muted-foreground" /></div>}
     <div className="min-w-0 space-y-3">
-      <p className="text-xs uppercase tracking-wider text-primary">Entrenador del equipo</p>
+      <p className="text-xs text-primary">Entrenador del equipo</p>
       <h3 className="font-display text-2xl font-bold break-words">{trainer.display_name || "Equipo de entrenamiento"}</h3>
       {trainer.specialty && <p className="text-sm text-primary">{trainer.specialty}</p>}
       {trainer.headline && <p className="font-medium">{trainer.headline}</p>}
@@ -49,7 +49,7 @@ export default function TrainersSection() {
   }, []);
   return <section id="equipo" className="border-t border-border px-4 py-16">
     <div className="container mx-auto max-w-4xl">
-      <p className="text-xs uppercase tracking-widest text-primary">Quién te acompaña</p>
+      <p className="text-xs text-primary">Quién te acompaña</p>
       <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">Conoce al equipo de entrenamiento</h2>
       <p className="mt-4 mb-8 max-w-2xl text-muted-foreground">{coach ? `Nicolás es el fundador y dirige Autopilot. En el plan ${coachName}, el equipo prepara y ajusta tu entrenamiento.` : "Nicolás San Marcos es el fundador y desarrollador de Autopilot."}</p>
       {trainers.length ? trainers.map(t => <TrainerPresentation key={t.id} trainer={t} certificates={certificates.filter(c => c.trainer_profile_id === t.id)} />) : <div className="border-t border-border pt-6"><h3 className="font-display text-xl font-semibold">Un equipo para acompañarte</h3><p className="mt-3 text-muted-foreground">{coach ? `En el plan ${coachName}, tu entrenador prepara tu plan y atiende tus dudas por chat. La dirección de Autopilot se ocupa de coordinar el servicio.` : "Autopilot es un proyecto independiente: la rutina, el registro y la progresión los diseña y mantiene su fundador."}</p></div>}

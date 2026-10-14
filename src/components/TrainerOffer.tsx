@@ -65,7 +65,7 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
         <DialogTitle className="sr-only">Autopilot para entrenadores</DialogTitle>
         {step >= 0 && step < 4 && (
           <div className="flex items-center gap-3">
-            <button type="button" aria-label="Atrás" onClick={() => setStep(step - 1)} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-4 h-4" /></button>
+            <button type="button" aria-label="Atrás" onClick={() => setStep(step - 1)} className="text-muted-foreground hover:text-foreground active:opacity-70"><ArrowLeft className="w-4 h-4" /></button>
             <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: `${((step + 1) / 4) * 100}%` }} /></div>
             <span className="text-xs text-muted-foreground">{step + 1}/4</span>
           </div>
@@ -73,13 +73,13 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 
         {step === -1 && (
           <div className="space-y-3">
-            <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">Para entrenadores</span>
+            <span className="inline-block text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Para entrenadores</span>
             <h3 className="font-display text-xl font-bold">{plan.name || "Autopilot para entrenadores"}</h3>
             <p className="text-sm text-muted-foreground leading-snug line-clamp-3">{plan.description}</p>
             {features.length > 0 && (
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">{features.map((f) => <li key={f} className="flex gap-2 text-xs sm:text-sm"><CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />{f}</li>)}</ul>
             )}
-            <div className="rounded-xl border border-border bg-secondary/40 p-3 text-sm"><span className="font-semibold">Plan a medida.</span> <span className="text-muted-foreground">Se adapta a tu número de clientes y a tu forma de trabajar.</span></div>
+            <div className="rounded-xl bg-secondary p-3 text-sm"><span className="font-semibold">Plan a medida.</span> <span className="text-muted-foreground">Se adapta a tu número de clientes y a tu forma de trabajar.</span></div>
             {plan.accepting_new_subscriptions
               ? <Button variant="hero" size="lg" className="w-full" onClick={() => { setStep(0); track("trainer_apply_start" as never, {}); }}>Personalizar mi acceso (1 min) <ArrowRight className="w-4 h-4" /></Button>
               : <p className="text-sm text-muted-foreground text-center">Ahora mismo no aceptamos nuevas altas.</p>}
@@ -92,7 +92,7 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
             <div className="grid gap-2">
               {STEPS[step].opts.map((o) => (
                 <button key={o} type="button" onClick={() => { setAnswers({ ...answers, [STEPS[step].key]: o }); setStep(step + 1); }}
-                  className={`text-left rounded-xl border px-4 py-3 text-sm transition-colors ${answers[STEPS[step].key] === o ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>{o}</button>
+                  className={`text-left rounded-xl border px-4 py-3 text-sm transition-colors ${answers[STEPS[step].key] === o ? "border-primary bg-primary/10" : "border-border hover:border-primary/40 active:opacity-80"}`}>{o}</button>
               ))}
             </div>
           </div>
@@ -131,16 +131,20 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 export default function TrainerOffer() {
   // iOS v1 (reader app, App Store §3.1.3(a)): hide B2B upsell inside the native build.
   if (isIOSNative()) return null;
+  return <TrainerOfferContent />;
+}
+
+function TrainerOfferContent() {
   const plan = useTrainerPlan();
   const [open, setOpen] = useState(false);
   if (!plan) return null;
   return (
     <>
       <button type="button" onClick={() => { setOpen(true); track("trainer_preview_open" as never, {}); }}
-        className="group mt-8 w-full max-w-6xl mx-auto text-left rounded-lg border border-border bg-card/60 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-5 hover:border-primary/40 transition-colors">
+        className="group mt-8 w-full max-w-6xl mx-auto text-left rounded-lg bg-card/60 p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-5 hover:border-primary/40 active:opacity-80 transition-colors">
         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><Briefcase className="w-5 h-5 text-primary" /></div>
         <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-primary">Para entrenadores</span>
+          <span className="text-[11px] font-bold text-primary">Para entrenadores</span>
           <h3 className="font-display text-xl font-bold mt-1">¿Entrenas a tus propios clientes?</h3>
           <p className="text-sm text-muted-foreground mt-1">Gestiona sus planes, su progreso y el chat con Autopilot. Plan a medida de tu negocio.</p>
         </div>

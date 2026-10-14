@@ -56,7 +56,7 @@ export default function PublicInfo({ page }: { page: Page }) {
   };
   return <PublicLayout title={info.title} description={info.description}>
     <div className="mx-auto max-w-6xl px-5 pb-8 pt-10 sm:pt-14">
-      <Link to="/" className="mb-5 inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground">← Inicio</Link>
+      <Link to="/" className="mb-5 inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground active:opacity-70">← Inicio</Link>
       <h1 className="font-display text-3xl font-bold sm:text-5xl">{info.title}</h1>
       <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">{info.description}</p>
     </div>

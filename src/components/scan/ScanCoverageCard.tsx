@@ -21,45 +21,46 @@ export default function ScanCoverageCard({ hasFront, hasBack, confidence, photoQ
   const tone = pct === null ? "text-muted-foreground" : pct >= 70 ? "text-success" : pct >= 45 ? "text-primary" : "text-destructive";
 
   return (
-    <div className="max-w-3xl mx-auto mb-8 rounded-2xl border border-border bg-card/50 backdrop-blur p-5">
-      <div className="grid sm:grid-cols-3 gap-4 text-sm">
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">
-            <Eye className="w-3.5 h-3.5 text-primary" /> Vistas analizadas
-          </div>
-          <div className="font-semibold">{views.length ? views.join(" + ") : "Ninguna"}</div>
+    <section className="max-w-3xl mx-auto mb-8 px-4 space-y-6">
+      <div className="flex items-start gap-4">
+        <Eye className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
+        <div className="min-w-0">
+          <div className="type-headline">Vistas analizadas</div>
+          <div className="type-subhead text-muted-foreground">{views.length ? views.join(" + ") : "Ninguna"}</div>
         </div>
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">
-            <Gauge className="w-3.5 h-3.5 text-primary" /> Nivel de confianza
-          </div>
-          <div className="font-semibold">
-            {level} {pct !== null && <span className={tone}>· {pct}%</span>}
+      </div>
+      <div className="flex items-start gap-4">
+        <Gauge className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
+        <div className="min-w-0">
+          <div className="type-headline">Nivel de confianza</div>
+          <div className="type-subhead text-muted-foreground">
+            {level} {pct !== null && <span className={`${tone} tabular-nums`}>· {pct}%</span>}
           </div>
         </div>
-        <div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5">
-            <EyeOff className="w-3.5 h-3.5 text-primary" /> Sin valorar
-          </div>
-          <div className="text-muted-foreground text-[13px] leading-snug">
+      </div>
+      <div className="flex items-start gap-4">
+        <EyeOff className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
+        <div className="min-w-0">
+          <div className="type-headline">Sin valorar</div>
+          <div className="type-subhead text-muted-foreground">
             {notEvaluated ?? "Nada relevante: tienes las dos vistas"}
           </div>
         </div>
       </div>
       {photoQualityNotes && photoQualityNotes.length > 0 && (
-        <ul className="mt-4 pt-4 border-t border-border/60 space-y-1 text-[12px] text-muted-foreground">
+        <ul className="space-y-1 type-footnote text-muted-foreground">
           {photoQualityNotes.slice(0, 3).map((n, i) => (
             <li key={i}>· {n}</li>
           ))}
         </ul>
       )}
       {notEvaluated && (
-        <p className="mt-4 pt-4 border-t border-border/60 text-[12px] text-muted-foreground">
+        <p className="type-footnote text-muted-foreground">
           {hasBack
             ? "Vista frontal no disponible: sube también la foto de delante para valorar pecho, abdomen y cuádriceps."
             : "Vista trasera no disponible: sube también la foto de atrás para valorar espalda, glúteos e isquios."}
         </p>
       )}
-    </div>
+    </section>
   );
 }

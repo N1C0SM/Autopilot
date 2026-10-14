@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarClock, RefreshCw, ArrowRightLeft, PauseCircle } from "lucide-react";
+import { hapticNotify, hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import {
   RENEWAL_LABELS,
@@ -18,10 +19,10 @@ interface Props {
   subscriptionTier: string;
 }
 
-const OPTIONS: { value: RenewalDecision; icon: typeof RefreshCw; variant: "hero" | "outline" | "ghost" }[] = [
+const OPTIONS: { value: RenewalDecision; icon: typeof RefreshCw; variant: "hero" | "tinted" | "plain" }[] = [
   { value: "renovar", icon: RefreshCw, variant: "hero" },
-  { value: "completo", icon: ArrowRightLeft, variant: "outline" },
-  { value: "pausar", icon: PauseCircle, variant: "ghost" },
+  { value: "completo", icon: ArrowRightLeft, variant: "tinted" },
+  { value: "pausar", icon: PauseCircle, variant: "plain" },
 ];
 
 const RenewalFlow = ({ userId, subscriptionTier }: Props) => {
@@ -64,9 +65,11 @@ const RenewalFlow = ({ userId, subscriptionTier }: Props) => {
       .eq("user_id", userId);
     setSaving(false);
     if (error) {
+      void hapticNotify("error");
       toast.error("No se pudo guardar tu elección");
       return;
     }
+    void hapticNotify("success");
     setDecision(value);
     setOpen(false);
     toast.success("Elección guardada. Tu entrenador ya lo sabe.");
@@ -80,53 +83,52 @@ const RenewalFlow = ({ userId, subscriptionTier }: Props) => {
   return (
     <>
       <Dialog open={open} onOpenChange={(v) => setOpen(v)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">Tu ciclo Transformación termina en 1 semana</DialogTitle>
+            <DialogTitle>Tu ciclo Transformación termina en 1 semana</DialogTitle>
             <DialogDescription>¿Qué quieres hacer al terminar?</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2">
             {OPTIONS.map(({ value, icon: Icon, variant }) => (
               <Button
                 key={value}
                 variant={variant}
-                className="w-full justify-start"
+                size="lg"
+                className="w-full"
                 disabled={saving}
-                onClick={() => choose(value)}
+                onClick={() => { void hapticTap(); void choose(value); }}
               >
-                <Icon className="w-4 h-4 mr-2" />
+                <Icon className="mr-2 h-5 w-5" />
                 {RENEWAL_LABELS[value]}
               </Button>
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
+          <p className="type-footnote text-muted-foreground">
             Si no eliges nada antes del {formatDateES(end)}, pasas automáticamente al plan Completo (49€/mes) para no
             perder seguimiento.
           </p>
         </DialogContent>
       </Dialog>
 
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <div className="flex items-start gap-3">
-          <CalendarClock className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-          <div className="min-w-0">
-            <div className="font-display font-semibold text-sm">Tu ciclo Transformación</div>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              {week !== null && <>Semana {Math.min(week, 12)} de 12 · </>}
-              Termina el {formatDateES(end)}.
-            </p>
-            <p className="text-xs mt-2">
-              <span className="text-muted-foreground">Al terminar: </span>
-              <span className="font-semibold">
-                {decision ? RENEWAL_LABELS[decision] : "Pasar a Completo (49€/mes) si no eliges otra opción"}
-              </span>
-            </p>
-            {!decision && week !== null && week >= 11 && (
-              <Button size="sm" variant="outline" className="mt-3" onClick={() => setOpen(true)}>
-                Elegir ahora
-              </Button>
-            )}
-          </div>
+      <div className="flex items-start gap-4 px-1">
+        <CalendarClock className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+        <div className="min-w-0">
+          <div className="type-headline">Tu ciclo Transformación</div>
+          <p className="mt-0.5 type-subhead text-muted-foreground">
+            {week !== null && <>Semana {Math.min(week, 12)} de 12 · </>}
+            Termina el {formatDateES(end)}.
+          </p>
+          <p className="mt-2 type-subhead">
+            <span className="text-muted-foreground">Al terminar: </span>
+            <span className="font-semibold">
+              {decision ? RENEWAL_LABELS[decision] : "Pasar a Completo (49€/mes) si no eliges otra opción"}
+            </span>
+          </p>
+          {!decision && week !== null && week >= 11 && (
+            <Button size="sm" variant="tinted" className="mt-3" onClick={() => { void hapticTap(); setOpen(true); }}>
+              Elegir ahora
+            </Button>
+          )}
         </div>
       </div>
     </>

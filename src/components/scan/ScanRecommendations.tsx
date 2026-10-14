@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Dumbbell } from "lucide-react";
+import { BookOpen, ChevronRight, Dumbbell } from "lucide-react";
 import { euro, usePlanAvailability, type PlanAvailability } from "@/lib/planCatalog";
 import { isIOSNative } from "@/lib/platform";
+import { hapticTap } from "@/lib/native";
 
 type Props = {
   /** Published plans; Coach is never recommended while it is hidden in Admin. */
@@ -91,59 +92,58 @@ export function recommendFor({ bottleneck, improvements, monthsWithPlan, plans =
   return { priority, limitation, rec: pick(`${limitation} ${priority}`, monthsWithPlan, plans) };
 }
 
-export default function ScanRecommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no plan recommendations in the native build.
-  if (isIOSNative()) return null;
+function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
   const plans = usePlanAvailability();
   const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan, plans });
 
   return (
-    <div className="max-w-3xl mx-auto mb-12">
-      <div className="rounded-2xl border border-primary/30 bg-card/50 backdrop-blur p-5 sm:p-6">
-        <div className="text-[10px] uppercase tracking-widest text-primary font-semibold mb-2">
-          Lo que te recomendamos
+    <section className="max-w-3xl mx-auto mb-12 px-4">
+      <h2 className="type-title2">Lo que te recomendamos</h2>
+      <p className="type-body mt-2">
+        Lo que más te limita ahora: <span className="font-semibold">{limitation}</span>.
+      </p>
+      <p className="type-subhead text-muted-foreground mt-1">
+        Lo primero que deberías trabajar es <span className="text-foreground">{priority || limitation}</span>.
+      </p>
+
+      <Link
+        to={rec.to}
+        onClick={() => void hapticTap()}
+        className="flex items-start gap-4 mt-6 min-h-[44px] active:opacity-60 transition-opacity"
+      >
+        {rec.kind === "guia" ? (
+          <BookOpen className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
+        ) : (
+          <Dumbbell className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="type-headline">
+            {rec.name}{rec.price ? ` · ${rec.price}` : ""}
+          </div>
+          <div className="type-subhead text-muted-foreground mt-0.5">{rec.why}</div>
+          <div className="type-subhead font-semibold text-primary mt-2">{rec.cta}</div>
         </div>
-        <p className="text-sm leading-relaxed mb-1">
-          Lo que más te limita ahora: <span className="font-semibold">{limitation}</span>.
-        </p>
-        <p className="text-sm text-muted-foreground leading-relaxed mb-5">
-          Lo primero que deberías trabajar es{" "}
-          <span className="font-medium text-foreground">{priority || limitation}</span>.
-        </p>
+        <ChevronRight className="w-5 h-5 text-muted-foreground/60 shrink-0 mt-0.5" />
+      </Link>
 
+      <p className="mt-6 type-footnote text-muted-foreground">
+        {rec.kind === "guia"
+          ? plans.coach ? "Si prefieres que Autopilot adapte tu plan, o que además lo revise Nicolás, mira los planes." : "Si prefieres que Autopilot adapte tu plan y tu nutrición, mira los planes."
+          : "Si por ahora prefieres ir por tu cuenta, tienes las guías en PDF en Recursos."}{" "}
         <Link
-          to={rec.to}
-          className="group flex items-start gap-3 rounded-xl border border-border bg-background/40 px-4 py-4 hover:border-primary/60 transition-colors"
+          to={rec.kind === "guia" ? "/planes" : "/recursos"}
+          onClick={() => void hapticTap()}
+          className="text-primary active:opacity-60"
         >
-          <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center shrink-0">
-            {rec.kind === "guia" ? (
-              <BookOpen className="w-4 h-4 text-primary" />
-            ) : (
-              <Dumbbell className="w-4 h-4 text-primary" />
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold">
-              {rec.name}{rec.price ? ` · ${rec.price}` : ""}
-            </div>
-            <div className="text-[13px] text-muted-foreground leading-snug mt-0.5">{rec.why}</div>
-            <div className="text-[12px] text-primary font-medium mt-2">{rec.cta}</div>
-          </div>
-          <ArrowRight className="w-4 h-4 text-primary shrink-0 transition-transform group-hover:translate-x-1" />
+          {rec.kind === "guia" ? "Ver planes" : "Ver guías"}
         </Link>
-
-        <p className="mt-4 text-[11px] text-muted-foreground">
-          {rec.kind === "guia"
-            ? plans.coach ? "Si prefieres que Autopilot adapte tu plan, o que además lo revise Nicolás, mira los planes." : "Si prefieres que Autopilot adapte tu plan y tu nutrición, mira los planes."
-            : "Si por ahora prefieres ir por tu cuenta, tienes las guías en PDF en Recursos."}{" "}
-          <Link
-            to={rec.kind === "guia" ? "/planes" : "/recursos"}
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            {rec.kind === "guia" ? "Ver planes" : "Ver guías"}
-          </Link>
-        </p>
-      </div>
-    </div>
+      </p>
+    </section>
   );
+}
+
+export default function ScanRecommendations(props: Props) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no plan recommendations in the native build.
+  if (isIOSNative()) return null;
+  return <Recommendations {...props} />;
 }

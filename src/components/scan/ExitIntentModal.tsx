@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowRight, ShieldCheck } from "lucide-react";
-
+import { ShieldCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { isIOSNative } from "@/lib/platform";
+import { hapticTap } from "@/lib/native";
 
 const STORAGE_KEY = "scan_exit_intent_shown";
 
-export default function ExitIntentModal({ onCta }: { onCta: () => void }) {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no exit-intent upsell inside the native build.
-  if (isIOSNative()) return null;
+function ExitIntent({ onCta }: { onCta: () => void }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -31,56 +30,37 @@ export default function ExitIntentModal({ onCta }: { onCta: () => void }) {
 
   const close = () => setOpen(false);
   const cta = () => {
+    void hapticTap();
     close();
     onCta();
   };
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={close}
-        >
-          <motion.div
-            initial={{ scale: 0.92, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 280, damping: 26 }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-lg w-full bg-card border border-primary/30 rounded-3xl p-8 shadow-2xl"
-          >
-            <button
-              onClick={close}
-              className="absolute top-3 right-3 w-8 h-8 rounded-full hover:bg-muted/50 flex items-center justify-center text-muted-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="text-[10px] uppercase tracking-widest text-primary mb-2">Espera</div>
-            <h3 className="text-2xl sm:text-3xl font-bold font-display leading-tight mb-3">
-              Ya tienes el análisis inicial,<br />
-              <span className="text-gradient">ahora elige un plan con entrenador.</span>
-            </h3>
-            <p className="text-sm text-muted-foreground mb-5">
-              Elige el plan que encaja contigo para que un entrenador real prepare y lleve tu entrenamiento. Pruébalo 7 días antes del primer cobro.
-            </p>
-            <button
-              onClick={cta}
-              className="w-full inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 py-3.5 rounded-xl transition-colors"
-            >
-              Elegir mi plan
-              <ArrowRight className="w-4 h-4" />
-            </button>
-            <div className="flex items-center justify-center gap-2 mt-4 text-[11px] text-muted-foreground">
-              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-              Requiere tarjeta · No se cobra hasta el día 8
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Dialog open={open} onOpenChange={(v) => !v && close()}>
+      <DialogContent className="max-w-md">
+        <DialogTitle className="type-title1 text-center">
+          Ya tienes el análisis inicial, ahora elige un plan con entrenador
+        </DialogTitle>
+        <DialogDescription className="type-subhead text-muted-foreground text-center">
+          Elige el plan que encaja contigo para que un entrenador real prepare y lleve tu entrenamiento. Pruébalo 7 días antes del primer cobro.
+        </DialogDescription>
+        <Button size="lg" className="w-full" onClick={cta}>
+          Elegir mi plan
+        </Button>
+        <Button variant="plain" className="w-full" onClick={close}>
+          Ahora no
+        </Button>
+        <div className="flex items-center justify-center gap-2 type-footnote text-muted-foreground">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          Requiere tarjeta · No se cobra hasta el día 8
+        </div>
+      </DialogContent>
+    </Dialog>
   );
+}
+
+export default function ExitIntentModal({ onCta }: { onCta: () => void }) {
+  // iOS v1 (reader app, App Store §3.1.3(a)): no exit-intent upsell inside the native build.
+  if (isIOSNative()) return null;
+  return <ExitIntent onCta={onCta} />;
 }

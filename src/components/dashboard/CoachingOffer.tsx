@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { Sparkles } from "lucide-react";
+import { hapticTap } from "@/lib/native";
 import { Button } from "@/components/ui/button";
 import { TIERS } from "@/config/tiers";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
@@ -12,8 +14,6 @@ export default function CoachingOffer({ onChoose, nutrition = false, compact = f
   /** Plan que el usuario ya eligió en la web, para destacarlo aquí. */
   defaultPlan?: "training" | "full";
 }) {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no upsell inside the native build.
-  if (isIOSNative()) return null;
   const [pending, setPending] = useState(false);
   const choose = async (plan: "training" | "full") => {
     setPending(true);
@@ -22,26 +22,29 @@ export default function CoachingOffer({ onChoose, nutrition = false, compact = f
   };
   const plans = usePlanAvailability();
   const coachPreferred = defaultPlan === "full" && plans.coach;
+  // iOS v1 (reader app, App Store §3.1.3(a)): no upsell inside the native build.
+  if (isIOSNative()) return null;
   return (
-    <section className="rounded-xl border border-primary/25 bg-card p-5 sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-wider text-primary">Autopilot {plans.plusName} · {euro(plans.plusPrice)}/mes</p>
-      <h2 className="mt-2 font-display text-xl font-bold">Autopilot se adapta a ti.</h2>
-      <p className="mt-2 max-w-xl text-sm text-muted-foreground">{nutrition
+    <section className="px-1 py-2">
+      <Sparkles className="h-7 w-7 text-primary" strokeWidth={1.75} />
+      <p className="mt-3 type-subhead text-muted-foreground">Autopilot {plans.plusName} · {euro(plans.plusPrice)}/mes</p>
+      <h2 className="mt-1 type-title2">Autopilot se adapta a ti.</h2>
+      <p className="mt-1.5 max-w-xl type-subhead text-muted-foreground">{nutrition
         ? `${plans.plusName} incluye tu plan de nutrición, adaptación automática y estadísticas avanzadas.`
         : `${plans.plusName} adapta tu entrenamiento automáticamente.${plans.coach ? ` ${plans.coachName} añade a Nicolás detrás.` : ""}`}</p>
       {defaultPlan && (defaultPlan !== "full" || plans.coach) && (
-        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+        <p className="mt-3 type-footnote text-primary">
           Elegiste {TIERS[defaultPlan].name} en la web · puedes cambiarlo aquí
         </p>
       )}
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <Button disabled={pending} variant={coachPreferred ? "outline" : "default"} onClick={() => void choose("training")}>
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+        <Button size="lg" disabled={pending} variant={coachPreferred ? "tinted" : "default"} onClick={() => { void hapticTap(); void choose("training"); }}>
           {pending ? "Abriendo pago…" : `Mejorar a ${plans.plusName}`}
         </Button>
-        {!nutrition && !compact && plans.coach && <Button disabled={pending} variant={coachPreferred ? "default" : "outline"} onClick={() => void choose("full")}>Elegir {plans.coachName} · {euro(plans.coachPrice)}/mes</Button>}
+        {!nutrition && !compact && plans.coach && <Button size="lg" disabled={pending} variant={coachPreferred ? "default" : "tinted"} onClick={() => { void hapticTap(); void choose("full"); }}>Elegir {plans.coachName} · {euro(plans.coachPrice)}/mes</Button>}
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">7 días de prueba y después {euro(plans.plusPrice)}/mes{plans.coach ? ` (${plans.coachName} ${euro(plans.coachPrice)}/mes)` : ""}. Renovación automática. Cancela desde Ajustes → Suscripción antes de terminar la prueba para evitar el primer cobro.</p>
-      <p className="mt-2 text-xs text-muted-foreground">Puedes seguir entrenando y guardando tu progreso gratis.</p>
+      <p className="mt-4 type-footnote text-muted-foreground">7 días de prueba y después {euro(plans.plusPrice)}/mes{plans.coach ? ` (${plans.coachName} ${euro(plans.coachPrice)}/mes)` : ""}. Renovación automática. Cancela desde Ajustes → Suscripción antes de terminar la prueba para evitar el primer cobro.</p>
+      <p className="mt-2 type-footnote text-muted-foreground">Puedes seguir entrenando y guardando tu progreso gratis.</p>
     </section>
   );
 }

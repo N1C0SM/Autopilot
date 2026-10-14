@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { Lock, Sparkles } from "lucide-react";
+import { Lock } from "lucide-react";
+import { hapticTap } from "@/lib/native";
 
 type Insight = { label: string; teaser: string; category?: string };
 
@@ -26,51 +26,48 @@ export default function LockedInsightsGrid({
   const hasRealInsights = !!insights && insights.length >= 4;
   const items = (hasRealInsights ? insights! : [...(insights || []), ...FALLBACK]).slice(0, 8);
 
+  const handle = () => {
+    void hapticTap();
+    onCta();
+  };
+
   return (
-    <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-5 mt-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="text-[10px] uppercase tracking-widest text-primary flex items-center gap-1.5">
-          <Lock className="w-3 h-3" /> {hasRealInsights ? `${items.length} insights bloqueados` : "Ejemplos de lo que incluye tu plan"}
-        </div>
+    <section className="mt-6">
+      <div className="flex items-center justify-between gap-3 px-1">
+        <h3 className="type-title3">
+          {hasRealInsights ? `${items.length} insights bloqueados` : "Ejemplos de lo que incluye tu plan"}
+        </h3>
         <button
-          onClick={onCta}
-          className="text-[10px] uppercase tracking-wider text-primary hover:underline flex items-center gap-1"
+          type="button"
+          onClick={handle}
+          className="min-h-[44px] shrink-0 type-subhead font-semibold text-primary active:opacity-60 transition-opacity"
         >
-          <Sparkles className="w-3 h-3" /> Desbloquear todos
+          Desbloquear todos
         </button>
       </div>
       {!hasRealInsights && (
-        <p className="mb-4 text-[11px] text-muted-foreground">
+        <p className="type-footnote text-muted-foreground px-1 -mt-1 mb-2">
           Ejemplos del tipo de recomendaciones que recibes con un plan. Las tuyas se calculan con tu análisis.
         </p>
       )}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 md:grid-cols-4 md:gap-x-4">
         {items.map((li, i) => (
-          <motion.button
+          <button
             key={i}
-            onClick={onCta}
-            initial={{ opacity: 0, y: 8 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.04 }}
-            whileHover={{ scale: 1.02 }}
-            className="group relative text-left bg-background/50 hover:bg-background/80 border border-border hover:border-primary/40 rounded-xl p-3 overflow-hidden transition-colors"
+            type="button"
+            onClick={handle}
+            className="sep-b last:border-b-0 flex items-start gap-3 py-3 min-h-[44px] text-left active:opacity-60 transition-opacity md:flex-col md:gap-2"
           >
-            <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-              <Lock className="w-3 h-3 text-primary" />
-            </div>
-            <div className="text-[11px] font-semibold text-foreground/90 pr-7 mb-1.5 leading-tight">
-              {li.label}
-            </div>
-            <div className="text-[10px] text-muted-foreground blur-[3px] group-hover:blur-[2px] select-none leading-snug line-clamp-2">
-              {li.teaser}
-            </div>
-            <div className="absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-card to-transparent flex items-end justify-center pb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-[9px] uppercase tracking-wider text-primary font-bold">Desbloquear</span>
-            </div>
-          </motion.button>
+            <Lock className="w-5 h-5 mt-0.5 text-primary shrink-0" strokeWidth={2} />
+            <span className="min-w-0 flex-1">
+              <span className="type-headline block">{li.label}</span>
+              <span className="type-subhead block text-muted-foreground blur-[3px] select-none line-clamp-2 mt-0.5">
+                {li.teaser}
+              </span>
+            </span>
+          </button>
         ))}
       </div>
-    </div>
+    </section>
   );
 }

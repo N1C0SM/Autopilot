@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export interface IosFeatureLockedProps {
   /** Nombre o descripción corta de la función. Encabeza el mensaje. */
@@ -19,20 +20,17 @@ export const IosFeatureLocked = ({
   feature = "Esta función",
   className = "",
 }: IosFeatureLockedProps) => (
-  <div
-    className={`mx-auto w-full max-w-md rounded-2xl border border-border bg-card p-6 text-center sm:p-8 ${className}`.trim()}
-    data-ios-feature-locked
-  >
-    <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-      <Lock className="h-7 w-7 text-primary" aria-hidden="true" />
-    </div>
-    <h2 className="font-display text-xl font-bold">
-      {feature} está disponible en los planes de pago.
-    </h2>
-    <p className="mt-3 text-sm text-muted-foreground">
-      Visita <span className="font-medium text-foreground">autopilotplan.com</span>
-      {" "}desde tu navegador para conocer las opciones.
-    </p>
+  <div className={`mx-auto w-full max-w-md ${className}`.trim()} data-ios-feature-locked>
+    <EmptyState
+      icon={Lock}
+      title={`${feature} está disponible en los planes de pago.`}
+      description={
+        <>
+          Visita <span className="font-medium text-foreground">autopilotplan.com</span>
+          {" "}desde tu navegador para conocer las opciones.
+        </>
+      }
+    />
   </div>
 );
 

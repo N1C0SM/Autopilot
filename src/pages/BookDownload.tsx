@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { CircleAlert, ArrowRight } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import PageHead from "@/components/PageHead";
+import { ResourcesStatus, ResourcesStatusScreen } from "@/components/ResourcesStatus";
+import { hapticTap } from "@/lib/native";
 import { readPendingBookRef } from "@/lib/buyLink";
 import { BookSuccess } from "./PaymentSuccess";
 
@@ -21,30 +23,27 @@ const BookDownload = () => {
   const [unknown, setUnknown] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <ResourcesStatusScreen>
       {unknown ? (
-        <div className="text-center max-w-md">
+        <ResourcesStatus
+          icon={CircleAlert}
+          title="No hemos podido identificar tu compra"
+          description="Si ya has pagado, contacta con nosotros con tu recibo para recuperar la guía."
+        >
           <PageHead
             title="Compra sin confirmar · Autopilot"
             description="Todavía no hemos podido confirmar esta compra."
             path="/descarga-libro"
             noindex
           />
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CircleAlert className="w-10 h-10 text-primary" />
-          </div>
-          <h1 className="text-3xl font-bold font-display mb-3">No hemos podido identificar tu compra</h1>
-          <p className="text-muted-foreground mb-8 text-sm">
-            Si ya has pagado, contacta con nosotros con tu recibo para recuperar la guía.
-          </p>
-          <Button variant="hero" size="lg" className="w-full" onClick={() => navigate("/recursos")}>
-            Ver mis recursos <ArrowRight className="w-4 h-4 ml-2" />
+          <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); navigate("/recursos"); }}>
+            Ver mis recursos
           </Button>
-        </div>
+        </ResourcesStatus>
       ) : (
         <BookSuccess bookRef={bookRef} sessionId={sessionId} onNotBook={() => setUnknown(true)} />
       )}
-    </div>
+    </ResourcesStatusScreen>
   );
 };
 

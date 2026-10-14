@@ -53,7 +53,7 @@ export default function PublicLayout({ title, description, children }: { title: 
       <div className="container mx-auto flex h-16 min-w-0 items-center justify-between gap-3 px-4">
         <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center font-display text-xl font-bold text-primary">Autopilot</Link>
         <nav aria-label="Navegación principal" className="hidden items-center gap-1 lg:flex">
-          {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 text-sm transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
+          {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 text-sm transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground active:opacity-70"}`}>{label}</NavLink>)}
           <Button variant="ghost" asChild className="min-h-11"><Link to="/login">Iniciar sesión</Link></Button>
           <Button asChild className="min-h-11"><Link to="/onboarding">Crear mi rutina</Link></Button>
         </nav>
@@ -66,7 +66,7 @@ export default function PublicLayout({ title, description, children }: { title: 
               <SheetDescription>Elige qué quieres consultar.</SheetDescription>
               <nav aria-label="Menú móvil" className="mt-6 flex flex-col gap-1">
                 <Link to="/" onClick={() => setMenuOpen(false)} className="min-h-11 rounded-md px-3 py-3">Inicio</Link>
-                {navigation.map(([to, label]) => <NavLink key={to} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `min-h-11 rounded-md px-3 py-3 ${isActive ? "bg-secondary text-primary" : "hover:bg-secondary"}`}>{label}</NavLink>)}
+                {navigation.map(([to, label]) => <NavLink key={to} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `min-h-11 rounded-md px-3 py-3 ${isActive ? "bg-secondary text-primary" : "hover:bg-secondary active:bg-secondary"}`}>{label}</NavLink>)}
                 <Link to="/login" onClick={() => setMenuOpen(false)} className="min-h-11 rounded-md px-3 py-3">Iniciar sesión</Link>
               </nav>
             </SheetContent>
@@ -79,9 +79,9 @@ export default function PublicLayout({ title, description, children }: { title: 
       <div className="container mx-auto flex max-w-6xl flex-col gap-4 text-sm text-muted-foreground sm:flex-row sm:items-start sm:justify-between">
         <p className="py-3"><span className="font-display font-bold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
         <div className="flex flex-wrap items-start gap-x-5">
-          <Link to="/preguntas-frecuentes" className="inline-flex min-h-11 items-center hover:text-foreground">Ayuda</Link>
-          <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center hover:text-foreground">Para entrenadores</Link>
-          <Link to="/blog" className="inline-flex min-h-11 items-center hover:text-foreground">Blog</Link>
+          <Link to="/preguntas-frecuentes" className="inline-flex min-h-11 items-center hover:text-foreground active:opacity-70">Ayuda</Link>
+          <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center hover:text-foreground active:opacity-70">Para entrenadores</Link>
+          <Link to="/blog" className="inline-flex min-h-11 items-center hover:text-foreground active:opacity-70">Blog</Link>
           <details>
             <summary className="min-h-11 cursor-pointer py-3">Información legal</summary>
             <div className="flex flex-col">
