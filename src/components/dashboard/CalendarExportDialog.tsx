@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { Calendar as CalendarIcon, Download, Link2, Copy, Check, Loader2, RefreshCw, Unplug, Zap } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Check, ChevronRight, Copy, Download, Link2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { DayPlan } from "@/types/training";
 import { downloadICS } from "@/lib/exportPlanICS";
@@ -26,6 +28,44 @@ const REMINDERS = [
   { value: 60, label: "1 hora antes" },
   { value: 120, label: "2 horas antes" },
 ];
+
+// Los grupos viven dentro de una hoja que ya es bg-card: sobre ella van en bg-secondary.
+const sheetGroup = "[&>div]:bg-secondary";
+
+interface PickerRowProps {
+  title: string;
+  value: number;
+  options: { value: number; label: string }[];
+  onChange: (value: number) => void;
+}
+
+// Fila de Ajustes con el valor actual a la derecha; toda la fila abre el selector.
+const PickerRow = ({ title, value, options, onChange }: PickerRowProps) => (
+  <ListRow
+    title={title}
+    trailing={
+      <Select
+        value={value.toString()}
+        onValueChange={(v) => {
+          void hapticSelection();
+          onChange(parseInt(v));
+        }}
+      >
+        <SelectTrigger
+          aria-label={title}
+          className="h-auto w-auto gap-1 bg-transparent px-0 text-[17px] leading-[22px] text-muted-foreground before:absolute before:inset-0 before:content-['']"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value.toString()}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    }
+  />
+);
 
 const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
   const { user } = useAuth();
@@ -110,6 +150,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
     : "";
 
   const copyLink = async () => {
+    void hapticTap();
     await navigator.clipboard.writeText(feedUrl);
     setCopied(true);
     toast.success("Enlace copiado");
@@ -117,6 +158,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
   };
 
   const handleConnectGoogle = async () => {
+    void hapticTap();
     setGcalLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("gcal-oauth-start", {
@@ -131,11 +173,12 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
   };
 
   const handleSyncGoogle = async () => {
+    void hapticTap();
     setGcalLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("gcal-sync");
       if (error) throw error;
-      toast.success(`✅ ${data.synced}/${data.total} eventos sincronizados`);
+      toast.success(`${data.synced}/${data.total} eventos sincronizados`);
       setGcalLastSync(new Date().toISOString());
     } catch (e) {
       toast.error("Error al sincronizar");
@@ -159,159 +202,149 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
     }
   };
 
+  const lastSyncLabel = gcalLastSync
+    ? new Date(gcalLastSync).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="outline" size="sm">
-            <CalendarIcon className="w-4 h-4 mr-1.5" /> Calendario
+          <Button variant="tinted" size="sm">
+            Calendario
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-primary" /> Tu plan en tu calendario
-          </DialogTitle>
+          <DialogTitle>Tu plan en tu calendario</DialogTitle>
+          <DialogDescription>Sincroniza tu plan directo en tu calendario. Se actualiza solo.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Conexión OAuth Google Calendar — HERO */}
-          <div className="bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/30 rounded-xl p-5 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-bold">Google Calendar · 1 clic</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Sincroniza tu plan directo en tu calendario. Se actualiza solo.
-                </p>
-              </div>
-            </div>
-            {!gcalConnected ? (
-              <Button onClick={handleConnectGoogle} disabled={gcalLoading} className="w-full" variant="hero">
-                {gcalLoading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Zap className="w-4 h-4 mr-1.5" />}
-                Conectar Google Calendar
+        <div className="space-y-6">
+          {/* Conexión OAuth Google Calendar */}
+          {!gcalConnected ? (
+            <Button onClick={handleConnectGoogle} disabled={gcalLoading} size="lg" variant="hero" className="w-full">
+              {gcalLoading ? <Spinner size="sm" label="Conectando" className="text-primary-foreground" /> : null}
+              Conectar Google Calendar
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <ListGroup className={sheetGroup} header="Google Calendar">
+                <ListRow
+                  icon={<Check />}
+                  title="Conectado"
+                  subtitle={lastSyncLabel ? `Última sincronización · ${lastSyncLabel}` : undefined}
+                />
+                <ListRow title="Desconectar" destructive disabled={gcalLoading} onClick={handleDisconnectGoogle} />
+              </ListGroup>
+              <Button onClick={handleSyncGoogle} disabled={gcalLoading} size="lg" variant="hero" className="w-full">
+                {gcalLoading ? <Spinner size="sm" label="Sincronizando" className="text-primary-foreground" /> : null}
+                Sincronizar ahora
               </Button>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Check className="w-3.5 h-3.5 text-primary" />
-                  Conectado{gcalLastSync ? ` · ${new Date(gcalLastSync).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={handleSyncGoogle} disabled={gcalLoading} className="flex-1" variant="hero">
-                    {gcalLoading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
-                    Sincronizar ahora
-                  </Button>
-                  <Button onClick={handleDisconnectGoogle} disabled={gcalLoading} size="icon" variant="outline" title="Desconectar">
-                    <Unplug className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Otras opciones (plegado) */}
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <button className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground py-2 px-1 transition-colors">
-                <span>Otras opciones (Apple, Outlook, .ics)</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 pt-2">
-          {/* Configuración */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Hora gimnasio</Label>
-              <Select value={hourGym.toString()} onValueChange={(v) => setHourGym(parseInt(v))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {HOURS.map((h) => <SelectItem key={h} value={h.toString()}>{h}:00</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Hora actividad</Label>
-              <Select value={hourAct.toString()} onValueChange={(v) => setHourAct(parseInt(v))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {HOURS.map((h) => <SelectItem key={h} value={h.toString()}>{h}:00</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Duración</Label>
-              <Select value={duration.toString()} onValueChange={(v) => setDuration(parseInt(v))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DURATIONS.map((d) => <SelectItem key={d} value={d.toString()}>{d} min</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Recordatorio</Label>
-              <Select value={reminder.toString()} onValueChange={(v) => setReminder(parseInt(v))}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {REMINDERS.map((r) => <SelectItem key={r.value} value={r.value.toString()}>{r.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Descarga */}
-          <div className="bg-secondary/30 rounded-lg p-4 space-y-2">
-            <div className="flex items-start gap-3">
-              <Download className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Descargar archivo .ics</p>
-                <p className="text-xs text-muted-foreground">Compatible con Google, Apple y Outlook. Una sola vez.</p>
-              </div>
-            </div>
-            <Button onClick={handleDownload} className="w-full" size="sm">
-              <Download className="w-4 h-4 mr-1.5" /> Descargar
-            </Button>
-          </div>
-
-          {/* Suscripción */}
-          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
-            <div className="flex items-start gap-3">
-              <Link2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Suscripción auto-actualizable</p>
-                <p className="text-xs text-muted-foreground">Se actualiza solo cuando cambia tu plan. Recomendado.</p>
-              </div>
-            </div>
-            {!token ? (
-              <Button onClick={handleSubscribe} disabled={loading} className="w-full" size="sm" variant="hero">
-                {loading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Link2 className="w-4 h-4 mr-1.5" />}
-                Generar enlace
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    readOnly
-                    value={feedUrl}
-                    className="flex-1 text-xs bg-background border border-border rounded px-2 py-1.5 font-mono truncate"
+            <div className="overflow-hidden rounded-2xl bg-secondary">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => void hapticSelection()}
+                  className="flex min-h-[44px] w-full items-center gap-3 px-4 py-[7px] text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block type-body">Otras opciones</span>
+                    <span className="block type-footnote text-muted-foreground">Apple, Outlook, .ics</span>
+                  </span>
+                  <ChevronRight
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios",
+                      advancedOpen && "rotate-90",
+                    )}
+                    strokeWidth={2.5}
+                    aria-hidden="true"
                   />
-                  <Button onClick={copyLink} size="sm" variant="outline" className="shrink-0">
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  📅 <b>Google Calendar:</b> Otros calendarios → Añadir → Desde URL · 🍎 <b>Apple:</b> Archivo → Nueva suscripción
-                </p>
-                <Button onClick={handleSubscribe} disabled={loading} variant="ghost" size="sm" className="w-full text-xs">
-                  {loading && <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />}
-                  Actualizar configuración
-                </Button>
-              </div>
-            )}
-          </div>
+                </button>
+              </CollapsibleTrigger>
+            </div>
+            <CollapsibleContent className="space-y-6 pt-6">
+              {/* Configuración */}
+              <ListGroup className={sheetGroup} header="Horario">
+                <PickerRow
+                  title="Hora gimnasio"
+                  value={hourGym}
+                  onChange={setHourGym}
+                  options={HOURS.map((h) => ({ value: h, label: `${h}:00` }))}
+                />
+                <PickerRow
+                  title="Hora actividad"
+                  value={hourAct}
+                  onChange={setHourAct}
+                  options={HOURS.map((h) => ({ value: h, label: `${h}:00` }))}
+                />
+                <PickerRow
+                  title="Duración"
+                  value={duration}
+                  onChange={setDuration}
+                  options={DURATIONS.map((d) => ({ value: d, label: `${d} min` }))}
+                />
+                <PickerRow title="Recordatorio" value={reminder} onChange={setReminder} options={REMINDERS} />
+              </ListGroup>
+
+              {/* Descarga */}
+              <ListGroup className={sheetGroup} footer="Compatible con Google, Apple y Outlook. Una sola vez.">
+                <ListRow icon={<Download />} title="Descargar archivo .ics" onClick={handleDownload} />
+              </ListGroup>
+
+              {/* Suscripción */}
+              {!token ? (
+                <ListGroup className={sheetGroup} header="Suscripción auto-actualizable" footer="Se actualiza solo cuando cambia tu plan. Recomendado.">
+                  <ListRow
+                    icon={<Link2 />}
+                    title="Generar enlace"
+                    disabled={loading}
+                    trailing={loading ? <Spinner size="sm" label="Generando" /> : undefined}
+                    onClick={handleSubscribe}
+                  />
+                </ListGroup>
+              ) : (
+                <ListGroup
+                  className={sheetGroup}
+                  header="Suscripción auto-actualizable"
+                  footer={
+                    <>
+                      <span className="font-semibold">Google Calendar:</span> Otros calendarios → Añadir → Desde URL ·{" "}
+                      <span className="font-semibold">Apple:</span> Archivo → Nueva suscripción
+                    </>
+                  }
+                >
+                  <div className="flex items-center gap-2 p-3 sep-b">
+                    <input
+                      readOnly
+                      aria-label="Enlace de suscripción"
+                      value={feedUrl}
+                      className="field selectable min-w-0 flex-1 truncate bg-card"
+                    />
+                    <Button
+                      onClick={copyLink}
+                      size="icon"
+                      variant="tinted"
+                      aria-label={copied ? "Enlace copiado" : "Copiar enlace"}
+                      className="shrink-0"
+                    >
+                      {copied ? <Check /> : <Copy />}
+                    </Button>
+                  </div>
+                  <ListRow
+                    title="Actualizar configuración"
+                    disabled={loading}
+                    trailing={loading ? <Spinner size="sm" label="Actualizando" /> : undefined}
+                    onClick={handleSubscribe}
+                  />
+                </ListGroup>
+              )}
             </CollapsibleContent>
           </Collapsible>
         </div>

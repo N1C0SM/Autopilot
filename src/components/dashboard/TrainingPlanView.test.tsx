@@ -7,7 +7,17 @@ vi.mock("@/components/ExerciseMedia", () => ({ ExerciseThumb: () => null }));
 vi.mock("@/components/ExerciseFocus", () => ({ default: () => null }));
 vi.mock("@/components/AIDisclaimer", () => ({ default: () => null }));
 vi.mock("./CalendarExportDialog", () => ({ default: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</> }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+
+const squat = { exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" };
+const setToday = (iso: string) => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(iso));
+};
+
 describe("weekly plan access", () => {
   it("opens an expanded day's routine directly and labels icon actions", () => {
     const onOpenWorkout = vi.fn();
@@ -19,5 +29,39 @@ describe("weekly plan access", () => {
     expect(screen.getByRole("button", { name: "Copiar plan" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Descargar plan" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Exportar plan al calendario" })).toBeVisible();
+  });
+  it("opens today's session by default", () => {
+    setToday("2026-10-12T12:00:00"); // lunes
+    render(<TrainingPlanView dayPlans={[{ day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] }]} onOpenWorkout={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Lunes, Piernas, hoy" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("heading", { name: "Piernas" })).toBeVisible();
+    expect(screen.getByText("Sentadilla")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Abrir sesión del lunes" })).toBeVisible();
+  });
+
+  it("switches sessions from the day selector and keeps rest days inert", () => {
+    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
+    const onOpenWorkout = vi.fn();
+    render(
+      <TrainingPlanView
+        dayPlans={[
+          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] },
+          { day: "Jueves", type: "actividad", sport: "Running", intensity: "Media", duration: "45 min" },
+        ]}
+        onOpenWorkout={onOpenWorkout}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Miércoles, descanso, hoy" })).toBeDisabled();
+    expect(screen.getByText("Hoy es día de descanso")).toBeVisible();
+
+    const thursday = screen.getByRole("button", { name: "Jueves, Running" });
+    fireEvent.click(thursday);
+    expect(thursday).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("45 min")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Abrir actividad del jueves" }));
+    expect(onOpenWorkout).toHaveBeenCalledWith("Jueves");
+
+    fireEvent.click(thursday);
+    expect(screen.getByText("Elige un día")).toBeVisible();
   });
 });

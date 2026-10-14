@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { SectionHeader } from "@/components/ui/section-header";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Save, Plus, Trash2, Dumbbell, UtensilsCrossed, Briefcase, Bell } from "lucide-react";
+import Screen from "@/components/native/Screen";
+import { Plus, Trash2 } from "lucide-react";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import PageHead from "@/components/PageHead";
 
@@ -51,6 +54,23 @@ const DEFAULT_MEALS: MealTimes = {
   snack_pm: "17:30",
   dinner: "21:00",
 };
+
+const Section = ({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) => (
+  <section className="space-y-3">
+    <SectionHeader title={title} hint={hint} size="md" />
+    {children}
+  </section>
+);
+
+// Fila de varios campos dentro de un grupo: sangría de 16 px y separador inferior, como ListRow.
+const InsetRow = ({ children }: { children: ReactNode }) => (
+  <div className="pl-4">
+    <div className="flex flex-wrap items-center gap-2 py-2 pr-4 sep-b">{children}</div>
+  </div>
+);
+
+// Un campo dentro de una ListRow ocupa 36 px; el margen negativo mantiene la fila en 44 px.
+const rowField = "-my-[7px] h-9";
 
 const MySchedule = () => {
   const { user } = useAuth();
@@ -105,6 +125,7 @@ const MySchedule = () => {
 
   const handleSave = async () => {
     if (!user) return;
+    void hapticTap();
     setSaving(true);
     const toastId = toast.loading("Guardando tu semana…");
     try {
@@ -136,69 +157,67 @@ const MySchedule = () => {
       const [planRes, syncRes] = await Promise.all(tasks);
 
       if (planRes?.error) {
+        void hapticNotify("warning");
         toast.error("Guardado, pero no se pudo regenerar el plan", { id: toastId });
         return;
       }
 
       if (gcalTok && syncRes?.data) {
         const synced = syncRes.data?.synced ?? 0;
+        void hapticNotify("success");
         toast.success(`Plan actualizado · ${synced} eventos en Google Calendar`, { id: toastId });
       } else {
-        toast.success("Plan actualizado a tu nueva semana ✓", { id: toastId });
+        void hapticNotify("success");
+        toast.success("Plan actualizado a tu nueva semana", { id: toastId });
       }
     } catch (e) {
+      void hapticNotify("error");
       toast.error("No se pudo guardar tu semana", { id: toastId });
     } finally {
       setSaving(false);
     }
   };
 
+  const goBack = () => navigate("/dashboard");
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
+      <Screen title="Mi horario" onBack={goBack} centered>
+        <div className="flex justify-center">
+          <Spinner size="lg" />
+        </div>
+      </Screen>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <PageHead
         title="Horarios y disponibilidad · Autopilot"
         description="Configura tus horarios reales de entrenamiento y disponibilidad."
         path="/my-schedule"
         noindex
       />
-      <header className="app-chrome h-14 border-b sticky top-0 z-50 flex items-center px-4 gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
-          <ArrowLeft className="w-4 h-4 mr-1.5" /> Volver
-        </Button>
-        <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground flex-1">
-          Horarios y disponibilidad
-        </h1>
-        <Button onClick={handleSave} disabled={saving} variant="hero" size="sm">
-          {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
-          Guardar
-        </Button>
-      </header>
-
-      <main className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-          <p className="text-sm">
-            Configura aquí cómo es tu semana de verdad. Tu plan de entrenos y tus comidas se sincronizarán a tu Google Calendar
-            <strong> respetando estos horarios</strong>.
+      <Screen
+        title="Mi horario"
+        largeTitle
+        onBack={goBack}
+        footer={
+          <Button onClick={handleSave} disabled={saving} size="lg" variant="hero" className="w-full">
+            {saving ? <Spinner size="sm" label="Guardando" className="text-primary-foreground" /> : null}
+            Guardar mi semana
+          </Button>
+        }
+      >
+        <div className="space-y-8 pb-4">
+          <p className="type-subhead text-muted-foreground">
+            Configura aquí cómo es tu semana de verdad. Tu plan de entrenos y tus comidas se sincronizarán a tu Google Calendar{" "}
+            <strong className="font-semibold text-foreground">respetando estos horarios</strong>.
           </p>
-        </div>
 
-        {/* Comidas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <UtensilsCrossed className="w-4 h-4 text-primary" /> Tus horarios de comidas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          {/* Comidas */}
+          <Section title="Tus horarios de comidas">
+            <ListGroup>
               {([
                 ["breakfast", "Desayuno"],
                 ["snack_am", "Snack AM"],
@@ -206,155 +225,200 @@ const MySchedule = () => {
                 ["snack_pm", "Snack PM"],
                 ["dinner", "Cena"],
               ] as const).map(([key, label]) => (
-                <div key={key}>
-                  <Label className="text-xs">{label}</Label>
-                  <Input
-                    type="time"
-                    value={mealTimes[key]}
-                    onChange={(e) => setMealTimes({ ...mealTimes, [key]: e.target.value })}
-                    className="h-9"
-                  />
-                </div>
+                <ListRow
+                  key={key}
+                  title={label}
+                  trailing={
+                    <Input
+                      type="time"
+                      aria-label={label}
+                      value={mealTimes[key]}
+                      onChange={(e) => setMealTimes({ ...mealTimes, [key]: e.target.value })}
+                      className={`${rowField} w-[116px]`}
+                    />
+                  }
+                />
               ))}
-            </div>
-            <div className="flex items-center gap-3">
-              <Label className="text-xs">Duración por comida (min)</Label>
-              <Input
-                type="number"
-                value={mealDuration}
-                onChange={(e) => setMealDuration(parseInt(e.target.value) || 30)}
-                className="h-9 w-24"
-                min={10}
-                max={120}
+              <ListRow
+                title="Duración por comida"
+                trailing={
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      aria-label="Duración por comida en minutos"
+                      value={mealDuration}
+                      onChange={(e) => setMealDuration(parseInt(e.target.value) || 30)}
+                      className={`${rowField} w-[72px]`}
+                      min={10}
+                      max={120}
+                    />
+                    <span className="type-body text-muted-foreground">min</span>
+                  </div>
+                }
               />
-            </div>
-          </CardContent>
-        </Card>
+            </ListGroup>
+          </Section>
 
-        {/* Gym slots */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Dumbbell className="w-4 h-4 text-primary" /> Tus huecos para entrenar
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {DAYS.map((d) => {
-              const daySlots = gymSlots.map((s, i) => ({ slot: s, idx: i })).filter((x) => x.slot.day === d.id);
-              return (
-                <div key={d.id} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
-                  <div className="w-20 text-sm font-medium pt-2">{d.label}</div>
-                  <div className="flex-1 space-y-2">
-                    {daySlots.length === 0 && (
-                      <p className="text-xs text-muted-foreground pt-2">Día libre</p>
-                    )}
+          {/* Gym slots */}
+          <Section title="Tus huecos para entrenar">
+            <div className="space-y-6">
+              {DAYS.map((d) => {
+                const daySlots = gymSlots.map((slot, i) => ({ slot, idx: i })).filter((x) => x.slot.day === d.id);
+                return (
+                  <ListGroup key={d.id} header={d.label}>
                     {daySlots.map(({ slot, idx }) => (
-                      <div key={idx} className="flex items-center gap-2">
+                      <InsetRow key={idx}>
                         <Input
                           type="time"
+                          aria-label={`Hora de inicio, ${d.label}`}
                           value={slot.start}
                           onChange={(e) => updateGymSlot(idx, { start: e.target.value })}
-                          className="h-8 w-28"
+                          className="h-9 w-[116px]"
                         />
                         <Input
                           type="number"
+                          inputMode="numeric"
+                          aria-label={`Duración en minutos, ${d.label}`}
                           value={slot.duration}
                           onChange={(e) => updateGymSlot(idx, { duration: parseInt(e.target.value) || 60 })}
-                          className="h-8 w-20"
+                          className="h-9 w-[72px]"
                           min={20}
                           max={240}
                         />
-                        <span className="text-xs text-muted-foreground">min</span>
-                        <Button variant="ghost" size="sm" onClick={() => removeGymSlot(idx)} className="h-8 w-8 p-0">
-                          <Trash2 className="w-3.5 h-3.5" />
+                        <span className="type-body text-muted-foreground">min</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`Quitar hueco, ${d.label}`}
+                          onClick={() => {
+                            void hapticTap();
+                            removeGymSlot(idx);
+                          }}
+                          className="-my-1 -mr-2 ml-auto text-destructive [&_svg]:size-5"
+                        >
+                          <Trash2 />
                         </Button>
-                      </div>
+                      </InsetRow>
                     ))}
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => addGymSlot(d.id)} className="h-8">
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Hueco
-                  </Button>
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Busy blocks */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Briefcase className="w-4 h-4 text-primary" /> Bloques ocupados (trabajo, clases…)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {busyBlocks.length === 0 && (
-              <p className="text-xs text-muted-foreground">Sin bloques. Añade los rangos en los que no estás disponible.</p>
-            )}
-            {busyBlocks.map((b, idx) => (
-              <div key={idx} className="flex flex-wrap items-center gap-2 p-2 bg-secondary/30 rounded-md">
-                <select
-                  value={b.day}
-                  onChange={(e) => updateBusyBlock(idx, { day: parseInt(e.target.value) })}
-                  className="h-8 px-2 text-sm bg-background border border-border rounded-md"
-                >
-                  {DAYS.map((d) => (
-                    <option key={d.id} value={d.id}>{d.label}</option>
-                  ))}
-                </select>
-                <Input type="time" value={b.start} onChange={(e) => updateBusyBlock(idx, { start: e.target.value })} className="h-8 w-28" />
-                <span className="text-xs text-muted-foreground">a</span>
-                <Input type="time" value={b.end} onChange={(e) => updateBusyBlock(idx, { end: e.target.value })} className="h-8 w-28" />
-                <Input
-                  value={b.label}
-                  onChange={(e) => updateBusyBlock(idx, { label: e.target.value })}
-                  placeholder="Etiqueta"
-                  className="h-8 flex-1 min-w-[120px]"
-                />
-                <Button variant="ghost" size="sm" onClick={() => removeBusyBlock(idx)} className="h-8 w-8 p-0">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
-            <Button variant="outline" size="sm" onClick={addBusyBlock}>
-              <Plus className="w-3.5 h-3.5 mr-1" /> Añadir bloque
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Recordatorios */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bell className="w-4 h-4 text-primary" /> Recordatorios semanales
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Pesarse</p>
-                <p className="text-xs text-muted-foreground">Domingos por la mañana</p>
-              </div>
-              <Switch checked={reminders.weigh_in} onCheckedChange={(v) => setReminders({ ...reminders, weigh_in: v })} />
+                    <ListRow
+                      icon={<Plus />}
+                      title="Añadir hueco"
+                      value={daySlots.length === 0 ? "Día libre" : undefined}
+                      onClick={() => addGymSlot(d.id)}
+                    />
+                  </ListGroup>
+                );
+              })}
             </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Foto de progreso</p>
-                <p className="text-xs text-muted-foreground">Primer domingo de cada mes</p>
-              </div>
-              <Switch checked={reminders.progress_photo} onCheckedChange={(v) => setReminders({ ...reminders, progress_photo: v })} />
-            </div>
-          </CardContent>
-        </Card>
+          </Section>
 
-        <div className="flex justify-end pt-4">
-          <Button onClick={handleSave} disabled={saving} variant="hero" size="lg">
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Guardar mi semana
-          </Button>
+          {/* Busy blocks */}
+          <Section title="Bloques ocupados (trabajo, clases…)">
+            <div className="space-y-6">
+              {busyBlocks.map((b, idx) => (
+                <ListGroup key={idx}>
+                  <ListRow
+                    title="Día"
+                    trailing={
+                      <select
+                        aria-label="Día del bloque"
+                        value={b.day}
+                        onChange={(e) => {
+                          void hapticSelection();
+                          updateBusyBlock(idx, { day: parseInt(e.target.value) });
+                        }}
+                        className={`field ${rowField} w-auto`}
+                      >
+                        {DAYS.map((d) => (
+                          <option key={d.id} value={d.id}>{d.label}</option>
+                        ))}
+                      </select>
+                    }
+                  />
+                  <ListRow
+                    title="Desde"
+                    trailing={
+                      <Input
+                        type="time"
+                        aria-label="Hora de inicio del bloque"
+                        value={b.start}
+                        onChange={(e) => updateBusyBlock(idx, { start: e.target.value })}
+                        className={`${rowField} w-[116px]`}
+                      />
+                    }
+                  />
+                  <ListRow
+                    title="Hasta"
+                    trailing={
+                      <Input
+                        type="time"
+                        aria-label="Hora de fin del bloque"
+                        value={b.end}
+                        onChange={(e) => updateBusyBlock(idx, { end: e.target.value })}
+                        className={`${rowField} w-[116px]`}
+                      />
+                    }
+                  />
+                  <ListRow
+                    title="Etiqueta"
+                    trailing={
+                      <Input
+                        aria-label="Etiqueta del bloque"
+                        value={b.label}
+                        onChange={(e) => updateBusyBlock(idx, { label: e.target.value })}
+                        placeholder="Etiqueta"
+                        enterKeyHint="done"
+                        autoCapitalize="sentences"
+                        className={`${rowField} w-40`}
+                      />
+                    }
+                  />
+                  <ListRow title="Eliminar bloque" destructive onClick={() => removeBusyBlock(idx)} />
+                </ListGroup>
+              ))}
+              <ListGroup footer={busyBlocks.length === 0 ? "Sin bloques. Añade los rangos en los que no estás disponible." : undefined}>
+                <ListRow icon={<Plus />} title="Añadir bloque" onClick={addBusyBlock} />
+              </ListGroup>
+            </div>
+          </Section>
+
+          {/* Recordatorios */}
+          <Section title="Recordatorios semanales">
+            <ListGroup>
+              <ListRow
+                title="Pesarse"
+                subtitle="Domingos por la mañana"
+                trailing={
+                  <Switch
+                    aria-label="Pesarse"
+                    checked={reminders.weigh_in}
+                    onCheckedChange={(v) => {
+                      void hapticSelection();
+                      setReminders({ ...reminders, weigh_in: v });
+                    }}
+                  />
+                }
+              />
+              <ListRow
+                title="Foto de progreso"
+                subtitle="Primer domingo de cada mes"
+                trailing={
+                  <Switch
+                    aria-label="Foto de progreso"
+                    checked={reminders.progress_photo}
+                    onCheckedChange={(v) => {
+                      void hapticSelection();
+                      setReminders({ ...reminders, progress_photo: v });
+                    }}
+                  />
+                }
+              />
+            </ListGroup>
+          </Section>
         </div>
-      </main>
-    </div>
+      </Screen>
+    </>
   );
 };
 
