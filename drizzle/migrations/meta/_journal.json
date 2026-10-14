@@ -43,6 +43,13 @@
       "when": 1791952548938,
       "tag": "0005_scan_card_attribution",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791985470265,
+      "tag": "0006_academy_fields",
+      "breakpoints": true
     }
   ]
 }
