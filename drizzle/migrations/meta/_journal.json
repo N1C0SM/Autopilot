@@ -50,6 +50,13 @@
       "when": 1791985470265,
       "tag": "0006_academy_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791987375048,
+      "tag": "0007_blog_posts_cover_alt_related",
+      "breakpoints": true
     }
   ]
 }
