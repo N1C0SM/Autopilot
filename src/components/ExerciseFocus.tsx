@@ -126,9 +126,12 @@ export const ExerciseFocus = ({
 
   return (
     <Dialog open={!!exercise} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="gap-0">
+      <DialogContent className="flex flex-col gap-0 overflow-hidden">
         {/* Bajo el botón de cerrar, no debajo de él: los controles del vídeo quedan libres. */}
-        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} className="mt-7 rounded-[14px] sm:mt-6" />
+        <ExerciseMedia video={exercise?.video} image={exercise?.image} name={name} className="mt-7 shrink-0 rounded-[14px] sm:mt-6" />
+
+        {/* Solo el texto se desplaza: un vídeo dentro de una zona con scroll se queda clavado en WebKit de iOS. */}
+        <div className="-mx-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:-mx-6 sm:px-6">
 
         <div className="mt-5 pr-8">
           <DialogTitle className="type-title2 sm:type-title2">{name}</DialogTitle>
@@ -211,6 +214,7 @@ export const ExerciseFocus = ({
               ))}
             </ListGroup>
           )}
+        </div>
         </div>
       </DialogContent>
     </Dialog>
