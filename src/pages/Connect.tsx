@@ -1,28 +1,48 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ListGroup } from "@/components/ui/list";
+import Screen from "@/components/native/Screen";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Copy, ExternalLink, Sparkles } from "lucide-react";
+import { hapticNotify } from "@/lib/native";
 
 const mcpUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/mcp`;
 
+const linkClass = "text-primary transition-opacity active:opacity-60";
+
+const Steps = ({ items }: { items: ReactNode[] }) => (
+  <ol>
+    {items.map((step, i) => (
+      <li key={i} className="group/row flex items-start gap-3 px-4">
+        <span className="mt-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 type-footnote font-semibold tabular-nums text-primary">
+          {i + 1}
+        </span>
+        <span className="min-w-0 flex-1 py-3 type-subhead group-[:not(:last-child)]/row:sep-b">{step}</span>
+      </li>
+    ))}
+  </ol>
+);
+
 const Connect = () => {
+  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
   const copyUrl = async () => {
     try {
       await navigator.clipboard.writeText(mcpUrl);
       setCopied(true);
+      void hapticNotify("success");
       toast.success("URL copiada");
       setTimeout(() => setCopied(false), 1800);
     } catch {
+      void hapticNotify("error");
       toast.error("No se pudo copiar");
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <Helmet>
         <title>Conectar Autopilot con ChatGPT o Claude (MCP) · Autopilot</title>
         <meta
@@ -32,133 +52,74 @@ const Connect = () => {
         <link rel="canonical" href="https://autopilotplan.com/connect" />
       </Helmet>
 
-      <div className="container mx-auto max-w-3xl px-4 py-14 sm:py-20">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-        >
-          <ArrowLeft className="w-4 h-4" /> Volver al inicio
-        </Link>
-
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/[0.08] mb-6">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-primary">
-            Integración con IA
-          </span>
-        </div>
-
-        <h1 className="text-3xl sm:text-5xl font-bold font-display leading-[1.05] tracking-tight mb-4">
-          Conecta Autopilot a tu <span className="text-gradient">asistente de IA</span>
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground mb-10 max-w-xl leading-relaxed">
-          En un minuto tendrás tu plan de entrenamiento, tu nutrición y tus registros de peso disponibles desde ChatGPT o Claude. Solo hace falta pegar esta URL.
-        </p>
-
-        {/* URL card */}
-        <section className="rounded-2xl border border-border bg-card p-5 sm:p-6 mb-12 premium-shadow">
-          <div className="text-[10px] font-mono uppercase tracking-[0.22em] text-muted-foreground mb-3">
-            URL del servidor MCP
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <code className="flex-1 min-w-0 rounded-xl bg-muted px-4 py-3 text-sm font-mono break-all">
-              {mcpUrl}
-            </code>
-            <Button onClick={copyUrl} variant="hero" className="shrink-0">
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" /> Copiada
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" /> Copiar
-                </>
-              )}
-            </Button>
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Cuando tu asistente te pida iniciar sesión, entra con tu cuenta de Autopilot: verá solo tus propios datos.
+      <Screen title="Conectar con IA" largeTitle onBack={() => navigate("/")} backLabel="Inicio" maxWidth="md">
+        <div className="space-y-8 pb-6">
+          <p className="px-1 type-callout text-muted-foreground">
+            En un minuto tendrás tu plan de entrenamiento, tu nutrición y tus registros de peso disponibles desde ChatGPT o Claude. Solo hace falta pegar esta URL.
           </p>
-        </section>
 
-        {/* ChatGPT */}
-        <section className="mb-10">
-          <h2 className="text-xl sm:text-2xl font-bold font-display mb-4">
-            Conectar desde ChatGPT
-          </h2>
-          <ol className="space-y-3">
-            {[
-              <>
-                Abre{" "}
-                <a
-                  href="https://chatgpt.com/#settings/Connectors/Advanced"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Ajustes → Conectores → Avanzado
-                  <ExternalLink className="w-3 h-3" />
-                </a>{" "}
-                y activa <strong>Developer mode</strong> (revisa el aviso de riesgo que aparece).
-              </>,
-              <>En el chat, abre el menú "+" del composer y activa <strong>Developer mode</strong>.</>,
-              <>Pulsa <strong>Add sources</strong> y luego <strong>Connect more</strong>.</>,
-              <>Ponle un nombre al conector (por ejemplo "Autopilot") y pega la URL de arriba.</>,
-              <>Pide a ChatGPT que use Autopilot: por ejemplo, "enséñame mi plan de entrenamiento".</>,
-            ].map((step, i) => (
-              <li
-                key={i}
-                className="flex gap-3 rounded-xl border border-border bg-card/50 p-4"
-              >
-                <span className="shrink-0 w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <span className="text-sm leading-relaxed text-foreground/90">{step}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
+          <ListGroup
+            header="URL del servidor MCP"
+            footer="Cuando tu asistente te pida iniciar sesión, entra con tu cuenta de Autopilot: verá solo tus propios datos."
+          >
+            <div className="flex items-center gap-3 py-2 pl-4 pr-2">
+              <code className="selectable min-w-0 flex-1 break-all font-mono type-footnote">{mcpUrl}</code>
+              <Button variant="plain" size="sm" className="shrink-0" onClick={copyUrl} aria-live="polite">
+                {copied ? "Copiada" : "Copiar"}
+              </Button>
+            </div>
+          </ListGroup>
 
-        {/* Claude */}
-        <section className="mb-14">
-          <h2 className="text-xl sm:text-2xl font-bold font-display mb-4">
-            Conectar desde Claude
-          </h2>
-          <ol className="space-y-3">
-            {[
-              <>
-                Abre{" "}
-                <a
-                  href="https://claude.ai/customize/connectors?modal=add-custom-connector"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  Añadir conector personalizado en Claude
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-                .
-              </>,
-              <>Ponle nombre al conector (por ejemplo "Autopilot") y pega la URL de arriba.</>,
-              <>Actívalo desde el composer del chat y pídele a Claude que use Autopilot.</>,
-            ].map((step, i) => (
-              <li
-                key={i}
-                className="flex gap-3 rounded-xl border border-border bg-card/50 p-4"
-              >
-                <span className="shrink-0 w-6 h-6 rounded-full bg-primary/15 text-primary text-xs font-bold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <span className="text-sm leading-relaxed text-foreground/90">{step}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
+          <ListGroup header="Conectar desde ChatGPT">
+            <Steps
+              items={[
+                <>
+                  Abre{" "}
+                  <a
+                    href="https://chatgpt.com/#settings/Connectors/Advanced"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={linkClass}
+                  >
+                    Ajustes → Conectores → Avanzado
+                  </a>{" "}
+                  y activa <strong>Developer mode</strong> (revisa el aviso de riesgo que aparece).
+                </>,
+                <>En el chat, abre el menú "+" del composer y activa <strong>Developer mode</strong>.</>,
+                <>Pulsa <strong>Add sources</strong> y luego <strong>Connect more</strong>.</>,
+                <>Ponle un nombre al conector (por ejemplo "Autopilot") y pega la URL de arriba.</>,
+                <>Pide a ChatGPT que use Autopilot: por ejemplo, "enséñame mi plan de entrenamiento".</>,
+              ]}
+            />
+          </ListGroup>
 
-        <div className="rounded-2xl border border-border bg-card/40 p-5 text-sm text-muted-foreground">
-          <strong className="text-foreground">¿Problemas?</strong> Asegúrate de estar en la cuenta correcta de Autopilot al iniciar sesión durante la conexión. Tu asistente solo podrá leer tu perfil, tu plan y registrar tu peso — nunca datos de otros usuarios.
+          <ListGroup header="Conectar desde Claude">
+            <Steps
+              items={[
+                <>
+                  Abre{" "}
+                  <a
+                    href="https://claude.ai/customize/connectors?modal=add-custom-connector"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={linkClass}
+                  >
+                    Añadir conector personalizado en Claude
+                  </a>
+                  .
+                </>,
+                <>Ponle nombre al conector (por ejemplo "Autopilot") y pega la URL de arriba.</>,
+                <>Actívalo desde el composer del chat y pídele a Claude que use Autopilot.</>,
+              ]}
+            />
+          </ListGroup>
+
+          <p className="px-4 type-footnote text-muted-foreground">
+            <strong className="font-semibold text-foreground">¿Problemas?</strong> Asegúrate de estar en la cuenta correcta de Autopilot al iniciar sesión durante la conexión. Tu asistente solo podrá leer tu perfil, tu plan y registrar tu peso — nunca datos de otros usuarios.
+          </p>
         </div>
-      </div>
-    </div>
+      </Screen>
+    </>
   );
 };
 

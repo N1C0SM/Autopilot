@@ -1,24 +1,31 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPanel from "./SettingsPanel";
 const mocks = vi.hoisted(() => ({
   user: { id: "user", email: "test@example.com" },
-  tier: "full", paid: "paid", status: "active", end: null as string | null,
+  tier: "full", paid: "paid", status: "active", end: null as string | null, travelUntil: null as string | null,
   availability: { days: "2", hours: "0.92", training_days: [1, 3], auto_calculated: true, sport_schedules: { running: "18:00" } } as Record<string, unknown>,
   saves: [] as Record<string, unknown>[],
+  updates: [] as { table: string; row: Record<string, unknown> }[],
+  toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
+vi.mock("sonner", () => ({ toast: mocks.toast }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: (table: string) => {
     const query = { select: () => query, eq: () => query, maybeSingle: () => query,
-      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "profiles" ? { subscription_tier: mocks.tier, payment_status: mocks.paid, subscription_status: mocks.status, subscription_end: mocks.end } : table === "onboarding" ? { availability: mocks.availability } : null, error: null }).then(resolve),
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "profiles" ? { subscription_tier: mocks.tier, payment_status: mocks.paid, subscription_status: mocks.status, subscription_end: mocks.end, travel_mode_until: mocks.travelUntil, travel_equipment: "gomas" } : table === "onboarding" ? { availability: mocks.availability } : null, error: null }).then(resolve),
       upsert: (row: Record<string, unknown>) => { mocks.saves.push(row); return Promise.resolve({ error: null }); },
+      update: (row: Record<string, unknown>) => { mocks.updates.push({ table, row }); return query; },
     }; return query;
   },
   rpc: () => Promise.resolve({ data: {} }), functions: { invoke: () => Promise.resolve({ data: {} }) },
 } }));
-beforeEach(() => { mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.saves = []; });
+beforeEach(() => {
+  mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.travelUntil = null; mocks.saves = []; mocks.updates = [];
+  mocks.toast.error.mockClear(); mocks.toast.success.mockClear(); mocks.toast.info.mockClear();
+});
 afterEach(cleanup);
 const show = () => render(<MemoryRouter><SettingsPanel /></MemoryRouter>);
 describe("settings plan labels and availability", () => {
@@ -46,5 +53,74 @@ describe("settings plan labels and availability", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
     await waitFor(() => expect(mocks.saves).toHaveLength(1));
     expect(mocks.saves[0].availability).toEqual({ ...mocks.availability, days: "3", auto_calculated: false });
+  });
+});
+
+describe("settings goal and rest controls", () => {
+  it("moves the goal with the arrow keys, keeps a single tab stop and saves the chosen goal", async () => {
+    show();
+    const radios = await screen.findAllByRole("radio");
+    expect(radios.map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false", "false"]);
+    expect(radios.map((r) => r.tabIndex)).toEqual([0, -1, -1]);
+    radios[0].focus();
+    fireEvent.keyDown(radios[0], { key: "ArrowDown" });
+    expect(radios[1]).toHaveAttribute("aria-checked", "true");
+    expect(radios[1]).toHaveFocus();
+    expect(radios.map((r) => r.tabIndex)).toEqual([-1, 0, -1]);
+    fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
+    await waitFor(() => expect(mocks.saves).toHaveLength(1));
+    expect(mocks.saves[0].goal).toBe("gain_muscle");
+  });
+  it("names the rest presets control for assistive technology", async () => {
+    show();
+    const presets = await screen.findByRole("tablist", { name: "Descanso entre series" });
+    expect(within(presets).getAllByRole("tab").length).toBeGreaterThan(0);
+  });
+});
+
+describe("settings account deletion", () => {
+  it.each([
+    ["active", "Tienes una suscripción activa", "Al eliminar la cuenta se cancela la suscripción y pierdes el acceso de inmediato, aunque hayas pagado hasta el final del periodo."],
+    ["trialing", "Tienes una prueba activa", "Al eliminar la cuenta cancelas la prueba y pierdes el acceso de inmediato — aunque aún no se te haya cobrado."],
+  ])("warns about a %s subscription before deleting the account", async (status, title, body) => {
+    mocks.status = status; show();
+    fireEvent.click(await screen.findByRole("button", { name: "Eliminar cuenta" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(title)).toBeVisible();
+    expect(within(dialog).getByText(body)).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Sí, eliminar cuenta" })).toBeEnabled();
+  });
+  it("shows no subscription warning when a free account is deleted", async () => {
+    mocks.tier = "free"; show();
+    fireEvent.click(await screen.findByRole("button", { name: "Eliminar cuenta" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(/Esta acción elimina permanentemente tu cuenta/)).toBeVisible();
+    expect(within(dialog).queryByText(/Tienes una (suscripción|prueba) activa/)).not.toBeInTheDocument();
+  });
+});
+
+describe("settings travel mode", () => {
+  it("asks for an end date before activating and does not write anything", async () => {
+    show();
+    fireEvent.click(await screen.findByRole("switch", { name: "Modo viaje" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Activar" }));
+    expect(mocks.toast.error).toHaveBeenCalledWith("Indica hasta cuándo estarás de viaje");
+    expect(mocks.updates).toHaveLength(0);
+  });
+  it("closes the form without saving when the switch is turned back off", async () => {
+    show();
+    const toggle = await screen.findByRole("switch", { name: "Modo viaje" });
+    fireEvent.click(toggle);
+    expect(await screen.findByLabelText("Equipamiento disponible")).toBeVisible();
+    fireEvent.click(toggle);
+    await waitFor(() => expect(screen.queryByLabelText("Equipamiento disponible")).not.toBeInTheDocument());
+    expect(mocks.updates).toHaveLength(0);
+  });
+  it("turns an active travel mode off from its switch and clears the stored trip", async () => {
+    mocks.travelUntil = "2999-01-01"; show();
+    const toggle = await screen.findByRole("switch", { name: "Modo viaje" });
+    await waitFor(() => expect(toggle).toBeChecked());
+    fireEvent.click(toggle);
+    await waitFor(() => expect(mocks.updates).toContainEqual({ table: "profiles", row: { travel_mode_until: null, travel_equipment: null } }));
   });
 });

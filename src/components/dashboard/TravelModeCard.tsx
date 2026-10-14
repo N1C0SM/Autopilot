@@ -2,14 +2,28 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plane, X, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { Plane } from "lucide-react";
 import { toast } from "sonner";
 import { toLocalDateString } from "@/lib/localDates";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 
 interface Props {
   userId: string;
 }
+
+const rowInput = "h-11 min-w-0 flex-1 bg-transparent px-0 text-right";
+
+const FieldRow = ({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) => (
+  <div className="group/row flex min-h-[44px] items-center px-4">
+    <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 group-[:not(:last-child)]/row:sep-b">
+      <label htmlFor={htmlFor} className="shrink-0 type-body md:text-sm">{label}</label>
+      {children}
+    </div>
+  </div>
+);
 
 const TravelModeCard = ({ userId }: Props) => {
   const [active, setActive] = useState(false);
@@ -40,6 +54,7 @@ const TravelModeCard = ({ userId }: Props) => {
   const activate = async () => {
     if (!until) {
       toast.error("Indica hasta cuándo estarás de viaje");
+      void hapticNotify("error");
       return;
     }
     setSaving(true);
@@ -49,12 +64,14 @@ const TravelModeCard = ({ userId }: Props) => {
       .eq("user_id", userId);
     if (error) {
       toast.error("Error al activar modo viaje");
+      void hapticNotify("error");
       setSaving(false);
       return;
     }
     // Regenerate plan adapted to travel
     supabase.functions.invoke("generate-plan", { body: { user_id: userId } });
-    toast.success("Modo viaje activado. Tu plan se está adaptando 🌴");
+    toast.success("Modo viaje activado. Tu plan se está adaptando");
+    void hapticNotify("success");
     setActive(true);
     setEditing(false);
     setSaving(false);
@@ -68,109 +85,105 @@ const TravelModeCard = ({ userId }: Props) => {
       .eq("user_id", userId);
     if (error) {
       toast.error("Error al desactivar modo viaje");
+      void hapticNotify("error");
       setSaving(false);
       return;
     }
     supabase.functions.invoke("generate-plan", { body: { user_id: userId } });
     toast.success("Modo viaje desactivado. Volviendo a tu plan normal");
+    void hapticNotify("success");
     setActive(false);
     setUntil("");
     setEquipment("");
     setSaving(false);
   };
 
-  if (active && !editing) {
-    return (
-      <div className="bg-card rounded-2xl p-5 border border-primary/30">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Plane className="w-5 h-5 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-display font-bold text-sm">Modo viaje activo</h3>
-              <p className="text-xs text-muted-foreground">
-                Hasta el{" "}
-                {new Date(until).toLocaleDateString("es-ES", {
-                  day: "numeric",
-                  month: "long",
-                })}
-              </p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Equipamiento: {equipment || "ninguno"}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={deactivate}
-            disabled={saving}
-            className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-            aria-label="Desactivar modo viaje"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const showActive = active && !editing;
+  const switchedOn = active || editing;
 
-  if (editing || active) {
-    return (
-      <div className="bg-card rounded-2xl p-5 border border-border">
-        <div className="flex items-center gap-2 mb-4">
-          <Plane className="w-4 h-4 text-primary" />
-          <h3 className="font-display font-bold text-sm">Activar modo viaje</h3>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <Label className="text-xs">Hasta cuándo</Label>
-            <Input
-              type="date"
-              value={until}
-              onChange={(e) => setUntil(e.target.value)}
-              min={toLocalDateString()}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label className="text-xs">Equipamiento disponible</Label>
-            <Input
-              value={equipment}
-              onChange={(e) => setEquipment(e.target.value)}
-              placeholder="Ej: solo gomas, gym del hotel, ninguno"
-              className="mt-1"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button variant="hero" size="sm" onClick={activate} disabled={saving} className="flex-1">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Activar"}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const toggle = (on: boolean) => {
+    void hapticSelection();
+    if (on) setEditing(true);
+    else if (active) void deactivate();
+    else setEditing(false);
+  };
 
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className="w-full bg-card rounded-2xl p-5 border border-border hover:border-primary/30 transition-colors text-left"
-    >
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
-          <Plane className="w-5 h-5 text-muted-foreground" />
+    <div className="space-y-3">
+      <ListGroup
+        footer={editing ? "Equipamiento disponible, por ejemplo: solo gomas, gym del hotel, ninguno." : undefined}
+      >
+        <ListRow
+          icon={<Plane />}
+          title={showActive ? "Modo viaje activo" : "Modo viaje"}
+          subtitle={showActive ? undefined : "Adapta tu plan cuando estás fuera de tu rutina habitual"}
+          trailing={
+            <>
+              {saving && !editing ? <Spinner size="sm" className="mr-3" /> : null}
+              <Switch checked={switchedOn} onCheckedChange={toggle} disabled={saving} aria-label="Modo viaje" />
+            </>
+          }
+        />
+        {showActive ? (
+          <>
+            <ListRow
+              title="Hasta"
+              value={new Date(until).toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
+            />
+            <ListRow title="Equipamiento" value={equipment || "ninguno"} />
+          </>
+        ) : null}
+        {editing ? (
+          <>
+            <FieldRow label="Hasta cuándo" htmlFor="travel-until">
+              <Input
+                id="travel-until"
+                type="date"
+                value={until}
+                onChange={(e) => setUntil(e.target.value)}
+                min={toLocalDateString()}
+                className="ml-auto h-11 w-auto min-w-0 bg-transparent px-0"
+              />
+            </FieldRow>
+            <FieldRow label="Equipamiento" htmlFor="travel-equipment">
+              <Input
+                id="travel-equipment"
+                value={equipment}
+                onChange={(e) => setEquipment(e.target.value)}
+                placeholder="Opcional"
+                aria-label="Equipamiento disponible"
+                enterKeyHint="done"
+                className={rowInput}
+              />
+            </FieldRow>
+          </>
+        ) : null}
+      </ListGroup>
+      {editing ? (
+        <div className="flex gap-2">
+          <Button
+            variant="hero"
+            className="flex-1"
+            onClick={() => {
+              void hapticTap();
+              void activate();
+            }}
+            disabled={saving}
+          >
+            {saving ? <Spinner size="sm" className="text-primary-foreground" label="Activando" /> : "Activar"}
+          </Button>
+          <Button
+            variant="plain"
+            onClick={() => {
+              void hapticTap();
+              setEditing(false);
+            }}
+          >
+            Cancelar
+          </Button>
         </div>
-        <div>
-          <h3 className="font-display font-bold text-sm">Modo viaje</h3>
-          <p className="text-xs text-muted-foreground">
-            Adapta tu plan cuando estás fuera de tu rutina habitual
-          </p>
-        </div>
-      </div>
-    </button>
+      ) : null}
+    </div>
   );
 };
 

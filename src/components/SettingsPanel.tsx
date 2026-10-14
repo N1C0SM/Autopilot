@@ -1,26 +1,23 @@
 import { errorMessage } from "@/lib/runtimeValues";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  Save, Camera, Trash2, Loader2, User, Lock, ClipboardList,
-  CreditCard, ExternalLink, Calendar, Crown, CalendarClock, Check, Zap, Unplug, RefreshCw,
-  ShieldCheck, Download, FileText, LogOut,
-  Timer,
+  Camera, User, Crown, ExternalLink, Calendar, CalendarClock, Check, Zap, Unplug, RefreshCw,
+  Download, FileText,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
 import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/lib/workoutPreferences";
@@ -28,8 +25,46 @@ import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import type { Json } from "@/integrations/supabase/types";
+
+const GOALS = [
+  { value: "lose_weight", label: "Perder peso" },
+  { value: "gain_muscle", label: "Ganar músculo" },
+  { value: "improve_endurance", label: "Mejorar resistencia" },
+];
+
+const rowInput = "h-11 min-w-0 flex-1 bg-transparent px-0 text-right";
+const blockTextarea = "rounded-none bg-transparent px-4";
+
+// Row with the label on the left and the value right-aligned, like a UITableView text field cell.
+const FieldRow = ({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) => (
+  <div className="group/row flex min-h-[44px] items-center px-4">
+    <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 group-[:not(:last-child)]/row:sep-b">
+      <label htmlFor={htmlFor} className="shrink-0 type-body md:text-sm">{label}</label>
+      {children}
+    </div>
+  </div>
+);
+
+// Single-choice row with a trailing check, as in Settings > General > Language.
+// `focusable` gives the group a single tab stop (roving tabindex); arrows move within it.
+const OptionRow = ({ label, selected, focusable, onSelect }: { label: string; selected: boolean; focusable: boolean; onSelect: () => void }) => (
+  <button
+    type="button"
+    role="radio"
+    aria-checked={selected}
+    tabIndex={focusable ? 0 : -1}
+    onClick={onSelect}
+    className="group/row flex min-h-[44px] w-full items-center px-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+  >
+    <span className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 py-[11px] group-[:not(:last-child)]/row:sep-b">
+      <span className="min-w-0 flex-1 truncate type-body">{label}</span>
+      {selected ? <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden="true" /> : null}
+    </span>
+  </button>
+);
 
 const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
   const plans = usePlanAvailability();
@@ -42,6 +77,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Profile
   const [name, setName] = useState("");
@@ -57,6 +93,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     if (error) {
       setPrivacy((p) => ({ ...p, [key]: !value }));
       toast.error("No se pudo guardar la privacidad");
+      void hapticNotify("error");
     } else toast.success("Privacidad actualizada");
   };
 
@@ -156,6 +193,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       if (data?.url) window.location.href = data.url;
     } catch {
       toast.error("No se pudo iniciar la conexión con Google");
+      void hapticNotify("error");
       setGcalLoading(false);
     }
   };
@@ -167,14 +205,17 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       if (error) throw error;
       const parts = [`${data.synced}/${data.total} eventos sincronizados`];
       if (data.deleted) parts.push(`${data.deleted} obsoletos eliminados`);
-      toast.success(`✅ ${parts.join(" · ")}`);
+      toast.success(parts.join(" · "));
+      void hapticNotify("success");
       if (data.errors?.length) {
         toast.error(`${data.errors.length} eventos fallaron. Revisa los logs.`);
+        void hapticNotify("error");
         console.warn("[gcal-sync] errors:", data.errors);
       }
       setGcalLastSync(new Date().toISOString());
     } catch {
       toast.error("Error al sincronizar");
+      void hapticNotify("error");
     } finally {
       setGcalLoading(false);
     }
@@ -190,6 +231,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       toast.success("Google Calendar desconectado");
     } catch {
       toast.error("Error al desconectar");
+      void hapticNotify("error");
     } finally {
       setGcalLoading(false);
     }
@@ -198,12 +240,12 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("La imagen no puede superar 2MB"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("La imagen no puede superar 2MB"); void hapticNotify("error"); return; }
     setUploading(true);
     const ext = file.name.split(".").pop();
     const path = `${user.id}/avatar.${ext}`;
     const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (uploadError) { toast.error("Error al subir la imagen"); setUploading(false); return; }
+    if (uploadError) { toast.error("Error al subir la imagen"); void hapticNotify("error"); setUploading(false); return; }
     const { data: publicUrl } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = `${publicUrl.publicUrl}?t=${Date.now()}`;
     await supabase.from("profiles").update({ avatar_url: url }).eq("user_id", user.id);
@@ -218,21 +260,21 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     const { error } = await supabase.from("profiles").update({ name, email }).eq("user_id", user.id);
     if (email !== user.email) {
       const { error: emailErr } = await supabase.auth.updateUser({ email });
-      if (emailErr) { toast.error("Error al cambiar email: " + emailErr.message); setSaving(false); return; }
+      if (emailErr) { toast.error("Error al cambiar email: " + emailErr.message); void hapticNotify("error"); setSaving(false); return; }
       toast.info("Se ha enviado un email de confirmación al nuevo correo");
     }
-    if (!error) toast.success("Perfil guardado");
-    else toast.error("Error al guardar");
+    if (!error) { toast.success("Perfil guardado"); void hapticNotify("success"); }
+    else { toast.error("Error al guardar"); void hapticNotify("error"); }
     setSaving(false);
   };
 
   const changePassword = async () => {
-    if (newPassword.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); return; }
-    if (newPassword !== confirmPassword) { toast.error("Las contraseñas no coinciden"); return; }
+    if (newPassword.length < 6) { toast.error("La contraseña debe tener al menos 6 caracteres"); void hapticNotify("error"); return; }
+    if (newPassword !== confirmPassword) { toast.error("Las contraseñas no coinciden"); void hapticNotify("error"); return; }
     setChangingPassword(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (!error) { toast.success("Contraseña actualizada"); setNewPassword(""); setConfirmPassword(""); }
-    else toast.error("Error: " + error.message);
+    if (!error) { toast.success("Contraseña actualizada"); void hapticNotify("success"); setNewPassword(""); setConfirmPassword(""); }
+    else { toast.error("Error: " + error.message); void hapticNotify("error"); }
     setChangingPassword(false);
   };
 
@@ -242,6 +284,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       const days = getAvailabilityDayCount(onboarding.availability);
       if (days === null || days < 1 || getAvailabilityHours(onboarding.availability) === null) {
         toast.error("Indica entre 1 y 7 días y una duración válida para cada sesión.");
+        void hapticNotify("error");
         return;
       }
     }
@@ -256,8 +299,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       nutrition_preferences: onboarding.nutrition_preferences,
       allergies: onboarding.allergies,
     }, { onConflict: "user_id" });
-    if (!error) toast.success("Datos actualizados");
-    else { console.error("saveOnboarding", error); toast.error(`No se pudo guardar: ${error.message}`); }
+    if (!error) { toast.success("Datos actualizados"); void hapticNotify("success"); }
+    else { console.error("saveOnboarding", error); toast.error(`No se pudo guardar: ${error.message}`); void hapticNotify("error"); }
     setSaving(false);
   };
 
@@ -271,6 +314,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     }
     if (error || !data?.url) {
       toast.error("No se pudo abrir la gestión de tu suscripción. Escríbele a tu entrenador por el chat y lo resuelve.");
+      void hapticNotify("error");
       setLoadingPortal(false);
       return;
     }
@@ -284,6 +328,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     const { error } = await supabase.functions.invoke("delete-account");
     if (error) {
       toast.error("Error al eliminar la cuenta. Inténtalo de nuevo.");
+      void hapticNotify("error");
       setDeleting(false);
       return;
     }
@@ -314,51 +359,237 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       toast.success("Tus datos se han descargado");
     } catch (e: unknown) {
       toast.error(errorMessage(e) || "No se pudieron exportar tus datos");
+      void hapticNotify("error");
     } finally {
       setExporting(false);
     }
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+    return <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>;
   }
 
   const hasPaidAccess = consumerPlan !== "free";
   const isActive = hasPaidAccess && ["active", "trialing"].includes(subscriptionStatus);
   const planName = consumerPlan === "coach" ? TIERS.full.name : consumerPlan === "plus" ? TIERS.training.name : TIERS.free.name;
+  const longDate = (value: string) =>
+    new Date(value).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+  const subscriptionFooter = hasPaidAccess
+    ? currentPlan === "monthly"
+      ? `Cambia a Anual y ahorra ${MONTHLY_PRICE_EUR * 12 - yearlyPriceEur}€/año desde el portal de gestión.`
+      : currentPlan
+        ? "Puedes cambiar a Mensual desde el portal de gestión cuando quieras."
+        : undefined
+    : "No tienes una suscripción activa. Empieza cuando quieras: 7 días de prueba.";
+
+  const setAvailability = (field: "days" | "hours", value: string) => {
+    setAvailabilityEdited(true);
+    setOnboarding((o) => ({ ...o, availability: { ...o.availability, [field]: value } }));
+  };
+
+  const selectGoal = (value: string) => {
+    void hapticSelection();
+    setOnboarding((o) => ({ ...o, goal: value }));
+  };
+
+  // Arrow keys move the selection inside the goal radio group, as the Radix RadioGroup did.
+  const handleGoalKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === "ArrowDown" || e.key === "ArrowRight" ? 1 : e.key === "ArrowUp" || e.key === "ArrowLeft" ? -1 : 0;
+    if (!step) return;
+    const radios = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]'));
+    const current = (e.target as HTMLElement).closest<HTMLElement>('[role="radio"]');
+    const from = current ? radios.indexOf(current) : -1;
+    if (from === -1) return;
+    e.preventDefault();
+    const to = (from + step + GOALS.length) % GOALS.length;
+    selectGoal(GOALS[to].value);
+    radios[to]?.focus();
+  };
+  const goalTabStop = GOALS.some((g) => g.value === onboarding.goal) ? onboarding.goal : GOALS[0].value;
 
   return (
-    <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
-      {/* Workout preferences */}
-      <div className={`order-3 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <Timer className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Tu forma de entrenar</h2>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      {/* Profile */}
+      <div className="order-1 flex flex-col gap-6">
+        <div className="flex items-center gap-4 px-1">
+          <button
+            type="button"
+            aria-label="Cambiar foto de perfil"
+            onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}
+            className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary transition-opacity active:opacity-70"
+          >
+            {avatarUrl ? <img loading="lazy" decoding="async" src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <User className="h-7 w-7 text-muted-foreground" />}
+            {uploading ? (
+              <span className="absolute inset-0 flex items-center justify-center bg-background/60">
+                <Spinner size="md" className="text-foreground" label="Subiendo foto" />
+              </span>
+            ) : null}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+          <div className="min-w-0">
+            <p className="truncate type-title2">{name || "Tu perfil"}</p>
+            {email ? <p className="truncate type-subhead text-muted-foreground">{email}</p> : null}
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground mb-5">
-          Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.
-        </p>
-        <Label className="text-sm">Descanso entre series</Label>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-2">
-          {REST_PRESETS.map((seconds) => (
-            <Button
-              key={seconds}
-              type="button"
-              size="sm"
-              variant={restSeconds === seconds ? "default" : "outline"}
-              onClick={() => {
+
+        <div className="space-y-3">
+          <ListGroup header="Perfil">
+            <FieldRow label="Nombre" htmlFor="settings-name">
+              <Input
+                id="settings-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tu nombre"
+                autoCapitalize="words"
+                autoComplete="name"
+                enterKeyHint="next"
+                className={rowInput}
+              />
+            </FieldRow>
+            <FieldRow label="Correo" htmlFor="settings-email">
+              <Input
+                id="settings-email"
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoComplete="email"
+                enterKeyHint="done"
+                aria-label="Correo electrónico"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@ejemplo.com"
+                className={rowInput}
+              />
+            </FieldRow>
+            <ListRow
+              icon={<Camera />}
+              title="Cambiar foto"
+              trailing={uploading ? <Spinner size="sm" label="Subiendo foto" /> : undefined}
+              onClick={() => fileInputRef.current?.click()}
+            />
+          </ListGroup>
+          <Button variant="tinted" className="w-full" onClick={() => { void hapticTap(); void saveProfile(); }} disabled={saving}>
+            {saving ? "Guardando…" : "Guardar perfil"}
+          </Button>
+        </div>
+
+        <ListGroup
+          className={hideForAdmin.trim()}
+          header="Privacidad"
+          footer="Tu entrenador siempre te ve. Esto decide qué pueden ver los demás."
+        >
+          {([
+            ["name_public", "Nombre público", "Si está apagado, se muestran solo tus iniciales."],
+            ["avatar_public", "Foto de perfil pública", "Si está apagado, se muestra un icono genérico."],
+            ["progress_public", "Progreso público", "Permite mostrar tu evolución (fotos, logros) fuera de tu cuenta."],
+          ] as const).map(([key, label, hint]) => (
+            <ListRow
+              key={key}
+              title={label}
+              subtitle={hint}
+              trailing={
+                <Switch
+                  checked={privacy[key]}
+                  onCheckedChange={(v) => { void hapticSelection(); void updatePrivacy(key, v); }}
+                  aria-label={label}
+                />
+              }
+            />
+          ))}
+        </ListGroup>
+      </div>
+
+      {/* Onboarding data */}
+      {hasOnboarding && (
+        <div className={`order-2 flex flex-col gap-6${hideForAdmin}`}>
+          <ListGroup header="Tus datos">
+            <FieldRow label="Edad" htmlFor="settings-age">
+              <Input id="settings-age" type="number" inputMode="numeric" enterKeyHint="next" value={onboarding.age} onChange={(e) => setOnboarding((o) => ({ ...o, age: e.target.value }))} className={rowInput} />
+            </FieldRow>
+            <FieldRow label="Altura (cm)" htmlFor="settings-height">
+              <Input id="settings-height" type="number" inputMode="decimal" enterKeyHint="next" value={onboarding.height} onChange={(e) => setOnboarding((o) => ({ ...o, height: e.target.value }))} className={rowInput} />
+            </FieldRow>
+            <FieldRow label="Peso (kg)" htmlFor="settings-weight">
+              <Input id="settings-weight" type="number" inputMode="decimal" enterKeyHint="done" value={onboarding.weight} onChange={(e) => setOnboarding((o) => ({ ...o, weight: e.target.value }))} className={rowInput} />
+            </FieldRow>
+          </ListGroup>
+
+          <ListGroup header="Objetivo">
+            <div role="radiogroup" aria-label="Objetivo" onKeyDown={handleGoalKeyDown}>
+              {GOALS.map((opt) => (
+                <OptionRow
+                  key={opt.value}
+                  label={opt.label}
+                  selected={onboarding.goal === opt.value}
+                  focusable={goalTabStop === opt.value}
+                  onSelect={() => selectGoal(opt.value)}
+                />
+              ))}
+            </div>
+          </ListGroup>
+
+          <ListGroup header="Disponibilidad">
+            <FieldRow label="Días/semana" htmlFor="availability-days">
+              <Input id="availability-days" type="number" inputMode="numeric" enterKeyHint="next" min={1} max={7} value={onboarding.availability.days} onChange={(e) => setAvailability("days", e.target.value)} className={rowInput} />
+            </FieldRow>
+            <FieldRow label="Horas/sesión" htmlFor="availability-hours">
+              <Input id="availability-hours" type="number" inputMode="decimal" enterKeyHint="done" min={0.25} max={24} step="0.01" value={onboarding.availability.hours} onChange={(e) => setAvailability("hours", e.target.value)} className={rowInput} />
+            </FieldRow>
+          </ListGroup>
+
+          <ListGroup header="Deportes">
+            <Textarea aria-label="Deportes" value={onboarding.sports} onChange={(e) => setOnboarding((o) => ({ ...o, sports: e.target.value }))} className={blockTextarea} rows={2} />
+          </ListGroup>
+          <ListGroup header="Preferencias nutricionales">
+            <Textarea aria-label="Preferencias nutricionales" value={onboarding.nutrition_preferences} onChange={(e) => setOnboarding((o) => ({ ...o, nutrition_preferences: e.target.value }))} className={blockTextarea} rows={2} />
+          </ListGroup>
+          <ListGroup header="Alergias">
+            <Textarea aria-label="Alergias" value={onboarding.allergies} onChange={(e) => setOnboarding((o) => ({ ...o, allergies: e.target.value }))} className={blockTextarea} rows={2} />
+          </ListGroup>
+
+          <Button variant="tinted" className="w-full" onClick={() => { void hapticTap(); void saveOnboarding(); }} disabled={saving}>
+            {saving ? "Guardando…" : "Guardar datos"}
+          </Button>
+        </div>
+      )}
+
+      {/* Workout preferences */}
+      <ListGroup
+        className={`order-3${hideForAdmin}`}
+        header="Tu forma de entrenar"
+        footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan."
+      >
+        <div className="group/row px-4">
+          <div className="py-3 group-[:not(:last-child)]/row:sep-b">
+            <p className="mb-2 type-body">Descanso entre series</p>
+            <Tabs
+              value={String(restSeconds)}
+              onValueChange={(value) => {
                 if (!user) return;
-                const saved = setWorkoutRestSeconds(user.id, seconds);
+                void hapticSelection();
+                const saved = setWorkoutRestSeconds(user.id, Number(value));
                 setRestSeconds(saved);
               }}
             >
-              {seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`}
-            </Button>
-          ))}
+              <TabsList className="w-full" aria-label="Descanso entre series">
+                {REST_PRESETS.map((seconds) => (
+                  // There is no TabsContent: drop the dangling aria-controls Radix would emit.
+                  <TabsTrigger key={seconds} value={String(seconds)} className="px-1" aria-controls={undefined}>
+                    {seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
-        <div className="flex items-center gap-2 mt-3 max-w-xs">
+        <FieldRow label="Personalizado" htmlFor="settings-rest-custom">
           <Input
+            id="settings-rest-custom"
             type="number"
+            inputMode="numeric"
+            enterKeyHint="done"
             min={15}
             max={600}
             step={5}
@@ -370,369 +601,234 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               setRestSeconds(saved);
             }}
             aria-label="Descanso personalizado en segundos"
+            className={rowInput}
           />
-          <span className="text-sm text-muted-foreground shrink-0">segundos</span>
-        </div>
-        <p className="text-[11px] text-muted-foreground mt-2">
-          Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan.
-        </p>
-      </div>
+          <span className="shrink-0 type-body text-muted-foreground md:text-sm">segundos</span>
+        </FieldRow>
+      </ListGroup>
 
-      {/* Avatar + Profile */}
-      <div className="order-1 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
-        <div className="flex items-center gap-2 mb-6">
-          <User className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Perfil</h2>
-        </div>
-        <div className="flex items-center gap-6 mb-6">
-          <div className="relative w-20 h-20 rounded-full bg-secondary flex items-center justify-center overflow-hidden cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
-            {avatarUrl ? <img loading="lazy" decoding="async" src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : <User className="w-8 h-8 text-muted-foreground" />}
-            <div className="absolute inset-0 bg-background/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-          </div>
-          <div className="text-sm text-muted-foreground">Haz clic para cambiar tu foto de perfil</div>
-        </div>
-        <div className="space-y-4">
-          <div><Label className="text-sm">Nombre</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Tu nombre" className="mt-1" /></div>
-          <div><Label className="text-sm">Correo electrónico</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@ejemplo.com" className="mt-1" /></div>
-        </div>
-        <Button variant="default" className="mt-4" onClick={saveProfile} disabled={saving}>
-          <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar perfil"}
+      {/* Password */}
+      <div className="order-4 space-y-3">
+        <ListGroup header="Cambiar contraseña">
+          <FieldRow label="Nueva" htmlFor="settings-new-password">
+            <Input
+              id="settings-new-password"
+              type="password"
+              autoComplete="new-password"
+              enterKeyHint="next"
+              aria-label="Nueva contraseña"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              className={rowInput}
+            />
+          </FieldRow>
+          <FieldRow label="Confirmar" htmlFor="settings-confirm-password">
+            <Input
+              id="settings-confirm-password"
+              type="password"
+              autoComplete="new-password"
+              enterKeyHint="done"
+              aria-label="Confirmar contraseña"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repite la contraseña"
+              className={rowInput}
+            />
+          </FieldRow>
+        </ListGroup>
+        <Button variant="tinted" className="w-full" onClick={() => { void hapticTap(); void changePassword(); }} disabled={changingPassword}>
+          {changingPassword ? "Cambiando…" : "Cambiar contraseña"}
         </Button>
-
-        <div className={`mt-8 pt-6 border-t border-border${hideForAdmin}`}>
-          <h3 className="font-display font-bold text-sm mb-1">Privacidad</h3>
-          <p className="text-xs text-muted-foreground mb-4">Tu entrenador siempre te ve. Esto decide qué pueden ver los demás.</p>
-          <div className="space-y-3">
-            {([
-              ["name_public", "Nombre público", "Si está apagado, se muestran solo tus iniciales."],
-              ["avatar_public", "Foto de perfil pública", "Si está apagado, se muestra un icono genérico."],
-              ["progress_public", "Progreso público", "Permite mostrar tu evolución (fotos, logros) fuera de tu cuenta."],
-            ] as const).map(([key, label, hint]) => (
-              <label key={key} className="flex items-center justify-between gap-4 p-3 rounded-xl bg-secondary/30 cursor-pointer">
-                <div className="min-w-0">
-                  <div className="text-sm font-medium">{label}</div>
-                  <div className="text-[11px] text-muted-foreground">{hint}</div>
-                </div>
-                <Switch checked={privacy[key]} onCheckedChange={(v) => updatePrivacy(key, v)} />
-              </label>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Subscription */}
-      <div className={`order-5 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
-        <div className="flex items-center gap-2 mb-6">
-          <CreditCard className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Suscripción</h2>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasPaidAccess ? "bg-primary/20" : "bg-muted"}`}>
-                <Crown className={`w-5 h-5 ${hasPaidAccess ? "text-primary" : "text-muted-foreground"}`} />
-              </div>
-              <div>
-                <div className="font-medium text-sm">Plan {planName}</div>
-                <div className="text-xs text-muted-foreground">
-                  {isActive ? (
-                    subscriptionStatus === "trialing" ? "Prueba gratuita activa" : "Suscripción activa"
-                  ) : hasPaidAccess ? "Acceso activo (pago único)" : "Cuenta Free · entrenador opcional"}
-                </div>
-              </div>
-            </div>
-            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${hasPaidAccess ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
-              {isActive ? (subscriptionStatus === "trialing" ? "Prueba" : "Activa") : hasPaidAccess ? "Pagado" : "Free"}
-            </span>
-          </div>
-
-          {subscriptionEnd && isActive && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground px-1">
-              <Calendar className="w-4 h-4" />
-              <span>
-                {subscriptionStatus === "trialing" ? "Tu prueba termina el" : "Próxima renovación:"}{" "}
-                <span className="font-medium text-foreground">
-                  {new Date(subscriptionEnd).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-                </span>
-              </span>
-            </div>
-          )}
-
-          {hasPaidAccess && (
-            <>
-              {currentPlan && (
-                <div className="p-4 rounded-xl border border-border bg-secondary/20 text-sm space-y-1.5">
-                  <p>
-                    Plan actual:{" "}
-                    <span className="font-semibold text-foreground">
-                      {currentPlan === "monthly" ? `Mensual (${MONTHLY_PRICE_EUR}€/mes)` : `Anual (${yearlyPriceEur}€/año)`}
-                    </span>
-                  </p>
-                  {currentPlan === "monthly" ? (
-                    <p className="text-xs text-muted-foreground">
-                      💡 Cambia a Anual y ahorra {MONTHLY_PRICE_EUR * 12 - yearlyPriceEur}€/año desde el portal de gestión.
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Puedes cambiar a Mensual desde el portal de gestión cuando quieras.
-                    </p>
-                  )}
-                </div>
-              )}
-              <Button variant="outline" className="w-full" onClick={handleManageSubscription} disabled={loadingPortal}>
-                {loadingPortal ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ExternalLink className="w-4 h-4 mr-2" />}
-                Gestionar suscripción
+      <div className={`order-5 space-y-3${hideForAdmin}`}>
+        <ListGroup header="Suscripción" footer={subscriptionFooter}>
+          <ListRow
+            icon={<Crown className={hasPaidAccess ? undefined : "text-muted-foreground"} />}
+            title={`Plan ${planName}`}
+            subtitle={
+              isActive
+                ? (subscriptionStatus === "trialing" ? "Prueba gratuita activa" : "Suscripción activa")
+                : hasPaidAccess ? "Acceso activo (pago único)" : "Cuenta Free · entrenador opcional"
+            }
+          />
+          {subscriptionEnd && isActive ? (
+            <ListRow
+              icon={<Calendar />}
+              title={subscriptionStatus === "trialing" ? "Fin de la prueba" : "Próxima renovación"}
+              value={new Date(subscriptionEnd).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+            />
+          ) : null}
+          {hasPaidAccess && currentPlan ? (
+            <ListRow
+              title="Plan actual"
+              value={currentPlan === "monthly" ? `Mensual (${MONTHLY_PRICE_EUR}€/mes)` : `Anual (${yearlyPriceEur}€/año)`}
+            />
+          ) : null}
+          {hasPaidAccess ? (
+            <ListRow
+              icon={<ExternalLink />}
+              title="Gestionar suscripción"
+              chevron={!loadingPortal}
+              trailing={loadingPortal ? <Spinner size="sm" /> : undefined}
+              onClick={() => { if (!loadingPortal) void handleManageSubscription(); }}
+            />
+          ) : null}
+        </ListGroup>
+        {!hasPaidAccess && onUpgrade && (
+          <div className="space-y-1">
+            <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); onUpgrade("training"); }}>
+              Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes
+            </Button>
+            {plans.coach && (
+              <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); onUpgrade("full"); }}>
+                Ver {plans.coachName} · Nicolás revisa tu plan
               </Button>
-            </>
-          )}
-
-          {!hasPaidAccess && (
-            <div className="space-y-3 text-center">
-              <p className="text-sm text-muted-foreground">
-                No tienes una suscripción activa. Empieza cuando quieras: 7 días de prueba.
-              </p>
-              {onUpgrade && (
-                <>
-                  <Button variant="hero" className="w-full" onClick={() => onUpgrade("training")}>
-                    <Zap className="mr-2 h-4 w-4" /> Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes
-                  </Button>
-                  {plans.coach && (
-                    <button
-                      type="button"
-                      onClick={() => onUpgrade("full")}
-                      className="min-h-11 w-full text-xs font-medium text-primary underline underline-offset-4"
-                    >
-                      Ver {plans.coachName} · Nicolás revisa tu plan
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Calendar */}
-      <div className={`order-6 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
-        <div className="flex items-center gap-2 mb-4">
-          <CalendarClock className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Google Calendar</h2>
-        </div>
-        {gcalConnected ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 p-3 bg-primary/10 border border-primary/20 rounded-xl text-sm">
-              <Check className="w-4 h-4 text-primary shrink-0" />
-              <div className="flex-1">
-                <p className="font-medium">Conectado</p>
-                {gcalLastSync && (
-                  <p className="text-xs text-muted-foreground">
-                    Última sync: {new Date(gcalLastSync).toLocaleString("es-ES")}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="grid sm:grid-cols-3 gap-2">
-              <Button variant="outline" onClick={() => navigate("/my-schedule")} size="sm">
-                <CalendarClock className="w-4 h-4 mr-2" /> Horarios y disponibilidad
-              </Button>
-              <Button variant="default" onClick={handleSyncGoogle} disabled={gcalLoading} size="sm">
-                {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                Sincronizar
-              </Button>
-              <Button variant="outline" onClick={handleDisconnectGoogle} disabled={gcalLoading} size="sm">
-                <Unplug className="w-4 h-4 mr-2" /> Desconectar
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Sincroniza tus entrenos y comidas directamente en tu Google Calendar.
-            </p>
-            <div className="grid sm:grid-cols-2 gap-2">
-              <Button variant="outline" onClick={() => navigate("/my-schedule")} size="sm">
-                <CalendarClock className="w-4 h-4 mr-2" /> Horarios y disponibilidad
-              </Button>
-              <Button variant="hero" onClick={handleConnectGoogle} disabled={gcalLoading} size="sm">
-                {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
-                Conectar
-              </Button>
-            </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Password */}
-      <div className="order-4 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
-        <div className="flex items-center gap-2 mb-6">
-          <Lock className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Cambiar contraseña</h2>
-        </div>
-        <div className="space-y-4">
-          <div><Label className="text-sm">Nueva contraseña</Label><Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="mt-1" /></div>
-          <div><Label className="text-sm">Confirmar contraseña</Label><Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repite la contraseña" className="mt-1" /></div>
-        </div>
-        <Button variant="default" className="mt-4" onClick={changePassword} disabled={changingPassword}>
-          <Lock className="w-4 h-4 mr-1" /> {changingPassword ? "Cambiando..." : "Cambiar contraseña"}
-        </Button>
-      </div>
-
-      {/* Onboarding data */}
-      {hasOnboarding && (
-        <div className={`order-2 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
-          <div className="flex items-center gap-2 mb-6">
-            <ClipboardList className="w-5 h-5 text-primary" />
-            <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Tus datos</h2>
-          </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
-              <div><Label className="text-xs">Edad</Label><Input type="number" value={onboarding.age} onChange={(e) => setOnboarding((o) => ({ ...o, age: e.target.value }))} className="mt-1" /></div>
-              <div><Label className="text-xs">Altura (cm)</Label><Input type="number" value={onboarding.height} onChange={(e) => setOnboarding((o) => ({ ...o, height: e.target.value }))} className="mt-1" /></div>
-              <div><Label className="text-xs">Peso (kg)</Label><Input type="number" value={onboarding.weight} onChange={(e) => setOnboarding((o) => ({ ...o, weight: e.target.value }))} className="mt-1" /></div>
-            </div>
-            <div>
-              <Label className="text-xs">Objetivo</Label>
-              <RadioGroup value={onboarding.goal} onValueChange={(v) => setOnboarding((o) => ({ ...o, goal: v }))} className="mt-1 space-y-2">
-                {[
-                  { value: "lose_weight", label: "Perder peso" },
-                  { value: "gain_muscle", label: "Ganar músculo" },
-                  { value: "improve_endurance", label: "Mejorar resistencia" },
-                ].map((opt) => (
-                  <label key={opt.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors text-sm ${onboarding.goal === opt.value ? "border-primary bg-primary/5" : "border-border"}`}>
-                    <RadioGroupItem value={opt.value} /><span className="font-medium">{opt.label}</span>
-                  </label>
-                ))}
-              </RadioGroup>
-            </div>
-            <div><Label className="text-xs">Deportes</Label><Textarea value={onboarding.sports} onChange={(e) => setOnboarding((o) => ({ ...o, sports: e.target.value }))} className="mt-1" rows={2} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label htmlFor="availability-days" className="text-xs">Días/semana</Label><Input id="availability-days" type="number" min={1} max={7} value={onboarding.availability.days} onChange={(e) => { setAvailabilityEdited(true); setOnboarding((o) => ({ ...o, availability: { ...o.availability, days: e.target.value } })); }} className="mt-1" /></div>
-              <div><Label htmlFor="availability-hours" className="text-xs">Horas/sesión</Label><Input id="availability-hours" type="number" min={0.25} max={24} step="0.01" value={onboarding.availability.hours} onChange={(e) => { setAvailabilityEdited(true); setOnboarding((o) => ({ ...o, availability: { ...o.availability, hours: e.target.value } })); }} className="mt-1" /></div>
-            </div>
-            <div><Label className="text-xs">Preferencias nutricionales</Label><Textarea value={onboarding.nutrition_preferences} onChange={(e) => setOnboarding((o) => ({ ...o, nutrition_preferences: e.target.value }))} className="mt-1" rows={2} /></div>
-            <div><Label className="text-xs">Alergias</Label><Textarea value={onboarding.allergies} onChange={(e) => setOnboarding((o) => ({ ...o, allergies: e.target.value }))} className="mt-1" rows={2} /></div>
-          </div>
-          <Button variant="default" className="mt-4" onClick={saveOnboarding} disabled={saving}>
-            <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar datos"}
-          </Button>
-        </div>
-      )}
+      {/* Calendar */}
+      <ListGroup
+        className={`order-6${hideForAdmin}`}
+        header={
+          <span className="inline-flex items-center gap-2">
+            Google Calendar
+            {gcalLoading ? <Spinner size="sm" /> : null}
+          </span>
+        }
+        footer={gcalConnected ? undefined : "Sincroniza tus entrenos y comidas directamente en tu Google Calendar."}
+      >
+        {gcalConnected ? (
+          <ListRow
+            icon={<Check />}
+            title="Conectado"
+            subtitle={gcalLastSync ? `Última sync: ${new Date(gcalLastSync).toLocaleString("es-ES")}` : undefined}
+          />
+        ) : null}
+        <ListRow
+          icon={<CalendarClock />}
+          title="Horarios y disponibilidad"
+          aria-label="Horarios y disponibilidad"
+          chevron
+          onClick={() => navigate("/my-schedule")}
+        />
+        {gcalConnected ? (
+          <>
+            <ListRow icon={<RefreshCw />} title="Sincronizar" disabled={gcalLoading} onClick={handleSyncGoogle} />
+            <ListRow
+              icon={<Unplug className="text-destructive" />}
+              title="Desconectar"
+              destructive
+              disabled={gcalLoading}
+              onClick={handleDisconnectGoogle}
+            />
+          </>
+        ) : (
+          <ListRow
+            icon={<Zap />}
+            title={<span className="text-primary">Conectar</span>}
+            aria-label="Conectar Google Calendar"
+            disabled={gcalLoading}
+            onClick={handleConnectGoogle}
+          />
+        )}
+      </ListGroup>
 
       {/* Privacy & Data (RGPD) */}
-      <div className={`order-7 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow${hideForAdmin}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <ShieldCheck className="w-5 h-5 text-primary" />
-          <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground">Privacidad y mis datos</h2>
-        </div>
-        <p className="text-sm text-muted-foreground mb-5">
-          Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.
-        </p>
-
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Button
-            variant="outline"
-            className="justify-start h-auto py-3"
-            onClick={exportMyData}
-            disabled={exporting}
-          >
-            <Download className="w-4 h-4 mr-2 shrink-0" />
-            <span className="text-left">
-              <span className="block font-medium text-sm">{exporting ? "Generando..." : "Exportar mis datos"}</span>
-              <span className="block text-[11px] text-muted-foreground">Descarga un JSON con todo lo que tenemos sobre ti.</span>
-            </span>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="justify-start h-auto py-3"
-            asChild
-          >
-            <Link to="/legal/privacidad">
-              <FileText className="w-4 h-4 mr-2 shrink-0" />
-              <span className="text-left">
-                <span className="block font-medium text-sm">Ver Política de Privacidad</span>
-                <span className="block text-[11px] text-muted-foreground">Qué datos tratamos y con qué base legal.</span>
-              </span>
-            </Link>
-          </Button>
-        </div>
-
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-4 text-[11px] text-muted-foreground">
-          <Link to="/legal/terminos" className="hover:text-foreground transition-colors">Términos</Link>
-          <Link to="/legal/cookies" className="hover:text-foreground transition-colors">Cookies</Link>
-          <Link to="/legal/disclaimer-medico" className="hover:text-foreground transition-colors">Disclaimer médico</Link>
-          <Link to="/legal/aviso-legal" className="hover:text-foreground transition-colors">Aviso legal</Link>
-        </div>
+      <div className={`order-7 flex flex-col gap-6${hideForAdmin}`}>
+        <ListGroup
+          header="Privacidad y mis datos"
+          footer="Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento."
+        >
+          <ListRow
+            icon={<Download />}
+            title={exporting ? "Generando…" : "Exportar mis datos"}
+            subtitle="Descarga un JSON con todo lo que tenemos sobre ti."
+            trailing={exporting ? <Spinner size="sm" /> : undefined}
+            onClick={() => { if (!exporting) void exportMyData(); }}
+          />
+          <ListRow
+            icon={<FileText />}
+            title="Ver Política de Privacidad"
+            subtitle="Qué datos tratamos y con qué base legal."
+            chevron
+            to="/legal/privacidad"
+          />
+        </ListGroup>
+        <ListGroup header="Legal">
+          <ListRow title="Términos" chevron to="/legal/terminos" />
+          <ListRow title="Cookies" chevron to="/legal/cookies" />
+          <ListRow title="Disclaimer médico" chevron to="/legal/disclaimer-medico" />
+          <ListRow title="Aviso legal" chevron to="/legal/aviso-legal" />
+        </ListGroup>
       </div>
 
-      {/* Sign out */}
-      <div className={`order-[7] ${hideForAdmin}`}>
+      {/* Travel mode */}
+      <div className={`order-[7]${hideForAdmin}`}>
         <TravelModeCard userId={user.id} />
       </div>
 
-      <div className="order-8 bg-card rounded-2xl p-4 sm:p-6 border border-border card-shadow">
-        <h2 className="font-semibold text-[13px] uppercase tracking-wider text-muted-foreground mb-2">Sesión</h2>
-        <p className="text-sm text-muted-foreground mb-4">Cierra tu sesión en este dispositivo.</p>
-        <Button
-          variant="outline"
-          className="w-full"
+      {/* Sign out */}
+      <ListGroup className="order-8" header="Sesión" footer="Cierra tu sesión en este dispositivo.">
+        <ListRow
+          title="Cerrar sesión"
+          destructive
           onClick={async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); }}
-        >
-          <LogOut className="w-4 h-4 mr-2" /> Cerrar sesión
-        </Button>
-      </div>
+        />
+      </ListGroup>
 
-      {/* Danger zone */}
-      <div className={`order-9 bg-card rounded-2xl p-4 sm:p-6 border border-destructive/30 card-shadow${hideForAdmin}`}>
-        <h2 className="font-semibold text-[13px] uppercase tracking-wider text-destructive mb-3">Zona peligrosa</h2>
-
-        <div className="space-y-4">
-          <Separator />
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full"><Trash2 className="w-4 h-4 mr-2" /> Eliminar cuenta</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar tu cuenta?</AlertDialogTitle>
-                <AlertDialogDescription asChild>
-                  <div className="space-y-3">
-                    {isActive && (
-                      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-left">
-                        <p className="text-sm font-semibold text-destructive">
-                          {subscriptionStatus === "trialing"
-                            ? "Tienes una prueba activa"
-                            : "Tienes una suscripción activa"}
+      {/* Delete account */}
+      <div className={`order-9${hideForAdmin}`}>
+        <ListGroup>
+          <ListRow
+            title="Eliminar cuenta"
+            destructive
+            onClick={() => { void hapticNotify("warning"); setConfirmingDelete(true); }}
+          />
+        </ListGroup>
+        <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar tu cuenta?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  {isActive && (
+                    <div className="rounded-xl bg-destructive/15 p-3 text-left">
+                      <p className="type-footnote font-semibold text-destructive">
+                        {subscriptionStatus === "trialing"
+                          ? "Tienes una prueba activa"
+                          : "Tienes una suscripción activa"}
+                      </p>
+                      <p className="mt-1 type-footnote text-foreground">
+                        {subscriptionStatus === "trialing"
+                          ? "Al eliminar la cuenta cancelas la prueba y pierdes el acceso de inmediato — aunque aún no se te haya cobrado."
+                          : "Al eliminar la cuenta se cancela la suscripción y pierdes el acceso de inmediato, aunque hayas pagado hasta el final del periodo."}
+                      </p>
+                      {subscriptionEnd && (
+                        <p className="mt-1 type-caption1 text-muted-foreground">
+                          Fecha prevista: {longDate(subscriptionEnd)}
                         </p>
-                        <p className="mt-1 text-sm text-foreground/90">
-                          {subscriptionStatus === "trialing"
-                            ? "Al eliminar la cuenta cancelas la prueba y pierdes el acceso de inmediato — aunque aún no se te haya cobrado."
-                            : "Al eliminar la cuenta se cancela la suscripción y pierdes el acceso de inmediato, aunque hayas pagado hasta el final del periodo."}
-                        </p>
-                        {subscriptionEnd && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Fecha prevista: {new Date(subscriptionEnd).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      Esta acción elimina permanentemente tu cuenta, tus planes, tu progreso, tus fotos y tus mensajes. No se puede deshacer.
-                    </p>
-                  </div>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={deleteAccount} disabled={deleting}>{deleting ? "Eliminando..." : "Sí, eliminar cuenta"}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
+                      )}
+                    </div>
+                  )}
+                  <p className="type-footnote text-muted-foreground">
+                    Esta acción elimina permanentemente tu cuenta, tus planes, tu progreso, tus fotos y tus mensajes. No se puede deshacer.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter stacked>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction destructive onClick={deleteAccount} disabled={deleting}>
+                {deleting ? "Eliminando…" : "Sí, eliminar cuenta"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
