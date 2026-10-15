@@ -1,12 +1,12 @@
-import { errorMessage } from "@/lib/runtimeValues";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, Target } from "lucide-react";
-import { toast } from "sonner";
+import { errorMessage } from"@/lib/runtimeValues";
+import { useEffect, useState } from"react";
+import { supabase } from"@/integrations/supabase/client";
+import { Button } from"@/components/ui/button";
+import { Input } from"@/components/ui/input";
+import { Label } from"@/components/ui/label";
+import { Switch } from"@/components/ui/switch";
+import { Loader2, Plus, Trash2, Upload, Target } from"lucide-react";
+import { toast } from"sonner";
 
 interface GoalPhysique {
   id: string;
@@ -17,8 +17,8 @@ interface GoalPhysique {
 }
 
 const uploadImage = async (file: File) => {
-  const ext = file.name.split(".").pop() || "jpg";
-  const path = `goal-physiques/${Date.now()}.${ext}`;
+  const ext = file.name.split(".").pop() ||"jpg";
+  const path =`goal-physiques/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: false });
   if (error) throw error;
   return supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
@@ -42,7 +42,7 @@ const GoalPhysiquesEditor = () => {
   const add = async () => {
     const { data, error } = await supabase
       .from("goal_physiques")
-      .insert({ name: "Nuevo físico", image_url: "", sort_order: items.length, visible: true })
+      .insert({ name:"Nuevo físico", image_url:"", sort_order: items.length, visible: true })
       .select()
       .single();
     if (error) { toast.error("No se pudo crear"); return; }
@@ -82,7 +82,7 @@ const GoalPhysiquesEditor = () => {
       await supabase.from("goal_physiques").update({ image_url: url }).eq("id", id);
       toast.success("Foto subida");
     } catch (err: unknown) {
-      toast.error(errorMessage(err) ?? "Error al subir");
+      toast.error(errorMessage(err) ??"Error al subir");
     }
   };
 
@@ -154,7 +154,7 @@ const GoalPhysiquesEditor = () => {
                     checked={it.visible}
                     onCheckedChange={(v) => update(it.id, { visible: v })}
                   />
-                  <span className="truncate text-muted-foreground">{it.visible ? "Visible" : "Oculto"}</span>
+                  <span className="truncate text-muted-foreground">{it.visible ?"Visible" :"Oculto"}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Button size="sm" variant="outline" className="px-2.5" onClick={() => save(it)}>

@@ -1,11 +1,11 @@
-import { errorMessage, functionErrorMessage } from "@/lib/runtimeValues";
-import { getExerciseTrackingConfig, TRACKING_MODES } from "@/lib/exerciseTrackingConfig";
-import { useState, useEffect, useMemo, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { errorMessage, functionErrorMessage } from"@/lib/runtimeValues";
+import { getExerciseTrackingConfig, TRACKING_MODES } from"@/lib/exerciseTrackingConfig";
+import { useState, useEffect, useMemo, useRef } from"react";
+import { supabase } from"@/integrations/supabase/client";
+import { Button } from"@/components/ui/button";
+import { Input } from"@/components/ui/input";
+import { Label } from"@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from"@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,22 +15,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
-import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, VideoOff, Image as ImageIcon, ImageOff, RefreshCw, AlertTriangle, Sparkles, Loader2, ImagePlus } from "lucide-react";
-import type { Exercise } from "@/types/training";
+} from"@/components/ui/alert-dialog";
+import { toast } from"sonner";
+import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, VideoOff, Image as ImageIcon, ImageOff, RefreshCw, AlertTriangle, Sparkles, Loader2, ImagePlus } from"lucide-react";
+import type { Exercise } from"@/types/training";
 import {
   MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
   PRIORITIES, STIMULUS_TYPES, LOAD_LEVELS, FATIGUE_LEVELS, RECOMMENDED_ORDERS, SKILL_TAGS,
-} from "@/types/training";
-import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
-import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
-import { ExercisePreviewSheet, type ExercisePreviewData } from "@/components/ExercisePreviewSheet";
+} from"@/types/training";
+import VideoEmbed, { toEmbedUrl } from"@/components/VideoEmbed";
+import ExerciseMedia, { ExerciseThumb } from"@/components/ExerciseMedia";
+import { ExercisePreviewSheet, type ExercisePreviewData } from"@/components/ExercisePreviewSheet";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
- * edge function `exercise-video`; los medios con otra versión (o sin versión) se
- * marcan como "estilo antiguo" y se pueden regenerar.
+ * edge function`exercise-video`; los medios con otra versión (o sin versión) se
+ * marcan como"estilo antiguo" y se pueden regenerar.
  */
 const MEDIA_STYLE_VERSION = 2;
 
@@ -47,7 +47,7 @@ type ExerciseRow = Exercise & {
   video_priority?: number | null;
 };
 
-type MediaFilter = "all" | "no-image" | "no-video" | "old-style" | "error";
+type MediaFilter ="all" |"no-image" |"no-video" |"old-style" |"error";
 
 const isOldStyle = (exercise: ExerciseRow) => (exercise.media_style_version ?? 0) !== MEDIA_STYLE_VERSION;
 /** Tiene algún medio pero generado con un estilo anterior (o sin versión). */
@@ -62,14 +62,14 @@ const needsGeneration = (exercise: ExerciseRow) =>
  */
 const siteAssetPath = (url: string | null | undefined, prefix: string): string | null => {
   if (!url) return null;
-  const marker = "/site-assets/";
+  const marker ="/site-assets/";
   const index = url.indexOf(marker);
   if (index === -1) return null;
   const path = url.slice(index + marker.length).split("?")[0];
   return path.startsWith(prefix) ? path : null;
 };
 
-const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS, "Otro"] as const;
+const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS,"Otro"] as const;
 
 /* ── Helpers ── */
 
@@ -81,7 +81,7 @@ const SmallSelect = ({ value, onChange, options, placeholder }: {
     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     value={value} onChange={(e) => onChange(e.target.value)}
   >
-    <option value="">{placeholder || "—"}</option>
+    <option value="">{placeholder ||"—"}</option>
     {options.map((o) => <option key={o} value={o}>{o}</option>)}
   </select>
 );
@@ -92,44 +92,44 @@ const NumSelect = ({ value, onChange, options }: {
 }) => (
   <select
     className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-    value={value ?? ""} onChange={(e) => onChange(parseInt(e.target.value) || 1)}
+    value={value ??""} onChange={(e) => onChange(parseInt(e.target.value) || 1)}
   >
     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
   </select>
 );
 
 const GROUP_COLORS: Record<string, string> = {
-  Pecho: "bg-secondary text-muted-foreground border-border/60",
-  Espalda: "bg-secondary text-muted-foreground border-border/60",
-  Hombros: "bg-secondary text-muted-foreground border-border/60",
-  Bíceps: "bg-secondary text-muted-foreground border-border/60",
-  Tríceps: "bg-secondary text-muted-foreground border-border/60",
-  Piernas: "bg-secondary text-muted-foreground border-border/60",
-  Glúteos: "bg-secondary text-muted-foreground border-border/60",
-  Core: "bg-secondary text-muted-foreground border-border/60",
-  Cardio: "bg-secondary text-muted-foreground border-border/60",
-  "Cuerpo completo": "bg-secondary text-muted-foreground border-border/60",
-  Otro: "bg-secondary text-muted-foreground border-border/60",
+  Pecho:"bg-secondary text-muted-foreground border-border/60",
+  Espalda:"bg-secondary text-muted-foreground border-border/60",
+  Hombros:"bg-secondary text-muted-foreground border-border/60",
+  Bíceps:"bg-secondary text-muted-foreground border-border/60",
+  Tríceps:"bg-secondary text-muted-foreground border-border/60",
+  Piernas:"bg-secondary text-muted-foreground border-border/60",
+  Glúteos:"bg-secondary text-muted-foreground border-border/60",
+  Core:"bg-secondary text-muted-foreground border-border/60",
+  Cardio:"bg-secondary text-muted-foreground border-border/60",
+"Cuerpo completo":"bg-secondary text-muted-foreground border-border/60",
+  Otro:"bg-secondary text-muted-foreground border-border/60",
 };
 
 const LEVEL_COLORS: Record<number, string> = {
-  1: "bg-secondary text-muted-foreground",
-  2: "bg-primary/10 text-primary/80",
-  3: "bg-primary/20 text-primary",
+  1:"bg-secondary text-muted-foreground",
+  2:"bg-primary/10 text-primary/80",
+  3:"bg-primary/20 text-primary",
 };
 
 const STIMULUS_COLORS: Record<string, string> = {
-  Fuerza: "bg-secondary text-muted-foreground",
-  Hipertrofia: "bg-secondary text-muted-foreground",
-  Resistencia: "bg-secondary text-muted-foreground",
-  Isométrico: "bg-secondary text-muted-foreground",
+  Fuerza:"bg-secondary text-muted-foreground",
+  Hipertrofia:"bg-secondary text-muted-foreground",
+  Resistencia:"bg-secondary text-muted-foreground",
+  Isométrico:"bg-secondary text-muted-foreground",
 };
 
 /* ── Chips de estado de medios ── */
 
-const MEDIA_BADGE_BASE = "flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium";
-const MEDIA_BADGE_ON = `${MEDIA_BADGE_BASE} border-primary/30 bg-primary/15 text-primary`;
-const MEDIA_BADGE_OFF = `${MEDIA_BADGE_BASE} border-border bg-secondary/60 text-muted-foreground`;
+const MEDIA_BADGE_BASE ="flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 type-caption2 font-medium";
+const MEDIA_BADGE_ON =`${MEDIA_BADGE_BASE} border-primary/30 bg-primary/15 text-primary`;
+const MEDIA_BADGE_OFF =`${MEDIA_BADGE_BASE} border-border bg-secondary/60 text-muted-foreground`;
 
 /* ── Exercise Form Dialog ── */
 
@@ -159,9 +159,9 @@ const ExerciseFormDialog = ({
     if (!id) return;
     setImgAiLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "image" } });
+      const { data, error } = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action:"image" } });
       if (error) {
-        toast.error(await fnErrorMessage(error, "No se pudo generar la foto"));
+        toast.error(await fnErrorMessage(error,"No se pudo generar la foto"));
         return;
       }
       if (data?.error) throw new Error(data.error);
@@ -170,7 +170,7 @@ const ExerciseFormDialog = ({
       onMediaChange?.();
       toast.success("Foto generada");
     } catch (e: unknown) {
-      toast.error(errorMessage(e) || "Error con IA");
+      toast.error(errorMessage(e) ||"Error con IA");
     } finally {
       setImgAiLoading(false);
     }
@@ -182,28 +182,28 @@ const ExerciseFormDialog = ({
     if (!id) return;
     setGenLoading(true);
     try {
-      const start = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "create" } });
+      const start = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action:"create" } });
       if (start.error) {
-        toast.error(await fnErrorMessage(start.error, "No se pudo iniciar el vídeo"));
+        toast.error(await fnErrorMessage(start.error,"No se pudo iniciar el vídeo"));
         return;
       }
       if (start.data?.error) throw new Error(start.data.error);
       if (start.data?.paused) {
-        toast.info(start.data.message || "La generación de vídeos está pausada");
+        toast.info(start.data.message ||"La generación de vídeos está pausada");
         return;
       }
       setGenStatus("Generando vídeo…");
       const deadline = Date.now() + VIDEO_DEADLINE_MS;
       while (Date.now() < deadline) {
         await new Promise((r) => setTimeout(r, 6000));
-        const check = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action: "check" } });
+        const check = await supabase.functions.invoke("exercise-video", { body: { exercise_id: id, action:"check" } });
         if (check.error) {
-          toast.error(await fnErrorMessage(check.error, "No se pudo comprobar el vídeo"));
+          toast.error(await fnErrorMessage(check.error,"No se pudo comprobar el vídeo"));
           return;
         }
         const d = check.data;
         if (d?.error) throw new Error(d.error);
-        if (d?.status === "completed" && d.video_url) {
+        if (d?.status ==="completed" && d.video_url) {
           set("video_url", d.video_url);
           onMediaChange?.();
           setGenStatus(null);
@@ -211,13 +211,13 @@ const ExerciseFormDialog = ({
           toast.success("Vídeo generado");
           return;
         }
-        if (d?.status === "failed") throw new Error(d.error || "La generación falló");
+        if (d?.status ==="failed") throw new Error(d.error ||"La generación falló");
         const pct = d?.progress ? Math.round(d.progress * 100) : 0;
-        setGenStatus(pct > 0 ? `Generando vídeo… ${pct}%` : "Generando vídeo…");
+        setGenStatus(pct > 0 ?`Generando vídeo… ${pct}%` :"Generando vídeo…");
       }
       throw new Error("El vídeo está tardando más de lo normal. Cierra y vuelve a abrir el ejercicio en un minuto.");
     } catch (e: unknown) {
-      toast.error(errorMessage(e) || "Error con IA");
+      toast.error(errorMessage(e) ||"Error con IA");
     } finally {
       setGenStatus(null);
       setGenLoading(false);
@@ -227,15 +227,15 @@ const ExerciseFormDialog = ({
   const uploadImage = async (file: File) => {
     setImgUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `exercise-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const ext = file.name.split(".").pop() ||"jpg";
+      const path =`exercise-images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data } = supabase.storage.from("site-assets").getPublicUrl(path);
       set("image_url", data.publicUrl);
       toast.success("Imagen subida");
     } catch (e: unknown) {
-      toast.error(errorMessage(e) || "Error al subir la imagen");
+      toast.error(errorMessage(e) ||"Error al subir la imagen");
     }
     setImgUploading(false);
   };
@@ -243,9 +243,9 @@ const ExerciseFormDialog = ({
   useEffect(() => {
     if (open) {
       setForm(initial ? { ...initial } : {
-        name: "", muscle_group: "", exercise_type: "", movement_pattern: "",
-        level: 1, priority: 2, stimulus_type: "", load_level: "", fatigue_level: "", recommended_order: 2,
-        alternative_id: null, skill_tag: null, progression_order: null, video_url: "",
+        name:"", muscle_group:"", exercise_type:"", movement_pattern:"",
+        level: 1, priority: 2, stimulus_type:"", load_level:"", fatigue_level:"", recommended_order: 2,
+        alternative_id: null, skill_tag: null, progression_order: null, video_url:"",
         is_stable: true, is_progressable: true, high_tension: true,
       });
       setAltSearch("");
@@ -265,7 +265,7 @@ const ExerciseFormDialog = ({
       setForm((f) => ({ ...f, ...data, name: f.name }));
       toast.success("Campos rellenados con IA");
     } catch (e: unknown) {
-      toast.error(errorMessage(e) || "Error con IA");
+      toast.error(errorMessage(e) ||"Error con IA");
     }
     setAiLoading(false);
   };
@@ -304,7 +304,7 @@ const ExerciseFormDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ExerciseThumb image={form.image_url} name={form.name} size="xs" />
-            {initial ? "Editar ejercicio" : "Nuevo ejercicio"}
+            {initial ?"Editar ejercicio" :"Nuevo ejercicio"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-5 pt-2">
@@ -315,22 +315,22 @@ const ExerciseFormDialog = ({
             <div>
               <Label className="text-xs">Nombre</Label>
               <div className="flex gap-2 mt-1">
-                <Input value={form.name || ""} onChange={(e) => set("name", e.target.value)} placeholder="Press banca" />
+                <Input value={form.name ||""} onChange={(e) => set("name", e.target.value)} placeholder="Press banca" />
                 <Button type="button" variant="secondary" size="sm" onClick={autofillWithAI} disabled={aiLoading || !form.name?.trim()} className="shrink-0 gap-1.5">
                   {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                   IA
                 </Button>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">Escribe el nombre y pulsa IA para clasificar automáticamente todos los campos.</p>
+              <p className="type-caption2 text-muted-foreground mt-1">Escribe el nombre y pulsa IA para clasificar automáticamente todos los campos.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Categoría · grupo muscular</Label>
-                <SmallSelect value={form.muscle_group || ""} onChange={(v) => set("muscle_group", v)} options={ALL_MUSCLE_GROUPS} placeholder="Seleccionar..." />
+                <SmallSelect value={form.muscle_group ||""} onChange={(v) => set("muscle_group", v)} options={ALL_MUSCLE_GROUPS} placeholder="Seleccionar..." />
               </div>
               <div>
                 <Label className="text-xs">Tipo</Label>
-                <SmallSelect value={form.exercise_type || ""} onChange={(v) => set("exercise_type", v)} options={EXERCISE_TYPES} placeholder="Tipo..." />
+                <SmallSelect value={form.exercise_type ||""} onChange={(v) => set("exercise_type", v)} options={EXERCISE_TYPES} placeholder="Tipo..." />
               </div>
             </div>
           </div>
@@ -341,11 +341,11 @@ const ExerciseFormDialog = ({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Patrón</Label>
-                <SmallSelect value={form.movement_pattern || ""} onChange={(v) => set("movement_pattern", v)} options={MOVEMENT_PATTERNS} placeholder="Patrón..." />
+                <SmallSelect value={form.movement_pattern ||""} onChange={(v) => set("movement_pattern", v)} options={MOVEMENT_PATTERNS} placeholder="Patrón..." />
               </div>
               <div>
                 <Label className="text-xs">Estímulo</Label>
-                <SmallSelect value={form.stimulus_type || ""} onChange={(v) => set("stimulus_type", v)} options={STIMULUS_TYPES} placeholder="Estímulo..." />
+                <SmallSelect value={form.stimulus_type ||""} onChange={(v) => set("stimulus_type", v)} options={STIMULUS_TYPES} placeholder="Estímulo..." />
               </div>
               <div>
                 <Label className="text-xs">Nivel</Label>
@@ -364,11 +364,11 @@ const ExerciseFormDialog = ({
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs">Carga</Label>
-                <SmallSelect value={form.load_level || ""} onChange={(v) => set("load_level", v)} options={LOAD_LEVELS} placeholder="—" />
+                <SmallSelect value={form.load_level ||""} onChange={(v) => set("load_level", v)} options={LOAD_LEVELS} placeholder="—" />
               </div>
               <div>
                 <Label className="text-xs">Fatiga</Label>
-                <SmallSelect value={form.fatigue_level || ""} onChange={(v) => set("fatigue_level", v)} options={FATIGUE_LEVELS} placeholder="—" />
+                <SmallSelect value={form.fatigue_level ||""} onChange={(v) => set("fatigue_level", v)} options={FATIGUE_LEVELS} placeholder="—" />
               </div>
               <div>
                 <Label className="text-xs">Orden</Label>
@@ -380,12 +380,12 @@ const ExerciseFormDialog = ({
           {/* Hard criteria */}
           <div className="space-y-2">
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Criterios obligatorios</p>
-            <p className="text-[10px] text-muted-foreground -mt-1">Si alguno está desactivado, el ejercicio NO se incluirá en planes generados.</p>
+            <p className="type-caption2 text-muted-foreground -mt-1">Si alguno está desactivado, el ejercicio NO se incluirá en planes generados.</p>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { key: "is_stable" as const, label: "Estable", hint: "Permite ejecución sin que el equilibrio limite la carga" },
-                { key: "is_progressable" as const, label: "Progresable", hint: "Se puede aumentar carga/reps sesión a sesión" },
-                { key: "high_tension" as const, label: "Alta tensión", hint: "Genera mucha tensión en el músculo objetivo" },
+                { key:"is_stable" as const, label:"Estable", hint:"Permite ejecución sin que el equilibrio limite la carga" },
+                { key:"is_progressable" as const, label:"Progresable", hint:"Se puede aumentar carga/reps sesión a sesión" },
+                { key:"high_tension" as const, label:"Alta tensión", hint:"Genera mucha tensión en el músculo objetivo" },
               ].map(({ key, label, hint }) => {
                 const checked = form[key] ?? true;
                 return (
@@ -396,17 +396,17 @@ const ExerciseFormDialog = ({
                     title={hint}
                     className={`rounded-lg border p-2 text-left transition-colors ${
                       checked
-                        ? "border-primary/50 bg-primary/10"
-                        : "border-border bg-secondary/40 opacity-60"
+                        ?"border-primary/50 bg-primary/10"
+                        :"border-border bg-secondary/40 opacity-60"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium">{label}</span>
-                      <span className={`text-[10px] font-bold ${checked ? "text-primary" : "text-muted-foreground"}`}>
-                        {checked ? "SÍ" : "NO"}
+                      <span className={`type-caption2 font-bold ${checked ?"text-primary" :"text-muted-foreground"}`}>
+                        {checked ?"SÍ" :"NO"}
                       </span>
                     </div>
-                    <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{hint}</p>
+                    <p className="type-caption2 text-muted-foreground mt-0.5 leading-tight">{hint}</p>
                   </button>
                 );
               })}
@@ -418,13 +418,13 @@ const ExerciseFormDialog = ({
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Modo de registro / métricas</p>
             <div className="grid grid-cols-1 gap-1.5">
               {([
-                ["", "Automático", "Se deduce por el nombre y el tipo"],
-                ...Object.entries(TRACKING_MODES).map(([k, c]) => [k, ({ weighted_reps: "KG + Repes", bodyweight_reps: "Peso corporal (PC)", weighted_bodyweight: "Lastre + Repes", seconds_only: "Segundos", assisted_reps: "Asistida + Repes" } as Record<string, string>)[k], c.description]),
+                ["","Automático","Se deduce por el nombre y el tipo"],
+                ...Object.entries(TRACKING_MODES).map(([k, c]) => [k, ({ weighted_reps:"KG + Repes", bodyweight_reps:"Peso corporal (PC)", weighted_bodyweight:"Lastre + Repes", seconds_only:"Segundos", assisted_reps:"Asistida + Repes" } as Record<string, string>)[k], c.description]),
               ] as [string, string, string][]).map(([k, label, desc]) => {
-                const active = (form.tracking_mode || "") === k;
+                const active = (form.tracking_mode ||"") === k;
                 return (
-                  <button key={k || "auto"} type="button" onClick={() => set("tracking_mode", k === "weighted_reps" || k === "bodyweight_reps" || k === "weighted_bodyweight" || k === "seconds_only" || k === "assisted_reps" ? k : null)}
-                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
+                  <button key={k ||"auto"} type="button" onClick={() => set("tracking_mode", k ==="weighted_reps" || k ==="bodyweight_reps" || k ==="weighted_bodyweight" || k ==="seconds_only" || k ==="assisted_reps" ? k : null)}
+                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ?"border-primary bg-primary/10" :"border-border hover:border-primary/40"}`}>
                     <span className="block text-sm font-medium">{label}</span>
                     <span className="block text-[11px] text-muted-foreground">{desc}</span>
                   </button>
@@ -434,8 +434,8 @@ const ExerciseFormDialog = ({
             {(() => {
               const c = getExerciseTrackingConfig({ name: form.name, skill_tag: form.skill_tag, movement_pattern: form.movement_pattern, exercise_type: form.exercise_type, tracking_mode: form.tracking_mode });
               return (
-                <div className="grid grid-cols-[40px_52px_1fr_1fr_24px] gap-2 rounded-lg bg-secondary/40 px-3 py-2 text-[10px] font-semibold uppercase text-muted-foreground">
-                  <span>Serie</span><span>Previa</span><span>{c.fixedBodyweight ? "PC" : c.weightLabel}</span><span>{c.valueLabel}</span><span>✓</span>
+                <div className="grid grid-cols-[40px_52px_1fr_1fr_24px] gap-2 rounded-lg bg-secondary/40 px-3 py-2 type-caption2 font-semibold uppercase text-muted-foreground">
+                  <span>Serie</span><span>Previa</span><span>{c.fixedBodyweight ?"PC" : c.weightLabel}</span><span>{c.valueLabel}</span><span>✓</span>
                 </div>
               );
             })()}
@@ -447,20 +447,20 @@ const ExerciseFormDialog = ({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Skill</Label>
-                <SmallSelect value={form.skill_tag || ""} onChange={(v) => set("skill_tag", v || null)} options={SKILL_TAGS} placeholder="Ninguno" />
+                <SmallSelect value={form.skill_tag ||""} onChange={(v) => set("skill_tag", v || null)} options={SKILL_TAGS} placeholder="Ninguno" />
               </div>
               <div>
                 <Label className="text-xs">Orden progresión</Label>
                 <Input
                   type="number" min={1} max={20}
                   className="h-9"
-                  value={form.progression_order ?? ""}
+                  value={form.progression_order ??""}
                   onChange={(e) => set("progression_order", e.target.value ? parseInt(e.target.value) : null)}
                   placeholder="1=básico"
                 />
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground">Asigna un skill y orden para crear cadenas de progresión (1=más fácil → mayor=más difícil)</p>
+            <p className="type-caption2 text-muted-foreground">Asigna un skill y orden para crear cadenas de progresión (1=más fácil → mayor=más difícil)</p>
           </div>
 
           {/* Imagen */}
@@ -474,7 +474,7 @@ const ExerciseFormDialog = ({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
                     {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
-                    {form.image_url ? "Cambiar imagen" : "Subir imagen"}
+                    {form.image_url ?"Cambiar imagen" :"Subir imagen"}
                     <input
                       type="file"
                       accept="image/*"
@@ -483,23 +483,23 @@ const ExerciseFormDialog = ({
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) uploadImage(f);
-                        e.target.value = "";
+                        e.target.value ="";
                       }}
                     />
                   </label>
                   {initial?.id && (
                     <Button type="button" variant="secondary" size="sm" onClick={generateImageWithAI} disabled={imgAiLoading} className="h-[30px] gap-1.5 px-3 text-xs">
                       {imgAiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      {form.image_url ? "Otra foto con IA" : "Generar foto con IA"}
+                      {form.image_url ?"Otra foto con IA" :"Generar foto con IA"}
                     </Button>
                   )}
                 </div>
                 {form.image_url && (
-                  <button type="button" onClick={() => set("image_url", null)} className="block text-[10px] text-muted-foreground hover:text-destructive">
+                  <button type="button" onClick={() => set("image_url", null)} className="block type-caption2 text-muted-foreground hover:text-destructive">
                     Quitar imagen
                   </button>
                 )}
-                <p className="text-[10px] text-muted-foreground">Se mostrará al usuario en su plan. Las fotos generadas con IA usan siempre el mismo estilo que los vídeos.</p>
+                <p className="type-caption2 text-muted-foreground">Se mostrará al usuario en su plan. Las fotos generadas con IA usan siempre el mismo estilo que los vídeos.</p>
               </div>
 
             </div>
@@ -511,7 +511,7 @@ const ExerciseFormDialog = ({
               <Video className="w-3.5 h-3.5" /> Vídeo del ejercicio
             </p>
             <Input
-              value={form.video_url || ""}
+              value={form.video_url ||""}
               onChange={(e) => set("video_url", e.target.value)}
               placeholder="YouTube, Vimeo o MP4 directo (https://...)"
               className="h-9"
@@ -526,15 +526,15 @@ const ExerciseFormDialog = ({
                 className="gap-1.5 self-start"
               >
                 {genLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                {genStatus || (form.video_url ? "Generar otro vídeo con IA" : "Generar vídeo con IA")}
+                {genStatus || (form.video_url ?"Generar otro vídeo con IA" :"Generar vídeo con IA")}
               </Button>
             ) : (
-              <p className="text-[10px] text-muted-foreground">Guarda el ejercicio y después podrás generar su vídeo con IA.</p>
+              <p className="type-caption2 text-muted-foreground">Guarda el ejercicio y después podrás generar su vídeo con IA.</p>
             )}
-            <p className="text-[10px] text-muted-foreground">
+            <p className="type-caption2 text-muted-foreground">
               Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento.
             </p>
-            <p className="text-[10px] text-muted-foreground">El vídeo se ve arriba, en la cabecera del ejercicio.</p>
+            <p className="type-caption2 text-muted-foreground">El vídeo se ve arriba, en la cabecera del ejercicio.</p>
 
           </div>
 
@@ -547,7 +547,7 @@ const ExerciseFormDialog = ({
               <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/30 bg-primary/5">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{selectedAlt.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{selectedAlt.exercise_type} · {selectedAlt.muscle_group}</p>
+                  <p className="type-caption2 text-muted-foreground">{selectedAlt.exercise_type} · {selectedAlt.muscle_group}</p>
                 </div>
                 <button onClick={() => set("alternative_id", null)} className="p-1 rounded hover:bg-secondary">
                   <X className="w-3.5 h-3.5 text-muted-foreground" />
@@ -570,7 +570,7 @@ const ExerciseFormDialog = ({
                         className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors flex items-center justify-between"
                       >
                         <span className="font-medium truncate">{e.name}</span>
-                        <span className="text-[10px] text-muted-foreground shrink-0 ml-2">{e.exercise_type}</span>
+                        <span className="type-caption2 text-muted-foreground shrink-0 ml-2">{e.exercise_type}</span>
                       </button>
                     )) : (
                       <p className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</p>
@@ -595,7 +595,7 @@ const ExerciseFormDialog = ({
                   onClick={() => onSave(form)}
                   disabled={loading || !form.name?.trim() || !allCriteria}
                 >
-                  {initial ? "Guardar cambios" : "Añadir ejercicio"}
+                  {initial ?"Guardar cambios" :"Añadir ejercicio"}
                 </Button>
               </>
             );
@@ -634,8 +634,8 @@ const ExerciseLibrary = () => {
    */
   const [mediaColumnsReady, setMediaColumnsReady] = useState(true);
 
-  const LEGACY_COLUMNS = "id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode";
-  const MEDIA_COLUMNS = "media_style_version, image_generated_at, video_generated_at, media_error, video_priority";
+  const LEGACY_COLUMNS ="id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode";
+  const MEDIA_COLUMNS ="media_style_version, image_generated_at, video_generated_at, media_error, video_priority";
 
   const fetchExercises = async () => {
     const full = await supabase.from("exercises")
@@ -698,12 +698,12 @@ const ExerciseLibrary = () => {
     }
   };
 
-  const invokeExerciseMedia = async (exerciseId: string, action: "image" | "create" | "check") => {
+  const invokeExerciseMedia = async (exerciseId: string, action:"image" |"create" |"check") => {
     const { data, error } = await supabase.functions.invoke("exercise-video", {
       body: { exercise_id: exerciseId, action },
     });
     if (error) {
-      let message = "No se pudo generar el recurso";
+      let message ="No se pudo generar el recurso";
       try {
         const body = await error.context?.json?.();
         if (body?.error) message = String(body.error);
@@ -743,7 +743,7 @@ const ExerciseLibrary = () => {
 
         if (!exercise.image_url || oldStyle) {
           setProgress("Generando imagen");
-          const image = await invokeExerciseMedia(exercise.id, "image");
+          const image = await invokeExerciseMedia(exercise.id,"image");
           if (!image?.image_url) throw new Error("La IA no devolvió una imagen.");
           setExercises((current) => current.map((item) => item.id === exercise.id
             ? { ...item, image_url: image.image_url, media_style_version: MEDIA_STYLE_VERSION, image_generated_at: new Date().toISOString(), media_error: null }
@@ -753,7 +753,7 @@ const ExerciseLibrary = () => {
 
         if (!videosPaused && (!exercise.video_url || oldStyle)) {
           setProgress("Generando técnica en vídeo");
-          const started = await invokeExerciseMedia(exercise.id, "create");
+          const started = await invokeExerciseMedia(exercise.id,"create");
           if (started?.paused) {
             // Vídeos pausados en Claves de IA: seguimos solo con las fotos.
             videosPaused = true;
@@ -765,13 +765,13 @@ const ExerciseLibrary = () => {
           while (Date.now() < deadline && !cancelRef.current) {
             await interruptibleSleep(6000);
             if (cancelRef.current) break;
-            const status = await invokeExerciseMedia(exercise.id, "check");
-            if (status?.status === "failed") throw new Error(status.error || "La generación del vídeo falló.");
-            if (status?.status === "completed" && status.video_url) {
+            const status = await invokeExerciseMedia(exercise.id,"check");
+            if (status?.status ==="failed") throw new Error(status.error ||"La generación del vídeo falló.");
+            if (status?.status ==="completed" && status.video_url) {
               completedVideoUrl = status.video_url;
               break;
             }
-            const progress = status?.progress ? ` (${Math.round(status.progress * 100)}%)` : "";
+            const progress = status?.progress ?` (${Math.round(status.progress * 100)}%)` :"";
             setProgress(`Generando técnica en vídeo${progress}`);
           }
           if (cancelRef.current) break;
@@ -784,13 +784,13 @@ const ExerciseLibrary = () => {
         completed++;
       } catch (error) {
         errors++;
-        const message = error instanceof Error ? error.message : "No se pudo completar la generación.";
+        const message = error instanceof Error ? error.message :"No se pudo completar la generación.";
         if (/credit limit|sin créditos|402/i.test(message)) {
           // Sin saldo o límite mensual alcanzado: parar la cola en vez de fallar 271 veces.
           toast.error("Se ha alcanzado el límite de créditos de IA. La cola se ha detenido.");
           break;
         }
-        console.error(`No se pudieron generar los medios de "${exercise.name}"`, error);
+        console.error(`No se pudieron generar los medios de"${exercise.name}"`, error);
         // El error se guarda en la fila (media_error) y la cola continúa.
         setExercises((current) => current.map((item) => item.id === exercise.id ? { ...item, media_error: message } : item));
         toast.error(`${exercise.name}: ${message}`);
@@ -801,7 +801,7 @@ const ExerciseLibrary = () => {
     cancelRef.current = false;
     setMediaBatch(null);
     void fetchExercises();
-    const detail = `${completed}/${total} · errores: ${errors}`;
+    const detail =`${completed}/${total} · errores: ${errors}`;
     if (cancelled) toast.info(`Cola cancelada (${detail}).`);
     else if (errors > 0) toast.warning(`Medios generados con incidencias (${detail}).`);
     else toast.success(`Medios generados (${detail}).`);
@@ -813,16 +813,16 @@ const ExerciseLibrary = () => {
       const q = search.toLowerCase();
       result = result.filter((e) => e.name.toLowerCase().includes(q));
     }
-    if (filterGroup) result = result.filter((e) => (e.muscle_group || "Sin grupo") === filterGroup);
+    if (filterGroup) result = result.filter((e) => (e.muscle_group ||"Sin grupo") === filterGroup);
     if (filterType) result = result.filter((e) => e.exercise_type === filterType);
-    if (mediaFilter === "no-image") result = result.filter((e) => !e.image_url);
-    if (mediaFilter === "no-video") result = result.filter((e) => !e.video_url);
-    if (mediaFilter === "old-style") result = result.filter(hasOutdatedMedia);
-    if (mediaFilter === "error") result = result.filter((e) => Boolean(e.media_error));
+    if (mediaFilter ==="no-image") result = result.filter((e) => !e.image_url);
+    if (mediaFilter ==="no-video") result = result.filter((e) => !e.video_url);
+    if (mediaFilter ==="old-style") result = result.filter(hasOutdatedMedia);
+    if (mediaFilter ==="error") result = result.filter((e) => Boolean(e.media_error));
     return result;
   }, [exercises, search, filterGroup, filterType, mediaFilter]);
 
-  /** Pendientes visibles: lo que realmente procesará el botón "Generar pendientes". */
+  /** Pendientes visibles: lo que realmente procesará el botón"Generar pendientes". */
   /** Los ejercicios clave (video_priority) van primero, el resto conserva su orden. */
   const pendingQueue = useMemo(
     () => filtered.filter(needsGeneration).sort((a, b) => (a.video_priority ?? 99) - (b.video_priority ?? 99)),
@@ -830,11 +830,11 @@ const ExerciseLibrary = () => {
   );
 
   const mediaFilterOptions = useMemo(() => ([
-    { value: "all" as const, label: "Todos", count: exercises.length },
-    { value: "no-image" as const, label: "Sin imagen", count: exercises.filter((e) => !e.image_url).length },
-    { value: "no-video" as const, label: "Sin vídeo", count: exercises.filter((e) => !e.video_url).length },
-    { value: "old-style" as const, label: "Estilo antiguo", count: exercises.filter(hasOutdatedMedia).length },
-    { value: "error" as const, label: "Con error", count: exercises.filter((e) => Boolean(e.media_error)).length },
+    { value:"all" as const, label:"Todos", count: exercises.length },
+    { value:"no-image" as const, label:"Sin imagen", count: exercises.filter((e) => !e.image_url).length },
+    { value:"no-video" as const, label:"Sin vídeo", count: exercises.filter((e) => !e.video_url).length },
+    { value:"old-style" as const, label:"Estilo antiguo", count: exercises.filter(hasOutdatedMedia).length },
+    { value:"error" as const, label:"Con error", count: exercises.filter((e) => Boolean(e.media_error)).length },
   ]), [exercises]);
 
   const pendingCounts = useMemo(() => ({
@@ -846,7 +846,7 @@ const ExerciseLibrary = () => {
   const groupCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     exercises.forEach((e) => {
-      const g = e.muscle_group || "Sin grupo";
+      const g = e.muscle_group ||"Sin grupo";
       counts[g] = (counts[g] || 0) + 1;
     });
     return counts;
@@ -859,7 +859,7 @@ const ExerciseLibrary = () => {
     }
     setLoading(true);
     const payload = {
-      name: form.name?.trim() || "",
+      name: form.name?.trim() ||"",
       muscle_group: form.muscle_group || null,
       exercise_type: form.exercise_type || null,
       movement_pattern: form.movement_pattern || null,
@@ -904,8 +904,8 @@ const ExerciseLibrary = () => {
     // Higiene de medios: primero se borra la fila (revoca el acceso) y después
     // los objetos del bucket. Si la limpieza falla, el ejercicio ya no existe.
     const orphanPaths = [
-      siteAssetPath(target?.image_url, "exercise-images/"),
-      siteAssetPath(target?.video_url, "exercise-videos/"),
+      siteAssetPath(target?.image_url,"exercise-images/"),
+      siteAssetPath(target?.video_url,"exercise-videos/"),
     ].filter((path): path is string => Boolean(path));
     if (orphanPaths.length > 0) {
       const { error: cleanupError } = await supabase.storage.from("site-assets").remove(orphanPaths);
@@ -914,9 +914,9 @@ const ExerciseLibrary = () => {
     toast.success("Ejercicio eliminado");
   };
 
-  const levelLabel = (l: number) => LEVELS.find((x) => x.value === l)?.label || "";
-  const priorityLabel = (p: number) => PRIORITIES.find((x) => x.value === p)?.label || "";
-  const orderLabel = (o: number) => RECOMMENDED_ORDERS.find((x) => x.value === o)?.label || "";
+  const levelLabel = (l: number) => LEVELS.find((x) => x.value === l)?.label ||"";
+  const priorityLabel = (p: number) => PRIORITIES.find((x) => x.value === p)?.label ||"";
+  const orderLabel = (o: number) => RECOMMENDED_ORDERS.find((x) => x.value === o)?.label ||"";
 
   return (
     <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-[0_16px_44px_-36px_hsl(var(--primary)/.55)] sm:p-5">
@@ -947,7 +947,7 @@ const ExerciseLibrary = () => {
               variant="secondary"
               size="sm"
               disabled={pendingQueue.length === 0 || !mediaColumnsReady}
-              title={!mediaColumnsReady ? "Falta aplicar la migración de medios: supabase db push" : undefined}
+              title={!mediaColumnsReady ?"Falta aplicar la migración de medios: supabase db push" : undefined}
               onClick={() => setMediaBatchOpen(true)}
               className="gap-1.5"
             >
@@ -990,12 +990,12 @@ const ExerciseLibrary = () => {
               <span>Músculo</span>
               <select
                 className="flex h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
-                value={filterGroup ?? ""}
+                value={filterGroup ??""}
                 onChange={(event) => setFilterGroup(event.target.value || null)}
                 aria-label="Filtrar ejercicios por músculo"
               >
                 <option value="">Todos los músculos</option>
-                {Object.keys(groupCounts).sort((a, b) => a.localeCompare(b, "es")).map((group) => (
+                {Object.keys(groupCounts).sort((a, b) => a.localeCompare(b,"es")).map((group) => (
                   <option key={group} value={group}>{group} · {groupCounts[group]}</option>
                 ))}
               </select>
@@ -1004,7 +1004,7 @@ const ExerciseLibrary = () => {
               <span>Tipo de ejercicio</span>
               <select
                 className="flex h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
-                value={filterType ?? ""}
+                value={filterType ??""}
                 onChange={(event) => setFilterType(event.target.value || null)}
                 aria-label="Filtrar ejercicios por tipo"
               >
@@ -1024,8 +1024,8 @@ const ExerciseLibrary = () => {
                 aria-pressed={mediaFilter === option.value}
                 className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
                   mediaFilter === option.value
-                    ? "border-primary/40 bg-primary/15 text-primary"
-                    : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary/70"
+                    ?"border-primary/40 bg-primary/15 text-primary"
+                    :"border-border bg-secondary/40 text-muted-foreground hover:bg-secondary/70"
                 }`}
               >
                 {option.label} · {option.count}
@@ -1047,7 +1047,7 @@ const ExerciseLibrary = () => {
                       name: ex.name,
                       image: ex.image_url,
                       video: ex.video_url,
-                      detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || null,
+                      detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" ·") || null,
                     })}
                     aria-label={`Ver el vídeo de ${ex.name}`}
                     className="shrink-0 rounded-xl transition-opacity hover:opacity-80"
@@ -1073,11 +1073,11 @@ const ExerciseLibrary = () => {
                       )}
                       <span className={ex.image_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
                         {ex.image_url ? <ImageIcon className="h-2.5 w-2.5" /> : <ImageOff className="h-2.5 w-2.5" />}
-                        {ex.image_url ? "Imagen" : "Sin imagen"}
+                        {ex.image_url ?"Imagen" :"Sin imagen"}
                       </span>
                       <span className={ex.video_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
                         {ex.video_url ? <Video className="h-2.5 w-2.5" /> : <VideoOff className="h-2.5 w-2.5" />}
-                        {ex.video_url ? "Vídeo" : "Sin vídeo"}
+                        {ex.video_url ?"Vídeo" :"Sin vídeo"}
                       </span>
                       {hasOutdatedMedia(ex) && (
                         <span className={MEDIA_BADGE_OFF} title="Generado con una versión de estilo anterior">
@@ -1118,7 +1118,7 @@ const ExerciseLibrary = () => {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Dumbbell className="w-10 h-10 text-muted-foreground/30 mb-3" />
               <p className="text-sm text-muted-foreground">
-                {exercises.length === 0 ? "No hay ejercicios aún. Añade el primero." : "Sin resultados para esta búsqueda."}
+                {exercises.length === 0 ?"No hay ejercicios aún. Añade el primero." :"Sin resultados para esta búsqueda."}
               </p>
             </div>
           )}

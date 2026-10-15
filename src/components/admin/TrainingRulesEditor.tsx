@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { Save, RotateCcw, Loader2, Zap, Dumbbell, Heart, Shield, Timer } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from"react";
+import { supabase } from"@/integrations/supabase/client";
+import { Button } from"@/components/ui/button";
+import { Input } from"@/components/ui/input";
+import { Label } from"@/components/ui/label";
+import { toast } from"sonner";
+import { Save, RotateCcw, Loader2, Zap, Dumbbell, Heart, Shield, Timer } from"lucide-react";
+import { Badge } from"@/components/ui/badge";
 
 interface TrainingRules {
   id: string;
@@ -35,21 +35,21 @@ interface TrainingRules {
   recovery_hours: Record<string, number>;
 }
 
-const DEFAULTS: Omit<TrainingRules, "id"> = {
+const DEFAULTS: Omit<TrainingRules,"id"> = {
   min_sets_per_session: 12,
   max_sets_per_session: 20,
   series_p1_min: 3, series_p1_max: 5,
   series_p2_min: 3, series_p2_max: 4,
   series_p3_min: 2, series_p3_max: 3,
-  reps_fuerza: "4-8", reps_hipertrofia: "8-15", reps_resistencia: "15-25", reps_isometrico: "20-60s",
-  rest_fuerza: "180s", rest_hipertrofia: "90s", rest_resistencia: "45s", rest_isometrico: "60s",
+  reps_fuerza:"4-8", reps_hipertrofia:"8-15", reps_resistencia:"15-25", reps_isometrico:"20-60s",
+  rest_fuerza:"180s", rest_hipertrofia:"90s", rest_resistencia:"45s", rest_isometrico:"60s",
   max_consecutive_high_fatigue: 2, max_heavy_hinges: 1, max_pattern_repeats: 2, push_pull_max_diff: 1,
   max_p2_exercises: 2, max_p3_exercises: 2,
-  required_patterns: ["Empuje", "Tirón", "Sentadilla", "Bisagra", "Core"],
-  recovery_hours: { Pecho: 48, Espalda: 48, Hombros: 48, Bíceps: 36, Tríceps: 36, Piernas: 72, Glúteos: 48, Core: 24, "Cuerpo completo": 48, Cardio: 24 },
+  required_patterns: ["Empuje","Tirón","Sentadilla","Bisagra","Core"],
+  recovery_hours: { Pecho: 48, Espalda: 48, Hombros: 48, Bíceps: 36, Tríceps: 36, Piernas: 72, Glúteos: 48, Core: 24,"Cuerpo completo": 48, Cardio: 24 },
 };
 
-const ALL_PATTERNS = ["Empuje", "Tirón", "Sentadilla", "Bisagra", "Core", "Aislamiento"];
+const ALL_PATTERNS = ["Empuje","Tirón","Sentadilla","Bisagra","Core","Aislamiento"];
 
 const TrainingRulesEditor = () => {
   const [rules, setRules] = useState<TrainingRules | null>(null);
@@ -66,7 +66,7 @@ const TrainingRulesEditor = () => {
       setRules({
         ...data,
         required_patterns: Array.isArray(data.required_patterns) ? data.required_patterns as string[] : DEFAULTS.required_patterns,
-        recovery_hours: typeof data.recovery_hours === "object" && data.recovery_hours !== null ? data.recovery_hours as Record<string, number> : DEFAULTS.recovery_hours,
+        recovery_hours: typeof data.recovery_hours ==="object" && data.recovery_hours !== null ? data.recovery_hours as Record<string, number> : DEFAULTS.recovery_hours,
       });
     }
     setLoading(false);
@@ -148,13 +148,13 @@ const TrainingRulesEditor = () => {
       {/* Reps & Rest by stimulus */}
       <Section icon={<Timer className="w-4 h-4" />} title="Reps y descanso por estímulo">
         <div className="space-y-3">
-          {(["fuerza", "hipertrofia", "resistencia", "isometrico"] as const).map(s => (
+          {(["fuerza","hipertrofia","resistencia","isometrico"] as const).map(s => (
             <div key={s} className="grid grid-cols-3 gap-2 items-end">
               <div>
-                <Label className="text-xs capitalize">{s === "isometrico" ? "Isométrico" : s.charAt(0).toUpperCase() + s.slice(1)}</Label>
+                <Label className="text-xs capitalize">{s ==="isometrico" ?"Isométrico" : s.charAt(0).toUpperCase() + s.slice(1)}</Label>
               </div>
               <div>
-                <Label className="text-[10px] text-muted-foreground">Reps</Label>
+                <Label className="type-caption2 text-muted-foreground">Reps</Label>
                 <Input
                   value={rules[`reps_${s}`]}
                   onChange={e => update(`reps_${s}`, e.target.value)}
@@ -162,7 +162,7 @@ const TrainingRulesEditor = () => {
                 />
               </div>
               <div>
-                <Label className="text-[10px] text-muted-foreground">Descanso</Label>
+                <Label className="type-caption2 text-muted-foreground">Descanso</Label>
                 <Input
                   value={rules[`rest_${s}`]}
                   onChange={e => update(`rest_${s}`, e.target.value)}
@@ -195,8 +195,8 @@ const TrainingRulesEditor = () => {
               onClick={() => togglePattern(p)}
               className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                 rules.required_patterns.includes(p)
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border text-muted-foreground hover:border-primary/30"
+                  ?"border-primary bg-primary/10 text-primary"
+                  :"border-border text-muted-foreground hover:border-primary/30"
               }`}
             >
               {p}
@@ -219,7 +219,7 @@ const TrainingRulesEditor = () => {
                 min={0}
                 max={168}
               />
-              <span className="text-[10px] text-muted-foreground">h</span>
+              <span className="type-caption2 text-muted-foreground">h</span>
             </div>
           ))}
         </div>
