@@ -798,14 +798,16 @@ serve(async (req) => {
     if (billingError) throw billingError;
     const paidCoaching = hasCoaching(billing);
     const includeNutrition = hasNutrition(billing);
+    // An admin regenerating their own plan skips the plan limits so every flow can be tested.
+    const { data: callerIsAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+    const adminSelf = !!callerIsAdmin && targetUserId === user.id;
     // Only Coach has a human reviewer; Plus is self-service and regenerates its own plan.
-    if (getConsumerPlan(billing) === "coach" && targetUserId === user.id) {
-      const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-      if (!isAdmin) return new Response(JSON.stringify({ error: "Tu entrenador prepara y revisa tu plan." }), {
+    if (getConsumerPlan(billing) === "coach" && targetUserId === user.id && !callerIsAdmin) {
+      return new Response(JSON.stringify({ error: "Tu entrenador prepara y revisa tu plan." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!paidCoaching) {
+    if (!paidCoaching && !adminSelf) {
       // Free accounts get one initial routine. Repeated requests preserve it and its logs.
       const { data: existing, error } = await supabase.from("training_plan").select("id")
         .eq("user_id", targetUserId).maybeSingle();
@@ -1034,7 +1036,7 @@ serve(async (req) => {
 
     const { error: trainingError } = await supabase.from("training_plan").upsert(
       { user_id: targetUserId, workouts_json: weeklyPlan },
-      { onConflict: "user_id", ignoreDuplicates: !paidCoaching },
+      { onConflict: "user_id", ignoreDuplicates: !paidCoaching && !adminSelf },
     );
     if (trainingError) throw trainingError;
     if (writeNutrition) {

@@ -45,7 +45,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { hapticTap, hapticSelection } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
-import { buildScanPlanUpdates, hasScanInferences } from "@/lib/scanApply";
+import { applyScanPlan, canApplyScanToPlan, hasScanInferences } from "@/lib/scanApply";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
@@ -330,7 +330,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
   const [genLoading, setGenLoading] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
-  const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "success" | "error">("idle");
+  const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "success" | "sent" | "error">("idle");
+  const [canApplyPlan, setCanApplyPlan] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
@@ -360,15 +361,17 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
     if (!user) return;
     supabase
       .from("profiles")
-      .select("payment_status, email, name")
+      .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id, email, name")
       .eq("user_id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         setIsPaid(data?.payment_status === "paid");
         setUserEmail(data?.email ?? user.email ?? null);
         setUserName(data?.name ?? null);
         setLeadEmail((prev) => prev || data?.email || user.email || "");
         setLeadName((prev) => prev || data?.name || "");
+        const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
+        setCanApplyPlan(canApplyScanToPlan(data, !!isAdmin));
       });
     supabase
       .from("onboarding")
@@ -805,53 +808,37 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
   };
 
   const applyScanToPlan = async (r: Result) => {
-    if (!user) return;
+    if (!user || planApplyState === "applying") return;
     setPlanApplyState("applying");
-    try {
-      const { data: existing } = await supabase
-        .from("onboarding")
-        .select("id, specific_goal")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (!existing) {
-        // Sin onboarding previo no podemos generar plan (faltan edad/peso/etc.)
+    const outcome = await applyScanPlan(supabase, user.id, r).catch((e: unknown) => {
+      console.error("applyScanToPlan", e);
+      return "failed" as const;
+    });
+    switch (outcome) {
+      case "applied":
+        setPlanApplyState("success");
+        toast.success("Plan actualizado con tu scan");
+        break;
+      case "sent_to_coach":
+        setPlanApplyState("sent");
+        toast.success("Scan enviado a tu entrenador para ajustar el plan");
+        break;
+      case "no_changes":
+        setPlanApplyState("idle");
+        toast.info("Este scan no propone cambios en tu plan");
+        break;
+      case "needs_profile":
         setPlanApplyState("idle");
         toast.error("Te falta completar tu perfil para poder aplicar el scan. Complétalo en Ajustes.");
-        return;
-      }
-
-      const updates = buildScanPlanUpdates(r);
-
-      if (Object.keys(updates).length === 0) {
+        break;
+      case "kept":
         setPlanApplyState("idle");
-        return;
-      }
-
-      const { error: updErr } = await supabase
-        .from("onboarding")
-        .update(updates)
-        .eq("user_id", user.id);
-      if (updErr) throw updErr;
-
-      await supabase.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", user.id);
-
-      const { error: genErr } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
-      if (genErr) {
-        // Coach: el plan lo revisa Nicolás; el scan queda guardado para él.
-        if ((genErr as { context?: Response }).context?.status === 403) {
-          setPlanApplyState("success");
-          toast.success("Scan enviado a tu entrenador para ajustar el plan");
-          return;
-        }
-        throw genErr;
-      }
-      setPlanApplyState("success");
-      toast.success("Plan actualizado con tu scan");
-    } catch (e: unknown) {
-      console.error("applyScanToPlan", e);
-      setPlanApplyState("error");
-      toast.error("No se pudo aplicar al plan. Tu plan no ha cambiado.");
+        setCanApplyPlan(false);
+        toast.info("Tu plan gratuito mantiene su rutina. Tu plan no ha cambiado.");
+        break;
+      default:
+        setPlanApplyState("error");
+        toast.error("No se pudo aplicar al plan. Tu plan no ha cambiado.");
     }
   };
 
@@ -1734,7 +1721,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             El scan no cambia nada por sí solo. Aplícalo solo si te encaja.
                           </div>
                         </div>
-                        {hasScanInferences(result) ? (
+                        {!hasScanInferences(result) ? (
+                          <div className="type-caption1 text-muted-foreground">
+                            Este scan no propone cambios, así que no hay nada que aplicar.
+                          </div>
+                        ) : canApplyPlan ? (
                           <Button
                             size="default"
                             variant="secondary"
@@ -1745,7 +1736,9 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           </Button>
                         ) : (
                           <div className="type-caption1 text-muted-foreground">
-                            Este scan no propone cambios, así que no hay nada que aplicar.
+                            {plans.plus
+                              ? "Ajustar tu plan con cada scan es parte de Plus."
+                              : "Tu plan gratuito mantiene su rutina inicial."}
                           </div>
                         )}
                       </>
@@ -1771,13 +1764,25 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         </Button>
                       </>
                     )}
+                    {planApplyState === "sent" && (
+                      <>
+                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                        <div className="type-subhead flex-1">
+                          <div className="font-semibold text-primary">Scan enviado a tu entrenador</div>
+                          <div className="type-caption1 text-muted-foreground">Tu entrenador ajustará tu plan con este scan.</div>
+                        </div>
+                      </>
+                    )}
                     {planApplyState === "error" && (
                       <>
                         <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
-                        <div className="type-subhead">
+                        <div className="type-subhead flex-1">
                           <div className="font-medium">No se pudo aplicar al plan</div>
                           <div className="type-caption1 text-muted-foreground">Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras.</div>
                         </div>
+                        <Button size="default" variant="secondary" onClick={() => { void hapticTap(); applyScanToPlan(result); }}>
+                          Reintentar
+                        </Button>
                       </>
                     )}
                   </div>
@@ -2402,7 +2407,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               </motion.div>
               ) : (
                 <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
-                  {routeUserId && user && (planApplyState === "idle" || planApplyState === "error") && (
+                  {routeUserId && user && canApplyPlan && hasScanInferences(result) && (planApplyState === "idle" || planApplyState === "error") && (
                     <Button
                       variant="secondary"
                       size="xl"
