@@ -74,13 +74,13 @@ export default function ProductsAdmin() {
   return (
     <div className="space-y-8 max-w-5xl">
       <ConsumerPlansAdmin />
-      <section className="rounded-2xl bg-card p-5 space-y-4">
+      <section className="space-y-4">
         <div className="flex flex-wrap gap-2">
           {([["pending", `Coach sin entrenador (${pendingCount})`], ["free", `Free (${count("free")})`], ["plus", `Plus (${count("plus")})`], ["coach", `Coach (${count("coach")})`], ["all", "Todos"]] as const).map(([k, l]) => (
             <Button key={k} size="sm" variant={filter === k ? "default" : "secondary"} onClick={() => { void hapticSelection(); setFilter(k); }}>{l}</Button>
           ))}
         </div>
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card px-4">
           {visible.length === 0 && <p className="py-4 type-subhead text-muted-foreground">No hay usuarios en este grupo.</p>}
           {visible.slice(0, 200).map((r) => (
             <div key={r.user_id} className="flex flex-wrap items-center gap-3 py-2 type-subhead">
@@ -100,11 +100,11 @@ export default function ProductsAdmin() {
       </section>
 
       {cfg && (
-        <section className="rounded-2xl bg-card p-5 space-y-4">
+        <section className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="type-title3">Autopilot para entrenadores</h2>
-              <p className="type-subhead text-muted-foreground">Estado: <span className="font-semibold text-foreground">{cfg.enabled ? "ACTIVADO" : "DESACTIVADO"}</span></p>
+              <p className="type-subhead text-muted-foreground">Estado: <span className="font-semibold text-foreground">{cfg.enabled ? "activado" : "desactivado"}</span></p>
               {!cfg.enabled && <p className="mt-1 type-subhead text-muted-foreground">El producto está construido pero actualmente no está disponible públicamente.</p>}
             </div>
             {cfg.enabled
@@ -134,13 +134,13 @@ export default function ProductsAdmin() {
         </section>
       )}
 
-      <section className="rounded-2xl bg-card p-5 space-y-3">
+      <section className="space-y-3">
         <h2 className="type-title3">Solicitudes de entrenadores ({apps.length})</h2>
         {apps.length === 0 && <p className="type-subhead text-muted-foreground">Aún no hay solicitudes.</p>}
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card px-4">
           {apps.map((a) => (
-            <div key={a.id} className="py-2 type-subhead flex flex-wrap gap-x-4 gap-y-1">
-              <span className="font-semibold">{a.quiz_answers?.name || "—"}</span>
+            <div key={a.id} className="py-3 type-subhead flex flex-wrap gap-x-4 gap-y-1">
+              <span className="type-headline">{a.quiz_answers?.name || "—"}</span>
               <a className="text-primary" href={`mailto:${a.email}`}>{a.email}</a>
               {a.quiz_answers?.phone && <span>{a.quiz_answers.phone}</span>}
               <span className="text-muted-foreground">{a.quiz_answers?.clients} clientes · {a.quiz_answers?.tools} · {a.quiz_answers?.goal}</span>

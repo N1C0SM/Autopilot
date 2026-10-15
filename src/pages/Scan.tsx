@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ProgressRing } from "@/components/ui/progress-ring";
+import { hapticTap, hapticSelection } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
 import { buildScanPlanUpdates, hasScanInferences } from "@/lib/scanApply";
 import { toast } from "sonner";
@@ -216,14 +218,16 @@ const Dropzone = ({
         }}
       />
       {image ? (
-        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-primary/30 bg-card">
+        <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-card">
           <img loading="lazy" decoding="async" src={image} alt={label} className="w-full h-full object-cover" />
           <button
-            onClick={onClear}
+            onClick={() => { void hapticTap(); onClear(); }}
             aria-label="Quitar foto"
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur flex items-center justify-center transition"
+            className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center active:opacity-60"
           >
-            <X className="w-4 h-4" />
+            <span className="w-8 h-8 rounded-full bg-background/80 flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </span>
           </button>
           <div className="absolute bottom-0 inset-x-0 bg-background/80 p-3">
             <div className="type-headline text-primary">
@@ -234,8 +238,8 @@ const Dropzone = ({
       ) : (
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
-          className="relative aspect-[3/4] w-full rounded-2xl border-2 border-dashed border-border transition-all flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-6 group overflow-hidden"
+          onClick={() => { void hapticTap(); inputRef.current?.click(); }}
+          className="relative aspect-[3/4] w-full rounded-2xl bg-card transition-colors active:bg-accent flex flex-col items-center justify-center gap-3 p-3 sm:p-6 overflow-hidden"
         >
           {placeholder && (
             <img
@@ -246,12 +250,12 @@ const Dropzone = ({
               className="absolute inset-0 w-full h-full object-contain opacity-15 pointer-events-none select-none"
             />
           )}
-          <div className="relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center transition">
-            <Upload className="w-6 h-6 text-primary" />
+          <div className="relative w-14 h-14 rounded-[22%] bg-secondary flex items-center justify-center">
+            <Upload className="w-7 h-7 text-primary" strokeWidth={1.75} />
           </div>
           <div className="relative text-center">
-            <div className="font-semibold text-sm">{label}</div>
-            <div className="text-xs text-muted-foreground mt-1">{hint}</div>
+            <div className="type-headline">{label}</div>
+            <div className="type-subhead text-muted-foreground mt-0.5">{hint}</div>
           </div>
         </button>
       )}
@@ -261,19 +265,17 @@ const Dropzone = ({
 
 const ScoreCard = ({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) => (
   <div
-    className={`relative bg-card/60 backdrop-blur rounded-2xl p-4 border ${
-      highlight ? "border-primary/40" : "border-border"
-    }`}
+    className={`relative bg-card rounded-2xl p-4 ${highlight ? "ring-1 ring-primary/40" : ""}`}
   >
     <div className="type-group-header text-muted-foreground mb-1 flex items-center gap-1">
       {highlight && <Zap className="w-3 h-3 text-primary" />}
       {label}
     </div>
     <div className="flex items-baseline gap-1">
-      <span className="text-3xl font-bold font-display text-primary">
+      <span className="type-title1 font-rounded tabular-nums text-primary">
         {value.toFixed(1)}
       </span>
-      <span className="text-xs text-muted-foreground">/10</span>
+      <span className="type-caption1 text-muted-foreground">/10</span>
     </div>
     <div className="h-1.5 bg-secondary rounded-full overflow-hidden mt-2">
       <motion.div
@@ -788,7 +790,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
           });
           // Solo confirmamos el envío si la función no devolvió error.
           if (emailError) throw emailError;
-          toast.success("Te hemos enviado el diagnóstico por email ✓");
+          toast.success("Te hemos enviado el diagnóstico por email");
         }
       } catch (err) {
         console.warn("send diagnosis email failed", err);
@@ -839,13 +841,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
         // Coach: el plan lo revisa Nicolás; el scan queda guardado para él.
         if ((genErr as { context?: Response }).context?.status === 403) {
           setPlanApplyState("success");
-          toast.success("Scan enviado a tu entrenador para ajustar el plan ✓");
+          toast.success("Scan enviado a tu entrenador para ajustar el plan");
           return;
         }
         throw genErr;
       }
       setPlanApplyState("success");
-      toast.success("Plan actualizado con tu scan ✓");
+      toast.success("Plan actualizado con tu scan");
     } catch (e: unknown) {
       console.error("applyScanToPlan", e);
       setPlanApplyState("error");
@@ -987,7 +989,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
         },
       });
       setAutoSaved(true);
-      if (!opts.silent) toast.success(`Diagnóstico enviado a ${userEmail} ✓`);
+      if (!opts.silent) toast.success(`Diagnóstico enviado a ${userEmail}`);
     } catch (e) {
       console.warn("saveAndEmailScan failed", e);
       if (!opts.silent) toast.error("No se pudo enviar el email");
@@ -1097,7 +1099,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
   if (isUnauthorized || isAwaitingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground text-sm">
+      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground type-subhead">
         {isUnauthorized ? "Solo puedes ver tu propio progreso. Redirigiendo…" : "Verificando acceso…"}
       </div>
     );
@@ -1123,19 +1125,15 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
         !user &&
         <StickyConversionBar onCta={() => navigate(signupWithPlan)} />
       )}
-      {/* Glow background */}
-      <div className="absolute inset-0 -z-10 pointer-events-none">
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[140px]" />
-      </div>
-
       {/* Header */}
-      {!embedded && <header className="container mx-auto max-w-7xl px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-4 grid grid-cols-[1fr_auto_1fr] items-center">
+      {!embedded && <header className="container mx-auto max-w-7xl px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 grid grid-cols-[1fr_auto_1fr] items-center">
         <div className="flex items-center gap-1">
           {user && <SidebarTrigger className="hidden md:inline-flex" />}
           <Link
             to={user ? "/dashboard" : "/"}
             aria-label="Volver"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition active:opacity-60"
+            onClick={() => void hapticTap()}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-primary transition active:opacity-60"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -1155,17 +1153,14 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               transition={{ duration: 0.4 }}
             >
               {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} />}
-              <div className="text-center max-w-3xl mx-auto mb-8">
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-3">
-                  Análisis físico con IA
-                </h1>
-                <p className="text-base text-muted-foreground">
+              <div className="text-center max-w-md mx-auto mt-2 mb-8">
+                <h1 className="type-title1">Análisis físico con IA</h1>
+                <p className="type-subhead text-muted-foreground mt-2">
                   Sube tu foto frontal o de espalda para actualizar tu análisis
                 </p>
               </div>
 
-
-              <div className="grid grid-cols-2 gap-3 sm:gap-5 max-w-md sm:max-w-3xl mx-auto mb-6">
+              <div className="grid grid-cols-2 gap-3 sm:gap-5 max-w-md sm:max-w-3xl mx-auto mb-10">
                 <Dropzone
                   label="Foto de delante"
                   hint="Cuerpo completo"
@@ -1186,132 +1181,136 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
               {/* Físico objetivo: presets del admin + opción de subir foto propia */}
               {user && savedObjectiveUrl && !editingObjective ? (
-                <div className="w-full mx-auto mb-8 rounded-2xl border border-primary/30 bg-card/60 backdrop-blur p-4 sm:p-5 flex items-center gap-4">
+                <div className="mx-auto mb-10 max-w-md flex items-center gap-4">
                   <img loading="lazy" decoding="async"
                     src={savedObjectiveUrl}
                     alt="Tu objetivo"
-                    className="w-20 h-24 object-cover rounded-lg border border-border flex-shrink-0"
+                    className="w-20 h-24 object-cover rounded-[10px] flex-shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Target className="w-4 h-4 text-primary" />
-                      <h2 className="font-display font-bold text-base truncate">
-                        {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || savedGoalText || "Tu objetivo actual"}
-                      </h2>
-                    </div>
-                    <p className="text-[12px] text-muted-foreground">
+                    <h2 className="type-headline truncate">
+                      {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || savedGoalText || "Tu objetivo actual"}
+                    </h2>
+                    <p className="type-subhead text-muted-foreground mt-0.5">
                       La IA lo usará para estimar cuántos meses te faltan.
                     </p>
-                  </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingObjective(true)}
-                    >
-                      Cambiar objetivo
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setObjectiveImg(null);
-                        setSelectedPresetId(null);
-                        setEditingObjective(true);
-                      }}
-                      className="text-[11px] text-muted-foreground"
-                    >
-                      Quitar para este scan
-                    </button>
+                    <div className="flex items-center gap-1 mt-1 -ml-3">
+                      <Button
+                        variant="plain"
+                        size="sm"
+                        onClick={() => { void hapticTap(); setEditingObjective(true); }}
+                      >
+                        Cambiar objetivo
+                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void hapticTap();
+                          setObjectiveImg(null);
+                          setSelectedPresetId(null);
+                          setEditingObjective(true);
+                        }}
+                        className="min-h-[34px] px-3 type-footnote text-muted-foreground active:opacity-60"
+                      >
+                        Quitar para este scan
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
-                <div className="mx-auto mb-6 flex max-w-4xl items-center justify-between gap-4 rounded-xl border border-border bg-card p-4">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Target className="w-4 h-4 text-primary flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="text-xs text-muted-foreground">Tu objetivo</div>
-                      <div className="font-display font-bold text-sm truncate">
-                        {savedGoalText || "Sin objetivo definido"}
-                      </div>
-                    </div>
+                <div className="mx-auto mb-10 max-w-md flex items-start gap-4">
+                  <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                    <Target className="w-7 h-7 text-primary" strokeWidth={1.75} />
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setEditingObjective(true)}>
-                    Cambiar objetivo
-                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="type-headline">Tu objetivo</h2>
+                    <p className="type-subhead text-muted-foreground mt-0.5 truncate">
+                      {savedGoalText || "Sin objetivo definido"}
+                    </p>
+                    <Button variant="plain" size="sm" className="-ml-3 mt-1" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
+                      Cambiar objetivo
+                    </Button>
+                  </div>
                 </div>
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
-                <div className="mx-auto mb-6 max-w-4xl rounded-xl border border-border bg-card p-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-primary" />
-                    <h2 className="font-display font-bold text-base">¿Tienes un físico objetivo?</h2>
+                <div className="mx-auto mb-10 max-w-md flex items-start gap-4">
+                  <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                    <Target className="w-7 h-7 text-primary" strokeWidth={1.75} />
                   </div>
-                  <p className="mb-4 text-sm text-muted-foreground">
-                    Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => { setHasObjectiveChoice("yes"); setEditingObjective(true); }}
-                    >
-                      Sí, elegir uno
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setHasObjectiveChoice("no")}
-                    >
-                      No, sin objetivo
-                    </Button>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="type-headline">¿Tienes un físico objetivo?</h2>
+                    <p className="type-subhead text-muted-foreground mt-0.5">
+                      Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-1 mt-1 -ml-3">
+                      <Button
+                        variant="plain"
+                        size="sm"
+                        onClick={() => { void hapticTap(); setHasObjectiveChoice("yes"); setEditingObjective(true); }}
+                      >
+                        Sí, elegir uno
+                      </Button>
+                      <Button
+                        variant="plain"
+                        size="sm"
+                        className="text-muted-foreground"
+                        onClick={() => { void hapticTap(); setHasObjectiveChoice("no"); }}
+                      >
+                        No, sin objetivo
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "no" ? (
-                <div className="mx-auto mb-6 flex max-w-4xl items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-                  <p className="text-sm text-muted-foreground">
+                <div className="mx-auto mb-10 max-w-md flex items-center justify-between gap-3">
+                  <p className="type-subhead text-muted-foreground">
                     Sin objetivo · el análisis se centra en tu físico actual.
                   </p>
-                  <Button variant="ghost" size="sm" onClick={() => { setHasObjectiveChoice("yes"); setEditingObjective(true); }}>
+                  <Button variant="plain" size="sm" className="shrink-0" onClick={() => { void hapticTap(); setHasObjectiveChoice("yes"); setEditingObjective(true); }}>
                     Añadir objetivo
                   </Button>
                 </div>
               ) : (
-              <div className="mx-auto mb-6 max-w-4xl rounded-xl border border-border bg-card p-5">
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Target className="w-4 h-4 text-primary" />
-                      <h2 className="font-display text-base font-bold">Tu físico objetivo <span className="ml-1 text-xs font-normal text-muted-foreground">opcional</span></h2>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
+              <div className="mx-auto mb-10 max-w-3xl">
+                <div className="flex items-start gap-4 mb-5">
+                  <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                    <Target className="w-7 h-7 text-primary" strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="type-headline">Tu físico objetivo</h2>
+                    <p className="type-subhead text-muted-foreground mt-0.5">
                       Elige una referencia o sube tu foto. Solo con objetivo calculamos cuántos meses te faltan.
                     </p>
+                    {objectiveImg && (
+                      <Button
+                        variant="plain"
+                        size="sm"
+                        className="-ml-3 mt-1"
+                        onClick={() => { void hapticTap(); setObjectiveImg(null); setSelectedPresetId(null); }}
+                      >
+                        Quitar
+                      </Button>
+                    )}
                   </div>
-                  {objectiveImg && (
-                    <button
-                      type="button"
-                      onClick={() => { setObjectiveImg(null); setSelectedPresetId(null); }}
-                      className="text-xs text-muted-foreground flex items-center gap-1"
-                    >
-                      <X className="w-3 h-3" /> Quitar
-                    </button>
-                  )}
                 </div>
 
                 {/* Un objetivo sin foto es una caja vacía con un nombre: no aporta nada */}
                 {goalPresets.some((p) => p.image_url) && (
-                  <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                  <div className="mb-5 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
                     {goalPresets.filter((p) => p.image_url).map((p) => {
                       const isSel = selectedPresetId === p.id;
                       return (
                         <button
                           key={p.id}
                           type="button"
+                          aria-pressed={isSel}
                           onClick={() => {
+                            void hapticSelection();
                             setObjectiveImg(p.image_url);
                             setSelectedPresetId(p.id);
                           }}
-                          className={`relative aspect-[3/4] overflow-hidden rounded-xl border-2 transition group ${
-                            isSel ? "border-primary" : "border-border"
+                          className={`relative aspect-[3/4] overflow-hidden rounded-xl bg-card transition-transform duration-100 active:scale-[0.97] ${
+                            isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                           }`}
                         >
                           <img
@@ -1321,7 +1320,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             loading="lazy"
                           />
                           <div className="absolute inset-x-0 bottom-0 bg-background/80 p-2">
-                            <div className="line-clamp-2 text-xs font-semibold leading-tight">
+                            <div className="line-clamp-2 type-caption1 font-semibold">
                               {p.name}
                             </div>
                           </div>
@@ -1338,7 +1337,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
                 <div className="grid sm:grid-cols-[180px,1fr] gap-4 items-center">
                   <div>
-                    <label className="block">
+                    <label className="block cursor-pointer">
                       <input
                         type="file"
                         accept="image/*"
@@ -1346,33 +1345,28 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         onChange={async (e) => {
                           const f = e.target.files?.[0];
                           if (!f) return;
+                          void hapticTap();
                           const dataUrl = await fileToDataUrl(f);
                           setObjectiveImg(dataUrl);
                           setSelectedPresetId(null);
                           if (user && routeUserId) await saveCustomGoalPreset(dataUrl);
                         }}
                       />
-                      <div className={`cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition ${
-                        objectiveImg && !selectedPresetId
-                          ? "border-primary bg-primary/5"
-                          : "border-border"
-                      }`}>
-                        {objectiveImg && !selectedPresetId ? (
-                          <img loading="lazy" decoding="async" src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-lg" />
-                        ) : (
-                          <>
-                            <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" />
-                            <div className="text-xs font-semibold">O sube tu propia foto</div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">JPG / PNG</div>
-                          </>
-                        )}
-                      </div>
+                      {objectiveImg && !selectedPresetId ? (
+                        <img loading="lazy" decoding="async" src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-background" />
+                      ) : (
+                        <div className="rounded-2xl bg-card min-h-[88px] px-4 py-5 flex flex-col items-center justify-center text-center transition-colors active:bg-accent">
+                          <Upload className="w-6 h-6 text-primary mb-2" strokeWidth={1.75} />
+                          <div className="type-subhead font-semibold">O sube tu propia foto</div>
+                          <div className="type-footnote text-muted-foreground mt-0.5">JPG / PNG</div>
+                        </div>
+                      )}
                     </label>
                   </div>
-                  <div className="text-sm leading-relaxed text-muted-foreground">
+                  <div className="type-subhead text-muted-foreground">
                     {objectiveImg ? (
                       <span>
-                        ✓ Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan.
+                        Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan.
                       </span>
                     ) : (
                       <span>
@@ -1385,87 +1379,61 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               )}
 
               {/* Guía para tomar las fotos */}
-              <div className="mx-auto mb-6 max-w-4xl rounded-xl border border-border bg-card p-5">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-primary" />
-                  </div>
-                  <h2 className="font-display font-bold text-base">Cómo tomar las fotos para un análisis preciso</h2>
-                </div>
-                <div className="grid sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <div className="type-headline text-primary mb-1.5">Distancia</div>
-                    <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
-                      <li>· Cámara a 2-3 m, a la altura del ombligo</li>
-                      <li>· Cuerpo entero (de la cabeza a los pies)</li>
-                      <li>· Móvil en vertical y bien apoyado o trípode</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <div className="type-headline text-primary mb-1.5">Luz y fondo</div>
-                    <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
-                      <li>· Luz natural de día, frontal y uniforme</li>
-                      <li>· Evita contraluz, sombras duras y flash</li>
-                      <li>· Fondo liso y claro, sin objetos detrás</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <div className="type-headline text-primary mb-1.5">Postura y ropa</div>
-                    <ul className="space-y-1 text-muted-foreground text-[13px] leading-relaxed">
-                      <li>· Ropa ajustada (sin camiseta o top + short)</li>
-                      <li>· Pies a la anchura de los hombros</li>
-                      <li>· Brazos relajados a los lados, sin flexionar</li>
-                    </ul>
-                  </div>
-                </div>
-                <div className="mt-4 pt-4 border-t border-border/60 grid sm:grid-cols-2 gap-4 text-[13px]">
-                  <div className="flex gap-2">
-                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[11px] font-bold text-primary shrink-0 mt-0.5">1</div>
-                    <div>
-                      <div className="font-semibold mb-0.5">Foto de delante</div>
-                      <div className="text-muted-foreground">Mira al frente, hombros relajados y palmas hacia el cuerpo. Que se te vea de cabeza a pies.</div>
+              <div className="mx-auto mb-10 max-w-md">
+                <h2 className="type-title3 mb-5">Cómo tomar las fotos</h2>
+                <ul className="space-y-6">
+                  <li className="flex items-start gap-4">
+                    <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                      <Ruler className="w-7 h-7 text-primary" strokeWidth={1.75} />
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="w-6 h-6 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-[11px] font-bold text-primary shrink-0 mt-0.5">2</div>
-                    <div>
-                      <div className="font-semibold mb-0.5">Foto de atrás</div>
-                      <div className="text-muted-foreground">Date la vuelta sin moverte de sitio. Misma postura, brazos relajados y mirada al frente para no curvar la espalda.</div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="type-headline">Distancia</h3>
+                      <p className="type-subhead text-muted-foreground mt-0.5">
+                        Cámara a 2-3 m, a la altura del ombligo, con el cuerpo entero y el móvil en vertical y bien apoyado.
+                      </p>
                     </div>
-                  </div>
-                </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                      <Eye className="w-7 h-7 text-primary" strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="type-headline">Luz y fondo</h3>
+                      <p className="type-subhead text-muted-foreground mt-0.5">
+                        Luz natural frontal y uniforme, sin contraluz ni flash, con un fondo liso y claro.
+                      </p>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-4">
+                    <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                      <Activity className="w-7 h-7 text-primary" strokeWidth={1.75} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="type-headline">Postura y ropa</h3>
+                      <p className="type-subhead text-muted-foreground mt-0.5">
+                        Ropa ajustada, pies a la anchura de los hombros y brazos relajados a los lados. Para la de atrás, date la vuelta sin moverte de sitio.
+                      </p>
+                    </div>
+                  </li>
+                </ul>
               </div>
 
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-4 max-w-md mx-auto">
                 <Button
-                  variant="hero"
-                  size="xl"
-                  onClick={() => setPhase("analyzing")}
+                  size="lg"
+                  className="w-full"
+                  onClick={() => { void hapticTap(); setPhase("analyzing"); }}
                   disabled={!currentImg && !backImg}
-                  className="min-w-[280px]"
                 >
-                  <ScanLine className="w-5 h-5 mr-1" />
                   Analizar mi físico
-                  <ArrowRight className="w-4 h-4 transition-transform" />
                 </Button>
-                <p className="text-xs text-muted-foreground text-center max-w-md">
+                <p className="type-footnote text-muted-foreground text-center">
                   Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos
                   fotos el análisis es más completo.
                 </p>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                    Privado: solo para tu análisis
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                    Sin registro
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                    Menos de 1 minuto
-                  </div>
-                </div>
+                <p className="type-footnote text-muted-foreground text-center">
+                  Privado: solo para tu análisis · Sin registro · Menos de 1 minuto
+                </p>
               </div>
             </motion.div>
           ) : !result && phase === "goal" ? (
@@ -1477,15 +1445,15 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               transition={{ duration: 0.35 }}
               className="max-w-3xl mx-auto"
             >
-              <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-4">
-                  <Target className="w-3.5 h-3.5 text-primary" />
-                  <span className="type-headline text-primary">Paso 2 · Tu objetivo</span>
+              <div className="text-center mb-8">
+                <div className="mx-auto w-16 h-16 rounded-[22%] bg-card flex items-center justify-center mb-5">
+                  <Target className="w-8 h-8 text-primary" strokeWidth={1.75} />
                 </div>
-                <h1 className="text-3xl sm:text-5xl font-bold font-display leading-[1.05] mb-3">
+                <p className="type-subhead text-muted-foreground mb-1">Paso 2 · Tu objetivo</p>
+                <h1 className="type-title1">
                   ¿Cuál es tu <span className="text-primary">objetivo principal</span>?
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="type-subhead text-muted-foreground mt-2">
                   La IA prioriza tu diagnóstico en función de lo que más te importa.
                 </p>
               </div>
@@ -1498,23 +1466,18 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     <button
                       key={g.id}
                       type="button"
-                      onClick={() => setGoal(g.id)}
-                      className={`text-left rounded-2xl border p-5 transition-all flex items-start gap-4 ${
-                        active
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-card/40"
+                      onClick={() => { void hapticSelection(); setGoal(g.id); }}
+                      aria-pressed={active}
+                      className={`text-left rounded-2xl p-4 min-h-[72px] transition-colors duration-100 active:bg-accent flex items-start gap-4 ${
+                        active ? "bg-card ring-2 ring-primary" : "bg-card"
                       }`}
                     >
-                      <div
-                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border ${
-                          active ? "bg-primary/20 border-primary/50" : "bg-primary/10 border-primary/30"
-                        }`}
-                      >
-                        <Icon className="w-5 h-5 text-primary" />
+                      <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
+                        <Icon className="w-7 h-7 text-primary" strokeWidth={1.75} />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold">{g.label}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{g.desc}</div>
+                        <div className="type-headline">{g.label}</div>
+                        <div className="type-subhead text-muted-foreground mt-0.5">{g.desc}</div>
                       </div>
                       {active && <CheckCircle2 className="w-5 h-5 text-primary ml-auto shrink-0" />}
                     </button>
@@ -1522,20 +1485,17 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 })}
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10">
-                <Button variant="outline" size="xl" onClick={() => setPhase("upload")}>
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Volver
-                </Button>
+              <div className="flex flex-col items-center gap-2 mt-8 max-w-md mx-auto">
                 <Button
-                  variant="hero"
-                  size="xl"
+                  size="lg"
                   disabled={!goal}
-                  onClick={() => setPhase("analyzing")}
-                  className="min-w-[280px]"
+                  onClick={() => { void hapticTap(); setPhase("analyzing"); }}
+                  className="w-full"
                 >
-                  <ScanLine className="w-5 h-5 mr-1" />
                   Analizar mi físico
-                  <ArrowRight className="w-4 h-4 transition-transform" />
+                </Button>
+                <Button variant="plain" onClick={() => { void hapticTap(); setPhase("upload"); }}>
+                  Volver
                 </Button>
               </div>
             </motion.div>
@@ -1548,14 +1508,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               transition={{ duration: 0.35 }}
               className="max-w-xl mx-auto text-center pt-12"
             >
-              <div className="relative w-28 h-28 mx-auto mb-8">
-                <div className="absolute inset-0 rounded-full border border-primary/30 animate-ping" />
-                <div className="absolute inset-2 rounded-full border border-primary/40" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Brain className="w-10 h-10 text-primary" />
-                </div>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold font-display mb-3">
+              <ProgressRing value={scanProgress} size={128} stroke={8} className="mx-auto mb-8" label="Progreso del análisis">
+                <Brain className="w-10 h-10 text-primary" strokeWidth={1.75} />
+              </ProgressRing>
+              <h2 className="type-title1 mb-3">
                 Analizando tu físico
               </h2>
               <AnimatePresence mode="wait">
@@ -1565,21 +1521,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.4 }}
-                  className="text-primary font-medium flex items-center justify-center gap-2"
+                  className="type-callout text-primary flex items-center justify-center gap-2"
                 >
                   <Spinner size="sm" />
                   {LOADING_MESSAGES[loadingMsgIdx]}
                 </motion.div>
               </AnimatePresence>
-              <div className="max-w-sm mx-auto mt-8">
-                <div className="h-1 bg-secondary rounded-full overflow-hidden">
-                  <motion.div
-                    animate={{ width: `${scanProgress}%` }}
-                    className="h-full bg-primary"
-                  />
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-2">{Math.round(scanProgress)}%</div>
-              </div>
+              <div className="type-subhead font-rounded tabular-nums text-muted-foreground mt-6">{Math.round(scanProgress)}%</div>
             </motion.div>
           ) : !result && phase === "lead" ? (
             <motion.div
@@ -1591,22 +1539,20 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               className="max-w-lg mx-auto"
             >
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  <span className="type-footnote font-semibold text-success">
-                    Diagnóstico listo
-                  </span>
+                <div className="mx-auto w-16 h-16 rounded-[22%] bg-card flex items-center justify-center mb-5">
+                  <CheckCircle2 className="w-8 h-8 text-success" strokeWidth={1.75} />
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-3">
+                <p className="type-subhead text-muted-foreground mb-1">Diagnóstico listo</p>
+                <h2 className="type-title1 mb-3">
                   Hemos detectado tus <span className="text-primary">principales prioridades físicas</span>.
                 </h2>
-                <p className="text-muted-foreground">
+                <p className="type-subhead text-muted-foreground">
                   Dinos tu nombre y tu email y te lo mostramos ahora mismo. También te lo
                   enviamos por correo para que lo tengas guardado.
                 </p>
               </div>
 
-              <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 space-y-4">
+              <div className="space-y-4">
                 <div>
                   <label className="type-footnote text-muted-foreground mb-1.5 block">
                     Nombre
@@ -1617,7 +1563,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     onChange={(e) => setLeadName(e.target.value)}
                     maxLength={100}
                     placeholder="Tu nombre"
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                    className="field w-full" autoCapitalize="words" autoComplete="name" enterKeyHint="next"
                   />
                 </div>
                 <div>
@@ -1632,22 +1578,22 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       onChange={(e) => setLeadEmail(e.target.value)}
                       maxLength={255}
                       placeholder="tu@email.com"
-                      className="w-full bg-background border border-border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-primary transition"
+                      className="field w-full pl-10" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="email" enterKeyHint="done"
                     />
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                  <p className="type-footnote text-muted-foreground mt-1.5">
                     Te enviamos una copia aquí. Sin tarjeta y sin compromiso.
                   </p>
                 </div>
 
-                <label className="flex items-start gap-3 cursor-pointer select-none pt-1">
+                <label className="flex items-start gap-3 cursor-pointer select-none py-1 min-h-11 active:opacity-70">
                   <input
                     type="checkbox"
                     checked={leadConsent}
                     onChange={(e) => setLeadConsent(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 accent-primary cursor-pointer shrink-0"
+                    className="mt-0.5 w-5 h-5 accent-primary cursor-pointer shrink-0"
                   />
-                  <span className="text-xs text-muted-foreground leading-relaxed">
+                  <span className="type-footnote text-muted-foreground">
                     Acepto que Autopilot use mi foto solo para generar mi diagnóstico físico y acepto la{" "}
                     <Link to="/legal/privacidad" className="text-primary">
                       política de privacidad
@@ -1657,11 +1603,10 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 </label>
 
                 <Button
-                  variant="hero"
-                  size="xl"
-                  onClick={submitLead}
+                  size="lg"
+                  onClick={() => { void hapticTap(); submitLead(); }}
                   disabled={submittingLead || !pendingResult}
-                  className="w-full group"
+                  className="w-full"
                 >
                   {submittingLead ? (
                     <>
@@ -1676,14 +1621,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   ) : (
                     <>
                       Ver mi diagnóstico ahora
-                      <ArrowRight className="w-4 h-4 transition-transform" />
                     </>
                   )}
                 </Button>
 
                 <div className="flex items-start gap-2 pt-1">
                   <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="type-footnote text-muted-foreground">
                     Tu foto no se publica ni se comparte con otros usuarios. Se usa para tu análisis y se guarda en tu
                     cuenta privada; puedes eliminarla cuando quieras.
                   </p>
@@ -1710,13 +1654,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 />
               )}
               <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-success/30 bg-success/10 mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary mb-4">
                   <CheckCircle2 className="w-3.5 h-3.5 text-success" />
                   <span className="type-footnote font-semibold text-success">
                     Análisis completo
                   </span>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-bold font-display leading-tight mb-3">
+                <h2 className="type-title1 font-rounded tabular-nums mb-3">
                   Tu <span className="text-primary">AI Physique Report</span>
                 </h2>
                 {result.headline_diagnosis ? (
@@ -1780,34 +1724,27 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   className="max-w-3xl mx-auto mb-6"
                 >
                   <div
-                    className={`rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 border backdrop-blur ${
-                      planApplyState === "success"
-                        ? "bg-primary/10 border-primary/40"
-                        : planApplyState === "error"
-                        ? "bg-destructive/10 border-destructive/40"
-                        : "bg-card/60 border-border"
-                    }`}
+                    className="rounded-2xl bg-card px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3"
                   >
                     {planApplyState === "idle" && (
                       <>
-                        <div className="text-sm flex-1">
+                        <div className="type-subhead flex-1">
                           <div className="font-medium">Tu plan sigue igual</div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="type-caption1 text-muted-foreground">
                             El scan no cambia nada por sí solo. Aplícalo solo si te encaja.
                           </div>
                         </div>
                         {hasScanInferences(result) ? (
                           <Button
-                            size="sm"
-                            variant="hero"
-                            onClick={() => applyScanToPlan(result)}
+                            size="default"
+                            variant="secondary"
+                            onClick={() => { void hapticTap(); applyScanToPlan(result); }}
                             className="w-full sm:w-auto"
                           >
                             Aplicar a mi plan
-                            <ArrowRight className="w-4 h-4 ml-1" />
                           </Button>
                         ) : (
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="type-caption1 text-muted-foreground">
                             Este scan no propone cambios, así que no hay nada que aplicar.
                           </div>
                         )}
@@ -1816,20 +1753,20 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     {planApplyState === "applying" && (
                       <>
                         <Spinner size="sm" />
-                        <div className="text-sm">
+                        <div className="type-subhead">
                           <div className="font-medium">Aplicando el scan a tu plan…</div>
-                          <div className="text-[11px] text-muted-foreground">Recalculando entrenamiento y nutrición con los datos del scan.</div>
+                          <div className="type-caption1 text-muted-foreground">Recalculando entrenamiento y nutrición con los datos del scan.</div>
                         </div>
                       </>
                     )}
                     {planApplyState === "success" && (
                       <>
                         <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div className="text-sm flex-1">
-                          <div className="font-semibold text-primary">Plan actualizado correctamente ✓</div>
-                          <div className="text-[11px] text-muted-foreground">Tu nuevo entrenamiento y nutrición ya están en tu cuenta.</div>
+                        <div className="type-subhead flex-1">
+                          <div className="font-semibold text-primary">Plan actualizado correctamente</div>
+                          <div className="type-caption1 text-muted-foreground">Tu nuevo entrenamiento y nutrición ya están en tu cuenta.</div>
                         </div>
-                        <Button size="sm" variant="hero" onClick={() => navigate("/dashboard")}>
+                        <Button size="default" variant="hero" onClick={() => { void hapticTap(); navigate("/dashboard"); }}>
                           Ver mi plan
                         </Button>
                       </>
@@ -1837,9 +1774,9 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     {planApplyState === "error" && (
                       <>
                         <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
-                        <div className="text-sm">
+                        <div className="type-subhead">
                           <div className="font-medium">No se pudo aplicar al plan</div>
-                          <div className="text-[11px] text-muted-foreground">Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras.</div>
+                          <div className="type-caption1 text-muted-foreground">Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras.</div>
                         </div>
                       </>
                     )}
@@ -1858,17 +1795,17 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5 text-center"
+                    className="bg-card rounded-2xl p-5 text-center"
                   >
                     <Clock className="w-4 h-4 text-primary mx-auto mb-2" />
                     <div className="type-group-header text-muted-foreground mb-1">
                       A tu objetivo
                     </div>
-                    <div className="text-4xl font-bold font-display text-primary">
+                    <div className="type-title1 font-rounded tabular-nums text-primary">
                       {Math.max(1, result.months_with_plan!)}m
                     </div>
                     {result.months_without_plan !== undefined && (
-                      <div className="text-[11px] text-muted-foreground mt-1">
+                      <div className="type-caption1 text-muted-foreground mt-1">
                         vs <span className="line-through">{Math.max(2, result.months_without_plan)}m</span> sin plan
                       </div>
                     )}
@@ -1877,19 +1814,19 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 );
               })()}
 
-              <p className="max-w-2xl mx-auto -mt-4 mb-8 text-[11px] text-muted-foreground text-center px-4">
+              <p className="max-w-2xl mx-auto -mt-4 mb-8 type-caption1 text-muted-foreground text-center px-4">
                 Orientación visual aproximada. No sustituye una valoración profesional.
               </p>
 
               {result.bottleneck && (
                 <div className="max-w-3xl mx-auto mb-10">
-                  <div className="bg-card/40 backdrop-blur border border-border rounded-2xl px-5 py-4 flex items-start gap-3">
+                  <div className="bg-card rounded-2xl px-5 py-4 flex items-start gap-3">
                     <AlertTriangle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                     <div>
                       <div className="type-group-header text-muted-foreground mb-0.5">
                         Lo que más te frena
                       </div>
-                      <div className="text-sm font-medium">{result.bottleneck}</div>
+                      <div className="type-subhead font-medium">{result.bottleneck}</div>
                     </div>
                   </div>
                 </div>
@@ -1921,7 +1858,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         {shots.map((p) => (
                           <div
                             key={p.label}
-                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden border ${p.primary ? "border-primary/40" : "border-border"}`}
+                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden ${p.primary ? "ring-2 ring-primary/50" : ""}`}
                           >
                             <img loading="lazy" decoding="async" src={p.src} alt={p.label.toLowerCase()} className="w-full h-full object-cover" />
                             <div className="absolute bottom-0 inset-x-0 bg-background/80 p-2">
@@ -1936,8 +1873,8 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   })()}
 
                   {objectiveImg && (
-                    <div className="bg-card/60 backdrop-blur border border-primary/20 rounded-2xl p-4">
-                      <div className="flex items-center justify-between mb-2 text-xs">
+                    <div className="bg-card rounded-2xl p-4">
+                      <div className="flex items-center justify-between mb-2 type-caption1">
                         <span className="text-muted-foreground">Similitud al objetivo</span>
                         <span className="font-bold text-primary">{result.similarity}%</span>
                       </div>
@@ -1949,7 +1886,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           className="h-full bg-primary"
                         />
                       </div>
-                      <div className="mt-3 text-[11px] text-muted-foreground">
+                      <div className="mt-3 type-caption1 text-muted-foreground">
                         Tiempo estimado:{" "}
                         <span className="text-foreground font-semibold">
                           ~{result.estimated_months ?? result.months_with_plan ?? "—"} meses
@@ -1969,7 +1906,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     <ScoreCard label="Estilo" value={result.style} />
                   </div>
 
-                  <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-4">
+                  <div className="bg-card rounded-2xl p-4">
                     <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                       <TrendingUp className="w-3 h-3" /> Mejoras detectadas
                     </div>
@@ -1980,7 +1917,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           initial={{ opacity: 0, x: -8 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.1 }}
-                          className="flex items-center justify-between text-sm"
+                          className="flex items-center justify-between type-subhead"
                         >
                           <span className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -2003,7 +1940,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   </div>
 
                   {/* Yo futuro bloqueado — gancho visceral */}
-                  <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-4 relative overflow-hidden">
+                  <div className="bg-card rounded-2xl p-4 relative overflow-hidden">
                     <div className="type-group-header text-primary mb-3 flex items-center gap-1.5">
                       {isPaid ? <Sparkles className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                       {result.months_with_plan ?? result.estimated_months
@@ -2014,7 +1951,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       <div className="flex gap-1 mb-3 p-1 rounded-full bg-secondary w-fit" role="tablist" aria-label="Vista de la simulación">
                         {(["front", "back"] as const).map((p) => (
                           <button key={p} role="tab" aria-selected={simPose === p} onClick={() => setSimPose(p)}
-                            className={`min-h-9 px-4 rounded-full text-xs font-semibold transition ${simPose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                            className={`min-h-9 px-4 rounded-full type-caption1 font-semibold transition ${simPose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
                             {p === "front" ? "Frente" : "Espalda"}
                           </button>
                         ))}
@@ -2041,7 +1978,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-4">
                             {isPaid ? (
                               <>
-                                <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur border border-primary/40 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
                                   {genLoading ? (
                                     <Spinner />
                                   ) : (
@@ -2050,23 +1987,23 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                                 </div>
                                 <Button
                                   variant="hero"
-                                  size="sm"
+                                  size="default"
                                   onClick={() => generateFuture()}
                                   disabled={genLoading}
                                 >
-                                  {genLoading ? "Generando con IA..." : "Generar simulación IA"}
+                                  {genLoading ? "Generando con IA…" : "Generar simulación IA"}
                                 </Button>
-                                <div className="text-[11px] text-muted-foreground max-w-xs">
+                                <div className="type-caption1 text-muted-foreground max-w-xs">
                                   Tarda ~15s. Misma identidad, físico transformado.
                                 </div>
                               </>
                             ) : (
                               <>
-                                <div className="w-12 h-12 rounded-full bg-primary/20 backdrop-blur border border-primary/40 flex items-center justify-center">
+                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
                                   <Lock className="w-5 h-5 text-primary" />
                                 </div>
-                                <div className="text-sm font-semibold">Visualiza tu transformación</div>
-                                <div className="text-[11px] text-muted-foreground max-w-xs">
+                                <div className="type-subhead font-semibold">Visualiza tu transformación</div>
+                                <div className="type-caption1 text-muted-foreground max-w-xs">
                                   Simulación generada con IA al activar tu plan
                                 </div>
                               </>
@@ -2090,13 +2027,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
               {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
                 <div className="w-full mx-auto mt-10 space-y-4">
                   <div className="text-center mb-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary">
                       <Gauge className="w-3.5 h-3.5 text-primary" />
                       <span className="type-headline text-primary">
                         Lectura estimada por IA
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
+                    <p className="type-caption1 text-muted-foreground mt-2">
                       Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable a partir de tus
                       fotos. Es una estimación visual, no un diagnóstico médico.
                     </p>
@@ -2105,31 +2042,31 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* Composición corporal */}
                     {result.body_composition && (
-                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                      <div className="bg-card rounded-2xl p-5">
                         <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                           <Activity className="w-3 h-3" /> Composición corporal estimada
                         </div>
                         <div className="grid grid-cols-3 gap-3 text-center">
                           {result.body_composition.body_fat_pct !== undefined && (
                             <div>
-                              <div className="text-2xl font-bold font-display text-primary">{result.body_composition.body_fat_pct}%</div>
+                              <div className="type-title2 font-rounded tabular-nums text-primary">{result.body_composition.body_fat_pct}%</div>
                               <div className="type-caption1 text-muted-foreground">Grasa</div>
                             </div>
                           )}
                           {result.body_composition.lean_mass_kg !== undefined && (
                             <div>
-                              <div className="text-2xl font-bold font-display text-primary">{result.body_composition.lean_mass_kg}kg</div>
+                              <div className="type-title2 font-rounded tabular-nums text-primary">{result.body_composition.lean_mass_kg}kg</div>
                               <div className="type-caption1 text-muted-foreground">Masa magra</div>
                             </div>
                           )}
                           {result.body_composition.weight_kg !== undefined && (
                             <div>
-                              <div className="text-2xl font-bold font-display">{result.body_composition.weight_kg}kg</div>
+                              <div className="type-title2 font-rounded tabular-nums">{result.body_composition.weight_kg}kg</div>
                               <div className="type-caption1 text-muted-foreground">Peso est.</div>
                             </div>
                           )}
                         </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                        <div className="mt-4 grid grid-cols-2 gap-2 type-caption1">
                           {result.body_composition.somatotype && (
                             <div className="bg-secondary/60 rounded-lg px-3 py-2">
                               <div className="type-caption1 text-muted-foreground">Somatotipo</div>
@@ -2154,14 +2091,14 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
                     {/* Proporciones */}
                     {result.proportions && (
-                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                      <div className="bg-card rounded-2xl p-5">
                         <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                           <Ruler className="w-3 h-3" /> Proporciones y simetría
                         </div>
-                        <div className="space-y-3 text-sm">
+                        <div className="space-y-3 type-subhead">
                           {result.proportions.shoulder_to_waist_ratio !== undefined && (
                             <div>
-                              <div className="flex justify-between text-xs mb-1">
+                              <div className="flex justify-between type-caption1 mb-1">
                                 <span className="text-muted-foreground">Ratio hombro/cintura</span>
                                 <span className="font-semibold">{result.proportions.shoulder_to_waist_ratio.toFixed(2)} <span className="text-muted-foreground font-normal">/ ideal ~1.60</span></span>
                               </div>
@@ -2172,7 +2109,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           )}
                           {result.proportions.v_taper_score !== undefined && (
                             <div>
-                              <div className="flex justify-between text-xs mb-1">
+                              <div className="flex justify-between type-caption1 mb-1">
                                 <span className="text-muted-foreground">V-taper</span>
                                 <span className="font-semibold">{result.proportions.v_taper_score}/10</span>
                               </div>
@@ -2183,7 +2120,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           )}
                           {result.proportions.symmetry_score !== undefined && (
                             <div>
-                              <div className="flex justify-between text-xs mb-1">
+                              <div className="flex justify-between type-caption1 mb-1">
                                 <span className="text-muted-foreground">Simetría</span>
                                 <span className="font-semibold">{result.proportions.symmetry_score}/10</span>
                               </div>
@@ -2193,13 +2130,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             </div>
                           )}
                           {result.proportions.upper_lower_balance && (
-                            <div className="text-xs bg-secondary/60 rounded-lg px-3 py-2">
+                            <div className="type-caption1 bg-secondary/60 rounded-lg px-3 py-2">
                               <span className="text-muted-foreground">Balance: </span>
                               <span className="font-medium">{result.proportions.upper_lower_balance}</span>
                             </div>
                           )}
                           {result.proportions.weakest_link && (
-                            <div className="text-xs text-primary border border-primary/30 bg-primary/5 rounded-lg px-3 py-2">
+                            <div className="type-caption1 text-primary bg-secondary rounded-lg px-3 py-2">
                               Eslabón más débil: <span className="font-semibold">{result.proportions.weakest_link}</span>
                             </div>
                           )}
@@ -2210,7 +2147,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
                   {/* Breakdown por grupo muscular */}
                   {result.muscle_breakdown && result.muscle_breakdown.length > 0 && (
-                    <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                    <div className="bg-card rounded-2xl p-5">
                       <div className="type-group-header text-muted-foreground mb-4 flex items-center gap-1.5">
                         <Dumbbell className="w-3 h-3" /> Lectura por grupo muscular
                       </div>
@@ -2221,11 +2158,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                             initial={{ opacity: 0, y: 6 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.04 }}
-                            className="border-b border-border/50 pb-2 last:border-0"
+                            className="pb-2"
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-medium">{m.group}</span>
-                              <span className={`text-xs font-bold tabular-nums ${m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}`}>
+                              <span className="type-subhead font-medium">{m.group}</span>
+                              <span className={`type-caption1 font-bold tabular-nums ${m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}`}>
                                 {m.score.toFixed(1)}<span className="text-muted-foreground font-normal">/10</span>
                               </span>
                             </div>
@@ -2237,7 +2174,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                                 className={`h-full ${m.score >= 7 ? "bg-primary" : "bg-primary/50"}`}
                               />
                             </div>
-                            <div className="text-[11px] text-muted-foreground leading-snug">{m.verdict}</div>
+                            <div className="type-caption1 text-muted-foreground leading-snug">{m.verdict}</div>
                           </motion.div>
                         ))}
                       </div>
@@ -2247,7 +2184,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                   <div className="grid md:grid-cols-2 gap-4">
                     {/* Postura */}
                     {result.posture && (result.posture.issues?.length || result.posture.note) && (
-                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                      <div className="bg-card rounded-2xl p-5">
                         <div className="type-group-header text-muted-foreground mb-3 flex items-center justify-between">
                           <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> Postura</span>
                           {result.posture.severity && (
@@ -2261,7 +2198,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         {result.posture.issues && result.posture.issues.length > 0 && (
                           <ul className="space-y-1.5 mb-3">
                             {result.posture.issues.map((iss, i) => (
-                              <li key={i} className="text-sm flex items-start gap-2">
+                              <li key={i} className="type-subhead flex items-start gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
                                 <span>{iss}</span>
                               </li>
@@ -2269,26 +2206,26 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           </ul>
                         )}
                         {result.posture.note && (
-                          <div className="text-[11px] text-muted-foreground italic">{result.posture.note}</div>
+                          <div className="type-caption1 text-muted-foreground italic">{result.posture.note}</div>
                         )}
                       </div>
                     )}
 
                     {/* Marcadores visuales (no genéticos) */}
                     {result.genetic_markers && result.genetic_markers.length > 0 && (
-                      <div className="bg-card/60 backdrop-blur border border-border rounded-2xl p-5">
+                      <div className="bg-card rounded-2xl p-5">
                         <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
                           <Dna className="w-3 h-3" /> Rasgos visuales que juegan a tu favor (o en contra)
                         </div>
                         <ul className="space-y-2">
                           {result.genetic_markers.map((g, i) => (
-                            <li key={i} className="text-sm flex items-start gap-2">
-                              <span className="text-primary text-xs mt-0.5">◆</span>
+                            <li key={i} className="type-subhead flex items-start gap-2">
+                              <span className="text-primary type-caption1 mt-0.5">•</span>
                               <span className="leading-snug">{g}</span>
                             </li>
                           ))}
                         </ul>
-                        <p className="mt-3 text-[11px] text-muted-foreground">
+                        <p className="mt-3 type-caption1 text-muted-foreground">
                           Señales observadas en tus fotos: no es un estudio genético.
                         </p>
                       </div>
@@ -2297,32 +2234,32 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
 
                   {/* Protocolo accionable */}
                   {result.protocol && (
-                    <div className="bg-card/60 backdrop-blur border border-primary/30 rounded-2xl p-5">
+                    <div className="bg-card rounded-2xl p-5">
                       <div className="type-group-header text-primary mb-4 flex items-center gap-1.5">
                         <ClipboardList className="w-3 h-3" /> Protocolo recomendado por la IA
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                         {result.protocol.training_days_per_week !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-primary">{result.protocol.training_days_per_week}</div>
+                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.training_days_per_week}</div>
                             <div className="type-caption1 text-muted-foreground">Días/sem</div>
                           </div>
                         )}
                         {result.protocol.weekly_sets_priority !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-primary">{result.protocol.weekly_sets_priority}</div>
+                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.weekly_sets_priority}</div>
                             <div className="type-caption1 text-muted-foreground">Sets prioridad</div>
                           </div>
                         )}
                         {result.protocol.protein_g_per_kg !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-primary">{result.protocol.protein_g_per_kg}g</div>
+                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.protein_g_per_kg}g</div>
                             <div className="type-caption1 text-muted-foreground">Proteína/kg</div>
                           </div>
                         )}
                         {result.protocol.calorie_adjustment_kcal !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-primary">
+                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">
                               {result.protocol.calorie_adjustment_kcal > 0 ? "+" : ""}{result.protocol.calorie_adjustment_kcal}
                             </div>
                             <div className="type-caption1 text-muted-foreground">kcal vs mant.</div>
@@ -2330,7 +2267,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                         )}
                         {result.protocol.cardio_minutes_per_week !== undefined && (
                           <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-bold font-display text-primary">{result.protocol.cardio_minutes_per_week}</div>
+                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.cardio_minutes_per_week}</div>
                             <div className="type-caption1 text-muted-foreground">min cardio/sem</div>
                           </div>
                         )}
@@ -2340,7 +2277,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           <div className="type-caption1 text-muted-foreground mb-1.5">Ejercicios clave</div>
                           <div className="flex flex-wrap gap-1.5">
                             {result.protocol.key_lifts.map((l, i) => (
-                              <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              <span key={i} className="type-caption1 px-2.5 py-1 rounded-full bg-primary/10 text-primary ">
                                 {l}
                               </span>
                             ))}
@@ -2352,7 +2289,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           <div className="type-caption1 text-muted-foreground mb-1.5">Evita</div>
                           <ul className="space-y-1">
                             {result.protocol.avoid.map((a, i) => (
-                              <li key={i} className="text-xs flex items-start gap-2 text-muted-foreground">
+                              <li key={i} className="type-caption1 flex items-start gap-2 text-muted-foreground">
                                 <X className="w-3 h-3 text-destructive mt-0.5 flex-shrink-0" />
                                 <span>{a}</span>
                               </li>
@@ -2386,15 +2323,15 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="relative w-full mx-auto mt-16"
               >
-                <div className="relative bg-card/80 backdrop-blur-xl border border-primary/30 rounded-3xl p-8 sm:p-12 text-center overflow-hidden">
+                <div className="relative bg-card rounded-2xl p-8 sm:p-12 text-center overflow-hidden">
                   <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 mb-5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary mb-5">
                       <Target className="w-3.5 h-3.5 text-primary" />
                       <span className="type-headline text-primary">
                         Siguiente paso
                       </span>
                     </div>
-                    <h3 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-display leading-[1.05] mb-4">
+                    <h3 className="type-title1 mb-4">
                       {(result.months_with_plan ?? result.estimated_months) ? (
                         <>
                           Llega ahí en{" "}
@@ -2418,7 +2355,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       lo más probable es que el siguiente scan siga pareciéndose a este.
                     </p>
                     <div className="flex items-baseline justify-center gap-3 mb-5">
-                      <span className="text-3xl font-bold font-display text-primary">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
+                      <span className="type-title1 font-rounded tabular-nums text-primary">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
                       <span className="type-footnote text-primary">{TRIAL_DAYS} días de prueba</span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -2442,11 +2379,11 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       </Button>
                     </div>
                     {!user && (
-                      <p className="text-[11px] text-muted-foreground mt-3">
+                      <p className="type-caption1 text-muted-foreground mt-3">
                         7 días de prueba en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
                       </p>
                     )}
-                    <div className="flex items-center gap-4 mt-6 justify-center text-xs text-muted-foreground flex-wrap">
+                    <div className="flex items-center gap-4 mt-6 justify-center type-caption1 text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                         Cancela en 1 clic
@@ -2467,7 +2404,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
                   {routeUserId && user && (planApplyState === "idle" || planApplyState === "error") && (
                     <Button
-                      variant="hero"
+                      variant="secondary"
                       size="xl"
                       onClick={() => applyScanToPlan(result)}
                     >
@@ -2476,13 +2413,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     </Button>
                   )}
                   {routeUserId && (
-                    <Button variant="hero" size="xl" onClick={() => navigate("/dashboard")}>
+                    <Button variant="secondary" size="xl" onClick={() => navigate("/dashboard")}>
                       Ver mi plan
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   )}
                   {!routeUserId && user && (
-                    <Button variant="hero" size="xl" onClick={() => navigate(`/scan/user/${user.id}`)}>
+                    <Button variant="secondary" size="xl" onClick={() => navigate(`/scan/user/${user.id}`)}>
                       Ir a mi progreso
                       <ArrowRight className="w-4 h-4" />
                     </Button>

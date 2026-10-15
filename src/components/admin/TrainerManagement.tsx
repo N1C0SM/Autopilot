@@ -255,7 +255,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
                   </div>
 
                   <Button variant="hero" size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); void saveProfile(); }} disabled={saving}>
-                    {saving ? <Spinner size="sm" className="text-primary-foreground" /> : <Save className="h-4 w-4" />} {saving ? "Guardando..." : "Guardar perfil"}
+                    {saving ? <Spinner size="sm" className="text-primary-foreground" /> : <Save className="h-4 w-4" />} {saving ? "Guardando…" : "Guardar perfil"}
                   </Button>
 
                   <div className="sep-t">
@@ -295,7 +295,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
 
               <div className="space-y-3">
                 <h2 className="type-group-header px-4">Asignar usuario</h2>
-                <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email…" value={search} onChange={(e) => setSearch(e.target.value)} />
                 <div className="max-h-80 overflow-y-auto rounded-2xl"><ListGroup>
                   {assignableUsers.slice(0, 30).map((u) => {
                     const previousTrainer = allAssignments.find((a) => a.user_id === u.user_id);
@@ -346,7 +346,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
             <h2 className="type-group-header px-4">Promover a entrenador</h2>
             <Button variant="ghost" size="icon" aria-label="Cerrar" onClick={() => { void hapticTap(); setPromoteOpen(false); }}><X className="h-4 w-4" /></Button>
           </div>
-          <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <div className="max-h-80 overflow-y-auto rounded-2xl"><ListGroup>
             {allUsers
               .filter((u) => !trainerIds.has(u.user_id) && !adminIds.has(u.user_id))

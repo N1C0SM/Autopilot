@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import { Settings, Save, Link as LinkIcon } from "lucide-react";
@@ -81,7 +82,7 @@ const PaymentModeToggle = () => {
     setSaving(false);
     if (error) return toast.error("Error al cambiar modo");
     setS({ ...s, payment_mode: newMode });
-    toast.success(`Modo cambiado a ${newMode.toUpperCase()}`);
+    toast.success(`Modo cambiado a ${newMode === "live" ? "producción" : "pruebas"}`);
   };
 
   const setItem = (id: string, p: Partial<Item>) =>
@@ -111,100 +112,75 @@ const PaymentModeToggle = () => {
 
   const mode = s.payment_mode;
 
+  const label = (m: Mode) => (m === "live" ? "producción" : "pruebas");
+
+  const linkField = (id: string, tag: string, value: string, placeholder: string, onChange: (v: string) => void) => (
+    <div className="px-4 py-2">
+      <Label htmlFor={id} className="type-footnote text-muted-foreground">{tag}</Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next"
+        className="mt-1 bg-background font-mono"
+      />
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
-      {/* Mode toggle */}
-      <div className="bg-card rounded-2xl p-5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Settings className="w-5 h-5 text-muted-foreground" />
+    <div className="space-y-8">
+      <ListGroup>
+        <ListRow
+          icon={<Settings />}
+          title="Modo de pago"
+          subtitle={<>Activo: <span className={mode === "live" ? "text-destructive" : "text-primary"}>{label(mode)}</span></>}
+          trailing={
+            <Button variant={mode === "live" ? "destructive" : "tinted"} size="sm" onClick={() => { void hapticTap(); void toggleMode(); }} disabled={saving}>
+              {saving && <Spinner size="sm" className="mr-1" />}
+              Cambiar a {mode === "test" ? "producción" : "pruebas"}
+            </Button>
+          }
+        />
+      </ListGroup>
+
+      <section className="space-y-4">
+        <div className="flex items-start gap-3">
+          <LinkIcon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <div>
-            <div className="type-headline">Modo de pago</div>
-            <div className="type-footnote text-muted-foreground">
-              Activo:{" "}
-              <span className={`font-bold ${mode === "live" ? "text-destructive" : "text-primary"}`}>
-                {mode.toUpperCase()}
-              </span>
-            </div>
+            <h2 className="type-headline">Payment Links de Stripe</h2>
+            <p className="type-subhead text-muted-foreground">
+              Pega el enlace de cada plan, en pruebas y en producción. Se usa el del modo activo.
+            </p>
           </div>
         </div>
-        <Button variant={mode === "live" ? "destructive" : "tinted"} size="sm" onClick={() => { void hapticTap(); void toggleMode(); }} disabled={saving}>
-          {saving && <Spinner size="sm" className="mr-1" />}
-          Cambiar a {mode === "test" ? "LIVE" : "TEST"}
-        </Button>
-      </div>
-
-      {/* Payment Links per plan */}
-      <div className="bg-card rounded-2xl p-5 space-y-5">
-        <div className="flex items-center gap-3">
-          <LinkIcon className="w-5 h-5 text-muted-foreground" />
-          <div>
-            <div className="type-headline">Payment Links de Stripe</div>
-            <div className="type-footnote text-muted-foreground">
-              Pega el Payment Link de Stripe para cada plan (Test y Live). Se usará el del modo activo.
-            </div>
-          </div>
-        </div>
-
         {PLANS.map((p) => (
-          <div key={p.key} className="space-y-2 pt-2 border-t border-border first:border-t-0 first:pt-0">
-            <div className="flex items-baseline justify-between">
-              <div className="type-subhead font-semibold">{p.label}</div>
-              <div className="type-footnote text-muted-foreground">{p.price}</div>
-            </div>
-            <div>
-              <Label className="type-footnote text-muted-foreground">Test</Label>
-              <Input
-                value={s[`payment_link_${p.key}_test`]}
-                onChange={(e) => setField(`payment_link_${p.key}_test`, e.target.value)}
-                placeholder="https://buy.stripe.com/test_..."
-                inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono"
-              />
-            </div>
-            <div>
-              <Label className="type-footnote text-muted-foreground">Live</Label>
-              <Input
-                value={s[`payment_link_${p.key}_live`]}
-                onChange={(e) => setField(`payment_link_${p.key}_live`, e.target.value)}
-                placeholder="https://buy.stripe.com/..."
-                inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono"
-              />
-            </div>
-          </div>
+          <ListGroup key={p.key} header={`${p.label} · ${p.price}`}>
+            {linkField(`${p.key}-test`, "Pruebas", s[`payment_link_${p.key}_test`], "https://buy.stripe.com/test_...", (v) => setField(`payment_link_${p.key}_test`, v))}
+            <div className="sep-t">{linkField(`${p.key}-live`, "Producción", s[`payment_link_${p.key}_live`], "https://buy.stripe.com/...", (v) => setField(`payment_link_${p.key}_live`, v))}</div>
+          </ListGroup>
         ))}
-      </div>
+      </section>
 
-      {/* Libros y packs */}
-      <div className="bg-card rounded-2xl p-5 space-y-5">
+      <section className="space-y-4">
         <div>
-          <div className="type-headline">Libros y packs</div>
-          <div className="type-footnote text-muted-foreground">Enlaces de Stripe de todo el Drive. Se usa el del modo activo.</div>
+          <h2 className="type-headline">Libros y packs</h2>
+          <p className="type-subhead text-muted-foreground">Enlaces de Stripe de todo el Drive. Se usa el del modo activo.</p>
         </div>
-        {items.length === 0 && <div className="type-footnote text-muted-foreground">Aún no hay libros ni packs.</div>}
+        {items.length === 0 && <p className="type-subhead text-muted-foreground">Aún no hay libros ni packs.</p>}
         {items.map((b) => (
-          <div key={b.id} className="space-y-2 pt-2 border-t border-border first:border-t-0 first:pt-0">
-            <div className="flex items-baseline justify-between">
-              <div className="type-subhead font-semibold">{b.title}</div>
-              <div className="type-footnote text-muted-foreground">{b.kind === "pack" ? "Pack" : "Libro"}{b.price ? ` · ${b.price}` : ""}</div>
-            </div>
-            <div>
-              <Label className="type-footnote text-muted-foreground">Test</Label>
-              <Input value={b.buy_url_test || ""} onChange={(e) => setItem(b.id, { buy_url_test: e.target.value })}
-                placeholder="https://buy.stripe.com/test_..." inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono" />
-            </div>
-            <div>
-              <Label className="type-footnote text-muted-foreground">Live</Label>
-              <Input value={b.buy_url_live || ""} onChange={(e) => setItem(b.id, { buy_url_live: e.target.value })}
-                placeholder="https://buy.stripe.com/..." inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono" />
-            </div>
-          </div>
+          <ListGroup key={b.id} header={`${b.title} · ${b.kind === "pack" ? "Pack" : "Libro"}${b.price ? ` · ${b.price}` : ""}`}>
+            {linkField(`${b.id}-test`, "Pruebas", b.buy_url_test || "", "https://buy.stripe.com/test_...", (v) => setItem(b.id, { buy_url_test: v }))}
+            <div className="sep-t">{linkField(`${b.id}-live`, "Producción", b.buy_url_live || "", "https://buy.stripe.com/...", (v) => setItem(b.id, { buy_url_live: v }))}</div>
+          </ListGroup>
         ))}
-      </div>
+      </section>
 
-      <div className="px-1 type-footnote text-muted-foreground">
-        Los <span className="font-medium text-foreground">webhook secrets</span> de Stripe se gestionan de forma segura
+      <p className="px-1 type-footnote text-muted-foreground">
+        Los <span className="text-foreground">webhook secrets</span> de Stripe se gestionan de forma segura
         como secretos del servidor (no en la base de datos). Si necesitas rotarlos, hazlo desde la configuración de
         secretos del backend.
-      </div>
+      </p>
 
       <Button onClick={() => { void hapticTap(); void saveAll(); }} disabled={saving} className="w-full" size="lg">
         {saving ? <Spinner size="sm" className="mr-2 text-primary-foreground" /> : <Save className="w-4 h-4 mr-2" />}

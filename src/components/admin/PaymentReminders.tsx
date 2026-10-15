@@ -6,7 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { hapticTap, hapticNotify } from "@/lib/native";
+import { ListGroup } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { hapticTap, hapticNotify, hapticSelection } from "@/lib/native";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -112,16 +114,12 @@ const PaymentReminders = ({ users }: Props) => {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
-        <Mail className="w-5 h-5 text-primary" />
-        <h1 className="type-title2">Recordatorios de pago</h1>
-      </div>
-      <p className="type-subhead text-muted-foreground mb-6">
+      <p className="mb-4 type-subhead text-muted-foreground">
         {unpaid.length} usuarios registrados sin pagar. Cooldown de 3 días por usuario.
       </p>
 
-      <div className="flex gap-3 mb-4 flex-wrap">
-        <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email…" value={search} onChange={e => setSearch(e.target.value)} className="flex-1 min-w-[200px]" />
+      <div className="mb-6 flex flex-wrap gap-3">
+        <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email…" value={search} onChange={e => setSearch(e.target.value)} className="min-w-[200px] flex-1" />
         <Button variant="secondary" onClick={() => { void hapticTap(); selectAll(); }}>Seleccionar todos ({filtered.length})</Button>
         {selected.size > 0 && <Button variant="plain" onClick={() => { void hapticTap(); clearAll(); }}>Limpiar ({selected.size})</Button>}
         <Button onClick={() => { void hapticTap(); setDialogOpen(true); }} disabled={selected.size === 0}>
@@ -129,29 +127,39 @@ const PaymentReminders = ({ users }: Props) => {
         </Button>
       </div>
 
-      <div className="space-y-2">
-        {filtered.map(u => {
-          const ds = daysSince(lastSentMap[u.user_id]);
-          const cooldown = ds !== null && ds < 3;
-          return (
-            <div key={u.user_id} className="bg-card rounded-2xl p-4 flex items-center gap-4">
-              <Checkbox checked={selected.has(u.user_id)} onCheckedChange={() => toggle(u.user_id)} />
-              <div className="flex-1 min-w-0">
-                <div className="type-subhead font-medium truncate">{u.email}</div>
-                <div className="type-footnote text-muted-foreground">
-                  Registrado {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                  {ds !== null && ` · Último email hace ${ds}d`}
+      {filtered.length === 0 ? (
+        <EmptyState icon={Mail} title="No hay usuarios sin pagar" description="Cuando alguien se registre y no pague, aparecerá aquí." />
+      ) : (
+        <ListGroup>
+          {filtered.map(u => {
+            const ds = daysSince(lastSentMap[u.user_id]);
+            const cooldown = ds !== null && ds < 3;
+            return (
+              <div
+                key={u.user_id}
+                role="button"
+                tabIndex={0}
+                onClick={() => { void hapticSelection(); toggle(u.user_id); }}
+                onKeyDown={e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(u.user_id); } }}
+                className="sep-t flex min-h-[56px] cursor-pointer items-center gap-4 px-4 transition-colors first:border-t-0 active:bg-accent"
+              >
+                <Checkbox checked={selected.has(u.user_id)} onCheckedChange={() => toggle(u.user_id)} onClick={e => e.stopPropagation()} aria-label={`Seleccionar ${u.email}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate type-body">{u.email}</div>
+                  <div className="type-footnote text-muted-foreground">
+                    Registrado {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                    {ds !== null && ` · Último email hace ${ds}d`}
+                  </div>
                 </div>
+                {cooldown && <Badge variant="secondary">En espera</Badge>}
+                {lastSentMap[u.user_id] && !cooldown && (
+                  <Badge className="bg-primary/15 text-primary"><CheckCircle2 className="w-3 h-3 mr-1" />Enviado</Badge>
+                )}
               </div>
-              {cooldown && <Badge variant="secondary">En espera</Badge>}
-              {lastSentMap[u.user_id] && !cooldown && (
-                <Badge className="bg-primary/15 text-primary"><CheckCircle2 className="w-3 h-3 mr-1" />Enviado</Badge>
-              )}
-            </div>
-          );
-        })}
-        {filtered.length === 0 && <div className="text-center py-8 text-muted-foreground type-subhead">No hay usuarios sin pagar</div>}
-      </div>
+            );
+          })}
+        </ListGroup>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -166,7 +174,7 @@ const PaymentReminders = ({ users }: Props) => {
             <div>
               <label className="type-footnote text-muted-foreground mb-1 block">Mensaje</label>
               <Textarea value={body} onChange={e => setBody(e.target.value)} rows={8} />
-              <p className="type-caption2 text-muted-foreground mt-1">El email incluye un botón "Activar mi plan" automáticamente.</p>
+              <p className="type-footnote text-muted-foreground mt-1">El email incluye un botón "Activar mi plan" automáticamente.</p>
             </div>
           </div>
           <DialogFooter>

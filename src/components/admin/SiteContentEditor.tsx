@@ -895,7 +895,7 @@ const SiteContentEditor = () => {
                   {t.photo_before_url ? (
                     <img loading="lazy" decoding="async" src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-[10px]" />
                   ) : (
-                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary/50 flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
+                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
                   )}
                   <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 w-full justify-center">
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_before_url", e)} />
@@ -910,7 +910,7 @@ const SiteContentEditor = () => {
                   {t.photo_after_url ? (
                     <img loading="lazy" decoding="async" src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-[10px]" />
                   ) : (
-                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary/50 flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
+                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
                   )}
                   <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 w-full justify-center">
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_after_url", e)} />

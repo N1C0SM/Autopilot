@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Newspaper, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { withBookRef } from "@/lib/buyLink";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -22,6 +22,23 @@ interface Post { slug: string; title: string; excerpt: string | null; cover_url:
 
 // Sin contenido de reserva: si no hay libros o recomendaciones reales en la base de
 // datos, esas secciones simplemente no se muestran (nada de material inventado).
+
+const sentenceCase = (t: string) => {
+  const v = t.trim().toLowerCase();
+  return v.charAt(0).toUpperCase() + v.slice(1);
+};
+
+const RowThumb = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: string; fallback: typeof Newspaper }) => {
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return <img src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-14 w-14 shrink-0 rounded-xl bg-secondary object-cover" />;
+  }
+  return (
+    <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary">
+      <Fallback className="h-6 w-6 text-primary" strokeWidth={1.75} />
+    </span>
+  );
+};
 
 const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const plans = usePlanAvailability();
@@ -110,16 +127,14 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
               {recos.map((r, i) => (
                 <ListRow
                   key={r.id || i}
-                  leading={
-                    r.image_url ? (
-                      <img src={r.image_url} alt={r.title} loading="lazy" className="h-14 w-14 rounded-xl object-cover" />
-                    ) : (
-                      <span className="block h-14 w-14 rounded-xl bg-secondary" />
-                    )
+                  leading={<RowThumb src={r.image_url} alt={r.title} fallback={ShoppingBag} />}
+                  title={<span className="line-clamp-2">{r.title}</span>}
+                  subtitle={
+                    <>
+                      {r.badge && <span className="block truncate type-footnote text-primary">{sentenceCase(r.badge)}</span>}
+                      <span className="line-clamp-2">{previewIntro(r.description)}</span>
+                    </>
                   }
-                  title={r.title}
-                  subtitle={<span className="line-clamp-2">{previewIntro(r.description)}</span>}
-                  value={r.badge || undefined}
                   chevron
                   onClick={() => setPreviewReco(r)}
                 />
@@ -171,14 +186,8 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                 <ListRow
                   key={p.slug}
                   to={`/blog/${p.slug}`}
-                  leading={
-                    p.cover_url ? (
-                      <img src={p.cover_url} alt={p.title} loading="lazy" className="h-14 w-14 rounded-xl object-cover" />
-                    ) : (
-                      <span className="block h-14 w-14 rounded-xl bg-secondary" />
-                    )
-                  }
-                  title={p.title}
+                  leading={<RowThumb src={p.cover_url} alt={p.title} fallback={Newspaper} />}
+                  title={<span className="line-clamp-2">{p.title}</span>}
                   subtitle={p.excerpt ? <span className="line-clamp-2">{p.excerpt}</span> : undefined}
                   chevron
                 />

@@ -10,7 +10,7 @@ import { hapticTap, hapticSelection } from "@/lib/native";
 import type { Profile } from "@/pages/Admin";
 import CreateTestAccountDialog, { type TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Surface } from "@/components/ui/surface";
+import { ListGroup } from "@/components/ui/list";
 import { SectionHeader } from "@/components/ui/section-header";
 import { PaymentDot, PlanStatusBadge, StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -52,7 +52,7 @@ const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; on
     <button
       type="button"
       onClick={() => { void hapticTap(); onClick(); }}
-      className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40 active:bg-accent"
+      className="sep-t flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors first:border-t-0 active:bg-accent"
     >
       {kind === "user" ? (
         <Avatar className="h-9 w-9 shrink-0">
@@ -68,7 +68,7 @@ const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; on
       )}
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate type-subhead font-semibold">{name}</span>
+        <span className="block truncate type-headline">{name}</span>
         <span className="block truncate type-footnote text-muted-foreground">{meta}</span>
       </span>
 
@@ -97,18 +97,13 @@ const UserGroup = ({
   onSelectUser: (user: Profile) => void;
   empty?: ReactNode;
 }) => (
-  <section>
-    <SectionHeader title={title} className="mb-2" />
-    {users.length === 0 ? (
-      empty
-    ) : (
-      <Surface padding="none" className="divide-y divide-border/60 overflow-hidden">
-        {users.map((u) => (
+  <ListGroup header={title}>
+    {users.length === 0
+      ? empty
+      : users.map((u) => (
           <UserRow key={u.user_id} user={u} kind={kind} onClick={() => onSelectUser(u)} />
         ))}
-      </Surface>
-    )}
-  </section>
+  </ListGroup>
 );
 
 const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCreated }: Props) => {
@@ -239,7 +234,7 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
 
       <div className="space-y-6">
         <UserGroup
-          title={`Usuarios (${regularUsers.length})`}
+          title={`Clientes (${regularUsers.length})`}
           users={regularUsers}
           kind="user"
           onSelectUser={onSelectUser}

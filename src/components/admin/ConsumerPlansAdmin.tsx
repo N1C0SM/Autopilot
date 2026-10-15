@@ -38,7 +38,7 @@ export default function ConsumerPlansAdmin() {
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="type-title2">Planes</h2>
+        <h2 className="type-title2">Planes públicos</h2>
         <p className="type-subhead text-muted-foreground">Lo que cambies aquí se ve al momento en la portada y en /planes. Los enlaces de cobro siguen en Pagos.</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
