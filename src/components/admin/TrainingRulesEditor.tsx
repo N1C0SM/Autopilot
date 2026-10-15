@@ -193,10 +193,10 @@ const TrainingRulesEditor = () => {
             <button
               key={p}
               onClick={() => togglePattern(p)}
-              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              className={`type-footnote font-semibold rounded-full px-3 py-1.5 transition-colors ${
                 rules.required_patterns.includes(p)
-                  ?"border-primary bg-primary/10 text-primary"
-                  :"border-border text-muted-foreground hover:border-primary/30"
+                  ?"bg-primary/15 text-primary"
+                  :"bg-secondary text-muted-foreground active:bg-accent"
               }`}
             >
               {p}
@@ -232,7 +232,7 @@ const TrainingRulesEditor = () => {
 
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5 space-y-3">
+    <div className="rounded-2xl bg-card p-4 sm:p-5 space-y-3">
       <div className="flex items-center gap-2">
         <div className="text-primary">{icon}</div>
         <h3 className="font-semibold text-sm">{title}</h3>
