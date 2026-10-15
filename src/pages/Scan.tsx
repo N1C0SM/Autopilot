@@ -1657,14 +1657,13 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                 ) : (
                   <p className="text-muted-foreground max-w-2xl mx-auto">{result.summary}</p>
                 )}
-                <div className="mt-5 flex justify-center">
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
                   {user && userEmail && (
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={resendByEmail}
                       disabled={emailSending || autoSaving}
-                      className="mr-2"
                     >
                       {emailSending || autoSaving ? <Spinner size="sm" className="mr-1" /> : <Mail className="w-4 h-4 mr-1" />}
                       {autoSaved ? "Reenviar por email" : "Enviar por email"}
@@ -1690,7 +1689,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                       size="sm"
                       onClick={resetProgress}
                       disabled={resettingProgress}
-                      className="ml-2 text-destructive"
+                      className="text-destructive"
                     >
                       {resettingProgress ? (
                         <Spinner size="sm" className="mr-1" />
