@@ -919,14 +919,14 @@ const ExerciseLibrary = () => {
   const orderLabel = (o: number) => RECOMMENDED_ORDERS.find((x) => x.value === o)?.label ||"";
 
   return (
-    <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-[0_16px_44px_-36px_hsl(var(--primary)/.55)] sm:p-5">
+    <div className="mb-6 rounded-2xl bg-card p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-4">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
             <Dumbbell className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="font-bold font-display">Biblioteca de ejercicios</h2>
+            <h2 className="sr-only">Biblioteca de ejercicios</h2>
             <p className="text-xs text-muted-foreground">{filtered.length} de {exercises.length} ejercicios</p>
           </div>
         </div>
@@ -1035,7 +1035,7 @@ const ExerciseLibrary = () => {
 
           {/* Lista única y limpia */}
           {filtered.length > 0 ? (
-            <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/80">
+            <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card">
               {filtered.map((ex) => (
                 <div
                   key={ex.id}

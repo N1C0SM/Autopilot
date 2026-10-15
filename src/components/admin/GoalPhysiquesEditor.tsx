@@ -112,13 +112,13 @@ const GoalPhysiquesEditor = () => {
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-border rounded-2xl text-sm text-muted-foreground">
+        <div className="rounded-2xl bg-card py-16 text-center type-subhead text-muted-foreground">
           Aún no hay físicos de referencia. Añade el primero con una foto y un nombre.
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
           {items.map((it) => (
-            <div key={it.id} className="rounded-xl bg-card border border-border/60 p-4 space-y-3">
+            <div key={it.id} className="rounded-2xl bg-card p-4 space-y-3">
               <div className="flex gap-3">
                 <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary">
                   {it.image_url ? (
@@ -136,7 +136,7 @@ const GoalPhysiquesEditor = () => {
                   </label>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nombre</Label>
+                  <Label className="type-footnote text-muted-foreground">Nombre</Label>
                   <Input
                     value={it.name}
                     onChange={(e) => update(it.id, { name: e.target.value })}

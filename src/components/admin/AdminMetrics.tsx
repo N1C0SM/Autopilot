@@ -153,7 +153,7 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="type-title2">Métricas</h2>
+        <h2 className="sr-only">Métricas</h2>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void refresh(); }} aria-label="Actualizar">
             <RefreshCw className="w-4 h-4" />

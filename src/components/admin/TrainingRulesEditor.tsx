@@ -111,7 +111,7 @@ const TrainingRulesEditor = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-2xl font-bold">Reglas de generación</h2>
+          <h2 className="sr-only">Reglas de generación</h2>
           <p className="text-xs text-muted-foreground">Configuración del motor Autopilot</p>
         </div>
         <div className="flex gap-2">
