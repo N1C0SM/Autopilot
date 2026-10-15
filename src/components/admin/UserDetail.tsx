@@ -10,7 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Loader2, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Check, Target, MoreHorizontal, KeyRound } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Target, MoreHorizontal, KeyRound, UserRound, Crown } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { hapticTap, hapticSelection } from "@/lib/native";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -84,19 +88,19 @@ interface OnboardingData {
 // ─── Macro Templates ───
 const MACRO_TEMPLATES: Record<string, { label: string; calc: (weight: number) => { protein: number; carbs: number; fats: number } }> = {
   gain_muscle: {
-    label: "💪 Ganar músculo",
+    label: "Ganar músculo",
     calc: (w) => ({ protein: Math.round(w * 2.2), carbs: Math.round(w * 4), fats: Math.round(w * 1) }),
   },
   lose_weight: {
-    label: "🔥 Perder grasa",
+    label: "Perder grasa",
     calc: (w) => ({ protein: Math.round(w * 2.4), carbs: Math.round(w * 2), fats: Math.round(w * 0.8) }),
   },
   recomp: {
-    label: "⚡ Recomposición",
+    label: "Recomposición",
     calc: (w) => ({ protein: Math.round(w * 2.2), carbs: Math.round(w * 3), fats: Math.round(w * 0.9) }),
   },
   maintenance: {
-    label: "⚖️ Mantenimiento",
+    label: "Mantenimiento",
     calc: (w) => ({ protein: Math.round(w * 1.8), carbs: Math.round(w * 3.5), fats: Math.round(w * 1) }),
   },
 };
@@ -333,7 +337,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
     if (!tpError && !npError) {
       await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", profile.user_id);
-      toast.success("¡Planes guardados y usuario notificado!");
+      toast.success("Planes guardados y usuario notificado");
       onUpdate(profile.user_id, { plan_status: "plan_ready" });
     } else {
       toast.error("Error al guardar los planes.");
@@ -385,7 +389,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
     onUpdate(profile.user_id, { plan_status: "plan_ready" });
     toast.success(data.macros
-      ? `¡Plan auto-generado! ${data.training_days} días de entrenamiento, macros: P${data.macros.protein}/C${data.macros.carbs}/F${data.macros.fats}`
+      ? `Plan generado: ${data.training_days} días de entrenamiento, macros: P${data.macros.protein}/C${data.macros.carbs}/F${data.macros.fats}`
       : `Plan de entrenamiento generado para ${data.training_days} días. Faltan datos para calcular macros.`);
     setGenerating(false);
   };
@@ -393,17 +397,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   if (dataLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <Spinner size="lg" className="text-primary" label="Cargando" />
       </div>
     );
   }
 
   const goalLabel: Record<string, string> = {
-    lose_weight: "🔥 Perder grasa",
-    gain_muscle: "💪 Ganar músculo",
-    recomp: "⚡ Recomposición",
-    improve_endurance: "🏃 Mejorar resistencia",
-    general_health: "❤️ Salud general",
+    lose_weight: "Perder grasa",
+    gain_muscle: "Ganar músculo",
+    recomp: "Recomposición",
+    improve_endurance: "Mejorar resistencia",
+    general_health: "Salud general",
   };
 
   const clientFeatures = resolveFeatures(getConsumerPlan(profile));
@@ -443,18 +447,18 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
          </AvatarFallback>
        </Avatar>
        <div className="flex-1 min-w-0">
-         <h1 className="text-base sm:text-xl font-bold font-display break-all">{profile.name?.trim() || profile.email}</h1>
-         {profile.name?.trim() && <p className="text-xs text-muted-foreground break-all">{profile.email}</p>}
+         <h1 className="type-title3 md:text-xl break-all">{profile.name?.trim() || profile.email}</h1>
+         {profile.name?.trim() && <p className="type-footnote text-muted-foreground break-all selectable">{profile.email}</p>}
         </div>
        </div>
        <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
         {profile.payment_status === "paid" && (
           <>
-            <Button variant="outline" onClick={autoGeneratePlan} disabled={generating} className="min-h-11 flex-1 sm:flex-none">
-              <Wand2 className="w-4 h-4 mr-1" /> {generating ? "Generando..." : "Auto-generar"}
+            <Button variant="tinted" onClick={autoGeneratePlan} disabled={generating} className="min-h-11 flex-1 sm:flex-none">
+              <Wand2 className="w-4 h-4 mr-1.5" /> {generating ? "Generando…" : "Auto-generar"}
             </Button>
             <Button variant="hero" onClick={savePlans} disabled={saving} className="min-h-11 flex-1 sm:flex-none">
-              <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar"}
+              <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando…" : "Guardar"}
             </Button>
           </>
         )}
@@ -462,7 +466,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="shrink-0" aria-label="Más acciones">
+                <Button variant="secondary" size="icon" className="shrink-0" aria-label="Más acciones">
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -485,8 +489,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    {deleting ? "Eliminando..." : "Eliminar"}
+                  <AlertDialogAction destructive onClick={handleDeleteUser}>
+                    {deleting ? "Eliminando…" : "Eliminar"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -499,34 +503,34 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
       {/* Tabs */}
       <Tabs key={profile.user_id} defaultValue={restricted ? "summary" : "info"} className="min-w-0 space-y-6">
-        <TabsList className="bg-secondary/50 w-full max-w-full flex justify-start overflow-x-auto no-scrollbar h-auto" aria-label="Ficha del cliente">
-          {restricted && <TabsTrigger value="summary" className="min-h-11 shrink-0 gap-1.5 text-xs whitespace-nowrap"><Target className="w-3.5 h-3.5" /> Plan</TabsTrigger>}
-          {!restricted && <TabsTrigger value="info" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+        <TabsList className="w-full max-w-full flex justify-start overflow-x-auto no-scrollbar h-auto" aria-label="Ficha del cliente">
+          {restricted && <TabsTrigger value="summary" className="min-h-11 shrink-0 gap-1.5 whitespace-nowrap"><Target className="w-3.5 h-3.5" /> Plan</TabsTrigger>}
+          {!restricted && <TabsTrigger value="info" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
             <Target className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Plan</span>
            </TabsTrigger> }
-          <TabsTrigger value="perfil" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+          <TabsTrigger value="perfil" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Perfil</span>
            </TabsTrigger>
           {!restricted && (
-            <TabsTrigger value="acceso" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+            <TabsTrigger value="acceso" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
               <KeyRound className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Acceso</span>
             </TabsTrigger>
           )}
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+              <TabsTrigger value="progress" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
                 <TrendingUp className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Progreso</span>
                </TabsTrigger>
-              <TabsTrigger value="training" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+              <TabsTrigger value="training" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
                 <Dumbbell className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Entreno</span>
               </TabsTrigger>
               {canViewNutrition && (
-                <TabsTrigger value="nutrition" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+                <TabsTrigger value="nutrition" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
                   <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Nutrición</span>
                 </TabsTrigger>
               )}
               {canMessageClient && (
-                <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 text-xs gap-1.5 whitespace-nowrap">
+                <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
                   <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Chat</span>
                 </TabsTrigger>
               )}
@@ -535,25 +539,25 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         </TabsList>
 
         {restricted && <TabsContent value="summary" className="space-y-4">
-          <section className="rounded-xl border border-border bg-card p-4 sm:p-6 space-y-3">
-            <h2 className="font-display font-semibold">Resumen del plan</h2>
-            <p className="text-sm text-muted-foreground">{dayPlans.length ? `${dayPlans.length} sesiones guardadas para este cliente.` : "Este cliente aún no tiene sesiones guardadas."}</p>
-            {dayPlans.length > 0 && <ul className="divide-y divide-border">{dayPlans.map((plan, index) => <li key={`${plan.day}-${index}`} className="py-3 text-sm"><span className="font-medium">{plan.day}</span><span className="block break-words text-muted-foreground">{plan.type === "gimnasio" ? (plan.routine_name || "Entrenamiento") : (plan.sport || "Actividad")} · {plan.type === "gimnasio" ? `${plan.exercises?.length || 0} ejercicios` : (plan.duration || "Duración pendiente")}</span></li>)}</ul>}
-            {!onboarding && <p className="text-sm text-muted-foreground">Falta completar el perfil del cliente. Pide al administrador que revise sus datos.</p>}
-            {!("subscription_tier" in profile) && <p role="status" className="rounded-lg bg-secondary/40 p-3 text-sm text-muted-foreground">La información de acceso del cliente está pendiente de actualizar. El chat con el cliente aparecerá cuando se confirme su acceso Coach.</p>}
-            {"subscription_tier" in profile && !canMessageClient && <p className="text-sm text-muted-foreground">Este cliente no tiene acceso activo al chat de seguimiento Coach.</p>}
+          <section className="space-y-4">
+            <h2 className="type-title2">Resumen del plan</h2>
+            <p className="type-subhead text-muted-foreground">{dayPlans.length ? `${dayPlans.length} sesiones guardadas para este cliente.` : "Este cliente aún no tiene sesiones guardadas."}</p>
+            {dayPlans.length > 0 && <ul className="overflow-hidden rounded-2xl bg-card">{dayPlans.map((plan, index) => <li key={`${plan.day}-${index}`} className="px-4 py-3 sep-t first:before:hidden"><span className="type-headline">{plan.day}</span><span className="type-subhead block break-words text-muted-foreground">{plan.type === "gimnasio" ? (plan.routine_name || "Entrenamiento") : (plan.sport || "Actividad")} · {plan.type === "gimnasio" ? `${plan.exercises?.length || 0} ejercicios` : (plan.duration || "Duración pendiente")}</span></li>)}</ul>}
+            {!onboarding && <p className="type-subhead text-muted-foreground">Falta completar el perfil del cliente. Pide al administrador que revise sus datos.</p>}
+            {!("subscription_tier" in profile) && <p role="status" className="type-subhead text-muted-foreground">La información de acceso del cliente está pendiente de actualizar. El chat con el cliente aparecerá cuando se confirme su acceso Coach.</p>}
+            {"subscription_tier" in profile && !canMessageClient && <p className="type-subhead text-muted-foreground">Este cliente no tiene acceso activo al chat de seguimiento Coach.</p>}
           </section>
         </TabsContent>}
 
         {/* Tab: Info (incluye Plan y acceso) */}
         <TabsContent value="info" className="space-y-6">
         {!restricted && (
-            <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
+            <div className="space-y-4">
               <div>
-                <div className="font-semibold text-base">Plan</div>
-                <div className="text-xs text-muted-foreground mt-1">Toca un plan para aplicarlo al instante. No genera ningún cobro.</div>
+                <h2 className="type-title2">Plan</h2>
+                <p className="type-subhead text-muted-foreground mt-1">Toca un plan para aplicarlo al instante. No genera ningún cobro.</p>
               </div>
-              <div className="grid gap-3 grid-cols-3">
+              <div className="grid gap-2 grid-cols-3">
                 {([
                   { value: "free", name: "Free", price: TIERS.free.price },
                   { value: "training", name: "Plus", price: TIERS.training.price },
@@ -571,6 +575,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       aria-pressed={active}
                       disabled={tierSaving || active}
                       onClick={async () => {
+                        void hapticSelection();
                         const updates: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = opt.value === "free"
                           ? { payment_status: "unpaid", subscription_status: "inactive" }
                           : {
@@ -595,18 +600,18 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                         onUpdate(profile.user_id, updates);
                         toast.success(`Plan: ${opt.name}`);
                       }}
-                      className={`rounded-xl border p-4 text-center transition-colors disabled:cursor-default ${
-                        active ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border bg-background hover:border-primary/50"
+                      className={`min-touch rounded-2xl p-4 text-center transition-colors ease-ios-standard active:opacity-70 disabled:cursor-default ${
+                        active ? "bg-primary text-primary-foreground" : "bg-card"
                       }`}
                     >
-                      <div className="font-semibold text-sm">{opt.name}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{opt.price} €/mes</div>
-                      {active && <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-primary">Actual</div>}
+                      <div className="type-headline">{opt.name}</div>
+                      <div className={`type-footnote mt-1 tabular-nums ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{opt.price} €/mes</div>
+                      {active && <div className="type-caption2 mt-1 font-semibold">Actual</div>}
                     </button>
                   );
                 })}
               </div>
-              {tierSaving && <Loader2 className="w-4 h-4 animate-spin text-primary mx-auto" />}
+              {tierSaving && <Spinner size="sm" className="mx-auto text-primary" label="Guardando" />}
             </div>
           )}
 
@@ -631,11 +636,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               onCancel={() => setEditingOnboarding(false)}
             />
           ) : onboarding ? (
-            <div className="min-w-0 bg-card rounded-xl p-4 sm:p-6 border border-border">
+            <div className="min-w-0">
               <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">Perfil del cliente</h2>
+                <h2 className="type-title2">Perfil del cliente</h2>
                 {!restricted && (
-                  <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Editar</Button>
+                  <Button size="sm" variant="tinted" onClick={() => setEditingOnboarding(true)}>Editar</Button>
                 )}
               </div>
               {(() => {
@@ -649,15 +654,15 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 const hours = av?.hours ? `${av.hours}h por sesión` : null;
                 const summary = [days, hours].filter(Boolean).join(" · ") || null;
                 return (
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-2 sm:gap-x-6 gap-y-5">
                 {[
                   { label: "Edad", value: onboarding.age },
                   { label: "Sexo", value: onboarding.sex === "male" ? "Hombre" : onboarding.sex === "female" ? "Mujer" : null },
                   { label: "Altura", value: onboarding.height ? `${onboarding.height} cm` : null },
                   { label: "Peso", value: onboarding.weight ? `${onboarding.weight} kg` : null },
-                  { label: "Equipamiento", value: onboarding.equipment_type ? `🏋️ ${onboarding.equipment_type}` : null },
+                  { label: "Equipamiento", value: onboarding.equipment_type ? onboarding.equipment_type : null },
                   { label: "Objetivo", value: onboarding.goal ? (goalLabel[onboarding.goal] || onboarding.goal) : null },
-                  { label: "Meta específica", value: onboarding.specific_goal ? `🎯 ${onboarding.specific_goal}` : null },
+                  { label: "Meta específica", value: onboarding.specific_goal ? onboarding.specific_goal : null },
                   { label: "Deportes", value: onboarding.sports },
                   { label: "Intensidad", value: onboarding.intensity_level ? `${onboarding.intensity_level}/10` : null },
                   { label: "Disponibilidad", value: summary },
@@ -668,17 +673,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   { label: "Cocina", value: ({ quick: "Rápido / sin tiempo", normal: "Algo de cocina", loves: "Le gusta cocinar" } as Record<string, string>)[jsonString(av.cooking)] || null },
                   { label: "Modalidad", value: av?.training_mode === "pareja" ? `En pareja · ${av.partner_email || ""}` : av?.training_mode ? "Individual" : null },
                 ].map((item) => (
-                  <div key={item.label} className="bg-secondary/30 rounded-lg p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{item.label}</div>
-                    <div className="break-words text-sm font-medium">{item.value || "—"}</div>
+                  <div key={item.label} className="min-w-0 sep-b pb-3">
+                    <div className="type-footnote text-muted-foreground">{item.label}</div>
+                    <div className="type-body break-words selectable">{item.value || "—"}</div>
                   </div>
                 ))}
                 {Object.keys(sportSchedules).length > 0 && (
-                  <div className="sm:col-span-2 bg-secondary/30 rounded-lg p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">🏃 Horarios de deportes</div>
+                  <div className="sm:col-span-2">
+                    <div className="type-footnote text-muted-foreground mb-2">Horarios de deportes</div>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(sportSchedules).map(([sport, sched]) => (
-                        <div key={sport} className="bg-card rounded-md px-3 py-1.5 text-xs border border-border">
+                        <div key={sport} className="bg-card rounded-full px-3 py-1.5 type-footnote">
                           <span className="font-semibold capitalize">{sport}</span>
                           <span className="text-muted-foreground ml-2">{formatSchedule(sched)}</span>
                         </div>
@@ -687,11 +692,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   </div>
                 )}
                 {customActivities.length > 0 && (
-                  <div className="sm:col-span-2 bg-secondary/30 rounded-lg p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">📌 Actividades personalizadas</div>
+                  <div className="sm:col-span-2">
+                    <div className="type-footnote text-muted-foreground mb-2">Actividades personalizadas</div>
                     <div className="flex flex-wrap gap-2">
                       {customActivities.map((act, i) => (
-                        <div key={i} className="bg-card rounded-md px-3 py-1.5 text-xs border border-border">
+                        <div key={i} className="bg-card rounded-full px-3 py-1.5 type-footnote">
                           <span className="font-semibold">{act.title}</span>
                           <span className="text-muted-foreground ml-2">{formatSchedule(act)}</span>
                         </div>
@@ -700,45 +705,47 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                   </div>
                 )}
                 {onboarding.injuries && (
-                  <div className="sm:col-span-2 bg-destructive/10 rounded-lg p-3 border border-destructive/20">
-                    <div className="text-[10px] uppercase tracking-wider text-destructive mb-1">⚠️ Lesiones / Condiciones</div>
-                    <div className="break-words text-sm">{onboarding.injuries}</div>
+                  <div className="sm:col-span-2 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 shrink-0 text-destructive mt-0.5" />
+                    <div className="min-w-0">
+                    <div className="type-headline text-destructive">Lesiones y condiciones</div>
+                    <div className="type-subhead break-words selectable">{onboarding.injuries}</div>
+                    </div>
                   </div>
                 )}
-                <div className="sm:col-span-2 bg-secondary/30 rounded-lg p-3">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Preferencias nutricionales</div>
-                  <div className="break-words text-sm">{onboarding.nutrition_preferences || "—"}</div>
+                <div className="sm:col-span-2 sep-b pb-3">
+                  <div className="type-footnote text-muted-foreground">Preferencias nutricionales</div>
+                  <div className="type-body break-words selectable">{onboarding.nutrition_preferences || "—"}</div>
                 </div>
-                <div className="sm:col-span-2 bg-secondary/30 rounded-lg p-3">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Alergias</div>
-                  <div className="break-words text-sm">{onboarding.allergies || "—"}</div>
+                <div className="sm:col-span-2">
+                  <div className="type-footnote text-muted-foreground">Alergias</div>
+                  <div className="type-body break-words selectable">{onboarding.allergies || "—"}</div>
                 </div>
               </div>
                 );
               })()}
             </div>
           ) : (
-            <div className="bg-card rounded-xl p-8 border border-border text-center space-y-3">
-              <p className="text-sm text-muted-foreground">Aún no hay datos de perfil.</p>
-              {!restricted && (
-                <Button size="sm" variant="outline" onClick={() => setEditingOnboarding(true)}>Añadir datos</Button>
-              )}
-            </div>
+            <EmptyState
+              icon={UserRound}
+              title="Aún no hay datos de perfil"
+              action={!restricted ? <Button size="sm" variant="plain" onClick={() => setEditingOnboarding(true)}>Añadir datos</Button> : undefined}
+            />
           )}
           {profile.payment_status === "paid" && (
             <details
-              className="bg-card rounded-xl border border-border p-4"
+              className="rounded-2xl bg-card px-4"
               onToggle={(event) => setShowGoalDetails(event.currentTarget.open)}
             >
-              <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2 font-medium text-sm">
-                  <Target className="w-4 h-4 text-primary" />
+              <summary className="min-h-11 cursor-pointer list-none flex items-center justify-between gap-3 active:opacity-70">
+                <span className="flex items-center gap-2 type-body">
+                  <Target className="w-5 h-5 text-muted-foreground" />
                   Físico objetivo
                 </span>
-                <span className="text-xs text-muted-foreground">{showGoalDetails ? "Ocultar" : "Ver"}</span>
+                <span className="type-subhead text-muted-foreground">{showGoalDetails ? "Ocultar" : "Ver"}</span>
               </summary>
               {showGoalDetails && (
-                <div className="border-t border-border mt-4 pt-4">
+                <div className="sep-t mt-1 py-4">
                   <UserGoalPanel userId={profile.user_id} email={profile.email} />
                 </div>
               )}
@@ -749,42 +756,34 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         {/* Tab: Acceso (roles y entrenador responsable, aparte del perfil para no acumular scroll) */}
         {!restricted && (
           <TabsContent value="acceso" className="space-y-6">
-          <div className="bg-card rounded-xl p-5 sm:p-6 border border-border space-y-4">
+          <div className="space-y-6">
               <div>
-                <h2 className="font-semibold text-base">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
-                <p className="text-xs text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
+                <h2 className="type-title2">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
+                <p className="type-subhead text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
               </div>
 
-              <div className="divide-y divide-border rounded-lg border border-border">
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <ShieldCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-sm">Administrador</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Puede gestionar la administración de Autopilot.</div>
-                    </div>
-                  </div>
-                  <Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />
-                </div>
-                <div className="p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <Dumbbell className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-medium text-sm">Entrenador</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Puede entrar al panel de entrenador y gestionar clientes asignados.</div>
-                    </div>
-                  </div>
-                  <Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />
-                </div>
-              </div>
+              <ListGroup>
+                <ListRow
+                  icon={<ShieldCheck className="text-muted-foreground" />}
+                  title="Administrador"
+                  subtitle="Puede gestionar la administración de Autopilot."
+                  trailing={<Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />}
+                />
+                <ListRow
+                  icon={<Dumbbell className="text-muted-foreground" />}
+                  title="Entrenador"
+                  subtitle="Puede entrar al panel de entrenador y gestionar clientes asignados."
+                  trailing={<Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />}
+                />
+              </ListGroup>
 
               {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
-              <div className="rounded-lg bg-secondary/30 p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <User2 className="w-5 h-5 text-primary shrink-0" />
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <User2 className="w-6 h-6 text-primary shrink-0" />
                   <div>
-                    <div className="font-medium text-sm">Entrenador responsable</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
+                    <div className="type-headline">Entrenador responsable</div>
+                    <div className="type-subhead text-muted-foreground">
                       {trainers.length === 0
                         ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
                         : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
@@ -822,9 +821,9 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         {/* Tab: Training */}
         <TabsContent value="training" className="space-y-8">
           <TrainingPlanForm dayPlans={dayPlans} onChange={setDayPlans} userSports={onboarding?.sports} equipmentType={onboarding?.equipment_type || "Mixto"} specificGoal={onboarding?.specific_goal || undefined} intensityLevel={onboarding?.intensity_level ?? 5} userGoal={onboarding?.goal || undefined} userInjuries={onboarding?.injuries || undefined} userAge={onboarding?.age ?? undefined} userAvailability={onboarding?.availability as Record<string, boolean> | null} />
-          <div className="space-y-4 border-t border-border/50 pt-6">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-              <Calendar className="w-4 h-4" /> Calendario
+          <div className="space-y-4 sep-t pt-6">
+            <h2 className="flex items-center gap-2 type-title3">
+              <Calendar className="w-5 h-5 text-muted-foreground" /> Calendario
             </h2>
             <AdminCalendarTab profile={profile} dayPlans={dayPlans} />
           </div>
@@ -832,41 +831,35 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Nutrition */}
         <TabsContent value="nutrition" className="space-y-6">
-          <div className="min-w-0 bg-card rounded-xl p-4 sm:p-6 border border-border">
-            <h2 className="font-bold font-display mb-4 flex items-center gap-2">
-              <Apple className="w-5 h-5 text-primary" />
-              Plan de Nutrición
-            </h2>
+          <div className="min-w-0 space-y-6">
+            <h2 className="type-title2">Plan de nutrición</h2>
 
-            {/* Macro templates */}
-            <div className="mb-4 p-3 bg-secondary/30 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-muted-foreground" />
+                <span className="type-footnote text-muted-foreground">
                   {onboarding?.weight
-                    ? `Calcular macros (${onboarding.weight}kg)`
+                    ? `Calcular macros (${onboarding.weight} kg)`
                     : "Añade el peso actual del cliente para calcular macros"}
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(MACRO_TEMPLATES).map(([key, tpl]) => (
-                  <Button key={key} variant="outline" size="sm" className="min-h-11 text-xs" onClick={() => applyMacroTemplate(key)} disabled={!onboarding?.weight || onboarding.weight <= 0}>
+                  <Button key={key} variant="secondary" size="sm" className="min-h-11 rounded-full" onClick={() => { void hapticTap(); applyMacroTemplate(key); }} disabled={!onboarding?.weight || onboarding.weight <= 0}>
                     {tpl.label}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* Macros */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+            <div className="grid grid-cols-3 gap-3">
               {[
-                { key: "protein" as const, label: "Proteína (g)", emoji: "🥩" },
-                { key: "carbs" as const, label: "Carbos (g)", emoji: "🍚" },
-                { key: "fats" as const, label: "Grasas (g)", emoji: "🥑" },
+                { key: "protein" as const, label: "Proteína (g)" },
+                { key: "carbs" as const, label: "Carbos (g)" },
+                { key: "fats" as const, label: "Grasas (g)" },
               ].map((m) => (
-                <div key={m.key} className="bg-secondary/30 rounded-lg p-4 text-center">
-                  <div className="text-2xl mb-1">{m.emoji}</div>
-                  <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="text-xs text-muted-foreground">{m.label}</Label>
+                <div key={m.key} className="min-w-0">
+                  <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="type-footnote text-muted-foreground">{m.label}</Label>
                   <Input
                     id={`client-${profile.user_id}-${m.key}`}
                     type="number"
@@ -875,24 +868,23 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     step="any"
                     value={macros[m.key]}
                     onChange={(e) => setMacros((prev) => ({ ...prev, [m.key]: e.target.value }))}
-                    className="mt-1 h-11 text-center text-lg font-bold bg-background"
+                    className="mt-1.5 text-center font-rounded font-bold tabular-nums"
                   />
                 </div>
               ))}
             </div>
 
-            {/* Meals */}
             <div>
-              <Label className="text-xs text-muted-foreground">Comidas (una por línea, formato: Nombre: Descripción)</Label>
+              <Label className="type-footnote text-muted-foreground">Comidas (una por línea, formato: Nombre: Descripción)</Label>
               <Textarea
                 value={mealsText}
                 onChange={(e) => setMealsText(e.target.value)}
                 placeholder={"Desayuno: Avena con frutos rojos y batido de proteínas\nAlmuerzo: Pollo a la plancha con arroz y verduras\nCena: Salmón al horno con patata y ensalada"}
                 rows={8}
-                className="mt-2 font-mono text-sm"
+                className="mt-2 font-mono"
               />
-              <p className="text-[10px] text-muted-foreground mt-2">
-                💡 Cada línea se convierte en una comida. El texto antes de ":" es el nombre.
+              <p className="type-footnote text-muted-foreground mt-2">
+                Cada línea se convierte en una comida. El texto antes de «:» es el nombre.
               </p>
             </div>
           </div>
@@ -901,7 +893,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
         {/* Tab: Chat */}
         {canMessageClient && <TabsContent value="chat" className="min-w-0">
-          {restricted && <p className="mb-3 text-sm text-muted-foreground">Conversación con {profile.name?.trim() || "tu cliente"}.</p>}
+          {restricted && <p className="mb-3 type-subhead text-muted-foreground">Conversación con {profile.name?.trim() || "tu cliente"}.</p>}
           {!restricted && assignedTrainerId ? (
             <div className="space-y-3">
               <div role="tablist" aria-label="Con quién hablar" className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1">
@@ -914,8 +906,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                       type="button"
                       role="tab"
                       aria-selected={active}
-                      onClick={() => setChatTarget(t)}
-                      className={`min-h-11 min-w-0 truncate rounded-full px-3 py-2 text-xs font-medium transition ${active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                      onClick={() => { void hapticSelection(); setChatTarget(t); }}
+                      className={`min-h-11 min-w-0 truncate rounded-full px-3 py-2 type-footnote font-medium transition ease-ios-standard active:opacity-70 ${active ? "bg-background text-foreground" : "text-muted-foreground"}`}
                     >
                       {t === "client" ? "Alumno" : `Entrenador (${trainerLabel})`}
                     </button>
@@ -924,7 +916,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               </div>
               {chatTarget === "trainer" ? (
                 <>
-                  <p className="text-center text-[11px] text-muted-foreground">Canal directo con el entrenador asignado a este cliente</p>
+                  <p className="text-center type-caption2 text-muted-foreground">Canal directo con el entrenador asignado a este cliente</p>
                   <Chat key={`t-${assignedTrainerId}`} conversationUserId={assignedTrainerId} isAdmin audience="trainer" />
                 </>
               ) : (
@@ -1102,9 +1094,10 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold font-display truncate">{profile.email}</h1>
-          <span className={`inline-block mt-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full ${kind === "admin" ? "bg-primary/15 text-primary" : "bg-primary/20 text-primary"}`}>
-            {kind === "admin" ? "👑 Administrador" : "🏋️ Entrenador"}
+          <h1 className="type-title3 md:text-xl truncate">{profile.email}</h1>
+          <span className="mt-0.5 flex items-center gap-1 type-footnote text-primary">
+            {kind === "admin" ? <Crown className="w-3.5 h-3.5" /> : <Dumbbell className="w-3.5 h-3.5" />}
+            {kind === "admin" ? "Administrador" : "Entrenador"}
           </span>
         </div>
         {!restricted && kind === "trainer" && (
@@ -1120,7 +1113,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="shrink-0 text-destructive hover:text-destructive" disabled={removingTrainerRole}>
+                <Button variant="plain" size="sm" className="shrink-0 text-destructive" disabled={removingTrainerRole}>
                   Quitar rol
                 </Button>
               </AlertDialogTrigger>
@@ -1136,11 +1129,11 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
+                    destructive
                     onClick={handleRemoveTrainerRole}
                     disabled={assigned.length > 0 || removingTrainerRole}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    {removingTrainerRole ? "Quitando..." : "Quitar rol de entrenador"}
+                    {removingTrainerRole ? "Quitando…" : "Quitar rol de entrenador"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1150,7 +1143,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
         {!restricted && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting}>
+              <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting} aria-label="Eliminar">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </AlertDialogTrigger>
@@ -1163,8 +1156,8 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                  {deleting ? "Eliminando..." : "Eliminar"}
+                <AlertDialogAction destructive onClick={handleDelete}>
+                  {deleting ? "Eliminando…" : "Eliminar"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1174,22 +1167,22 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <Spinner size="lg" className="text-primary" label="Cargando" />
         </div>
       ) : (
         <Tabs defaultValue={kind === "trainer" ? "info" : "chat"} className="space-y-6">
-          <TabsList className={`grid w-full bg-secondary/50 ${kind === "trainer" ? "grid-cols-3" : "grid-cols-1"}`}>
+          <TabsList className={`grid w-full ${kind === "trainer" ? "grid-cols-3" : "grid-cols-1"}`}>
             {kind === "trainer" && (
               <>
-                <TabsTrigger value="info" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
+                <TabsTrigger value="info" className="gap-1.5 shrink-0 whitespace-nowrap">
                   <User2 className="w-3.5 h-3.5" /> Info
                 </TabsTrigger>
-                <TabsTrigger value="assigned" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
+                <TabsTrigger value="assigned" className="gap-1.5 shrink-0 whitespace-nowrap">
                   <Dumbbell className="w-3.5 h-3.5" /> Asignados ({assigned.length})
                 </TabsTrigger>
               </>
             )}
-            <TabsTrigger value="chat" className="text-xs gap-1.5 shrink-0 whitespace-nowrap">
+            <TabsTrigger value="chat" className="gap-1.5 shrink-0 whitespace-nowrap">
               <MessageCircle className="w-3.5 h-3.5" /> Chat
             </TabsTrigger>
           </TabsList>
@@ -1197,14 +1190,14 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           {kind === "trainer" && (
             <TabsContent value="info">
               {trainerProfile && (
-                <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
+                <div className="space-y-6">
                   {/* Foto */}
                   <div className="flex items-start gap-5">
                     {trainerProfile.photo_url ? (
                       <img loading="lazy" decoding="async"
                         src={trainerProfile.photo_url}
                         alt={trainerProfile.display_name || profile.email}
-                        className="w-24 h-24 rounded-2xl object-cover ring-1 ring-border"
+                        className="w-24 h-24 rounded-2xl object-cover"
                       />
                     ) : (
                       <div className="w-24 h-24 rounded-2xl bg-secondary flex items-center justify-center">
@@ -1220,16 +1213,16 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                           disabled={uploadingPhoto}
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadTrainerPhoto(f); }}
                         />
-                        <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
-                          {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <User2 className="w-3.5 h-3.5" />}
-                          {uploadingPhoto ? "Subiendo..." : "Subir foto"}
+                        <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-secondary px-4 type-subhead active:opacity-70">
+                          {uploadingPhoto ? <Spinner size="sm" /> : <User2 className="w-4 h-4" />}
+                          {uploadingPhoto ? "Subiendo…" : "Subir foto"}
                         </span>
                       </label>
                       {trainerProfile.photo_url && (
                         <button
                           type="button"
                           onClick={() => setTrainerProfile({ ...trainerProfile, photo_url: "" })}
-                          className="text-[11px] text-muted-foreground hover:text-destructive text-left"
+                          className="min-h-11 type-footnote text-destructive text-left active:opacity-70"
                         >
                           Quitar foto
                         </button>
@@ -1238,10 +1231,10 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                   </div>
 
                   {/* Visible toggle */}
-                  <div className="flex items-center justify-between border-t border-border pt-4">
+                  <div className="flex items-center justify-between sep-t pt-4">
                     <div>
-                      <Label className="text-sm font-medium">Visible en la landing</Label>
-                      <p className="text-xs text-muted-foreground">Aparecerá en la sección "Entrenadores"</p>
+                      <Label className="type-body">Visible en la landing</Label>
+                      <p className="type-footnote text-muted-foreground">Aparecerá en la sección "Entrenadores"</p>
                     </div>
                     <Switch
                       checked={!!trainerProfile.visible}
@@ -1286,7 +1279,7 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                       rows={4}
                       value={trainerProfile.bio || ""}
                       onChange={(e) => setTrainerProfile({ ...trainerProfile, bio: e.target.value })}
-                      placeholder="Cuenta brevemente quién es y a quién ayuda..."
+                      placeholder="Cuenta brevemente quién es y a quién ayuda…"
                     />
                   </div>
                   <div>
@@ -1294,13 +1287,15 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                     <Input
                       className="mt-1.5 max-w-[120px]"
                       type="number"
+                      inputMode="numeric"
+                      enterKeyHint="done"
                       value={trainerProfile.sort_order ?? 0}
                       onChange={(e) => setTrainerProfile({ ...trainerProfile, sort_order: parseInt(e.target.value) || 0 })}
                     />
                   </div>
 
                   <Button variant="hero" onClick={saveTrainerProfile} disabled={savingProfile}>
-                    <Save className="w-4 h-4 mr-1.5" /> {savingProfile ? "Guardando..." : "Guardar perfil"}
+                    <Save className="w-4 h-4 mr-1.5" /> {savingProfile ? "Guardando…" : "Guardar perfil"}
                   </Button>
                 </div>
               )}
@@ -1310,9 +1305,15 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           {kind === "trainer" && (
             <TabsContent value="assigned">
               {!restricted && (
-                <div className="mb-4 bg-card rounded-xl p-4 border border-border flex flex-col sm:flex-row gap-2">
+                <div className="mb-4 flex flex-col sm:flex-row gap-2">
                   <Input
                     type="email"
+                    inputMode="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    autoComplete="off"
+                    enterKeyHint="done"
                     placeholder="email@usuario.com"
                     value={assignEmail}
                     onChange={(e) => setAssignEmail(e.target.value)}
@@ -1320,38 +1321,28 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                     className="flex-1"
                   />
                   <Button onClick={handleAssign} disabled={assigning || !assignEmail.trim()}>
-                    {assigning ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null}
+                    {assigning ? <Spinner size="sm" className="mr-1.5 text-primary-foreground" /> : null}
                     Asignar usuario
                   </Button>
                 </div>
               )}
               {assigned.length === 0 ? (
-                <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
-                  <p className="text-sm text-muted-foreground">Sin usuarios asignados.</p>
-                </div>
+                <EmptyState icon={User2} title="Sin usuarios asignados" />
               ) : (
-                <div className="space-y-2">
+                <ListGroup>
                   {assigned.map((u) => (
-                    <div key={u.user_id} className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold">{u.email.charAt(0).toUpperCase()}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{u.email}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {u.plan_status === "plan_ready" ? "✅ Plan listo" : u.plan_status === "plan_pending" ? "📋 Pendiente" : "Perfil pendiente"}
-                          {" · "}
-                          {u.payment_status === "paid" ? "Pagado" : "Sin pagar"}
-                        </div>
-                      </div>
-                      {!restricted && (
-                        <Button variant="ghost" size="icon" onClick={() => handleUnassign(u.user_id)} aria-label="Quitar asignación">
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                    <ListRow
+                      key={u.user_id}
+                      title={<span className="truncate selectable">{u.email}</span>}
+                      subtitle={`${u.plan_status === "plan_ready" ? "Plan listo" : u.plan_status === "plan_pending" ? "Pendiente" : "Perfil pendiente"} · ${u.payment_status === "paid" ? "Pagado" : "Sin pagar"}`}
+                      trailing={!restricted ? (
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); void hapticTap(); handleUnassign(u.user_id); }} aria-label="Quitar asignación">
+                          <Trash2 className="w-5 h-5 text-destructive" />
                         </Button>
-                      )}
-                    </div>
+                      ) : undefined}
+                    />
                   ))}
-                </div>
+                </ListGroup>
               )}
             </TabsContent>
           )}
@@ -1400,23 +1391,23 @@ function AdminCalendarTab({ profile, dayPlans }: AdminCalendarTabProps) {
   return (
     <div className="space-y-4">
       {conflicts.length > 0 && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 space-y-3">
+        <div className="space-y-3">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <AlertTriangle className="w-6 h-6 text-primary shrink-0" />
               <div>
-                <p className="font-bold text-sm">{conflicts.length} conflicto{conflicts.length > 1 ? "s" : ""} detectado{conflicts.length > 1 ? "s" : ""} esta semana</p>
-                <p className="text-xs text-muted-foreground mt-0.5">El sistema puede reubicar los entrenos automáticamente respetando recuperación.</p>
+                <p className="type-headline">{conflicts.length} conflicto{conflicts.length > 1 ? "s" : ""} detectado{conflicts.length > 1 ? "s" : ""} esta semana</p>
+                <p className="type-subhead text-muted-foreground">El sistema puede reubicar los entrenos automáticamente respetando recuperación.</p>
               </div>
             </div>
             <Button size="sm" onClick={runAutoReschedule} disabled={running} variant="hero">
-              {running ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
+              {running ? <Spinner size="sm" className="mr-1.5 text-primary-foreground" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
               {running ? "Aplicando…" : "Aplicar auto-ajuste"}
             </Button>
           </div>
           <ul className="space-y-1.5">
             {conflicts.slice(0, 5).map((c, i) => (
-              <li key={i} className="text-xs flex items-start gap-2">
+              <li key={i} className="type-footnote flex items-start gap-2">
                 <span className="text-primary mt-0.5">•</span>
                 <span>
                   <strong>{c.dayLabel}</strong> · {c.trainingTitle} —{" "}
@@ -1425,7 +1416,7 @@ function AdminCalendarTab({ profile, dayPlans }: AdminCalendarTabProps) {
               </li>
             ))}
             {conflicts.length > 5 && (
-              <li className="text-xs text-muted-foreground italic">…y {conflicts.length - 5} más</li>
+              <li className="type-footnote text-muted-foreground">…y {conflicts.length - 5} más</li>
             )}
           </ul>
         </div>

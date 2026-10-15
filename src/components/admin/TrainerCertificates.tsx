@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import CertificateLink from "@/components/CertificateLink";
+import { ListGroup } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 import type { Database } from "@/integrations/supabase/types";
 
 type Certificate = Database["public"]["Tables"]["trainer_certificates"]["Row"];
@@ -67,17 +69,19 @@ export default function TrainerCertificates({ profileId }: { profileId: string }
     finally { setBusy(false); }
   };
 
-  return <section className="space-y-4 border-t border-border pt-6" aria-labelledby="certificates-heading">
-    <h3 id="certificates-heading" className="font-display font-semibold">Certificados del entrenador</h3>
-    <p className="text-sm text-muted-foreground">Los documentos se podrán consultar en la landing si este perfil está visible. Sube una copia autorizada sin DNI, dirección ni otros datos privados. Subir un documento no implica una verificación independiente.</p>
-    {loading ? <p role="status">Cargando certificados…</p> : failed ? <div role="alert"><p>No se pudieron cargar los certificados.</p><Button variant="outline" onClick={load}>Reintentar</Button></div> : certificates.length === 0 ? <p className="text-sm text-muted-foreground">Sin certificados publicados. La landing mostrará “Entrenador del equipo” y su presentación.</p> : <ul className="divide-y divide-border">
-      {certificates.map(c => <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="font-medium break-words">{c.title}</p><p className="text-sm text-muted-foreground break-words">{c.issuer}</p><CertificateLink path={c.file_path} title={c.title} /></div><Button type="button" variant="outline" disabled={busy} onClick={() => remove(c)}>Eliminar certificado</Button></li>)}
-    </ul>}
+  return <section className="space-y-4 pt-2" aria-labelledby="certificates-heading">
+    <div className="space-y-1">
+      <h3 id="certificates-heading" className="type-title3">Certificados del entrenador</h3>
+      <p className="type-footnote text-muted-foreground">Los documentos se podrán consultar en la landing si este perfil está visible. Sube una copia autorizada sin DNI, dirección ni otros datos privados. Subir un documento no implica una verificación independiente.</p>
+    </div>
+    {loading ? <p role="status" className="type-subhead text-muted-foreground">Cargando certificados…</p> : failed ? <div role="alert" className="flex items-center justify-between gap-3"><p className="type-subhead text-destructive">No se pudieron cargar los certificados.</p><Button variant="plain" className="min-h-[44px]" onClick={() => { void hapticTap(); void load(); }}>Reintentar</Button></div> : certificates.length === 0 ? <p className="type-subhead text-muted-foreground">Sin certificados publicados. La landing mostrará “Entrenador del equipo” y su presentación.</p> : <ListGroup inset>
+      {certificates.map(c => <div key={c.id} className="sep-t flex flex-wrap items-center justify-between gap-x-3 px-4 py-2 first:border-t-0"><div className="min-w-0"><p className="type-headline break-words">{c.title}</p><p className="type-subhead text-muted-foreground break-words">{c.issuer}</p><CertificateLink path={c.file_path} title={c.title} /></div><Button type="button" variant="plain" className="text-destructive" disabled={busy} onClick={() => { void hapticTap(); void remove(c); }}>Eliminar certificado</Button></div>)}
+    </ListGroup>}
     <fieldset disabled={busy || loading || failed} className="space-y-3">
-      <div><Label htmlFor="certificate-title">Nombre de la titulación</Label><Input id="certificate-title" maxLength={160} value={title} onChange={e => setTitle(e.target.value)} placeholder="Nombre exacto que aparece en el certificado" /></div>
-      <div><Label htmlFor="certificate-issuer">Entidad que lo expide</Label><Input id="certificate-issuer" maxLength={160} value={issuer} onChange={e => setIssuer(e.target.value)} /></div>
-      <div><Label htmlFor="certificate-file">Documento · PDF, JPG, PNG o WebP · máximo 10 MB</Label><Input ref={input} id="certificate-file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e => setFile(e.target.files?.[0] ?? null)} /></div>
-      <Button type="button" onClick={upload} disabled={!file || !title.trim() || !issuer.trim()}>{busy ? "Guardando…" : "Subir y publicar certificado"}</Button>
+      <div><Label htmlFor="certificate-title" className="mb-1.5 block text-muted-foreground">Nombre de la titulación</Label><Input id="certificate-title" maxLength={160} autoCapitalize="sentences" enterKeyHint="next" value={title} onChange={e => setTitle(e.target.value)} placeholder="Nombre exacto que aparece en el certificado" /></div>
+      <div><Label htmlFor="certificate-issuer" className="mb-1.5 block text-muted-foreground">Entidad que lo expide</Label><Input id="certificate-issuer" maxLength={160} enterKeyHint="done" value={issuer} onChange={e => setIssuer(e.target.value)} /></div>
+      <div><Label htmlFor="certificate-file" className="mb-1.5 block text-muted-foreground">Documento · PDF, JPG, PNG o WebP · máximo 10 MB</Label><Input ref={input} id="certificate-file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e => setFile(e.target.files?.[0] ?? null)} /></div>
+      <Button type="button" variant="tinted" onClick={() => { void hapticTap(); void upload(); }} disabled={!file || !title.trim() || !issuer.trim()}>{busy ? "Guardando…" : "Subir y publicar certificado"}</Button>
     </fieldset>
   </section>;
 }

@@ -2,14 +2,16 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Users as UsersIcon } from "lucide-react";
+import { AlertCircle, Users as UsersIcon } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminStats from "@/components/admin/AdminStats";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Surface } from "@/components/ui/surface";
 import { SectionHeader } from "@/components/ui/section-header";
 import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -135,17 +137,21 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-6 text-center">
-        <p>No se pudieron cargar las cuentas y sus permisos.</p>
-        <Button onClick={() => { void loadAdmin(); }}>Reintentar</Button>
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <EmptyState
+          icon={AlertCircle}
+          title="No se pudo cargar"
+          description="No se pudieron cargar las cuentas y sus permisos."
+          action={<Button size="lg" onClick={() => { void loadAdmin(); }}>Reintentar</Button>}
+        />
       </div>
     );
   }
@@ -197,7 +203,7 @@ const Admin = () => {
           {/* Top bar escritorio / tablet */}
           <header className="app-chrome hidden md:flex h-14 border-b sticky top-0 z-50 items-center px-4 gap-3">
             <SidebarTrigger />
-            <h1 className="font-display font-bold text-sm uppercase tracking-wider text-muted-foreground truncate">
+            <h1 className="type-headline truncate">
               {sectionTitle}
             </h1>
           </header>
@@ -205,29 +211,26 @@ const Admin = () => {
           <main
             className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[var(--mobile-nav-content-padding)] md:pb-8"
           >
-            <Suspense fallback={<div className="min-h-40 animate-pulse rounded-xl bg-card/50" aria-hidden />}>
+            <Suspense fallback={<div className="flex min-h-40 items-center justify-center" aria-hidden><Spinner /></div>}>
             {section === "dashboard" && (
               <div className="max-w-5xl space-y-6">
                 <AdminStats users={clients} />
 
-                {/* Quick actions */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <ListGroup header="Requiere atención">
                   <QuickAction
                     label="Planes pendientes"
                     value={clients.filter(u => u.plan_status === "plan_pending").length}
-                    color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
                     label="Sin pagar"
                     value={clients.filter(u => u.payment_status === "unpaid").length}
-                    color="text-destructive"
+                    danger
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
                     label="En viaje"
                     value={clients.filter(u => u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()).length}
-                    color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
                   <QuickAction
@@ -237,12 +240,10 @@ const Admin = () => {
                       const today = new Date();
                       return d.toDateString() === today.toDateString();
                     }).length}
-                    color="text-foreground"
                     onClick={() => { setSection("users"); }}
                   />
-                </div>
+                </ListGroup>
 
-                {/* Recent users */}
                 <div>
                   <SectionHeader title="Usuarios recientes" className="mb-2" />
                   {clients.length === 0 ? (
@@ -252,34 +253,33 @@ const Admin = () => {
                       description="Cuando alguien se registre aparecerá aquí."
                     />
                   ) : (
-                    <Surface padding="none" className="divide-y divide-border overflow-hidden">
+                    <ListGroup>
                       {[...clients]
                         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                         .slice(0, 5)
                         .map((u) => (
-                          <button
+                          <ListRow
                             key={u.user_id}
-                            type="button"
                             onClick={() => handleSelectUser(u)}
-                            className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40"
-                          >
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-muted-foreground">
-                              {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold">{u.name?.trim() || u.email}</span>
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                            leading={
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary type-subhead font-semibold text-muted-foreground">
+                                {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
                               </span>
-                            </span>
-                            <PlanStatusBadge
-                              planStatus={u.plan_status}
-                              traveling={!!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()}
-                            />
-                            <PaymentDot status={u.payment_status} />
-                          </button>
+                            }
+                            title={u.name?.trim() || u.email}
+                            subtitle={new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                            trailing={
+                              <span className="flex items-center gap-2">
+                                <PlanStatusBadge
+                                  planStatus={u.plan_status}
+                                  traveling={!!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()}
+                                />
+                                <PaymentDot status={u.payment_status} />
+                              </span>
+                            }
+                          />
                         ))}
-                    </Surface>
+                    </ListGroup>
                   )}
                 </div>
               </div>
@@ -402,15 +402,14 @@ const Admin = () => {
 
 // ─── Small helper components ───
 
-function QuickAction({ label, value, color, onClick }: { label: string; value: number; color: string; onClick: () => void }) {
+function QuickAction({ label, value, danger, onClick }: { label: string; value: number; danger?: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className="rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
-    >
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-display text-2xl font-bold tabular-nums ${color}`}>{value}</div>
-    </button>
+    <ListRow
+      title={label}
+      value={<span className={`font-rounded font-semibold tabular-nums ${danger && value > 0 ? "text-destructive" : ""}`}>{value}</span>}
+      chevron
+      onClick={() => { void hapticTap(); onClick(); }}
+    />
   );
 }
 

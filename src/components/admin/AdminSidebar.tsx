@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Users, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle } from "lucide-react";
 import type { AdminSection } from "@/pages/Admin";
+import { hapticTap } from "@/lib/native";
 
 interface Props {
   section: AdminSection;
@@ -47,11 +48,11 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
         {/* Brand */}
         <div className="p-4 border-b border-sidebar-border">
           {!collapsed ? (
-            <span className="font-display text-lg font-bold text-gradient">Autopilot</span>
+            <span className="type-headline text-primary">Autopilot</span>
           ) : (
-            <span className="font-display text-lg font-bold text-gradient">A</span>
+            <span className="type-headline text-primary">A</span>
           )}
-          {!collapsed && <span className="text-[10px] uppercase tracking-widest text-muted-foreground ml-2">Admin</span>}
+          {!collapsed && <span className="type-caption1 text-muted-foreground ml-2">Admin</span>}
         </div>
 
         <SidebarGroup>
@@ -63,15 +64,15 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
                 return (
                   <SidebarMenuItem key={item.section}>
                     <SidebarMenuButton
-                      onClick={() => onNavigate(item.section)}
-                      className={`cursor-pointer transition-colors ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                      onClick={() => { void hapticTap(); onNavigate(item.section); }}
+                      className={`transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && (
                         <span className="flex-1 flex items-center justify-between">
                           {item.title}
                           {item.section === "users" && (
-                            <span className="text-[10px] bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
+                            <span className="type-caption2 bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
                               {userCount}
                             </span>
                           )}
@@ -89,7 +90,7 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="cursor-pointer text-muted-foreground hover:text-destructive">
+            <SidebarMenuButton onClick={() => { void hapticTap(); onSignOut(); }} className="text-muted-foreground hover:text-destructive active:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>

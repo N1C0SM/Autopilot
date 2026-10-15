@@ -38,7 +38,7 @@ describe("trainer routine editor", () => {
   it("loads two Full Body sessions on the actual selected weekdays", () => {
     const onChange = vi.fn();
     render(<TrainingPlanForm dayPlans={[]} onChange={onChange} userAvailability={{ training_days: [2, 5, 5], days: "2", hours: 1, coach_style: "direct" }} />);
-    expect(screen.getByText("📅 Recomendado (2 días disponibles):")).toBeInTheDocument();
+    expect(screen.getByText("Recomendado (2 días disponibles):")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Cargar plantilla" }));
     expect(onChange.mock.calls[0][0].map((plan: DayPlan) => plan.day)).toEqual(["Martes", "Viernes"]);
   });

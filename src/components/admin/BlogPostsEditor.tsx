@@ -7,7 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, ExternalLink, Loader2, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { hapticTap } from "@/lib/native";
+import { Plus, Trash2, Save, ExternalLink, Image as ImageIcon, Sparkles, FileText } from "lucide-react";
 
 interface Post {
   id: string;
@@ -152,24 +156,25 @@ const BlogPostsEditor = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+    return <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>;
   }
 
   if (editing) {
     return (
-      <div className="space-y-5">
+      <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex items-center justify-between gap-3">
-          <Button variant="ghost" onClick={() => setEditing(null)}>← Volver a la lista</Button>
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">Publicado</Label>
-            <Switch checked={editing.published} onCheckedChange={(v) => setEditing({ ...editing, published: v })} />
+          <Button variant="plain" className="-ml-3" onClick={() => setEditing(null)}>← Volver a la lista</Button>
+          <div className="flex items-center gap-3">
+            <Label className="type-footnote text-muted-foreground">Publicado</Label>
+            <Switch checked={editing.published} onCheckedChange={(v) => { void hapticTap(); setEditing({ ...editing, published: v }); }} />
             <Button variant="hero" onClick={save} disabled={saving}>
-              <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar"}
+              {saving ? <Spinner size="sm" className="mr-1.5 text-primary-foreground" /> : <Save className="w-4 h-4 mr-1.5" />}
+              {saving ? "Guardando..." : "Guardar"}
             </Button>
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="space-y-5">
           <div>
             <Label>Título</Label>
             <Input
@@ -179,7 +184,7 @@ const BlogPostsEditor = () => {
               placeholder="Cómo ganar músculo con 30 años sin tiempo"
             />
           </div>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <Label>Slug (URL)</Label>
               <Input
@@ -188,7 +193,7 @@ const BlogPostsEditor = () => {
                 onChange={(e) => setEditing({ ...editing, slug: slugify(e.target.value) })}
                 placeholder="ganar-musculo-30-anos"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">URL: /blog/{editing.slug || "..."}</p>
+              <p className="type-footnote text-muted-foreground mt-1.5 px-1">URL: /blog/{editing.slug || "..."}</p>
             </div>
             <div>
               <Label>Autor</Label>
@@ -213,27 +218,27 @@ const BlogPostsEditor = () => {
 
           <div>
             <Label>Portada</Label>
-            <div className="mt-1.5 flex items-start gap-4">
+            <div className="mt-1.5 flex items-center gap-4">
               {editing.cover_url ? (
-                <img loading="lazy" decoding="async" src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-lg border border-border" />
+                <img loading="lazy" decoding="async" src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-[10px]" />
               ) : (
-                <div className="w-32 h-20 rounded-lg bg-secondary flex items-center justify-center">
+                <div className="w-32 h-20 rounded-[10px] bg-secondary flex items-center justify-center">
                   <ImageIcon className="w-6 h-6 text-muted-foreground" />
                 </div>
               )}
-              <div className="flex flex-col gap-2">
-                <label>
+              <div className="flex flex-col items-start gap-1">
+                <label className="inline-flex">
                   <input type="file" accept="image/*" className="hidden" disabled={uploading}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCover(f); }} />
-                  <span className="inline-flex items-center gap-1.5 cursor-pointer text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
-                    {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                  <span className="pressable inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 type-body text-primary active:opacity-60">
+                    {uploading ? <Spinner size="sm" /> : <ImageIcon className="w-4 h-4" />}
                     {uploading ? "Subiendo..." : "Subir portada"}
                   </span>
                 </label>
                 {editing.cover_url && (
-                  <button type="button" onClick={() => setEditing({ ...editing, cover_url: "" })} className="text-[11px] text-muted-foreground hover:text-destructive text-left">
+                  <Button type="button" variant="plain" className="text-destructive" onClick={() => setEditing({ ...editing, cover_url: "" })}>
                     Quitar portada
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -242,129 +247,141 @@ const BlogPostsEditor = () => {
           <div>
             <Label>Contenido (Markdown)</Label>
             <Textarea
-              className="mt-1.5 font-mono text-sm"
+              className="mt-1.5 font-mono md:text-sm"
               rows={20}
               value={editing.body_markdown}
               onChange={(e) => setEditing({ ...editing, body_markdown: e.target.value })}
               placeholder={"# Encabezado\n\nPárrafo con **negrita** y [enlaces](https://...).\n\n## Subtítulo\n\n- Lista\n- De\n- Items"}
             />
-            <p className="text-[10px] text-muted-foreground mt-1">Soporta Markdown completo (#, **, listas, enlaces, código, tablas).</p>
-          </div>
-
-          <div className="border-t border-border pt-4">
-            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">SEO (opcional)</p>
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">SEO title (sobrescribe el título)</Label>
-                <Input
-                  className="mt-1"
-                  value={editing.seo_title || ""}
-                  onChange={(e) => setEditing({ ...editing, seo_title: e.target.value })}
-                  placeholder="Máx 60 caracteres"
-                  maxLength={60}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Meta description</Label>
-                <Textarea
-                  className="mt-1"
-                  rows={2}
-                  value={editing.seo_description || ""}
-                  onChange={(e) => setEditing({ ...editing, seo_description: e.target.value })}
-                  placeholder="Máx 160 caracteres"
-                  maxLength={160}
-                />
-              </div>
-            </div>
+            <p className="type-footnote text-muted-foreground mt-1.5 px-1">Soporta Markdown completo (#, **, listas, enlaces, código, tablas).</p>
           </div>
         </div>
+
+        <section className="space-y-4">
+          <h3 className="type-group-header px-1">SEO (opcional)</h3>
+          <div>
+            <Label>SEO title (sobrescribe el título)</Label>
+            <Input
+              className="mt-1.5"
+              value={editing.seo_title || ""}
+              onChange={(e) => setEditing({ ...editing, seo_title: e.target.value })}
+              placeholder="Máx 60 caracteres"
+              maxLength={60}
+            />
+          </div>
+          <div>
+            <Label>Meta description</Label>
+            <Textarea
+              className="mt-1.5"
+              rows={2}
+              value={editing.seo_description || ""}
+              onChange={(e) => setEditing({ ...editing, seo_description: e.target.value })}
+              placeholder="Máx 160 caracteres"
+              maxLength={160}
+            />
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-8">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold font-display">Blog</h2>
-          <p className="text-xs text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
+          <h2 className="type-title1">Blog</h2>
+          <p className="type-subhead text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
         </div>
         <Button variant="hero" onClick={createNew}>
           <Plus className="w-4 h-4 mr-1.5" /> Nuevo artículo
         </Button>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <p className="text-sm font-semibold">Escribir con IA</p>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.
-        </p>
-        <div className="grid sm:grid-cols-2 gap-3">
+      <div className="flex items-start gap-4">
+        <Sparkles className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+        <div className="min-w-0 flex-1 space-y-4">
           <div>
-            <Label className="text-xs">¿De qué trata?</Label>
-            <Input
-              className="mt-1"
-              value={aiTopic}
-              onChange={(e) => setAiTopic(e.target.value)}
-              placeholder="Cuántos días entrenar a la semana si trabajas 10 horas"
-            />
+            <p className="type-headline">Escribir con IA</p>
+            <p className="type-subhead text-muted-foreground">
+              La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.
+            </p>
           </div>
-          <div>
-            <Label className="text-xs">Para quién (opcional)</Label>
-            <Input
-              className="mt-1"
-              value={aiAudience}
-              onChange={(e) => setAiAudience(e.target.value)}
-              placeholder="Hombres de 30-45 con poco tiempo"
-            />
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <Label>¿De qué trata?</Label>
+              <Input
+                className="mt-1.5"
+                value={aiTopic}
+                onChange={(e) => setAiTopic(e.target.value)}
+                placeholder="Cuántos días entrenar a la semana si trabajas 10 horas"
+              />
+            </div>
+            <div>
+              <Label>Para quién (opcional)</Label>
+              <Input
+                className="mt-1.5"
+                value={aiAudience}
+                onChange={(e) => setAiAudience(e.target.value)}
+                placeholder="Hombres de 30-45 con poco tiempo"
+              />
+            </div>
           </div>
+          <Button variant="tinted" onClick={generateWithAI} disabled={generating}>
+            {generating ? <Spinner size="sm" className="mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
+            {generating ? "Escribiendo borrador..." : "Generar borrador"}
+          </Button>
         </div>
-        <Button variant="hero" onClick={generateWithAI} disabled={generating}>
-          {generating ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
-          {generating ? "Escribiendo borrador..." : "Generar borrador"}
-        </Button>
       </div>
 
       {posts.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-xl border border-dashed border-border">
-          <p className="text-sm text-muted-foreground mb-3">Aún no hay artículos.</p>
-          <Button variant="outline" onClick={createNew}>
-            <Plus className="w-4 h-4 mr-1.5" /> Crear el primero
-          </Button>
-        </div>
+        <EmptyState
+          icon={FileText}
+          title="Aún no hay artículos."
+          description="Escribe el primero o pide un borrador a la IA."
+          action={
+            <Button variant="plain" onClick={createNew}>
+              <Plus className="w-4 h-4 mr-1.5" /> Crear el primero
+            </Button>
+          }
+        />
       ) : (
-        <div className="space-y-2">
+        <ListGroup header="Artículos">
           {posts.map((p) => (
-            <div key={p.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-              {p.cover_url ? (
-                <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-md object-cover shrink-0" />
-              ) : (
-                <div className="w-16 h-12 rounded-md bg-secondary shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{p.title}</p>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.published ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+            <ListRow
+              key={p.id}
+              leading={
+                p.cover_url ? (
+                  <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-[10px] object-cover" />
+                ) : (
+                  <div className="w-16 h-12 rounded-[10px] bg-secondary" />
+                )
+              }
+              title={
+                <span className="flex items-center gap-2">
+                  <span className="truncate">{p.title}</span>
+                  <span className={`type-caption1 shrink-0 ${p.published ? "text-primary" : "text-muted-foreground"}`}>
                     {p.published ? "Publicado" : "Borrador"}
                   </span>
-                </div>
-                <p className="text-[11px] text-muted-foreground truncate">/blog/{p.slug}</p>
-              </div>
-              {p.published && (
-                <a href={`/blog/${p.slug}`} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary" title="Ver">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              )}
-              <Button variant="ghost" size="sm" onClick={() => setEditing(p)}>Editar</Button>
-              <Button variant="ghost" size="icon" onClick={() => remove(p.id)} aria-label="Eliminar">
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
+                </span>
+              }
+              subtitle={`/blog/${p.slug}`}
+              onClick={() => setEditing(p)}
+              aria-label={`Editar ${p.title}`}
+              trailing={
+                <span className="flex items-center">
+                  {p.published && (
+                    <a href={`/blog/${p.slug}`} target="_blank" rel="noreferrer" className="pressable flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground active:opacity-60" title="Ver" aria-label="Ver artículo">
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => remove(p.id)} aria-label="Eliminar">
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </span>
+              }
+            />
           ))}
-        </div>
+        </ListGroup>
       )}
     </div>
   );

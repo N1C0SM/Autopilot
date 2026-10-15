@@ -6,8 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon, ArrowUp, ArrowDown, Video } from "lucide-react";
+import { Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon, ArrowUp, ArrowDown, Video } from "lucide-react";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { hapticTap } from "@/lib/native";
 import { toOptimizedWebp } from "@/lib/imageOptimization";
 
 interface Testimonial {
@@ -451,23 +454,23 @@ const SiteContentEditor = () => {
     } catch (err: unknown) { toast.error(errorMessage(err)); }
   };
 
-  if (loading) return <div className="flex justify-center p-10"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  if (loading) return <div className="flex justify-center p-10"><Spinner size="lg" /></div>;
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-3xl space-y-12">
       {/* Claves de IA */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Claves de IA</h2>
+          <h2 className="type-title3">Claves de IA</h2>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="type-footnote text-muted-foreground">
           Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI.
         </p>
         {/* Motor de texto: orden libre + activación */}
-        <div className="p-3 rounded-lg border border-border space-y-2">
-          <p className="text-sm font-medium">Motor de texto</p>
-          <p className="text-xs text-muted-foreground">
+        <div className="p-4 rounded-xl bg-card space-y-2">
+          <p className="type-headline">Motor de texto</p>
+          <p className="type-footnote text-muted-foreground">
             Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente. Apaga los que no quieras usar (deja solo uno para usar «solo esa IA»).
           </p>
           <div className="space-y-2">
@@ -475,35 +478,35 @@ const SiteContentEditor = () => {
               const p = TEXT_PROVIDERS.find((t) => t.id === id)!;
               const on = textEnabled.has(id);
               return (
-                <div key={id} className={`flex items-center gap-2 p-2.5 rounded-lg border transition-colors ${on ? "border-border" : "border-border/50 opacity-60"}`}>
-                  <span className="text-[10px] font-bold text-muted-foreground w-4 text-center">{on ? i + 1 : "–"}</span>
+                <div key={id} className={`flex items-center gap-2 p-2.5 rounded-xl bg-secondary transition-opacity ${on ? "" : "opacity-60"}`}>
+                  <span className="type-caption1 text-muted-foreground w-4 text-center">{on ? i + 1 : "–"}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{p.label}</p>
-                    <p className="text-[11px] text-muted-foreground">{p.desc}</p>
+                    <p className="type-headline">{p.label}</p>
+                    <p className="type-footnote text-muted-foreground">{p.desc}</p>
                   </div>
                   <div className="flex flex-col">
-                    <button type="button" onClick={() => moveTextProvider(id, -1)} disabled={i === 0} className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5" aria-label={`Subir ${p.label}`}>
+                    <button type="button" onClick={() => moveTextProvider(id, -1)} disabled={i === 0} className="pressable flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground active:text-foreground disabled:opacity-30" aria-label={`Subir ${p.label}`}>
                       <ArrowUp className="w-3.5 h-3.5" />
                     </button>
-                    <button type="button" onClick={() => moveTextProvider(id, 1)} disabled={i === textDisplay.length - 1} className="text-muted-foreground hover:text-foreground disabled:opacity-30 p-0.5" aria-label={`Bajar ${p.label}`}>
+                    <button type="button" onClick={() => moveTextProvider(id, 1)} disabled={i === textDisplay.length - 1} className="pressable flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground active:text-foreground disabled:opacity-30" aria-label={`Bajar ${p.label}`}>
                       <ArrowDown className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <Switch checked={on} onCheckedChange={(v) => toggleTextProvider(id, v)} />
+                  <Switch checked={on} onCheckedChange={(v) => { void hapticTap(); toggleTextProvider(id, v); }} />
                 </div>
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="type-footnote text-muted-foreground">
             Claude y DeepSeek solo hacen texto: las imágenes y los vídeos siempre van a OpenAI o Lovable. Si un proveedor no tiene clave puesta, se salta solo.
           </p>
         </div>
 
         {/* Motor de imágenes */}
-        <div className="p-3 rounded-lg border border-border space-y-2">
+        <div className="p-4 rounded-xl bg-card space-y-2">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4 text-primary" />
-            <p className="text-sm font-medium">Motor de imágenes</p>
+            <p className="type-headline">Motor de imágenes</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {([
@@ -517,11 +520,11 @@ const SiteContentEditor = () => {
                 <button
                   key={v}
                   type="button"
-                  onClick={() => saveAiSetting("AI_MEDIA_PROVIDER", v, `Imágenes: ${label}`)}
-                  className={`text-left p-3 rounded-lg border transition-colors ${active ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}
+                  onClick={() => { void hapticTap(); saveAiSetting("AI_MEDIA_PROVIDER", v, `Imágenes: ${label}`); }}
+                  className={`pressable min-h-[44px] text-left p-3 rounded-xl transition-colors ${active ? "bg-primary/15 ring-1 ring-primary" : "bg-secondary active:bg-accent"}`}
                 >
-                  <p className="text-sm font-medium">{label}</p>
-                  <p className="text-xs text-muted-foreground">{desc}</p>
+                  <p className="type-headline">{label}</p>
+                  <p className="type-footnote text-muted-foreground">{desc}</p>
                 </button>
               );
             })}
@@ -529,31 +532,31 @@ const SiteContentEditor = () => {
         </div>
 
         {/* Motor de vídeos */}
-        <div className="p-3 rounded-lg border border-border space-y-2">
+        <div className="p-4 rounded-xl bg-card space-y-2">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 min-w-0">
               <Video className="w-4 h-4 text-primary shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm font-medium">Motor de vídeos</p>
-                <p className="text-[11px] text-muted-foreground">Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios.</p>
+                <p className="type-headline">Motor de vídeos</p>
+                <p className="type-footnote text-muted-foreground">Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios.</p>
               </div>
             </div>
             <Switch
               checked={aiKeys.AI_VIDEO_ENABLED !== "0"}
-              onCheckedChange={(v) => saveAiSetting("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa")}
+              onCheckedChange={(v) => { void hapticTap(); saveAiSetting("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa"); }}
             />
           </div>
         </div>
         <div className="space-y-3">
           {AI_KEYS.map((k) => (
-            <div key={k.key} className="p-3 rounded-lg border border-border space-y-2">
+            <div key={k.key} className="p-4 rounded-xl bg-card space-y-2">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium">{k.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{k.desc}</p>
+                  <p className="type-headline">{k.label}</p>
+                  <p className="type-footnote text-muted-foreground">{k.desc}</p>
                 </div>
                 {aiKeys[k.key] && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => removeAiKey(k.key)}>
+                  <Button type="button" variant="ghost" size="sm" className="min-h-[44px] md:min-h-0" onClick={() => removeAiKey(k.key)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 )}
@@ -566,7 +569,7 @@ const SiteContentEditor = () => {
                   placeholder={k.placeholder}
                   autoComplete="off"
                 />
-                <Button type="button" variant="outline" disabled={saving} onClick={() => saveAiKey(k.key)}>
+                <Button type="button" variant="tinted" disabled={saving} onClick={() => saveAiKey(k.key)}>
                   Guardar
                 </Button>
               </div>
@@ -576,36 +579,36 @@ const SiteContentEditor = () => {
       </div>
 
       {/* Secciones de la landing */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <LayoutGrid className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Secciones visibles en la landing</h2>
+          <h2 className="type-title3">Secciones visibles en la landing</h2>
         </div>
-        <p className="text-xs text-muted-foreground">Activa o desactiva bloques enteros de la home pública.</p>
+        <p className="type-footnote text-muted-foreground">Activa o desactiva bloques enteros de la home pública.</p>
         <div className="space-y-3">
           {([
             { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
             { key: "show_ebooks", label: "Guías / Ebooks", desc: "Sección de guías descargables (visible en /recursos y en la landing)." },
             { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recursos y en la landing)." },
           ] as const).map((s) => (
-            <div key={s.key} className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+            <div key={s.key} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
               <div className="min-w-0">
-                <p className="text-sm font-medium">{s.label}</p>
-                <p className="text-[11px] text-muted-foreground">{s.desc}</p>
+                <p className="type-headline">{s.label}</p>
+                <p className="type-footnote text-muted-foreground">{s.desc}</p>
               </div>
               <Switch
                 checked={sections[s.key]}
-                onCheckedChange={(v) => saveSectionsToggles({ ...sections, [s.key]: v })}
+                onCheckedChange={(v) => { void hapticTap(); saveSectionsToggles({ ...sections, [s.key]: v }); }}
               />
             </div>
           ))}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 pt-2">
-          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
             <div className="min-w-0">
-              <p className="text-sm font-medium">Libros en la landing</p>
-              <p className="text-[11px] text-muted-foreground">Cuántas guías se muestran en la portada (0 = ninguna).</p>
+              <p className="type-headline">Libros en la landing</p>
+              <p className="type-footnote text-muted-foreground">Cuántas guías se muestran en la portada (0 = ninguna).</p>
             </div>
             <Input
               type="number" min={0} max={24}
@@ -615,10 +618,10 @@ const SiteContentEditor = () => {
               onBlur={() => saveLandingCounts(landingCounts)}
             />
           </div>
-          <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border">
+          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
             <div className="min-w-0">
-              <p className="text-sm font-medium">Recomendaciones en la landing</p>
-              <p className="text-[11px] text-muted-foreground">Cuántos productos recomendados se muestran en la portada.</p>
+              <p className="type-headline">Recomendaciones en la landing</p>
+              <p className="type-footnote text-muted-foreground">Cuántos productos recomendados se muestran en la portada.</p>
             </div>
             <Input
               type="number" min={0} max={24}
@@ -630,13 +633,13 @@ const SiteContentEditor = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-primary/30 bg-primary/5">
+        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Ordenar con IA</p>
-            <p className="text-[11px] text-muted-foreground">La IA analiza libros y recomendaciones y pone primero los que más venden. En la landing se mostrarán los primeros según las cantidades de arriba.</p>
+            <p className="type-headline">Ordenar con IA</p>
+            <p className="type-footnote text-muted-foreground">La IA analiza libros y recomendaciones y pone primero los que más venden. En la landing se mostrarán los primeros según las cantidades de arriba.</p>
           </div>
-          <Button type="button" variant="outline" size="sm" disabled={ranking} onClick={rankWithAi} className="shrink-0">
-            {ranking ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1" />}
+          <Button type="button" variant="tinted" size="sm" disabled={ranking} onClick={rankWithAi} className="shrink-0 min-h-[44px] md:min-h-0">
+            {ranking ? <Spinner size="sm" className="mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
             Ordenar con IA
           </Button>
         </div>
@@ -644,40 +647,43 @@ const SiteContentEditor = () => {
 
 
       {/* Ebooks: ahora se gestionan en el Drive */}
-      <div className="bg-card border border-border rounded-2xl p-6 flex items-center gap-3">
-        <BookOpen className="w-5 h-5 text-primary shrink-0" />
-        <p className="text-sm text-muted-foreground">
-          Los libros y el pack se gestionan ahora en <strong className="text-foreground">Drive · Libros</strong>. Lo que publiques allí aparece en la landing y en Recursos.
-        </p>
+      <div className="flex items-start gap-4">
+        <BookOpen className="w-6 h-6 text-primary shrink-0" />
+        <div className="min-w-0">
+          <p className="type-headline">Libros en el Drive</p>
+          <p className="mt-0.5 type-subhead text-muted-foreground">
+            Los libros y el pack se gestionan en <strong className="text-foreground">Drive · Libros</strong>. Lo que publiques allí aparece en la landing y en Recursos.
+          </p>
+        </div>
       </div>
 
       {/* Recomendaciones */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-bold">Recomendaciones (suplementos y productos)</h2>
+            <h2 className="type-title3">Recomendaciones (suplementos y productos)</h2>
           </div>
-          <Button size="sm" onClick={() => setRecommendations((a) => [...a, { id: uid(), title: "", description: "", image_url: "", url: "", badge: "" }])}>
+          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={() => setRecommendations((a) => [...a, { id: uid(), title: "", description: "", image_url: "", url: "", badge: "" }])}>
             <Plus className="w-4 h-4 mr-1" /> Añadir
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground">Creatina, proteína, material… con enlace de afiliado si quieres.</p>
-        {recommendations.length === 0 && <p className="text-sm text-muted-foreground">Sin recomendaciones todavía.</p>}
+        <p className="type-footnote text-muted-foreground">Creatina, proteína, material… con enlace de afiliado si quieres.</p>
+        {recommendations.length === 0 && <EmptyState icon={Sparkles} title="Sin recomendaciones" description="Añade suplementos o material con su enlace." />}
         <div className="space-y-3">
           {recommendations.map((r) => (
-            <div key={r.id} className="border border-border rounded-xl p-4 space-y-2">
+            <div key={r.id} className="rounded-2xl bg-card p-4 space-y-2">
               <div className="flex items-start gap-3">
                 {r.image_url ? (
-                  <img loading="lazy" decoding="async" src={r.image_url} alt="" className="w-16 h-16 rounded object-cover shrink-0" />
+                  <img loading="lazy" decoding="async" src={r.image_url} alt="" className="w-16 h-16 rounded-[10px] object-cover shrink-0" />
                 ) : (
-                  <div className="w-16 h-16 rounded bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
+                  <div className="w-16 h-16 rounded-[10px] bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
                 )}
-                <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 self-start">
+                <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 self-start">
                   <input type="file" accept="image/*" className="hidden" onChange={(ev) => onRecImage(r.id, ev)} />
                   <Upload className="w-3 h-3" /> Imagen
                 </label>
-                <button className="ml-auto text-destructive" onClick={() => setRecommendations((a) => a.filter((x) => x.id !== r.id))} aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                <button className="pressable ml-auto flex min-h-[44px] min-w-[44px] items-center justify-center text-destructive active:opacity-60" onClick={() => setRecommendations((a) => a.filter((x) => x.id !== r.id))} aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
               </div>
               <Input placeholder="Título (Creatina Monohidratada)" value={r.title} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, title: ev.target.value } : x))} />
               <Textarea rows={2} placeholder="Por qué la recomiendas" value={r.description} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, description: ev.target.value } : x))} />
@@ -688,21 +694,21 @@ const SiteContentEditor = () => {
             </div>
           ))}
         </div>
-        <Button onClick={saveRecommendations} disabled={saving}>{saving ? "Guardando..." : "Guardar recomendaciones"}</Button>
+        <Button variant="tinted" onClick={saveRecommendations} disabled={saving}>{saving ? "Guardando..." : "Guardar recomendaciones"}</Button>
       </div>
 
       {/* Vídeo del Hero */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Film className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Vídeo del Hero (landing)</h2>
+          <h2 className="type-title3">Vídeo del Hero (landing)</h2>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="type-footnote text-muted-foreground">
           Sube un vídeo corto (15–45s, MP4/WebM, máx 100MB) que se reproducirá en silencio en la portada. Mejora notablemente la conversión.
         </p>
 
         {hero.hero_video_url ? (
-          <div className="rounded-xl overflow-hidden border border-border bg-black">
+          <div className="rounded-2xl overflow-hidden bg-black">
             <video
               key={hero.hero_video_url}
               src={hero.hero_video_url}
@@ -713,7 +719,7 @@ const SiteContentEditor = () => {
             />
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
+          <div className="rounded-2xl bg-card p-8 text-center type-subhead text-muted-foreground">
             Aún no hay vídeo. Sin vídeo, en el hero se mostrará un fondo limpio sin reproductor.
           </div>
         )}
@@ -721,22 +727,22 @@ const SiteContentEditor = () => {
         <div className="flex flex-wrap gap-2">
           <label className={`cursor-pointer ${videoUploading ? "opacity-60 pointer-events-none" : ""}`}>
             <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onHeroVideo} />
-            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90">
-              {videoUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-primary/15 text-primary active:opacity-60">
+              {videoUploading ? <Spinner size="sm" /> : <Upload className="w-3.5 h-3.5" />}
               {videoUploading ? "Subiendo..." : hero.hero_video_url ? "Reemplazar vídeo" : "Subir vídeo"}
             </span>
           </label>
           <label className={`cursor-pointer ${posterUploading ? "opacity-60 pointer-events-none" : ""}`}>
             <input type="file" accept="image/*" className="hidden" onChange={onHeroPoster} />
-            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary">
-              {posterUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-secondary active:bg-accent">
+              {posterUploading ? <Spinner size="sm" /> : <Upload className="w-3.5 h-3.5" />}
               {posterUploading ? "Subiendo..." : "Subir miniatura (poster)"}
             </span>
           </label>
           {hero.hero_video_url && (
             <button
               onClick={removeHeroVideo}
-              className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-md border border-border hover:bg-secondary text-destructive"
+              className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-secondary text-destructive active:bg-accent"
             >
               <X className="w-3.5 h-3.5" /> Quitar vídeo
             </button>
@@ -744,63 +750,63 @@ const SiteContentEditor = () => {
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs">O pega una URL de vídeo (MP4 directo)</Label>
+          <Label>O pega una URL de vídeo (MP4 directo)</Label>
           <Input
             placeholder="https://..."
             value={hero.hero_video_url}
             onChange={(e) => setHero((h) => ({ ...h, hero_video_url: e.target.value }))}
           />
-          <Label className="text-xs">URL de miniatura (opcional)</Label>
+          <Label>URL de miniatura (opcional)</Label>
           <Input
             placeholder="https://..."
             value={hero.hero_video_poster_url}
             onChange={(e) => setHero((h) => ({ ...h, hero_video_poster_url: e.target.value }))}
           />
-          <Button size="sm" onClick={saveHero} disabled={saving}>
+          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={saveHero} disabled={saving}>
             {saving ? "Guardando..." : "Guardar URLs"}
           </Button>
         </div>
       </div>
 
       {/* Enlaces a las tiendas de la app */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Smartphone className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Enlaces a la app (App Store / Google Play)</h2>
+          <h2 className="type-title3">Enlaces a la app (App Store / Google Play)</h2>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="type-footnote text-muted-foreground">
           Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado).
         </p>
         <div className="space-y-2">
-          <Label className="text-xs">URL App Store (iOS)</Label>
+          <Label>URL App Store (iOS)</Label>
           <Input
             placeholder="https://apps.apple.com/app/id0000000000"
             value={stores.app_store_url}
             onChange={(e) => setStores((s) => ({ ...s, app_store_url: e.target.value }))}
           />
-          <Label className="text-xs">URL Google Play (Android)</Label>
+          <Label>URL Google Play (Android)</Label>
           <Input
             placeholder="https://play.google.com/store/apps/details?id=..."
             value={stores.play_store_url}
             onChange={(e) => setStores((s) => ({ ...s, play_store_url: e.target.value }))}
           />
-          <Button size="sm" onClick={saveStores} disabled={saving}>
+          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={saveStores} disabled={saving}>
             {saving ? "Guardando..." : "Guardar enlaces"}
           </Button>
         </div>
       </div>
 
       {/* Plazas de Transformación */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div>
-          <h2 className="font-display font-bold">Plazas de Transformación</h2>
-          <p className="text-xs text-muted-foreground mt-1">
+          <h2 className="type-title3">Plazas de Transformación</h2>
+          <p className="type-footnote text-muted-foreground mt-1">
             Esta cifra aparece en la landing. Usa 0 cuando no queden plazas disponibles.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="space-y-2 sm:max-w-[180px]">
-            <Label className="text-xs" htmlFor="transformation-slots">Plazas disponibles este mes</Label>
+            <Label htmlFor="transformation-slots">Plazas disponibles este mes</Label>
             <Input
               id="transformation-slots"
               type="number"
@@ -811,71 +817,71 @@ const SiteContentEditor = () => {
               onChange={(e) => setTransformationSlots(Number(e.target.value))}
             />
           </div>
-          <Button size="sm" onClick={saveTransformationSlots} disabled={saving || !Number.isFinite(transformationSlots)}>
+          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={saveTransformationSlots} disabled={saving || !Number.isFinite(transformationSlots)}>
             {saving ? "Guardando..." : "Guardar plazas"}
           </Button>
         </div>
       </div>
 
       {/* Entrenador */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <User className="w-5 h-5 text-primary" />
-          <h2 className="font-display font-bold">Sobre el fundador</h2>
+          <h2 className="type-title3">Sobre el fundador</h2>
         </div>
         <div className="flex items-center gap-4">
           {trainer.trainer_photo_url ? (
-            <img loading="lazy" decoding="async" src={trainer.trainer_photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
+            <img loading="lazy" decoding="async" src={trainer.trainer_photo_url} alt="" className="w-20 h-20 rounded-full object-cover " />
           ) : (
             <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground"><User className="w-8 h-8" /></div>
           )}
           <label className="cursor-pointer">
             <input type="file" accept="image/*" className="hidden" onChange={onTrainerPhoto} />
-            <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary"><Upload className="w-3.5 h-3.5" /> Subir foto</span>
+            <span className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-secondary active:bg-accent"><Upload className="w-3.5 h-3.5" /> Subir foto</span>
           </label>
         </div>
         <div>
-          <Label className="text-xs">Nombre</Label>
+          <Label>Nombre</Label>
           <Input value={trainer.trainer_name} onChange={(e) => setTrainer((t) => ({ ...t, trainer_name: e.target.value }))} />
         </div>
         <div>
-          <Label className="text-xs">Bio</Label>
+          <Label>Bio</Label>
           <Textarea rows={4} value={trainer.trainer_bio} onChange={(e) => setTrainer((t) => ({ ...t, trainer_bio: e.target.value }))} placeholder="Llevo años ayudando a personas a..." />
         </div>
         <div>
-          <Label className="text-xs">Teléfono / WhatsApp de contacto</Label>
+          <Label>Teléfono / WhatsApp de contacto</Label>
           <Input value={trainer.contact_phone} onChange={(e) => setTrainer((t) => ({ ...t, contact_phone: e.target.value }))} placeholder="+34 600 000 000" />
-          <p className="text-xs text-muted-foreground mt-1">Se usa en el botón «Hablar por WhatsApp» de la solicitud de entrenadores.</p>
+          <p className="type-footnote text-muted-foreground mt-1">Se usa en el botón «Hablar por WhatsApp» de la solicitud de entrenadores.</p>
         </div>
-        <Button onClick={saveTrainer} disabled={saving}>{saving ? "Guardando..." : "Guardar entrenador"}</Button>
+        <Button variant="tinted" onClick={saveTrainer} disabled={saving}>{saving ? "Guardando..." : "Guardar entrenador"}</Button>
       </div>
 
       {/* Testimonios */}
-      <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Star className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-bold">Testimonios</h2>
+            <h2 className="type-title3">Testimonios</h2>
           </div>
-          <Button size="sm" onClick={addTestimonial}><Plus className="w-4 h-4 mr-1" /> Añadir</Button>
+          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={addTestimonial}><Plus className="w-4 h-4 mr-1" /> Añadir</Button>
         </div>
-        {testimonials.length === 0 && <p className="text-sm text-muted-foreground">Aún no has añadido testimonios.</p>}
+        {testimonials.length === 0 && <EmptyState icon={Star} title="Sin testimonios" description="Añade el primero para mostrarlo en la landing." />}
         <div className="space-y-4">
           {testimonials.map((t) => (
-            <div key={t.id} className="border border-border rounded-xl p-4 space-y-3">
+            <div key={t.id} className="rounded-2xl bg-card p-4 space-y-3">
               <div className="flex items-start gap-3">
                 {t.photo_url ? (
                   <img loading="lazy" decoding="async" src={t.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
                 ) : (
-                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-xs text-muted-foreground">Foto</div>
+                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center type-footnote text-muted-foreground">Foto</div>
                 )}
-                <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1">
+                <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1">
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestPhoto(t.id, e)} />
                   <Upload className="w-3 h-3" /> Foto
                 </label>
                 <div className="ml-auto flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Visible</span>
-                  <Switch checked={t.visible} onCheckedChange={(v) => updateTestimonial(t.id, { visible: v })} />
+                  <span className="type-footnote text-muted-foreground">Visible</span>
+                  <Switch checked={t.visible} onCheckedChange={(v) => { void hapticTap(); updateTestimonial(t.id, { visible: v }); }} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -883,51 +889,51 @@ const SiteContentEditor = () => {
                 <Input placeholder="Resultado (-8kg en 3 meses)" value={t.result} onChange={(e) => updateTestimonial(t.id, { result: e.target.value })} />
               </div>
               <Textarea rows={3} placeholder="Texto del testimonio" value={t.text} onChange={(e) => updateTestimonial(t.id, { text: e.target.value })} />
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+              <div className="grid grid-cols-2 gap-3 pt-3 sep-t">
                 <div className="space-y-2">
-                  <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Antes</Label>
+                  <Label className="text-muted-foreground">Antes</Label>
                   {t.photo_before_url ? (
-                    <img loading="lazy" decoding="async" src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-md" />
+                    <img loading="lazy" decoding="async" src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-[10px]" />
                   ) : (
-                    <div className="w-full aspect-[3/4] rounded-md bg-secondary/50 flex items-center justify-center text-[11px] text-muted-foreground">Sin foto</div>
+                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary/50 flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
                   )}
-                  <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 w-full justify-center">
+                  <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 w-full justify-center">
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_before_url", e)} />
                     <Upload className="w-3 h-3" /> {t.photo_before_url ? "Cambiar" : "Subir"}
                   </label>
                   {t.photo_before_url && (
-                    <button onClick={() => updateTestimonial(t.id, { photo_before_url: "" })} className="text-[10px] text-muted-foreground hover:text-destructive">Quitar</button>
+                    <button onClick={() => updateTestimonial(t.id, { photo_before_url: "" })} className="pressable min-h-[44px] type-subhead text-destructive active:opacity-60">Quitar</button>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[11px] uppercase tracking-wider text-primary">Después</Label>
+                  <Label className="text-primary">Después</Label>
                   {t.photo_after_url ? (
-                    <img loading="lazy" decoding="async" src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-md" />
+                    <img loading="lazy" decoding="async" src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-[10px]" />
                   ) : (
-                    <div className="w-full aspect-[3/4] rounded-md bg-secondary/50 flex items-center justify-center text-[11px] text-muted-foreground">Sin foto</div>
+                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary/50 flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
                   )}
-                  <label className="cursor-pointer text-xs px-2 py-1 rounded border border-border hover:bg-secondary inline-flex items-center gap-1 w-full justify-center">
+                  <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 w-full justify-center">
                     <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_after_url", e)} />
                     <Upload className="w-3 h-3" /> {t.photo_after_url ? "Cambiar" : "Subir"}
                   </label>
                   {t.photo_after_url && (
-                    <button onClick={() => updateTestimonial(t.id, { photo_after_url: "" })} className="text-[10px] text-muted-foreground hover:text-destructive">Quitar</button>
+                    <button onClick={() => updateTestimonial(t.id, { photo_after_url: "" })} className="pressable min-h-[44px] type-subhead text-destructive active:opacity-60">Quitar</button>
                   )}
                 </div>
               </div>
-              <p className="text-[11px] text-muted-foreground">Si subes Antes y Después, en la landing se mostrarán como par comparativo.</p>
-              <div className="flex items-center justify-between border-t border-border pt-3">
+              <p className="type-footnote text-muted-foreground">Si subes Antes y Después, en la landing se mostrarán como par comparativo.</p>
+              <div className="flex items-center justify-between sep-t pt-3">
                 <div>
-                  <Label className="text-xs font-medium">Transformación 12 semanas</Label>
-                  <p className="text-[10px] text-muted-foreground">Si lo activas, este testimonio se destacará en la sección premium.</p>
+                  <Label>Transformación 12 semanas</Label>
+                  <p className="type-footnote text-muted-foreground">Si lo activas, este testimonio se destacará en la sección premium.</p>
                 </div>
                 <Switch
                   checked={!!t.is_12w_transformation}
-                  onCheckedChange={(v) => updateTestimonial(t.id, { is_12w_transformation: v })}
+                  onCheckedChange={(v) => { void hapticTap(); updateTestimonial(t.id, { is_12w_transformation: v }); }}
                 />
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={() => saveTestimonial(t)}>Guardar</Button>
+                <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={() => saveTestimonial(t)}>Guardar</Button>
                 <Button size="sm" variant="ghost" onClick={() => deleteTestimonial(t.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
               </div>
             </div>

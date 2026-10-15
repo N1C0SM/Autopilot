@@ -6,7 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, UserPlus, Loader2, Save, X, MessageCircle, User2, Users as UsersIcon, Upload } from "lucide-react";
+import { ArrowLeft, UserPlus, Save, X, MessageCircle, User2, Users as UsersIcon, Upload, Award } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import TrainerCertificates from "./TrainerCertificates";
 import Chat from "@/components/Chat";
@@ -156,154 +160,166 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
       u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ─── Trainer detail view ───
+  const initial = (email: string) => email.charAt(0).toUpperCase();
+  const avatar = (email: string, size = "h-10 w-10") => (
+    <div className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-secondary`}>
+      <span className="type-subhead font-semibold">{initial(email)}</span>
+    </div>
+  );
+  const plural = (n: number) => `${n} usuario${n !== 1 ? "s" : ""} asignado${n !== 1 ? "s" : ""}`;
+
+  // Trainer detail view
   if (selectedTrainer) {
     return (
-      <div>
-        <div className="flex items-center gap-3 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedTrainer(null)}>
-            <ArrowLeft className="w-5 h-5" />
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6 flex items-center gap-2">
+          <Button variant="ghost" size="icon" aria-label="Volver" onClick={() => { void hapticTap(); setSelectedTrainer(null); }}>
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold font-display">{selectedTrainer.email}</h1>
-            <p className="text-xs text-muted-foreground">Entrenador · {assignments.length} usuario{assignments.length !== 1 ? "s" : ""} asignado{assignments.length !== 1 ? "s" : ""}</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="type-title2 truncate">{selectedTrainer.email}</h1>
+            <p className="type-footnote text-muted-foreground">Entrenador · {assignments.length} usuario{assignments.length !== 1 ? "s" : ""} asignado{assignments.length !== 1 ? "s" : ""}</p>
           </div>
-          <Button variant="destructive" size="sm" onClick={() => removeTrainerRole(selectedTrainer.user_id)}>
+          <Button variant="plain" className="text-destructive" onClick={() => { void hapticNotify("warning"); void removeTrainerRole(selectedTrainer.user_id); }}>
             Quitar rol
           </Button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            <Spinner size="lg" />
           </div>
         ) : (
-          <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
-              <TabsTrigger value="profile" className="text-xs gap-1.5"><User2 className="w-3.5 h-3.5" /> Perfil público</TabsTrigger>
-              <TabsTrigger value="users" className="text-xs gap-1.5"><UsersIcon className="w-3.5 h-3.5" /> Usuarios</TabsTrigger>
-              <TabsTrigger value="chat" className="text-xs gap-1.5"><MessageCircle className="w-3.5 h-3.5" /> Chat</TabsTrigger>
+          <Tabs defaultValue="profile" className="space-y-6" onValueChange={() => void hapticSelection()}>
+            <TabsList className="w-full">
+              <TabsTrigger value="profile" className="flex-1 gap-1.5"><User2 className="h-4 w-4" /> Perfil público</TabsTrigger>
+              <TabsTrigger value="users" className="flex-1 gap-1.5"><UsersIcon className="h-4 w-4" /> Usuarios</TabsTrigger>
+              <TabsTrigger value="chat" className="flex-1 gap-1.5"><MessageCircle className="h-4 w-4" /> Chat</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="profile" className="space-y-4">
+            <TabsContent value="profile" className="space-y-6">
               {profile && (
-                <div className="bg-card rounded-xl p-6 border border-border space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-sm font-medium">Visible en la landing</Label>
-                      <p className="text-xs text-muted-foreground">Aparecerá en la sección "Entrenadores"</p>
-                    </div>
-                    <Switch checked={profile.visible} onCheckedChange={(v) => setProfile({ ...profile, visible: v })} />
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <Label>Nombre público</Label>
-                      <Input className="mt-1.5" value={profile.display_name} onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} placeholder="Carlos Méndez" />
-                    </div>
-                    <div>
-                      <Label>Especialidad</Label>
-                      <Input className="mt-1.5" value={profile.specialty} onChange={(e) => setProfile({ ...profile, specialty: e.target.value })} placeholder="Hipertrofia · Calistenia" />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Titular corto</Label>
-                    <Input className="mt-1.5" value={profile.headline} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} placeholder="Entrenamiento de fuerza adaptado a tu nivel" />
-                  </div>
-                  <div>
-                    <Label>Bio</Label>
-                    <Textarea className="mt-1.5" rows={4} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} placeholder="Cuenta brevemente quién eres y a quién ayudas..." />
-                  </div>
-                  <div>
-                    <Label>Foto de perfil</Label>
-                    <div className="mt-1.5 flex items-center gap-4">
-                      {profile.photo_url ? (
-                        <img loading="lazy" decoding="async" src={profile.photo_url} alt="" className="w-20 h-20 rounded-full object-cover border border-border" />
-                      ) : (
-                        <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground">
-                          <User2 className="w-8 h-8" />
-                        </div>
+                <>
+                  <div className="flex items-center gap-4">
+                    {profile.photo_url ? (
+                      <img loading="lazy" decoding="async" src={profile.photo_url} alt="" className="h-20 w-20 shrink-0 rounded-full object-cover" />
+                    ) : (
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                        <User2 className="h-8 w-8" strokeWidth={1.75} />
+                      </div>
+                    )}
+                    <div className="flex flex-col items-start">
+                      <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 type-body text-primary transition-opacity active:opacity-60">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); }} />
+                        <Upload className="h-4 w-4" /> Subir foto
+                      </label>
+                      {profile.photo_url && (
+                        <button type="button" onClick={() => { void hapticTap(); setProfile({ ...profile, photo_url: "" }); }} className="min-h-[44px] type-subhead text-muted-foreground transition-opacity active:opacity-60">
+                          Quitar foto
+                        </button>
                       )}
-                      <div className="flex flex-col gap-2">
-                        <label className="cursor-pointer">
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadPhoto(f); }} />
-                          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
-                            <Upload className="w-3.5 h-3.5" /> Subir foto
-                          </span>
-                        </label>
-                        {profile.photo_url && (
-                          <button type="button" onClick={() => setProfile({ ...profile, photo_url: "" })} className="text-[11px] text-muted-foreground hover:text-destructive text-left">
-                            Quitar foto
-                          </button>
-                        )}
+                    </div>
+                  </div>
+
+                  <ListGroup>
+                    <ListRow
+                      title="Visible en la landing"
+                      subtitle="Aparecerá en la sección «Entrenadores»"
+                      trailing={<Switch checked={profile.visible} onCheckedChange={(v) => { void hapticSelection(); setProfile({ ...profile, visible: v }); }} />}
+                    />
+                  </ListGroup>
+
+                  <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label className="mb-1.5 block text-muted-foreground">Nombre público</Label>
+                        <Input autoCapitalize="words" enterKeyHint="next" value={profile.display_name} onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} placeholder="Carlos Méndez" />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-muted-foreground">Especialidad</Label>
+                        <Input enterKeyHint="next" value={profile.specialty} onChange={(e) => setProfile({ ...profile, specialty: e.target.value })} placeholder="Hipertrofia · Calistenia" />
                       </div>
                     </div>
+                    <div>
+                      <Label className="mb-1.5 block text-muted-foreground">Titular corto</Label>
+                      <Input enterKeyHint="next" value={profile.headline} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} placeholder="Entrenamiento de fuerza adaptado a tu nivel" />
+                    </div>
+                    <div>
+                      <Label className="mb-1.5 block text-muted-foreground">Bio</Label>
+                      <Textarea rows={4} value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} placeholder="Cuenta brevemente quién eres y a quién ayudas…" />
+                    </div>
+                    <div>
+                      <Label className="mb-1.5 block text-muted-foreground">Orden</Label>
+                      <Input className="max-w-[120px]" type="number" inputMode="numeric" enterKeyHint="done" value={profile.sort_order} onChange={(e) => setProfile({ ...profile, sort_order: parseInt(e.target.value) || 0 })} />
+                    </div>
                   </div>
-                  <div>
-                    <Label>Orden</Label>
-                    <Input className="mt-1.5 max-w-[120px]" type="number" value={profile.sort_order} onChange={(e) => setProfile({ ...profile, sort_order: parseInt(e.target.value) || 0 })} />
-                  </div>
-                  <Button variant="hero" onClick={saveProfile} disabled={saving}>
-                    <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar perfil"}
+
+                  <Button variant="hero" size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); void saveProfile(); }} disabled={saving}>
+                    {saving ? <Spinner size="sm" className="text-primary-foreground" /> : <Save className="h-4 w-4" />} {saving ? "Guardando..." : "Guardar perfil"}
                   </Button>
-                  {profile.id ? <TrainerCertificates key={profile.id} profileId={profile.id} /> : <p className="text-sm text-muted-foreground">Guarda primero el perfil para añadir certificados.</p>}
-                </div>
+
+                  <div className="sep-t">
+                    {profile.id ? <TrainerCertificates key={profile.id} profileId={profile.id} /> : (
+                      <div className="flex items-start gap-3.5 pt-6">
+                        <Award className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+                        <div>
+                          <p className="type-headline">Certificados</p>
+                          <p className="type-subhead text-muted-foreground">Guarda primero el perfil para añadir certificados.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </TabsContent>
 
-            <TabsContent value="users" className="space-y-4">
-              <div className="bg-card rounded-xl p-6 border border-border">
-                <h3 className="font-display font-bold text-sm mb-3">Usuarios asignados ({assignedUserObjs.length})</h3>
+            <TabsContent value="users" className="space-y-6">
+              <ListGroup header={`Usuarios asignados (${assignedUserObjs.length})`}>
                 {assignedUserObjs.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Aún no hay usuarios asignados.</p>
+                  <p className="px-4 py-3 type-subhead text-muted-foreground">Aún no hay usuarios asignados.</p>
                 ) : (
-                  <div className="space-y-2">
-                    {assignedUserObjs.map((u) => {
-                      const a = assignments.find((x) => x.user_id === u.user_id)!;
-                      return (
-                        <div key={u.user_id} className="flex items-center gap-3 bg-secondary/50 rounded-lg px-3 py-2">
-                          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                            <span className="text-xs font-bold">{u.email.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <span className="flex-1 text-sm truncate">{u.email}</span>
-                          <Button variant="ghost" size="icon" onClick={() => unassignUser(a.id, u.user_id)}>
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  assignedUserObjs.map((u) => {
+                    const a = assignments.find((x) => x.user_id === u.user_id)!;
+                    return (
+                      <div key={u.user_id} className="sep-t flex min-h-[56px] items-center gap-3 px-4 first:border-t-0">
+                        {avatar(u.email, "h-8 w-8")}
+                        <span className="min-w-0 flex-1 truncate type-body">{u.email}</span>
+                        <Button variant="ghost" size="icon" aria-label="Quitar usuario" onClick={() => { void hapticTap(); void unassignUser(a.id, u.user_id); }}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    );
+                  })
                 )}
-              </div>
+              </ListGroup>
 
-              <div className="bg-card rounded-xl p-6 border border-border">
-                <h3 className="font-display font-bold text-sm mb-3">Asignar usuario</h3>
-                <Input placeholder="Buscar por email..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3" />
-                <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              <div className="space-y-3">
+                <h2 className="type-group-header px-4">Asignar usuario</h2>
+                <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <div className="max-h-80 overflow-y-auto rounded-2xl"><ListGroup>
                   {assignableUsers.slice(0, 30).map((u) => {
                     const previousTrainer = allAssignments.find((a) => a.user_id === u.user_id);
                     return (
                       <button
                         key={u.user_id}
-                        onClick={() => assignUser(u.user_id)}
-                        className="w-full flex items-center gap-3 hover:bg-secondary/50 rounded-lg px-3 py-2 transition-colors text-left"
+                        onClick={() => { void hapticTap(); void assignUser(u.user_id); }}
+                        className="sep-t flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors first:border-t-0 active:bg-accent"
                       >
-                        <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center">
-                          <span className="text-xs font-bold">{u.email.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <span className="flex-1 text-sm truncate">{u.email}</span>
-                        {previousTrainer && <span className="text-[10px] text-primary">Reasignar</span>}
-                        <UserPlus className="w-4 h-4 text-primary" />
+                        {avatar(u.email, "h-8 w-8")}
+                        <span className="min-w-0 flex-1 truncate type-body">{u.email}</span>
+                        {previousTrainer && <span className="type-caption1 text-muted-foreground">Reasignar</span>}
+                        <UserPlus className="h-5 w-5 text-primary" />
                       </button>
                     );
                   })}
-                  {assignableUsers.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No hay usuarios disponibles.</p>}
-                </div>
+                  {assignableUsers.length === 0 && <p className="px-4 py-6 text-center type-subhead text-muted-foreground">No hay usuarios disponibles.</p>}
+                </ListGroup></div>
               </div>
             </TabsContent>
 
             <TabsContent value="chat">
               <Chat conversationUserId={selectedTrainer.user_id} isAdmin />
-              <p className="text-[11px] text-muted-foreground mt-2 text-center">Conversación privada admin ↔ entrenador.</p>
+              <p className="mt-2 text-center type-footnote text-muted-foreground">Conversación privada admin ↔ entrenador.</p>
             </TabsContent>
           </Tabs>
         )}
@@ -311,27 +327,27 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
     );
   }
 
-  // ─── Trainer list ───
+  // Trainer list
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="mx-auto max-w-3xl">
+      <div className="mb-6 flex items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold font-display">Entrenadores</h1>
-          <p className="text-sm text-muted-foreground mt-1">{trainers.length} entrenador{trainers.length !== 1 ? "es" : ""}</p>
+          <h1 className="type-large-title md:type-title1">Entrenadores</h1>
+          <p className="mt-1 type-subhead text-muted-foreground">{trainers.length} entrenador{trainers.length !== 1 ? "es" : ""}</p>
         </div>
-        <Button variant="hero" onClick={() => setPromoteOpen((v) => !v)}>
-          <UserPlus className="w-4 h-4 mr-1.5" /> Promover usuario
+        <Button variant="hero" onClick={() => { void hapticTap(); setPromoteOpen((v) => !v); }}>
+          <UserPlus className="h-4 w-4" /> Promover usuario
         </Button>
       </div>
 
       {promoteOpen && (
-        <div className="bg-card rounded-xl p-5 border border-border mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-display font-bold text-sm">Promover a entrenador</h3>
-            <Button variant="ghost" size="icon" onClick={() => setPromoteOpen(false)}><X className="w-4 h-4" /></Button>
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="type-group-header px-4">Promover a entrenador</h2>
+            <Button variant="ghost" size="icon" aria-label="Cerrar" onClick={() => { void hapticTap(); setPromoteOpen(false); }}><X className="h-4 w-4" /></Button>
           </div>
-          <Input placeholder="Buscar por email..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3" />
-          <div className="space-y-1.5 max-h-72 overflow-y-auto">
+          <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="max-h-80 overflow-y-auto rounded-2xl"><ListGroup>
             {allUsers
               .filter((u) => !trainerIds.has(u.user_id) && !adminIds.has(u.user_id))
               .filter((u) => u.email.toLowerCase().includes(search.toLowerCase()))
@@ -339,49 +355,46 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange }: Pr
               .map((u) => (
                 <button
                   key={u.user_id}
-                  onClick={() => promoteToTrainer(u.user_id)}
-                  className="w-full flex items-center gap-3 hover:bg-secondary/50 rounded-lg px-3 py-2 transition-colors text-left"
+                  onClick={() => { void hapticTap(); void promoteToTrainer(u.user_id); }}
+                  className="sep-t flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors first:border-t-0 active:bg-accent"
                 >
-                  <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center">
-                    <span className="text-xs font-bold">{u.email.charAt(0).toUpperCase()}</span>
-                  </div>
-                  <span className="flex-1 text-sm truncate">{u.email}</span>
-                  <UserPlus className="w-4 h-4 text-primary" />
+                  {avatar(u.email, "h-8 w-8")}
+                  <span className="min-w-0 flex-1 truncate type-body">{u.email}</span>
+                  <UserPlus className="h-5 w-5 text-primary" />
                 </button>
               ))}
-          </div>
+          </ListGroup></div>
         </div>
       )}
 
-      <div className="space-y-2">
-        {trainers.map((t) => {
-          const count = allAssignments.filter((a) => a.trainer_id === t.user_id).length;
-          return (
-            <div
-              key={t.user_id}
-              onClick={() => setSelectedTrainer(t)}
-              className="bg-card rounded-xl p-4 border border-border flex items-center gap-4 cursor-pointer hover:border-primary/50 transition-all group"
-            >
-              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-                <span className="text-sm font-bold text-primary">{t.email.charAt(0).toUpperCase()}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate group-hover:text-primary transition-colors">{t.email}</div>
-                <div className="text-xs text-muted-foreground">{count} usuario{count !== 1 ? "s" : ""} asignado{count !== 1 ? "s" : ""}</div>
-              </div>
-              <span className="text-muted-foreground group-hover:text-primary">→</span>
-            </div>
-          );
-        })}
-        {trainers.length === 0 && (
-          <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
-            <p className="text-sm text-muted-foreground mb-3">No hay entrenadores aún.</p>
-            <Button variant="outline" size="sm" onClick={() => setPromoteOpen(true)}>
-              <UserPlus className="w-4 h-4 mr-1.5" /> Promover primer entrenador
+      {trainers.length > 0 ? (
+        <ListGroup>
+          {trainers.map((t) => {
+            const count = allAssignments.filter((a) => a.trainer_id === t.user_id).length;
+            return (
+              <ListRow
+                key={t.user_id}
+                leading={avatar(t.email)}
+                title={t.email}
+                subtitle={plural(count)}
+                chevron
+                onClick={() => setSelectedTrainer(t)}
+              />
+            );
+          })}
+        </ListGroup>
+      ) : (
+        <EmptyState
+          icon={UsersIcon}
+          title="No hay entrenadores aún"
+          description="Promueve a un usuario para que aparezca aquí."
+          action={
+            <Button variant="plain" onClick={() => { void hapticTap(); setPromoteOpen(true); }}>
+              Promover primer entrenador
             </Button>
-          </div>
-        )}
-      </div>
+          }
+        />
+      )}
     </div>
   );
 };

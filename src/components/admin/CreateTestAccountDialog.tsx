@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Check, Copy, Loader2, Plus, UserPlus } from "lucide-react";
+import { Check, Copy, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticNotify, hapticTap } from "@/lib/native";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -61,6 +63,7 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
       const profile = data.profile as Profile;
       onCreated(profile, kind);
       setCreated({ profile, kind, password: data.password as string });
+      void hapticNotify("success");
       toast.success("Cuenta de prueba creada");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No se pudo conectar para crear la cuenta.");
@@ -89,7 +92,7 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-2">
+        <Button size="sm" variant="tinted" className="gap-2">
           <Plus className="w-4 h-4" /> Crear cuenta de prueba
         </Button>
       </DialogTrigger>
@@ -102,19 +105,19 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                 Ya aparece en la lista de usuarios. Guarda estas credenciales; la contraseña solo se muestra ahora.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 rounded-lg border border-border bg-secondary/30 p-4 text-sm">
+            <div className="space-y-3 rounded-2xl bg-secondary p-4 type-subhead">
               <div><span className="text-muted-foreground">Tipo: </span>{ACCOUNT_KIND_LABELS[created.kind]}</div>
               <div><span className="text-muted-foreground">Email: </span><span className="font-medium">{created.profile.email}</span></div>
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground shrink-0">Contraseña:</span>
-                <code className="min-w-0 flex-1 break-all rounded bg-background px-2 py-1">{created.password}</code>
-                <Button type="button" size="icon" variant="outline" onClick={copyPassword} aria-label="Copiar contraseña">
+                <code className="min-w-0 flex-1 break-all rounded-lg bg-background px-2 py-1 selectable">{created.password}</code>
+                <Button type="button" size="icon" variant="ghost" onClick={() => { void hapticTap(); void copyPassword(); }} aria-label="Copiar contraseña">
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { reset(); }}>
+              <Button type="button" variant="secondary" onClick={() => { reset(); }}>
                 <UserPlus className="w-4 h-4 mr-2" /> Crear otra
               </Button>
               <Button type="button" onClick={() => setOpen(false)}>Listo</Button>
@@ -134,6 +137,11 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                 <Input
                   id="test-account-email"
                   type="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
                   autoComplete="off"
                   required
                   value={email}
@@ -149,6 +157,8 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Cuenta de pruebas"
                   maxLength={80}
+                  autoCapitalize="words"
+                  enterKeyHint="done"
                 />
               </div>
               <div className="space-y-1.5">
@@ -166,8 +176,8 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={creating || !email.trim()}>
-                {creating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              <Button type="submit" size="lg" disabled={creating || !email.trim()}>
+                {creating ? <Spinner size="sm" className="mr-2 text-primary-foreground" /> : <UserPlus className="w-4 h-4 mr-2" />}
                 Crear cuenta
               </Button>
             </DialogFooter>

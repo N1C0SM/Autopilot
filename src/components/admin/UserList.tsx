@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { hapticTap, hapticSelection } from "@/lib/native";
 import type { Profile } from "@/pages/Admin";
 import CreateTestAccountDialog, { type TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,13 +51,13 @@ const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; on
   return (
     <button
       type="button"
-      onClick={onClick}
-      className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40"
+      onClick={() => { void hapticTap(); onClick(); }}
+      className="flex h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted/40 active:bg-accent"
     >
       {kind === "user" ? (
         <Avatar className="h-9 w-9 shrink-0">
           <AvatarImage src={u.avatar_url || undefined} alt={name} />
-          <AvatarFallback className="bg-secondary text-xs font-semibold text-muted-foreground">
+          <AvatarFallback className="bg-secondary type-footnote font-semibold text-muted-foreground">
             {name.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
@@ -67,8 +68,8 @@ const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; on
       )}
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold">{name}</span>
-        <span className="block truncate text-xs text-muted-foreground">{meta}</span>
+        <span className="block truncate type-subhead font-semibold">{name}</span>
+        <span className="block truncate type-footnote text-muted-foreground">{meta}</span>
       </span>
 
       {kind === "user" ? (
@@ -101,7 +102,7 @@ const UserGroup = ({
     {users.length === 0 ? (
       empty
     ) : (
-      <Surface padding="none" className="divide-y divide-border overflow-hidden">
+      <Surface padding="none" className="divide-y divide-border/60 overflow-hidden">
         {users.map((u) => (
           <UserRow key={u.user_id} user={u} kind={kind} onClick={() => onSelectUser(u)} />
         ))}
@@ -172,10 +173,11 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
         <div className="relative min-w-0 flex-1 md:max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre o email..."
+            type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+            placeholder="Buscar por nombre o email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 pl-9"
+            className="pl-9"
             aria-label="Buscar usuario"
           />
         </div>
@@ -183,13 +185,12 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
-              className={cn("h-11 shrink-0 gap-2 px-3 font-normal", dateRange?.from && "bg-primary/10")}
-              title={rangeLabel || "Filtrar por fecha de registro"}
+              variant="secondary"
+              className={cn("shrink-0 gap-2 px-3 font-normal", dateRange?.from && "bg-primary/15 text-primary")}
               aria-label="Filtrar por fecha de registro"
             >
               <CalendarIcon className="h-4 w-4 shrink-0" />
-              {rangeLabel ? <span className="text-xs">{rangeLabel}</span> : null}
+              {rangeLabel ? <span className="type-footnote">{rangeLabel}</span> : null}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
@@ -208,8 +209,8 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
           <Button
             variant="ghost"
             size="icon"
-            className="h-11 w-11 shrink-0"
-            onClick={() => setDateRange(undefined)}
+            className="shrink-0"
+            onClick={() => { void hapticTap(); setDateRange(undefined); }}
             aria-label="Quitar filtro de fecha"
           >
             <X className="h-4 w-4" />
@@ -221,13 +222,13 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
             <button
               key={f.value}
               type="button"
-              onClick={() => setFilter(f.value)}
+              onClick={() => { void hapticSelection(); setFilter(f.value); }}
               aria-pressed={filter === f.value}
               className={cn(
-                "h-11 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors",
+                "h-11 shrink-0 rounded-full px-4 type-footnote font-semibold transition-colors active:opacity-70",
                 filter === f.value
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/50",
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground",
               )}
             >
               {f.label}

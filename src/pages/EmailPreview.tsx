@@ -2,7 +2,10 @@ import { errorMessage } from "@/lib/runtimeValues";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Monitor, Smartphone, Radio } from "lucide-react";
+import { Monitor, Smartphone, Radio } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { hapticTap } from "@/lib/native";
 
 type Msg = { customHtml: string; subject: string; templateData?: Record<string, unknown> };
 
@@ -107,39 +110,31 @@ export default function EmailPreview() {
   const frameWidth = viewport === "mobile" ? 390 : 720;
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
-      <header className="bg-card border-b border-border px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="material sep-b px-4 md:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Previsualización · {templateKey}</div>
-          <div className="text-sm font-semibold truncate">{subject || "Sin asunto"}</div>
+          <div className="type-footnote text-muted-foreground">Previsualización · {templateKey}</div>
+          <div className="type-headline truncate">{subject || "Sin asunto"}</div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${connected ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-            <Radio className="w-3 h-3" /> {connected ? "Sincronizado con el editor" : "Esperando editor…"}
+        <div className="flex items-center gap-4">
+          <div className={`flex items-center gap-1.5 type-footnote ${connected ? "text-primary" : "text-muted-foreground"}`}>
+            <Radio className="w-3.5 h-3.5" /> {connected ? "Sincronizado con el editor" : "Esperando editor…"}
           </div>
-          <div className="flex items-center bg-background border border-border rounded-lg p-0.5">
-            <button
-              onClick={() => setViewport("desktop")}
-              className={`px-2 py-1 rounded-md text-xs flex items-center gap-1 ${viewport === "desktop" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <Monitor className="w-3.5 h-3.5" /> Desktop
-            </button>
-            <button
-              onClick={() => setViewport("mobile")}
-              className={`px-2 py-1 rounded-md text-xs flex items-center gap-1 ${viewport === "mobile" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
-            >
-              <Smartphone className="w-3.5 h-3.5" /> Mobile
-            </button>
-          </div>
+          <Tabs value={viewport} onValueChange={(v) => { void hapticTap(); setViewport(v as "desktop" | "mobile"); }}>
+            <TabsList>
+              <TabsTrigger value="desktop" className="gap-1"><Monitor className="w-3.5 h-3.5" /> Desktop</TabsTrigger>
+              <TabsTrigger value="mobile" className="gap-1"><Smartphone className="w-3.5 h-3.5" /> Mobile</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </header>
 
-      <div className="flex-1 flex items-start justify-center p-6 overflow-auto">
+      <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-auto">
         {loading && !renderedHtml ? (
-          <div className="flex items-center gap-2 text-muted-foreground mt-20"><Loader2 className="w-4 h-4 animate-spin" /> Cargando…</div>
+          <div className="flex items-center gap-2 type-subhead text-muted-foreground mt-20"><Spinner size="sm" /> Cargando…</div>
         ) : (
           <div
-            className="bg-white rounded-xl shadow-lg overflow-hidden transition-all"
+            className="bg-white rounded-2xl overflow-hidden transition-all"
             style={{ width: frameWidth, maxWidth: "100%" }}
           >
             <iframe

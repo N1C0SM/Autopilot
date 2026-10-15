@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, Send, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, Send, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticTap, hapticNotify } from "@/lib/native";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,7 +14,7 @@ import type { Profile } from "@/pages/Admin";
 
 interface Props { users: Profile[] }
 
-const DEFAULT_SUBJECT = "Tu plan personalizado te está esperando 🚀";
+const DEFAULT_SUBJECT = "Tu plan personalizado te está esperando";
 const DEFAULT_BODY = `Te registraste en Autopilot pero todavía no has activado tu plan. Tu entrenamiento + nutrición personalizados están listos para empezar a transformar tu rutina.
 
 Solo te llevará 1 minuto. Empieza hoy y recibe tu plan completo en Google Calendar mañana mismo.`;
@@ -96,6 +98,7 @@ const PaymentReminders = ({ users }: Props) => {
     setSending(false);
     setDialogOpen(false);
     setSelected(new Set());
+    void hapticNotify(fail ? "warning" : "success");
     toast.success(`Enviados: ${ok}${skip ? ` · Saltados (cooldown 3d): ${skip}` : ""}${fail ? ` · Fallidos: ${fail}` : ""}`);
 
     // Refresh last sent map
@@ -111,17 +114,17 @@ const PaymentReminders = ({ users }: Props) => {
     <div>
       <div className="flex items-center gap-2 mb-2">
         <Mail className="w-5 h-5 text-primary" />
-        <h1 className="text-2xl font-bold font-display">Recordatorios de pago</h1>
+        <h1 className="type-title2">Recordatorios de pago</h1>
       </div>
-      <p className="text-sm text-muted-foreground mb-6">
+      <p className="type-subhead text-muted-foreground mb-6">
         {unpaid.length} usuarios registrados sin pagar. Cooldown de 3 días por usuario.
       </p>
 
       <div className="flex gap-3 mb-4 flex-wrap">
-        <Input placeholder="Buscar por email..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 min-w-[200px]" />
-        <Button variant="outline" onClick={selectAll}>Seleccionar todos ({filtered.length})</Button>
-        {selected.size > 0 && <Button variant="ghost" onClick={clearAll}>Limpiar ({selected.size})</Button>}
-        <Button onClick={() => setDialogOpen(true)} disabled={selected.size === 0}>
+        <Input type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Buscar por email…" value={search} onChange={e => setSearch(e.target.value)} className="flex-1 min-w-[200px]" />
+        <Button variant="secondary" onClick={() => { void hapticTap(); selectAll(); }}>Seleccionar todos ({filtered.length})</Button>
+        {selected.size > 0 && <Button variant="plain" onClick={() => { void hapticTap(); clearAll(); }}>Limpiar ({selected.size})</Button>}
+        <Button onClick={() => { void hapticTap(); setDialogOpen(true); }} disabled={selected.size === 0}>
           <Send className="w-4 h-4 mr-2" /> Enviar a {selected.size}
         </Button>
       </div>
@@ -131,45 +134,45 @@ const PaymentReminders = ({ users }: Props) => {
           const ds = daysSince(lastSentMap[u.user_id]);
           const cooldown = ds !== null && ds < 3;
           return (
-            <div key={u.user_id} className="bg-card rounded-xl p-4 border border-border flex items-center gap-4">
+            <div key={u.user_id} className="bg-card rounded-2xl p-4 flex items-center gap-4">
               <Checkbox checked={selected.has(u.user_id)} onCheckedChange={() => toggle(u.user_id)} />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate">{u.email}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="type-subhead font-medium truncate">{u.email}</div>
+                <div className="type-footnote text-muted-foreground">
                   Registrado {new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                   {ds !== null && ` · Último email hace ${ds}d`}
                 </div>
               </div>
-              {cooldown && <Badge variant="secondary" className="text-[10px]">⏳ Cooldown</Badge>}
+              {cooldown && <Badge variant="secondary">En espera</Badge>}
               {lastSentMap[u.user_id] && !cooldown && (
-                <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30"><CheckCircle2 className="w-3 h-3 mr-1" />Enviado</Badge>
+                <Badge className="bg-primary/15 text-primary"><CheckCircle2 className="w-3 h-3 mr-1" />Enviado</Badge>
               )}
             </div>
           );
         })}
-        {filtered.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">No hay usuarios sin pagar</div>}
+        {filtered.length === 0 && <div className="text-center py-8 text-muted-foreground type-subhead">No hay usuarios sin pagar</div>}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Recordatorio a {selected.size} usuario{selected.size !== 1 ? "s" : ""}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Asunto</label>
-              <Input value={subject} onChange={e => setSubject(e.target.value)} />
+              <label className="type-footnote text-muted-foreground mb-1 block">Asunto</label>
+              <Input enterKeyHint="next" value={subject} onChange={e => setSubject(e.target.value)} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Mensaje</label>
+              <label className="type-footnote text-muted-foreground mb-1 block">Mensaje</label>
               <Textarea value={body} onChange={e => setBody(e.target.value)} rows={8} />
-              <p className="text-[11px] text-muted-foreground mt-1">El email incluye un botón "Activar mi plan" automáticamente.</p>
+              <p className="type-caption2 text-muted-foreground mt-1">El email incluye un botón "Activar mi plan" automáticamente.</p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={sending}>Cancelar</Button>
-            <Button onClick={send} disabled={sending}>
-              {sending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+            <Button variant="plain" onClick={() => setDialogOpen(false)} disabled={sending}>Cancelar</Button>
+            <Button onClick={() => { void hapticTap(); void send(); }} disabled={sending}>
+              {sending ? <Spinner size="sm" className="mr-2 text-primary-foreground" /> : <Send className="w-4 h-4 mr-2" />}
               Enviar
             </Button>
           </DialogFooter>

@@ -3,8 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticTap } from "@/lib/native";
 import { toast } from "sonner";
-import { Settings, Loader2, Save, Link as LinkIcon } from "lucide-react";
+import { Settings, Save, Link as LinkIcon } from "lucide-react";
 
 type Mode = "test" | "live";
 
@@ -104,20 +106,20 @@ const PaymentModeToggle = () => {
     toast.success("Configuración guardada");
   };
 
-  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />;
-  if (!s) return <div className="text-sm text-muted-foreground">No se encontró configuración</div>;
+  if (loading) return <Spinner />;
+  if (!s) return <div className="type-subhead text-muted-foreground">No se encontró configuración</div>;
 
   const mode = s.payment_mode;
 
   return (
     <div className="space-y-4">
       {/* Mode toggle */}
-      <div className="bg-card rounded-xl p-5 border border-border flex items-center justify-between">
+      <div className="bg-card rounded-2xl p-5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Settings className="w-5 h-5 text-muted-foreground" />
           <div>
-            <div className="font-medium text-sm">Modo de Pago</div>
-            <div className="text-xs text-muted-foreground">
+            <div className="type-headline">Modo de pago</div>
+            <div className="type-footnote text-muted-foreground">
               Activo:{" "}
               <span className={`font-bold ${mode === "live" ? "text-destructive" : "text-primary"}`}>
                 {mode.toUpperCase()}
@@ -125,19 +127,19 @@ const PaymentModeToggle = () => {
             </div>
           </div>
         </div>
-        <Button variant={mode === "live" ? "destructive" : "outline"} size="sm" onClick={toggleMode} disabled={saving}>
-          {saving && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+        <Button variant={mode === "live" ? "destructive" : "tinted"} size="sm" onClick={() => { void hapticTap(); void toggleMode(); }} disabled={saving}>
+          {saving && <Spinner size="sm" className="mr-1" />}
           Cambiar a {mode === "test" ? "LIVE" : "TEST"}
         </Button>
       </div>
 
       {/* Payment Links per plan */}
-      <div className="bg-card rounded-xl p-5 border border-border space-y-5">
+      <div className="bg-card rounded-2xl p-5 space-y-5">
         <div className="flex items-center gap-3">
           <LinkIcon className="w-5 h-5 text-muted-foreground" />
           <div>
-            <div className="font-medium text-sm">Payment Links de Stripe</div>
-            <div className="text-xs text-muted-foreground">
+            <div className="type-headline">Payment Links de Stripe</div>
+            <div className="type-footnote text-muted-foreground">
               Pega el Payment Link de Stripe para cada plan (Test y Live). Se usará el del modo activo.
             </div>
           </div>
@@ -146,25 +148,25 @@ const PaymentModeToggle = () => {
         {PLANS.map((p) => (
           <div key={p.key} className="space-y-2 pt-2 border-t border-border first:border-t-0 first:pt-0">
             <div className="flex items-baseline justify-between">
-              <div className="font-medium text-sm">{p.label}</div>
-              <div className="text-xs text-muted-foreground">{p.price}</div>
+              <div className="type-subhead font-semibold">{p.label}</div>
+              <div className="type-footnote text-muted-foreground">{p.price}</div>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Test</Label>
+              <Label className="type-footnote text-muted-foreground">Test</Label>
               <Input
                 value={s[`payment_link_${p.key}_test`]}
                 onChange={(e) => setField(`payment_link_${p.key}_test`, e.target.value)}
                 placeholder="https://buy.stripe.com/test_..."
-                className="mt-1 text-sm font-mono"
+                inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono"
               />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Live</Label>
+              <Label className="type-footnote text-muted-foreground">Live</Label>
               <Input
                 value={s[`payment_link_${p.key}_live`]}
                 onChange={(e) => setField(`payment_link_${p.key}_live`, e.target.value)}
                 placeholder="https://buy.stripe.com/..."
-                className="mt-1 text-sm font-mono"
+                inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono"
               />
             </div>
           </div>
@@ -172,40 +174,40 @@ const PaymentModeToggle = () => {
       </div>
 
       {/* Libros y packs */}
-      <div className="bg-card rounded-xl p-5 border border-border space-y-5">
+      <div className="bg-card rounded-2xl p-5 space-y-5">
         <div>
-          <div className="font-medium text-sm">Libros y packs</div>
-          <div className="text-xs text-muted-foreground">Enlaces de Stripe de todo el Drive. Se usa el del modo activo.</div>
+          <div className="type-headline">Libros y packs</div>
+          <div className="type-footnote text-muted-foreground">Enlaces de Stripe de todo el Drive. Se usa el del modo activo.</div>
         </div>
-        {items.length === 0 && <div className="text-xs text-muted-foreground">Aún no hay libros ni packs.</div>}
+        {items.length === 0 && <div className="type-footnote text-muted-foreground">Aún no hay libros ni packs.</div>}
         {items.map((b) => (
           <div key={b.id} className="space-y-2 pt-2 border-t border-border first:border-t-0 first:pt-0">
             <div className="flex items-baseline justify-between">
-              <div className="font-medium text-sm">{b.title}</div>
-              <div className="text-xs text-muted-foreground">{b.kind === "pack" ? "Pack" : "Libro"}{b.price ? ` · ${b.price}` : ""}</div>
+              <div className="type-subhead font-semibold">{b.title}</div>
+              <div className="type-footnote text-muted-foreground">{b.kind === "pack" ? "Pack" : "Libro"}{b.price ? ` · ${b.price}` : ""}</div>
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Test</Label>
+              <Label className="type-footnote text-muted-foreground">Test</Label>
               <Input value={b.buy_url_test || ""} onChange={(e) => setItem(b.id, { buy_url_test: e.target.value })}
-                placeholder="https://buy.stripe.com/test_..." className="mt-1 text-sm font-mono" />
+                placeholder="https://buy.stripe.com/test_..." inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono" />
             </div>
             <div>
-              <Label className="text-xs text-muted-foreground">Live</Label>
+              <Label className="type-footnote text-muted-foreground">Live</Label>
               <Input value={b.buy_url_live || ""} onChange={(e) => setItem(b.id, { buy_url_live: e.target.value })}
-                placeholder="https://buy.stripe.com/..." className="mt-1 text-sm font-mono" />
+                placeholder="https://buy.stripe.com/..." inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} className="mt-1 font-mono" />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-muted/30 rounded-xl p-4 border border-border text-xs text-muted-foreground">
+      <div className="px-1 type-footnote text-muted-foreground">
         Los <span className="font-medium text-foreground">webhook secrets</span> de Stripe se gestionan de forma segura
         como secretos del servidor (no en la base de datos). Si necesitas rotarlos, hazlo desde la configuración de
         secretos del backend.
       </div>
 
-      <Button onClick={saveAll} disabled={saving} className="w-full" size="lg">
-        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+      <Button onClick={() => { void hapticTap(); void saveAll(); }} disabled={saving} className="w-full" size="lg">
+        {saving ? <Spinner size="sm" className="mr-2 text-primary-foreground" /> : <Save className="w-4 h-4 mr-2" />}
         Guardar configuración
       </Button>
     </div>

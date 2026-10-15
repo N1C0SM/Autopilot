@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Save, X } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticTap } from "@/lib/native";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface OnboardingEditable {
@@ -26,12 +27,12 @@ export interface OnboardingEditable {
 }
 
 const GOALS = [
-  { value: "lose_weight", label: "🔥 Perder grasa" },
-  { value: "gain_muscle", label: "💪 Ganar músculo" },
-  { value: "recomp", label: "⚡ Recomposición" },
-  { value: "improve_endurance", label: "🏃 Mejorar resistencia" },
-  { value: "general_health", label: "❤️ Salud general" },
-  { value: "skill_based", label: "🤸 Skill concreto" },
+  { value: "lose_weight", label: "Perder grasa" },
+  { value: "gain_muscle", label: "Ganar músculo" },
+  { value: "recomp", label: "Recomposición" },
+  { value: "improve_endurance", label: "Mejorar resistencia" },
+  { value: "general_health", label: "Salud general" },
+  { value: "skill_based", label: "Skill concreto" },
 ];
 
 const EQUIPMENT = ["Gimnasio", "Casa", "Mixto", "Calistenia"];
@@ -100,26 +101,24 @@ const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
   };
 
   return (
-    <div className="bg-card rounded-xl p-6 border border-border space-y-4">
-      <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground">
-        Editar onboarding
-      </h2>
+    <section className="space-y-5">
+      <h2 className="type-title3">Editar onboarding</h2>
 
       <div className="grid sm:grid-cols-3 gap-4">
         <div>
-          <Label className="text-xs">Edad</Label>
-          <Input type="number" value={form.age} onChange={(e) => set("age", e.target.value)} />
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Edad</Label>
+          <Input type="number" inputMode="decimal" value={form.age} onChange={(e) => set("age", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Altura (cm)</Label>
-          <Input type="number" value={form.height} onChange={(e) => set("height", e.target.value)} />
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Altura (cm)</Label>
+          <Input type="number" inputMode="decimal" value={form.height} onChange={(e) => set("height", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Peso (kg)</Label>
-          <Input type="number" value={form.weight} onChange={(e) => set("weight", e.target.value)} />
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Peso (kg)</Label>
+          <Input type="number" inputMode="decimal" value={form.weight} onChange={(e) => set("weight", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Sexo</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Sexo</Label>
           <Select value={form.sex || "__none__"} onValueChange={(v) => set("sex", v === "__none__" ? "" : v)}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>
@@ -130,7 +129,7 @@ const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
           </Select>
         </div>
         <div>
-          <Label className="text-xs">Equipamiento</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Equipamiento</Label>
           <Select value={form.equipment_type} onValueChange={(v) => set("equipment_type", v)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -139,11 +138,11 @@ const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
           </Select>
         </div>
         <div>
-          <Label className="text-xs">Intensidad (1-10)</Label>
-          <Input type="number" min={1} max={10} value={form.intensity_level} onChange={(e) => set("intensity_level", e.target.value)} />
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Intensidad (1-10)</Label>
+          <Input type="number" inputMode="numeric" min={1} max={10} value={form.intensity_level} onChange={(e) => set("intensity_level", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Objetivo</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Objetivo</Label>
           <Select value={form.goal || "__none__"} onValueChange={(v) => set("goal", v === "__none__" ? "" : v)}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>
@@ -153,51 +152,51 @@ const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
           </Select>
         </div>
         <div>
-          <Label className="text-xs">Días / semana</Label>
-          <Input type="number" min={1} max={7} value={form.days} onChange={(e) => set("days", e.target.value)} />
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Días / semana</Label>
+          <Input type="number" inputMode="numeric" min={1} max={7} value={form.days} onChange={(e) => set("days", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Horas por sesión</Label>
-          <Input type="number" step="0.5" value={form.hours} onChange={(e) => set("hours", e.target.value)} />
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Horas por sesión</Label>
+          <Input type="number" inputMode="decimal" step="0.5" value={form.hours} onChange={(e) => set("hours", e.target.value)} />
         </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <Label className="text-xs">Meta específica / skill</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Meta específica / skill</Label>
           <Input value={form.specific_goal} onChange={(e) => set("specific_goal", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Deportes</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Deportes</Label>
           <Input value={form.sports} onChange={(e) => set("sports", e.target.value)} />
         </div>
       </div>
 
       <div>
-        <Label className="text-xs">Lesiones / condiciones</Label>
+        <Label className="type-subhead mb-1.5 block text-muted-foreground">Lesiones / condiciones</Label>
         <Textarea rows={2} value={form.injuries} onChange={(e) => set("injuries", e.target.value)} />
       </div>
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <Label className="text-xs">Preferencias nutricionales</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Preferencias nutricionales</Label>
           <Textarea rows={2} value={form.nutrition_preferences} onChange={(e) => set("nutrition_preferences", e.target.value)} />
         </div>
         <div>
-          <Label className="text-xs">Alergias</Label>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Alergias</Label>
           <Textarea rows={2} value={form.allergies} onChange={(e) => set("allergies", e.target.value)} />
         </div>
       </div>
 
       <div className="flex gap-2">
-        <Button onClick={save} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        <Button onClick={save} disabled={saving} onPointerDown={() => void hapticTap()}>
+          {saving && <Spinner size="sm" className="mr-2" />}
           Guardar
         </Button>
-        <Button variant="outline" onClick={onCancel} disabled={saving} className="gap-2">
-          <X className="w-4 h-4" /> Cancelar
+        <Button variant="plain" onClick={onCancel} disabled={saving}>
+          Cancelar
         </Button>
       </div>
-    </div>
+    </section>
   );
 };
 

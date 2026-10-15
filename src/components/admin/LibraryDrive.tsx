@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Loader2,
   Plus,
   Trash2,
   Upload,
@@ -307,13 +311,25 @@ const LibraryDrive = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" /> Cargando tu biblioteca…
+      <div className="flex min-h-[40vh] items-center justify-center gap-2 type-subhead text-muted-foreground">
+        <Spinner size="md" label="Cargando tu biblioteca" /> Cargando tu biblioteca…
       </div>
     );
   }
 
   const open = books.find((b) => b.id === openId) || null;
+
+  const kindIcon = (k: Kind, cls = "h-5 w-5") =>
+    k === "pack" ? <Package className={cls} />
+    : k === "video" ? <Video className={cls} />
+    : k === "recommendation" ? <Star className={cls} />
+    : k === "folder" ? <Folder className={cls} />
+    : <BookOpen className={cls} />;
+
+  const menuButton = "absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-md transition-colors active:bg-accent";
+  const uploadLink = "inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 type-subhead text-primary transition-opacity active:opacity-60";
+  const previewBox = "relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-card";
+  const emptyPreview = "flex h-full w-full flex-col items-center justify-center gap-2 type-subhead text-muted-foreground";
 
   if (open) {
     const kind: Kind = open.kind || (open.is_pack ? "pack" : open.is_folder ? "folder" : "book");
@@ -321,36 +337,34 @@ const LibraryDrive = () => {
     const isPack = kind === "pack";
     const isVideo = kind === "video";
     const isRec = kind === "recommendation";
+    const packBooks = books.filter((x) => (x.kind || "book") === "book");
 
     return (
-      <div className="space-y-5">
-        <button
-          onClick={() => setOpenId(null)}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="w-4 h-4" /> Volver
-        </button>
-
-        <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 space-y-5">
-          <div className="flex items-center gap-2">
-            {isPack ? <Package className="w-5 h-5 text-primary" />
-              : isVideo ? <Video className="w-5 h-5 text-primary" />
-              : isRec ? <Star className="w-5 h-5 text-primary" />
-              : <FolderOpen className="w-5 h-5 text-primary" />}
-            <h2 className="font-display font-bold">{open.title || "Sin título"}</h2>
-            <span className="text-[10px] uppercase tracking-widest text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-              {KIND_LABEL[kind]}
-            </span>
+      <div className="mx-auto max-w-3xl space-y-8">
+        <div className="space-y-3">
+          <button
+            onClick={() => { void hapticTap(); setOpenId(null); }}
+            className="-ml-2 inline-flex min-h-[44px] items-center gap-1 px-2 type-body text-primary transition-opacity active:opacity-60"
+          >
+            <ArrowLeft className="h-5 w-5" /> Volver
+          </button>
+          <div className="flex items-start gap-3.5">
+            <span className="mt-1 text-primary">{kindIcon(kind, "h-7 w-7")}</span>
+            <div className="min-w-0">
+              <h2 className="type-title1 break-words">{open.title || "Sin título"}</h2>
+              <p className="type-subhead text-muted-foreground">{KIND_LABEL[kind]}</p>
+            </div>
           </div>
+        </div>
 
-          {(isBook || isPack) && (
-          <div className="grid gap-4 sm:grid-cols-2">
+        {(isBook || isPack) && (
+          <div className="grid gap-6 sm:grid-cols-2">
             {/* Portada */}
-            <div className={`space-y-1.5 ${isPack ? "sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-sm" : ""}`}>
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Portada</Label>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-secondary">
-                  <Upload className="h-3.5 w-3.5" />
+            <div className={`space-y-1 ${isPack ? "sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-sm" : ""}`}>
+              <div className="flex items-center justify-between gap-2 px-4">
+                <Label className="type-group-header">Portada</Label>
+                <label className={uploadLink}>
+                  <Upload className="h-4 w-4" />
                   {open.cover_path ? "Cambiar portada" : "Subir portada"}
                   <input
                     type="file"
@@ -364,19 +378,18 @@ const LibraryDrive = () => {
                   />
                 </label>
               </div>
-              <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
+              <div className={previewBox}>
                 {covers[open.id] ? (
-                  <img loading="lazy" decoding="async" src={covers[open.id]} alt="Portada" className="w-full h-full object-cover" />
+                  <img loading="lazy" decoding="async" src={covers[open.id]} alt="Portada" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
-                    <ImageIcon className="w-4 h-4" /> Sin portada
+                  <div className={emptyPreview}>
+                    <ImageIcon className="h-6 w-6" strokeWidth={1.75} /> Sin portada
                   </div>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-background/80 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-background transition-colors">
-
-                      <MoreVertical className="w-4 h-4" />
+                    <button aria-label="Opciones de portada" className={menuButton}>
+                      <MoreVertical className="h-5 w-5" />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
@@ -389,11 +402,11 @@ const LibraryDrive = () => {
                           )
                         }
                       >
-                        <Download className="w-4 h-4 mr-2" /> Descargar portada
+                        <Download className="mr-2 h-4 w-4" /> Descargar portada
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
-                      <label className="cursor-pointer flex items-center w-full">
+                      <label className="flex w-full cursor-pointer items-center">
                         <input
                           type="file"
                           accept="image/*"
@@ -403,7 +416,7 @@ const LibraryDrive = () => {
                             if (f) upload(open, "cover", f);
                           }}
                         />
-                        <Upload className="w-4 h-4 mr-2" /> {open.cover_path ? "Cambiar portada" : "Subir portada"}
+                        <Upload className="mr-2 h-4 w-4" /> {open.cover_path ? "Cambiar portada" : "Subir portada"}
                       </label>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -412,213 +425,223 @@ const LibraryDrive = () => {
             </div>
 
             {isBook && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Archivo del libro</Label>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-secondary">
-                  <Upload className="h-3.5 w-3.5" />
-                  {open.file_path ? "Cambiar PDF" : "Subir PDF"}
-                  <input
-                    type="file"
-                    accept=".pdf,application/pdf"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      e.currentTarget.value = "";
-                      if (f) upload(open, "file", f);
-                    }}
-                  />
-                </label>
-              </div>
-              <div className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border border-border bg-secondary/40">
-                {open.file_path ? (
-                  previewUrl ? (
-                    <iframe
-                      loading="lazy"
-                      src={`${previewUrl}#page=2&toolbar=0&navpanes=0&view=FitH`}
-                      title="Vista previa del contenido del PDF"
-                      className="w-full h-full"
+              <div className="space-y-1">
+                <div className="flex items-center justify-between gap-2 px-4">
+                  <Label className="type-group-header">Archivo del libro</Label>
+                  <label className={uploadLink}>
+                    <Upload className="h-4 w-4" />
+                    {open.file_path ? "Cambiar PDF" : "Subir PDF"}
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.currentTarget.value = "";
+                        if (f) upload(open, "file", f);
+                      }}
                     />
+                  </label>
+                </div>
+                <div className={previewBox}>
+                  {open.file_path ? (
+                    previewUrl ? (
+                      <iframe
+                        loading="lazy"
+                        src={`${previewUrl}#page=2&toolbar=0&navpanes=0&view=FitH`}
+                        title="Vista previa del contenido del PDF"
+                        className="h-full w-full"
+                      />
+                    ) : (
+                      <div className={emptyPreview}>
+                        <Spinner size="md" label="Cargando contenido" /> Cargando contenido…
+                      </div>
+                    )
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Cargando contenido…
+                    <div className={emptyPreview}>
+                      <FileText className="h-6 w-6" strokeWidth={1.75} /> Sin archivo
                     </div>
-                  )
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground gap-1.5">
-                    <FileText className="w-4 h-4" /> Sin archivo
-                  </div>
-                )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-background/80 backdrop-blur-md border border-border/60 flex items-center justify-center hover:bg-background transition-colors">
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    {open.file_path && (
-                      <>
-                        <DropdownMenuItem onClick={() => downloadFile(open.file_path!, `${open.title || "libro"}.pdf`)}>
-                          <Download className="w-4 h-4 mr-2" /> Descargar PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => shareOnce(open.id)}>
-                          <LinkIcon className="w-4 h-4 mr-2" /> Copiar enlace de 1 descarga
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openFile(open.file_path!)}>
-                          <Eye className="w-4 h-4 mr-2" /> Abrir a pantalla completa
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    <DropdownMenuItem asChild>
-                      <label className="cursor-pointer flex items-center w-full">
-                        <input
-                          type="file"
-                          accept="application/pdf,application/zip,application/epub+zip"
-                          className="hidden"
-                          onChange={(e) => {
-                            const f = e.target.files?.[0];
-                            e.currentTarget.value = "";
-                            if (f) upload(open, "file", f);
-                          }}
-                        />
-                        <Upload className="w-4 h-4 mr-2" /> {open.file_path ? "Reemplazar archivo" : "Subir archivo"}
-                      </label>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button aria-label="Opciones del archivo" className={menuButton}>
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {open.file_path && (
+                        <>
+                          <DropdownMenuItem onClick={() => downloadFile(open.file_path!, `${open.title || "libro"}.pdf`)}>
+                            <Download className="mr-2 h-4 w-4" /> Descargar PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => shareOnce(open.id)}>
+                            <LinkIcon className="mr-2 h-4 w-4" /> Copiar enlace de 1 descarga
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openFile(open.file_path!)}>
+                            <Eye className="mr-2 h-4 w-4" /> Abrir a pantalla completa
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuItem asChild>
+                        <label className="flex w-full cursor-pointer items-center">
+                          <input
+                            type="file"
+                            accept="application/pdf,application/zip,application/epub+zip"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              e.currentTarget.value = "";
+                              if (f) upload(open, "file", f);
+                            }}
+                          />
+                          <Upload className="mr-2 h-4 w-4" /> {open.file_path ? "Reemplazar archivo" : "Subir archivo"}
+                        </label>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
-            </div>
             )}
           </div>
-          )}
+        )}
 
+        <div className="space-y-4">
+          <div>
+            <Label className="mb-1.5 block text-muted-foreground">Título</Label>
+            <Input enterKeyHint="next" value={open.title} onChange={(e) => patch(open.id, { title: e.target.value })} />
+          </div>
+          <div>
+            <Label className="mb-1.5 block text-muted-foreground">Descripción</Label>
+            <Textarea
+              rows={3}
+              value={open.description}
+              placeholder={isVideo ? "Qué se explica en el vídeo" : "De qué trata y a quién le sirve"}
+              onChange={(e) => patch(open.id, { description: e.target.value })}
+            />
+          </div>
 
-          <div className="space-y-3 pt-2 border-t border-border">
+          {isVideo && (
             <div>
-              <Label className="text-xs">Título</Label>
-              <Input value={open.title} onChange={(e) => patch(open.id, { title: e.target.value })} />
-            </div>
-            <div>
-              <Label className="text-xs">Descripción</Label>
-              <Textarea
-                rows={3}
-                value={open.description}
-                placeholder={isVideo ? "Qué se explica en el vídeo" : "De qué trata y a quién le sirve"}
-                onChange={(e) => patch(open.id, { description: e.target.value })}
+              <Label className="mb-1.5 block text-muted-foreground">Enlace del vídeo (YouTube, Vimeo…)</Label>
+              <Input
+                type="url"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={open.video_url || ""}
+                placeholder="https://…"
+                onChange={(e) => patch(open.id, { video_url: e.target.value })}
               />
             </div>
+          )}
 
-            {isVideo && (
-              <div>
-                <Label className="text-xs">Enlace del vídeo (YouTube, Vimeo…)</Label>
-                <Input
-                  value={open.video_url || ""}
-                  placeholder="https://…"
-                  onChange={(e) => patch(open.id, { video_url: e.target.value })}
-                />
-              </div>
-            )}
-
-            {(isBook || isPack) && (
-              <div className="sm:max-w-[200px]">
-                <Label className="text-xs">Precio</Label>
-                <Input
-                  value={open.price}
-                  placeholder="Gratis, 19 €…"
-                  onChange={(e) => patch(open.id, { price: e.target.value })}
-                />
-                <Button type="button" size="sm" variant="ghost" className="mt-1 h-7 px-2 text-xs" disabled={busy === "price"} onClick={() => suggestPrice(open)}>
-                  {busy === "price" ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : "✨"} Sugerir precio con IA
-                </Button>
-                {priceTip && <p className="text-[11px] text-muted-foreground mt-1">{priceTip}</p>}
-              </div>
-            )}
-
-            {isBook && open.file_path && (
-              <div>
-                <Button size="sm" variant="hero" onClick={() => shareOnce(open.id)}>
-                  <LinkIcon className="w-4 h-4 mr-2" /> Copiar enlace de 1 descarga
-                </Button>
-                <p className="text-[11px] text-muted-foreground mt-1">El cliente podrá descargarlo una sola vez. Caduca en 7 días.</p>
-              </div>
-            )}
-
-            {(isBook || isPack) && (
-              <p className="text-[11px] text-muted-foreground">
-                Los enlaces de compra se gestionan en Ajustes → Pagos.
-              </p>
-            )}
-
-            {isRec && (
-              <div>
-                <Label className="text-xs">Enlace de la recomendación</Label>
-                <Input
-                  value={open.buy_url || ""}
-                  placeholder="https://…"
-                  onChange={(e) => patch(open.id, { buy_url: e.target.value })}
-                />
-              </div>
-            )}
-
-            {isPack && (
-              <div>
-                <Label className="text-xs">Libros incluidos en el pack</Label>
-                <div className="mt-1 space-y-1.5">
-                  {books.filter((x) => (x.kind || "book") === "book").map((x) => {
-                    const items: string[] = open.pack_items || [];
-                    const on = items.includes(x.id);
-                    return (
-                      <label key={x.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={() =>
-                            patch(open.id, { pack_items: on ? items.filter((i) => i !== x.id) : [...items, x.id] })
-                          }
-                        />
-                        {x.title}
-                      </label>
-                    );
-                  })}
-                  {books.filter((x) => (x.kind || "book") === "book").length === 0 && (
-                    <p className="text-[11px] text-muted-foreground">Crea primero algún libro para poder incluirlo.</p>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  variant="hero"
-                  className="mt-3"
-                  disabled={(open.pack_items || []).length === 0}
-                  onClick={() => shareOnce(open.id)}
-                >
-                  Copiar enlace de 1 descarga del pack
-                </Button>
-                <p className="text-[11px] text-muted-foreground mt-1">El cliente podrá descargar cada libro incluido una sola vez. Caduca en 7 días.</p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium flex items-center gap-1.5">
-                {open.published ? <Globe className="w-4 h-4 text-success" /> : <Lock className="w-4 h-4 text-muted-foreground" />}
-                {open.published ? "Publicado" : "Borrador privado"}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {open.published
-                  ? "Aparece en la página de recursos de tus clientes."
-                  : "Solo lo ves tú. Nadie más puede abrirlo ni encontrarlo."}
-              </p>
+          {(isBook || isPack) && (
+            <div className="sm:max-w-[240px]">
+              <Label className="mb-1.5 block text-muted-foreground">Precio</Label>
+              <Input
+                enterKeyHint="done"
+                value={open.price}
+                placeholder="Gratis, 19 €…"
+                onChange={(e) => patch(open.id, { price: e.target.value })}
+              />
+              <Button type="button" variant="plain" className="-ml-3 min-h-[44px]" disabled={busy === "price"} onClick={() => { void hapticTap(); void suggestPrice(open); }}>
+                {busy === "price" && <Spinner size="sm" />} Sugerir precio con IA
+              </Button>
+              {priceTip && <p className="mt-1 type-footnote text-muted-foreground">{priceTip}</p>}
             </div>
-            <Switch checked={open.published} onCheckedChange={(v) => patch(open.id, { published: v })} />
-          </div>
+          )}
 
-          <div className="flex gap-2">
-            <Button onClick={() => save(open)} disabled={busy === open.id}>
-              {busy === open.id ? "Guardando…" : "Guardar"}
+          {isRec && (
+            <div>
+              <Label className="mb-1.5 block text-muted-foreground">Enlace de la recomendación</Label>
+              <Input
+                type="url"
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={open.buy_url || ""}
+                placeholder="https://…"
+                onChange={(e) => patch(open.id, { buy_url: e.target.value })}
+              />
+            </div>
+          )}
+
+          {(isBook || isPack) && (
+            <p className="type-footnote text-muted-foreground">
+              Los enlaces de compra se gestionan en Ajustes → Pagos.
+            </p>
+          )}
+        </div>
+
+        {isPack && (
+          <ListGroup
+            header="Libros incluidos en el pack"
+            footer="El cliente podrá descargar cada libro incluido una sola vez. Caduca en 7 días."
+          >
+            {packBooks.map((x) => {
+              const items: string[] = open.pack_items || [];
+              const on = items.includes(x.id);
+              const toggle = () => {
+                void hapticSelection();
+                patch(open.id, { pack_items: on ? items.filter((i) => i !== x.id) : [...items, x.id] });
+              };
+              return (
+                <ListRow
+                  key={x.id}
+                  title={x.title}
+                  trailing={<Checkbox checked={on} onCheckedChange={toggle} aria-label={x.title} />}
+                  onClick={toggle}
+                />
+              );
+            })}
+            {packBooks.length === 0 && (
+              <p className="px-4 py-3 type-subhead text-muted-foreground">Crea primero algún libro para poder incluirlo.</p>
+            )}
+          </ListGroup>
+        )}
+
+        {isPack && (
+          <Button
+            variant="tinted"
+            className="w-full sm:w-auto"
+            disabled={(open.pack_items || []).length === 0}
+            onClick={() => { void hapticTap(); shareOnce(open.id); }}
+          >
+            <LinkIcon className="h-4 w-4" /> Copiar enlace de 1 descarga del pack
+          </Button>
+        )}
+
+        {isBook && open.file_path && (
+          <div className="space-y-1.5">
+            <Button variant="tinted" className="w-full sm:w-auto" onClick={() => { void hapticTap(); shareOnce(open.id); }}>
+              <LinkIcon className="h-4 w-4" /> Copiar enlace de 1 descarga
             </Button>
-            <Button variant="ghost" onClick={() => remove(open)}>
-              <Trash2 className="w-4 h-4 text-destructive" />
+            <p className="type-footnote text-muted-foreground">El cliente podrá descargarlo una sola vez. Caduca en 7 días.</p>
+          </div>
+        )}
+
+        <ListGroup>
+          <ListRow
+            icon={open.published ? <Globe className="text-success" /> : <Lock className="text-muted-foreground" />}
+            title={open.published ? "Publicado" : "Borrador privado"}
+            subtitle={
+              open.published
+                ? "Aparece en la página de recursos de tus clientes."
+                : "Solo lo ves tú. Nadie más puede abrirlo ni encontrarlo."
+            }
+            trailing={<Switch checked={open.published} onCheckedChange={(v) => { void hapticSelection(); patch(open.id, { published: v }); }} />}
+          />
+        </ListGroup>
+
+        <div className="space-y-2">
+          <Button size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); void save(open); }} disabled={busy === open.id}>
+            {busy === open.id ? "Guardando…" : "Guardar"}
+          </Button>
+          <div>
+            <Button variant="plain" className="text-destructive" aria-label="Eliminar" onClick={() => { void hapticNotify("warning"); void remove(open); }}>
+              <Trash2 className="h-4 w-4" /> Eliminar
             </Button>
           </div>
         </div>
@@ -630,136 +653,118 @@ const LibraryDrive = () => {
   const countInside = (id: string) => books.filter((b) => b.parent_id === id).length;
 
   return (
-    <div className="space-y-5">
-      <div className="bg-card border border-border rounded-2xl p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display font-bold flex items-center gap-2">
-              <Folder className="w-5 h-5 text-primary" /> Tu nube privada
-            </h2>
-            <p className="text-xs text-muted-foreground mt-1 max-w-xl leading-relaxed">
-              Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones.
-              Nada se ve fuera hasta que tú lo publicas.
-            </p>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-1" /> Nuevo
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => create("folder")}>
-                <FolderPlus className="w-4 h-4 mr-2" /> Carpeta
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("book")}>
-                <BookOpen className="w-4 h-4 mr-2" /> Libro (portada + PDF)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("pack")}>
-                <Package className="w-4 h-4 mr-2" /> Pack (elige libros)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="type-large-title md:type-title1">Tu nube privada</h2>
+          <p className="mt-1 max-w-xl type-subhead text-muted-foreground">
+            Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones.
+            Nada se ve fuera hasta que tú lo publicas.
+          </p>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button onClick={() => void hapticTap()}>
+              <Plus className="h-4 w-4" /> Nuevo
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => create("folder")}>
+              <FolderPlus className="mr-2 h-4 w-4" /> Carpeta
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => create("book")}>
+              <BookOpen className="mr-2 h-4 w-4" /> Libro (portada + PDF)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => create("pack")}>
+              <Package className="mr-2 h-4 w-4" /> Pack (elige libros)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Migas de pan */}
-      <div className="flex items-center gap-1 text-sm overflow-x-auto">
+      <nav aria-label="Ruta" className="-mx-2 flex items-center overflow-x-auto type-subhead">
         <button
-          onClick={() => setPath([])}
-          className={`px-2 py-1 rounded-md hover:bg-secondary ${path.length === 0 ? "font-semibold" : "text-muted-foreground"}`}
+          onClick={() => { void hapticTap(); setPath([]); }}
+          className={`inline-flex min-h-[44px] shrink-0 items-center px-2 transition-opacity active:opacity-60 ${path.length === 0 ? "font-semibold" : "text-primary"}`}
         >
           Drive
         </button>
         {path.map((p, i) => (
-          <span key={p.id} className="flex items-center gap-1 shrink-0">
-            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+          <span key={p.id} className="flex shrink-0 items-center">
+            <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
             <button
-              onClick={() => setPath((arr) => arr.slice(0, i + 1))}
-              className={`px-2 py-1 rounded-md hover:bg-secondary ${i === path.length - 1 ? "font-semibold" : "text-muted-foreground"}`}
+              onClick={() => { void hapticTap(); setPath((arr) => arr.slice(0, i + 1)); }}
+              className={`inline-flex min-h-[44px] items-center px-2 transition-opacity active:opacity-60 ${i === path.length - 1 ? "font-semibold" : "text-primary"}`}
             >
               {p.title}
             </button>
           </span>
         ))}
-      </div>
+      </nav>
 
-      {items.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-          Esta carpeta está vacía. Pulsa «Nuevo» para empezar.
-        </div>
-      )}
+      {items.length === 0 ? (
+        <EmptyState
+          icon={FolderOpen}
+          title="Esta carpeta está vacía"
+          description="Pulsa «Nuevo» para empezar."
+        />
+      ) : (
+        <ListGroup>
+          {items.map((b) => {
+            const kind: Kind = b.kind || (b.is_pack ? "pack" : b.is_folder ? "folder" : "book");
+            if (kind === "folder") {
+              return (
+                <ListRow
+                  key={b.id}
+                  icon={<Folder />}
+                  title={b.title}
+                  subtitle={`${countInside(b.id)} elementos`}
+                  onClick={() => setPath((p) => [...p, { id: b.id, title: b.title }])}
+                  trailing={
+                    <span className="flex items-center">
+                      <Button variant="plain" className="min-h-[44px]" onClick={() => { void hapticTap(); void rename(b); }}>
+                        Renombrar
+                      </Button>
+                      <Button variant="ghost" size="icon" aria-label="Eliminar carpeta" onClick={() => { void hapticNotify("warning"); void remove(b); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </span>
+                  }
+                />
+              );
+            }
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((b) => {
-          const kind: Kind = b.kind || (b.is_pack ? "pack" : b.is_folder ? "folder" : "book");
-          if (kind === "folder") {
+            const packCover = kind === "pack" ? covers[(b.pack_items || [])[0]] : undefined;
+            const thumb = covers[b.id] || packCover;
+            const detail =
+              kind === "book" ? `${b.file_path ? "PDF listo" : "Sin PDF"} · ${b.cover_path ? "con portada" : "sin portada"}`
+              : kind === "pack" ? `${(b.pack_items || []).length} libros incluidos`
+              : kind === "video" ? (b.video_url ? "Enlace añadido" : "Sin enlace")
+              : b.buy_url_test || b.buy_url_live || b.buy_url ? `Stripe ${b.buy_url_test ? "Test" : ""}${b.buy_url_test && b.buy_url_live ? " + " : ""}${b.buy_url_live ? "Live" : ""}`.trim() : "Sin enlace";
+
             return (
-              <div
+              <ListRow
                 key={b.id}
-                className="bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors flex items-center gap-3"
-              >
-                <button onClick={() => setPath((p) => [...p, { id: b.id, title: b.title }])} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Folder className="w-5 h-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">{b.title}</p>
-                    <p className="text-[11px] text-muted-foreground">{countInside(b.id)} elementos</p>
-                  </div>
-                </button>
-                <button onClick={() => rename(b)} className="text-[11px] text-muted-foreground hover:text-foreground px-1">
-                  Renombrar
-                </button>
-                <button onClick={() => remove(b)} className="p-1 rounded hover:bg-secondary">
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </button>
-              </div>
+                leading={
+                  thumb ? (
+                    <img loading="lazy" decoding="async" src={thumb} alt="" className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover" />
+                  ) : (
+                    <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
+                      {kindIcon(kind)}
+                    </div>
+                  )
+                }
+                title={b.title || "Sin título"}
+                subtitle={`${KIND_LABEL[kind]} · ${detail}`}
+                value={b.published ? "Publicado" : "Borrador"}
+                chevron
+                onClick={() => setOpenId(b.id)}
+              />
             );
-          }
-
-          const packCover = kind === "pack" ? covers[(b.pack_items || [])[0]] : undefined;
-          const thumb = covers[b.id] || packCover;
-          const detail =
-            kind === "book" ? `${b.file_path ? "PDF listo" : "Sin PDF"} · ${b.cover_path ? "con portada" : "sin portada"}`
-            : kind === "pack" ? `${(b.pack_items || []).length} libros incluidos`
-            : kind === "video" ? (b.video_url ? "Enlace añadido" : "Sin enlace")
-            : b.buy_url_test || b.buy_url_live || b.buy_url ? `Stripe ${b.buy_url_test ? "Test" : ""}${b.buy_url_test && b.buy_url_live ? " + " : ""}${b.buy_url_live ? "Live" : ""}`.trim() : "Sin enlace";
-
-          return (
-            <button
-              key={b.id}
-              onClick={() => setOpenId(b.id)}
-              className="text-left bg-card border border-border rounded-2xl p-4 hover:border-primary/40 transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                {thumb ? (
-                  <img loading="lazy" decoding="async" src={thumb} alt="" className="w-14 h-[74px] rounded object-cover shrink-0" />
-                ) : (
-                  <div className="w-14 h-[74px] rounded bg-secondary shrink-0 flex items-center justify-center">
-                    {kind === "pack" ? <Package className="w-5 h-5 text-primary" />
-                      : kind === "video" ? <Video className="w-5 h-5 text-primary" />
-                      : kind === "recommendation" ? <Star className="w-5 h-5 text-primary" />
-                      : <BookOpen className="w-5 h-5 text-muted-foreground" />}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-sm truncate">{b.title || "Sin título"}</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{KIND_LABEL[kind]} · {detail}</p>
-                  <span
-                    className={`inline-flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
-                      b.published ? "text-success bg-success/10" : "text-muted-foreground bg-secondary"
-                    }`}
-                  >
-                    {b.published ? <Globe className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
-                    {b.published ? "Publicado" : "Borrador"}
-                  </span>
-                </div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+          })}
+        </ListGroup>
+      )}
     </div>
   );
 };

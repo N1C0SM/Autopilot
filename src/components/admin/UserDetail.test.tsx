@@ -11,7 +11,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   }; return query; },
   channel: () => { const channel = { on: () => channel, subscribe: () => channel }; return channel; }, removeChannel: vi.fn(),
 } }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: mocks.error } }));
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: mocks.error, info: vi.fn() } }));
 vi.mock("@/components/Chat", () => ({ default: ({ conversationUserId, audience }: { conversationUserId: string; audience: string }) => <div>Chat {audience}: {conversationUserId}</div> }));
 vi.mock("./TrainingPlanForm", () => ({ default: () => <div>Editor de entrenamiento</div> }));
 vi.mock("./UserProgressPanel", () => ({ default: () => null }));

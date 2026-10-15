@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarClock, Save } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { hapticTap } from "@/lib/native";
+import { CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import {
   RENEWAL_LABELS,
@@ -46,31 +48,31 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
   const end = cycleEndDate(start || null);
 
   return (
-    <div className="bg-card rounded-xl p-5 border border-border space-y-4">
-      <div className="flex items-center gap-3">
-        <CalendarClock className="w-5 h-5 text-primary" />
-        <div>
-          <div className="font-medium text-sm">Ciclo Transformación 12 semanas</div>
-          <div className="text-xs text-muted-foreground">
+    <section className="space-y-5">
+      <div className="flex items-start gap-3">
+        <CalendarClock className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+        <div className="min-w-0">
+          <h3 className="type-headline">Ciclo Transformación 12 semanas</h3>
+          <p className="type-subhead text-muted-foreground">
             {start
               ? `${week !== null ? `Semana ${Math.min(week, 12)} de 12 · ` : ""}Termina el ${formatDateES(end)}`
               : "Sin fecha de inicio: el cliente no verá el aviso de renovación"}
-          </div>
+          </p>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label className="text-xs">Fecha de inicio del ciclo</Label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Fecha de inicio del ciclo</Label>
           <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} disabled={disabled} />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">Decisión al terminar</Label>
+        <div>
+          <Label className="type-subhead mb-1.5 block text-muted-foreground">Decisión al terminar</Label>
           <select
             value={decision}
             onChange={(e) => setDecision(e.target.value)}
             disabled={disabled}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+            className="field w-full"
           >
             <option value="">Sin respuesta (fallback: Completo)</option>
             {(Object.keys(RENEWAL_LABELS) as RenewalDecision[]).map((k) => (
@@ -83,11 +85,12 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
       </div>
 
       {!disabled && (
-        <Button size="sm" onClick={save} disabled={saving}>
-          <Save className="w-4 h-4 mr-1" /> {saving ? "Guardando..." : "Guardar ciclo"}
+        <Button onClick={save} disabled={saving} onPointerDown={() => void hapticTap()}>
+          {saving && <Spinner size="sm" className="mr-2" />}
+          {saving ? "Guardando…" : "Guardar ciclo"}
         </Button>
       )}
-    </div>
+    </section>
   );
 };
 

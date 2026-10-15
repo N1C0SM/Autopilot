@@ -1,10 +1,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { HardDrive, Loader2, LogOut, LockKeyhole } from "lucide-react";
+import { HardDrive, LogOut, LockKeyhole } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { hapticTap } from "@/lib/native";
 import LibraryDrive from "@/components/admin/LibraryDrive";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,14 +90,14 @@ const Drive = () => {
         <meta name="robots" content="noindex,nofollow" />
       </Helmet>
 
-      <header className="app-chrome sticky top-0 z-40 border-b">
+      <header className="app-chrome sticky top-0 z-40 pt-safe">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
-          <Link to="/drive" className="inline-flex items-center gap-2 font-display font-bold">
+          <Link to="/drive" className="inline-flex min-h-[44px] items-center gap-2 type-headline transition-opacity active:opacity-60">
             <HardDrive className="h-5 w-5 text-primary" />
             <span>Autopilot Drive</span>
           </Link>
           {access === "allowed" && (
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            <Button variant="plain" className="min-h-[44px]" onClick={() => { void hapticTap(); void handleSignOut(); }}>
               <LogOut className="h-4 w-4" />
               Cerrar sesión
             </Button>
@@ -102,82 +105,85 @@ const Drive = () => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
+      <main className="mx-auto max-w-7xl px-4 py-6 pb-safe sm:py-8">
         {checking ? (
-          <div className="flex min-h-[50vh] items-center justify-center gap-3 text-sm text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <div className="flex min-h-[50vh] items-center justify-center gap-3 type-subhead text-muted-foreground">
+            <Spinner size="md" label="Comprobando acceso" />
             Comprobando acceso…
           </div>
         ) : access === "allowed" ? (
           <LibraryDrive />
         ) : access === "signed-out" ? (
-          <div className="mx-auto flex min-h-[65vh] max-w-md flex-col justify-center">
-            <div className="mb-6 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                <LockKeyhole className="h-7 w-7 text-primary" />
+          <div className="mx-auto flex min-h-[65vh] max-w-sm flex-col justify-center">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">
+                <LockKeyhole className="h-8 w-8 text-primary" strokeWidth={1.75} />
               </div>
-              <h1 className="font-display text-2xl font-bold">Tu biblioteca, en un solo lugar</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <h1 className="type-title1">Tu biblioteca, en un solo lugar</h1>
+              <p className="mt-2 type-subhead text-muted-foreground">
                 Inicia sesión con tu cuenta de administrador para gestionar libros, packs y recursos.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-border bg-card p-6 card-shadow">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="drive-email">Correo de administrador</Label>
+                <Label htmlFor="drive-email" className="mb-1.5 block text-muted-foreground">Correo de administrador</Label>
                 <Input
                   id="drive-email"
                   type="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
                   autoComplete="username"
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  className="mt-1.5"
                   placeholder="tu@autopilotplan.com"
                 />
               </div>
               <div>
-                <Label htmlFor="drive-password">Contraseña</Label>
+                <Label htmlFor="drive-password" className="mb-1.5 block text-muted-foreground">Contraseña</Label>
                 <Input
                   id="drive-password"
                   type="password"
+                  enterKeyHint="done"
                   autoComplete="current-password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="mt-1.5"
                 />
               </div>
-              {loginError && <p role="alert" className="text-sm text-destructive">{loginError}</p>}
-              <Button type="submit" variant="hero" size="lg" className="w-full" disabled={submitting}>
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
+              {loginError && <p role="alert" className="type-footnote text-destructive">{loginError}</p>}
+              <Button type="submit" variant="hero" size="lg" className="w-full" disabled={submitting} onClick={() => void hapticTap()}>
+                {submitting && <Spinner size="sm" className="text-primary-foreground" />}
                 {submitting ? "Iniciando sesión…" : "Entrar en Drive"}
               </Button>
             </form>
           </div>
         ) : (
-          <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
-              <LockKeyhole className="h-7 w-7 text-destructive" />
-            </div>
-            <h1 className="font-display text-2xl font-bold">
-              {access === "denied" ? "Acceso solo para administradores" : "No se pudo comprobar el acceso"}
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {access === "denied"
-                ? "Esta cuenta no tiene permisos para gestionar Autopilot Drive."
-                : "Ha ocurrido un problema al verificar tu cuenta. Vuelve a intentarlo."}
-            </p>
-            {access === "denied" ? (
-              <Button variant="outline" className="mt-5" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4" />
-                Cambiar de cuenta
-              </Button>
-            ) : (
-              <Button variant="outline" className="mt-5" onClick={() => setRoleCheckAttempt((attempt) => attempt + 1)}>
-                Reintentar
-              </Button>
-            )}
+          <div className="mx-auto flex min-h-[60vh] max-w-md flex-col justify-center">
+            <EmptyState
+              icon={LockKeyhole}
+              title={access === "denied" ? "Acceso solo para administradores" : "No se pudo comprobar el acceso"}
+              description={
+                access === "denied"
+                  ? "Esta cuenta no tiene permisos para gestionar Autopilot Drive."
+                  : "Ha ocurrido un problema al verificar tu cuenta. Vuelve a intentarlo."
+              }
+              action={
+                access === "denied" ? (
+                  <Button variant="plain" onClick={() => { void hapticTap(); void handleSignOut(); }}>
+                    Cambiar de cuenta
+                  </Button>
+                ) : (
+                  <Button variant="plain" onClick={() => { void hapticTap(); setRoleCheckAttempt((attempt) => attempt + 1); }}>
+                    Reintentar
+                  </Button>
+                )
+              }
+            />
           </div>
         )}
       </main>

@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Save, RotateCcw, FileCode, Eye, Wand2 } from "lucide-react";
+import { Save, RotateCcw, FileCode, Eye, Wand2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 import { toast } from "sonner";
 import scanPreviewAsset from "@/assets/scan-preview.jpg.asset.json";
 import scanUserAsset from "@/assets/scan-example-user.jpg.asset.json";
@@ -409,27 +413,27 @@ export default function EmailTemplatesEditor() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-8">
       <div>
-        <h1 className="text-2xl font-display font-bold mb-1">Editor de Emails</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="type-title1 mb-1">Editor de Emails</h1>
+        <p className="type-subhead text-muted-foreground">
           Personaliza el asunto y el HTML de cada email transaccional. Si está desactivado, se usa el diseño por defecto.
         </p>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      <div className="space-y-6">
         <div>
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Plantilla</Label>
+          <Label>Plantilla</Label>
           <select
             value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-sm"
+            onChange={(e) => { void hapticTap(); setSelected(e.target.value); }}
+            className="field w-full mt-1.5"
           >
             {TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
           </select>
-          <div className="mt-3 space-y-1.5">
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Variables disponibles — haz clic para insertarlas en el editor</div>
-            <div className="flex flex-wrap gap-1.5">
+          <div className="mt-4 space-y-2">
+            <p className="type-footnote text-muted-foreground">Variables disponibles. Pulsa una para insertarla en el editor.</p>
+            <div className="flex flex-wrap gap-2">
               {current.placeholders.map(p => {
                 const raw = current.sampleData?.[p];
                 const val = raw === undefined || raw === null ? "—" : String(raw);
@@ -439,12 +443,12 @@ export default function EmailTemplatesEditor() {
                   <button
                     key={p}
                     type="button"
-                    onClick={() => insertVariable(p)}
+                    onClick={() => { void hapticTap(); insertVariable(p); }}
                     title={`Insertar {{${p}}} — valor actual: ${val}`}
-                    className="group inline-flex items-center gap-1 text-[11px] bg-muted/60 border border-border rounded-md overflow-hidden hover:border-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                    className="pressable inline-flex min-h-[44px] md:min-h-[32px] items-center gap-2 rounded-full bg-secondary px-3 type-footnote active:bg-accent"
                   >
-                    <code className="px-1.5 py-0.5 bg-muted text-foreground group-hover:bg-primary group-hover:text-primary-foreground">{`{{${p}}}`}</code>
-                    <span className="px-1.5 py-0.5 text-muted-foreground">{display}</span>
+                    <code className="text-primary">{`{{${p}}}`}</code>
+                    <span className="text-muted-foreground">{display}</span>
                   </button>
                 );
               })}
@@ -453,49 +457,43 @@ export default function EmailTemplatesEditor() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-10"><Loader2 className="w-5 h-5 animate-spin" /></div>
+          <div className="flex items-center justify-center py-10"><Spinner size="md" /></div>
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3 p-3 bg-muted/40 rounded-lg">
-              <div>
-                <div className="text-sm font-medium">Personalización activa</div>
-                <div className="text-xs text-muted-foreground">{hasOverride ? "Estás usando una versión personalizada" : "Sin personalizar (se usa el diseño por defecto)"}</div>
-              </div>
-              <Switch checked={enabled} onCheckedChange={setEnabled} />
+            <ListGroup>
+              <ListRow
+                title="Personalización activa"
+                subtitle={hasOverride ? "Estás usando una versión personalizada" : "Sin personalizar (se usa el diseño por defecto)"}
+                trailing={<Switch checked={enabled} onCheckedChange={(v) => { void hapticTap(); setEnabled(v); }} aria-label="Personalización activa" />}
+              />
+            </ListGroup>
+
+            <div>
+              <Label>Asunto</Label>
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1.5" placeholder="Asunto del email" />
             </div>
 
             <div>
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Asunto</Label>
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1" placeholder="Asunto del email" />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("html")}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${activeTab === "html" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >HTML</button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("css")}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${activeTab === "css" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  >CSS</button>
-                </div>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <Tabs value={activeTab} onValueChange={(v) => { void hapticTap(); setActiveTab(v as "html" | "css"); }}>
+                  <TabsList>
+                    <TabsTrigger value="html">HTML</TabsTrigger>
+                    <TabsTrigger value="css">CSS</TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={formatDocument} className="h-7 text-xs gap-1">
-                    <Wand2 className="w-3 h-3" /> Formatear
+                  <Button variant="plain" size="sm" onClick={formatDocument} className="gap-1">
+                    <Wand2 className="w-3.5 h-3.5" /> Formatear
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={loadDefault} className="h-7 text-xs gap-1">
-                    <FileCode className="w-3 h-3" /> Cargar por defecto
+                  <Button variant="plain" size="sm" onClick={loadDefault} className="gap-1">
+                    <FileCode className="w-3.5 h-3.5" /> Cargar por defecto
                   </Button>
                 </div>
               </div>
-              <div className="rounded-lg overflow-hidden border border-border bg-[#1E1E3F]">
+              <div className="rounded-2xl overflow-hidden bg-[#1E1E3F]">
                 {activeTab === "html" ? (
                   <Editor
-                    height="520px"
+                    height="min(520px, 60vh)"
                     defaultLanguage="html"
                     language="html"
                     value={html}
@@ -506,7 +504,7 @@ export default function EmailTemplatesEditor() {
                   />
                 ) : (
                   <Editor
-                    height="520px"
+                    height="min(520px, 60vh)"
                     defaultLanguage="css"
                     language="css"
                     value={css}
@@ -517,21 +515,21 @@ export default function EmailTemplatesEditor() {
                   />
                 )}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5">
+              <p className="type-footnote text-muted-foreground mt-2 px-1">
                 Editor estilo VSCode. El CSS se reinyecta como <code>style="..."</code> al guardar para máxima compatibilidad (Gmail, Outlook). Al cargar se formatea y se colapsa todo automáticamente.
               </p>
             </div>
 
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button onClick={save} disabled={saving} className="gap-2">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? <Spinner size="sm" className="text-primary-foreground" /> : <Save className="w-4 h-4" />}
                 Guardar
               </Button>
-              <Button variant="outline" onClick={preview} className="gap-2">
+              <Button variant="tinted" onClick={preview} className="gap-2">
                 <Eye className="w-4 h-4" /> Previsualizar
               </Button>
               {hasOverride && (
-                <Button variant="outline" onClick={resetToDefault} className="gap-2 text-destructive">
+                <Button variant="plain" onClick={resetToDefault} className="gap-2 text-destructive">
                   <RotateCcw className="w-4 h-4" /> Restaurar por defecto
                 </Button>
               )}
@@ -539,7 +537,6 @@ export default function EmailTemplatesEditor() {
           </>
         )}
       </div>
-
     </div>
   );
 }
