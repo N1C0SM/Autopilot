@@ -1,14 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { FileQuestion, ChevronLeft, ImageOff } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
-import { hapticTap } from "@/lib/native";
+import { Calendar, Clock, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { EVIDENCE_LABEL, LEVEL_LABEL, categoryBySlug, extractToc, slugifyHeading, type Evidence, type Level, type Reference } from "@/lib/academy";
 
 interface Post {
   id: string;
@@ -20,63 +17,65 @@ interface Post {
   seo_title: string | null;
   seo_description: string | null;
   published_at: string | null;
+  updated_at: string | null;
   reading_minutes: number | null;
   author_name: string | null;
+  category: string | null;
+  level: string | null;
+  evidence_level: string | null;
+  order_index: number | null;
+  references: unknown;
 }
+type Lite = Pick<Post, "slug" | "title" | "level" | "order_index" | "category">;
 
-/** Image from the article body, with a composed gap if it fails to load. */
-const BodyImage = ({ src, alt }: { src?: string; alt?: string }) => {
-  const [failed, setFailed] = useState(false);
-  if (!src || failed) {
-    return <span className="my-8 flex aspect-video items-center justify-center rounded-2xl bg-secondary"><ImageOff className="h-8 w-8 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" /></span>;
-  }
-  return <img src={src} alt={alt ?? ""} loading="lazy" decoding="async" onError={() => setFailed(true)} className="rounded-2xl" />;
-};
+const textOf = (children: React.ReactNode): string =>
+  Array.isArray(children) ? children.map(textOf).join("") : typeof children === "string" ? children : (children as { props?: { children?: React.ReactNode } })?.props?.children ? textOf((children as { props: { children: React.ReactNode } }).props.children) : "";
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [post, setPost] = useState<Post | null>(null);
+  const [siblings, setSiblings] = useState<Lite[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [coverFailed, setCoverFailed] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
+    setLoading(true);
     (async () => {
-      const { data } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .eq("slug", slug)
-        .eq("published", true)
-        .maybeSingle();
+      const { data } = await supabase.from("blog_posts").select("*").eq("slug", slug).eq("published", true).maybeSingle();
       if (!data) { setNotFound(true); setLoading(false); return; }
       setPost(data as Post);
+      if (data.category) {
+        const { data: sib } = await supabase
+          .from("blog_posts")
+          .select("slug, title, level, order_index, category")
+          .eq("published", true)
+          .eq("category", data.category)
+          .order("order_index", { ascending: true });
+        setSiblings((sib || []) as Lite[]);
+      }
       setLoading(false);
     })();
   }, [slug]);
 
+  const toc = useMemo(() => extractToc(post?.body_markdown || ""), [post]);
+  const refs = (Array.isArray(post?.references) ? post!.references : []) as Reference[];
+  const idx = siblings.findIndex((s) => s.slug === post?.slug);
+  const prev = idx > 0 ? siblings[idx - 1] : null;
+  const next = idx >= 0 && idx < siblings.length - 1 ? siblings[idx + 1] : null;
+  const related = siblings.filter((s) => s.slug !== post?.slug).slice(0, 3);
+
   if (loading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-background">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>;
   }
 
   if (notFound || !post) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-background px-4">
-        <Helmet>
-          <title>Artículo no encontrado — Autopilot</title>
-          <meta name="robots" content="noindex" />
-        </Helmet>
-        <EmptyState
-          icon={FileQuestion}
-          title="Este artículo no existe"
-          description="Puede que se haya movido o que el enlace esté mal."
-          action={<Button variant="plain" onClick={() => { void hapticTap(); navigate("/blog"); }}>Volver al blog</Button>}
-        />
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+        <Helmet><title>Artículo no encontrado — Autopilot</title><meta name="robots" content="noindex" /></Helmet>
+        <p className="text-muted-foreground mb-4">Este artículo no existe.</p>
+        <button onClick={() => navigate("/blog")} className="text-primary hover:underline text-sm">← Volver a la Academia</button>
       </div>
     );
   }
@@ -84,6 +83,12 @@ const BlogPost = () => {
   const url = `https://autopilotplan.com/blog/${post.slug}`;
   const title = post.seo_title || post.title;
   const desc = post.seo_description || post.excerpt || "";
+  const cat = categoryBySlug(post.category);
+  const ev = post.evidence_level ? EVIDENCE_LABEL[post.evidence_level as Evidence] : null;
+
+  const H = (Tag: "h2" | "h3") => ({ children }: { children?: React.ReactNode }) => (
+    <Tag id={slugifyHeading(textOf(children).replace(/[*_`]/g, ""))} className="scroll-mt-24">{children}</Tag>
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -96,69 +101,158 @@ const BlogPost = () => {
         <meta property="og:url" content={url} />
         <meta property="og:type" content="article" />
         {post.cover_url && <meta property="og:image" content={post.cover_url} />}
-        {post.published_at && <meta property="article:published_time" content={post.published_at} />}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={title} />
-        <meta name="twitter:description" content={desc} />
-        {post.cover_url && <meta name="twitter:image" content={post.cover_url} />}
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "Article",
+          "@type": ["Article", "LearningResource"],
           headline: post.title,
           description: desc,
-          image: post.cover_url || undefined,
+          inLanguage: "es-ES",
+          isAccessibleForFree: true,
+          educationalLevel: post.level ? LEVEL_LABEL[post.level as Level] : undefined,
+          about: cat?.name,
           datePublished: post.published_at,
+          dateModified: post.updated_at || post.published_at,
           author: { "@type": "Person", name: post.author_name || "Autopilot" },
           publisher: { "@type": "Organization", name: "Autopilot", url: "https://autopilotplan.com" },
           mainEntityOfPage: { "@type": "WebPage", "@id": url },
+          citation: refs.map((r) => ({ "@type": "ScholarlyArticle", name: r.title, author: r.authors, datePublished: String(r.year), sameAs: r.doi ? `https://doi.org/${r.doi}` : r.url })),
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Academia", item: "https://autopilotplan.com/blog" },
+            ...(cat ? [{ "@type": "ListItem", position: 2, name: cat.name, item: "https://autopilotplan.com/blog" }] : []),
+            { "@type": "ListItem", position: cat ? 3 : 2, name: post.title, item: url },
+          ],
         })}</script>
       </Helmet>
 
-      <nav className="app-chrome sep-b sticky top-0 z-50 pt-safe">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
-          <Link to="/blog" onClick={() => void hapticTap()} className="-ml-2 flex min-h-[44px] items-center gap-0.5 pr-2 type-body text-primary transition-opacity active:opacity-60">
-            <ChevronLeft className="h-6 w-6" strokeWidth={2.25} /> Blog
-          </Link>
-          <Link to="/scan" className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
-            Diagnóstico gratis
-          </Link>
+      <nav className="app-chrome border-b sticky top-0 z-50">
+        <div className="container mx-auto flex items-center justify-between h-16 px-4">
+          <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
+          <Link to="/onboarding" className="text-sm text-primary font-medium hover:underline">Crear mi rutina gratis →</Link>
         </div>
       </nav>
 
-      <article className="container mx-auto max-w-3xl px-4 pb-safe pt-8 sm:pt-12">
-        <header className="mb-8">
-          <h1 className="type-large-title sm:text-[48px] sm:leading-[52px]">{post.title}</h1>
-          <p className="mt-3 type-footnote text-muted-foreground">
-            {[
-              post.author_name ? `Por ${post.author_name}` : "",
-              post.published_at ? new Date(post.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "",
-              post.reading_minutes ? `${post.reading_minutes} min` : "",
-            ].filter(Boolean).join(" · ")}
-          </p>
-        </header>
+      <div className="container mx-auto max-w-6xl px-4 py-12 sm:py-16 lg:grid lg:grid-cols-[1fr_220px] lg:gap-16">
+        <article className="max-w-3xl min-w-0">
+          <nav aria-label="Migas de pan" className="text-xs text-muted-foreground mb-8 flex items-center gap-1.5 flex-wrap">
+            <Link to="/blog" className="inline-flex items-center gap-1 hover:text-foreground"><ArrowLeft className="w-3 h-3" /> Academia</Link>
+            {cat && <><span>/</span><span>{cat.name}</span></>}
+          </nav>
 
-        {post.cover_url && (
-          <div className="mb-10 overflow-hidden rounded-2xl">
-            {coverFailed
-              ? <div className="flex aspect-video items-center justify-center bg-secondary"><ImageOff className="h-8 w-8 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" /></div>
-              : <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} onError={() => setCoverFailed(true)} className="h-auto w-full object-cover" />}
+          <header className="mb-10">
+            <div className="flex flex-wrap gap-2 mb-5">
+              {post.level && <span className="text-xs px-3 py-1 rounded-full bg-secondary text-foreground">{LEVEL_LABEL[post.level as Level]}</span>}
+              {ev && <span title={ev.hint} className="text-xs px-3 py-1 rounded-full border border-primary/40 text-primary">{ev.label}</span>}
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-bold font-display tracking-tight leading-[1.1] mb-5">{post.title}</h1>
+            {post.excerpt && <p className="text-lg text-muted-foreground leading-relaxed mb-5">{post.excerpt}</p>}
+            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+              {post.author_name && <span>Por {post.author_name}</span>}
+              {post.published_at && (
+                <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />
+                  {new Date(post.updated_at || post.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                </span>
+              )}
+              {post.reading_minutes ? <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {post.reading_minutes} min de lectura</span> : null}
+            </div>
+          </header>
+
+          {toc.length > 1 && (
+            <details className="lg:hidden mb-10 rounded-2xl bg-secondary/50 p-4">
+              <summary className="text-sm font-medium cursor-pointer">Contenido</summary>
+              <ol className="mt-3 space-y-2 text-sm">
+                {toc.map((t) => <li key={t.id} className={t.depth === 3 ? "pl-4" : ""}><a href={`#${t.id}`} className="text-muted-foreground hover:text-foreground">{t.text}</a></li>)}
+              </ol>
+            </details>
+          )}
+
+          {post.cover_url && (
+            <div className="mb-10 rounded-3xl overflow-hidden">
+              <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} className="w-full h-auto object-cover" />
+            </div>
+          )}
+
+          <div className="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-headings:tracking-tight prose-p:leading-relaxed prose-a:text-primary prose-strong:text-foreground">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ h2: H("h2"), h3: H("h3") }}>{post.body_markdown}</ReactMarkdown>
           </div>
+
+          {refs.length > 0 && (
+            <section id="referencias" className="mt-16 pt-8 border-t border-border">
+              <h2 className="text-xl font-semibold font-display mb-5">Referencias</h2>
+              <ol className="space-y-4 text-sm text-muted-foreground list-decimal pl-5">
+                {refs.map((r, i) => (
+                  <li key={i} className="leading-relaxed">
+                    {r.authors} ({r.year}). <span className="text-foreground">{r.title}</span>.{r.journal ? <em> {r.journal}.</em> : null}{" "}
+                    {r.doi ? <a className="text-primary hover:underline break-all" href={`https://doi.org/${r.doi}`} target="_blank" rel="noreferrer">doi:{r.doi}</a>
+                      : r.url ? <a className="text-primary hover:underline break-all" href={r.url} target="_blank" rel="noreferrer">Enlace</a> : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {(prev || next) && (
+            <nav aria-label="Navegación entre artículos" className="mt-16 grid sm:grid-cols-2 gap-3">
+              {prev ? (
+                <Link to={`/blog/${prev.slug}`} className="rounded-2xl bg-secondary/50 p-5 hover:bg-secondary transition-colors">
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Anterior</span>
+                  <p className="font-medium mt-1">{prev.title}</p>
+                </Link>
+              ) : <span />}
+              {next && (
+                <Link to={`/blog/${next.slug}`} className="rounded-2xl bg-secondary/50 p-5 hover:bg-secondary transition-colors sm:text-right">
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">Siguiente <ArrowRight className="w-3 h-3" /></span>
+                  <p className="font-medium mt-1">{next.title}</p>
+                </Link>
+              )}
+            </nav>
+          )}
+
+          {related.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-xl font-semibold font-display mb-4">Más sobre {cat?.name.toLowerCase()}</h2>
+              <ul className="divide-y divide-border border-y border-border">
+                {related.map((r) => (
+                  <li key={r.slug}>
+                    <Link to={`/blog/${r.slug}`} className="flex items-center justify-between gap-3 py-4 hover:text-primary transition-colors">
+                      <span>{r.title}</span>
+                      {r.level && <span className="text-xs text-muted-foreground shrink-0">{LEVEL_LABEL[r.level as Level]}</span>}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <div className="mt-16 p-6 sm:p-8 bg-card border border-border rounded-3xl text-center">
+            <h3 className="text-xl sm:text-2xl font-bold font-display mb-3">Pon esto en práctica</h3>
+            <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">Crea tu rutina gratis y registra tus entrenamientos. Sin tarjeta.</p>
+            <Link to="/onboarding" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+              Crear mi rutina gratis →
+            </Link>
+          </div>
+        </article>
+
+        {toc.length > 1 && (
+          <aside className="hidden lg:block">
+            <div className="sticky top-24">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Contenido</p>
+              <ol className="space-y-2 text-sm border-l border-border">
+                {toc.map((t) => (
+                  <li key={t.id} className={t.depth === 3 ? "pl-7" : "pl-4"}>
+                    <a href={`#${t.id}`} className="text-muted-foreground hover:text-foreground transition-colors">{t.text}</a>
+                  </li>
+                ))}
+                {refs.length > 0 && <li className="pl-4"><a href="#referencias" className="text-muted-foreground hover:text-foreground">Referencias</a></li>}
+              </ol>
+            </div>
+          </aside>
         )}
-
-        <div className="prose prose-invert prose-lg max-w-none prose-a:text-primary prose-a:no-underline prose-strong:text-foreground">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ src, alt }) => <BodyImage src={src} alt={alt} /> }}>{post.body_markdown}</ReactMarkdown>
-        </div>
-
-        <aside className="mx-auto mt-16 max-w-sm text-center">
-          <h3 className="type-title2">Diagnóstico físico con IA en menos de un minuto</h3>
-          <p className="mt-2 type-subhead text-muted-foreground">
-            Sube una foto y la IA te dirá por dónde empezar. Gratis, sin tarjeta.
-          </p>
-          <Button asChild variant="hero" size="lg" className="mt-6 w-full">
-            <Link to="/scan" onClick={() => void hapticTap()}>Hacer mi diagnóstico gratis</Link>
-          </Button>
-        </aside>
-      </article>
+      </div>
     </div>
   );
 };

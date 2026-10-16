@@ -36,13 +36,21 @@ export type Database = {
         Row: {
           author_name: string | null
           body_markdown: string
+          category: string | null
+          cover_alt: string | null
           cover_url: string | null
           created_at: string
+          evidence_level: string | null
           excerpt: string | null
           id: string
+          level: string | null
+          order_index: number | null
           published: boolean
           published_at: string | null
           reading_minutes: number | null
+          references: Json
+          related_slugs: string[]
+          review_status: string
           seo_description: string | null
           seo_title: string | null
           slug: string
@@ -52,13 +60,21 @@ export type Database = {
         Insert: {
           author_name?: string | null
           body_markdown?: string
+          category?: string | null
+          cover_alt?: string | null
           cover_url?: string | null
           created_at?: string
+          evidence_level?: string | null
           excerpt?: string | null
           id?: string
+          level?: string | null
+          order_index?: number | null
           published?: boolean
           published_at?: string | null
           reading_minutes?: number | null
+          references?: Json
+          related_slugs?: string[]
+          review_status?: string
           seo_description?: string | null
           seo_title?: string | null
           slug: string
@@ -68,13 +84,21 @@ export type Database = {
         Update: {
           author_name?: string | null
           body_markdown?: string
+          category?: string | null
+          cover_alt?: string | null
           cover_url?: string | null
           created_at?: string
+          evidence_level?: string | null
           excerpt?: string | null
           id?: string
+          level?: string | null
+          order_index?: number | null
           published?: boolean
           published_at?: string | null
           reading_minutes?: number | null
+          references?: Json
+          related_slugs?: string[]
+          review_status?: string
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
@@ -1133,6 +1157,30 @@ export type Database = {
           referrer_user_id?: string
           reward_applied?: boolean
           status?: string
+        }
+        Relationships: []
+      }
+      scan_card_uploads: {
+        Row: {
+          anon_session_id: string | null
+          created_at: string
+          id: string
+          storage_path: string
+          user_id: string | null
+        }
+        Insert: {
+          anon_session_id?: string | null
+          created_at?: string
+          id?: string
+          storage_path: string
+          user_id?: string | null
+        }
+        Update: {
+          anon_session_id?: string | null
+          created_at?: string
+          id?: string
+          storage_path?: string
+          user_id?: string | null
         }
         Relationships: []
       }
