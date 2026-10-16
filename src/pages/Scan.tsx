@@ -288,7 +288,7 @@ const ScoreCard = ({ label, value, highlight }: { label: string; value: number; 
   </div>
 );
 
-const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
+const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: () => void } = {}) => {
   const plans = usePlanAvailability();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -807,6 +807,18 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
     }
   };
 
+  // «Ver mi plan» abre la pestaña Plan con la rutina semanal. Dentro del Dashboard
+  // cambia de pestaña al momento; fuera, deja la pestaña elegida antes de navegar.
+  const openPlan = () => {
+    void hapticTap();
+    if (onOpenPlan) {
+      onOpenPlan();
+      return;
+    }
+    try { sessionStorage.setItem("autopilot_section", "training"); } catch { /* sin almacenamiento */ }
+    navigate("/dashboard");
+  };
+
   const applyScanToPlan = async (r: Result) => {
     if (!user || planApplyState === "applying") return;
     setPlanApplyState("applying");
@@ -830,6 +842,12 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
       case "needs_profile":
         setPlanApplyState("idle");
         toast.error("Te falta completar tu perfil para poder aplicar el scan. Complétalo en Ajustes.");
+        break;
+      case "session_expired":
+        setPlanApplyState("idle");
+        toast.error("Tu sesión ha caducado. Inicia sesión de nuevo para aplicar el scan.");
+        await supabase.auth.signOut({ scope: "local" });
+        navigate("/login");
         break;
       case "kept":
         setPlanApplyState("idle");
@@ -1758,7 +1776,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                           <div className="font-semibold text-primary">Plan actualizado correctamente</div>
                           <div className="type-caption1 text-muted-foreground">Tu nuevo entrenamiento y nutrición ya están en tu cuenta.</div>
                         </div>
-                        <Button size="default" variant="hero" onClick={() => { void hapticTap(); navigate("/dashboard"); }}>
+                        <Button size="default" variant="hero" onClick={openPlan}>
                           Ver mi plan
                         </Button>
                       </>
@@ -2417,7 +2435,7 @@ const Scan = ({ inline = false }: { inline?: boolean } = {}) => {
                     </Button>
                   )}
                   {routeUserId && (
-                    <Button variant="secondary" size="xl" onClick={() => navigate("/dashboard")}>
+                    <Button variant="secondary" size="xl" onClick={openPlan}>
                       Ver mi plan
                       <ArrowRight className="w-4 h-4" />
                     </Button>

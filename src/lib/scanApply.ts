@@ -1,3 +1,4 @@
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import { getConsumerPlan, type BillingProfile } from "@/lib/entitlements";
 
@@ -31,7 +32,10 @@ export function buildScanPlanUpdates(r: ScanInferences): TablesUpdate<"onboardin
       r.inferred_focus === "gimnasio" ? "Gimnasio" :
       r.inferred_focus === "calistenia" ? "Calistenia" : "Mixto";
   }
-  if (typeof r.inferred_intensity === "number") updates.intensity_level = r.inferred_intensity;
+  // intensity_level es un entero en la base de datos: 7,5 haría fallar el guardado.
+  if (typeof r.inferred_intensity === "number" && Number.isFinite(r.inferred_intensity)) {
+    updates.intensity_level = Math.round(Math.min(10, Math.max(1, r.inferred_intensity)));
+  }
   if (r.inferred_specific_goals?.length) {
     updates.specific_goal = r.inferred_specific_goals.join(", ");
   }
@@ -57,10 +61,30 @@ export type ScanApplyOutcome =
   | "needs_profile"
   /** El servidor conservó la rutina (cuenta Free): se deshacen los cambios. */
   | "kept"
+  /** La sesión ya no existe en el servidor (p. ej. se cerró en otro dispositivo): hay que volver a entrar. */
+  | "session_expired"
   /** Algo falló: se deshacen los cambios y el plan queda como estaba. */
   | "failed";
 
 const functionStatus = (error: unknown) => (error as { context?: Response } | null)?.context?.status;
+
+/** generate-plan responde 500 con «Auth error: …» cuando la sesión ya no existe. */
+async function isAuthFailure(error: unknown) {
+  const context = (error as { context?: Response } | null)?.context;
+  if (!context || typeof context.clone !== "function") return false;
+  const text = await context.clone().text().catch(() => "");
+  return /Auth error|Not authenticated|No authorization header/i.test(text);
+}
+
+/** Deja en consola el paso que falló y el mensaje del servidor, para poder diagnosticarlo. */
+async function logFailure(step: string, error: unknown) {
+  let detail: unknown = error;
+  const context = (error as { context?: Response } | null)?.context;
+  if (context && typeof context.clone === "function") {
+    detail = await context.clone().text().catch(() => error);
+  }
+  console.error(`applyScanPlan failed at ${step}`, detail);
+}
 
 /**
  * Aplica las inferencias aprobadas al onboarding y regenera el plan. Si el
@@ -72,11 +96,29 @@ export async function applyScanPlan(client: Client, userId: string, r: ScanInfer
   const keys = Object.keys(updates) as (keyof TablesUpdate<"onboarding">)[];
   if (keys.length === 0) return "no_changes";
 
+  // generate-plan valida la sesión contra el servidor; la base de datos solo mira el token.
+  // Si la sesión se cerró en otro sitio, se detecta aquí, antes de escribir nada.
+  const { error: sessionError } = await client.auth.getUser();
+  if (sessionError) {
+    if (isAuthRetryableFetchError(sessionError)) {
+      await logFailure("session (network)", sessionError);
+      return "failed";
+    }
+    const { error: refreshError } = await client.auth.refreshSession();
+    if (refreshError) {
+      await logFailure("session", sessionError);
+      return isAuthRetryableFetchError(refreshError) ? "failed" : "session_expired";
+    }
+  }
+
   const [{ data: onboarding, error: onboardingError }, { data: profile }] = await Promise.all([
     client.from("onboarding").select("*").eq("user_id", userId).maybeSingle(),
     client.from("profiles").select("plan_status").eq("user_id", userId).maybeSingle(),
   ]);
-  if (onboardingError) return "failed";
+  if (onboardingError) {
+    await logFailure("read onboarding", onboardingError);
+    return "failed";
+  }
   if (!onboarding) return "needs_profile";
 
   const previous: TablesUpdate<"onboarding"> = {};
@@ -97,10 +139,14 @@ export async function applyScanPlan(client: Client, userId: string, r: ScanInfer
 
   const { data: updated, error: updateError } = await client
     .from("onboarding").update(updates).eq("user_id", userId).select("id");
-  if (updateError || !updated?.length) return "failed";
+  if (updateError || !updated?.length) {
+    await logFailure("update onboarding", updateError ?? "no row updated");
+    return "failed";
+  }
 
   const { error: statusError } = await client.from("profiles").update({ plan_status: "plan_pending" }).eq("user_id", userId);
   if (statusError) {
+    await logFailure("set plan_pending", statusError);
     await restore();
     return "failed";
   }
@@ -109,8 +155,9 @@ export async function applyScanPlan(client: Client, userId: string, r: ScanInfer
   if (error) {
     // Coach: el plan lo prepara su entrenador; el scan y los datos quedan para él.
     if (functionStatus(error) === 403) return "sent_to_coach";
+    await logFailure("generate-plan", error);
     await restore();
-    return "failed";
+    return (await isAuthFailure(error)) ? "session_expired" : "failed";
   }
   if ((data as { existing?: boolean } | null)?.existing) {
     await restore();

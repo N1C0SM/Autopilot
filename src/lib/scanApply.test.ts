@@ -1,3 +1,4 @@
+import { AuthRetryableFetchError, AuthSessionMissingError } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
 import { applyScanPlan, buildScanPlanUpdates, canApplyScanToPlan, hasScanInferences } from "./scanApply";
 
@@ -37,6 +38,12 @@ describe("scan plan updates (solo se aplica lo que el usuario aprueba)", () => {
     });
   });
 
+  it("guarda la intensidad como entero entre 1 y 10", () => {
+    expect(buildScanPlanUpdates({ inferred_intensity: 7.5 })).toEqual({ intensity_level: 8 });
+    expect(buildScanPlanUpdates({ inferred_intensity: 14 })).toEqual({ intensity_level: 10 });
+    expect(buildScanPlanUpdates({ inferred_intensity: Number.NaN })).toEqual({});
+  });
+
   it("ignora una intensidad que no sea un número", () => {
     expect(buildScanPlanUpdates({ inferred_goal: "gain_muscle", inferred_intensity: undefined })).toEqual({
       goal: "gain_muscle",
@@ -66,6 +73,8 @@ function fakeClient(opts: {
   onboarding?: Record<string, unknown> | null;
   invoke?: Invoke;
   updatedRows?: number;
+  sessionError?: unknown;
+  refreshError?: unknown;
 }) {
   const writes: { table: string; values: Record<string, unknown> }[] = [];
   const onboarding = opts.onboarding === undefined
@@ -90,6 +99,10 @@ function fakeClient(opts: {
       };
     },
     functions: { invoke },
+    auth: {
+      getUser: async () => ({ data: { user: null }, error: opts.sessionError ?? null }),
+      refreshSession: async () => ({ data: { session: null }, error: opts.refreshError ?? null }),
+    },
   };
   return { client: client as unknown as Parameters<typeof applyScanPlan>[0], writes, invoke };
 }
@@ -143,6 +156,32 @@ describe("aplicar un scan al plan", () => {
     const { client, writes } = fakeClient({ invoke: async () => ({ data: null, error: { context: new Response(null, { status: 403 }) } }) });
     expect(await applyScanPlan(client, "u1", scan)).toBe("sent_to_coach");
     expect(writes).toHaveLength(2);
+  });
+
+  it("pide volver a entrar si la sesión ya no existe, sin escribir nada", async () => {
+    const gone = new AuthSessionMissingError();
+    const { client, writes, invoke } = fakeClient({ sessionError: gone, refreshError: gone });
+    expect(await applyScanPlan(client, "u1", scan)).toBe("session_expired");
+    expect(writes).toEqual([]);
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("sin conexión no da la sesión por caducada", async () => {
+    const offline = new AuthRetryableFetchError("Failed to fetch", 0);
+    const { client, writes } = fakeClient({ sessionError: offline });
+    expect(await applyScanPlan(client, "u1", scan)).toBe("failed");
+    expect(writes).toEqual([]);
+  });
+
+  it("si el servidor rechaza la sesión, deshace los cambios y pide volver a entrar", async () => {
+    const { client, writes } = fakeClient({
+      invoke: async () => ({ data: null, error: { context: new Response(JSON.stringify({ error: "Auth error: Auth session missing!" }), { status: 500 }) } }),
+    });
+    expect(await applyScanPlan(client, "u1", scan)).toBe("session_expired");
+    expect(writes.slice(2)).toEqual([
+      { table: "onboarding", values: restored },
+      { table: "profiles", values: { plan_status: "plan_ready" } },
+    ]);
   });
 
   it("falla sin llamar al servidor si no se pudo guardar el onboarding", async () => {

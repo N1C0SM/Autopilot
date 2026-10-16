@@ -659,7 +659,14 @@ const Dashboard = () => {
               <PRsList userId={user.id} />
             </TabsContent>
             <TabsContent value="scan" tabIndex={-1} className="mt-0">
-              <Scan inline />
+              <Scan
+                inline
+                onOpenPlan={() => {
+                  setAutoStartWorkout(false);
+                  setTrainingView("plan");
+                  setSection("training");
+                }}
+              />
             </TabsContent>
           </Suspense>
         </Tabs>
