@@ -1,4 +1,5 @@
 import { Eye, EyeOff, Gauge } from "lucide-react";
+import { FindingRow } from "@/components/scan/ScanResultParts";
 
 type Props = {
   hasFront: boolean;
@@ -21,45 +22,49 @@ export default function ScanCoverageCard({ hasFront, hasBack, confidence, photoQ
   const tone = pct === null ? "text-muted-foreground" : pct >= 70 ? "text-success" : pct >= 45 ? "text-primary" : "text-destructive";
 
   return (
-    <section className="max-w-3xl mx-auto mb-8 px-4 space-y-6">
-      <div className="flex items-start gap-4">
-        <Eye className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-        <div className="min-w-0">
-          <div className="type-headline">Vistas analizadas</div>
-          <div className="type-subhead text-muted-foreground">{views.length ? views.join(" + ") : "Ninguna"}</div>
-        </div>
-      </div>
-      <div className="flex items-start gap-4">
-        <Gauge className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-        <div className="min-w-0">
-          <div className="type-headline">Nivel de confianza</div>
-          <div className="type-subhead text-muted-foreground">
-            {level} {pct !== null && <span className={`${tone} tabular-nums`}>· {pct}%</span>}
-          </div>
-        </div>
-      </div>
-      <div className="flex items-start gap-4">
-        <EyeOff className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-        <div className="min-w-0">
-          <div className="type-headline">Sin valorar</div>
-          <div className="type-subhead text-muted-foreground">
-            {notEvaluated ?? "Nada relevante: tienes las dos vistas"}
-          </div>
-        </div>
+    <section>
+      <h2 className="type-title2">Cobertura del análisis</h2>
+      <div className="mt-5 space-y-6">
+        <FindingRow
+          icon={Eye}
+          iconClassName="text-muted-foreground"
+          title="Vistas analizadas"
+          description={views.length ? views.join(" + ") : "Ninguna"}
+        />
+        <FindingRow
+          icon={Gauge}
+          iconClassName="text-muted-foreground"
+          title="Nivel de confianza"
+          description={
+            <>
+              {level} {pct !== null && <span className={`${tone} tabular-nums`}>· {pct}%</span>}
+            </>
+          }
+        />
+        <FindingRow
+          icon={EyeOff}
+          iconClassName="text-muted-foreground"
+          title="Sin valorar"
+          description={
+            <>
+              {notEvaluated ?? "Nada relevante: tienes las dos vistas"}
+              {notEvaluated && (
+                <span className="mt-1.5 block type-footnote">
+                  {hasBack
+                    ? "Vista frontal no disponible: sube también la foto de delante para valorar pecho, abdomen y cuádriceps."
+                    : "Vista trasera no disponible: sube también la foto de atrás para valorar espalda, glúteos e isquios."}
+                </span>
+              )}
+            </>
+          }
+        />
       </div>
       {photoQualityNotes && photoQualityNotes.length > 0 && (
-        <ul className="space-y-1 type-footnote text-muted-foreground">
+        <ul className="mt-4 space-y-1 pl-14 type-footnote text-muted-foreground">
           {photoQualityNotes.slice(0, 3).map((n, i) => (
-            <li key={i}>· {n}</li>
+            <li key={i}>{n}</li>
           ))}
         </ul>
-      )}
-      {notEvaluated && (
-        <p className="type-footnote text-muted-foreground">
-          {hasBack
-            ? "Vista frontal no disponible: sube también la foto de delante para valorar pecho, abdomen y cuádriceps."
-            : "Vista trasera no disponible: sube también la foto de atrás para valorar espalda, glúteos e isquios."}
-        </p>
       )}
     </section>
   );

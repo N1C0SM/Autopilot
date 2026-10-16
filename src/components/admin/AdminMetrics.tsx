@@ -1,10 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { RefreshCw, Trash2, AlertCircle } from "lucide-react";
+import { RefreshCw, Trash2, AlertCircle, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { HeroFigure, StatRow } from "@/components/admin/AdminStats";
 import { hapticTap, hapticNotify } from "@/lib/native";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import type { Profile } from "@/pages/Admin";
 import type { ConsumerPlan } from "@/lib/entitlements";
@@ -33,6 +47,7 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
   const [data, setData] = useState<MetricsData | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const load = useCallback(async (profiles = users) => {
     setLoading(true);
@@ -101,7 +116,6 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
   };
 
   const resetMetrics = async () => {
-    if (!confirm("¿Resetear TODAS las métricas a 0? Se borran scans, leads, logs de emails, entrenos, pesos, PRs, fotos, chat, notificaciones y recordatorios. Las cuentas NO se borran. Irreversible.")) return;
     setResetting(true);
     try {
       const { data, error } = await supabase.functions.invoke("admin-reset-metrics");
@@ -117,22 +131,22 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
   };
 
   if (!loading && !data && loadError) {
-    return <div className="space-y-3 py-12 text-center"><p className="type-body">No se pudieron cargar las métricas.</p><Button variant="tinted" onClick={refresh}>Reintentar</Button></div>;
+    return (
+      <EmptyState
+        icon={AlertCircle}
+        title="Métricas no disponibles"
+        description="No se pudieron cargar las métricas."
+        action={<Button size="lg" onClick={() => { void hapticTap(); void refresh(); }}>Reintentar</Button>}
+      />
+    );
   }
   if (loading || !data) {
     return <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>;
   }
 
-  const kpis = [
-    { label: "Estimación mensual", value: fmtEur(data.estimatedMonthly), hint: `${fmtEur(data.estimatedPerPlan)} por plan activo` },
-    { label: "Plus y Coach activos", value: data.activePlans, hint: `${pct(data.activePlans, data.total)}% del total` },
-    { label: "Clientes", value: data.total, hint: `+${data.newUsers7} esta semana` },
-    { label: "Activos 7 días", value: `${pct(data.active7, data.total)}%`, hint: `${data.active7} entrenando` },
-  ];
-
   const plans: { key: ConsumerPlan; name: string; price: string; tone: string }[] = [
-    { key: "free", name: "Free", price: "0 €", tone: "bg-muted-foreground/40" },
-    { key: "plus", name: "Plus", price: fmtEur(PLAN_PRICE.plus), tone: "bg-primary/60" },
+    { key: "free", name: "Free", price: "0 €", tone: "bg-muted-foreground" },
+    { key: "plus", name: "Plus", price: fmtEur(PLAN_PRICE.plus), tone: "bg-foreground" },
     { key: "coach", name: "Coach", price: fmtEur(PLAN_PRICE.coach), tone: "bg-primary" },
   ];
 
@@ -150,112 +164,171 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
     { label: "Plus y Coach", value: data.activePlans },
   ];
 
+  const hasDailyActivity = data.daily.some((day) => day.entrenos > 0 || day.registros > 0);
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="sr-only">Métricas</h2>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void refresh(); }} aria-label="Actualizar">
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => { void hapticNotify("warning"); void resetMetrics(); }} disabled={resetting} aria-label="Resetear métricas" className="text-muted-foreground hover:text-destructive">
-            <Trash2 className="w-4 h-4" />
-          </Button>
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="type-subhead text-muted-foreground">Planes y actividad de los clientes.</p>
+          <div className="-mr-3 flex shrink-0 items-center">
+            <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void refresh(); }} aria-label="Actualizar" className="text-primary [&_svg]:size-5">
+              <RefreshCw />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { void hapticNotify("warning"); setConfirmingReset(true); }}
+              disabled={resetting}
+              aria-label="Resetear métricas"
+              className="text-destructive [&_svg]:size-5"
+            >
+              <Trash2 />
+            </Button>
+          </div>
         </div>
+        {loadError && <p role="alert" className="type-footnote text-destructive">No se pudieron actualizar los datos. Se muestra la última carga correcta.</p>}
       </div>
 
-      {loadError && <p role="alert" className="type-footnote text-destructive">No se pudieron actualizar los datos. Se muestra la última carga correcta.</p>}
-      <p className="type-footnote text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {kpis.map((k) => (
-          <Tile key={k.label}>
-            <Label>{k.label}</Label>
-            <div className="mt-2 font-rounded text-3xl font-bold tabular-nums">{k.value}</div>
-            <div className="mt-1 type-footnote text-muted-foreground">{k.hint}</div>
-          </Tile>
-        ))}
-      </div>
-
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
-        <Tile>
-          <Label>Clientes por plan</Label>
-          <div className="mt-4 space-y-4">
-            {plans.map((p) => {
-              const c = data.counts[p.key];
-              const w = pct(c, data.total);
-              return (
-                <div key={p.key}>
-                  <div className="flex items-baseline justify-between type-subhead">
-                    <span className="font-medium">{p.name} <span className="type-footnote text-muted-foreground">· {p.price}</span></span>
-                    <span className="tabular-nums"><b>{c}</b> <span className="type-footnote text-muted-foreground">{w}%</span></span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 rounded-full bg-secondary overflow-hidden">
-                    <div className={`h-full rounded-full ${p.tone} transition-[width] duration-700`} style={{ width: `${w}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Tile>
-
-        <Tile>
-          <Label>Actividad</Label>
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-            {activity.map((a) => (
-              <div key={a.label}>
-                <div className="font-rounded text-2xl font-bold tabular-nums">{a.value}</div>
-                <div className="type-footnote text-muted-foreground">{a.label}</div>
-              </div>
-            ))}
-          </div>
-        </Tile>
-
-        <Tile>
-          <Label>Embudo</Label>
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {funnel.map((f) => (
-              <div key={f.label}>
-                <div className="font-rounded text-xl font-bold tabular-nums">{f.value}</div>
-                <div className="type-footnote text-muted-foreground">{f.label}</div>
-                <div className="mt-2 h-1 rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full bg-primary rounded-full" style={{ width: `${pct(f.value, data.total)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Tile>
-
-        <Tile>
-          <Label>Últimos 30 días · entrenos</Label>
-          <div className="mt-3 h-32">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.daily} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-                <XAxis dataKey="d" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} interval={6} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", borderRadius: 12, fontSize: 12 }} />
-                <Area type="monotone" dataKey="entrenos" name="Entrenos" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.15} />
-                <Area type="monotone" dataKey="registros" name="Registros" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} fill="transparent" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Tile>
-      </div>
+      <section aria-label="Resumen" className="space-y-5">
+        <HeroFigure
+          label="Estimación mensual"
+          value={fmtEur(data.estimatedMonthly)}
+          hint={`${fmtEur(data.estimatedPerPlan)} por plan activo`}
+        />
+        <StatRow
+          className="md:max-w-2xl"
+          items={[
+            { label: "Plus y Coach", value: data.activePlans, hint: `${pct(data.activePlans, data.total)}% del total` },
+            { label: "Clientes", value: data.total, hint: `+${data.newUsers7} esta semana` },
+            { label: "Activos 7 días", value: `${pct(data.active7, data.total)}%`, hint: `${data.active7} entrenando` },
+          ]}
+        />
+        <p className="type-footnote text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
+      </section>
 
       {data.emailsFailed > 0 && (
-        <div className="rounded-2xl bg-destructive/10 p-4 flex items-center gap-3 type-subhead">
-          <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-          {data.emailsFailed} emails fallidos en 30 días.
+        <div className="flex items-start gap-4">
+          <AlertCircle className="mt-0.5 h-7 w-7 shrink-0 text-destructive" strokeWidth={1.75} aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="type-headline">{data.emailsFailed} emails fallidos</p>
+            <p className="mt-1 type-subhead text-muted-foreground">En los últimos 30 días.</p>
+          </div>
         </div>
       )}
+
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-x-10">
+        <section>
+          <SectionHeader title="Clientes por plan" className="mb-4" />
+          <BarList
+            rows={plans.map((p) => ({
+              label: p.name,
+              detail: p.price,
+              value: data.counts[p.key],
+              percent: pct(data.counts[p.key], data.total),
+              tone: p.tone,
+            }))}
+          />
+        </section>
+
+        <section>
+          <SectionHeader title="Embudo" className="mb-4" />
+          <BarList rows={funnel.map((f) => ({ label: f.label, value: f.value, percent: pct(f.value, data.total) }))} />
+        </section>
+
+        <section>
+          <SectionHeader title="Actividad" className="mb-3" />
+          <StatRow items={activity} fourUpAt="2xl" />
+        </section>
+
+        <section>
+          <SectionHeader
+            title="Últimos 30 días"
+            hint={
+              <span className="inline-flex gap-4">
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />Entrenos</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-muted-foreground" aria-hidden="true" />Registros</span>
+              </span>
+            }
+            className="mb-3"
+          />
+          {hasDailyActivity ? (
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data.daily} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="d" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} interval={6} />
+                  <Tooltip
+                    cursor={{ stroke: "hsl(var(--border))" }}
+                    contentStyle={{ background: "hsl(var(--popover))", border: "none", borderRadius: 12, fontSize: 13 }}
+                    labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+                  />
+                  <Area type="monotone" dataKey="entrenos" name="Entrenos" stroke="hsl(var(--primary))" strokeWidth={2} fill="hsl(var(--primary))" fillOpacity={0.15} />
+                  <Area type="monotone" dataKey="registros" name="Registros" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} fill="transparent" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              icon={BarChart3}
+              title="Sin actividad"
+              description="No hay entrenos ni registros en los últimos 30 días."
+              className="py-8"
+            />
+          )}
+        </section>
+      </div>
+
+      <AlertDialog open={confirmingReset} onOpenChange={setConfirmingReset}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Resetear todas las métricas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borran scans, leads, logs de emails, entrenos, pesos, PRs, fotos, chat, notificaciones y recordatorios. Las cuentas no se borran. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction destructive onClick={() => { void resetMetrics(); }}>
+              Resetear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
 
-function Tile({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl bg-card p-4 sm:p-5">{children}</div>;
+interface BarRow {
+  label: string;
+  detail?: string;
+  value: number;
+  percent: number;
+  tone?: string;
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <div className="type-footnote text-muted-foreground">{children}</div>;
+/** Filas con cifra, porcentaje y barra fina: sin cajas, directamente sobre el fondo. */
+function BarList({ rows }: { rows: BarRow[] }) {
+  return (
+    <ul className="space-y-4">
+      {rows.map((row) => (
+        <li key={row.label}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate type-body">
+              {row.label}
+              {row.detail ? <span className="type-footnote text-muted-foreground"> · {row.detail}</span> : null}
+            </span>
+            <span className="shrink-0 tabular-nums">
+              <span className="type-headline">{row.value}</span>
+              <span className="ml-1.5 type-footnote text-muted-foreground">{row.percent}%</span>
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-secondary">
+            <div className={cn("h-full rounded-full", row.tone ?? "bg-primary")} style={{ width: `${row.percent}%` }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export default AdminMetrics;

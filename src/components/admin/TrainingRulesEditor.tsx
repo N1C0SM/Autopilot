@@ -1,11 +1,14 @@
-import { useEffect, useState } from"react";
-import { supabase } from"@/integrations/supabase/client";
-import { Button } from"@/components/ui/button";
-import { Input } from"@/components/ui/input";
-import { Label } from"@/components/ui/label";
-import { toast } from"sonner";
-import { Save, RotateCcw, Loader2, Zap, Dumbbell, Heart, Shield, Timer } from"lucide-react";
-import { Badge } from"@/components/ui/badge";
+import { useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "sonner";
+import { SlidersHorizontal } from "lucide-react";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
 
 interface TrainingRules {
   id: string;
@@ -51,6 +54,14 @@ const DEFAULTS: Omit<TrainingRules,"id"> = {
 
 const ALL_PATTERNS = ["Empuje","Tirón","Sentadilla","Bisagra","Core","Aislamiento"];
 
+const STIMULI = ["fuerza", "hipertrofia", "resistencia", "isometrico"] as const;
+const STIMULUS_LABELS: Record<(typeof STIMULI)[number], string> = {
+  fuerza: "Fuerza",
+  hipertrofia: "Hipertrofia",
+  resistencia: "Resistencia",
+  isometrico: "Isométrico",
+};
+
 const TrainingRulesEditor = () => {
   const [rules, setRules] = useState<TrainingRules | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +89,7 @@ const TrainingRulesEditor = () => {
 
   const togglePattern = (p: string) => {
     if (!rules) return;
+    void hapticSelection();
     const current = rules.required_patterns;
     update("required_patterns", current.includes(p) ? current.filter(x => x !== p) : [...current, p]);
   };
@@ -89,189 +101,215 @@ const TrainingRulesEditor = () => {
 
   const save = async () => {
     if (!rules) return;
+    void hapticTap();
     setSaving(true);
     const { id, ...rest } = rules;
     const { error } = await supabase.from("training_rules").update(rest).eq("id", id);
-    if (error) toast.error("Error al guardar");
-    else toast.success("Reglas actualizadas");
+    if (error) {
+      void hapticNotify("error");
+      toast.error("Error al guardar");
+    } else {
+      void hapticNotify("success");
+      toast.success("Reglas actualizadas");
+    }
     setSaving(false);
   };
 
   const resetDefaults = () => {
     if (!rules) return;
+    void hapticTap();
     setRules({ ...DEFAULTS, id: rules.id });
     toast.info("Valores por defecto restaurados (guarda para aplicar)");
   };
 
-  if (loading) return <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
-  if (!rules) return <p className="text-sm text-muted-foreground">No se encontraron reglas.</p>;
+  if (loading) return <div className="flex justify-center py-12"><Spinner size="lg" /></div>;
+  if (!rules) return <EmptyState icon={SlidersHorizontal} title="Sin reglas" description="No se encontraron reglas de generación." />;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="sr-only">Reglas de generación</h2>
-          <p className="text-xs text-muted-foreground">Configuración del motor Autopilot</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={resetDefaults}>
-            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reset
-          </Button>
-          <Button size="sm" onClick={save} disabled={saving}>
-            {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
-            Guardar
-          </Button>
-        </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="type-subhead text-muted-foreground">Configuración del motor Autopilot</p>
+        <Button type="button" variant="plain" size="sm" className="-mr-3.5 h-11 shrink-0" onClick={resetDefaults}>
+          Restablecer
+        </Button>
       </div>
 
-      {/* Volume */}
-      <Section icon={<Dumbbell className="w-4 h-4" />} title="Volumen por sesión">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Mínimo series" value={rules.min_sets_per_session} onChange={v => update("min_sets_per_session", v)} type="number" />
-          <Field label="Máximo series" value={rules.max_sets_per_session} onChange={v => update("max_sets_per_session", v)} type="number" />
-        </div>
-      </Section>
+      <ListGroup header="Volumen por sesión">
+        <NumberRow id="rule-min-sets" label="Mínimo de series" value={rules.min_sets_per_session} onChange={v => update("min_sets_per_session", v)} />
+        <NumberRow id="rule-max-sets" label="Máximo de series" value={rules.max_sets_per_session} onChange={v => update("max_sets_per_session", v)} />
+      </ListGroup>
 
-      {/* Series by priority */}
-      <Section icon={<Zap className="w-4 h-4" />} title="Series por prioridad">
-        <div className="space-y-2">
-          <PriorityRow label="P1 (Base)" min={rules.series_p1_min} max={rules.series_p1_max}
-            onMinChange={v => update("series_p1_min", v)} onMaxChange={v => update("series_p1_max", v)} />
-          <PriorityRow label="P2 (Desarrollo)" min={rules.series_p2_min} max={rules.series_p2_max}
-            onMinChange={v => update("series_p2_min", v)} onMaxChange={v => update("series_p2_max", v)} />
-          <PriorityRow label="P3 (Accesorio)" min={rules.series_p3_min} max={rules.series_p3_max}
-            onMinChange={v => update("series_p3_min", v)} onMaxChange={v => update("series_p3_max", v)} />
-        </div>
-      </Section>
+      <ListGroup header="Series por prioridad" footer="Mínimo y máximo de series para cada prioridad.">
+        <RangeRow label="P1 (Base)" min={rules.series_p1_min} max={rules.series_p1_max}
+          onMinChange={v => update("series_p1_min", v)} onMaxChange={v => update("series_p1_max", v)} />
+        <RangeRow label="P2 (Desarrollo)" min={rules.series_p2_min} max={rules.series_p2_max}
+          onMinChange={v => update("series_p2_min", v)} onMaxChange={v => update("series_p2_max", v)} />
+        <RangeRow label="P3 (Accesorio)" min={rules.series_p3_min} max={rules.series_p3_max}
+          onMinChange={v => update("series_p3_min", v)} onMaxChange={v => update("series_p3_max", v)} />
+      </ListGroup>
 
-      {/* Reps & Rest by stimulus */}
-      <Section icon={<Timer className="w-4 h-4" />} title="Reps y descanso por estímulo">
-        <div className="space-y-3">
-          {(["fuerza","hipertrofia","resistencia","isometrico"] as const).map(s => (
-            <div key={s} className="grid grid-cols-3 gap-2 items-end">
-              <div>
-                <Label className="text-xs capitalize">{s ==="isometrico" ?"Isométrico" : s.charAt(0).toUpperCase() + s.slice(1)}</Label>
-              </div>
-              <div>
-                <Label className="type-caption2 text-muted-foreground">Reps</Label>
-                <Input
-                  value={rules[`reps_${s}`]}
-                  onChange={e => update(`reps_${s}`, e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="type-caption2 text-muted-foreground">Descanso</Label>
-                <Input
-                  value={rules[`rest_${s}`]}
-                  onChange={e => update(`rest_${s}`, e.target.value)}
-                  className="h-8 text-sm"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </Section>
+      <ListGroup header="Repeticiones por estímulo" footer="Rango de repeticiones por serie, por ejemplo 8-15.">
+        {STIMULI.map(s => (
+          <TextRow
+            key={s}
+            id={`rule-reps-${s}`}
+            label={STIMULUS_LABELS[s]}
+            ariaLabel={`Repeticiones de ${STIMULUS_LABELS[s]}`}
+            value={rules[`reps_${s}`]}
+            onChange={v => update(`reps_${s}`, v)}
+          />
+        ))}
+      </ListGroup>
 
-      {/* Structure limits */}
-      <Section icon={<Shield className="w-4 h-4" />} title="Límites de estructura">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Máx fatiga alta seguidas" value={rules.max_consecutive_high_fatigue} onChange={v => update("max_consecutive_high_fatigue", v)} type="number" />
-          <Field label="Máx bisagras pesadas" value={rules.max_heavy_hinges} onChange={v => update("max_heavy_hinges", v)} type="number" />
-          <Field label="Máx repetición patrón" value={rules.max_pattern_repeats} onChange={v => update("max_pattern_repeats", v)} type="number" />
-          <Field label="Diferencia máx empuje/tirón" value={rules.push_pull_max_diff} onChange={v => update("push_pull_max_diff", v)} type="number" />
-          <Field label="Máx ejercicios P2" value={rules.max_p2_exercises} onChange={v => update("max_p2_exercises", v)} type="number" />
-          <Field label="Máx ejercicios P3" value={rules.max_p3_exercises} onChange={v => update("max_p3_exercises", v)} type="number" />
-        </div>
-      </Section>
+      <ListGroup header="Descanso por estímulo" footer="Tiempo entre series, por ejemplo 90s.">
+        {STIMULI.map(s => (
+          <TextRow
+            key={s}
+            id={`rule-rest-${s}`}
+            label={STIMULUS_LABELS[s]}
+            ariaLabel={`Descanso de ${STIMULUS_LABELS[s]}`}
+            value={rules[`rest_${s}`]}
+            onChange={v => update(`rest_${s}`, v)}
+          />
+        ))}
+      </ListGroup>
 
-      {/* Required patterns */}
-      <Section icon={<Zap className="w-4 h-4" />} title="Patrones obligatorios">
-        <div className="flex flex-wrap gap-2">
-          {ALL_PATTERNS.map(p => (
-            <button
-              key={p}
-              onClick={() => togglePattern(p)}
-              className={`type-footnote font-semibold rounded-full px-3 py-1.5 transition-colors ${
-                rules.required_patterns.includes(p)
-                  ?"bg-primary/15 text-primary"
-                  :"bg-secondary text-muted-foreground active:bg-accent"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </Section>
+      <ListGroup header="Límites de estructura">
+        <NumberRow id="rule-fatigue" label="Máx. fatiga alta seguidas" value={rules.max_consecutive_high_fatigue} onChange={v => update("max_consecutive_high_fatigue", v)} />
+        <NumberRow id="rule-hinges" label="Máx. bisagras pesadas" value={rules.max_heavy_hinges} onChange={v => update("max_heavy_hinges", v)} />
+        <NumberRow id="rule-repeats" label="Máx. repetición de patrón" value={rules.max_pattern_repeats} onChange={v => update("max_pattern_repeats", v)} />
+        <NumberRow id="rule-push-pull" label="Diferencia máx. empuje/tirón" value={rules.push_pull_max_diff} onChange={v => update("push_pull_max_diff", v)} />
+        <NumberRow id="rule-p2" label="Máx. ejercicios P2" value={rules.max_p2_exercises} onChange={v => update("max_p2_exercises", v)} />
+        <NumberRow id="rule-p3" label="Máx. ejercicios P3" value={rules.max_p3_exercises} onChange={v => update("max_p3_exercises", v)} />
+      </ListGroup>
 
-      {/* Recovery hours */}
-      <Section icon={<Heart className="w-4 h-4" />} title="Horas de recuperación por músculo">
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(rules.recovery_hours).map(([muscle, hours]) => (
-            <div key={muscle} className="flex items-center gap-2">
-              <Label className="text-xs w-24 truncate">{muscle}</Label>
-              <Input
-                type="number"
-                value={hours}
-                onChange={e => updateRecovery(muscle, parseInt(e.target.value) || 0)}
-                className="h-8 text-sm w-20"
-                min={0}
-                max={168}
-              />
-              <span className="type-caption2 text-muted-foreground">h</span>
-            </div>
-          ))}
+      <ListGroup header="Patrones obligatorios">
+        <div className="flex flex-wrap gap-2 p-4">
+          {ALL_PATTERNS.map(p => {
+            const selected = rules.required_patterns.includes(p);
+            return (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => togglePattern(p)}
+                className={cn(
+                  "relative h-9 rounded-full px-4 type-subhead font-medium transition-colors duration-100 before:absolute before:inset-x-0 before:-inset-y-1",
+                  selected ? "bg-primary/15 text-primary active:bg-primary/25" : "bg-secondary text-muted-foreground active:bg-accent",
+                )}
+              >
+                {p}
+              </button>
+            );
+          })}
         </div>
-      </Section>
+      </ListGroup>
+
+      <ListGroup header="Horas de recuperación por músculo">
+        {Object.entries(rules.recovery_hours).map(([muscle, hours]) => {
+          const id = `rule-recovery-${muscle.trim().toLowerCase().replace(/\s+/g, "-")}`;
+          return (
+            <ListRow
+              key={muscle}
+              title={<label htmlFor={id} className="block whitespace-normal">{muscle}</label>}
+              trailing={
+                <div className="flex items-center gap-2">
+                  <CountInput id={id} label={`Horas de recuperación de ${muscle}`} value={hours} max={168} onChange={v => updateRecovery(muscle, v)} />
+                  <span className="type-subhead text-muted-foreground" aria-hidden="true">h</span>
+                </div>
+              }
+            />
+          );
+        })}
+      </ListGroup>
+
+      <Button type="button" size="lg" className="w-full" onClick={save} disabled={saving}>
+        {saving ? <Spinner size="sm" className="text-primary-foreground" /> : null}
+        Guardar
+      </Button>
     </div>
   );
 };
 
 // ─── Helper components ───
 
-function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function CountInput({ id, label, value, onChange, max, className }: {
+  id?: string; label: string; value: number; onChange: (v: number) => void; max?: number; className?: string;
+}) {
   return (
-    <div className="rounded-2xl bg-card p-4 sm:p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="text-primary">{icon}</div>
-        <h3 className="font-semibold text-sm">{title}</h3>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, type }: { label: string; value: number; onChange: (v: number) => void; type: string }) {
-  return (
-    <div>
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+    <HitArea>
       <Input
-        type={type}
+        id={id}
+        aria-label={label}
+        type="number"
+        inputMode="numeric"
+        enterKeyHint="done"
+        min={0}
+        max={max}
         value={value}
         onChange={e => onChange(parseInt(e.target.value) || 0)}
-        className="h-8 text-sm mt-1"
-        min={0}
+        onFocus={e => e.currentTarget.select()}
+        className={cn("h-9 w-16 text-right", className)}
       />
-    </div>
+    </HitArea>
   );
 }
 
-function PriorityRow({ label, min, max, onMinChange, onMaxChange }: {
+function NumberRow({ id, label, value, onChange }: { id: string; label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <ListRow
+      title={<label htmlFor={id} className="block whitespace-normal">{label}</label>}
+      trailing={<CountInput id={id} label={label} value={value} onChange={onChange} />}
+    />
+  );
+}
+
+function RangeRow({ label, min, max, onMinChange, onMaxChange }: {
   label: string; min: number; max: number;
   onMinChange: (v: number) => void; onMaxChange: (v: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <Badge variant="secondary" className="w-28 justify-center text-xs">{label}</Badge>
-      <div className="flex items-center gap-1.5">
-        <Input type="number" value={min} onChange={e => onMinChange(parseInt(e.target.value) || 0)} className="h-8 text-sm w-16" min={0} />
-        <span className="text-xs text-muted-foreground">—</span>
-        <Input type="number" value={max} onChange={e => onMaxChange(parseInt(e.target.value) || 0)} className="h-8 text-sm w-16" min={0} />
-        <span className="text-xs text-muted-foreground">series</span>
-      </div>
-    </div>
+    <ListRow
+      title={label}
+      trailing={
+        <div className="flex items-center gap-2">
+          <CountInput label={`${label}, mínimo de series`} value={min} onChange={onMinChange} className="w-14 px-2 text-center" />
+          <span className="type-subhead text-muted-foreground" aria-hidden="true">–</span>
+          <CountInput label={`${label}, máximo de series`} value={max} onChange={onMaxChange} className="w-14 px-2 text-center" />
+        </div>
+      }
+    />
   );
+}
+
+function TextRow({ id, label, ariaLabel, value, onChange }: {
+  id: string; label: string; ariaLabel: string; value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <ListRow
+      title={<label htmlFor={id} className="block whitespace-normal">{label}</label>}
+      trailing={
+        <HitArea>
+          <Input
+            id={id}
+            aria-label={ariaLabel}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="done"
+            className="h-9 w-24 px-2 text-right"
+          />
+        </HitArea>
+      }
+    />
+  );
+}
+
+/** Keeps the compact 36 px field look while the tappable area reaches 44 px. */
+function HitArea({ children }: { children: ReactNode }) {
+  return <label className="-my-1 flex items-center py-1">{children}</label>;
 }
 
 export default TrainingRulesEditor;

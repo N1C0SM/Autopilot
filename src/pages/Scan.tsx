@@ -10,25 +10,16 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Upload,
-  ScanLine,
-  Brain,
   Sparkles,
-  ArrowRight,
-  ArrowLeft,
+  Check,
   CheckCircle2,
+  ChevronLeft,
   TrendingUp,
-  Zap,
   Target,
   X,
   Lock,
-  Users,
-  Clock,
   AlertTriangle,
   Eye,
-  Share2,
-  Download,
-  Phone,
-  Mail,
   Shield,
   Dumbbell,
   Flame,
@@ -36,16 +27,18 @@ import {
   Activity,
   Sprout,
   Ruler,
-  Dna,
   ClipboardList,
-  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import NavBar from "@/components/native/NavBar";
 import { hapticTap, hapticSelection } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
-import { applyScanPlan, canApplyScanToPlan, hasScanInferences } from "@/lib/scanApply";
+import { applyScanPlan, canApplyScanToPlan, hasScanInferences, userSpecificGoal, type ScanApplyResult } from "@/lib/scanApply";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
@@ -59,6 +52,7 @@ import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
+import { FindingRow, MeterRow, ScanImage, StatRow, type Stat } from "@/components/scan/ScanResultParts";
 import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
@@ -219,18 +213,19 @@ const Dropzone = ({
       />
       {image ? (
         <div className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-card">
-          <img loading="lazy" decoding="async" src={image} alt={label} className="w-full h-full object-cover" />
+          <ScanImage src={image} alt={label} className="w-full h-full" />
           <button
             onClick={() => { void hapticTap(); onClear(); }}
             aria-label="Quitar foto"
             className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center active:opacity-60"
           >
-            <span className="w-8 h-8 rounded-full bg-background/80 flex items-center justify-center">
-              <X className="w-4 h-4" />
+            <span className="w-8 h-8 rounded-full material flex items-center justify-center">
+              <X className="w-4 h-4" strokeWidth={2.5} />
             </span>
           </button>
-          <div className="absolute bottom-0 inset-x-0 bg-background/80 p-3">
-            <div className="type-headline text-primary">
+          <div className="absolute bottom-0 inset-x-0 material px-3 py-2.5 flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />
+            <div className="type-subhead font-semibold truncate">
               {label}
             </div>
           </div>
@@ -263,32 +258,15 @@ const Dropzone = ({
   );
 };
 
-const ScoreCard = ({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) => (
-  <div
-    className={`relative bg-card rounded-2xl p-4 ${highlight ? "ring-1 ring-primary/40" : ""}`}
-  >
-    <div className="type-group-header text-muted-foreground mb-1 flex items-center gap-1">
-      {highlight && <Zap className="w-3 h-3 text-primary" />}
-      {label}
-    </div>
-    <div className="flex items-baseline gap-1">
-      <span className="type-title1 font-rounded tabular-nums text-primary">
-        {value.toFixed(1)}
-      </span>
-      <span className="type-caption1 text-muted-foreground">/10</span>
-    </div>
-    <div className="h-1.5 bg-secondary rounded-full overflow-hidden mt-2">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${value * 10}%` }}
-        transition={{ duration: 1, ease: "easeOut" }}
-        className="h-full bg-primary"
-      />
-    </div>
-  </div>
-);
+const sentenceCase = (text: string) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
 
-const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: () => void } = {}) => {
+/** «Ahora prioriza hombros y pecho.» con los grupos que se aplicaron. */
+const priorityLine = (muscles: string[]) =>
+  muscles.length ? `Ahora prioriza ${muscles.map((m) => m.toLowerCase()).join(" y ")}.` : null;
+
+type PlanApplyCopy = { title: string; description: string; tone: "ok" | "warn" };
+
+const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean; onOpenPlan?: () => void; onPlanChanged?: () => void } = {}) => {
   const plans = usePlanAvailability();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -330,7 +308,15 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
   const [genLoading, setGenLoading] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
-  const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "success" | "sent" | "error">("idle");
+  const [planApplyState, setPlanApplyState] = useState<"idle" | "applying" | "done" | "sent" | "error">("idle");
+  const [planApplyCopy, setPlanApplyCopy] = useState<PlanApplyCopy | null>(null);
+  // Cada aplicación lleva un número: si entretanto empieza otro scan, su resultado ya no se pinta.
+  const applyRun = useRef(0);
+  // Una aplicación en marcha (aunque se empiece otro scan) y el último resultado, para «Reintentar».
+  const applyInFlight = useRef(false);
+  const lastApply = useRef<ScanApplyResult | null>(null);
+  // Objetivo y objetivo concreto del usuario: el botón solo aparece si el scan trae algo nuevo para él.
+  const [scanOnboarding, setScanOnboarding] = useState<{ goal: string | null; specific_goal: string | null } | null>(null);
   const [canApplyPlan, setCanApplyPlan] = useState(false);
   const [autoSaving, setAutoSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(false);
@@ -391,7 +377,8 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
             })
           );
         }
-        const txt = (data?.specific_goal || data?.goal || "").toString().trim();
+        setScanOnboarding({ goal: data?.goal ?? null, specific_goal: data?.specific_goal ?? null });
+        const txt = (userSpecificGoal(data?.specific_goal) || data?.goal || "").toString().trim();
         if (txt) setSavedGoalText(txt);
       });
   }, [user]);
@@ -819,25 +806,66 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
     navigate("/dashboard");
   };
 
-  const applyScanToPlan = async (r: Result) => {
+  const applyScanToPlan = async (r: Result, retry = false) => {
     if (!user || planApplyState === "applying") return;
+    if (applyInFlight.current) {
+      toast.info("Espera a que termine de aplicarse el scan anterior");
+      return;
+    }
+    applyInFlight.current = true;
+    const run = ++applyRun.current;
     setPlanApplyState("applying");
-    const outcome = await applyScanPlan(supabase, user.id, r).catch((e: unknown) => {
-      console.error("applyScanToPlan", e);
-      return "failed" as const;
-    });
+    const res: ScanApplyResult = await applyScanPlan(supabase, user.id, r, { retryOf: retry ? lastApply.current : null })
+      .catch((e: unknown) => {
+        console.error("applyScanToPlan", e);
+        return { outcome: "failed" as const, priorities: [] };
+      })
+      .finally(() => { applyInFlight.current = false; });
+    if (res.saved) setScanOnboarding(res.saved);
+    const outcome = res.outcome;
+    if (run !== applyRun.current) {
+      // «Hacer otro scan» durante la aplicación: la pantalla ya es de otro scan, pero se avisa de cómo acabó.
+      onPlanChanged?.();
+      if (outcome === "session_expired") {
+        toast.error("Tu sesión ha caducado. Inicia sesión de nuevo.");
+        await supabase.auth.signOut({ scope: "local" });
+        navigate("/login");
+      } else if (outcome === "kept") {
+        setCanApplyPlan(false);
+      } else if (outcome === "applied" || outcome === "nutrition_only") {
+        toast.success("El scan anterior se aplicó a tu plan");
+      } else if (outcome === "failed" || outcome === "unknown") {
+        toast.info("No pudimos confirmar si el scan anterior se aplicó");
+      }
+      return;
+    }
+    const done = (copy: PlanApplyCopy, toastText: string) => {
+      setPlanApplyCopy(copy);
+      setPlanApplyState("done");
+      if (copy.tone === "warn") toast.info(toastText); else toast.success(toastText);
+      onPlanChanged?.();
+    };
+    lastApply.current = res;
     switch (outcome) {
       case "applied":
-        setPlanApplyState("success");
-        toast.success("Plan actualizado con tu scan");
+        done({ title: "Plan actualizado", description: priorityLine(res.priorities) ?? "Tu nuevo entrenamiento ya está en tu cuenta.", tone: "ok" }, "Plan actualizado con tu scan");
+        break;
+      case "nutrition_only":
+        done({ title: "Plan actualizado", description: "Tu entrenamiento sigue igual; tus macros se han ajustado al scan.", tone: "ok" }, "Macros ajustados con tu scan");
+        break;
+      case "unchanged":
+        done({ title: "Tu plan ya encajaba", description: "Hemos guardado lo que propone el scan para tus próximos ajustes.", tone: "ok" }, "Scan aplicado. Tu plan ya encajaba");
+        break;
+      case "unknown":
+        done({ title: "No pudimos confirmarlo", description: "No sabemos si llegó a aplicarse. Revisa tu plan en unos minutos o reinténtalo.", tone: "warn" }, "No pudimos confirmar si se aplicó");
         break;
       case "sent_to_coach":
         setPlanApplyState("sent");
-        toast.success("Scan enviado a tu entrenador para ajustar el plan");
+        toast.success("Guardado para tu entrenador");
         break;
       case "no_changes":
         setPlanApplyState("idle");
-        toast.info("Este scan no propone cambios en tu plan");
+        toast.info("No hay nada nuevo que aplicar de este scan");
         break;
       case "needs_profile":
         setPlanApplyState("idle");
@@ -1011,6 +1039,10 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
   };
 
   const reset = () => {
+    applyRun.current += 1;
+    lastApply.current = null;
+    setPlanApplyState("idle");
+    setPlanApplyCopy(null);
     // Un escaneo nuevo estrena id anónimo: el anterior ya no debe atribuirse a
     // quien escanee después en esta misma pestaña.
     clearAnonScanId();
@@ -1104,7 +1136,8 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
 
   if (isUnauthorized || isAwaitingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground type-subhead">
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 bg-background px-6 text-center text-muted-foreground type-subhead">
+        <Spinner size="md" />
         {isUnauthorized ? "Solo puedes ver tu propio progreso. Redirigiendo…" : "Verificando acceso…"}
       </div>
     );
@@ -1130,42 +1163,51 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
         !user &&
         <StickyConversionBar onCta={() => navigate(signupWithPlan)} />
       )}
-      {/* Header */}
-      {!embedded && <header className="container mx-auto max-w-7xl px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 grid grid-cols-[1fr_auto_1fr] items-center">
-        <div className="flex items-center gap-1">
-          {user && <SidebarTrigger className="hidden md:inline-flex" />}
-          <Link
-            to={user ? "/dashboard" : "/"}
-            aria-label="Volver"
-            onClick={() => void hapticTap()}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-primary transition active:opacity-60"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-        </div>
-        <span className="type-headline">Escáner corporal</span>
-        <div />
-      </header>}
+      {/* Barra de navegación: atrás en el leading; el título grande vive en el contenido */}
+      {!embedded && (
+        <NavBar
+          solid={false}
+          titleAsHeading={false}
+          className="container mx-auto max-w-7xl px-2"
+          leading={
+            <>
+              {user && <SidebarTrigger className="hidden md:inline-flex" />}
+              <Link
+                to={user ? "/dashboard" : "/"}
+                onClick={() => void hapticTap()}
+                className="inline-flex min-h-[44px] items-center pr-2 type-body text-primary transition-opacity active:opacity-60"
+              >
+                <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} aria-hidden="true" />
+                Inicio
+              </Link>
+            </>
+          }
+        />
+      )}
 
-      <main className={embedded ? "w-full pb-6" : "container mx-auto max-w-7xl px-4 pb-24"}>
+      <main className={embedded ? "w-full pb-6" : "container mx-auto max-w-7xl px-4 pt-2 pb-24"}>
         <AnimatePresence mode="wait">
           {!result && phase === "upload" ? (
             <motion.div
               key="upload"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto w-full max-w-2xl space-y-10"
             >
-              {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} />}
-              <div className="text-center max-w-md mx-auto mt-2 mb-8">
-                <h1 className="type-title1">Análisis físico con IA</h1>
-                <p className="type-subhead text-muted-foreground mt-2">
+              <header>
+                {!inline && (
+                  <h1 data-nav-title className="type-large-title mb-1">Análisis físico con IA</h1>
+                )}
+                <p className="type-subhead text-muted-foreground">
                   Sube tu foto frontal o de espalda para actualizar tu análisis
                 </p>
-              </div>
+              </header>
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-5 max-w-md sm:max-w-3xl mx-auto mb-10">
+              {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} />}
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <Dropzone
                   label="Foto de delante"
                   hint="Cuerpo completo"
@@ -1176,7 +1218,7 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                 />
                 <Dropzone
                   label="Foto de atrás"
-                  hint="Cuerpo completo · opcional"
+                  hint="Opcional"
                   image={backImg}
                   onFile={async (f) => setBackImg(await fileToDataUrl(f))}
                   onClear={() => setBackImg(null)}
@@ -1186,11 +1228,11 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
 
               {/* Físico objetivo: presets del admin + opción de subir foto propia */}
               {user && savedObjectiveUrl && !editingObjective ? (
-                <div className="mx-auto mb-10 max-w-md flex items-center gap-4">
-                  <img loading="lazy" decoding="async"
+                <div className="flex items-center gap-4">
+                  <ScanImage
                     src={savedObjectiveUrl}
                     alt="Tu objetivo"
-                    className="w-20 h-24 object-cover rounded-[10px] flex-shrink-0"
+                    className="h-24 w-20 shrink-0 rounded-[10px]"
                   />
                   <div className="flex-1 min-w-0">
                     <h2 className="type-headline truncate">
@@ -1199,7 +1241,7 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                     <p className="type-subhead text-muted-foreground mt-0.5">
                       La IA lo usará para estimar cuántos meses te faltan.
                     </p>
-                    <div className="flex items-center gap-1 mt-1 -ml-3">
+                    <div className="flex flex-wrap items-center mt-1 -ml-3">
                       <Button
                         variant="plain"
                         size="sm"
@@ -1207,47 +1249,40 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                       >
                         Cambiar objetivo
                       </Button>
-                      <button
-                        type="button"
+                      <Button
+                        variant="plain"
+                        size="sm"
+                        className="text-muted-foreground"
                         onClick={() => {
                           void hapticTap();
                           setObjectiveImg(null);
                           setSelectedPresetId(null);
                           setEditingObjective(true);
                         }}
-                        className="min-h-[34px] px-3 type-footnote text-muted-foreground active:opacity-60"
                       >
                         Quitar para este scan
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
               ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
-                <div className="mx-auto mb-10 max-w-md flex items-start gap-4">
-                  <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                    <Target className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="type-headline">Tu objetivo</h2>
-                    <p className="type-subhead text-muted-foreground mt-0.5 truncate">
-                      {savedGoalText || "Sin objetivo definido"}
-                    </p>
-                    <Button variant="plain" size="sm" className="-ml-3 mt-1" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
+                <FindingRow
+                  icon={Target}
+                  title="Tu objetivo"
+                  description={<span className="block truncate">{savedGoalText || "Sin objetivo definido"}</span>}
+                  action={
+                    <Button variant="plain" size="sm" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
                       Cambiar objetivo
                     </Button>
-                  </div>
-                </div>
+                  }
+                />
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
-                <div className="mx-auto mb-10 max-w-md flex items-start gap-4">
-                  <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                    <Target className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="type-headline">¿Tienes un físico objetivo?</h2>
-                    <p className="type-subhead text-muted-foreground mt-0.5">
-                      Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1 mt-1 -ml-3">
+                <FindingRow
+                  icon={Target}
+                  title="¿Tienes un físico objetivo?"
+                  description="Solo si pones un objetivo te calculamos cuántos meses tardarás en llegar."
+                  action={
+                    <div className="flex flex-wrap items-center">
                       <Button
                         variant="plain"
                         size="sm"
@@ -1264,10 +1299,10 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                         No, sin objetivo
                       </Button>
                     </div>
-                  </div>
-                </div>
+                  }
+                />
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "no" ? (
-                <div className="mx-auto mb-10 max-w-md flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <p className="type-subhead text-muted-foreground">
                     Sin objetivo · el análisis se centra en tu físico actual.
                   </p>
@@ -1276,32 +1311,27 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                   </Button>
                 </div>
               ) : (
-              <div className="mx-auto mb-10 max-w-3xl">
-                <div className="flex items-start gap-4 mb-5">
-                  <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                    <Target className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="type-headline">Tu físico objetivo</h2>
-                    <p className="type-subhead text-muted-foreground mt-0.5">
-                      Elige una referencia o sube tu foto. Solo con objetivo calculamos cuántos meses te faltan.
-                    </p>
-                    {objectiveImg && (
+              <div>
+                <FindingRow
+                  icon={Target}
+                  title="Tu físico objetivo"
+                  description="Elige una referencia o sube tu foto. Solo con objetivo calculamos cuántos meses te faltan."
+                  action={
+                    objectiveImg ? (
                       <Button
                         variant="plain"
                         size="sm"
-                        className="-ml-3 mt-1"
                         onClick={() => { void hapticTap(); setObjectiveImg(null); setSelectedPresetId(null); }}
                       >
                         Quitar
                       </Button>
-                    )}
-                  </div>
-                </div>
+                    ) : undefined
+                  }
+                />
 
                 {/* Un objetivo sin foto es una caja vacía con un nombre: no aporta nada */}
                 {goalPresets.some((p) => p.image_url) && (
-                  <div className="mb-5 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                  <div className="mt-5 grid grid-cols-3 gap-3 sm:grid-cols-4">
                     {goalPresets.filter((p) => p.image_url).map((p) => {
                       const isSel = selectedPresetId === p.id;
                       return (
@@ -1318,20 +1348,15 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                             isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                           }`}
                         >
-                          <img
-                            src={p.image_url}
-                            alt={p.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-x-0 bottom-0 bg-background/80 p-2">
+                          <ScanImage src={p.image_url} alt={p.name} className="h-full w-full" />
+                          <div className="absolute inset-x-0 bottom-0 material p-2">
                             <div className="line-clamp-2 type-caption1 font-semibold">
                               {p.name}
                             </div>
                           </div>
                           {isSel && (
                             <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-background" />
+                              <Check className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={3} />
                             </div>
                           )}
                         </button>
@@ -1340,90 +1365,70 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                   </div>
                 )}
 
-                <div className="grid sm:grid-cols-[180px,1fr] gap-4 items-center">
-                  <div>
-                    <label className="block cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const f = e.target.files?.[0];
-                          if (!f) return;
-                          void hapticTap();
-                          const dataUrl = await fileToDataUrl(f);
-                          setObjectiveImg(dataUrl);
-                          setSelectedPresetId(null);
-                          if (user && routeUserId) await saveCustomGoalPreset(dataUrl);
-                        }}
-                      />
-                      {objectiveImg && !selectedPresetId ? (
-                        <img loading="lazy" decoding="async" src={objectiveImg} alt="tu objetivo" className="w-full aspect-[3/4] object-cover rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-background" />
-                      ) : (
-                        <div className="rounded-2xl bg-card min-h-[88px] px-4 py-5 flex flex-col items-center justify-center text-center transition-colors active:bg-accent">
-                          <Upload className="w-6 h-6 text-primary mb-2" strokeWidth={1.75} />
-                          <div className="type-subhead font-semibold">O sube tu propia foto</div>
-                          <div className="type-footnote text-muted-foreground mt-0.5">JPG / PNG</div>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                  <div className="type-subhead text-muted-foreground">
-                    {objectiveImg ? (
-                      <span>
-                        Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan.
-                      </span>
-                    ) : (
-                      <span>
-                        Sin objetivo el análisis se centra en tu físico actual, fortalezas y mejoras prioritarias — sin estimación de tiempo.
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <label className="mt-4 block cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      void hapticTap();
+                      const dataUrl = await fileToDataUrl(f);
+                      setObjectiveImg(dataUrl);
+                      setSelectedPresetId(null);
+                      if (user && routeUserId) await saveCustomGoalPreset(dataUrl);
+                    }}
+                  />
+                  {objectiveImg && !selectedPresetId ? (
+                    <ScanImage
+                      src={objectiveImg}
+                      alt="tu objetivo"
+                      className="aspect-[3/4] w-28 rounded-xl ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    />
+                  ) : (
+                    <div className="flex min-h-[72px] items-center gap-4 rounded-2xl bg-card px-4 py-3 transition-colors active:bg-accent">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[22%] bg-secondary">
+                        <Upload className="h-6 w-6 text-primary" strokeWidth={1.75} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="type-headline">O sube tu propia foto</div>
+                        <div className="type-subhead text-muted-foreground">JPG / PNG</div>
+                      </div>
+                    </div>
+                  )}
+                </label>
+                <p className="mt-3 type-footnote text-muted-foreground">
+                  {objectiveImg
+                    ? "Objetivo seleccionado. La IA comparará tu físico con esta referencia y estimará cuántos meses te faltan."
+                    : "Sin objetivo el análisis se centra en tu físico actual, fortalezas y mejoras prioritarias — sin estimación de tiempo."}
+                </p>
               </div>
               )}
 
               {/* Guía para tomar las fotos */}
-              <div className="mx-auto mb-10 max-w-md">
+              <section>
                 <h2 className="type-title3 mb-5">Cómo tomar las fotos</h2>
-                <ul className="space-y-6">
-                  <li className="flex items-start gap-4">
-                    <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                      <Ruler className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="type-headline">Distancia</h3>
-                      <p className="type-subhead text-muted-foreground mt-0.5">
-                        Cámara a 2-3 m, a la altura del ombligo, con el cuerpo entero y el móvil en vertical y bien apoyado.
-                      </p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                      <Eye className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="type-headline">Luz y fondo</h3>
-                      <p className="type-subhead text-muted-foreground mt-0.5">
-                        Luz natural frontal y uniforme, sin contraluz ni flash, con un fondo liso y claro.
-                      </p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                      <Activity className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="type-headline">Postura y ropa</h3>
-                      <p className="type-subhead text-muted-foreground mt-0.5">
-                        Ropa ajustada, pies a la anchura de los hombros y brazos relajados a los lados. Para la de atrás, date la vuelta sin moverte de sitio.
-                      </p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
+                <div className="space-y-6">
+                  <FindingRow
+                    icon={Ruler}
+                    title="Distancia"
+                    description="Cámara a 2-3 m, a la altura del ombligo, con el cuerpo entero y el móvil en vertical y bien apoyado."
+                  />
+                  <FindingRow
+                    icon={Eye}
+                    title="Luz y fondo"
+                    description="Luz natural frontal y uniforme, sin contraluz ni flash, con un fondo liso y claro."
+                  />
+                  <FindingRow
+                    icon={Activity}
+                    title="Postura y ropa"
+                    description="Ropa ajustada, pies a la anchura de los hombros y brazos relajados a los lados. Para la de atrás, date la vuelta sin moverte de sitio."
+                  />
+                </div>
+              </section>
 
-              <div className="flex flex-col items-center gap-4 max-w-md mx-auto">
+              <div className="mx-auto w-full max-w-sm space-y-3">
                 <Button
                   size="lg"
                   className="w-full"
@@ -1444,18 +1449,18 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
           ) : !result && phase === "goal" ? (
             <motion.div
               key="goal"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.35 }}
-              className="max-w-3xl mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto w-full max-w-2xl"
             >
               <div className="text-center mb-8">
-                <div className="mx-auto w-16 h-16 rounded-[22%] bg-card flex items-center justify-center mb-5">
+                <div className="mx-auto w-[72px] h-[72px] rounded-[22%] bg-card flex items-center justify-center mb-5">
                   <Target className="w-8 h-8 text-primary" strokeWidth={1.75} />
                 </div>
                 <p className="type-subhead text-muted-foreground mb-1">Paso 2 · Tu objetivo</p>
-                <h1 className="type-title1">
+                <h1 data-nav-title={inline ? undefined : true} className="type-title1">
                   ¿Cuál es tu <span className="text-primary">objetivo principal</span>?
                 </h1>
                 <p className="type-subhead text-muted-foreground mt-2">
@@ -1463,7 +1468,7 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                 </p>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="overflow-hidden rounded-2xl bg-card">
                 {GOALS.map((g) => {
                   const Icon = g.icon;
                   const active = goal === g.id;
@@ -1473,24 +1478,22 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                       type="button"
                       onClick={() => { void hapticSelection(); setGoal(g.id); }}
                       aria-pressed={active}
-                      className={`text-left rounded-2xl p-4 min-h-[72px] transition-colors duration-100 active:bg-accent flex items-start gap-4 ${
-                        active ? "bg-card ring-2 ring-primary" : "bg-card"
-                      }`}
+                      className="group/row flex w-full items-center gap-3 px-4 text-left transition-colors duration-100 active:bg-accent"
                     >
-                      <div className="w-10 shrink-0 flex items-center justify-center pt-0.5">
-                        <Icon className="w-7 h-7 text-primary" strokeWidth={1.75} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="type-headline">{g.label}</div>
-                        <div className="type-subhead text-muted-foreground mt-0.5">{g.desc}</div>
-                      </div>
-                      {active && <CheckCircle2 className="w-5 h-5 text-primary ml-auto shrink-0" />}
+                      <Icon className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} />
+                      <span className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 py-2.5 group-[:not(:last-child)]/row:sep-b">
+                        <span className="min-w-0 flex-1">
+                          <span className="block type-body">{g.label}</span>
+                          <span className="mt-0.5 block type-footnote text-muted-foreground">{g.desc}</span>
+                        </span>
+                        {active && <Check className="h-5 w-5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden="true" />}
+                      </span>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="flex flex-col items-center gap-2 mt-8 max-w-md mx-auto">
+              <div className="mx-auto mt-8 w-full max-w-sm space-y-2">
                 <Button
                   size="lg"
                   disabled={!goal}
@@ -1499,7 +1502,7 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                 >
                   Analizar mi físico
                 </Button>
-                <Button variant="plain" onClick={() => { void hapticTap(); setPhase("upload"); }}>
+                <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); setPhase("upload"); }}>
                   Volver
                 </Button>
               </div>
@@ -1507,62 +1510,65 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
           ) : !result && phase === "analyzing" ? (
             <motion.div
               key="analyzing"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.35 }}
-              className="max-w-xl mx-auto text-center pt-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center py-12 text-center"
             >
-              <ProgressRing value={scanProgress} size={128} stroke={8} className="mx-auto mb-8" label="Progreso del análisis">
-                <Brain className="w-10 h-10 text-primary" strokeWidth={1.75} />
+              <ProgressRing value={scanProgress} size={160} stroke={12} className="mb-8" label="Progreso del análisis">
+                <span className="font-rounded text-[34px] font-bold leading-none tabular-nums">
+                  {Math.round(scanProgress)}
+                  <span className="type-headline text-muted-foreground">%</span>
+                </span>
               </ProgressRing>
-              <h2 className="type-title1 mb-3">
+              <h2 data-nav-title={inline ? undefined : true} className="type-title1">
                 Analizando tu físico
               </h2>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={loadingMsgIdx}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.4 }}
-                  className="type-callout text-primary flex items-center justify-center gap-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-3 flex items-center justify-center gap-2 type-callout text-muted-foreground"
                 >
                   <Spinner size="sm" />
                   {LOADING_MESSAGES[loadingMsgIdx]}
                 </motion.div>
               </AnimatePresence>
-              <div className="type-subhead font-rounded tabular-nums text-muted-foreground mt-6">{Math.round(scanProgress)}%</div>
             </motion.div>
           ) : !result && phase === "lead" ? (
             <motion.div
               key="lead"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.35 }}
-              className="max-w-lg mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto w-full max-w-md"
             >
               <div className="text-center mb-8">
-                <div className="mx-auto w-16 h-16 rounded-[22%] bg-card flex items-center justify-center mb-5">
+                <div className="mx-auto w-[72px] h-[72px] rounded-[22%] bg-card flex items-center justify-center mb-5">
                   <CheckCircle2 className="w-8 h-8 text-success" strokeWidth={1.75} />
                 </div>
                 <p className="type-subhead text-muted-foreground mb-1">Diagnóstico listo</p>
-                <h2 className="type-title1 mb-3">
+                <h1 className="type-title1 mb-3">
                   Hemos detectado tus <span className="text-primary">principales prioridades físicas</span>.
-                </h2>
+                </h1>
                 <p className="type-subhead text-muted-foreground">
                   Dinos tu nombre y tu email y te lo mostramos ahora mismo. También te lo
                   enviamos por correo para que lo tengas guardado.
                 </p>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <div>
-                  <label className="type-footnote text-muted-foreground mb-1.5 block">
+                  <label htmlFor="scan-lead-name" className="type-subhead text-muted-foreground mb-1.5 block">
                     Nombre
                   </label>
                   <input
+                    id="scan-lead-name"
                     type="text"
                     value={leadName}
                     onChange={(e) => setLeadName(e.target.value)}
@@ -1572,40 +1578,38 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                   />
                 </div>
                 <div>
-                  <label className="type-footnote text-muted-foreground mb-1.5 block">
+                  <label htmlFor="scan-lead-email" className="type-subhead text-muted-foreground mb-1.5 block">
                     Email
                   </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="email"
-                      value={leadEmail}
-                      onChange={(e) => setLeadEmail(e.target.value)}
-                      maxLength={255}
-                      placeholder="tu@email.com"
-                      className="field w-full pl-10" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="email" enterKeyHint="done"
-                    />
-                  </div>
+                  <input
+                    id="scan-lead-email"
+                    type="email"
+                    value={leadEmail}
+                    onChange={(e) => setLeadEmail(e.target.value)}
+                    maxLength={255}
+                    placeholder="tu@email.com"
+                    className="field w-full" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} autoComplete="email" enterKeyHint="done"
+                  />
                   <p className="type-footnote text-muted-foreground mt-1.5">
                     Te enviamos una copia aquí. Sin tarjeta y sin compromiso.
                   </p>
                 </div>
 
-                <label className="flex items-start gap-3 cursor-pointer select-none py-1 min-h-11 active:opacity-70">
-                  <input
-                    type="checkbox"
+                <div className="flex min-h-11 items-start gap-3 py-1">
+                  <Checkbox
+                    id="scan-lead-consent"
                     checked={leadConsent}
-                    onChange={(e) => setLeadConsent(e.target.checked)}
-                    className="mt-0.5 w-5 h-5 accent-primary cursor-pointer shrink-0"
+                    onCheckedChange={(v) => { void hapticSelection(); setLeadConsent(v === true); }}
+                    className="-mt-0.5"
                   />
-                  <span className="type-footnote text-muted-foreground">
+                  <label htmlFor="scan-lead-consent" className="select-none type-footnote text-muted-foreground">
                     Acepto que Autopilot use mi foto solo para generar mi diagnóstico físico y acepto la{" "}
                     <Link to="/legal/privacidad" className="text-primary">
                       política de privacidad
                     </Link>
                     .
-                  </span>
-                </label>
+                  </label>
+                </div>
 
                 <Button
                   size="lg"
@@ -1615,12 +1619,12 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                 >
                   {submittingLead ? (
                     <>
-                      <Spinner className="mr-1" />
+                      <Spinner />
                       Enviando…
                     </>
                   ) : !pendingResult ? (
                     <>
-                      <Spinner className="mr-1" />
+                      <Spinner />
                       Generando tu diagnóstico…
                     </>
                   ) : (
@@ -1631,7 +1635,7 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                 </Button>
 
                 <div className="flex items-start gap-2 pt-1">
-                  <Shield className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                  <Shield className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" aria-hidden="true" />
                   <p className="type-footnote text-muted-foreground">
                     Tu foto no se publica ni se comparte con otros usuarios. Se usa para tu análisis y se guarda en tu
                     cuenta privada; puedes eliminarla cuando quieras.
@@ -1642,10 +1646,168 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
           ) : (
             <motion.div
               key="result"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto w-full max-w-2xl space-y-10"
             >
+              {/* Protagonista: la puntuación de físico en un anillo, como Actividad */}
+              <section>
+                {inline ? (
+                  <h2 className="type-title2">Tu AI Physique Report</h2>
+                ) : (
+                  <h1 data-nav-title className="type-large-title">Tu AI Physique Report</h1>
+                )}
+                <p className="mt-1 flex items-center gap-1.5 type-subhead text-success">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Análisis completo
+                </p>
+
+                <div className="mt-8 flex flex-col items-center text-center">
+                  <ProgressRing value={result.physique * 10} size={200} stroke={14} label="Puntuación de físico">
+                    <div className="flex flex-col items-center">
+                      <span className="font-rounded text-[56px] font-bold leading-none tabular-nums min-[390px]:text-[64px]">
+                        {result.physique.toFixed(1)}
+                      </span>
+                      <span className="mt-1.5 type-footnote text-muted-foreground">Físico · de 10</span>
+                    </div>
+                  </ProgressRing>
+                  {result.headline_diagnosis ? (
+                    <p className="mt-6 max-w-md type-title3">"{result.headline_diagnosis}"</p>
+                  ) : (
+                    <p className="mt-6 max-w-md type-body text-muted-foreground">{result.summary}</p>
+                  )}
+                </div>
+
+                {(() => {
+                  const hasObjective = !!objectiveImg || !!savedObjectiveUrl;
+                  const showMonths = hasObjective && result.months_with_plan !== undefined;
+                  const stats: Stat[] = [
+                    { label: "Atractivo", value: result.attractiveness.toFixed(1), unit: "/10" },
+                    { label: "Potencial", value: result.potential.toFixed(1), unit: "/10", tone: "text-primary" },
+                    { label: "Estilo", value: result.style.toFixed(1), unit: "/10" },
+                  ];
+                  if (showMonths) {
+                    stats.push({ label: "A tu objetivo", value: Math.max(1, result.months_with_plan!), unit: "meses" });
+                  }
+                  return (
+                    <>
+                      <StatRow stats={stats} className="mt-8" />
+                      {showMonths && result.months_without_plan !== undefined && (
+                        <p className="mt-2 type-footnote text-muted-foreground tabular-nums">
+                          Con plan, frente a unos {Math.max(2, result.months_without_plan)} meses sin plan.
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
+                <p className="mt-2 type-footnote text-muted-foreground">
+                  Orientación visual aproximada. No sustituye una valoración profesional.
+                </p>
+
+                <div className="mt-4 -ml-3 flex flex-wrap items-center">
+                  {user && userEmail && (
+                    <Button
+                      variant="plain"
+                      size="sm"
+                      onClick={() => { void hapticTap(); resendByEmail(); }}
+                      disabled={emailSending || autoSaving}
+                    >
+                      {(emailSending || autoSaving) && <Spinner size="sm" />}
+                      {autoSaved ? "Reenviar por email" : "Enviar por email"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="plain"
+                    size="sm"
+                    onClick={() => { void hapticTap(); handleShare(); }}
+                    disabled={sharing}
+                  >
+                    {sharing && <Spinner size="sm" />}
+                    Compartir mi resultado
+                  </Button>
+                </div>
+              </section>
+
+              {/* Estado de aplicación al plan: patrón de la bienvenida, sin caja */}
+              {routeUserId && user && (
+                <section aria-label="Tu plan">
+                  {planApplyState === "idle" && (
+                    <FindingRow
+                      icon={ClipboardList}
+                      title="Tu plan sigue igual"
+                      description="El scan no cambia nada por sí solo. Aplícalo solo si te encaja."
+                      action={
+                        !hasScanInferences(result, scanOnboarding) ? (
+                          <p className="pl-3 type-footnote text-muted-foreground">
+                            Este scan no propone cambios, así que no hay nada que aplicar.
+                          </p>
+                        ) : canApplyPlan ? (
+                          <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result); }}>
+                            Aplicar a mi plan
+                          </Button>
+                        ) : (
+                          <p className="pl-3 type-footnote text-muted-foreground">
+                            {plans.plus
+                              ? "Ajustar tu plan con cada scan es parte de Plus."
+                              : "Tu plan gratuito mantiene su rutina inicial."}
+                          </p>
+                        )
+                      }
+                    />
+                  )}
+                  {planApplyState === "applying" && (
+                    <FindingRow
+                      leading={<Spinner size="md" />}
+                      title="Aplicando el scan a tu plan…"
+                      description="Recalculando entrenamiento y nutrición con los datos del scan."
+                    />
+                  )}
+                  {planApplyState === "done" && planApplyCopy && (
+                    <FindingRow
+                      icon={planApplyCopy.tone === "warn" ? AlertTriangle : CheckCircle2}
+                      iconClassName={planApplyCopy.tone === "warn" ? "text-muted-foreground" : "text-success"}
+                      title={planApplyCopy.title}
+                      description={planApplyCopy.description}
+                      action={
+                        <div className="flex items-center">
+                          {planApplyCopy.tone === "warn" && (
+                            <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result, true); }}>
+                              Reintentar
+                            </Button>
+                          )}
+                          <Button variant="plain" size="sm" onClick={openPlan}>
+                            Ver mi plan
+                          </Button>
+                        </div>
+                      }
+                    />
+                  )}
+                  {planApplyState === "sent" && (
+                    <FindingRow
+                      icon={CheckCircle2}
+                      iconClassName="text-success"
+                      title="Guardado para tu entrenador"
+                      description="Verá en tu ficha lo que propone el scan cuando ajuste tu plan."
+                    />
+                  )}
+                  {planApplyState === "error" && (
+                    <FindingRow
+                      icon={AlertTriangle}
+                      iconClassName="text-destructive"
+                      title="No se pudo aplicar al plan"
+                      description="Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras."
+                      action={
+                        <Button variant="plain" size="sm" onClick={() => { void hapticTap(); applyScanToPlan(result, true); }}>
+                          Reintentar
+                        </Button>
+                      }
+                    />
+                  )}
+                </section>
+              )}
+
               {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} compact />}
               {user && routeUserId && !inline && (
                 <BeforeAfterCompare
@@ -1658,200 +1820,26 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                   }}
                 />
               )}
-              <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary mb-4">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
-                  <span className="type-footnote font-semibold text-success">
-                    Análisis completo
-                  </span>
-                </div>
-                <h2 className="type-title1 font-rounded tabular-nums mb-3">
-                  Tu <span className="text-primary">AI Physique Report</span>
-                </h2>
-                {result.headline_diagnosis ? (
-                  <p className="text-lg sm:text-xl text-foreground max-w-2xl mx-auto font-medium leading-snug">
-                    "{result.headline_diagnosis}"
-                  </p>
-                ) : (
-                  <p className="text-muted-foreground max-w-2xl mx-auto">{result.summary}</p>
-                )}
-                <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  {user && userEmail && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resendByEmail}
-                      disabled={emailSending || autoSaving}
-                    >
-                      {emailSending || autoSaving ? <Spinner size="sm" className="mr-1" /> : <Mail className="w-4 h-4 mr-1" />}
-                      {autoSaved ? "Reenviar por email" : "Enviar por email"}
-                    </Button>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleShare}
-                    disabled={sharing}
-                    className="active:opacity-70"
-                  >
-                    {sharing ? (
-                      <Spinner size="sm" className="mr-1" />
-                    ) : (
-                      <Share2 className="w-4 h-4 mr-1" />
-                    )}
-                    Compartir mi resultado
-                  </Button>
-                  {user && routeUserId && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetProgress}
-                      disabled={resettingProgress}
-                      className="text-destructive"
-                    >
-                      {resettingProgress ? (
-                        <Spinner size="sm" className="mr-1" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4 mr-1" />
-                      )}
-                      Resetear progreso
-                    </Button>
-                  )}
-                </div>
-              </div>
 
-              {/* Estado de aplicación al plan */}
-              {routeUserId && user && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="max-w-3xl mx-auto mb-6"
-                >
-                  <div
-                    className="rounded-2xl bg-card px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3"
-                  >
-                    {planApplyState === "idle" && (
-                      <>
-                        <div className="type-subhead flex-1">
-                          <div className="font-medium">Tu plan sigue igual</div>
-                          <div className="type-caption1 text-muted-foreground">
-                            El scan no cambia nada por sí solo. Aplícalo solo si te encaja.
-                          </div>
-                        </div>
-                        {!hasScanInferences(result) ? (
-                          <div className="type-caption1 text-muted-foreground">
-                            Este scan no propone cambios, así que no hay nada que aplicar.
-                          </div>
-                        ) : canApplyPlan ? (
-                          <Button
-                            size="default"
-                            variant="secondary"
-                            onClick={() => { void hapticTap(); applyScanToPlan(result); }}
-                            className="w-full sm:w-auto"
-                          >
-                            Aplicar a mi plan
-                          </Button>
-                        ) : (
-                          <div className="type-caption1 text-muted-foreground">
-                            {plans.plus
-                              ? "Ajustar tu plan con cada scan es parte de Plus."
-                              : "Tu plan gratuito mantiene su rutina inicial."}
-                          </div>
-                        )}
-                      </>
+              {/* Hallazgos: icono + título + descripción, como la lista de la bienvenida */}
+              {(result.bottleneck || (result.improvements?.length ?? 0) > 0) && (
+                <section>
+                  <h2 className="type-title2">Diagnóstico</h2>
+                  <div className="mt-5 space-y-6">
+                    {result.bottleneck && (
+                      <FindingRow icon={AlertTriangle} title="Lo que más te frena" description={result.bottleneck} />
                     )}
-                    {planApplyState === "applying" && (
-                      <>
-                        <Spinner size="sm" />
-                        <div className="type-subhead">
-                          <div className="font-medium">Aplicando el scan a tu plan…</div>
-                          <div className="type-caption1 text-muted-foreground">Recalculando entrenamiento y nutrición con los datos del scan.</div>
-                        </div>
-                      </>
-                    )}
-                    {planApplyState === "success" && (
-                      <>
-                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div className="type-subhead flex-1">
-                          <div className="font-semibold text-primary">Plan actualizado correctamente</div>
-                          <div className="type-caption1 text-muted-foreground">Tu nuevo entrenamiento y nutrición ya están en tu cuenta.</div>
-                        </div>
-                        <Button size="default" variant="hero" onClick={openPlan}>
-                          Ver mi plan
-                        </Button>
-                      </>
-                    )}
-                    {planApplyState === "sent" && (
-                      <>
-                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                        <div className="type-subhead flex-1">
-                          <div className="font-semibold text-primary">Scan enviado a tu entrenador</div>
-                          <div className="type-caption1 text-muted-foreground">Tu entrenador ajustará tu plan con este scan.</div>
-                        </div>
-                      </>
-                    )}
-                    {planApplyState === "error" && (
-                      <>
-                        <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0" />
-                        <div className="type-subhead flex-1">
-                          <div className="font-medium">No se pudo aplicar al plan</div>
-                          <div className="type-caption1 text-muted-foreground">Tu plan no ha cambiado. Vuelve a intentarlo cuando quieras.</div>
-                        </div>
-                        <Button size="default" variant="secondary" onClick={() => { void hapticTap(); applyScanToPlan(result); }}>
-                          Reintentar
-                        </Button>
-                      </>
-                    )}
+                    {(result.improvements ?? []).map((m, i) => (
+                      <FindingRow
+                        key={i}
+                        icon={TrendingUp}
+                        iconClassName={m.priority === "Alta" ? "text-primary" : "text-muted-foreground"}
+                        title={m.label}
+                        description={m.priority ? `Prioridad ${String(m.priority).toLowerCase()}` : undefined}
+                      />
+                    ))}
                   </div>
-                </motion.div>
-              )}
-
-              {/* HERO STATS — tiempo estimado al objetivo (solo si hay físico objetivo) */}
-              {(() => {
-                const hasObjective = !!objectiveImg || !!savedObjectiveUrl;
-                const showMonths = hasObjective && result.months_with_plan !== undefined;
-                if (!showMonths) return null;
-                return (
-                <div className="mx-auto mb-8 grid sm:grid-cols-1 gap-3 max-w-sm">
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-card rounded-2xl p-5 text-center"
-                  >
-                    <Clock className="w-4 h-4 text-primary mx-auto mb-2" />
-                    <div className="type-group-header text-muted-foreground mb-1">
-                      A tu objetivo
-                    </div>
-                    <div className="type-title1 font-rounded tabular-nums text-primary">
-                      {Math.max(1, result.months_with_plan!)}m
-                    </div>
-                    {result.months_without_plan !== undefined && (
-                      <div className="type-caption1 text-muted-foreground mt-1">
-                        vs <span className="line-through">{Math.max(2, result.months_without_plan)}m</span> sin plan
-                      </div>
-                    )}
-                  </motion.div>
-                </div>
-                );
-              })()}
-
-              <p className="max-w-2xl mx-auto -mt-4 mb-8 type-caption1 text-muted-foreground text-center px-4">
-                Orientación visual aproximada. No sustituye una valoración profesional.
-              </p>
-
-              {result.bottleneck && (
-                <div className="max-w-3xl mx-auto mb-10">
-                  <div className="bg-card rounded-2xl px-5 py-4 flex items-start gap-3">
-                    <AlertTriangle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <div className="type-group-header text-muted-foreground mb-0.5">
-                        Lo que más te frena
-                      </div>
-                      <div className="type-subhead font-medium">{result.bottleneck}</div>
-                    </div>
-                  </div>
-                </div>
+                </section>
               )}
 
               <ScanCoverageCard
@@ -1867,439 +1855,316 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                 monthsWithPlan={result.months_with_plan}
               />
 
-              <div className="grid lg:grid-cols-2 gap-6 w-full mx-auto">
-                {/* Photos + similarity */}
-                <div className="space-y-4">
-                  {(() => {
-                    const shots: { src: string; label: string; primary?: boolean }[] = [];
-                    if (currentImg) shots.push({ src: currentImg, label: "Actual" });
-                    if (objectiveImg) shots.push({ src: objectiveImg, label: "Objetivo", primary: true });
-                    else if (backImg) shots.push({ src: backImg, label: "Espalda" });
+              {/* Fotos y similitud al objetivo */}
+              {(() => {
+                const shots: { src: string; label: string; primary?: boolean }[] = [];
+                if (currentImg) shots.push({ src: currentImg, label: "Actual" });
+                if (objectiveImg) shots.push({ src: objectiveImg, label: "Objetivo", primary: true });
+                else if (backImg) shots.push({ src: backImg, label: "Espalda" });
+                if (shots.length === 0 && !objectiveImg) return null;
+                return (
+                  <section>
+                    <h2 className="type-title2">Tus fotos</h2>
+                    <div className={`mt-4 grid gap-3 ${shots.length > 1 ? "grid-cols-2" : "grid-cols-1 max-w-[240px]"}`}>
+                      {shots.map((p) => (
+                        <figure key={p.label} className="min-w-0">
+                          <ScanImage src={p.src} alt={p.label.toLowerCase()} className="aspect-[3/4] w-full rounded-2xl" />
+                          <figcaption className={`mt-2 type-subhead ${p.primary ? "font-semibold text-primary" : "text-muted-foreground"}`}>
+                            {p.label}
+                          </figcaption>
+                        </figure>
+                      ))}
+                    </div>
+                    {objectiveImg && (
+                      <div className="mt-4">
+                        <MeterRow
+                          label="Similitud al objetivo"
+                          value={`${result.similarity}%`}
+                          pct={result.similarity}
+                          hint={
+                            <>
+                              Tiempo estimado:{" "}
+                              <span className="font-semibold text-foreground tabular-nums">
+                                ~{result.estimated_months ?? result.months_with_plan ?? "—"} meses
+                              </span>{" "}
+                              con plan personalizado y constancia.
+                            </>
+                          }
+                        />
+                      </div>
+                    )}
+                  </section>
+                );
+              })()}
+
+              {/* Yo futuro: contenido rico, una sola superficie */}
+              <section>
+                <h2 className="type-title2">
+                  {result.months_with_plan ?? result.estimated_months
+                    ? <>Tu yo en {result.months_with_plan ?? result.estimated_months} meses</>
+                    : <>Tu yo transformado</>}
+                </h2>
+                {currentImg && backImg && (
+                  <Tabs
+                    value={simPose}
+                    onValueChange={(v) => { void hapticSelection(); setSimPose(v as "front" | "back"); }}
+                    className="mt-4"
+                  >
+                    <TabsList aria-label="Vista de la simulación" className="w-full max-w-xs">
+                      <TabsTrigger value="front">Frente</TabsTrigger>
+                      <TabsTrigger value="back">Espalda</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                )}
+                <div className="relative mt-4 aspect-[3/2] overflow-hidden rounded-2xl bg-card">
+                  {futureImg ? (
+                    <ScanImage src={futureImg} alt="futuro IA" className="h-full w-full" />
+                  ) : simBase ? (
+                    <ScanImage
+                      src={simBase}
+                      alt="futuro"
+                      className="w-full h-full"
+                      imgClassName="scale-110"
+                      style={{
+                        filter: isPaid && !genLoading
+                          ? "brightness(1.05) contrast(1.05)"
+                          : "blur(18px) brightness(1.1) contrast(1.1)",
+                      }}
+                    />
+                  ) : null}
+                  {!futureImg && (
+                    <>
+                      <div className="absolute inset-0 bg-background/70" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-[22%] bg-card">
+                          {isPaid ? (
+                            genLoading ? <Spinner /> : <Sparkles className="h-7 w-7 text-primary" strokeWidth={1.75} />
+                          ) : (
+                            <Lock className="h-7 w-7 text-primary" strokeWidth={1.75} />
+                          )}
+                        </div>
+                        {isPaid ? (
+                          <>
+                            <p className="mt-3 max-w-xs type-footnote text-muted-foreground">
+                              Tarda ~15s. Misma identidad, físico transformado.
+                            </p>
+                            <Button
+                              variant="tinted"
+                              size="sm"
+                              className="mt-3"
+                              onClick={() => { void hapticTap(); generateFuture(); }}
+                              disabled={genLoading}
+                            >
+                              {genLoading ? "Generando con IA…" : "Generar simulación IA"}
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="mt-3 type-headline">Visualiza tu transformación</p>
+                            <p className="mt-0.5 max-w-xs type-footnote text-muted-foreground">
+                              Simulación generada con IA al activar tu plan
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </section>
+
+              {!isPaid && !user && (
+                <LockedInsightsGrid
+                  insights={result.locked_insights}
+                  onCta={() => navigate(signupWithPlan)}
+                />
+              )}
+
+              {/* === CAPA DE DETALLE — lectura estimada por IA === */}
+              {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
+                <section className="space-y-10">
+                  <header>
+                    <h2 className="type-title2">Lectura estimada por IA</h2>
+                    <p className="mt-1 type-subhead text-muted-foreground">
+                      Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable a partir de tus
+                      fotos. Es una estimación visual, no un diagnóstico médico.
+                    </p>
+                  </header>
+
+                  {/* Composición corporal */}
+                  {result.body_composition && (() => {
+                    const bc = result.body_composition;
+                    const stats: Stat[] = [];
+                    if (bc.body_fat_pct !== undefined) stats.push({ label: "Grasa", value: bc.body_fat_pct, unit: "%", tone: "text-primary" });
+                    if (bc.lean_mass_kg !== undefined) stats.push({ label: "Masa magra", value: bc.lean_mass_kg, unit: "kg" });
+                    if (bc.weight_kg !== undefined) stats.push({ label: "Peso est.", value: bc.weight_kg, unit: "kg" });
                     return (
-                      <div className={`grid gap-3 ${shots.length > 1 ? "grid-cols-2" : "grid-cols-1 sm:max-w-[320px]"}`}>
-                        {shots.map((p) => (
-                          <div
-                            key={p.label}
-                            className={`relative aspect-[3/4] rounded-2xl overflow-hidden ${p.primary ? "ring-2 ring-primary/50" : ""}`}
-                          >
-                            <img loading="lazy" decoding="async" src={p.src} alt={p.label.toLowerCase()} className="w-full h-full object-cover" />
-                            <div className="absolute bottom-0 inset-x-0 bg-background/80 p-2">
-                              <div className={`type-group-header ${p.primary ? "text-primary" : "text-muted-foreground"}`}>
-                                {p.label}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                      <div>
+                        <h3 className="type-title3">Composición corporal estimada</h3>
+                        <StatRow stats={stats} className="mt-2" />
+                        {(bc.somatotype || bc.frame_size || bc.fat_distribution) && (
+                          <ListGroup className="mt-4">
+                            {bc.somatotype && <ListRow title="Somatotipo" value={sentenceCase(bc.somatotype)} />}
+                            {bc.frame_size && <ListRow title="Estructura" value={sentenceCase(bc.frame_size)} />}
+                            {bc.fat_distribution && (
+                              <ListRow title="Distribución de grasa" subtitle={sentenceCase(bc.fat_distribution)} />
+                            )}
+                          </ListGroup>
+                        )}
                       </div>
                     );
                   })()}
 
-                  {objectiveImg && (
-                    <div className="bg-card rounded-2xl p-4">
-                      <div className="flex items-center justify-between mb-2 type-caption1">
-                        <span className="text-muted-foreground">Similitud al objetivo</span>
-                        <span className="font-bold text-primary">{result.similarity}%</span>
+                  {/* Proporciones */}
+                  {result.proportions && (
+                    <div>
+                      <h3 className="type-title3">Proporciones y simetría</h3>
+                      <div className="mt-1">
+                        {result.proportions.shoulder_to_waist_ratio !== undefined && (
+                          <MeterRow
+                            label="Ratio hombro/cintura"
+                            value={result.proportions.shoulder_to_waist_ratio.toFixed(2)}
+                            hint="Ideal ~1.60"
+                            pct={(result.proportions.shoulder_to_waist_ratio / 1.8) * 100}
+                          />
+                        )}
+                        {result.proportions.v_taper_score !== undefined && (
+                          <MeterRow
+                            label="V-taper"
+                            value={`${result.proportions.v_taper_score}/10`}
+                            pct={result.proportions.v_taper_score * 10}
+                          />
+                        )}
+                        {result.proportions.symmetry_score !== undefined && (
+                          <MeterRow
+                            label="Simetría"
+                            value={`${result.proportions.symmetry_score}/10`}
+                            pct={result.proportions.symmetry_score * 10}
+                          />
+                        )}
                       </div>
-                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${result.similarity}%` }}
-                          transition={{ duration: 1.2, ease: "easeOut" }}
-                          className="h-full bg-primary"
-                        />
-                      </div>
-                      <div className="mt-3 type-caption1 text-muted-foreground">
-                        Tiempo estimado:{" "}
-                        <span className="text-foreground font-semibold">
-                          ~{result.estimated_months ?? result.months_with_plan ?? "—"} meses
-                        </span>{" "}
-                        con plan personalizado y constancia.
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Scores + improvements */}
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <ScoreCard label="Atractivo" value={result.attractiveness} />
-                    <ScoreCard label="Potencial" value={result.potential} highlight />
-                    <ScoreCard label="Físico" value={result.physique} />
-                    <ScoreCard label="Estilo" value={result.style} />
-                  </div>
-
-                  <div className="bg-card rounded-2xl p-4">
-                    <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
-                      <TrendingUp className="w-3 h-3" /> Mejoras detectadas
-                    </div>
-                    <ul className="space-y-2">
-                      {result.improvements.map((m, i) => (
-                        <motion.li
-                          key={i}
-                          initial={{ opacity: 0, x: -8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.1 }}
-                          className="flex items-center justify-between type-subhead"
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            {m.label}
-                          </span>
-                          <span
-                            className={`type-caption2 px-2 py-0.5 rounded-full ${
-                              m.priority === "Alta"
-                                ? "bg-primary/15 text-primary"
-                                : m.priority === "Media"
-                                ? "bg-secondary text-foreground"
-                                : "bg-secondary text-muted-foreground"
-                            }`}
-                          >
-                            {m.priority}
-                          </span>
-                        </motion.li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Yo futuro bloqueado — gancho visceral */}
-                  <div className="bg-card rounded-2xl p-4 relative overflow-hidden">
-                    <div className="type-group-header text-primary mb-3 flex items-center gap-1.5">
-                      {isPaid ? <Sparkles className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                      {result.months_with_plan ?? result.estimated_months
-                        ? <>Tu yo en {result.months_with_plan ?? result.estimated_months} meses</>
-                        : <>Tu yo transformado</>}
-                    </div>
-                    {currentImg && backImg && (
-                      <div className="flex gap-1 mb-3 p-1 rounded-full bg-secondary w-fit" role="tablist" aria-label="Vista de la simulación">
-                        {(["front", "back"] as const).map((p) => (
-                          <button key={p} role="tab" aria-selected={simPose === p} onClick={() => setSimPose(p)}
-                            className={`min-h-9 px-4 rounded-full type-caption1 font-semibold transition ${simPose === p ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-                            {p === "front" ? "Frente" : "Espalda"}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-secondary">
-                      {futureImg ? (
-                        <img loading="lazy" decoding="async" src={futureImg} alt="futuro IA" className="w-full h-full object-cover" />
-                      ) : simBase ? (
-                        <img loading="lazy" decoding="async"
-                          src={simBase}
-                          alt="futuro"
-                          className="w-full h-full object-cover scale-110"
-                          style={{
-                            filter: isPaid && !genLoading
-                              ? "brightness(1.05) contrast(1.05)"
-                              : "blur(18px) brightness(1.1) contrast(1.1)",
-                          }}
-                        />
-                      ) : null}
-                      {!futureImg && (
-                        <>
-                          <div className="absolute inset-0 bg-background/80" />
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-4">
-                            {isPaid ? (
-                              <>
-                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                                  {genLoading ? (
-                                    <Spinner />
-                                  ) : (
-                                    <Sparkles className="w-5 h-5 text-primary" />
-                                  )}
-                                </div>
-                                <Button
-                                  variant="hero"
-                                  size="default"
-                                  onClick={() => generateFuture()}
-                                  disabled={genLoading}
-                                >
-                                  {genLoading ? "Generando con IA…" : "Generar simulación IA"}
-                                </Button>
-                                <div className="type-caption1 text-muted-foreground max-w-xs">
-                                  Tarda ~15s. Misma identidad, físico transformado.
-                                </div>
-                              </>
-                            ) : (
-                              <>
-                                <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
-                                  <Lock className="w-5 h-5 text-primary" />
-                                </div>
-                                <div className="type-subhead font-semibold">Visualiza tu transformación</div>
-                                <div className="type-caption1 text-muted-foreground max-w-xs">
-                                  Simulación generada con IA al activar tu plan
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {!isPaid && !user && (
-                    <LockedInsightsGrid
-                      insights={result.locked_insights}
-                      onCta={() => navigate(signupWithPlan)}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* === CAPA DE DETALLE — lectura estimada por IA === */}
-              {(result.body_composition || result.muscle_breakdown?.length || result.posture || result.proportions || result.genetic_markers?.length || result.protocol) && (
-                <div className="w-full mx-auto mt-10 space-y-4">
-                  <div className="text-center mb-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary">
-                      <Gauge className="w-3.5 h-3.5 text-primary" />
-                      <span className="type-headline text-primary">
-                        Lectura estimada por IA
-                      </span>
-                    </div>
-                    <p className="type-caption1 text-muted-foreground mt-2">
-                      Lectura por grupo muscular, composición, postura, proporciones y protocolo accionable a partir de tus
-                      fotos. Es una estimación visual, no un diagnóstico médico.
-                    </p>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* Composición corporal */}
-                    {result.body_composition && (
-                      <div className="bg-card rounded-2xl p-5">
-                        <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
-                          <Activity className="w-3 h-3" /> Composición corporal estimada
-                        </div>
-                        <div className="grid grid-cols-3 gap-3 text-center">
-                          {result.body_composition.body_fat_pct !== undefined && (
-                            <div>
-                              <div className="type-title2 font-rounded tabular-nums text-primary">{result.body_composition.body_fat_pct}%</div>
-                              <div className="type-caption1 text-muted-foreground">Grasa</div>
-                            </div>
-                          )}
-                          {result.body_composition.lean_mass_kg !== undefined && (
-                            <div>
-                              <div className="type-title2 font-rounded tabular-nums text-primary">{result.body_composition.lean_mass_kg}kg</div>
-                              <div className="type-caption1 text-muted-foreground">Masa magra</div>
-                            </div>
-                          )}
-                          {result.body_composition.weight_kg !== undefined && (
-                            <div>
-                              <div className="type-title2 font-rounded tabular-nums">{result.body_composition.weight_kg}kg</div>
-                              <div className="type-caption1 text-muted-foreground">Peso est.</div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="mt-4 grid grid-cols-2 gap-2 type-caption1">
-                          {result.body_composition.somatotype && (
-                            <div className="bg-secondary/60 rounded-lg px-3 py-2">
-                              <div className="type-caption1 text-muted-foreground">Somatotipo</div>
-                              <div className="font-medium capitalize">{result.body_composition.somatotype}</div>
-                            </div>
-                          )}
-                          {result.body_composition.frame_size && (
-                            <div className="bg-secondary/60 rounded-lg px-3 py-2">
-                              <div className="type-caption1 text-muted-foreground">Estructura</div>
-                              <div className="font-medium capitalize">{result.body_composition.frame_size}</div>
-                            </div>
-                          )}
-                          {result.body_composition.fat_distribution && (
-                            <div className="bg-secondary/60 rounded-lg px-3 py-2 col-span-2">
-                              <div className="type-caption1 text-muted-foreground">Distribución de grasa</div>
-                              <div className="font-medium capitalize">{result.body_composition.fat_distribution}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Proporciones */}
-                    {result.proportions && (
-                      <div className="bg-card rounded-2xl p-5">
-                        <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
-                          <Ruler className="w-3 h-3" /> Proporciones y simetría
-                        </div>
-                        <div className="space-y-3 type-subhead">
-                          {result.proportions.shoulder_to_waist_ratio !== undefined && (
-                            <div>
-                              <div className="flex justify-between type-caption1 mb-1">
-                                <span className="text-muted-foreground">Ratio hombro/cintura</span>
-                                <span className="font-semibold">{result.proportions.shoulder_to_waist_ratio.toFixed(2)} <span className="text-muted-foreground font-normal">/ ideal ~1.60</span></span>
-                              </div>
-                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: `${Math.min(100, (result.proportions.shoulder_to_waist_ratio / 1.8) * 100)}%` }} />
-                              </div>
-                            </div>
-                          )}
-                          {result.proportions.v_taper_score !== undefined && (
-                            <div>
-                              <div className="flex justify-between type-caption1 mb-1">
-                                <span className="text-muted-foreground">V-taper</span>
-                                <span className="font-semibold">{result.proportions.v_taper_score}/10</span>
-                              </div>
-                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: `${result.proportions.v_taper_score * 10}%` }} />
-                              </div>
-                            </div>
-                          )}
-                          {result.proportions.symmetry_score !== undefined && (
-                            <div>
-                              <div className="flex justify-between type-caption1 mb-1">
-                                <span className="text-muted-foreground">Simetría</span>
-                                <span className="font-semibold">{result.proportions.symmetry_score}/10</span>
-                              </div>
-                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className="h-full bg-primary" style={{ width: `${result.proportions.symmetry_score * 10}%` }} />
-                              </div>
-                            </div>
-                          )}
+                      {(result.proportions.upper_lower_balance || result.proportions.weakest_link) && (
+                        <div className="mt-5 space-y-6">
                           {result.proportions.upper_lower_balance && (
-                            <div className="type-caption1 bg-secondary/60 rounded-lg px-3 py-2">
-                              <span className="text-muted-foreground">Balance: </span>
-                              <span className="font-medium">{result.proportions.upper_lower_balance}</span>
-                            </div>
+                            <FindingRow
+                              icon={Ruler}
+                              iconClassName="text-muted-foreground"
+                              title="Balance"
+                              description={result.proportions.upper_lower_balance}
+                            />
                           )}
                           {result.proportions.weakest_link && (
-                            <div className="type-caption1 text-primary bg-secondary rounded-lg px-3 py-2">
-                              Eslabón más débil: <span className="font-semibold">{result.proportions.weakest_link}</span>
-                            </div>
+                            <FindingRow icon={Target} title="Eslabón más débil" description={result.proportions.weakest_link} />
                           )}
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Breakdown por grupo muscular */}
                   {result.muscle_breakdown && result.muscle_breakdown.length > 0 && (
-                    <div className="bg-card rounded-2xl p-5">
-                      <div className="type-group-header text-muted-foreground mb-4 flex items-center gap-1.5">
-                        <Dumbbell className="w-3 h-3" /> Lectura por grupo muscular
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-x-6 gap-y-3">
+                    <div>
+                      <h3 className="type-title3">Lectura por grupo muscular</h3>
+                      <div className="mt-1 grid md:grid-cols-2 md:gap-x-8">
                         {result.muscle_breakdown.map((m, i) => (
-                          <motion.div
+                          <MeterRow
                             key={i}
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.04 }}
-                            className="pb-2"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="type-subhead font-medium">{m.group}</span>
-                              <span className={`type-caption1 font-bold tabular-nums ${m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}`}>
-                                {m.score.toFixed(1)}<span className="text-muted-foreground font-normal">/10</span>
+                            label={m.group}
+                            value={
+                              <span className={m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}>
+                                {m.score.toFixed(1)}
+                                <span className="type-footnote font-normal text-muted-foreground">/10</span>
                               </span>
-                            </div>
-                            <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${m.score * 10}%` }}
-                                transition={{ duration: 0.8, delay: i * 0.04 }}
-                                className={`h-full ${m.score >= 7 ? "bg-primary" : "bg-primary/50"}`}
-                              />
-                            </div>
-                            <div className="type-caption1 text-muted-foreground leading-snug">{m.verdict}</div>
-                          </motion.div>
+                            }
+                            pct={m.score * 10}
+                            dim={m.score < 7}
+                            hint={m.verdict}
+                          />
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {/* Postura */}
-                    {result.posture && (result.posture.issues?.length || result.posture.note) && (
-                      <div className="bg-card rounded-2xl p-5">
-                        <div className="type-group-header text-muted-foreground mb-3 flex items-center justify-between">
-                          <span className="flex items-center gap-1.5"><Activity className="w-3 h-3" /> Postura</span>
-                          {result.posture.severity && (
-                            <span className={`type-caption1 px-2 py-0.5 rounded-full ${
-                              result.posture.severity === "severa" ? "bg-destructive/15 text-destructive" :
-                              result.posture.severity === "moderada" ? "bg-primary/15 text-primary" :
-                              "bg-secondary text-muted-foreground"
-                            }`}>{result.posture.severity}</span>
-                          )}
-                        </div>
-                        {result.posture.issues && result.posture.issues.length > 0 && (
-                          <ul className="space-y-1.5 mb-3">
-                            {result.posture.issues.map((iss, i) => (
-                              <li key={i} className="type-subhead flex items-start gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                                <span>{iss}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {result.posture.note && (
-                          <div className="type-caption1 text-muted-foreground italic">{result.posture.note}</div>
+                  {/* Postura */}
+                  {result.posture && (result.posture.issues?.length || result.posture.note) && (
+                    <div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <h3 className="type-title3">Postura</h3>
+                        {result.posture.severity && (
+                          <span className={`type-subhead font-semibold ${
+                            result.posture.severity === "severa" ? "text-destructive" :
+                            result.posture.severity === "moderada" ? "text-primary" :
+                            "text-muted-foreground"
+                          }`}>{sentenceCase(result.posture.severity)}</span>
                         )}
                       </div>
-                    )}
-
-                    {/* Marcadores visuales (no genéticos) */}
-                    {result.genetic_markers && result.genetic_markers.length > 0 && (
-                      <div className="bg-card rounded-2xl p-5">
-                        <div className="type-group-header text-muted-foreground mb-3 flex items-center gap-1.5">
-                          <Dna className="w-3 h-3" /> Rasgos visuales que juegan a tu favor (o en contra)
-                        </div>
-                        <ul className="space-y-2">
-                          {result.genetic_markers.map((g, i) => (
-                            <li key={i} className="type-subhead flex items-start gap-2">
-                              <span className="text-primary type-caption1 mt-0.5">•</span>
-                              <span className="leading-snug">{g}</span>
-                            </li>
+                      {result.posture.issues && result.posture.issues.length > 0 && (
+                        <ul className="mt-1">
+                          {result.posture.issues.map((iss, i) => (
+                            <li key={i} className="sep-b last:border-b-0 py-3 type-body">{iss}</li>
                           ))}
                         </ul>
-                        <p className="mt-3 type-caption1 text-muted-foreground">
-                          Señales observadas en tus fotos: no es un estudio genético.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      {result.posture.note && (
+                        <p className="mt-2 type-footnote text-muted-foreground">{result.posture.note}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Marcadores visuales (no genéticos) */}
+                  {result.genetic_markers && result.genetic_markers.length > 0 && (
+                    <div>
+                      <h3 className="type-title3">Rasgos visuales que juegan a tu favor (o en contra)</h3>
+                      <ul className="mt-1">
+                        {result.genetic_markers.map((g, i) => (
+                          <li key={i} className="sep-b last:border-b-0 py-3 type-body">{g}</li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 type-footnote text-muted-foreground">
+                        Señales observadas en tus fotos: no es un estudio genético.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Protocolo accionable */}
                   {result.protocol && (
-                    <div className="bg-card rounded-2xl p-5">
-                      <div className="type-group-header text-primary mb-4 flex items-center gap-1.5">
-                        <ClipboardList className="w-3 h-3" /> Protocolo recomendado por la IA
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                        {result.protocol.training_days_per_week !== undefined && (
-                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.training_days_per_week}</div>
-                            <div className="type-caption1 text-muted-foreground">Días/sem</div>
-                          </div>
-                        )}
-                        {result.protocol.weekly_sets_priority !== undefined && (
-                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.weekly_sets_priority}</div>
-                            <div className="type-caption1 text-muted-foreground">Sets prioridad</div>
-                          </div>
-                        )}
-                        {result.protocol.protein_g_per_kg !== undefined && (
-                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.protein_g_per_kg}g</div>
-                            <div className="type-caption1 text-muted-foreground">Proteína/kg</div>
-                          </div>
-                        )}
-                        {result.protocol.calorie_adjustment_kcal !== undefined && (
-                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">
-                              {result.protocol.calorie_adjustment_kcal > 0 ? "+" : ""}{result.protocol.calorie_adjustment_kcal}
-                            </div>
-                            <div className="type-caption1 text-muted-foreground">kcal vs mant.</div>
-                          </div>
-                        )}
-                        {result.protocol.cardio_minutes_per_week !== undefined && (
-                          <div className="bg-background/50 rounded-lg px-3 py-2.5 text-center">
-                            <div className="text-xl font-rounded font-bold tabular-nums text-primary">{result.protocol.cardio_minutes_per_week}</div>
-                            <div className="type-caption1 text-muted-foreground">min cardio/sem</div>
-                          </div>
-                        )}
-                      </div>
+                    <div>
+                      <h3 className="type-title3">Protocolo recomendado por la IA</h3>
+                      {(result.protocol.training_days_per_week !== undefined ||
+                        result.protocol.weekly_sets_priority !== undefined ||
+                        result.protocol.protein_g_per_kg !== undefined ||
+                        result.protocol.calorie_adjustment_kcal !== undefined ||
+                        result.protocol.cardio_minutes_per_week !== undefined) && (
+                        <ListGroup className="mt-3">
+                          {result.protocol.training_days_per_week !== undefined && (
+                            <ListRow title="Días de entreno por semana" value={<span className="tabular-nums">{result.protocol.training_days_per_week}</span>} />
+                          )}
+                          {result.protocol.weekly_sets_priority !== undefined && (
+                            <ListRow title="Series del grupo prioritario" value={<span className="tabular-nums">{result.protocol.weekly_sets_priority}</span>} />
+                          )}
+                          {result.protocol.protein_g_per_kg !== undefined && (
+                            <ListRow title="Proteína por kg" value={<span className="tabular-nums">{result.protocol.protein_g_per_kg} g</span>} />
+                          )}
+                          {result.protocol.calorie_adjustment_kcal !== undefined && (
+                            <ListRow
+                              title="Calorías frente a mantenimiento"
+                              value={
+                                <span className="tabular-nums">
+                                  {result.protocol.calorie_adjustment_kcal > 0 ? "+" : ""}{result.protocol.calorie_adjustment_kcal} kcal
+                                </span>
+                              }
+                            />
+                          )}
+                          {result.protocol.cardio_minutes_per_week !== undefined && (
+                            <ListRow title="Cardio por semana" value={<span className="tabular-nums">{result.protocol.cardio_minutes_per_week} min</span>} />
+                          )}
+                        </ListGroup>
+                      )}
                       {result.protocol.key_lifts && result.protocol.key_lifts.length > 0 && (
-                        <div className="mb-3">
-                          <div className="type-caption1 text-muted-foreground mb-1.5">Ejercicios clave</div>
-                          <div className="flex flex-wrap gap-1.5">
+                        <div className="mt-6">
+                          <h4 className="type-headline">Ejercicios clave</h4>
+                          <div className="mt-2 flex flex-wrap gap-2">
                             {result.protocol.key_lifts.map((l, i) => (
-                              <span key={i} className="type-caption1 px-2.5 py-1 rounded-full bg-primary/10 text-primary ">
+                              <span key={i} className="rounded-full bg-secondary px-3 py-1.5 type-subhead">
                                 {l}
                               </span>
                             ))}
@@ -2307,12 +2172,12 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                         </div>
                       )}
                       {result.protocol.avoid && result.protocol.avoid.length > 0 && (
-                        <div>
-                          <div className="type-caption1 text-muted-foreground mb-1.5">Evita</div>
-                          <ul className="space-y-1">
+                        <div className="mt-6">
+                          <h4 className="type-headline">Evita</h4>
+                          <ul className="mt-1">
                             {result.protocol.avoid.map((a, i) => (
-                              <li key={i} className="type-caption1 flex items-start gap-2 text-muted-foreground">
-                                <X className="w-3 h-3 text-destructive mt-0.5 flex-shrink-0" />
+                              <li key={i} className="flex items-start gap-3 py-2 type-subhead text-muted-foreground">
+                                <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
                                 <span>{a}</span>
                               </li>
                             ))}
@@ -2321,7 +2186,7 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
                       )}
                     </div>
                   )}
-                </div>
+                </section>
               )}
 
               {/* Proyección + prueba social — antes del CTA final */}
@@ -2337,125 +2202,117 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
               )}
               {!isPaid && !user && <SocialProofStrip />}
 
-              {/* FUNNEL CTA */}
+              {/* FUNNEL CTA — cierre al estilo de la bienvenida: una sola acción dorada */}
               {!isPaid && !user ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, duration: 0.6 }}
-                className="relative w-full mx-auto mt-16"
-              >
-                <div className="relative bg-card rounded-2xl p-8 sm:p-12 text-center overflow-hidden">
-                  <div className="relative">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary mb-5">
-                      <Target className="w-3.5 h-3.5 text-primary" />
-                      <span className="type-headline text-primary">
-                        Siguiente paso
-                      </span>
-                    </div>
-                    <h3 className="type-title1 mb-4">
-                      {(result.months_with_plan ?? result.estimated_months) ? (
-                        <>
-                          Llega ahí en{" "}
-                          <span className="text-primary">
-                            {result.months_with_plan ?? result.estimated_months} meses
-                          </span>
-                          {result.months_without_plan !== undefined && (
-                            <>, no en {result.months_without_plan}</>
-                          )}
-                        </>
-                      ) : (
-                        <>
-                          Convierte el diagnóstico en{" "}
-                          <span className="text-primary">resultados reales</span>
-                        </>
-                      )}
-                    </h3>
-                    <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-                      La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
-                      Te proponemos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin cambios de fondo,
-                      lo más probable es que el siguiente scan siga pareciéndose a este.
-                    </p>
-                    <div className="flex items-baseline justify-center gap-3 mb-5">
-                      <span className="type-title1 font-rounded tabular-nums text-primary">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
-                      <span className="type-footnote text-primary">{TRIAL_DAYS} días de prueba</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      {(() => {
-                        const { rec } = recommendFor({
-                          bottleneck: result.bottleneck,
-                          improvements: result.improvements,
-                          monthsWithPlan: result.months_with_plan,
-                          plans,
-                        });
-                        const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
-                        return (
-                          <Button variant="hero" size="xl" onClick={() => navigate(to)} className="active:scale-[0.98]">
-                            {user ? "Volver a mi cuenta" : `Empezar con ${rec.name}`}
-                            <ArrowRight className="w-4 h-4 transition-transform" />
-                          </Button>
-                        );
-                      })()}
-                      <Button variant="outline" size="xl" onClick={reset}>
-                        Hacer otro scan
-                      </Button>
-                    </div>
-                    {!user && (
-                      <p className="type-caption1 text-muted-foreground mt-3">
-                        7 días de prueba en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
-                      </p>
+                <section className="pt-4 text-center">
+                  <h2 className="type-title1">
+                    {(result.months_with_plan ?? result.estimated_months) ? (
+                      <>
+                        Llega ahí en{" "}
+                        <span className="text-primary">
+                          {result.months_with_plan ?? result.estimated_months} meses
+                        </span>
+                        {result.months_without_plan !== undefined && (
+                          <>, no en {result.months_without_plan}</>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        Convierte el diagnóstico en{" "}
+                        <span className="text-primary">resultados reales</span>
+                      </>
                     )}
-                    <div className="flex items-center gap-4 mt-6 justify-center type-caption1 text-muted-foreground flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                        Cancela en 1 clic
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                        Sin permanencia
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                        Garantía {GUARANTEE_DAYS} días
-                      </div>
-                    </div>
+                  </h2>
+                  <p className="mx-auto mt-3 max-w-md type-subhead text-muted-foreground">
+                    La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
+                    Te proponemos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin cambios de fondo,
+                    lo más probable es que el siguiente scan siga pareciéndose a este.
+                  </p>
+                  <p className="mt-6 flex flex-wrap items-baseline justify-center gap-x-2">
+                    <span className="font-rounded type-title2 font-bold tabular-nums">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
+                    <span className="type-subhead text-muted-foreground">{TRIAL_DAYS} días de prueba</span>
+                  </p>
+                  <div className="mx-auto mt-6 max-w-sm space-y-2">
+                    {(() => {
+                      const { rec } = recommendFor({
+                        bottleneck: result.bottleneck,
+                        improvements: result.improvements,
+                        monthsWithPlan: result.months_with_plan,
+                        plans,
+                      });
+                      const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
+                      return (
+                        <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(to); }}>
+                          {user ? "Volver a mi cuenta" : `Empezar con ${rec.name}`}
+                        </Button>
+                      );
+                    })()}
+                    <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); reset(); }}>
+                      Hacer otro scan
+                    </Button>
                   </div>
-                </div>
-              </motion.div>
+                  {!user && (
+                    <p className="mt-3 type-footnote text-muted-foreground">
+                      7 días de prueba en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
+                    </p>
+                  )}
+                  <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 type-footnote text-muted-foreground">
+                    <li className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Cancela en 1 clic
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Sin permanencia
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      Garantía {GUARANTEE_DAYS} días
+                    </li>
+                  </ul>
+                </section>
               ) : (
-                <div className="max-w-2xl mx-auto mt-12 flex flex-col sm:flex-row gap-3 justify-center">
-                  {routeUserId && user && canApplyPlan && hasScanInferences(result) && (planApplyState === "idle" || planApplyState === "error") && (
-                    <Button
-                      variant="secondary"
-                      size="xl"
-                      onClick={() => applyScanToPlan(result)}
-                    >
-                      Aplicar a mi plan
-                      <ArrowRight className="w-4 h-4" />
+                <section className="mx-auto w-full max-w-sm space-y-2">
+                  {routeUserId && (
+                    <Button size="lg" className="w-full" onClick={openPlan}>
+                      Ver mi plan
                     </Button>
                   )}
-                  {routeUserId && (
-                    <Button variant="secondary" size="xl" onClick={openPlan}>
-                      Ver mi plan
-                      <ArrowRight className="w-4 h-4" />
+                  {routeUserId && user && canApplyPlan && hasScanInferences(result, scanOnboarding) && (planApplyState === "idle" || planApplyState === "error") && (
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full"
+                      onClick={() => { void hapticTap(); applyScanToPlan(result, planApplyState === "error"); }}
+                    >
+                      Aplicar a mi plan
                     </Button>
                   )}
                   {!routeUserId && user && (
-                    <Button variant="secondary" size="xl" onClick={() => navigate(`/scan/user/${user.id}`)}>
+                    <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(`/scan/user/${user.id}`); }}>
                       Ir a mi progreso
-                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   )}
                   {!routeUserId && !user && (
-                    <Button variant="hero" size="xl" onClick={() => navigate(signupWithPlan)}>
+                    <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(signupWithPlan); }}>
                       Empezar mi plan
-                      <ArrowRight className="w-4 h-4" />
                     </Button>
                   )}
-                  <Button variant="outline" size="xl" onClick={reset}>
+                  <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); reset(); }}>
                     Hacer otro scan
                   </Button>
-                </div>
+                  {user && routeUserId && (
+                    <Button
+                      variant="plain"
+                      className="w-full text-destructive"
+                      onClick={() => { void hapticTap(); resetProgress(); }}
+                      disabled={resettingProgress}
+                    >
+                      {resettingProgress && <Spinner size="sm" />}
+                      Resetear progreso
+                    </Button>
+                  )}
+                </section>
               )}
 
               {/* Tarjeta compartible (oculta off-screen) */}
@@ -2627,7 +2484,8 @@ const Scan = ({ inline = false, onOpenPlan }: { inline?: boolean; onOpenPlan?: (
   if (embedded) {
     return (
       <MobileAppShell
-        title="Análisis IA"
+        title={result ? "Tu AI Physique Report" : "Análisis físico con IA"}
+        titleInContent
         active="progress"
         userId={user.id}
         onChange={(t) => { try { sessionStorage.setItem("autopilot_section", t); } catch { /* sin storage */ } navigate("/dashboard"); }}

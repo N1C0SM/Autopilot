@@ -60,7 +60,7 @@ const ForgotPassword = () => {
           noindex
         />
         <AuthHero
-          mark={<AuthSymbol icon={Mail} size="lg" />}
+          mark={<AuthSymbol icon={Mail} />}
           title="Revisa tu correo"
           description={
             <>

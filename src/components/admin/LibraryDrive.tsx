@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
-import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import { hapticSelection, hapticTap } from "@/lib/native";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,21 +18,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Plus,
-  Trash2,
   Upload,
   Folder,
   FolderOpen,
   FolderPlus,
   FileText,
   Image as ImageIcon,
-  ArrowLeft,
   ChevronRight,
   Eye,
   Download,
   MoreVertical,
+  MoreHorizontal,
   Link as LinkIcon,
-
   Package,
   Lock,
   Globe,
@@ -42,6 +39,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { toOptimizedWebp } from "@/lib/imageOptimization";
+import { ImageWithFallback, InlineBack, MONO_FIELD } from "@/components/admin/content/AdminContentParts";
+import { useConfirm } from "@/components/admin/content/useConfirm";
+import { useTextPrompt } from "@/components/admin/content/useTextPrompt";
 
 type Kind = "folder" | "book" | "pack" | "video" | "recommendation";
 
@@ -89,6 +89,8 @@ const LibraryDrive = () => {
   const [busy, setBusy] = useState<string | null>(null);
   const [covers, setCovers] = useState<Record<string, string>>({});
   const [path, setPath] = useState<{ id: string; title: string }[]>([]);
+  const { ask, dialog: confirmDialog } = useConfirm();
+  const { ask: askText, dialog: promptDialog } = useTextPrompt();
 
   const parentId = path.length ? path[path.length - 1].id : null;
 
@@ -178,14 +180,14 @@ const LibraryDrive = () => {
   };
 
   const rename = async (b: Book) => {
-    const title = prompt("Nombre de la carpeta", b.title);
+    const title = await askText({ title: "Nombre de la carpeta", initialValue: b.title });
     if (!title) return;
     await supabase.from("library_books").update({ title }).eq("id", b.id);
     patch(b.id, { title });
   };
 
   const remove = async (b: Book) => {
-    if (!confirm(`¿Eliminar "${b.title}" y todo lo que contiene?`)) return;
+    if (!(await ask({ title: `¿Eliminar «${b.title || "sin título"}»?`, description: "Se eliminará con todo lo que contiene." }))) return;
     const paths = [b.cover_path, b.file_path].filter((x) => x && !x.startsWith("http")) as string[];
     if (paths.length) await supabase.storage.from("library").remove(paths);
     await supabase.from("library_books").delete().eq("id", b.id);
@@ -260,7 +262,7 @@ const LibraryDrive = () => {
     if (error || !data?.token) { toast.error("No se pudo crear el enlace"); return; }
     const url = `https://autopilotplan.com/d/${data.token}`;
     try { await navigator.clipboard.writeText(url); toast.success("Enlace copiado: sirve para 1 descarga, caduca en 7 días"); }
-    catch { window.prompt("Copia este enlace (1 descarga):", url); }
+    catch { void askText({ title: "Copia este enlace", description: "Sirve para 1 descarga.", initialValue: url, readOnly: true }); }
   };
 
   const openFile = async (p: string) => {
@@ -319,14 +321,14 @@ const LibraryDrive = () => {
 
   const open = books.find((b) => b.id === openId) || null;
 
-  const kindIcon = (k: Kind, cls = "h-5 w-5") =>
-    k === "pack" ? <Package className={cls} />
-    : k === "video" ? <Video className={cls} />
-    : k === "recommendation" ? <Star className={cls} />
-    : k === "folder" ? <Folder className={cls} />
-    : <BookOpen className={cls} />;
+  const kindIcon = (k: Kind, cls = "h-5 w-5", strokeWidth = 2) =>
+    k === "pack" ? <Package className={cls} strokeWidth={strokeWidth} />
+    : k === "video" ? <Video className={cls} strokeWidth={strokeWidth} />
+    : k === "recommendation" ? <Star className={cls} strokeWidth={strokeWidth} />
+    : k === "folder" ? <Folder className={cls} strokeWidth={strokeWidth} />
+    : <BookOpen className={cls} strokeWidth={strokeWidth} />;
 
-  const menuButton = "absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-background/80 backdrop-blur-md transition-colors active:bg-accent";
+  const menuButton = "absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-secondary transition-colors active:bg-accent";
   const uploadLink = "inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 type-subhead text-primary transition-opacity active:opacity-60";
   const previewBox = "relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-card";
   const emptyPreview = "flex h-full w-full flex-col items-center justify-center gap-2 type-subhead text-muted-foreground";
@@ -342,16 +344,11 @@ const LibraryDrive = () => {
     return (
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="space-y-3">
-          <button
-            onClick={() => { void hapticTap(); setOpenId(null); }}
-            className="-ml-2 inline-flex min-h-[44px] items-center gap-1 px-2 type-body text-primary transition-opacity active:opacity-60"
-          >
-            <ArrowLeft className="h-5 w-5" /> Volver
-          </button>
+          <InlineBack label={path.length ? path[path.length - 1].title : "Atrás"} onClick={() => setOpenId(null)} />
           <div className="flex items-start gap-3.5">
-            <span className="mt-1 text-primary">{kindIcon(kind, "h-7 w-7")}</span>
+            <span className="mt-1 text-primary">{kindIcon(kind, "h-7 w-7", 1.75)}</span>
             <div className="min-w-0">
-              <h2 className="type-title1 break-words">{open.title || "Sin título"}</h2>
+              <h2 className="type-title2 break-words">{open.title || "Sin título"}</h2>
               <p className="type-subhead text-muted-foreground">{KIND_LABEL[kind]}</p>
             </div>
           </div>
@@ -364,7 +361,6 @@ const LibraryDrive = () => {
               <div className="flex items-center justify-between gap-2 px-4">
                 <Label className="type-group-header">Portada</Label>
                 <label className={uploadLink}>
-                  <Upload className="h-4 w-4" />
                   {open.cover_path ? "Cambiar portada" : "Subir portada"}
                   <input
                     type="file"
@@ -379,13 +375,16 @@ const LibraryDrive = () => {
                 </label>
               </div>
               <div className={previewBox}>
-                {covers[open.id] ? (
-                  <img loading="lazy" decoding="async" src={covers[open.id]} alt="Portada" className="h-full w-full object-cover" />
-                ) : (
-                  <div className={emptyPreview}>
-                    <ImageIcon className="h-6 w-6" strokeWidth={1.75} /> Sin portada
-                  </div>
-                )}
+                <ImageWithFallback
+                  src={covers[open.id]}
+                  alt="Portada"
+                  className="h-full w-full object-cover"
+                  fallback={
+                    <div className={emptyPreview}>
+                      <ImageIcon className="h-6 w-6" strokeWidth={1.75} /> Sin portada
+                    </div>
+                  }
+                />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button aria-label="Opciones de portada" className={menuButton}>
@@ -429,7 +428,6 @@ const LibraryDrive = () => {
                 <div className="flex items-center justify-between gap-2 px-4">
                   <Label className="type-group-header">Archivo del libro</Label>
                   <label className={uploadLink}>
-                    <Upload className="h-4 w-4" />
                     {open.file_path ? "Cambiar PDF" : "Subir PDF"}
                     <input
                       type="file"
@@ -529,6 +527,8 @@ const LibraryDrive = () => {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
+                className={MONO_FIELD}
+                enterKeyHint="done"
                 value={open.video_url || ""}
                 placeholder="https://…"
                 onChange={(e) => patch(open.id, { video_url: e.target.value })}
@@ -561,6 +561,8 @@ const LibraryDrive = () => {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
+                className={MONO_FIELD}
+                enterKeyHint="done"
                 value={open.buy_url || ""}
                 placeholder="https://…"
                 onChange={(e) => patch(open.id, { buy_url: e.target.value })}
@@ -575,7 +577,16 @@ const LibraryDrive = () => {
           )}
         </div>
 
-        {isPack && (
+        {isPack && packBooks.length === 0 && (
+          <EmptyState
+            icon={BookOpen}
+            title="Aún no hay libros"
+            description="Crea primero algún libro para poder incluirlo."
+            className="py-6"
+          />
+        )}
+
+        {isPack && packBooks.length > 0 && (
           <ListGroup
             header="Libros incluidos en el pack"
             footer="El cliente podrá descargar cada libro incluido una sola vez. Caduca en 7 días."
@@ -596,9 +607,6 @@ const LibraryDrive = () => {
                 />
               );
             })}
-            {packBooks.length === 0 && (
-              <p className="px-4 py-3 type-subhead text-muted-foreground">Crea primero algún libro para poder incluirlo.</p>
-            )}
           </ListGroup>
         )}
 
@@ -609,14 +617,14 @@ const LibraryDrive = () => {
             disabled={(open.pack_items || []).length === 0}
             onClick={() => { void hapticTap(); shareOnce(open.id); }}
           >
-            <LinkIcon className="h-4 w-4" /> Copiar enlace de 1 descarga del pack
+            Copiar enlace de 1 descarga del pack
           </Button>
         )}
 
         {isBook && open.file_path && (
           <div className="space-y-1.5">
             <Button variant="tinted" className="w-full sm:w-auto" onClick={() => { void hapticTap(); shareOnce(open.id); }}>
-              <LinkIcon className="h-4 w-4" /> Copiar enlace de 1 descarga
+              Copiar enlace de 1 descarga
             </Button>
             <p className="type-footnote text-muted-foreground">El cliente podrá descargarlo una sola vez. Caduca en 7 días.</p>
           </div>
@@ -640,11 +648,13 @@ const LibraryDrive = () => {
             {busy === open.id ? "Guardando…" : "Guardar"}
           </Button>
           <div>
-            <Button variant="plain" className="text-destructive" aria-label="Eliminar" onClick={() => { void hapticNotify("warning"); void remove(open); }}>
-              <Trash2 className="h-4 w-4" /> Eliminar
+            <Button variant="plain" className="-ml-4 text-destructive" aria-label={`Eliminar ${open.title || "elemento"}`} onClick={() => { void remove(open); }}>
+              Eliminar
             </Button>
           </div>
         </div>
+        {confirmDialog}
+        {promptDialog}
       </div>
     );
   }
@@ -653,55 +663,52 @@ const LibraryDrive = () => {
   const countInside = (id: string) => books.filter((b) => b.parent_id === id).length;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="type-large-title md:type-title1">Tu nube privada</h2>
-          <p className="mt-1 max-w-xl type-subhead text-muted-foreground">
-            Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones.
-            Nada se ve fuera hasta que tú lo publicas.
-          </p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button onClick={() => void hapticTap()}>
-              <Plus className="h-4 w-4" /> Nuevo
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem onClick={() => create("folder")}>
-              <FolderPlus className="mr-2 h-4 w-4" /> Carpeta
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => create("book")}>
-              <BookOpen className="mr-2 h-4 w-4" /> Libro (portada + PDF)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => create("pack")}>
-              <Package className="mr-2 h-4 w-4" /> Pack (elige libros)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-4">
+      <p className="max-w-xl type-subhead text-muted-foreground">
+        Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones.
+        Nada se ve fuera hasta que tú lo publicas.
+      </p>
 
-      {/* Migas de pan */}
-      <nav aria-label="Ruta" className="-mx-2 flex items-center overflow-x-auto type-subhead">
-        <button
-          onClick={() => { void hapticTap(); setPath([]); }}
-          className={`inline-flex min-h-[44px] shrink-0 items-center px-2 transition-opacity active:opacity-60 ${path.length === 0 ? "font-semibold" : "text-primary"}`}
-        >
-          Drive
-        </button>
-        {path.map((p, i) => (
-          <span key={p.id} className="flex shrink-0 items-center">
-            <ChevronRight className="h-4 w-4 text-muted-foreground/60" />
-            <button
-              onClick={() => { void hapticTap(); setPath((arr) => arr.slice(0, i + 1)); }}
-              className={`inline-flex min-h-[44px] items-center px-2 transition-opacity active:opacity-60 ${i === path.length - 1 ? "font-semibold" : "text-primary"}`}
-            >
-              {p.title}
-            </button>
-          </span>
-        ))}
-      </nav>
+      {/* Barra de herramientas: ruta a la izquierda, acciones a la derecha */}
+      <div className="flex items-center justify-between gap-2">
+        <nav aria-label="Ruta" className="no-scrollbar -ml-2 flex min-w-0 flex-1 items-center overflow-x-auto type-subhead">
+          <button
+            onClick={() => { void hapticTap(); setPath([]); }}
+            className={`inline-flex min-h-[44px] shrink-0 items-center px-2 transition-opacity active:opacity-60 ${path.length === 0 ? "font-semibold" : "text-primary"}`}
+          >
+            Drive
+          </button>
+          {path.map((p, i) => (
+            <span key={p.id} className="flex shrink-0 items-center">
+              <ChevronRight className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+              <button
+                onClick={() => { void hapticTap(); setPath((arr) => arr.slice(0, i + 1)); }}
+                className={`inline-flex min-h-[44px] items-center px-2 transition-opacity active:opacity-60 ${i === path.length - 1 ? "font-semibold" : "text-primary"}`}
+              >
+                {p.title}
+              </button>
+            </span>
+          ))}
+        </nav>
+        <div className="-mr-2 flex shrink-0 items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="plain" onClick={() => void hapticTap()}>Nuevo</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem onClick={() => create("folder")}>
+                <FolderPlus className="mr-2 h-4 w-4" /> Carpeta
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => create("book")}>
+                <BookOpen className="mr-2 h-4 w-4" /> Libro (portada + PDF)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => create("pack")}>
+                <Package className="mr-2 h-4 w-4" /> Pack (elige libros)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
       {items.length === 0 ? (
         <EmptyState
@@ -722,14 +729,19 @@ const LibraryDrive = () => {
                   subtitle={`${countInside(b.id)} elementos`}
                   onClick={() => setPath((p) => [...p, { id: b.id, title: b.title }])}
                   trailing={
-                    <span className="flex items-center">
-                      <Button variant="plain" className="min-h-[44px]" onClick={() => { void hapticTap(); void rename(b); }}>
-                        Renombrar
-                      </Button>
-                      <Button variant="ghost" size="icon" aria-label="Eliminar carpeta" onClick={() => { void hapticNotify("warning"); void remove(b); }}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="-mr-2 text-muted-foreground" aria-label={`Opciones de ${b.title || "la carpeta"}`} onClick={() => void hapticTap()}>
+                          <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => void rename(b)}>Renombrar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(b)}>
+                          Eliminar carpeta
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   }
                 />
               );
@@ -747,13 +759,15 @@ const LibraryDrive = () => {
               <ListRow
                 key={b.id}
                 leading={
-                  thumb ? (
-                    <img loading="lazy" decoding="async" src={thumb} alt="" className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover" />
-                  ) : (
-                    <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
-                      {kindIcon(kind)}
-                    </div>
-                  )
+                  <ImageWithFallback
+                    src={thumb}
+                    className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover"
+                    fallback={
+                      <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
+                        {kindIcon(kind)}
+                      </div>
+                    }
+                  />
                 }
                 title={b.title || "Sin título"}
                 subtitle={`${KIND_LABEL[kind]} · ${detail}`}
@@ -765,6 +779,8 @@ const LibraryDrive = () => {
           })}
         </ListGroup>
       )}
+      {confirmDialog}
+      {promptDialog}
     </div>
   );
 };

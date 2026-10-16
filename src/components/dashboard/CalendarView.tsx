@@ -1,13 +1,13 @@
 import { getSportSchedules, getCustomActivities } from "@/lib/availability";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import esLocale from "@fullcalendar/core/locales/es";
-import type { EventInput, EventClickArg, EventDropArg, EventChangeArg, DateSelectArg } from "@fullcalendar/core";
-import { Plus, Trash2, X, Dumbbell, Flame, Apple, ShieldCheck, StickyNote, Sparkles } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { EventInput, EventClickArg, EventDropArg, EventChangeArg, DateSelectArg, EventContentArg, DayHeaderContentArg } from "@fullcalendar/core";
+import { Flame, ShieldCheck, StickyNote } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
+import { skipAutoFocusOnTouch } from "@/components/admin-user-detail/skipAutoFocusOnTouch";
 import type { DayPlan } from "@/types/training";
 
 const DAYS_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -23,11 +27,37 @@ const DAY_TO_DOW: Record<string, number> = {
   Lunes: 1, Martes: 2, Miércoles: 3, Jueves: 4, Viernes: 5, Sábado: 6, Domingo: 0,
 };
 
+// Colores de los bloques del calendario, sobre tokens: entreno en tinte, el resto en gris.
 const COLORS = {
-  training: "#3b82f6",   // azul
-  external: "#f97316",   // naranja
-  nutrition: "#22c55e",  // verde
+  training: { bg: "hsl(var(--primary) / 0.22)", text: "hsl(var(--primary))" },
+  external: { bg: "hsl(var(--accent))", text: "hsl(var(--foreground))" },
 };
+
+const LABEL = "mb-1.5 block font-normal text-muted-foreground";
+
+// Barra de FullCalendar con métricas iOS. `.fc-themed` (index.css) la deja como web (borde, 10–12 px,
+// 24 px de alto, mayúsculas de palabra); se sobrescribe desde el contenedor con `!` porque esas reglas
+// van después de las utilidades. Navegación: botones grises de 44 px. Vistas: control segmentado
+// igual que `TabsList`. En el móvil el título va primero y el segmentado ocupa su propia fila.
+const FC_NATIVE = [
+  // Barra
+  "[&_.fc-header-toolbar]:!mb-4 [&_.fc-header-toolbar]:!flex-wrap [&_.fc-header-toolbar]:!gap-3",
+  "[&_.fc-toolbar-title]:!truncate [&_.fc-toolbar-title]:!text-[17px] [&_.fc-toolbar-title]:!font-semibold [&_.fc-toolbar-title]:!leading-[22px] [&_.fc-toolbar-title]:!normal-case [&_.fc-toolbar-title::first-letter]:uppercase",
+  "max-sm:[&_.fc-toolbar-chunk:nth-child(2)]:order-first max-sm:[&_.fc-toolbar-chunk:nth-child(2)]:min-w-0 max-sm:[&_.fc-toolbar-chunk:nth-child(2)]:flex-1",
+  "max-sm:[&_.fc-toolbar-chunk:last-child]:basis-full max-sm:[&_.fc-toolbar-chunk:last-child_.fc-button-group]:!w-full",
+  // Botones: gris, sin borde, 44 px, 15 px, estado pulsado y anillo solo con teclado
+  "[&_.fc-button]:!inline-flex [&_.fc-button]:!h-11 [&_.fc-button]:!min-w-11 [&_.fc-button]:!items-center [&_.fc-button]:!justify-center [&_.fc-button]:!rounded-full [&_.fc-button]:!border-0 [&_.fc-button]:!bg-secondary [&_.fc-button]:!px-4 [&_.fc-button]:!py-0",
+  "[&_.fc-button]:!text-[15px] [&_.fc-button]:!font-medium [&_.fc-button]:!leading-5 [&_.fc-button]:!normal-case [&_.fc-button]:!text-foreground [&_.fc-button]:!shadow-none [&_.fc-button]:!outline-none [&_.fc-button]:transition-[background-color,transform] [&_.fc-button]:duration-150",
+  "[&_.fc-button:not(:disabled):active]:!bg-accent [&_.fc-button:not(:disabled):active]:scale-[0.97] [&_.fc-button:focus-visible]:!ring-2 [&_.fc-button:focus-visible]:!ring-primary [&_.fc-button:disabled]:!opacity-40",
+  "[&_.fc-prev-button]:!w-11 [&_.fc-prev-button]:!px-0 [&_.fc-next-button]:!ml-2 [&_.fc-next-button]:!w-11 [&_.fc-next-button]:!px-0 [&_.fc-today-button]:!ml-2",
+  // Vistas (Semana, Mes, Día): control segmentado
+  "[&_.fc-toolbar-chunk:last-child_.fc-button-group]:!flex [&_.fc-toolbar-chunk:last-child_.fc-button-group]:!h-9 [&_.fc-toolbar-chunk:last-child_.fc-button-group]:!rounded-[9px] [&_.fc-toolbar-chunk:last-child_.fc-button-group]:!bg-[rgba(118,118,128,0.24)] [&_.fc-toolbar-chunk:last-child_.fc-button-group]:!p-0.5",
+  "[&_.fc-toolbar-chunk:last-child_.fc-button]:!m-0 [&_.fc-toolbar-chunk:last-child_.fc-button]:!h-full [&_.fc-toolbar-chunk:last-child_.fc-button]:!min-w-0 [&_.fc-toolbar-chunk:last-child_.fc-button]:!flex-1 [&_.fc-toolbar-chunk:last-child_.fc-button]:!rounded-[7px] [&_.fc-toolbar-chunk:last-child_.fc-button]:!bg-transparent [&_.fc-toolbar-chunk:last-child_.fc-button]:!px-3 [&_.fc-toolbar-chunk:last-child_.fc-button]:!text-[13px] [&_.fc-toolbar-chunk:last-child_.fc-button]:!leading-[18px]",
+  "[&_.fc-toolbar-chunk:last-child_.fc-button-active]:!bg-[#636366] [&_.fc-toolbar-chunk:last-child_.fc-button-active]:!font-semibold [&_.fc-toolbar-chunk:last-child_.fc-button-active]:!shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]",
+  // Rejilla: nada por debajo de 11 px y sin el brillo de hover en los eventos
+  "[&_.fc-col-header-cell-cushion]:!px-0 [&_.fc-col-header-cell-cushion]:!text-[11px] [&_.fc-timegrid-slot-label-cushion]:tabular-nums [&_.fc-daygrid-day-number]:!text-[13px] [&_.fc-daygrid-day-number]:tabular-nums",
+  "[&_.fc-event:hover]:!filter-none [&_.fc-event:active]:opacity-70",
+].join(" ");
 
 /**
  * Fatiga estimada por categoría de actividad externa.
@@ -42,9 +72,9 @@ const EXTERNAL_FATIGUE: Record<string, "Alta" | "Media" | "Baja"> = {
 
 const LOAD_LABEL: Record<string, { dot: string; bg: string; label: string; recovery: string }> = {
   // Escala de carga sobre tokens: alta / media / baja, sin colores fuera de paleta.
-  Alta:  { dot: "bg-destructive", bg: "bg-destructive/10 text-destructive border-destructive/30", label: "Carga alta",  recovery: "48h recomendadas" },
-  Media: { dot: "bg-primary",     bg: "bg-primary/10 text-primary border-primary/30",             label: "Carga media", recovery: "24h recomendadas" },
-  Baja:  { dot: "bg-muted-foreground", bg: "bg-secondary text-muted-foreground border-border",    label: "Carga baja",  recovery: "Sin restricción" },
+  Alta:  { dot: "bg-destructive",      bg: "bg-destructive/15 text-destructive",    label: "Carga alta",  recovery: "48h recomendadas" },
+  Media: { dot: "bg-primary",          bg: "bg-primary/15 text-primary",            label: "Carga media", recovery: "24h recomendadas" },
+  Baja:  { dot: "bg-muted-foreground", bg: "bg-secondary text-muted-foreground",    label: "Carga baja",  recovery: "Sin restricción" },
 };
 
 /** Estima la carga de un día de plan a partir de los fatigue_level de sus ejercicios. */
@@ -75,20 +105,21 @@ interface ScheduleConflict {
   hint: string;              // texto humano que se enseña al admin
 }
 
+// `icon` y `color` son datos que se guardan con la actividad (no se pintan en la interfaz).
 const CATEGORIES = [
-  { value: "boxeo", label: "🥊 Boxeo", color: "#f97316" },
-  { value: "escalada", label: "🧗 Escalada", color: "#f97316" },
-  { value: "yoga", label: "🧘 Yoga", color: "#10b981" },
-  { value: "running", label: "🏃 Running", color: "#ef4444" },
-  { value: "ciclismo", label: "🚴 Ciclismo", color: "#06b6d4" },
-  { value: "natacion", label: "🏊 Natación", color: "#0ea5e9" },
-  { value: "futbol", label: "⚽ Fútbol", color: "#84cc16" },
-  { value: "tenis", label: "🎾 Tenis", color: "#eab308" },
-  { value: "padel", label: "🏓 Pádel", color: "#a855f7" },
-  { value: "danza", label: "💃 Danza", color: "#ec4899" },
-  { value: "personal", label: "📌 Personal", color: "#a855f7" },
-  { value: "trabajo", label: "💼 Trabajo", color: "#64748b" },
-  { value: "otro", label: "✨ Otro", color: "#f97316" },
+  { value: "boxeo", label: "Boxeo", icon: "🥊", color: "#f97316" },
+  { value: "escalada", label: "Escalada", icon: "🧗", color: "#f97316" },
+  { value: "yoga", label: "Yoga", icon: "🧘", color: "#10b981" },
+  { value: "running", label: "Running", icon: "🏃", color: "#ef4444" },
+  { value: "ciclismo", label: "Ciclismo", icon: "🚴", color: "#06b6d4" },
+  { value: "natacion", label: "Natación", icon: "🏊", color: "#0ea5e9" },
+  { value: "futbol", label: "Fútbol", icon: "⚽", color: "#84cc16" },
+  { value: "tenis", label: "Tenis", icon: "🎾", color: "#eab308" },
+  { value: "padel", label: "Pádel", icon: "🏓", color: "#a855f7" },
+  { value: "danza", label: "Danza", icon: "💃", color: "#ec4899" },
+  { value: "personal", label: "Personal", icon: "📌", color: "#a855f7" },
+  { value: "trabajo", label: "Trabajo", icon: "💼", color: "#64748b" },
+  { value: "otro", label: "Otro", icon: "✨", color: "#f97316" },
 ];
 
 // Default day-of-week + hour for auto-seeded sports from onboarding.
@@ -169,6 +200,7 @@ function dateForDow(monday: Date, dow: number, hour: number, minute: number): Da
 
 const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, onConflictsChange }: Props) => {
   const { user } = useAuth();
+  const formId = useId();
   const effectiveUserId = targetUserId ?? user?.id;
   const calendarRef = useRef<FullCalendar | null>(null);
   const [externals, setExternals] = useState<ExternalActivity[]>([]);
@@ -354,20 +386,19 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
       const dur = ovr?.duration_min ?? 60;
       const start = dateForDow(monday, finalDow, h, m);
       const end = new Date(start.getTime() + dur * 60 * 1000);
-      const icon = plan.type === "gimnasio" ? "🏋️" : "🔥";
       const titleText = plan.type === "gimnasio"
         ? (plan.routine_name || "Entrenamiento")
         : (plan.sport || "Actividad");
       const load = estimatePlanLoad(plan);
-      const loadEmoji = load === "Alta" ? "🔴" : load === "Media" ? "🟡" : "🟢";
 
       out.push({
         id: `plan-${plan.day}`,
-        title: `${loadEmoji} ${icon} ${titleText}`,
+        title: titleText,
         start,
         end,
-        backgroundColor: COLORS.training,
-        borderColor: COLORS.training,
+        backgroundColor: COLORS.training.bg,
+        borderColor: COLORS.training.bg,
+        textColor: COLORS.training.text,
         extendedProps: { kind: "training", plan, load, override: ovr },
       });
     }
@@ -376,14 +407,14 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
       const start = dateForDow(monday, ext.day_of_week, ext.start_hour, ext.start_minute);
       const end = new Date(start.getTime() + ext.duration_min * 60 * 1000);
       const load = EXTERNAL_FATIGUE[ext.category] || "Baja";
-      const loadEmoji = load === "Alta" ? "🔴" : load === "Media" ? "🟡" : "🟢";
       out.push({
         id: `ext-${ext.id}`,
-        title: `${loadEmoji} ${ext.icon || "✨"} ${ext.title}`,
+        title: ext.title,
         start,
         end,
-        backgroundColor: ext.color,
-        borderColor: ext.color,
+        backgroundColor: COLORS.external.bg,
+        borderColor: COLORS.external.bg,
+        textColor: COLORS.external.text,
         extendedProps: { kind: "external", ext, load },
       });
     }
@@ -474,7 +505,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
     if (!effectiveUserId) return;
     if (!title.trim()) { toast.error("Pon un nombre"); return; }
     const cat = CATEGORIES.find((c) => c.value === category) || CATEGORIES[0];
-    const icon = cat.label.split(" ")[0];
+    const icon = cat.icon;
     const payload = {
       user_id: effectiveUserId,
       title: title.trim(),
@@ -595,31 +626,62 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
 
   const detailProps = selectedEvent?.extendedProps;
 
+  const renderEventContent = (arg: EventContentArg) => {
+    const load = (arg.event.extendedProps as CalendarDetails)?.load ?? "Baja";
+    return (
+      <div className="flex min-w-0 items-start gap-1 overflow-hidden">
+        <span className={cn("mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full", LOAD_LABEL[load].dot)} aria-hidden="true" />
+        <span className="min-w-0">
+          <span className="block truncate">{arg.event.title}</span>
+          {arg.timeText ? <span className="block truncate font-normal tabular-nums opacity-80">{arg.timeText}</span> : null}
+        </span>
+      </div>
+    );
+  };
+
+  // Cabecera de columna como el Calendario de iOS: día de la semana pequeño y el número debajo (hoy en tinte).
+  const renderDayHeader = (arg: DayHeaderContentArg) => {
+    const weekday = arg.date.toLocaleDateString("es-ES", { weekday: "short" }).replace(".", "");
+    if (arg.view.type === "dayGridMonth") {
+      return <span className="block py-1.5 type-footnote text-muted-foreground">{weekday}</span>;
+    }
+    return (
+      <span className="flex flex-col items-center py-1">
+        <span className="type-caption2 text-muted-foreground">{weekday}</span>
+        <span className={cn("type-subhead font-semibold tabular-nums", arg.isToday ? "text-primary" : "text-foreground")}>{arg.date.getDate()}</span>
+      </span>
+    );
+  };
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {isAdminMode && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 text-sm flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-          <span>
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <p className="min-w-0 type-subhead text-muted-foreground">
             Estás editando el calendario de{" "}
-            <strong>{targetUserEmail || "este usuario"}</strong>. Los cambios se sincronizan en tiempo real.
-          </span>
+            <span className="break-all text-foreground">{targetUserEmail || "este usuario"}</span>. Los cambios se sincronizan en tiempo real.
+          </p>
         </div>
       )}
-      {/* Toolbar */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3 text-xs flex-wrap">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: COLORS.training }} /> Entreno</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: COLORS.external }} /> Externa</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: COLORS.nutrition }} /> Nutrición</span>
+
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 type-footnote text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: COLORS.training.bg }} aria-hidden="true" /> Entreno</span>
+          <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: COLORS.external.bg }} aria-hidden="true" /> Otra actividad</span>
+          <span className="flex items-center gap-1.5">
+            Carga
+            <span role="img" className={cn("h-1.5 w-1.5 rounded-full", LOAD_LABEL.Alta.dot)} aria-label="alta" />
+            <span role="img" className={cn("h-1.5 w-1.5 rounded-full", LOAD_LABEL.Media.dot)} aria-label="media" />
+            <span role="img" className={cn("h-1.5 w-1.5 rounded-full", LOAD_LABEL.Baja.dot)} aria-label="baja" />
+          </span>
         </div>
-        <Button size="sm" onClick={() => openCreate()} variant="hero">
-          <Plus className="w-4 h-4 mr-1.5" /> Añadir actividad
+        <Button size="sm" variant="plain" className="-mr-3.5 shrink-0" onClick={() => { void hapticTap(); openCreate(); }}>
+          Añadir actividad
         </Button>
       </div>
 
-      {/* Calendar */}
-      <div className="bg-card border border-border rounded-xl p-2 sm:p-4 fc-themed">
+      <div className={`fc-themed rounded-2xl bg-card p-2 sm:p-4 ${FC_NATIVE}`}>
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
@@ -641,6 +703,8 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
           eventDurationEditable
           eventStartEditable
           events={events}
+          eventContent={renderEventContent}
+          dayHeaderContent={renderDayHeader}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
           eventResize={handleEventDrop}
@@ -651,56 +715,56 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
           <DialogHeader>
             <DialogTitle>{editId ? "Editar actividad" : "Nueva actividad"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <Label className="text-xs">Tipo</Label>
+              <Label htmlFor={`${formId}-category`} className={LABEL}>Tipo</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${formId}-category`}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Nombre</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Boxeo en BoxStudio" />
+              <Label htmlFor={`${formId}-title`} className={LABEL}>Nombre</Label>
+              <Input id={`${formId}-title`} enterKeyHint="next" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Boxeo en BoxStudio" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Día</Label>
+                <Label htmlFor={`${formId}-dow`} className={LABEL}>Día</Label>
                 <Select value={dow.toString()} onValueChange={(v) => setDow(parseInt(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${formId}-dow`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[1,2,3,4,5,6,0].map((d) => <SelectItem key={d} value={d.toString()}>{DAYS_ES[d]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Duración</Label>
+                <Label htmlFor={`${formId}-duration`} className={LABEL}>Duración</Label>
                 <Select value={duration.toString()} onValueChange={(v) => setDuration(parseInt(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${formId}-duration`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[30,45,60,75,90,120,150,180].map((d) => <SelectItem key={d} value={d.toString()}>{d} min</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Hora</Label>
+                <Label htmlFor={`${formId}-hour`} className={LABEL}>Hora</Label>
                 <Select value={hour.toString()} onValueChange={(v) => setHour(parseInt(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${formId}-hour`} className="tabular-nums"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 17 }, (_, i) => i + 6).map((h) => <SelectItem key={h} value={h.toString()}>{h}:00</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-xs">Minutos</Label>
+                <Label htmlFor={`${formId}-minute`} className={LABEL}>Minutos</Label>
                 <Select value={minute.toString()} onValueChange={(v) => setMinute(parseInt(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${formId}-minute`} className="tabular-nums"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[0,15,30,45].map((m) => <SelectItem key={m} value={m.toString()}>:{m.toString().padStart(2,"0")}</SelectItem>)}
                   </SelectContent>
@@ -708,67 +772,64 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
               </div>
             </div>
             <div>
-              <Label className="text-xs">Nota (opcional)</Label>
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Lugar, profesor, etc." />
+              <Label htmlFor={`${formId}-note`} className={LABEL}>Nota (opcional)</Label>
+              <Textarea id={`${formId}-note`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Lugar, profesor, etc." />
             </div>
-            <div className="flex gap-2 pt-2">
-              {editId && (
-                <Button variant="outline" size="sm" onClick={() => handleDelete(editId)} className="text-destructive">
-                  <Trash2 className="w-4 h-4 mr-1" /> Borrar
-                </Button>
-              )}
-              <Button onClick={handleSave} className="flex-1" variant="hero">
-                {editId ? "Guardar" : "Añadir"}
+          </div>
+          <div className="space-y-3 pt-2">
+            <Button size="lg" className="w-full" onClick={() => { void hapticTap(); void handleSave(); }}>
+              {editId ? "Guardar" : "Añadir"}
+            </Button>
+            {editId && (
+              <Button variant="plain" className="w-full text-destructive" onClick={() => { void hapticTap(); void handleDelete(editId); }}>
+                Borrar actividad
               </Button>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Detail dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
           <DialogHeader>
             <DialogTitle>{selectedEvent?.title}</DialogTitle>
+            {selectedEvent?.start instanceof Date && (
+              <DialogDescription className="tabular-nums first-letter:uppercase">
+                {selectedEvent.start.toLocaleString("es-ES", { weekday: "long", hour: "2-digit", minute: "2-digit" })}
+                {selectedEvent.end instanceof Date && ` — ${selectedEvent.end.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`}
+              </DialogDescription>
+            )}
           </DialogHeader>
           {selectedEvent && (
-            <div className="space-y-3 text-sm">
-              <p className="text-muted-foreground">
-                {selectedEvent.start instanceof Date && selectedEvent.start.toLocaleString("es-ES", {
-                  weekday: "long", hour: "2-digit", minute: "2-digit",
-                })}
-                {selectedEvent.end instanceof Date && ` — ${selectedEvent.end.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`}
-              </p>
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                {detailProps?.load && (
+                  <span className={cn("inline-flex min-h-7 items-center gap-1.5 rounded-full px-3 type-footnote", LOAD_LABEL[detailProps.load].bg)}>
+                    <span className={cn("h-2 w-2 rounded-full", LOAD_LABEL[detailProps.load].dot)} aria-hidden="true" />
+                    {LOAD_LABEL[detailProps.load].label} · {LOAD_LABEL[detailProps.load].recovery}
+                  </span>
+                )}
+                {detailProps?.kind === "training" && detailProps.plan?.type === "actividad" && (
+                  <>
+                    {detailProps.plan.intensity && (
+                      <span className="inline-flex min-h-7 items-center gap-1.5 rounded-full bg-secondary px-3 type-footnote">
+                        <Flame className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />{detailProps.plan.intensity}
+                      </span>
+                    )}
+                    {detailProps.plan.duration && (
+                      <span className="inline-flex min-h-7 items-center rounded-full bg-secondary px-3 type-footnote">{detailProps.plan.duration}</span>
+                    )}
+                  </>
+                )}
+              </div>
 
               {detailProps?.kind === "training" && detailProps.plan?.type === "gimnasio" && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Dumbbell className="w-3.5 h-3.5" /> {detailProps.plan.muscle_focus}
-                  </div>
-                  <div className="space-y-1.5">
-                    {(detailProps.plan.exercises || []).map((ex, i) => (
-                      <div key={i} className="bg-secondary/30 rounded-lg p-2.5">
-                        <p className="font-medium text-sm">{ex.name}</p>
-                        <p className="text-xs text-muted-foreground">{ex.series} × {ex.reps} · {ex.rest}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {detailProps?.kind === "training" && detailProps.plan?.type === "actividad" && (
-                <div className="flex gap-2 text-xs">
-                  <span className="bg-secondary/40 px-2.5 py-1 rounded-full flex items-center gap-1.5"><Flame className="w-3 h-3" />{detailProps.plan.intensity}</span>
-                  <span className="bg-secondary/40 px-2.5 py-1 rounded-full">{detailProps.plan.duration}</span>
-                </div>
-              )}
-
-              {/* Etiqueta de carga visible en cualquier evento */}
-              {detailProps?.load && (
-                <div className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${LOAD_LABEL[detailProps.load].bg}`}>
-                  <span className={`w-2 h-2 rounded-full ${LOAD_LABEL[detailProps.load].dot}`} />
-                  {LOAD_LABEL[detailProps.load].label} · {LOAD_LABEL[detailProps.load].recovery}
-                </div>
+                <ListGroup inset header={detailProps.plan.muscle_focus || undefined}>
+                  {(detailProps.plan.exercises || []).map((ex, i) => (
+                    <ListRow key={i} title={ex.name} subtitle={<span className="tabular-nums">{ex.series} × {ex.reps} · {ex.rest}</span>} />
+                  ))}
+                </ListGroup>
               )}
 
               {/* Nota del coach (visible para el usuario, editable por admin) */}
@@ -777,17 +838,18 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
                 const existingNote = dayLabel ? overrides[dayLabel]?.admin_note : null;
                 if (isAdminMode) {
                   return (
-                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
-                      <Label className="text-xs flex items-center gap-1.5">
-                        <StickyNote className="w-3.5 h-3.5 text-primary" /> Nota del coach (visible para el usuario)
-                      </Label>
-                      <Textarea
-                        value={adminNoteDraft}
-                        onChange={(e) => setAdminNoteDraft(e.target.value)}
-                        rows={2}
-                        placeholder="Ej. Hoy mete RIR 1, ya estás listo."
-                      />
-                      <Button size="sm" onClick={saveAdminNote} disabled={adminNoteSaving} className="w-full">
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor={`${formId}-admin-note`} className={LABEL}>Nota del coach (visible para el usuario)</Label>
+                        <Textarea
+                          id={`${formId}-admin-note`}
+                          value={adminNoteDraft}
+                          onChange={(e) => setAdminNoteDraft(e.target.value)}
+                          rows={2}
+                          placeholder="Ej. Hoy mete RIR 1, ya estás listo."
+                        />
+                      </div>
+                      <Button size="lg" onClick={() => { void hapticTap(); void saveAdminNote(); }} disabled={adminNoteSaving} className="w-full">
                         {adminNoteSaving ? "Guardando…" : "Guardar nota"}
                       </Button>
                     </div>
@@ -795,11 +857,11 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
                 }
                 if (existingNote) {
                   return (
-                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm flex gap-2">
-                      <StickyNote className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[10px] uppercase tracking-wider text-primary mb-0.5">Nota de tu coach</p>
-                        <p>{existingNote}</p>
+                    <div className="flex items-start gap-3">
+                      <StickyNote className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="type-headline">Nota de tu coach</p>
+                        <p className="mt-0.5 break-words type-subhead text-muted-foreground">{existingNote}</p>
                       </div>
                     </div>
                   );
@@ -809,21 +871,21 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
 
               {detailProps?.kind === "external" && (
                 <>
-                  {detailProps.ext.note && <p className="text-sm bg-secondary/30 rounded-lg p-3">{detailProps.ext.note}</p>}
-                  <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(detailProps.ext.id)} className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-1" /> Borrar
-                    </Button>
-                    <Button size="sm" onClick={() => openEdit(detailProps.ext)} className="flex-1">
+                  {detailProps.ext.note && <p className="break-words type-subhead text-muted-foreground">{detailProps.ext.note}</p>}
+                  <div className="space-y-3">
+                    <Button size="lg" onClick={() => { void hapticTap(); openEdit(detailProps.ext); }} className="w-full">
                       Editar
+                    </Button>
+                    <Button variant="plain" onClick={() => { void hapticTap(); void handleDelete(detailProps.ext.id); }} className="w-full text-destructive">
+                      Borrar actividad
                     </Button>
                   </div>
                 </>
               )}
 
               {detailProps?.kind === "training" && (
-                <p className="text-[11px] text-muted-foreground italic">
-                  💡 Arrastra el evento en el calendario para moverlo a otro día/hora.
+                <p className="text-center type-footnote text-muted-foreground">
+                  Arrastra el entreno en el calendario para moverlo a otro día u hora.
                 </p>
               )}
             </div>

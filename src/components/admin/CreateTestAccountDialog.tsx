@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { Check, Copy, Plus, UserPlus } from "lucide-react";
+import { Check, Copy, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { hapticNotify, hapticTap } from "@/lib/native";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ListGroup } from "@/components/ui/list";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Profile } from "@/pages/Admin";
+import { Field, FieldRow } from "./AdminOpsParts";
 
 export type TestAccountKind = "client_training" | "client_full" | "client_transform" | "trainer" | "admin";
 
@@ -32,6 +34,7 @@ const ACCOUNT_KIND_LABELS: Record<TestAccountKind, string> = {
 };
 
 const CreateTestAccountDialog = ({ onCreated }: Props) => {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -92,11 +95,11 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
       }}
     >
       <DialogTrigger asChild>
-        <Button size="sm" variant="tinted" className="gap-2">
-          <Plus className="w-4 h-4" /> Crear cuenta de prueba
+        <Button variant="plain" className="gap-1.5 px-0">
+          <Plus className="h-4 w-4" strokeWidth={2.5} /> Crear cuenta de prueba
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" onOpenAutoFocus={isMobile ? (event) => event.preventDefault() : undefined}>
         {created ? (
           <>
             <DialogHeader>
@@ -105,22 +108,34 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                 Ya aparece en la lista de usuarios. Guarda estas credenciales; la contraseña solo se muestra ahora.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3 rounded-2xl bg-secondary p-4 type-subhead">
-              <div><span className="text-muted-foreground">Tipo: </span>{ACCOUNT_KIND_LABELS[created.kind]}</div>
-              <div><span className="text-muted-foreground">Email: </span><span className="font-medium">{created.profile.email}</span></div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground shrink-0">Contraseña:</span>
-                <code className="min-w-0 flex-1 break-all rounded-lg bg-background px-2 py-1 selectable">{created.password}</code>
-                <Button type="button" size="icon" variant="ghost" onClick={() => { void hapticTap(); void copyPassword(); }} aria-label="Copiar contraseña">
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
+            <ListGroup inset>
+              <FieldRow label="Tipo">
+                <p className="type-body">{ACCOUNT_KIND_LABELS[created.kind]}</p>
+              </FieldRow>
+              <FieldRow label="Email">
+                <p className="break-all type-body selectable">{created.profile.email}</p>
+              </FieldRow>
+              <FieldRow label="Contraseña">
+                <div className="flex items-center gap-2">
+                  <code className="min-w-0 flex-1 break-all font-mono type-footnote selectable">{created.password}</code>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="-my-2 -mr-3 shrink-0"
+                    onClick={() => { void hapticTap(); void copyPassword(); }}
+                    aria-label="Copiar contraseña"
+                  >
+                    {copied ? <Check className="h-4 w-4 text-success" strokeWidth={2.5} /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </FieldRow>
+            </ListGroup>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => { reset(); }}>
-                <UserPlus className="w-4 h-4 mr-2" /> Crear otra
+              <Button type="button" variant="plain" className="w-full sm:w-auto" onClick={() => { reset(); }}>
+                Crear otra
               </Button>
-              <Button type="button" onClick={() => setOpen(false)}>Listo</Button>
+              <Button type="button" size="lg" className="w-full sm:w-auto" onClick={() => setOpen(false)}>Listo</Button>
             </DialogFooter>
           </>
         ) : (
@@ -131,9 +146,8 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                 Crea una cuenta lista para iniciar sesión. No se envía ningún correo ni se realiza ningún cobro.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="test-account-email">Email</Label>
+            <div className="space-y-4">
+              <Field label="Email" htmlFor="test-account-email">
                 <Input
                   id="test-account-email"
                   type="email"
@@ -148,9 +162,8 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="prueba@ejemplo.com"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="test-account-name">Nombre (opcional)</Label>
+              </Field>
+              <Field label="Nombre (opcional)" htmlFor="test-account-name">
                 <Input
                   id="test-account-name"
                   value={name}
@@ -160,9 +173,8 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                   autoCapitalize="words"
                   enterKeyHint="done"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="test-account-kind">Tipo de cuenta</Label>
+              </Field>
+              <Field label="Tipo de cuenta" htmlFor="test-account-kind">
                 <Select value={kind} onValueChange={(value) => setKind(value as TestAccountKind)}>
                   <SelectTrigger id="test-account-kind"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -173,11 +185,11 @@ const CreateTestAccountDialog = ({ onCreated }: Props) => {
                     <SelectItem value="admin">Administrador</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
             </div>
             <DialogFooter>
-              <Button type="submit" size="lg" disabled={creating || !email.trim()}>
-                {creating ? <Spinner size="sm" className="mr-2 text-primary-foreground" /> : <UserPlus className="w-4 h-4 mr-2" />}
+              <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={creating || !email.trim()}>
+                {creating && <Spinner size="sm" className="text-primary-foreground" />}
                 Crear cuenta
               </Button>
             </DialogFooter>

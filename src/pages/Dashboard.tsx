@@ -427,7 +427,7 @@ const Dashboard = () => {
     resources: "Recursos",
   };
   // En Hoy el título grande es el saludo de HomeOverview: la barra solo muestra "Hoy" al pasarlo.
-  const LARGE_TITLE_TABS: MobileTab[] = ["training", "nutrition", "chat", "progress", "settings"];
+  const LARGE_TITLE_TABS: MobileTab[] = ["training", "nutrition", "chat", "progress", "settings", "resources"];
   // En el móvil la conversación ocupa justo el alto que queda bajo el título, con el campo de texto a la vista.
   const chatFills = isMobile && consumerPlan === "coach" && coachAssigned;
   // Ayuda de la sección: en escritorio va junto al título de la barra.
@@ -666,6 +666,7 @@ const Dashboard = () => {
                   setTrainingView("plan");
                   setSection("training");
                 }}
+                onPlanChanged={() => { void fetchData(); }}
               />
             </TabsContent>
           </Suspense>

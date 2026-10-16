@@ -39,7 +39,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
     }}
     aria-label={label}
   >
-    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 rounded-full bg-card/70 p-1 shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-[0.5px] ring-white/10 backdrop-blur-2xl backdrop-saturate-[1.8]">
+    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 material rounded-full p-1">
       {items.map(({ key, label: itemLabel, icon: Icon, locked }) => {
         const isActive = active === key;
         return (
@@ -47,7 +47,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
             <button
               type="button"
               onClick={() => {
-                hapticTap();
+                void hapticTap();
                 onChange(key);
               }}
               aria-current={isActive ? "page" : undefined}
@@ -59,7 +59,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
               {isActive && (
                 <motion.span
                   layoutId={`${layoutId}-active`}
-                  className="absolute inset-0 rounded-full bg-white/10"
+                  className="absolute inset-0 rounded-full bg-secondary"
                   transition={{ type: "spring", stiffness: 380, damping: 36 }}
                 />
               )}
@@ -69,7 +69,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
                   <Lock className="absolute -bottom-0.5 -right-2 h-3 w-3 rounded-full bg-card p-[1px] text-muted-foreground" />
                 )}
               </span>
-              <span className="relative z-10 max-w-full truncate px-0.5 text-[10px] font-medium leading-none">
+              <span className="relative z-10 max-w-full truncate px-0.5 type-caption2 font-medium">
                 {itemLabel}
               </span>
             </button>

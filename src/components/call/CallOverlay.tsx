@@ -62,7 +62,7 @@ const CallOverlay = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[70] bg-background/98 backdrop-blur-sm flex flex-col"
+          className="fixed inset-0 z-[70] flex flex-col bg-background"
           style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
         >
           <div className="relative flex-1 overflow-hidden">
@@ -74,7 +74,7 @@ const CallOverlay = ({
             />
 
             {(!remoteStream || state !== "connected") && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">
                   <Video className="h-8 w-8 text-primary" strokeWidth={1.75} />
                 </div>
@@ -89,7 +89,7 @@ const CallOverlay = ({
                 autoPlay
                 playsInline
                 muted
-                className="absolute bottom-4 right-4 w-28 h-40 sm:w-36 sm:h-52 object-cover rounded-2xl bg-secondary"
+                className="absolute bottom-4 right-4 h-40 w-28 rounded-2xl bg-secondary object-cover sm:h-52 sm:w-36"
               />
             )}
           </div>

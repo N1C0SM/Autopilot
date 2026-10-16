@@ -4,7 +4,8 @@ import AdminMetrics from "./AdminMetrics";
 import type { Profile } from "@/pages/Admin";
 
 const from = vi.hoisted(() => vi.fn());
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from } }));
+const invoke = vi.hoisted(() => vi.fn());
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from, functions: { invoke } } }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("recharts", () => ({
   ResponsiveContainer: () => null,
@@ -22,6 +23,7 @@ const coach: Profile = {
 
 beforeEach(() => {
   from.mockImplementation(() => ({ select: () => ({ gte: async () => ({ data: [], error: null }) }) }));
+  invoke.mockResolvedValue({ data: {}, error: null });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -50,5 +52,35 @@ describe("admin metrics loading", () => {
     fireEvent.click(screen.getByRole("button", { name: "Actualizar" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("última carga correcta");
     expect(screen.getByText("Estimación mensual").parentElement).toHaveTextContent("78 €");
+  });
+});
+
+describe("admin metrics reset", () => {
+  it("does not reset anything until the alert is confirmed", async () => {
+    render(<AdminMetrics users={[coach]} onRefresh={async () => [coach]} />);
+    const reset = await screen.findByRole("button", { name: "Resetear métricas" });
+
+    fireEvent.click(reset);
+    expect(await screen.findByText("¿Resetear todas las métricas?")).toBeInTheDocument();
+    expect(invoke).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    await waitFor(() => expect(screen.queryByText("¿Resetear todas las métricas?")).not.toBeInTheDocument());
+    expect(invoke).not.toHaveBeenCalled();
+
+    fireEvent.click(reset);
+    fireEvent.click(await screen.findByRole("button", { name: "Resetear" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
+    expect(invoke).toHaveBeenCalledWith("admin-reset-metrics");
+  });
+});
+
+describe("admin metrics content", () => {
+  it("tells the truth when there is no activity and lists the four activity figures", async () => {
+    render(<AdminMetrics users={[coach]} onRefresh={async () => [coach]} />);
+    expect(await screen.findByText("Sin actividad")).toBeInTheDocument();
+    for (const label of ["Entrenos hoy", "Entrenos 7 días", "Series 7 días", "Récords 7 días"]) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
   });
 });

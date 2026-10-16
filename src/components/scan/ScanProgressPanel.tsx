@@ -3,6 +3,7 @@ import { History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { signedUrlsFor } from "@/lib/storageSign";
+import { FindingRow, ScanImage, StatRow } from "@/components/scan/ScanResultParts";
 
 type Row = {
   id: string;
@@ -44,13 +45,11 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
 
   if (rows.length === 1) {
     return (
-      <div className="max-w-md mx-auto mb-8 px-4 text-center">
-        <History className="w-7 h-7 text-primary mx-auto mb-3" strokeWidth={1.75} />
-        <div className="type-headline">Tu primer scan está guardado</div>
-        <div className="type-subhead text-muted-foreground mt-1">
-          Repite el análisis cada 2–4 semanas para ver tu evolución aquí.
-        </div>
-      </div>
+      <FindingRow
+        icon={History}
+        title="Tu primer scan está guardado"
+        description="Repite el análisis cada 2–4 semanas para ver tu evolución aquí."
+      />
     );
   }
 
@@ -82,14 +81,14 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
   }
 
   return (
-    <section className="max-w-3xl mx-auto mb-8 px-4">
+    <section>
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="type-title2">Tu progreso</h2>
-          <p className="type-subhead text-muted-foreground">{rows.length} scans</p>
+          <p className="type-subhead text-muted-foreground tabular-nums">{rows.length} scans</p>
         </div>
         <div className={`flex items-center gap-1.5 font-rounded font-bold tabular-nums type-title3 ${trendColor}`}>
-          <TrendIcon className="w-5 h-5" />
+          <TrendIcon className="w-5 h-5" aria-hidden="true" />
           {delta > 0 ? "+" : ""}
           {delta.toFixed(1)} <span className="type-subhead font-normal text-muted-foreground">físico</span>
         </div>
@@ -100,9 +99,9 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
           <div className="h-48 mt-5 mb-6">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 8, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis domain={[0, 10]} stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeWidth={0.5} />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, 10]} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
                     background: "hsl(var(--card))",
@@ -118,35 +117,29 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
             </ResponsiveContainer>
           </div>
 
-          <div className="grid grid-cols-3 mb-6">
-            <div className="text-center">
-              <div className="font-rounded font-bold tabular-nums text-[34px] leading-tight">{bestPhysique.toFixed(1)}</div>
-              <div className="type-footnote text-muted-foreground">Mejor físico</div>
-            </div>
-            <div className="text-center sep-l sep-r">
-              <div className="font-rounded font-bold tabular-nums text-[34px] leading-tight">{daysSinceFirst}d</div>
-              <div className="type-footnote text-muted-foreground">Desde el inicio</div>
-            </div>
-            <div className="text-center">
-              <div className="font-rounded font-bold tabular-nums text-[34px] leading-tight">{maxStreak}</div>
-              <div className="type-footnote text-muted-foreground">Racha al alza</div>
-            </div>
-          </div>
+          <StatRow
+            className="mb-6"
+            stats={[
+              { label: "Mejor físico", value: bestPhysique.toFixed(1) },
+              { label: "Desde el inicio", value: daysSinceFirst, unit: "d" },
+              { label: "Racha al alza", value: maxStreak },
+            ]}
+          />
         </>
       )}
 
-      <div className="flex gap-4 overflow-x-auto pb-1 mt-5">
+      <div className="flex gap-3 overflow-x-auto p-0.5 -mx-0.5 mt-5">
         {rows.slice(-8).map((r, idx, arr) => {
           const date = new Date(r.taken_at);
           const label = date.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
           const isLast = idx === arr.length - 1;
           return (
             <div key={r.id} className="flex-shrink-0 w-24 text-center">
-              {r.current_photo_url ? (
-                <img loading="lazy" decoding="async" src={r.current_photo_url} alt={`Scan ${label}`} className={`w-full h-28 object-cover rounded-xl mb-2 ${isLast ? "ring-2 ring-primary" : ""}`} />
-              ) : (
-                <div className={`w-full h-28 rounded-xl mb-2 bg-secondary ${isLast ? "ring-2 ring-primary" : ""}`} />
-              )}
+              <ScanImage
+                src={r.current_photo_url}
+                alt={`Scan ${label}`}
+                className={`w-full h-28 rounded-xl mb-2 ${isLast ? "ring-2 ring-primary" : ""}`}
+              />
               <div className="type-footnote text-muted-foreground">{label}</div>
               <div className="font-rounded font-bold tabular-nums type-headline">
                 {Number(r.physique ?? 0).toFixed(1)}

@@ -2,10 +2,12 @@ import { errorMessage } from "@/lib/runtimeValues";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Monitor, Smartphone, Radio } from "lucide-react";
+import { Radio } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { hapticTap } from "@/lib/native";
+import Screen from "@/components/native/Screen";
+import { hapticSelection } from "@/lib/native";
+import { cn } from "@/lib/utils";
 
 type Msg = { customHtml: string; subject: string; templateData?: Record<string, unknown> };
 
@@ -110,31 +112,29 @@ export default function EmailPreview() {
   const frameWidth = viewport === "mobile" ? 390 : 720;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="material sep-b px-4 md:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+    <Screen title="Previsualización" hideBack maxWidth="full" contentClassName="space-y-4 pb-4 pt-2">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <div className="type-footnote text-muted-foreground">Previsualización · {templateKey}</div>
-          <div className="type-headline truncate">{subject || "Sin asunto"}</div>
+          <p className="type-footnote text-muted-foreground"><span className="font-mono">{templateKey}</span></p>
+          <p className="mt-0.5 break-words type-title3">{subject || "Sin asunto"}</p>
+          <p className={cn("mt-1 flex items-center gap-1.5 type-footnote", connected ? "text-success" : "text-muted-foreground")}>
+            <Radio className="h-3.5 w-3.5" aria-hidden="true" /> {connected ? "Sincronizado con el editor" : "Esperando al editor…"}
+          </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className={`flex items-center gap-1.5 type-footnote ${connected ? "text-primary" : "text-muted-foreground"}`}>
-            <Radio className="w-3.5 h-3.5" /> {connected ? "Sincronizado con el editor" : "Esperando editor…"}
-          </div>
-          <Tabs value={viewport} onValueChange={(v) => { void hapticTap(); setViewport(v as "desktop" | "mobile"); }}>
-            <TabsList>
-              <TabsTrigger value="desktop" className="gap-1"><Monitor className="w-3.5 h-3.5" /> Desktop</TabsTrigger>
-              <TabsTrigger value="mobile" className="gap-1"><Smartphone className="w-3.5 h-3.5" /> Mobile</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </header>
+        <Tabs value={viewport} onValueChange={(v) => { void hapticSelection(); setViewport(v as "desktop" | "mobile"); }} className="w-full sm:w-64">
+          <TabsList className="w-full">
+            <TabsTrigger value="desktop">Escritorio</TabsTrigger>
+            <TabsTrigger value="mobile">Móvil</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-      <div className="flex-1 flex items-start justify-center p-4 md:p-6 overflow-auto">
+      <div className="flex justify-center">
         {loading && !renderedHtml ? (
-          <div className="flex items-center gap-2 type-subhead text-muted-foreground mt-20"><Spinner size="sm" /> Cargando…</div>
+          <div className="mt-20 flex items-center gap-2 type-subhead text-muted-foreground"><Spinner size="sm" /> Cargando…</div>
         ) : (
           <div
-            className="bg-white rounded-2xl overflow-hidden transition-all"
+            className="overflow-hidden rounded-2xl bg-white transition-all"
             style={{ width: frameWidth, maxWidth: "100%" }}
           >
             <iframe
@@ -147,6 +147,6 @@ export default function EmailPreview() {
           </div>
         )}
       </div>
-    </div>
+    </Screen>
   );
 }

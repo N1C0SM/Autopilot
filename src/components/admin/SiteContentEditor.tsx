@@ -1,17 +1,23 @@
 import { errorMessage, jsonObject, jsonString } from "@/lib/runtimeValues";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Upload, User, Star, Film, X, Smartphone, LayoutGrid, BookOpen, Sparkles, Image as ImageIcon, ArrowUp, ArrowDown, Video } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { cn } from "@/lib/utils";
+import { SectionHeader } from "@/components/ui/section-header";
+import { Trash2, Star, Film, BookOpen, Sparkles, User, ArrowUp, ArrowDown, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { hapticTap } from "@/lib/native";
+import { hapticSelection, hapticTap } from "@/lib/native";
 import { toOptimizedWebp } from "@/lib/imageOptimization";
+import { ImageWithFallback, MONO_FIELD } from "@/components/admin/content/AdminContentParts";
+import { useConfirm } from "@/components/admin/content/useConfirm";
 
 interface Testimonial {
   id: string;
@@ -60,6 +66,27 @@ const TEXT_PROVIDERS = [
   { id: "lovable", label: "Lovable", desc: "Incluida, sin clave" },
 ] as const;
 
+const IMAGE_ENGINES = [
+  { id: "auto", label: "Automático", desc: "Sigue el orden del motor de texto (se salta las que no hacen imágenes)." },
+  { id: "openai", label: "OpenAI", desc: "Siempre tu cuenta de OpenAI; si falla, Lovable de respaldo." },
+  { id: "lovable", label: "Lovable", desc: "Siempre los créditos de Lovable." },
+] as const;
+
+const URL_INPUT = { inputMode: "url", autoCapitalize: "none", autoCorrect: "off", spellCheck: false } as const;
+const FIELD_LABEL = "mb-1.5 block text-muted-foreground";
+const UPLOAD_CHIP = "pressable inline-flex min-h-[44px] cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 type-body";
+const BLOCK = "space-y-3 p-4 [&:not(:last-child)]:sep-b";
+
+const Section = ({ title, description, action, children }: { title: string; description?: ReactNode; action?: ReactNode; children: ReactNode }) => (
+  <section className="space-y-4">
+    <div className="space-y-1">
+      <SectionHeader title={title} size="md" action={action} />
+      {description ? <p className="type-subhead text-muted-foreground">{description}</p> : null}
+    </div>
+    {children}
+  </section>
+);
+
 const uploadImage = async (file: File, folder: string) => {
   const optimized = await toOptimizedWebp(file);
   const ext = optimized.name.split(".").pop() || "webp";
@@ -90,6 +117,7 @@ const SiteContentEditor = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [guideEbookUrl, setGuideEbookUrl] = useState<string>("");
   const [aiKeys, setAiKeys] = useState<Record<string, string>>({});
+  const { ask, dialog: confirmDialog } = useConfirm();
 
   const loadAiKeys = async () => {
     const { data } = await supabase.from("app_secrets").select("key, value");
@@ -385,7 +413,7 @@ const SiteContentEditor = () => {
   };
 
   const removeHeroVideo = async () => {
-    if (!confirm("¿Quitar el vídeo del hero?")) return;
+    if (!(await ask({ title: "¿Quitar el vídeo del hero?", description: "La portada se mostrará sin reproductor.", confirmLabel: "Quitar" }))) return;
     const next = { hero_video_url: "", hero_video_poster_url: "" };
     setHero(next);
     await supabase.from("settings").update(next).eq("id", settingsId);
@@ -427,7 +455,7 @@ const SiteContentEditor = () => {
   };
 
   const deleteTestimonial = async (id: string) => {
-    if (!confirm("¿Eliminar testimonio?")) return;
+    if (!(await ask({ title: "¿Eliminar este testimonio?", description: "Dejará de mostrarse en la landing." }))) return;
     await supabase.from("site_testimonials").delete().eq("id", id);
     setTestimonials((t) => t.filter((x) => x.id !== id));
   };
@@ -456,490 +484,535 @@ const SiteContentEditor = () => {
 
   if (loading) return <div className="flex justify-center p-10"><Spinner size="lg" /></div>;
 
+  const imageEngine = aiKeys.AI_MEDIA_PROVIDER === "openai" ? "openai" : aiKeys.AI_MEDIA_PROVIDER === "lovable" ? "lovable" : "auto";
+  const imageEngineInfo = IMAGE_ENGINES.find((e) => e.id === imageEngine)!;
+  const patchRecommendation = (id: string, patch: Partial<Recommendation>) =>
+    setRecommendations((a) => a.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const saveButton = "w-full md:w-auto";
+
   return (
     <div className="mx-auto max-w-3xl space-y-12">
+      <p className="type-subhead text-muted-foreground">
+        Lo que se ve en la home pública y la IA que lo genera.
+      </p>
+
       {/* Claves de IA */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="w-5 h-5 text-primary" />
-          <h2 className="type-title3">Claves de IA</h2>
-        </div>
-        <p className="type-footnote text-muted-foreground">
-          Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI.
-        </p>
-        {/* Motor de texto: orden libre + activación */}
-        <div className="p-4 rounded-xl bg-card space-y-2">
-          <p className="type-headline">Motor de texto</p>
-          <p className="type-footnote text-muted-foreground">
-            Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente. Apaga los que no quieras usar (deja solo uno para usar «solo esa IA»).
-          </p>
-          <div className="space-y-2">
+      <Section
+        title="Claves de IA"
+        description="Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI."
+      >
+        <div className="space-y-6">
+          {/* Motor de texto: orden libre + activación */}
+          <ListGroup
+            header="Motor de texto"
+            footer="Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente. Apaga los que no quieras usar (deja solo uno para usar «solo esa IA»). Claude y DeepSeek solo hacen texto: las imágenes y los vídeos siempre van a OpenAI o Lovable. Si un proveedor no tiene clave puesta, se salta solo."
+          >
             {textDisplay.map((id, i) => {
               const p = TEXT_PROVIDERS.find((t) => t.id === id)!;
               const on = textEnabled.has(id);
               return (
-                <div key={id} className={`flex items-center gap-2 p-2.5 rounded-xl bg-secondary transition-opacity ${on ? "" : "opacity-60"}`}>
-                  <span className="type-caption1 text-muted-foreground w-4 text-center">{on ? i + 1 : "–"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="type-headline">{p.label}</p>
-                    <p className="type-footnote text-muted-foreground">{p.desc}</p>
+                <div key={id} className="group/row flex min-h-[56px] items-center gap-1.5 pl-4 pr-2">
+                  <span className="w-4 shrink-0 text-center type-subhead tabular-nums text-muted-foreground">{on ? i + 1 : "–"}</span>
+                  <div className="flex min-h-[56px] min-w-0 flex-1 items-center group-[:not(:last-child)]/row:sep-b">
+                    <div className="min-w-0 flex-1 py-2">
+                      <p className={cn("truncate type-body", !on && "text-muted-foreground")}>{p.label}</p>
+                      <p className="truncate type-footnote text-muted-foreground">{p.desc}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground active:text-foreground [&_svg]:size-[18px]"
+                      onClick={() => { void hapticTap(); moveTextProvider(id, -1); }}
+                      disabled={i === 0}
+                      aria-label={`Subir ${p.label}`}
+                    >
+                      <ArrowUp />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground active:text-foreground [&_svg]:size-[18px]"
+                      onClick={() => { void hapticTap(); moveTextProvider(id, 1); }}
+                      disabled={i === textDisplay.length - 1}
+                      aria-label={`Bajar ${p.label}`}
+                    >
+                      <ArrowDown />
+                    </Button>
+                    <Switch
+                      aria-label={`Usar ${p.label}`}
+                      checked={on}
+                      onCheckedChange={(v) => { void hapticSelection(); toggleTextProvider(id, v); }}
+                    />
                   </div>
-                  <div className="flex flex-col">
-                    <button type="button" onClick={() => moveTextProvider(id, -1)} disabled={i === 0} className="pressable flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground active:text-foreground disabled:opacity-30" aria-label={`Subir ${p.label}`}>
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button type="button" onClick={() => moveTextProvider(id, 1)} disabled={i === textDisplay.length - 1} className="pressable flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground active:text-foreground disabled:opacity-30" aria-label={`Bajar ${p.label}`}>
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <Switch checked={on} onCheckedChange={(v) => { void hapticTap(); toggleTextProvider(id, v); }} />
                 </div>
               );
             })}
-          </div>
-          <p className="type-footnote text-muted-foreground">
-            Claude y DeepSeek solo hacen texto: las imágenes y los vídeos siempre van a OpenAI o Lovable. Si un proveedor no tiene clave puesta, se salta solo.
-          </p>
-        </div>
+          </ListGroup>
 
-        {/* Motor de imágenes */}
-        <div className="p-4 rounded-xl bg-card space-y-2">
-          <div className="flex items-center gap-2">
-            <ImageIcon className="w-4 h-4 text-primary" />
-            <p className="type-headline">Motor de imágenes</p>
+          {/* Motor de imágenes */}
+          <div>
+            <h3 className="type-group-header px-4 pb-1.5">Motor de imágenes</h3>
+            <Tabs
+              value={imageEngine}
+              onValueChange={(v) => {
+                void hapticSelection();
+                const engine = IMAGE_ENGINES.find((e) => e.id === v);
+                if (engine) saveAiSetting("AI_MEDIA_PROVIDER", engine.id, `Imágenes: ${engine.label}`);
+              }}
+            >
+              <TabsList className="w-full">
+                {IMAGE_ENGINES.map((e) => <TabsTrigger key={e.id} value={e.id}>{e.label}</TabsTrigger>)}
+              </TabsList>
+            </Tabs>
+            <p className="px-4 pt-1.5 type-footnote text-muted-foreground">{imageEngineInfo.desc}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {([
-              ["auto", "Automático", "Sigue el orden del motor de texto (se salta las que no hacen imágenes)"],
-              ["openai", "OpenAI", "Siempre tu cuenta de OpenAI; si falla, Lovable de respaldo"],
-              ["lovable", "Lovable", "Siempre los créditos de Lovable"],
-            ] as const).map(([v, label, desc]) => {
-              const current = aiKeys.AI_MEDIA_PROVIDER === "openai" ? "openai" : aiKeys.AI_MEDIA_PROVIDER === "lovable" ? "lovable" : "auto";
-              const active = current === v;
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  onClick={() => { void hapticTap(); saveAiSetting("AI_MEDIA_PROVIDER", v, `Imágenes: ${label}`); }}
-                  className={`pressable min-h-[44px] text-left p-3 rounded-xl transition-colors ${active ? "bg-primary/15 ring-1 ring-primary" : "bg-secondary active:bg-accent"}`}
-                >
-                  <p className="type-headline">{label}</p>
-                  <p className="type-footnote text-muted-foreground">{desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
-        {/* Motor de vídeos */}
-        <div className="p-4 rounded-xl bg-card space-y-2">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 min-w-0">
-              <Video className="w-4 h-4 text-primary shrink-0" />
-              <div className="min-w-0">
-                <p className="type-headline">Motor de vídeos</p>
-                <p className="type-footnote text-muted-foreground">Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios.</p>
-              </div>
-            </div>
-            <Switch
-              checked={aiKeys.AI_VIDEO_ENABLED !== "0"}
-              onCheckedChange={(v) => { void hapticTap(); saveAiSetting("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa"); }}
-            />
-          </div>
-        </div>
-        <div className="space-y-3">
-          {AI_KEYS.map((k) => (
-            <div key={k.key} className="p-4 rounded-xl bg-card space-y-2">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="type-headline">{k.label}</p>
-                  <p className="type-footnote text-muted-foreground">{k.desc}</p>
-                </div>
-                {aiKeys[k.key] && (
-                  <Button type="button" variant="ghost" size="sm" className="min-h-[44px] md:min-h-0" onClick={() => removeAiKey(k.key)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  type="password"
-                  value={aiKeys[k.key] || ""}
-                  onChange={(e) => setAiKeys((p) => ({ ...p, [k.key]: e.target.value }))}
-                  placeholder={k.placeholder}
-                  autoComplete="off"
+          {/* Motor de vídeos */}
+          <ListGroup
+            header="Motor de vídeos"
+            footer="Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios."
+          >
+            <ListRow
+              title="Vídeos de ejercicios"
+              trailing={
+                <Switch
+                  aria-label="Generar vídeos de ejercicios"
+                  checked={aiKeys.AI_VIDEO_ENABLED !== "0"}
+                  onCheckedChange={(v) => { void hapticSelection(); saveAiSetting("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa"); }}
                 />
-                <Button type="button" variant="tinted" disabled={saving} onClick={() => saveAiKey(k.key)}>
-                  Guardar
-                </Button>
+              }
+            />
+          </ListGroup>
+
+          <ListGroup header="Claves de API">
+            {AI_KEYS.map((k) => (
+              <div key={k.key} className="space-y-3 px-4 py-3 [&:not(:last-child)]:sep-b">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="type-body">{k.label}</p>
+                    <p className="type-footnote text-muted-foreground">{k.desc}</p>
+                  </div>
+                  {aiKeys[k.key] && (
+                    <Button type="button" variant="plain" className="-mr-4 shrink-0 text-destructive" aria-label={`Quitar la clave de ${k.label}`} onClick={() => { void hapticTap(); void removeAiKey(k.key); }}>
+                      Quitar
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    aria-label={`Clave de ${k.label}`}
+                    value={aiKeys[k.key] || ""}
+                    onChange={(e) => setAiKeys((p) => ({ ...p, [k.key]: e.target.value }))}
+                    placeholder={k.placeholder}
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    enterKeyHint="done"
+                  />
+                  <Button type="button" variant="tinted" disabled={saving} onClick={() => { void hapticTap(); void saveAiKey(k.key); }}>
+                    Guardar
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </ListGroup>
         </div>
-      </div>
+      </Section>
 
       {/* Secciones de la landing */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <LayoutGrid className="w-5 h-5 text-primary" />
-          <h2 className="type-title3">Secciones visibles en la landing</h2>
-        </div>
-        <p className="type-footnote text-muted-foreground">Activa o desactiva bloques enteros de la home pública.</p>
-        <div className="space-y-3">
-          {([
-            { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
-            { key: "show_ebooks", label: "Guías / Ebooks", desc: "Sección de guías descargables (visible en /recursos y en la landing)." },
-            { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recursos y en la landing)." },
-          ] as const).map((s) => (
-            <div key={s.key} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
-              <div className="min-w-0">
-                <p className="type-headline">{s.label}</p>
-                <p className="type-footnote text-muted-foreground">{s.desc}</p>
-              </div>
-              <Switch
-                checked={sections[s.key]}
-                onCheckedChange={(v) => { void hapticTap(); saveSectionsToggles({ ...sections, [s.key]: v }); }}
+      <Section title="Secciones visibles en la landing" description="Activa o desactiva bloques enteros de la home pública.">
+        <div className="space-y-6">
+          <ListGroup>
+            {([
+              { key: "show_blog", label: "Blog", desc: "Enlace al blog en el menú y sección de últimos artículos." },
+              { key: "show_ebooks", label: "Guías / Ebooks", desc: "Sección de guías descargables (visible en /recursos y en la landing)." },
+              { key: "show_recommendations", label: "Recomendaciones", desc: "Productos recomendados (visibles en /recursos y en la landing)." },
+            ] as const).map((s) => (
+              <ListRow
+                key={s.key}
+                title={s.label}
+                subtitle={s.desc}
+                trailing={
+                  <Switch
+                    aria-label={s.label}
+                    checked={sections[s.key]}
+                    onCheckedChange={(v) => { void hapticSelection(); saveSectionsToggles({ ...sections, [s.key]: v }); }}
+                  />
+                }
               />
-            </div>
-          ))}
-        </div>
+            ))}
+          </ListGroup>
 
-        <div className="grid gap-3 sm:grid-cols-2 pt-2">
-          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
-            <div className="min-w-0">
-              <p className="type-headline">Libros en la landing</p>
-              <p className="type-footnote text-muted-foreground">Cuántas guías se muestran en la portada (0 = ninguna).</p>
-            </div>
-            <Input
-              type="number" min={0} max={24}
-              className="w-20 text-center"
-              value={landingCounts.landing_ebooks_count}
-              onChange={(e) => setLandingCounts({ ...landingCounts, landing_ebooks_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
-              onBlur={() => saveLandingCounts(landingCounts)}
+          <ListGroup>
+            <ListRow
+              title="Libros en la landing"
+              subtitle="Cuántas guías se muestran en la portada (0 = ninguna)."
+              trailing={
+                <Input
+                  type="number" min={0} max={24}
+                  inputMode="numeric"
+                  enterKeyHint="done"
+                  aria-label="Libros en la landing"
+                  className="w-20 text-center tabular-nums"
+                  value={landingCounts.landing_ebooks_count}
+                  onChange={(e) => setLandingCounts({ ...landingCounts, landing_ebooks_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
+                  onBlur={() => saveLandingCounts(landingCounts)}
+                />
+              }
             />
-          </div>
-          <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
-            <div className="min-w-0">
-              <p className="type-headline">Recomendaciones en la landing</p>
-              <p className="type-footnote text-muted-foreground">Cuántos productos recomendados se muestran en la portada.</p>
-            </div>
-            <Input
-              type="number" min={0} max={24}
-              className="w-20 text-center"
-              value={landingCounts.landing_recommendations_count}
-              onChange={(e) => setLandingCounts({ ...landingCounts, landing_recommendations_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
-              onBlur={() => saveLandingCounts(landingCounts)}
+            <ListRow
+              title="Recomendaciones en la landing"
+              subtitle="Cuántos productos recomendados se muestran en la portada."
+              trailing={
+                <Input
+                  type="number" min={0} max={24}
+                  inputMode="numeric"
+                  enterKeyHint="done"
+                  aria-label="Recomendaciones en la landing"
+                  className="w-20 text-center tabular-nums"
+                  value={landingCounts.landing_recommendations_count}
+                  onChange={(e) => setLandingCounts({ ...landingCounts, landing_recommendations_count: Math.max(0, Math.min(24, Number(e.target.value) || 0)) })}
+                  onBlur={() => saveLandingCounts(landingCounts)}
+                />
+              }
             />
-          </div>
-        </div>
+          </ListGroup>
 
-        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card">
-          <div className="min-w-0">
-            <p className="type-headline">Ordenar con IA</p>
-            <p className="type-footnote text-muted-foreground">La IA analiza libros y recomendaciones y pone primero los que más venden. En la landing se mostrarán los primeros según las cantidades de arriba.</p>
-          </div>
-          <Button type="button" variant="tinted" size="sm" disabled={ranking} onClick={rankWithAi} className="shrink-0 min-h-[44px] md:min-h-0">
-            {ranking ? <Spinner size="sm" className="mr-1" /> : <Sparkles className="w-4 h-4 mr-1" />}
-            Ordenar con IA
-          </Button>
+          <ListGroup footer="La IA analiza libros y recomendaciones y pone primero los que más venden. En la landing se mostrarán los primeros según las cantidades de arriba.">
+            <ListRow
+              title={<span className="text-primary">Ordenar con IA</span>}
+              trailing={ranking ? <Spinner size="sm" label="Ordenando" /> : undefined}
+              onClick={() => { if (!ranking) void rankWithAi(); }}
+            />
+          </ListGroup>
         </div>
-      </div>
-
+      </Section>
 
       {/* Ebooks: ahora se gestionan en el Drive */}
       <div className="flex items-start gap-4">
-        <BookOpen className="w-6 h-6 text-primary shrink-0" />
+        <BookOpen className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
         <div className="min-w-0">
           <p className="type-headline">Libros en el Drive</p>
           <p className="mt-0.5 type-subhead text-muted-foreground">
-            Los libros y el pack se gestionan en <strong className="text-foreground">Drive · Libros</strong>. Lo que publiques allí aparece en la landing y en Recursos.
+            Los libros y el pack se gestionan en <strong className="font-semibold text-foreground">Drive · Libros</strong>. Lo que publiques allí aparece en la landing y en Recursos.
           </p>
         </div>
       </div>
 
       {/* Recomendaciones */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <h2 className="type-title3">Recomendaciones (suplementos y productos)</h2>
-          </div>
-          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={() => setRecommendations((a) => [...a, { id: uid(), title: "", description: "", image_url: "", url: "", badge: "" }])}>
-            <Plus className="w-4 h-4 mr-1" /> Añadir
+      <Section
+        title="Recomendaciones"
+        description="Suplementos y productos: creatina, proteína, material… con enlace de afiliado si quieres."
+        action={
+          <Button
+            variant="plain"
+            className="-mr-4"
+            onClick={() => setRecommendations((a) => [...a, { id: uid(), title: "", description: "", image_url: "", url: "", badge: "" }])}
+          >
+            Añadir
           </Button>
-        </div>
-        <p className="type-footnote text-muted-foreground">Creatina, proteína, material… con enlace de afiliado si quieres.</p>
-        {recommendations.length === 0 && <EmptyState icon={Sparkles} title="Sin recomendaciones" description="Añade suplementos o material con su enlace." />}
-        <div className="space-y-3">
-          {recommendations.map((r) => (
-            <div key={r.id} className="rounded-2xl bg-card p-4 space-y-2">
-              <div className="flex items-start gap-3">
-                {r.image_url ? (
-                  <img loading="lazy" decoding="async" src={r.image_url} alt="" className="w-16 h-16 rounded-[10px] object-cover shrink-0" />
-                ) : (
-                  <div className="w-16 h-16 rounded-[10px] bg-secondary shrink-0 flex items-center justify-center"><ImageIcon className="w-5 h-5 text-muted-foreground" /></div>
-                )}
-                <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 self-start">
-                  <input type="file" accept="image/*" className="hidden" onChange={(ev) => onRecImage(r.id, ev)} />
-                  <Upload className="w-3 h-3" /> Imagen
-                </label>
-                <button className="pressable ml-auto flex min-h-[44px] min-w-[44px] items-center justify-center text-destructive active:opacity-60" onClick={() => setRecommendations((a) => a.filter((x) => x.id !== r.id))} aria-label="Eliminar"><Trash2 className="w-4 h-4" /></button>
+        }
+      >
+        {recommendations.length === 0 ? (
+          <EmptyState icon={Sparkles} title="Sin recomendaciones" description="Añade suplementos o material con su enlace." />
+        ) : (
+          <ListGroup>
+            {recommendations.map((r) => (
+              <div key={r.id} className={BLOCK}>
+                <div className="flex items-center gap-3">
+                  <ImageWithFallback src={r.image_url} className="h-16 w-16 shrink-0 rounded-[10px] object-cover" iconClassName="h-6 w-6" />
+                  <label className="pressable inline-flex min-h-[44px] cursor-pointer items-center type-body text-primary">
+                    <input type="file" accept="image/*" className="hidden" onChange={(ev) => onRecImage(r.id, ev)} />
+                    {r.image_url ? "Cambiar imagen" : "Subir imagen"}
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="ml-auto"
+                    onClick={() => { void hapticTap(); setRecommendations((a) => a.filter((x) => x.id !== r.id)); }}
+                    aria-label={`Eliminar ${r.title || "recomendación"}`}
+                  >
+                    <Trash2 className="h-[18px] w-[18px] text-destructive" />
+                  </Button>
+                </div>
+                <Input aria-label="Título" autoCapitalize="sentences" enterKeyHint="next" placeholder="Título (Creatina Monohidratada)" value={r.title} onChange={(ev) => patchRecommendation(r.id, { title: ev.target.value })} />
+                <Textarea aria-label="Descripción" rows={2} placeholder="Por qué la recomiendas" value={r.description} onChange={(ev) => patchRecommendation(r.id, { description: ev.target.value })} />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input aria-label="Etiqueta" autoCapitalize="sentences" enterKeyHint="next" placeholder="Etiqueta (Top, Recomendado…)" value={r.badge} onChange={(ev) => patchRecommendation(r.id, { badge: ev.target.value })} />
+                  <Input aria-label="URL" {...URL_INPUT} enterKeyHint="done" className={MONO_FIELD} placeholder="URL (afiliado o web)" value={r.url} onChange={(ev) => patchRecommendation(r.id, { url: ev.target.value })} />
+                </div>
               </div>
-              <Input placeholder="Título (Creatina Monohidratada)" value={r.title} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, title: ev.target.value } : x))} />
-              <Textarea rows={2} placeholder="Por qué la recomiendas" value={r.description} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, description: ev.target.value } : x))} />
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Etiqueta (Top, Recomendado…)" value={r.badge} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, badge: ev.target.value } : x))} />
-                <Input placeholder="URL (afiliado o web)" value={r.url} onChange={(ev) => setRecommendations((a) => a.map((x) => x.id === r.id ? { ...x, url: ev.target.value } : x))} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <Button variant="tinted" onClick={saveRecommendations} disabled={saving}>{saving ? "Guardando..." : "Guardar recomendaciones"}</Button>
-      </div>
+            ))}
+          </ListGroup>
+        )}
+        <Button variant="tinted" className={saveButton} onClick={saveRecommendations} disabled={saving}>{saving ? "Guardando…" : "Guardar recomendaciones"}</Button>
+      </Section>
 
       {/* Vídeo del Hero */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Film className="w-5 h-5 text-primary" />
-          <h2 className="type-title3">Vídeo del Hero (landing)</h2>
-        </div>
-        <p className="type-footnote text-muted-foreground">
-          Sube un vídeo corto (15–45s, MP4/WebM, máx 100MB) que se reproducirá en silencio en la portada. Mejora notablemente la conversión.
-        </p>
-
+      <Section
+        title="Vídeo del Hero (landing)"
+        description="Sube un vídeo corto (15–45 s, MP4/WebM, máx 100 MB) que se reproducirá en silencio en la portada. Mejora notablemente la conversión."
+      >
         {hero.hero_video_url ? (
-          <div className="rounded-2xl overflow-hidden bg-black">
+          <div className="overflow-hidden rounded-2xl bg-black">
             <video
               key={hero.hero_video_url}
               src={hero.hero_video_url}
               poster={hero.hero_video_poster_url || undefined}
               controls
               playsInline
-              className="w-full max-h-72 object-contain bg-black"
+              className="max-h-72 w-full bg-black object-contain"
             />
           </div>
         ) : (
-          <div className="rounded-2xl bg-card p-8 text-center type-subhead text-muted-foreground">
-            Aún no hay vídeo. Sin vídeo, en el hero se mostrará un fondo limpio sin reproductor.
-          </div>
+          <EmptyState icon={Film} title="Sin vídeo" description="Sin vídeo, el hero muestra un fondo limpio sin reproductor." className="py-6" />
         )}
 
         <div className="flex flex-wrap gap-2">
-          <label className={`cursor-pointer ${videoUploading ? "opacity-60 pointer-events-none" : ""}`}>
+          <label className={`cursor-pointer ${videoUploading ? "pointer-events-none opacity-60" : ""}`}>
             <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={onHeroVideo} />
-            <span className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-primary/15 text-primary active:opacity-60">
-              {videoUploading ? <Spinner size="sm" /> : <Upload className="w-3.5 h-3.5" />}
-              {videoUploading ? "Subiendo..." : hero.hero_video_url ? "Reemplazar vídeo" : "Subir vídeo"}
+            <span className={`${UPLOAD_CHIP} bg-primary/15 text-primary active:opacity-60`}>
+              {videoUploading ? <Spinner size="sm" /> : null}
+              {videoUploading ? "Subiendo…" : hero.hero_video_url ? "Reemplazar vídeo" : "Subir vídeo"}
             </span>
           </label>
-          <label className={`cursor-pointer ${posterUploading ? "opacity-60 pointer-events-none" : ""}`}>
+          <label className={`cursor-pointer ${posterUploading ? "pointer-events-none opacity-60" : ""}`}>
             <input type="file" accept="image/*" className="hidden" onChange={onHeroPoster} />
-            <span className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-secondary active:bg-accent">
-              {posterUploading ? <Spinner size="sm" /> : <Upload className="w-3.5 h-3.5" />}
-              {posterUploading ? "Subiendo..." : "Subir miniatura (poster)"}
+            <span className={`${UPLOAD_CHIP} bg-secondary active:bg-accent`}>
+              {posterUploading ? <Spinner size="sm" /> : null}
+              {posterUploading ? "Subiendo…" : "Subir miniatura (poster)"}
             </span>
           </label>
           {hero.hero_video_url && (
             <button
-              onClick={removeHeroVideo}
-              className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-secondary text-destructive active:bg-accent"
+              type="button"
+              onClick={() => { void hapticTap(); void removeHeroVideo(); }}
+              className={`${UPLOAD_CHIP} bg-secondary text-destructive active:bg-accent`}
             >
-              <X className="w-3.5 h-3.5" /> Quitar vídeo
+              Quitar vídeo
             </button>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label>O pega una URL de vídeo (MP4 directo)</Label>
-          <Input
-            placeholder="https://..."
-            value={hero.hero_video_url}
-            onChange={(e) => setHero((h) => ({ ...h, hero_video_url: e.target.value }))}
-          />
-          <Label>URL de miniatura (opcional)</Label>
-          <Input
-            placeholder="https://..."
-            value={hero.hero_video_poster_url}
-            onChange={(e) => setHero((h) => ({ ...h, hero_video_poster_url: e.target.value }))}
-          />
-          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={saveHero} disabled={saving}>
-            {saving ? "Guardando..." : "Guardar URLs"}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="hero-video-url" className={FIELD_LABEL}>O pega una URL de vídeo (MP4 directo)</Label>
+            <Input
+              id="hero-video-url"
+              {...URL_INPUT}
+              enterKeyHint="next"
+              className={MONO_FIELD}
+              placeholder="https://…"
+              value={hero.hero_video_url}
+              onChange={(e) => setHero((h) => ({ ...h, hero_video_url: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="hero-poster-url" className={FIELD_LABEL}>URL de miniatura (opcional)</Label>
+            <Input
+              id="hero-poster-url"
+              {...URL_INPUT}
+              enterKeyHint="done"
+              className={MONO_FIELD}
+              placeholder="https://…"
+              value={hero.hero_video_poster_url}
+              onChange={(e) => setHero((h) => ({ ...h, hero_video_poster_url: e.target.value }))}
+            />
+          </div>
+          <Button variant="tinted" className={saveButton} onClick={saveHero} disabled={saving}>
+            {saving ? "Guardando…" : "Guardar URLs"}
           </Button>
         </div>
-      </div>
+      </Section>
 
       {/* Enlaces a las tiendas de la app */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Smartphone className="w-5 h-5 text-primary" />
-          <h2 className="type-title3">Enlaces a la app (App Store / Google Play)</h2>
-        </div>
-        <p className="type-footnote text-muted-foreground">
-          Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado).
-        </p>
-        <div className="space-y-2">
-          <Label>URL App Store (iOS)</Label>
-          <Input
-            placeholder="https://apps.apple.com/app/id0000000000"
-            value={stores.app_store_url}
-            onChange={(e) => setStores((s) => ({ ...s, app_store_url: e.target.value }))}
-          />
-          <Label>URL Google Play (Android)</Label>
-          <Input
-            placeholder="https://play.google.com/store/apps/details?id=..."
-            value={stores.play_store_url}
-            onChange={(e) => setStores((s) => ({ ...s, play_store_url: e.target.value }))}
-          />
-          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={saveStores} disabled={saving}>
-            {saving ? "Guardando..." : "Guardar enlaces"}
+      <Section
+        title="Enlaces a la app (App Store / Google Play)"
+        description="Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado)."
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="app-store-url" className={FIELD_LABEL}>URL App Store (iOS)</Label>
+            <Input
+              id="app-store-url"
+              {...URL_INPUT}
+              enterKeyHint="next"
+              className={MONO_FIELD}
+              placeholder="https://apps.apple.com/app/id0000000000"
+              value={stores.app_store_url}
+              onChange={(e) => setStores((s) => ({ ...s, app_store_url: e.target.value }))}
+            />
+          </div>
+          <div>
+            <Label htmlFor="play-store-url" className={FIELD_LABEL}>URL Google Play (Android)</Label>
+            <Input
+              id="play-store-url"
+              {...URL_INPUT}
+              enterKeyHint="done"
+              className={MONO_FIELD}
+              placeholder="https://play.google.com/store/apps/details?id=…"
+              value={stores.play_store_url}
+              onChange={(e) => setStores((s) => ({ ...s, play_store_url: e.target.value }))}
+            />
+          </div>
+          <Button variant="tinted" className={saveButton} onClick={saveStores} disabled={saving}>
+            {saving ? "Guardando…" : "Guardar enlaces"}
           </Button>
         </div>
-      </div>
+      </Section>
 
       {/* Plazas de Transformación */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="type-title3">Plazas de Transformación</h2>
-          <p className="type-footnote text-muted-foreground mt-1">
-            Esta cifra aparece en la landing. Usa 0 cuando no queden plazas disponibles.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <div className="space-y-2 sm:max-w-[180px]">
-            <Label htmlFor="transformation-slots">Plazas disponibles este mes</Label>
+      <Section
+        title="Plazas de Transformación"
+        description="Esta cifra aparece en la landing. Usa 0 cuando no queden plazas disponibles."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="sm:max-w-[180px]">
+            <Label htmlFor="transformation-slots" className={FIELD_LABEL}>Plazas disponibles este mes</Label>
             <Input
               id="transformation-slots"
               type="number"
               min={0}
               max={999}
               inputMode="numeric"
+              enterKeyHint="done"
+              className="tabular-nums"
               value={transformationSlots}
               onChange={(e) => setTransformationSlots(Number(e.target.value))}
             />
           </div>
-          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={saveTransformationSlots} disabled={saving || !Number.isFinite(transformationSlots)}>
-            {saving ? "Guardando..." : "Guardar plazas"}
+          <Button variant="tinted" className={saveButton} onClick={saveTransformationSlots} disabled={saving || !Number.isFinite(transformationSlots)}>
+            {saving ? "Guardando…" : "Guardar plazas"}
           </Button>
         </div>
-      </div>
+      </Section>
 
       {/* Entrenador */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <User className="w-5 h-5 text-primary" />
-          <h2 className="type-title3">Sobre el fundador</h2>
-        </div>
+      <Section title="Sobre el fundador">
         <div className="flex items-center gap-4">
-          {trainer.trainer_photo_url ? (
-            <img loading="lazy" decoding="async" src={trainer.trainer_photo_url} alt="" className="w-20 h-20 rounded-full object-cover " />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-muted-foreground"><User className="w-8 h-8" /></div>
-          )}
-          <label className="cursor-pointer">
+          <ImageWithFallback
+            src={trainer.trainer_photo_url}
+            fallbackIcon={User}
+            iconClassName="h-8 w-8"
+            className="h-20 w-20 shrink-0 rounded-full object-cover"
+          />
+          <label className="pressable inline-flex min-h-[44px] cursor-pointer items-center type-body text-primary">
             <input type="file" accept="image/*" className="hidden" onChange={onTrainerPhoto} />
-            <span className="pressable inline-flex min-h-[44px] items-center gap-1.5 type-body px-4 rounded-xl bg-secondary active:bg-accent"><Upload className="w-3.5 h-3.5" /> Subir foto</span>
+            {trainer.trainer_photo_url ? "Cambiar foto" : "Subir foto"}
           </label>
         </div>
-        <div>
-          <Label>Nombre</Label>
-          <Input value={trainer.trainer_name} onChange={(e) => setTrainer((t) => ({ ...t, trainer_name: e.target.value }))} />
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="trainer-name" className={FIELD_LABEL}>Nombre</Label>
+            <Input id="trainer-name" autoCapitalize="words" autoComplete="name" enterKeyHint="next" value={trainer.trainer_name} onChange={(e) => setTrainer((t) => ({ ...t, trainer_name: e.target.value }))} />
+          </div>
+          <div>
+            <Label htmlFor="trainer-bio" className={FIELD_LABEL}>Bio</Label>
+            <Textarea id="trainer-bio" rows={4} value={trainer.trainer_bio} onChange={(e) => setTrainer((t) => ({ ...t, trainer_bio: e.target.value }))} placeholder="Llevo años ayudando a personas a…" />
+          </div>
+          <div>
+            <Label htmlFor="trainer-phone" className={FIELD_LABEL}>Teléfono / WhatsApp de contacto</Label>
+            <Input id="trainer-phone" type="tel" inputMode="tel" autoComplete="tel" enterKeyHint="done" value={trainer.contact_phone} onChange={(e) => setTrainer((t) => ({ ...t, contact_phone: e.target.value }))} placeholder="+34 600 000 000" />
+            <p className="mt-1.5 px-1 type-footnote text-muted-foreground">Se usa en el botón «Hablar por WhatsApp» de la solicitud de entrenadores.</p>
+          </div>
+          <Button variant="tinted" className={saveButton} onClick={saveTrainer} disabled={saving}>{saving ? "Guardando…" : "Guardar entrenador"}</Button>
         </div>
-        <div>
-          <Label>Bio</Label>
-          <Textarea rows={4} value={trainer.trainer_bio} onChange={(e) => setTrainer((t) => ({ ...t, trainer_bio: e.target.value }))} placeholder="Llevo años ayudando a personas a..." />
-        </div>
-        <div>
-          <Label>Teléfono / WhatsApp de contacto</Label>
-          <Input value={trainer.contact_phone} onChange={(e) => setTrainer((t) => ({ ...t, contact_phone: e.target.value }))} placeholder="+34 600 000 000" />
-          <p className="type-footnote text-muted-foreground mt-1">Se usa en el botón «Hablar por WhatsApp» de la solicitud de entrenadores.</p>
-        </div>
-        <Button variant="tinted" onClick={saveTrainer} disabled={saving}>{saving ? "Guardando..." : "Guardar entrenador"}</Button>
-      </div>
+      </Section>
 
       {/* Testimonios */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-primary" />
-            <h2 className="type-title3">Testimonios</h2>
-          </div>
-          <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={addTestimonial}><Plus className="w-4 h-4 mr-1" /> Añadir</Button>
-        </div>
-        {testimonials.length === 0 && <EmptyState icon={Star} title="Sin testimonios" description="Añade el primero para mostrarlo en la landing." />}
-        <div className="space-y-4">
-          {testimonials.map((t) => (
-            <div key={t.id} className="rounded-2xl bg-card p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                {t.photo_url ? (
-                  <img loading="lazy" decoding="async" src={t.photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
-                ) : (
-                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center type-footnote text-muted-foreground">Foto</div>
-                )}
-                <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1">
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestPhoto(t.id, e)} />
-                  <Upload className="w-3 h-3" /> Foto
-                </label>
-                <div className="ml-auto flex items-center gap-2">
-                  <span className="type-footnote text-muted-foreground">Visible</span>
-                  <Switch checked={t.visible} onCheckedChange={(v) => { void hapticTap(); updateTestimonial(t.id, { visible: v }); }} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <Input placeholder="Nombre" value={t.name} onChange={(e) => updateTestimonial(t.id, { name: e.target.value })} />
-                <Input placeholder="Resultado (-8kg en 3 meses)" value={t.result} onChange={(e) => updateTestimonial(t.id, { result: e.target.value })} />
-              </div>
-              <Textarea rows={3} placeholder="Texto del testimonio" value={t.text} onChange={(e) => updateTestimonial(t.id, { text: e.target.value })} />
-              <div className="grid grid-cols-2 gap-3 pt-3 sep-t">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Antes</Label>
-                  {t.photo_before_url ? (
-                    <img loading="lazy" decoding="async" src={t.photo_before_url} alt="Antes" className="w-full aspect-[3/4] object-cover rounded-[10px]" />
-                  ) : (
-                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
-                  )}
-                  <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 w-full justify-center">
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_before_url", e)} />
-                    <Upload className="w-3 h-3" /> {t.photo_before_url ? "Cambiar" : "Subir"}
+      <Section
+        title="Testimonios"
+        action={<Button variant="plain" className="-mr-4" onClick={addTestimonial}>Añadir</Button>}
+      >
+        {testimonials.length === 0 ? (
+          <EmptyState icon={Star} title="Sin testimonios" description="Añade el primero para mostrarlo en la landing." />
+        ) : (
+          <ListGroup>
+            {testimonials.map((t) => (
+              <div key={t.id} className={BLOCK}>
+                <div className="flex items-center gap-3">
+                  <ImageWithFallback
+                    src={t.photo_url}
+                    fallbackIcon={User}
+                    iconClassName="h-6 w-6"
+                    className="h-14 w-14 shrink-0 rounded-full object-cover"
+                  />
+                  <label className="pressable inline-flex min-h-[44px] cursor-pointer items-center type-body text-primary">
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestPhoto(t.id, e)} />
+                    {t.photo_url ? "Cambiar foto" : "Subir foto"}
                   </label>
-                  {t.photo_before_url && (
-                    <button onClick={() => updateTestimonial(t.id, { photo_before_url: "" })} className="pressable min-h-[44px] type-subhead text-destructive active:opacity-60">Quitar</button>
-                  )}
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="type-footnote text-muted-foreground">Visible</span>
+                    <Switch aria-label={`Visible: ${t.name || "testimonio"}`} checked={t.visible} onCheckedChange={(v) => { void hapticSelection(); updateTestimonial(t.id, { visible: v }); }} />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-primary">Después</Label>
-                  {t.photo_after_url ? (
-                    <img loading="lazy" decoding="async" src={t.photo_after_url} alt="Después" className="w-full aspect-[3/4] object-cover rounded-[10px]" />
-                  ) : (
-                    <div className="w-full aspect-[3/4] rounded-[10px] bg-secondary flex items-center justify-center type-footnote text-muted-foreground">Sin foto</div>
-                  )}
-                  <label className="pressable min-h-[44px] cursor-pointer type-subhead px-3 rounded-xl bg-secondary active:bg-accent inline-flex items-center gap-1 w-full justify-center">
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, "photo_after_url", e)} />
-                    <Upload className="w-3 h-3" /> {t.photo_after_url ? "Cambiar" : "Subir"}
-                  </label>
-                  {t.photo_after_url && (
-                    <button onClick={() => updateTestimonial(t.id, { photo_after_url: "" })} className="pressable min-h-[44px] type-subhead text-destructive active:opacity-60">Quitar</button>
-                  )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input aria-label="Nombre" autoCapitalize="words" enterKeyHint="next" placeholder="Nombre" value={t.name} onChange={(e) => updateTestimonial(t.id, { name: e.target.value })} />
+                  <Input aria-label="Resultado" enterKeyHint="next" placeholder="Resultado (-8kg en 3 meses)" value={t.result} onChange={(e) => updateTestimonial(t.id, { result: e.target.value })} />
+                </div>
+                <Textarea aria-label="Texto del testimonio" rows={3} placeholder="Texto del testimonio" value={t.text} onChange={(e) => updateTestimonial(t.id, { text: e.target.value })} />
+                <div className="grid grid-cols-2 gap-3 pt-3 sep-t">
+                  {([
+                    { field: "photo_before_url", label: "Antes", alt: "Antes" },
+                    { field: "photo_after_url", label: "Después", alt: "Después" },
+                  ] as const).map(({ field, label, alt }) => {
+                    const url = t[field];
+                    return (
+                      <div key={field} className="space-y-2">
+                        <p className="type-subhead font-medium text-muted-foreground">{label}</p>
+                        <ImageWithFallback
+                          src={url}
+                          alt={alt}
+                          className="aspect-[3/4] w-full rounded-[10px] object-cover"
+                          fallback={
+                            <div className="flex aspect-[3/4] w-full flex-col items-center justify-center gap-1.5 rounded-[10px] bg-secondary type-footnote text-muted-foreground">
+                              <ImageIcon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+                              Sin foto
+                            </div>
+                          }
+                        />
+                        <label className={`${UPLOAD_CHIP} w-full bg-secondary active:bg-accent`}>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => onTestBeforeAfter(t.id, field, e)} />
+                          {url ? "Cambiar" : "Subir"}
+                        </label>
+                        {url && (
+                          <button type="button" onClick={() => { void hapticTap(); updateTestimonial(t.id, { [field]: "" } as Partial<Testimonial>); }} className="pressable min-h-[44px] w-full type-subhead text-destructive">
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="type-footnote text-muted-foreground">Si subes Antes y Después, en la landing se mostrarán como par comparativo.</p>
+                <div className="flex items-center justify-between gap-4 pt-3 sep-t">
+                  <div className="min-w-0">
+                    <Label>Transformación 12 semanas</Label>
+                    <p className="type-footnote text-muted-foreground">Si lo activas, este testimonio se destacará en la sección premium.</p>
+                  </div>
+                  <Switch
+                    aria-label={`Transformación 12 semanas: ${t.name || "testimonio"}`}
+                    checked={!!t.is_12w_transformation}
+                    onCheckedChange={(v) => { void hapticSelection(); updateTestimonial(t.id, { is_12w_transformation: v }); }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="tinted" onClick={() => { void hapticTap(); void saveTestimonial(t); }}>Guardar</Button>
+                  <Button variant="ghost" size="icon" aria-label={`Eliminar testimonio${t.name ? `: ${t.name}` : ""}`} onClick={() => { void hapticTap(); void deleteTestimonial(t.id); }}>
+                    <Trash2 className="h-[18px] w-[18px] text-destructive" />
+                  </Button>
                 </div>
               </div>
-              <p className="type-footnote text-muted-foreground">Si subes Antes y Después, en la landing se mostrarán como par comparativo.</p>
-              <div className="flex items-center justify-between sep-t pt-3">
-                <div>
-                  <Label>Transformación 12 semanas</Label>
-                  <p className="type-footnote text-muted-foreground">Si lo activas, este testimonio se destacará en la sección premium.</p>
-                </div>
-                <Switch
-                  checked={!!t.is_12w_transformation}
-                  onCheckedChange={(v) => { void hapticTap(); updateTestimonial(t.id, { is_12w_transformation: v }); }}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button variant="tinted" size="sm" className="min-h-[44px] md:min-h-0" onClick={() => saveTestimonial(t)}>Guardar</Button>
-                <Button size="sm" variant="ghost" onClick={() => deleteTestimonial(t.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </ListGroup>
+        )}
+      </Section>
+      {confirmDialog}
     </div>
   );
 };

@@ -2,6 +2,8 @@ import { Play, Image as ImageIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { signedUrlsFor } from "@/lib/storageSign";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ImageWithFallback, VideoWithFallback } from "@/components/chrome-chat/ImageWithFallback";
+import { hapticTap } from "@/lib/native";
 
 interface Message {
   id: string;
@@ -49,24 +51,22 @@ const ChatMediaGallery = ({ messages, onViewMedia }: Props) => {
             key={msg.id}
             type="button"
             aria-label={msg.media_type === "video" ? "Ver vídeo" : "Ver foto"}
-            onClick={() => onViewMedia({ url: resolve(msg.media_url), type: msg.media_type || "image" })}
+            onClick={() => { void hapticTap(); onViewMedia({ url: resolve(msg.media_url), type: msg.media_type || "image" }); }}
             className="relative aspect-square overflow-hidden bg-secondary transition-opacity active:opacity-80"
           >
             {msg.media_type === "video" ? (
               <>
-                <video src={resolve(msg.media_url)} className="w-full h-full object-cover" />
+                <VideoWithFallback src={resolve(msg.media_url)} className="h-full w-full object-cover" />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <Play className="w-6 h-6 text-white" />
+                  <Play className="h-6 w-6 text-white" />
                 </div>
               </>
             ) : (
-              <img loading="lazy" decoding="async" src={resolve(msg.media_url)} alt="" className="w-full h-full object-cover" />
+              <ImageWithFallback src={resolve(msg.media_url)} alt="" className="h-full w-full object-cover" />
             )}
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5">
-              <span className="type-caption2 text-white">
-                {new Date(msg.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-              </span>
-            </div>
+            <span className="absolute bottom-1 left-1 rounded-full bg-black/50 px-1.5 py-0.5 type-caption2 text-white">
+              {new Date(msg.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+            </span>
           </button>
         ))}
       </div>

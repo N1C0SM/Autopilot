@@ -43,7 +43,7 @@ import NativeDeepLinks from "@/components/native/NativeDeepLinks";
 import { Helmet } from "react-helmet-async";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { isNativeApp } from "@/lib/platform";
 
 const RootRoute = () => (isNativeApp() ? <Welcome /> : <Index />);
@@ -52,8 +52,8 @@ const DashboardRedirect = () => {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -78,8 +78,8 @@ const NoIndex = ({ children }: { children: JSX.Element }) => (
 );
 
 const RouteFallback = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <Spinner size="lg" />
   </div>
 );
 

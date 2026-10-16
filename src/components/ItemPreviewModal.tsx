@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { Button } from "@/components/ui/button";
 import { hapticTap } from "@/lib/native";
 import { track, type EventName } from "@/lib/analytics";
+import { ImageWithFallback } from "@/components/chrome-chat/ImageWithFallback";
+import { skipAutoFocusOnTouch } from "@/components/chrome-chat/skipAutoFocusOnTouch";
 
 /**
  * Ficha de vista previa genérica para cualquier sección de la landing (recomendaciones y futuras).
@@ -46,15 +48,15 @@ export default function ItemPreviewModal({ item, variant, onClose }: { item: Pre
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
         <div className="flex flex-col items-center text-center">
-          {item.image_url ? (
-            <img loading="lazy" decoding="async" src={item.image_url} alt={item.title} className="h-28 w-28 rounded-[22%] object-cover" />
-          ) : (
-            <div className="flex h-28 w-28 items-center justify-center rounded-[22%] bg-secondary">
-              <ShoppingBag className="h-10 w-10 text-primary" strokeWidth={1.75} />
-            </div>
-          )}
+          <ImageWithFallback
+            src={item.image_url}
+            alt={item.title}
+            className="h-28 w-28 rounded-[22%] object-cover"
+            fallbackIcon={ShoppingBag}
+            fallbackIconClassName="h-10 w-10"
+          />
           <p className="mt-5 type-subhead text-primary">{item.badge || variant.label}</p>
           <DialogTitle className="mt-1 type-title1">{item.title}</DialogTitle>
           {intro && <DialogDescription className="mt-2 type-subhead text-muted-foreground">{intro}</DialogDescription>}
@@ -75,7 +77,7 @@ export default function ItemPreviewModal({ item, variant, onClose }: { item: Pre
         )}
 
         <div className="space-y-2">
-          {item.price && <p className="text-center font-rounded text-3xl font-bold tabular-nums">{item.price}</p>}
+          {item.price && <p className="text-center type-large-title font-rounded tabular-nums">{item.price}</p>}
           {item.url ? (
             <Button asChild variant="hero" size="lg" className="w-full">
               <a href={item.url} target="_blank" rel="noreferrer sponsored" onClick={() => { void hapticTap(); track(variant.event, { item: item.title }); }}>

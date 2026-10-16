@@ -37,13 +37,13 @@ export default function ProjectionTimeline({
   const milestones = milestonesFor(priorities, m);
 
   return (
-    <section className="max-w-3xl mx-auto mt-10 px-4">
-      <h2 className="type-title1 text-center">Proyección a {m} meses</h2>
-      <p className="type-subhead text-muted-foreground text-center mt-2 max-w-md mx-auto">
+    <section>
+      <h2 className="type-title2">Proyección a {m} meses</h2>
+      <p className="type-subhead text-muted-foreground mt-1">
         Mismo punto de partida, dos escenarios. Proyección orientativa: no es una promesa de resultados.
       </p>
 
-      <div className="grid md:grid-cols-2 gap-10 md:gap-12 mt-8">
+      <div className="grid md:grid-cols-2 gap-10 md:gap-12 mt-6">
         <div>
           <div className="flex items-center gap-3">
             <TrendingDown className="w-7 h-7 text-muted-foreground shrink-0" strokeWidth={1.75} />
@@ -90,7 +90,7 @@ export default function ProjectionTimeline({
               void hapticTap();
               onCta();
             }}
-            className="mt-4 min-h-[44px] type-headline text-primary active:opacity-60 transition-opacity"
+            className="mt-4 -ml-3 min-h-[44px] px-3 type-headline text-primary active:opacity-60 transition-opacity"
           >
             Empezar mi plan
           </button>

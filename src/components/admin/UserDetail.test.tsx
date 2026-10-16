@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import UserDetail from "./UserDetail";
 import type { Profile } from "@/pages/Admin";
@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({ upsert: vi.fn(), error: vi.fn(), macros: { pro
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: (table: string) => { const query = {
     select: () => query, eq: () => query,
-    maybeSingle: () => Promise.resolve({ data: table === "nutrition_plan" ? { macros_json: mocks.macros, meals_json: [] } : table === "training_plan" ? { workouts_json: [{ day: "Lunes", type: "gimnasio", routine_name: "Sesión guardada", exercises: [] }] } : null, error: null }),
+    maybeSingle: () => Promise.resolve({ data: table === "nutrition_plan" ? { macros_json: mocks.macros, meals_json: [] } : table === "training_plan" ? { workouts_json: [{ day: "Lunes", type: "gimnasio", routine_name: "Sesión guardada", exercises: [] }] } : table === "trainer_assignments" ? { trainer_id: "trainer-1" } : null, error: null }),
     upsert: (...args: unknown[]) => { mocks.upsert(table, ...args); return Promise.resolve({ error: null }); }, update: () => ({ eq: () => Promise.resolve({ error: null }) }),
   }; return query; },
   channel: () => { const channel = { on: () => channel, subscribe: () => channel }; return channel; }, removeChannel: vi.fn(),
@@ -69,5 +69,32 @@ describe("assigned client detail", () => {
     render(<UserDetail profile={coach} {...props} />);
     await screen.findByText("Resumen del plan"); fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
     await waitFor(() => expect(mocks.upsert).toHaveBeenCalledWith("nutrition_plan", expect.objectContaining({ macros_json: {} }), { onConflict: "user_id" }));
+  });
+});
+describe("admin client detail", () => {
+  const adminProps = { ...props, restricted: false };
+  it("marks the client's current plan in the plan picker", async () => {
+    render(<UserDetail profile={coach} {...adminProps} />);
+    const picker = await screen.findByRole("group", { name: "Plan del cliente" });
+    expect(within(picker).getByRole("button", { name: /Coach/ })).toHaveAttribute("aria-pressed", "true");
+    expect(within(picker).getByRole("button", { name: /Free/ })).toHaveAttribute("aria-pressed", "false");
+    expect(within(picker).getByRole("button", { name: /Plus/ })).toHaveAttribute("aria-pressed", "false");
+  });
+  it("switches the admin chat between the client and the assigned trainer", async () => {
+    render(<UserDetail profile={coach} {...adminProps} />);
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: "Chat" }), { button: 0 });
+    expect(await screen.findByText("Chat client: assigned-client")).toBeVisible();
+    fireEvent.mouseDown(await screen.findByRole("tab", { name: "Entrenador" }), { button: 0 });
+    expect(await screen.findByText("Chat trainer: trainer-1")).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Cliente" })).toHaveAttribute("aria-selected", "false");
+  });
+  it("keeps a trainer's secondary actions in the more menu and confirms before removing the role", async () => {
+    render(<UserDetail profile={{ ...coach, user_id: "trainer-1", email: "coach@example.com" }} {...adminProps} isTargetTrainer />);
+    const more = await screen.findByRole("button", { name: "Más acciones" });
+    expect(screen.queryByRole("button", { name: "Ver como" })).not.toBeInTheDocument();
+    fireEvent.keyDown(more, { key: "Enter" });
+    expect(await screen.findByRole("menuitem", { name: "Ver como" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Quitar rol de entrenador" }));
+    expect(await screen.findByText("¿Quitarle el rol de entrenador?")).toBeInTheDocument();
   });
 });

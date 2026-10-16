@@ -5,8 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import CertificateLink from "@/components/CertificateLink";
-import { ListGroup } from "@/components/ui/list";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 import { hapticTap } from "@/lib/native";
+import { useConfirm } from "@/components/admin/content/useConfirm";
+import { Award, Trash2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type Certificate = Database["public"]["Tables"]["trainer_certificates"]["Row"];
@@ -21,6 +25,7 @@ export default function TrainerCertificates({ profileId }: { profileId: string }
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const { ask, dialog: confirmDialog } = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,7 +60,7 @@ export default function TrainerCertificates({ profileId }: { profileId: string }
   };
 
   const remove = async (certificate: Certificate) => {
-    if (!window.confirm(`¿Retirar «${certificate.title}» de la landing y eliminar el archivo?`)) return;
+    if (!(await ask({ title: `¿Retirar «${certificate.title}»?`, description: "Dejará de mostrarse en la landing y se eliminará el archivo.", confirmLabel: "Retirar" }))) return;
     setBusy(true);
     try {
       // Removing the row first revokes access even if storage cleanup fails.
@@ -69,19 +74,53 @@ export default function TrainerCertificates({ profileId }: { profileId: string }
     finally { setBusy(false); }
   };
 
-  return <section className="space-y-4 pt-2" aria-labelledby="certificates-heading">
+  return <section className="space-y-4 pt-6" aria-labelledby="certificates-heading">
     <div className="space-y-1">
       <h3 id="certificates-heading" className="type-title3">Certificados del entrenador</h3>
-      <p className="type-footnote text-muted-foreground">Los documentos se podrán consultar en la landing si este perfil está visible. Sube una copia autorizada sin DNI, dirección ni otros datos privados. Subir un documento no implica una verificación independiente.</p>
+      <p className="type-subhead text-muted-foreground">Los documentos se podrán consultar en la landing si este perfil está visible. Sube una copia autorizada sin DNI, dirección ni otros datos privados. Subir un documento no implica una verificación independiente.</p>
     </div>
-    {loading ? <p role="status" className="type-subhead text-muted-foreground">Cargando certificados…</p> : failed ? <div role="alert" className="flex items-center justify-between gap-3"><p className="type-subhead text-destructive">No se pudieron cargar los certificados.</p><Button variant="plain" className="min-h-[44px]" onClick={() => { void hapticTap(); void load(); }}>Reintentar</Button></div> : certificates.length === 0 ? <p className="type-subhead text-muted-foreground">Sin certificados publicados. La landing mostrará “Entrenador del equipo” y su presentación.</p> : <ListGroup inset>
-      {certificates.map(c => <div key={c.id} className="sep-t flex flex-wrap items-center justify-between gap-x-3 px-4 py-2 first:border-t-0"><div className="min-w-0"><p className="type-headline break-words">{c.title}</p><p className="type-subhead text-muted-foreground break-words">{c.issuer}</p><CertificateLink path={c.file_path} title={c.title} /></div><Button type="button" variant="plain" className="text-destructive" disabled={busy} onClick={() => { void hapticTap(); void remove(c); }}>Eliminar certificado</Button></div>)}
-    </ListGroup>}
-    <fieldset disabled={busy || loading || failed} className="space-y-3">
+    {loading ? (
+      <div role="status" className="flex items-center justify-center gap-2 py-6 type-subhead text-muted-foreground"><Spinner size="sm" label="Cargando certificados" /> Cargando certificados…</div>
+    ) : failed ? (
+      <div role="alert" className="flex items-center justify-between gap-3">
+        <p className="type-footnote text-destructive">No se pudieron cargar los certificados.</p>
+        <Button variant="plain" className="-mr-4 shrink-0" onClick={() => { void hapticTap(); void load(); }}>Reintentar</Button>
+      </div>
+    ) : certificates.length === 0 ? (
+      <EmptyState icon={Award} title="Sin certificados publicados" description="La landing mostrará “Entrenador del equipo” y su presentación." className="py-6" />
+    ) : (
+      <ListGroup>
+        {certificates.map(c => (
+          <ListRow
+            key={c.id}
+            title={<span className="break-words">{c.title}</span>}
+            subtitle={<span className="break-words">{c.issuer}</span>}
+            trailing={
+              <span className="-mr-2 flex items-center">
+                <CertificateLink path={c.file_path} title={c.title} />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive [&_svg]:size-[18px]"
+                  aria-label={`Eliminar certificado: ${c.title}`}
+                  disabled={busy}
+                  onClick={() => { void hapticTap(); void remove(c); }}
+                >
+                  <Trash2 />
+                </Button>
+              </span>
+            }
+          />
+        ))}
+      </ListGroup>
+    )}
+    <fieldset disabled={busy || loading || failed} className="space-y-4">
       <div><Label htmlFor="certificate-title" className="mb-1.5 block text-muted-foreground">Nombre de la titulación</Label><Input id="certificate-title" maxLength={160} autoCapitalize="sentences" enterKeyHint="next" value={title} onChange={e => setTitle(e.target.value)} placeholder="Nombre exacto que aparece en el certificado" /></div>
-      <div><Label htmlFor="certificate-issuer" className="mb-1.5 block text-muted-foreground">Entidad que lo expide</Label><Input id="certificate-issuer" maxLength={160} enterKeyHint="done" value={issuer} onChange={e => setIssuer(e.target.value)} /></div>
+      <div><Label htmlFor="certificate-issuer" className="mb-1.5 block text-muted-foreground">Entidad que lo expide</Label><Input id="certificate-issuer" maxLength={160} autoCapitalize="sentences" enterKeyHint="done" value={issuer} onChange={e => setIssuer(e.target.value)} /></div>
       <div><Label htmlFor="certificate-file" className="mb-1.5 block text-muted-foreground">Documento · PDF, JPG, PNG o WebP · máximo 10 MB</Label><Input ref={input} id="certificate-file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" onChange={e => setFile(e.target.files?.[0] ?? null)} /></div>
-      <Button type="button" variant="tinted" onClick={() => { void hapticTap(); void upload(); }} disabled={!file || !title.trim() || !issuer.trim()}>{busy ? "Guardando…" : "Subir y publicar certificado"}</Button>
+      <Button type="button" variant="tinted" className="w-full md:w-auto" onClick={() => { void hapticTap(); void upload(); }} disabled={!file || !title.trim() || !issuer.trim()}>{busy ? "Guardando…" : "Subir y publicar certificado"}</Button>
     </fieldset>
+    {confirmDialog}
   </section>;
 }

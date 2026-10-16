@@ -1,6 +1,6 @@
 import { getSportSchedules, getCustomActivities } from "@/lib/availability";
 import { jsonObject, jsonString } from "@/lib/runtimeValues";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Chat from "@/components/Chat";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, Save, ShieldCheck, User2, Dumbbell, Apple, MessageCircle, Zap, Wand2, Trash2, TrendingUp, Calendar, AlertTriangle, Sparkles, Eye, Target, MoreHorizontal, KeyRound, UserRound, Crown } from "lucide-react";
+import { ArrowLeft, ShieldCheck, User2, Dumbbell, Trash2, AlertTriangle, Eye, Target, MoreHorizontal, UserRound, UserMinus, Crown, Check, ChevronRight, Info } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SectionHeader } from "@/components/ui/section-header";
+import { cn } from "@/lib/utils";
 import { hapticTap, hapticSelection } from "@/lib/native";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,7 +37,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import type { Profile } from "@/pages/Admin";
 import type { Json } from "@/integrations/supabase/types";
@@ -103,6 +104,40 @@ const MACRO_TEMPLATES: Record<string, { label: string; calc: (weight: number) =>
     label: "Mantenimiento",
     calc: (w) => ({ protein: Math.round(w * 1.8), carbs: Math.round(w * 3.5), fats: Math.round(w * 1) }),
   },
+};
+
+// Pestañas de la ficha: barra de chips con scroll horizontal (más de cinco vistas no caben en un segmentado).
+// En el móvil llega hasta los bordes de la pantalla y el primer chip queda alineado con el margen de 16 px.
+const CHIP_BAR = "no-scrollbar -mx-4 flex h-auto w-auto snap-x scroll-px-4 justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-4 py-0 md:mx-0 md:scroll-px-0 md:px-0";
+const CHIP = "h-11 flex-none snap-start rounded-full bg-secondary px-4 type-subhead font-medium text-foreground transition-[background-color,color,transform] duration-150 active:scale-[0.97] data-[state=active]:bg-primary/15 data-[state=active]:font-semibold data-[state=active]:text-primary data-[state=active]:shadow-none";
+
+/** Nombre visible del cliente: nunca el email completo como título. */
+const clientDisplayName = (profile: Pick<Profile, "name" | "email">) =>
+  profile.name?.trim() || profile.email.split("@")[0] || profile.email;
+
+const Notice = ({ children, status }: { children: ReactNode; status?: boolean }) => (
+  <div className="flex items-start gap-3">
+    <Info className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+    <p role={status ? "status" : undefined} className="min-w-0 type-subhead text-muted-foreground">{children}</p>
+  </div>
+);
+
+/** Fila clave-valor de una lista agrupada (como Ajustes > Información). */
+const FactRow = ({ label, value, stacked }: { label: ReactNode; value: ReactNode; stacked?: boolean }) => {
+  const shown = value === null || value === undefined || value === "" || value === 0 ? "—" : value;
+  return (
+    <div className="group/fact pl-4">
+      <div
+        className={cn(
+          "min-h-[44px] py-[11px] pr-4 group-[:not(:last-child)]/fact:sep-b",
+          stacked ? "space-y-0.5" : "flex items-baseline justify-between gap-4",
+        )}
+      >
+        <div className={stacked ? "type-footnote text-muted-foreground" : "shrink-0 type-body"}>{label}</div>
+        <div className={cn("min-w-0 break-words type-body selectable", !stacked && "text-right text-muted-foreground")}>{shown}</div>
+      </div>
+    </div>
+  );
 };
 
 interface Props {
@@ -431,51 +466,43 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
   const hasAccess = profile.payment_status === "paid";
   const currentTier = (profile.subscription_tier as string) || undefined;
+  const hasCoachTier = ["full", "transform", "personal", "coach"].includes(currentTier || "");
+  const displayName = clientDisplayName(profile);
+  const assignedTrainerEmail = trainers.find((tr) => tr.user_id === assignedTrainerId)?.email;
 
   return (
-    <div className="min-w-0">
-      {/* Header */}
-      <div className="mb-6 space-y-3 sm:space-y-0 sm:flex sm:items-start sm:gap-3">
-       <div className="flex items-start gap-3 min-w-0 sm:flex-1">
-        <Button variant="ghost" size="icon" onClick={onBack} className="h-11 w-11 shrink-0" aria-label="Volver a clientes">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-       <Avatar className="w-11 h-11 shrink-0">
-         <AvatarImage src={profile.avatar_url || undefined} alt={profile.name?.trim() || "Foto del cliente"} />
-         <AvatarFallback className="bg-secondary font-semibold text-muted-foreground">
-           {(profile.name?.trim() || profile.email).charAt(0).toUpperCase()}
-         </AvatarFallback>
-       </Avatar>
-       <div className="flex-1 min-w-0">
-         <h1 className="type-title3 md:text-xl break-all">{profile.name?.trim() || profile.email}</h1>
-         {profile.name?.trim() && <p className="type-footnote text-muted-foreground break-all selectable">{profile.email}</p>}
+    <div className="min-w-0 space-y-6">
+      {/* Móvil: identidad y «…» en la primera línea, Auto-generar + Guardar debajo. Escritorio: todo en una fila. */}
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4 md:gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack} className="hidden shrink-0 md:inline-flex" aria-label="Volver a clientes">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <Avatar className="h-16 w-16 shrink-0 md:h-11 md:w-11">
+            <AvatarImage src={profile.avatar_url || undefined} alt={profile.name?.trim() || "Foto del cliente"} />
+            <AvatarFallback className="bg-secondary type-title2 text-muted-foreground md:type-headline">
+              {displayName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <h1 data-nav-title className="break-words type-large-title md:type-title3">{displayName}</h1>
+            <p className="break-all type-subhead text-muted-foreground selectable">{profile.email}</p>
+          </div>
         </div>
-       </div>
-       <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:shrink-0">
-        {profile.payment_status === "paid" && (
-          <>
-            <Button variant="tinted" onClick={autoGeneratePlan} disabled={generating} className="min-h-11 flex-1 sm:flex-none">
-              <Wand2 className="w-4 h-4 mr-1.5" /> {generating ? "Generando…" : "Auto-generar"}
-            </Button>
-            <Button variant="hero" onClick={savePlans} disabled={saving} className="min-h-11 flex-1 sm:flex-none">
-              <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando…" : "Guardar"}
-            </Button>
-          </>
-        )}
         {!restricted && (
-          <>
+          <div className="shrink-0 md:order-last">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="icon" className="shrink-0" aria-label="Más acciones">
-                  <MoreHorizontal className="w-4 h-4" />
+                <Button variant="secondary" size="icon" aria-label="Más acciones" onPointerDown={() => void hapticTap()}>
+                  <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => impersonateUser(profile.user_id, "/dashboard")}>
-                  <Eye className="w-4 h-4 mr-2" /> Ver como
+                  <Eye className="h-4 w-4 text-muted-foreground" /> Ver como
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive">
-                  <Trash2 className="w-4 h-4 mr-2" /> Eliminar usuario
+                  <Trash2 className="h-4 w-4" /> Eliminar usuario
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -495,69 +522,67 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </>
+          </div>
         )}
-       </div>
-      </div>
+        {hasAccess && (
+          <div className="flex w-full items-center gap-2 md:w-auto md:shrink-0">
+            <Button variant="plain" onClick={() => { void hapticTap(); void autoGeneratePlan(); }} disabled={generating} className="shrink-0 px-3">
+              {generating ? <><Spinner size="sm" className="text-primary" label="Generando" /> Generando…</> : "Auto-generar"}
+            </Button>
+            <Button onClick={() => { void hapticTap(); void savePlans(); }} disabled={saving} className="min-w-0 flex-1 md:min-w-28 md:flex-none">
+              {saving ? "Guardando…" : "Guardar"}
+            </Button>
+          </div>
+        )}
+      </header>
 
-
-      {/* Tabs */}
       <Tabs key={profile.user_id} defaultValue={restricted ? "summary" : "info"} className="min-w-0 space-y-6">
-        <TabsList className="w-full max-w-full flex justify-start overflow-x-auto no-scrollbar h-auto" aria-label="Ficha del cliente">
-          {restricted && <TabsTrigger value="summary" className="min-h-11 shrink-0 gap-1.5 whitespace-nowrap"><Target className="w-3.5 h-3.5" /> Plan</TabsTrigger>}
-          {!restricted && <TabsTrigger value="info" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-            <Target className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Plan</span>
-           </TabsTrigger> }
-          <TabsTrigger value="perfil" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-            <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Perfil</span>
-           </TabsTrigger>
-          {!restricted && (
-            <TabsTrigger value="acceso" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-              <KeyRound className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Acceso</span>
-            </TabsTrigger>
-          )}
+        <TabsList className={CHIP_BAR} aria-label="Ficha del cliente">
+          {restricted && <TabsTrigger value="summary" className={CHIP} onPointerDown={() => void hapticSelection()}>Plan</TabsTrigger>}
+          {!restricted && <TabsTrigger value="info" className={CHIP} onPointerDown={() => void hapticSelection()}>Plan</TabsTrigger>}
+          <TabsTrigger value="perfil" className={CHIP} onPointerDown={() => void hapticSelection()}>Perfil</TabsTrigger>
+          {!restricted && <TabsTrigger value="acceso" className={CHIP} onPointerDown={() => void hapticSelection()}>Acceso</TabsTrigger>}
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-                <TrendingUp className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Progreso</span>
-               </TabsTrigger>
-              <TabsTrigger value="training" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-                <Dumbbell className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Entreno</span>
-              </TabsTrigger>
-              {canViewNutrition && (
-                <TabsTrigger value="nutrition" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-                  <Apple className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Nutrición</span>
-                </TabsTrigger>
-              )}
-              {canMessageClient && (
-                <TabsTrigger value="chat" className="group shrink-0 sm:flex-1 sm:min-w-0 min-h-11 gap-1.5 whitespace-nowrap">
-                  <MessageCircle className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Chat</span>
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="progress" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
+              <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
+              {canViewNutrition && <TabsTrigger value="nutrition" className={CHIP} onPointerDown={() => void hapticSelection()}>Nutrición</TabsTrigger>}
+              {canMessageClient && <TabsTrigger value="chat" className={CHIP} onPointerDown={() => void hapticSelection()}>Chat</TabsTrigger>}
             </>
           )}
         </TabsList>
 
-        {restricted && <TabsContent value="summary" className="space-y-4">
-          <section className="space-y-4">
-            <h2 className="type-title2">Resumen del plan</h2>
-            <p className="type-subhead text-muted-foreground">{dayPlans.length ? `${dayPlans.length} sesiones guardadas para este cliente.` : "Este cliente aún no tiene sesiones guardadas."}</p>
-            {dayPlans.length > 0 && <ul className="overflow-hidden rounded-2xl bg-card">{dayPlans.map((plan, index) => <li key={`${plan.day}-${index}`} className="px-4 py-3 sep-t first:before:hidden"><span className="type-headline">{plan.day}</span><span className="type-subhead block break-words text-muted-foreground">{plan.type === "gimnasio" ? (plan.routine_name || "Entrenamiento") : (plan.sport || "Actividad")} · {plan.type === "gimnasio" ? `${plan.exercises?.length || 0} ejercicios` : (plan.duration || "Duración pendiente")}</span></li>)}</ul>}
-            {!onboarding && <p className="type-subhead text-muted-foreground">Falta completar el perfil del cliente. Pide al administrador que revise sus datos.</p>}
-            {!("subscription_tier" in profile) && <p role="status" className="type-subhead text-muted-foreground">La información de acceso del cliente está pendiente de actualizar. El chat con el cliente aparecerá cuando se confirme su acceso Coach.</p>}
-            {"subscription_tier" in profile && !canMessageClient && <p className="type-subhead text-muted-foreground">Este cliente no tiene acceso activo al chat de seguimiento Coach.</p>}
-          </section>
-        </TabsContent>}
-
-        {/* Tab: Info (incluye Plan y acceso) */}
-        <TabsContent value="info" className="space-y-6">
-        {!restricted && (
-            <div className="space-y-4">
+        {restricted && (
+          <TabsContent value="summary" className="space-y-6">
+            <section className="space-y-3">
               <div>
-                <h2 className="type-title2">Plan</h2>
-                <p className="type-subhead text-muted-foreground mt-1">Toca un plan para aplicarlo al instante. No genera ningún cobro.</p>
+                <h2 className="type-title2">Resumen del plan</h2>
+                <p className="mt-1 type-subhead text-muted-foreground">{dayPlans.length ? `${dayPlans.length} sesiones guardadas para este cliente.` : "Este cliente aún no tiene sesiones guardadas."}</p>
               </div>
-              <div className="grid gap-2 grid-cols-3">
+              {dayPlans.length > 0 && (
+                <ListGroup>
+                  {dayPlans.map((plan, index) => (
+                    <ListRow
+                      key={`${plan.day}-${index}`}
+                      title={plan.day}
+                      subtitle={`${plan.type === "gimnasio" ? (plan.routine_name || "Entrenamiento") : (plan.sport || "Actividad")} · ${plan.type === "gimnasio" ? `${plan.exercises?.length || 0} ejercicios` : (plan.duration || "Duración pendiente")}`}
+                    />
+                  ))}
+                </ListGroup>
+              )}
+            </section>
+            {!onboarding && <Notice>Falta completar el perfil del cliente. Pide al administrador que revise sus datos.</Notice>}
+            {!("subscription_tier" in profile) && <Notice status>La información de acceso del cliente está pendiente de actualizar. El chat con el cliente aparecerá cuando se confirme su acceso Coach.</Notice>}
+            {"subscription_tier" in profile && !canMessageClient && <Notice>Este cliente no tiene acceso activo al chat de seguimiento Coach.</Notice>}
+          </TabsContent>
+        )}
+
+        {/* Tab: Plan (admin) */}
+        <TabsContent value="info" className="space-y-10">
+          {!restricted && (
+            <section className="space-y-3">
+              <p className="type-subhead text-muted-foreground">Toca un plan para aplicarlo al instante. No genera ningún cobro.</p>
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Plan del cliente">
                 {([
                   { value: "free", name: "Free", price: TIERS.free.price },
                   { value: "training", name: "Plus", price: TIERS.training.price },
@@ -600,19 +625,24 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                         onUpdate(profile.user_id, updates);
                         toast.success(`Plan: ${opt.name}`);
                       }}
-                      className={`min-touch rounded-2xl p-4 text-center transition-colors ease-ios-standard active:opacity-70 disabled:cursor-default ${
-                        active ? "bg-primary text-primary-foreground" : "bg-card"
-                      }`}
+                      className={cn(
+                        "flex min-h-[88px] flex-col items-center justify-center rounded-2xl px-2 py-3 text-center transition-[background-color,opacity,transform] duration-150 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default",
+                        active ? "bg-primary/15 text-primary" : "bg-card active:scale-[0.97] active:bg-accent disabled:opacity-40",
+                      )}
                     >
-                      <div className="type-headline">{opt.name}</div>
-                      <div className={`type-footnote mt-1 tabular-nums ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{opt.price} €/mes</div>
-                      {active && <div className="type-caption2 mt-1 font-semibold">Actual</div>}
+                      <span className="type-headline">{opt.name}</span>
+                      <span className={cn("mt-0.5 type-footnote tabular-nums", active ? "text-primary" : "text-muted-foreground")}>{opt.price} €/mes</span>
+                      {active && (
+                        <span className="mt-1.5 inline-flex items-center gap-1 type-caption1 font-semibold">
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" /> Actual
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-              {tierSaving && <Spinner size="sm" className="mx-auto text-primary" label="Guardando" />}
-            </div>
+              {tierSaving && <Spinner size="sm" className="mx-auto block text-primary" label="Guardando" />}
+            </section>
           )}
 
           {profile.subscription_tier === "transform" && (
@@ -625,9 +655,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
         </TabsContent>
 
-        {/* Tab: Perfil (roles, entrenador responsable y datos del cliente) */}
-        <TabsContent value="perfil" className="space-y-6">
-
+        {/* Tab: Perfil (datos del cuestionario y físico objetivo) */}
+        <TabsContent value="perfil" className="space-y-8">
           {editingOnboarding && !restricted ? (
             <OnboardingEditor
               userId={profile.user_id}
@@ -636,116 +665,122 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
               onCancel={() => setEditingOnboarding(false)}
             />
           ) : onboarding ? (
-            <div className="min-w-0">
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <h2 className="type-title2">Perfil del cliente</h2>
-                {!restricted && (
-                  <Button size="sm" variant="tinted" onClick={() => setEditingOnboarding(true)}>Editar</Button>
-                )}
-              </div>
-              {(() => {
-                const av = jsonObject(onboarding.availability);
-                const sportSchedules = getSportSchedules(onboarding.availability);
-                const customActivities = getCustomActivities(onboarding.availability);
-                const dowNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-                const formatSchedule = (s: { dow: number; start: string; end: string }) =>
-                  `${dowNames[s.dow] ?? "?"} ${s.start}–${s.end}`;
-                const days = av?.days ? `${av.days} días/sem` : null;
-                const hours = av?.hours ? `${av.hours}h por sesión` : null;
-                const summary = [days, hours].filter(Boolean).join(" · ") || null;
-                return (
-              <div className="grid sm:grid-cols-2 sm:gap-x-6 gap-y-5">
-                {[
-                  { label: "Edad", value: onboarding.age },
-                  { label: "Sexo", value: onboarding.sex === "male" ? "Hombre" : onboarding.sex === "female" ? "Mujer" : null },
-                  { label: "Altura", value: onboarding.height ? `${onboarding.height} cm` : null },
-                  { label: "Peso", value: onboarding.weight ? `${onboarding.weight} kg` : null },
-                  { label: "Equipamiento", value: onboarding.equipment_type ? onboarding.equipment_type : null },
-                  { label: "Objetivo", value: onboarding.goal ? (goalLabel[onboarding.goal] || onboarding.goal) : null },
-                  { label: "Meta específica", value: onboarding.specific_goal ? onboarding.specific_goal : null },
-                  { label: "Deportes", value: onboarding.sports },
-                  { label: "Intensidad", value: onboarding.intensity_level ? `${onboarding.intensity_level}/10` : null },
-                  { label: "Disponibilidad", value: summary },
-                  { label: "Días elegidos", value: Array.isArray(av?.training_days) ? av.training_days.map((d: number) => dowNames[d]).join(", ") : null },
-                  { label: "Estructura", value: ({ full_body: "Full Body", torso_pierna: "Torso / Pierna", ppl: "Empuje / Tirón / Pierna", coach: "Elige el entrenador" } as Record<string, string>)[jsonString(av.structure)] || null },
-                  { label: "Revisión preferida", value: av?.checkin_time ? `${dowNames[typeof av.checkin_dow === "number" ? av.checkin_dow : -1] ?? "?"} ${av.checkin_time}` : null },
-                  { label: "Estilo de coach", value: ({ direct: "Directo y exigente", flexible: "Flexible y realista", technical: "Técnico y analítico" } as Record<string, string>)[jsonString(av.coach_style)] || null },
-                  { label: "Cocina", value: ({ quick: "Rápido / sin tiempo", normal: "Algo de cocina", loves: "Le gusta cocinar" } as Record<string, string>)[jsonString(av.cooking)] || null },
-                  { label: "Modalidad", value: av?.training_mode === "pareja" ? `En pareja · ${av.partner_email || ""}` : av?.training_mode ? "Individual" : null },
-                ].map((item) => (
-                  <div key={item.label} className="min-w-0 sep-b pb-3">
-                    <div className="type-footnote text-muted-foreground">{item.label}</div>
-                    <div className="type-body break-words selectable">{item.value || "—"}</div>
+            (() => {
+              const av = jsonObject(onboarding.availability);
+              const sportSchedules = getSportSchedules(onboarding.availability);
+              const customActivities = getCustomActivities(onboarding.availability);
+              const dowNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+              const formatSchedule = (s: { dow: number; start: string; end: string }) =>
+                `${dowNames[s.dow] ?? "?"} ${s.start}–${s.end}`;
+              const days = av?.days ? `${av.days} días/sem` : null;
+              const hours = av?.hours ? `${av.hours}h por sesión` : null;
+              const summary = [days, hours].filter(Boolean).join(" · ") || null;
+              const groups: { header: string; facts: { label: string; value: ReactNode; stacked?: boolean }[] }[] = [
+                {
+                  header: "Cuerpo",
+                  facts: [
+                    { label: "Edad", value: onboarding.age },
+                    { label: "Sexo", value: onboarding.sex === "male" ? "Hombre" : onboarding.sex === "female" ? "Mujer" : null },
+                    { label: "Altura", value: onboarding.height ? `${onboarding.height} cm` : null },
+                    { label: "Peso", value: onboarding.weight ? `${onboarding.weight} kg` : null },
+                  ],
+                },
+                {
+                  header: "Objetivo",
+                  facts: [
+                    { label: "Objetivo", value: onboarding.goal ? (goalLabel[onboarding.goal] || onboarding.goal) : null },
+                    { label: "Meta específica", value: onboarding.specific_goal ? onboarding.specific_goal : null },
+                    { label: "Intensidad", value: onboarding.intensity_level ? `${onboarding.intensity_level}/10` : null },
+                  ],
+                },
+                {
+                  header: "Entrenamiento",
+                  facts: [
+                    { label: "Equipamiento", value: onboarding.equipment_type ? onboarding.equipment_type : null },
+                    { label: "Deportes", value: onboarding.sports },
+                    { label: "Disponibilidad", value: summary },
+                    { label: "Días elegidos", value: Array.isArray(av?.training_days) ? av.training_days.map((d: number) => dowNames[d]).join(", ") : null },
+                    { label: "Estructura", value: ({ full_body: "Full Body", torso_pierna: "Torso / Pierna", ppl: "Empuje / Tirón / Pierna", coach: "Elige el entrenador" } as Record<string, string>)[jsonString(av.structure)] || null },
+                    { label: "Modalidad", value: av?.training_mode === "pareja" ? `En pareja · ${av.partner_email || ""}` : av?.training_mode ? "Individual" : null },
+                  ],
+                },
+                {
+                  header: "Seguimiento",
+                  facts: [
+                    { label: "Revisión preferida", value: av?.checkin_time ? `${dowNames[typeof av.checkin_dow === "number" ? av.checkin_dow : -1] ?? "?"} ${av.checkin_time}` : null },
+                    { label: "Estilo de coach", value: ({ direct: "Directo y exigente", flexible: "Flexible y realista", technical: "Técnico y analítico" } as Record<string, string>)[jsonString(av.coach_style)] || null },
+                  ],
+                },
+                {
+                  header: "Nutrición",
+                  facts: [
+                    { label: "Cocina", value: ({ quick: "Rápido / sin tiempo", normal: "Algo de cocina", loves: "Le gusta cocinar" } as Record<string, string>)[jsonString(av.cooking)] || null },
+                    { label: "Preferencias nutricionales", value: onboarding.nutrition_preferences, stacked: true },
+                    { label: "Alergias", value: onboarding.allergies, stacked: true },
+                  ],
+                },
+              ];
+              return (
+                <div className="min-w-0 space-y-8">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="min-w-0 type-subhead text-muted-foreground">Datos del cuestionario del cliente.</p>
+                    {!restricted && (
+                      <Button variant="plain" size="sm" className="-mr-3 shrink-0" onClick={() => { void hapticTap(); setEditingOnboarding(true); }}>Editar</Button>
+                    )}
                   </div>
-                ))}
-                {Object.keys(sportSchedules).length > 0 && (
-                  <div className="sm:col-span-2">
-                    <div className="type-footnote text-muted-foreground mb-2">Horarios de deportes</div>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(sportSchedules).map(([sport, sched]) => (
-                        <div key={sport} className="bg-card rounded-full px-3 py-1.5 type-footnote">
-                          <span className="font-semibold capitalize">{sport}</span>
-                          <span className="text-muted-foreground ml-2">{formatSchedule(sched)}</span>
-                        </div>
-                      ))}
+                  {onboarding.injuries && (
+                    <div className="flex items-start gap-4">
+                      <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-destructive" strokeWidth={1.75} />
+                      <div className="min-w-0">
+                        <div className="type-headline text-destructive">Lesiones y condiciones</div>
+                        <div className="mt-0.5 break-words type-subhead text-muted-foreground selectable">{onboarding.injuries}</div>
+                      </div>
                     </div>
+                  )}
+                  <div className="grid gap-6 md:grid-cols-2 md:items-start">
+                    {groups.map((group) => (
+                      <ListGroup key={group.header} header={group.header}>
+                        {group.facts.map((fact) => <FactRow key={fact.label} label={fact.label} value={fact.value} stacked={fact.stacked} />)}
+                      </ListGroup>
+                    ))}
+                    {Object.keys(sportSchedules).length > 0 && (
+                      <ListGroup header="Horarios de deportes">
+                        {Object.entries(sportSchedules).map(([sport, sched]) => (
+                          <FactRow key={sport} label={<span className="capitalize">{sport}</span>} value={<span className="tabular-nums">{formatSchedule(sched)}</span>} />
+                        ))}
+                      </ListGroup>
+                    )}
+                    {customActivities.length > 0 && (
+                      <ListGroup header="Actividades personalizadas">
+                        {customActivities.map((act, i) => (
+                          <FactRow key={i} label={act.title} value={<span className="tabular-nums">{formatSchedule(act)}</span>} />
+                        ))}
+                      </ListGroup>
+                    )}
                   </div>
-                )}
-                {customActivities.length > 0 && (
-                  <div className="sm:col-span-2">
-                    <div className="type-footnote text-muted-foreground mb-2">Actividades personalizadas</div>
-                    <div className="flex flex-wrap gap-2">
-                      {customActivities.map((act, i) => (
-                        <div key={i} className="bg-card rounded-full px-3 py-1.5 type-footnote">
-                          <span className="font-semibold">{act.title}</span>
-                          <span className="text-muted-foreground ml-2">{formatSchedule(act)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {onboarding.injuries && (
-                  <div className="sm:col-span-2 flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 shrink-0 text-destructive mt-0.5" />
-                    <div className="min-w-0">
-                    <div className="type-headline text-destructive">Lesiones y condiciones</div>
-                    <div className="type-subhead break-words selectable">{onboarding.injuries}</div>
-                    </div>
-                  </div>
-                )}
-                <div className="sm:col-span-2 sep-b pb-3">
-                  <div className="type-footnote text-muted-foreground">Preferencias nutricionales</div>
-                  <div className="type-body break-words selectable">{onboarding.nutrition_preferences || "—"}</div>
                 </div>
-                <div className="sm:col-span-2">
-                  <div className="type-footnote text-muted-foreground">Alergias</div>
-                  <div className="type-body break-words selectable">{onboarding.allergies || "—"}</div>
-                </div>
-              </div>
-                );
-              })()}
-            </div>
+              );
+            })()
           ) : (
             <EmptyState
               icon={UserRound}
               title="Aún no hay datos de perfil"
-              action={!restricted ? <Button size="sm" variant="plain" onClick={() => setEditingOnboarding(true)}>Añadir datos</Button> : undefined}
+              action={!restricted ? <Button variant="plain" onClick={() => { void hapticTap(); setEditingOnboarding(true); }}>Añadir datos</Button> : undefined}
             />
           )}
           {profile.payment_status === "paid" && (
-            <details
-              className="rounded-2xl bg-card px-4"
-              onToggle={(event) => setShowGoalDetails(event.currentTarget.open)}
-            >
-              <summary className="min-h-11 cursor-pointer list-none flex items-center justify-between gap-3 active:opacity-70">
-                <span className="flex items-center gap-2 type-body">
-                  <Target className="w-5 h-5 text-muted-foreground" />
-                  Físico objetivo
-                </span>
-                <span className="type-subhead text-muted-foreground">{showGoalDetails ? "Ocultar" : "Ver"}</span>
+            <details onToggle={(event) => setShowGoalDetails(event.currentTarget.open)}>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-2xl bg-card px-4 transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                <Target className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="flex-1 py-[11px] type-body">Físico objetivo</span>
+                <ChevronRight
+                  className={cn("h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios", showGoalDetails && "rotate-90")}
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                />
               </summary>
               {showGoalDetails && (
-                <div className="sep-t mt-1 py-4">
+                <div className="pt-6">
                   <UserGoalPanel userId={profile.user_id} email={profile.email} />
                 </div>
               )}
@@ -753,50 +788,36 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
         </TabsContent>
 
-        {/* Tab: Acceso (roles y entrenador responsable, aparte del perfil para no acumular scroll) */}
+        {/* Tab: Acceso (roles y entrenador responsable) */}
         {!restricted && (
-          <TabsContent value="acceso" className="space-y-6">
-          <div className="space-y-6">
-              <div>
-                <h2 className="type-title2">{["full", "transform", "personal", "coach"].includes(currentTier || "") ? "Roles y entrenador responsable" : "Roles"}</h2>
-                <p className="type-subhead text-muted-foreground mt-1">Controla los permisos de esta cuenta{["full", "transform", "personal", "coach"].includes(currentTier || "") ? " y quién acompaña al cliente" : ""}.</p>
-              </div>
+          <TabsContent value="acceso" className="space-y-8">
+            <p className="type-subhead text-muted-foreground">Controla los permisos de esta cuenta{hasCoachTier ? " y quién acompaña al cliente" : ""}.</p>
 
-              <ListGroup>
-                <ListRow
-                  icon={<ShieldCheck className="text-muted-foreground" />}
-                  title="Administrador"
-                  subtitle="Puede gestionar la administración de Autopilot."
-                  trailing={<Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />}
-                />
-                <ListRow
-                  icon={<Dumbbell className="text-muted-foreground" />}
-                  title="Entrenador"
-                  subtitle="Puede entrar al panel de entrenador y gestionar clientes asignados."
-                  trailing={<Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />}
-                />
-              </ListGroup>
+            <ListGroup header="Roles">
+              <ListRow
+                icon={<ShieldCheck className="text-muted-foreground" />}
+                title="Administrador"
+                subtitle="Puede gestionar la administración de Autopilot."
+                trailing={<Switch checked={isUserAdmin} onCheckedChange={toggleAdminRole} disabled={roleLoading} aria-label="Asignar rol de administrador" />}
+              />
+              <ListRow
+                icon={<Dumbbell className="text-muted-foreground" />}
+                title="Entrenador"
+                subtitle="Puede entrar al panel de entrenador y gestionar clientes asignados."
+                trailing={<Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />}
+              />
+            </ListGroup>
 
-              {["full", "transform", "personal", "coach"].includes(currentTier || "") && (
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <User2 className="w-6 h-6 text-primary shrink-0" />
-                  <div>
-                    <div className="type-headline">Entrenador responsable</div>
-                    <div className="type-subhead text-muted-foreground">
-                      {trainers.length === 0
-                        ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
-                        : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
-                    </div>
-                  </div>
-                </div>
+            {hasCoachTier && (
+              <section>
+                <h2 className="type-group-header px-4 pb-1.5">Entrenador responsable</h2>
                 {trainers.length > 0 && (
                   <Select
                     value={assignedTrainerId || "__none__"}
                     onValueChange={assignTrainer}
                     disabled={trainerSaving}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Entrenador responsable" className="rounded-2xl bg-card px-4">
                       <SelectValue placeholder="Sin entrenador asignado" />
                     </SelectTrigger>
                     <SelectContent>
@@ -807,9 +828,13 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                     </SelectContent>
                   </Select>
                 )}
-              </div>
-              )}
-            </div>
+                <p className="px-4 pt-1.5 type-footnote text-muted-foreground">
+                  {trainers.length === 0
+                    ? "Aún no hay entrenadores disponibles. Asigna primero el rol de entrenador a una cuenta."
+                    : "Elige quién llevará el seguimiento y verá el progreso de este cliente."}
+                </p>
+              </section>
+            )}
           </TabsContent>
         )}
 
@@ -819,39 +844,34 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
         </TabsContent>
 
         {/* Tab: Training */}
-        <TabsContent value="training" className="space-y-8">
+        <TabsContent value="training" className="space-y-10">
           <TrainingPlanForm dayPlans={dayPlans} onChange={setDayPlans} userSports={onboarding?.sports} equipmentType={onboarding?.equipment_type || "Mixto"} specificGoal={onboarding?.specific_goal || undefined} intensityLevel={onboarding?.intensity_level ?? 5} userGoal={onboarding?.goal || undefined} userInjuries={onboarding?.injuries || undefined} userAge={onboarding?.age ?? undefined} userAvailability={onboarding?.availability as Record<string, boolean> | null} />
-          <div className="space-y-4 sep-t pt-6">
-            <h2 className="flex items-center gap-2 type-title3">
-              <Calendar className="w-5 h-5 text-muted-foreground" /> Calendario
-            </h2>
+          <section className="space-y-4">
+            <SectionHeader size="lg" title="Calendario" />
             <AdminCalendarTab profile={profile} dayPlans={dayPlans} />
-          </div>
+          </section>
         </TabsContent>
 
         {/* Tab: Nutrition */}
-        <TabsContent value="nutrition" className="space-y-6">
-          <div className="min-w-0 space-y-6">
-            <h2 className="type-title2">Plan de nutrición</h2>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-muted-foreground" />
-                <span className="type-footnote text-muted-foreground">
-                  {onboarding?.weight
-                    ? `Calcular macros (${onboarding.weight} kg)`
-                    : "Añade el peso actual del cliente para calcular macros"}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(MACRO_TEMPLATES).map(([key, tpl]) => (
-                  <Button key={key} variant="secondary" size="sm" className="min-h-11 rounded-full" onClick={() => { void hapticTap(); applyMacroTemplate(key); }} disabled={!onboarding?.weight || onboarding.weight <= 0}>
-                    {tpl.label}
-                  </Button>
-                ))}
-              </div>
+        <TabsContent value="nutrition" className="space-y-8">
+          <section>
+            <h2 className="type-group-header px-4 pb-1.5">Calcular macros</h2>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(MACRO_TEMPLATES).map(([key, tpl]) => (
+                <Button key={key} variant="secondary" size="sm" className="h-11" onClick={() => { void hapticTap(); applyMacroTemplate(key); }} disabled={!onboarding?.weight || onboarding.weight <= 0}>
+                  {tpl.label}
+                </Button>
+              ))}
             </div>
+            <p className="px-4 pt-1.5 type-footnote text-muted-foreground tabular-nums">
+              {onboarding?.weight
+                ? `Según su peso actual (${onboarding.weight} kg).`
+                : "Añade el peso actual del cliente para calcular macros."}
+            </p>
+          </section>
 
+          <section>
+            <h2 className="type-group-header px-4 pb-1.5">Macros diarios</h2>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { key: "protein" as const, label: "Proteína (g)" },
@@ -859,74 +879,65 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 { key: "fats" as const, label: "Grasas (g)" },
               ].map((m) => (
                 <div key={m.key} className="min-w-0">
-                  <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="type-footnote text-muted-foreground">{m.label}</Label>
                   <Input
                     id={`client-${profile.user_id}-${m.key}`}
                     type="number"
                     inputMode="decimal"
+                    enterKeyHint={m.key === "fats" ? "done" : "next"}
                     min={0}
                     step="any"
                     value={macros[m.key]}
                     onChange={(e) => setMacros((prev) => ({ ...prev, [m.key]: e.target.value }))}
-                    className="mt-1.5 text-center font-rounded font-bold tabular-nums"
+                    className="h-14 rounded-2xl text-center font-rounded text-[22px] font-bold tabular-nums md:h-11 md:rounded-xl md:text-lg"
                   />
+                  <Label htmlFor={`client-${profile.user_id}-${m.key}`} className="mt-1.5 block text-center type-footnote font-normal text-muted-foreground">{m.label}</Label>
                 </div>
               ))}
             </div>
+          </section>
 
-            <div>
-              <Label className="type-footnote text-muted-foreground">Comidas (una por línea, formato: Nombre: Descripción)</Label>
-              <Textarea
-                value={mealsText}
-                onChange={(e) => setMealsText(e.target.value)}
-                placeholder={"Desayuno: Avena con frutos rojos y batido de proteínas\nAlmuerzo: Pollo a la plancha con arroz y verduras\nCena: Salmón al horno con patata y ensalada"}
-                rows={8}
-                className="mt-2 font-mono"
-              />
-              <p className="type-footnote text-muted-foreground mt-2">
-                Cada línea se convierte en una comida. El texto antes de «:» es el nombre.
-              </p>
-            </div>
-          </div>
+          <section>
+            <Label htmlFor={`client-${profile.user_id}-meals`} className="mb-1.5 block px-4 type-group-header font-normal">Comidas</Label>
+            <Textarea
+              id={`client-${profile.user_id}-meals`}
+              value={mealsText}
+              onChange={(e) => setMealsText(e.target.value)}
+              placeholder={"Desayuno: Avena con frutos rojos y batido de proteínas\nAlmuerzo: Pollo a la plancha con arroz y verduras\nCena: Salmón al horno con patata y ensalada"}
+              rows={8}
+              className="rounded-2xl"
+            />
+            <p className="px-4 pt-1.5 type-footnote text-muted-foreground">
+              Una comida por línea, con el formato «Nombre: Descripción». El texto antes de «:» es el nombre.
+            </p>
+          </section>
         </TabsContent>
 
-
         {/* Tab: Chat */}
-        {canMessageClient && <TabsContent value="chat" className="min-w-0">
-          {restricted && <p className="mb-3 type-subhead text-muted-foreground">Conversación con {profile.name?.trim() || "tu cliente"}.</p>}
-          {!restricted && assignedTrainerId ? (
-            <div className="space-y-3">
-              <div role="tablist" aria-label="Con quién hablar" className="grid grid-cols-2 gap-1 rounded-full bg-secondary p-1">
-                {(["client", "trainer"] as const).map((t) => {
-                  const trainerLabel = trainers.find((tr) => tr.user_id === assignedTrainerId)?.email || "asignado";
-                  const active = chatTarget === t;
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => { void hapticSelection(); setChatTarget(t); }}
-                      className={`min-h-11 min-w-0 truncate rounded-full px-3 py-2 type-footnote font-medium transition ease-ios-standard active:opacity-70 ${active ? "bg-background text-foreground" : "text-muted-foreground"}`}
-                    >
-                      {t === "client" ? "Alumno" : `Entrenador (${trainerLabel})`}
-                    </button>
-                  );
-                })}
-              </div>
-              {chatTarget === "trainer" ? (
-                <>
-                  <p className="text-center type-caption2 text-muted-foreground">Canal directo con el entrenador asignado a este cliente</p>
+        {canMessageClient && (
+          <TabsContent value="chat" className="min-w-0">
+            {restricted && <p className="mb-3 type-subhead text-muted-foreground">Conversación con {profile.name?.trim() || "tu cliente"}.</p>}
+            {!restricted && assignedTrainerId ? (
+              <Tabs value={chatTarget} onValueChange={(value) => { void hapticSelection(); setChatTarget(value as "client" | "trainer"); }} className="space-y-3">
+                <TabsList aria-label="Con quién hablar" className="grid w-full grid-cols-2">
+                  <TabsTrigger value="client" className="min-w-0">Cliente</TabsTrigger>
+                  <TabsTrigger value="trainer" className="min-w-0">Entrenador</TabsTrigger>
+                </TabsList>
+                <TabsContent value="client" className="mt-0">
+                  <Chat key={`c-${profile.user_id}`} conversationUserId={profile.user_id} isAdmin audience="client" />
+                </TabsContent>
+                <TabsContent value="trainer" className="mt-0 space-y-3">
+                  <p className="break-words type-footnote text-muted-foreground">
+                    Canal directo con el entrenador asignado a este cliente
+                    {assignedTrainerEmail ? <>: <span className="text-foreground selectable">{assignedTrainerEmail}</span></> : null}.
+                  </p>
                   <Chat key={`t-${assignedTrainerId}`} conversationUserId={assignedTrainerId} isAdmin audience="trainer" />
-                </>
-              ) : (
-                <Chat key={`c-${profile.user_id}`} conversationUserId={profile.user_id} isAdmin audience="client" />
-              )}
-            </div>
-          ) : (
-            <Chat conversationUserId={profile.user_id} isAdmin audience="client" />
-          )}
-        </TabsContent>}
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <Chat conversationUserId={profile.user_id} isAdmin audience="client" />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -954,6 +965,11 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
   const [assigning, setAssigning] = useState(false);
   const [loading, setLoading] = useState(true);
   const [removingTrainerRole, setRemovingTrainerRole] = useState(false);
+  // Hojas de confirmación abiertas desde el menú «…» y desde las filas de asignados.
+  const [removeRoleOpen, setRemoveRoleOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [unassignOpen, setUnassignOpen] = useState(false);
+  const [unassignTarget, setUnassignTarget] = useState<{ user_id: string; email: string } | null>(null);
 
   const reloadAssigned = async () => {
     const { data: assignments } = await supabase
@@ -984,8 +1000,8 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
     await reloadAssigned();
   };
 
+  // La confirmación la pide la alerta de «Quitar asignación» antes de llamar aquí.
   const handleUnassign = async (userId: string) => {
-    if (!confirm("¿Quitar este usuario del entrenador?")) return;
     const { error } = await supabase.rpc("admin_unassign_user_from_trainer", {
       _trainer_id: profile.user_id,
       _user_id: userId,
@@ -1087,83 +1103,97 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
     onBack();
   };
 
+  const displayName = clientDisplayName(profile);
+  const roleLabel = kind === "admin" ? "Administrador" : "Entrenador";
+
   return (
-    <div>
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" onClick={onBack} className="h-11 w-11 shrink-0" aria-label="Volver a clientes">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex-1 min-w-0">
-          <h1 className="type-title3 md:text-xl truncate">{profile.email}</h1>
-          <span className="mt-0.5 flex items-center gap-1 type-footnote text-primary">
-            {kind === "admin" ? <Crown className="w-3.5 h-3.5" /> : <Dumbbell className="w-3.5 h-3.5" />}
-            {kind === "admin" ? "Administrador" : "Entrenador"}
-          </span>
+    <div className="min-w-0 space-y-6">
+      <header className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-4 md:gap-3">
+          <Button variant="ghost" size="icon" onClick={onBack} className="hidden shrink-0 md:inline-flex" aria-label="Volver a clientes">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-secondary md:h-11 md:w-11" aria-hidden="true">
+            {kind === "admin"
+              ? <Crown className="h-7 w-7 text-primary md:h-5 md:w-5" strokeWidth={1.75} />
+              : <Dumbbell className="h-7 w-7 text-primary md:h-5 md:w-5" strokeWidth={1.75} />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 data-nav-title className="break-words type-large-title md:type-title3">{displayName}</h1>
+            <p className="break-all type-subhead text-muted-foreground selectable">{roleLabel} · {profile.email}</p>
+          </div>
         </div>
-        {!restricted && kind === "trainer" && (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => impersonateUser(profile.user_id, "/trainer")}
-              title="Abrir el panel del entrenador como esta persona"
-            >
-              <Eye className="w-4 h-4 mr-1.5" /> Ver como
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="plain" size="sm" className="shrink-0 text-destructive" disabled={removingTrainerRole}>
-                  Quitar rol
+        {!restricted && (
+          <div className="shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" aria-label="Más acciones" onPointerDown={() => void hapticTap()}>
+                  <MoreHorizontal className="h-5 w-5" />
                 </Button>
-              </AlertDialogTrigger>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {kind === "trainer" && (
+                  <>
+                    <DropdownMenuItem onSelect={() => impersonateUser(profile.user_id, "/trainer")}>
+                      <Eye className="h-4 w-4 text-muted-foreground" /> Ver como
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      disabled={removingTrainerRole}
+                      onSelect={() => setRemoveRoleOpen(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <UserMinus className="h-4 w-4" /> Quitar rol de entrenador
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem disabled={deleting} onSelect={() => setDeleteOpen(true)} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4" /> Eliminar {kind === "admin" ? "administrador" : "entrenador"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {kind === "trainer" && (
+              <AlertDialog open={removeRoleOpen} onOpenChange={setRemoveRoleOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Quitarle el rol de entrenador?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {assigned.length > 0
+                        ? `Primero reasigna o retira sus ${assigned.length} cliente${assigned.length === 1 ? "" : "s"} desde la pestaña «Asignados».`
+                        : `${profile.email} dejará de tener acceso al panel de entrenador. Su cuenta y sus datos no se eliminarán.`}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      destructive
+                      onClick={handleRemoveTrainerRole}
+                      disabled={assigned.length > 0 || removingTrainerRole}
+                    >
+                      {removingTrainerRole ? "Quitando…" : "Quitar rol de entrenador"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Quitarle el rol de entrenador?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Eliminar {kind === "admin" ? "administrador" : "entrenador"}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    {assigned.length > 0
-                      ? `Primero reasigna o retira sus ${assigned.length} cliente${assigned.length === 1 ? "" : "s"} desde la pestaña «Asignados».`
-                      : `${profile.email} dejará de tener acceso al panel de entrenador. Su cuenta y sus datos no se eliminarán.`}
+                    Se borrarán permanentemente todos los datos de <strong>{profile.email}</strong>. Esta acción no se puede deshacer.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    destructive
-                    onClick={handleRemoveTrainerRole}
-                    disabled={assigned.length > 0 || removingTrainerRole}
-                  >
-                    {removingTrainerRole ? "Quitando…" : "Quitar rol de entrenador"}
+                  <AlertDialogAction destructive onClick={handleDelete}>
+                    {deleting ? "Eliminando…" : "Eliminar"}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </>
+          </div>
         )}
-        {!restricted && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon" className="shrink-0" disabled={deleting} aria-label="Eliminar">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar {kind === "admin" ? "administrador" : "entrenador"}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Se borrarán permanentemente todos los datos de <strong>{profile.email}</strong>. Esta acción no se puede deshacer.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction destructive onClick={handleDelete}>
-                  {deleting ? "Eliminando…" : "Eliminar"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-      </div>
+      </header>
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -1171,41 +1201,22 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
         </div>
       ) : (
         <Tabs defaultValue={kind === "trainer" ? "info" : "chat"} className="space-y-6">
-          <TabsList className={`grid w-full ${kind === "trainer" ? "grid-cols-3" : "grid-cols-1"}`}>
-            {kind === "trainer" && (
-              <>
-                <TabsTrigger value="info" className="gap-1.5 shrink-0 whitespace-nowrap">
-                  <User2 className="w-3.5 h-3.5" /> Info
-                </TabsTrigger>
-                <TabsTrigger value="assigned" className="gap-1.5 shrink-0 whitespace-nowrap">
-                  <Dumbbell className="w-3.5 h-3.5" /> Asignados ({assigned.length})
-                </TabsTrigger>
-              </>
-            )}
-            <TabsTrigger value="chat" className="gap-1.5 shrink-0 whitespace-nowrap">
-              <MessageCircle className="w-3.5 h-3.5" /> Chat
-            </TabsTrigger>
-          </TabsList>
+          {kind === "trainer" && (
+            <TabsList className="w-full">
+              <TabsTrigger value="info" onPointerDown={() => void hapticSelection()}>Perfil</TabsTrigger>
+              <TabsTrigger value="assigned" className="tabular-nums" onPointerDown={() => void hapticSelection()}>Asignados ({assigned.length})</TabsTrigger>
+              <TabsTrigger value="chat" onPointerDown={() => void hapticSelection()}>Chat</TabsTrigger>
+            </TabsList>
+          )}
 
           {kind === "trainer" && (
-            <TabsContent value="info">
+            <TabsContent value="info" className="mt-0">
               {trainerProfile && (
-                <div className="space-y-6">
-                  {/* Foto */}
-                  <div className="flex items-start gap-5">
-                    {trainerProfile.photo_url ? (
-                      <img loading="lazy" decoding="async"
-                        src={trainerProfile.photo_url}
-                        alt={trainerProfile.display_name || profile.email}
-                        className="w-24 h-24 rounded-2xl object-cover"
-                      />
-                    ) : (
-                      <div className="w-24 h-24 rounded-2xl bg-secondary flex items-center justify-center">
-                        <User2 className="w-10 h-10 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-2">
-                      <label className="cursor-pointer">
+                <div className="space-y-8">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <TrainerPhoto url={trainerProfile.photo_url || ""} alt={trainerProfile.display_name || profile.email} />
+                    <div className="flex items-center gap-5">
+                      <label className={cn("inline-flex min-h-11 cursor-pointer items-center gap-2 type-body text-primary transition-opacity active:opacity-60", uploadingPhoto && "pointer-events-none opacity-60")}>
                         <input
                           type="file"
                           accept="image/*"
@@ -1213,16 +1224,14 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                           disabled={uploadingPhoto}
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadTrainerPhoto(f); }}
                         />
-                        <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-secondary px-4 type-subhead active:opacity-70">
-                          {uploadingPhoto ? <Spinner size="sm" /> : <User2 className="w-4 h-4" />}
-                          {uploadingPhoto ? "Subiendo…" : "Subir foto"}
-                        </span>
+                        {uploadingPhoto && <Spinner size="sm" className="text-primary" label="Subiendo" />}
+                        {uploadingPhoto ? "Subiendo…" : trainerProfile.photo_url ? "Cambiar foto" : "Subir foto"}
                       </label>
                       {trainerProfile.photo_url && (
                         <button
                           type="button"
-                          onClick={() => setTrainerProfile({ ...trainerProfile, photo_url: "" })}
-                          className="min-h-11 type-footnote text-destructive text-left active:opacity-70"
+                          onClick={() => { void hapticTap(); setTrainerProfile({ ...trainerProfile, photo_url: "" }); }}
+                          className="min-h-11 type-body text-destructive transition-opacity active:opacity-60"
                         >
                           Quitar foto
                         </button>
@@ -1230,72 +1239,81 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                     </div>
                   </div>
 
-                  {/* Visible toggle */}
-                  <div className="flex items-center justify-between sep-t pt-4">
-                    <div>
-                      <Label className="type-body">Visible en la landing</Label>
-                      <p className="type-footnote text-muted-foreground">Aparecerá en la sección "Entrenadores"</p>
-                    </div>
-                    <Switch
-                      checked={!!trainerProfile.visible}
-                      onCheckedChange={(v) => setTrainerProfile({ ...trainerProfile, visible: v })}
+                  <ListGroup footer="Aparecerá en la sección «Entrenadores» de la web.">
+                    <ListRow
+                      title="Visible en la landing"
+                      trailing={
+                        <Switch
+                          checked={!!trainerProfile.visible}
+                          onCheckedChange={(v) => { void hapticSelection(); setTrainerProfile({ ...trainerProfile, visible: v }); }}
+                          aria-label="Visible en la landing"
+                        />
+                      }
                     />
-                  </div>
+                  </ListGroup>
 
-                  {/* Campos */}
-                  <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label htmlFor={`trainer-${profile.user_id}-name`} className="mb-1.5 block font-normal text-muted-foreground">Nombre público</Label>
+                        <Input
+                          id={`trainer-${profile.user_id}-name`}
+                          autoCapitalize="words"
+                          autoComplete="off"
+                          enterKeyHint="next"
+                          value={trainerProfile.display_name || ""}
+                          onChange={(e) => setTrainerProfile({ ...trainerProfile, display_name: e.target.value })}
+                          placeholder="Carlos Méndez"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`trainer-${profile.user_id}-specialty`} className="mb-1.5 block font-normal text-muted-foreground">Especialidad</Label>
+                        <Input
+                          id={`trainer-${profile.user_id}-specialty`}
+                          enterKeyHint="next"
+                          value={trainerProfile.specialty || ""}
+                          onChange={(e) => setTrainerProfile({ ...trainerProfile, specialty: e.target.value })}
+                          placeholder="Hipertrofia · Calistenia"
+                        />
+                      </div>
+                    </div>
                     <div>
-                      <Label>Nombre público</Label>
+                      <Label htmlFor={`trainer-${profile.user_id}-headline`} className="mb-1.5 block font-normal text-muted-foreground">Titular corto</Label>
                       <Input
-                        className="mt-1.5"
-                        value={trainerProfile.display_name || ""}
-                        onChange={(e) => setTrainerProfile({ ...trainerProfile, display_name: e.target.value })}
-                        placeholder="Carlos Méndez"
+                        id={`trainer-${profile.user_id}-headline`}
+                        enterKeyHint="next"
+                        value={trainerProfile.headline || ""}
+                        onChange={(e) => setTrainerProfile({ ...trainerProfile, headline: e.target.value })}
+                        placeholder="Entrenador certificado · 5 años"
                       />
                     </div>
                     <div>
-                      <Label>Especialidad</Label>
+                      <Label htmlFor={`trainer-${profile.user_id}-bio`} className="mb-1.5 block font-normal text-muted-foreground">Descripción</Label>
+                      <Textarea
+                        id={`trainer-${profile.user_id}-bio`}
+                        rows={4}
+                        value={trainerProfile.bio || ""}
+                        onChange={(e) => setTrainerProfile({ ...trainerProfile, bio: e.target.value })}
+                        placeholder="Cuenta brevemente quién es y a quién ayuda…"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`trainer-${profile.user_id}-order`} className="mb-1.5 block font-normal text-muted-foreground">Orden</Label>
                       <Input
-                        className="mt-1.5"
-                        value={trainerProfile.specialty || ""}
-                        onChange={(e) => setTrainerProfile({ ...trainerProfile, specialty: e.target.value })}
-                        placeholder="Hipertrofia · Calistenia"
+                        id={`trainer-${profile.user_id}-order`}
+                        className="max-w-[120px] tabular-nums"
+                        type="number"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        enterKeyHint="done"
+                        value={trainerProfile.sort_order ?? 0}
+                        onChange={(e) => setTrainerProfile({ ...trainerProfile, sort_order: parseInt(e.target.value) || 0 })}
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label>Titular corto</Label>
-                    <Input
-                      className="mt-1.5"
-                      value={trainerProfile.headline || ""}
-                      onChange={(e) => setTrainerProfile({ ...trainerProfile, headline: e.target.value })}
-                      placeholder="Entrenador certificado · 5 años"
-                    />
-                  </div>
-                  <div>
-                    <Label>Descripción / Bio</Label>
-                    <Textarea
-                      className="mt-1.5"
-                      rows={4}
-                      value={trainerProfile.bio || ""}
-                      onChange={(e) => setTrainerProfile({ ...trainerProfile, bio: e.target.value })}
-                      placeholder="Cuenta brevemente quién es y a quién ayuda…"
-                    />
-                  </div>
-                  <div>
-                    <Label>Orden</Label>
-                    <Input
-                      className="mt-1.5 max-w-[120px]"
-                      type="number"
-                      inputMode="numeric"
-                      enterKeyHint="done"
-                      value={trainerProfile.sort_order ?? 0}
-                      onChange={(e) => setTrainerProfile({ ...trainerProfile, sort_order: parseInt(e.target.value) || 0 })}
-                    />
-                  </div>
 
-                  <Button variant="hero" onClick={saveTrainerProfile} disabled={savingProfile}>
-                    <Save className="w-4 h-4 mr-1.5" /> {savingProfile ? "Guardando…" : "Guardar perfil"}
+                  <Button size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); void saveTrainerProfile(); }} disabled={savingProfile}>
+                    {savingProfile ? "Guardando…" : "Guardar perfil"}
                   </Button>
                 </div>
               )}
@@ -1303,31 +1321,35 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
           )}
 
           {kind === "trainer" && (
-            <TabsContent value="assigned">
+            <TabsContent value="assigned" className="mt-0 space-y-6">
               {!restricted && (
-                <div className="mb-4 flex flex-col sm:flex-row gap-2">
-                  <Input
-                    type="email"
-                    inputMode="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    autoComplete="off"
-                    enterKeyHint="done"
-                    placeholder="email@usuario.com"
-                    value={assignEmail}
-                    onChange={(e) => setAssignEmail(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleAssign(); }}
-                    className="flex-1"
-                  />
-                  <Button onClick={handleAssign} disabled={assigning || !assignEmail.trim()}>
-                    {assigning ? <Spinner size="sm" className="mr-1.5 text-primary-foreground" /> : null}
-                    Asignar usuario
-                  </Button>
-                </div>
+                <section>
+                  <Label htmlFor={`trainer-${profile.user_id}-assign`} className="mb-1.5 block px-4 type-group-header font-normal">Asignar usuario</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id={`trainer-${profile.user_id}-assign`}
+                      type="email"
+                      inputMode="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      autoComplete="off"
+                      enterKeyHint="done"
+                      placeholder="email@usuario.com"
+                      value={assignEmail}
+                      onChange={(e) => setAssignEmail(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleAssign(); }}
+                      className="min-w-0 flex-1"
+                    />
+                    <Button className="shrink-0" onClick={() => { void hapticTap(); void handleAssign(); }} disabled={assigning || !assignEmail.trim()}>
+                      {assigning ? <Spinner size="sm" className="text-primary-foreground" label="Asignando" /> : null}
+                      Asignar
+                    </Button>
+                  </div>
+                </section>
               )}
               {assigned.length === 0 ? (
-                <EmptyState icon={User2} title="Sin usuarios asignados" />
+                <EmptyState icon={User2} title="Sin usuarios asignados" description="Los clientes que asignes a este entrenador aparecerán aquí." />
               ) : (
                 <ListGroup>
                   {assigned.map((u) => (
@@ -1336,23 +1358,62 @@ function StaffDetail({ profile, onBack, onDelete, kind, restricted, deleting, se
                       title={<span className="truncate selectable">{u.email}</span>}
                       subtitle={`${u.plan_status === "plan_ready" ? "Plan listo" : u.plan_status === "plan_pending" ? "Pendiente" : "Perfil pendiente"} · ${u.payment_status === "paid" ? "Pagado" : "Sin pagar"}`}
                       trailing={!restricted ? (
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); void hapticTap(); handleUnassign(u.user_id); }} aria-label="Quitar asignación">
-                          <Trash2 className="w-5 h-5 text-destructive" />
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); void hapticTap(); setUnassignTarget({ user_id: u.user_id, email: u.email }); setUnassignOpen(true); }} aria-label="Quitar asignación">
+                          <Trash2 className="h-5 w-5" />
                         </Button>
                       ) : undefined}
                     />
                   ))}
                 </ListGroup>
               )}
+              <AlertDialog open={unassignOpen} onOpenChange={setUnassignOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Quitar este usuario del entrenador?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      <span className="break-all">{unassignTarget?.email}</span> dejará de estar asignado a este entrenador.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction destructive onClick={() => { if (unassignTarget) void handleUnassign(unassignTarget.user_id); }}>
+                      Quitar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </TabsContent>
           )}
 
-          <TabsContent value="chat">
+          <TabsContent value="chat" className="mt-0">
             <Chat conversationUserId={profile.user_id} isAdmin audience={kind === "trainer" ? "trainer" : "team"} />
           </TabsContent>
         </Tabs>
       )}
     </div>
+  );
+}
+
+/** Foto pública del entrenador con hueco compuesto si falta o no carga. */
+function TrainerPhoto({ url, alt }: { url: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [url]);
+  if (!url || failed) {
+    return (
+      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-secondary" aria-hidden="true">
+        <User2 className="h-10 w-10 text-muted-foreground" strokeWidth={1.75} />
+      </div>
+    );
+  }
+  return (
+    <img
+      loading="lazy"
+      decoding="async"
+      src={url}
+      alt={alt}
+      onError={() => setFailed(true)}
+      className="h-24 w-24 rounded-full bg-secondary object-cover"
+    />
   );
 }
 
@@ -1389,37 +1450,25 @@ function AdminCalendarTab({ profile, dayPlans }: AdminCalendarTabProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {conflicts.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-6 h-6 text-primary shrink-0" />
-              <div>
-                <p className="type-headline">{conflicts.length} conflicto{conflicts.length > 1 ? "s" : ""} detectado{conflicts.length > 1 ? "s" : ""} esta semana</p>
-                <p className="type-subhead text-muted-foreground">El sistema puede reubicar los entrenos automáticamente respetando recuperación.</p>
-              </div>
+        <section className="space-y-3">
+          <div className="flex items-start gap-4">
+            <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+            <div className="min-w-0 flex-1">
+              <p className="type-headline">{conflicts.length} conflicto{conflicts.length > 1 ? "s" : ""} detectado{conflicts.length > 1 ? "s" : ""} esta semana</p>
+              <p className="mt-0.5 type-subhead text-muted-foreground">El sistema puede reubicar los entrenos automáticamente respetando recuperación.</p>
+              <Button variant="plain" size="sm" className="-ml-3.5 mt-1" onClick={() => { void hapticTap(); void runAutoReschedule(); }} disabled={running}>
+                {running ? <><Spinner size="sm" className="text-primary" label="Aplicando" /> Aplicando…</> : "Aplicar auto-ajuste"}
+              </Button>
             </div>
-            <Button size="sm" onClick={runAutoReschedule} disabled={running} variant="hero">
-              {running ? <Spinner size="sm" className="mr-1.5 text-primary-foreground" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
-              {running ? "Aplicando…" : "Aplicar auto-ajuste"}
-            </Button>
           </div>
-          <ul className="space-y-1.5">
+          <ListGroup footer={conflicts.length > 5 ? `Y ${conflicts.length - 5} más.` : undefined}>
             {conflicts.slice(0, 5).map((c, i) => (
-              <li key={i} className="type-footnote flex items-start gap-2">
-                <span className="text-primary mt-0.5">•</span>
-                <span>
-                  <strong>{c.dayLabel}</strong> · {c.trainingTitle} —{" "}
-                  <span className="text-muted-foreground">{c.hint}</span>
-                </span>
-              </li>
+              <ListRow key={i} title={`${c.dayLabel} · ${c.trainingTitle}`} subtitle={c.hint} />
             ))}
-            {conflicts.length > 5 && (
-              <li className="type-footnote text-muted-foreground">…y {conflicts.length - 5} más</li>
-            )}
-          </ul>
-        </div>
+          </ListGroup>
+        </section>
       )}
 
       <CalendarView

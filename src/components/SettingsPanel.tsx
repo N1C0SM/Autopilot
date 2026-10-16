@@ -84,6 +84,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  // URL de la foto que no cargó: se muestra la inicial en vez del icono de imagen rota.
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [privacy, setPrivacy] = useState({ name_public: false, avatar_public: false, progress_public: false });
   const updatePrivacy = async (key: keyof typeof privacy, value: boolean) => {
@@ -426,8 +428,15 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}
             className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary transition-opacity active:opacity-70"
           >
-            {avatarUrl ? (
-              <img loading="lazy" decoding="async" src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            {avatarUrl && avatarUrl !== failedAvatarUrl ? (
+              <img
+                loading="lazy"
+                decoding="async"
+                src={avatarUrl}
+                alt=""
+                onError={() => setFailedAvatarUrl(avatarUrl)}
+                className="h-full w-full object-cover"
+              />
             ) : initial ? (
               <span aria-hidden="true" className="font-rounded type-large-title text-muted-foreground">{initial}</span>
             ) : (
@@ -671,7 +680,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           />
           {subscriptionEnd && isActive ? (
             <ListRow
-              icon={<Calendar />}
+              icon={<Calendar className="text-muted-foreground" />}
               title={subscriptionStatus === "trialing" ? "Fin de la prueba" : "Próxima renovación"}
               value={new Date(subscriptionEnd).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
             />
@@ -681,7 +690,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           ) : null}
           {hasPaidAccess && !iosReader ? (
             <ListRow
-              icon={<ExternalLink />}
+              icon={<ExternalLink className="text-muted-foreground" />}
               title="Gestionar suscripción"
               chevron={!loadingPortal}
               trailing={loadingPortal ? <Spinner size="sm" /> : undefined}
@@ -716,13 +725,13 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       >
         {gcalConnected ? (
           <ListRow
-            icon={<Check />}
+            icon={<Check className="text-success" />}
             title="Conectado"
             subtitle={gcalLastSync ? `Última sync: ${new Date(gcalLastSync).toLocaleString("es-ES")}` : undefined}
           />
         ) : null}
         <ListRow
-          icon={<CalendarClock />}
+          icon={<CalendarClock className="text-muted-foreground" />}
           title="Horarios y disponibilidad"
           aria-label="Horarios y disponibilidad"
           chevron
@@ -730,7 +739,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         />
         {gcalConnected ? (
           <>
-            <ListRow icon={<RefreshCw />} title="Sincronizar" disabled={gcalLoading} onClick={handleSyncGoogle} />
+            <ListRow icon={<RefreshCw className="text-muted-foreground" />} title="Sincronizar" disabled={gcalLoading} onClick={handleSyncGoogle} />
             <ListRow
               icon={<Unplug className="text-destructive" />}
               title="Desconectar"
@@ -757,14 +766,14 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           footer="Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento."
         >
           <ListRow
-            icon={<Download />}
+            icon={<Download className="text-muted-foreground" />}
             title={exporting ? "Generando…" : "Exportar mis datos"}
             subtitle="Descarga un JSON con todo lo que tenemos sobre ti."
             trailing={exporting ? <Spinner size="sm" /> : undefined}
             onClick={() => { if (!exporting) void exportMyData(); }}
           />
           <ListRow
-            icon={<FileText />}
+            icon={<FileText className="text-muted-foreground" />}
             title="Ver Política de Privacidad"
             subtitle="Qué datos tratamos y con qué base legal."
             chevron

@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Save, RotateCcw, FileCode, Eye, Wand2 } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ListGroup, ListRow } from "@/components/ui/list";
-import { hapticTap } from "@/lib/native";
+import { hapticSelection, hapticTap } from "@/lib/native";
+import { useConfirm } from "@/components/admin/content/useConfirm";
 import { toast } from "sonner";
 import scanPreviewAsset from "@/assets/scan-preview.jpg.asset.json";
 import scanUserAsset from "@/assets/scan-example-user.jpg.asset.json";
@@ -99,6 +99,7 @@ export default function EmailTemplatesEditor() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasOverride, setHasOverride] = useState(false);
+  const { ask, dialog: confirmDialog } = useConfirm();
   const bcRef = useRef<BroadcastChannel | null>(null);
   const previewWinRef = useRef<Window | null>(null);
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
@@ -161,7 +162,7 @@ export default function EmailTemplatesEditor() {
 
   const editorOptions = {
     fontSize: 13,
-    fontFamily: "JetBrains Mono, Menlo, Monaco, monospace",
+    fontFamily: "SF Mono, Menlo, Monaco, monospace",
     minimap: { enabled: false },
     wordWrap: "on" as const,
     tabSize: 2,
@@ -189,51 +190,51 @@ export default function EmailTemplatesEditor() {
   const handleEditorMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    // "Shades of Purple"-inspired dark theme
-    monaco.editor.defineTheme("shades-of-purple", {
+    // Editor skin in the app palette: card background, iOS system colours for the syntax.
+    monaco.editor.defineTheme("autopilot-dark", {
       base: "vs-dark",
       inherit: true,
       rules: [
-        { token: "", foreground: "FFFFFF", background: "1E1E3F" },
-        { token: "tag", foreground: "FF9D00" },
-        { token: "tag.html", foreground: "FF9D00" },
-        { token: "metatag", foreground: "FF9D00" },
-        { token: "metatag.content.html", foreground: "A5FF90" },
-        { token: "metatag.html", foreground: "FF9D00" },
-        { token: "delimiter", foreground: "B362FF" },
-        { token: "delimiter.html", foreground: "B362FF" },
-        { token: "attribute.name", foreground: "FAD000" },
-        { token: "attribute.name.html", foreground: "FAD000" },
-        { token: "attribute.value", foreground: "A5FF90" },
-        { token: "attribute.value.html", foreground: "A5FF90" },
-        { token: "string", foreground: "A5FF90" },
-        { token: "string.html", foreground: "A5FF90" },
-        { token: "comment", foreground: "B362FF", fontStyle: "italic" },
-        { token: "comment.html", foreground: "B362FF", fontStyle: "italic" },
-        { token: "number", foreground: "FF628C" },
-        { token: "keyword", foreground: "FF9D00" },
+        { token: "", foreground: "FFFFFF", background: "1C1C1E" },
+        { token: "tag", foreground: "FF9F0A" },
+        { token: "tag.html", foreground: "FF9F0A" },
+        { token: "metatag", foreground: "FF9F0A" },
+        { token: "metatag.content.html", foreground: "30D158" },
+        { token: "metatag.html", foreground: "FF9F0A" },
+        { token: "delimiter", foreground: "8E8E93" },
+        { token: "delimiter.html", foreground: "8E8E93" },
+        { token: "attribute.name", foreground: "64D2FF" },
+        { token: "attribute.name.html", foreground: "64D2FF" },
+        { token: "attribute.value", foreground: "30D158" },
+        { token: "attribute.value.html", foreground: "30D158" },
+        { token: "string", foreground: "30D158" },
+        { token: "string.html", foreground: "30D158" },
+        { token: "comment", foreground: "8E8E93", fontStyle: "italic" },
+        { token: "comment.html", foreground: "8E8E93", fontStyle: "italic" },
+        { token: "number", foreground: "BF5AF2" },
+        { token: "keyword", foreground: "FF9F0A" },
       ],
       colors: {
-        "editor.background": "#1E1E3F",
+        "editor.background": "#1C1C1E",
         "editor.foreground": "#FFFFFF",
-        "editor.lineHighlightBackground": "#2D2B55",
-        "editor.lineHighlightBorder": "#2D2B55",
-        "editorLineNumber.foreground": "#A599E9",
-        "editorLineNumber.activeForeground": "#FAD000",
-        "editorCursor.foreground": "#FAD000",
-        "editor.selectionBackground": "#B362FF55",
-        "editor.inactiveSelectionBackground": "#B362FF33",
-        "editorBracketMatch.background": "#FAD00033",
-        "editorBracketMatch.border": "#FAD000",
-        "editorIndentGuide.background": "#3B3974",
-        "editorIndentGuide.activeBackground": "#FAD000",
-        "editorWhitespace.foreground": "#3B3974",
-        "scrollbarSlider.background": "#B362FF55",
-        "scrollbarSlider.hoverBackground": "#B362FF88",
-        "scrollbarSlider.activeBackground": "#B362FFAA",
+        "editor.lineHighlightBackground": "#2C2C2E",
+        "editor.lineHighlightBorder": "#2C2C2E",
+        "editorLineNumber.foreground": "#636366",
+        "editorLineNumber.activeForeground": "#EBEBF5",
+        "editorCursor.foreground": "#D7B45B",
+        "editor.selectionBackground": "#D7B45B44",
+        "editor.inactiveSelectionBackground": "#D7B45B22",
+        "editorBracketMatch.background": "#D7B45B33",
+        "editorBracketMatch.border": "#D7B45B",
+        "editorIndentGuide.background": "#38383A",
+        "editorIndentGuide.activeBackground": "#636366",
+        "editorWhitespace.foreground": "#38383A",
+        "scrollbarSlider.background": "#63636655",
+        "scrollbarSlider.hoverBackground": "#63636688",
+        "scrollbarSlider.activeBackground": "#636366AA",
       },
     });
-    monaco.editor.setTheme("shades-of-purple");
+    monaco.editor.setTheme("autopilot-dark");
     // Fold everything once the model is ready so the user sees a clean tree.
     setTimeout(() => foldAll(editor), 60);
   };
@@ -375,7 +376,7 @@ export default function EmailTemplatesEditor() {
   };
 
   const resetToDefault = async () => {
-    if (!confirm("¿Restaurar la plantilla por defecto? Se borrará tu personalización.")) return;
+    if (!(await ask({ title: "¿Restaurar la plantilla por defecto?", description: "Se borrará tu personalización.", confirmLabel: "Restaurar" }))) return;
     try {
       const { error } = await supabase.from("email_template_overrides")
         .delete().eq("template_name", selected);
@@ -398,7 +399,7 @@ export default function EmailTemplatesEditor() {
   };
 
   const loadDefault = async () => {
-    if (!confirm("¿Cargar el HTML por defecto en el editor? Se sobrescribirá lo que tengas escrito (no se guardará hasta que pulses Guardar).")) return;
+    if (!(await ask({ title: "¿Cargar el HTML por defecto?", description: "Se sobrescribirá lo que tengas escrito en el editor. No se guardará hasta que pulses Guardar.", confirmLabel: "Cargar", destructive: false }))) return;
     try {
       const { data, error } = await supabase.functions.invoke("render-email-template", {
         body: { templateName: selected },
@@ -413,21 +414,19 @@ export default function EmailTemplatesEditor() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div>
-        <h1 className="type-title1 mb-1">Editor de Emails</h1>
-        <p className="type-subhead text-muted-foreground">
-          Personaliza el asunto y el HTML de cada email transaccional. Si está desactivado, se usa el diseño por defecto.
-        </p>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-8">
+      <p className="type-subhead text-muted-foreground">
+        Personaliza el asunto y el HTML de cada email transaccional. Si está desactivado, se usa el diseño por defecto.
+      </p>
 
       <div className="space-y-6">
         <div>
-          <Label>Plantilla</Label>
+          <Label htmlFor="email-template" className="mb-1.5 block text-muted-foreground">Plantilla</Label>
           <select
+            id="email-template"
             value={selected}
-            onChange={(e) => { void hapticTap(); setSelected(e.target.value); }}
-            className="field w-full mt-1.5"
+            onChange={(e) => { void hapticSelection(); setSelected(e.target.value); }}
+            className="field w-full"
           >
             {TEMPLATES.map(t => <option key={t.name} value={t.name}>{t.label}</option>)}
           </select>
@@ -445,10 +444,11 @@ export default function EmailTemplatesEditor() {
                     type="button"
                     onClick={() => { void hapticTap(); insertVariable(p); }}
                     title={`Insertar {{${p}}} — valor actual: ${val}`}
-                    className="pressable inline-flex min-h-[44px] md:min-h-[32px] items-center gap-2 rounded-full bg-secondary px-3 type-footnote active:bg-accent"
+                    aria-label={`Insertar {{${p}}}, valor actual: ${val}`}
+                    className="relative inline-flex h-[34px] max-w-full items-center gap-2 rounded-full bg-secondary px-3 type-footnote transition-colors active:bg-accent before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']"
                   >
-                    <code className="text-primary">{`{{${p}}}`}</code>
-                    <span className="text-muted-foreground">{display}</span>
+                    <code className="shrink-0 font-mono">{`{{${p}}}`}</code>
+                    <span className="min-w-0 truncate text-muted-foreground">{display}</span>
                   </button>
                 );
               })}
@@ -464,33 +464,23 @@ export default function EmailTemplatesEditor() {
               <ListRow
                 title="Personalización activa"
                 subtitle={hasOverride ? "Estás usando una versión personalizada" : "Sin personalizar (se usa el diseño por defecto)"}
-                trailing={<Switch checked={enabled} onCheckedChange={(v) => { void hapticTap(); setEnabled(v); }} aria-label="Personalización activa" />}
+                trailing={<Switch checked={enabled} onCheckedChange={(v) => { void hapticSelection(); setEnabled(v); }} aria-label="Personalización activa" />}
               />
             </ListGroup>
 
             <div>
-              <Label>Asunto</Label>
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} className="mt-1.5" placeholder="Asunto del email" />
+              <Label htmlFor="email-subject" className="mb-1.5 block text-muted-foreground">Asunto</Label>
+              <Input id="email-subject" value={subject} onChange={(e) => setSubject(e.target.value)} enterKeyHint="done" placeholder="Asunto del email" />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <Tabs value={activeTab} onValueChange={(v) => { void hapticTap(); setActiveTab(v as "html" | "css"); }}>
-                  <TabsList>
-                    <TabsTrigger value="html">HTML</TabsTrigger>
-                    <TabsTrigger value="css">CSS</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <div className="flex gap-1">
-                  <Button variant="plain" size="sm" onClick={formatDocument} className="gap-1">
-                    <Wand2 className="w-3.5 h-3.5" /> Formatear
-                  </Button>
-                  <Button variant="plain" size="sm" onClick={loadDefault} className="gap-1">
-                    <FileCode className="w-3.5 h-3.5" /> Cargar por defecto
-                  </Button>
-                </div>
-              </div>
-              <div className="rounded-2xl overflow-hidden bg-[#1E1E3F]">
+            <div className="space-y-3">
+              <Tabs value={activeTab} onValueChange={(v) => { void hapticSelection(); setActiveTab(v as "html" | "css"); }}>
+                <TabsList className="w-full sm:w-56">
+                  <TabsTrigger value="html">HTML</TabsTrigger>
+                  <TabsTrigger value="css">CSS</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="overflow-hidden rounded-2xl bg-card">
                 {activeTab === "html" ? (
                   <Editor
                     height="min(520px, 60vh)"
@@ -499,7 +489,7 @@ export default function EmailTemplatesEditor() {
                     value={html}
                     onChange={(value) => setHtml(value ?? "")}
                     onMount={handleEditorMount}
-                    theme="shades-of-purple"
+                    theme="autopilot-dark"
                     options={editorOptions}
                   />
                 ) : (
@@ -510,33 +500,31 @@ export default function EmailTemplatesEditor() {
                     value={css}
                     onChange={(value) => setCss(value ?? "")}
                     onMount={handleCssEditorMount}
-                    theme="shades-of-purple"
+                    theme="autopilot-dark"
                     options={editorOptions}
                   />
                 )}
               </div>
-              <p className="type-footnote text-muted-foreground mt-2 px-1">
-                Editor estilo VSCode. El CSS se reinyecta como <code>style="..."</code> al guardar para máxima compatibilidad (Gmail, Outlook). Al cargar se formatea y se colapsa todo automáticamente.
+              <p className="px-1 type-footnote text-muted-foreground">
+                Editor de código. El CSS se reinyecta como <code className="font-mono">style="…"</code> al guardar para máxima compatibilidad (Gmail, Outlook). Al cargar se formatea y se colapsa todo automáticamente.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button onClick={save} disabled={saving} className="gap-2">
-                {saving ? <Spinner size="sm" className="text-primary-foreground" /> : <Save className="w-4 h-4" />}
-                Guardar
-              </Button>
-              <Button variant="tinted" onClick={preview} className="gap-2">
-                <Eye className="w-4 h-4" /> Previsualizar
-              </Button>
-              {hasOverride && (
-                <Button variant="plain" onClick={resetToDefault} className="gap-2 text-destructive">
-                  <RotateCcw className="w-4 h-4" /> Restaurar por defecto
-                </Button>
-              )}
-            </div>
+            <ListGroup>
+              <ListRow title={<span className="text-primary">Previsualizar</span>} onClick={() => void preview()} />
+              <ListRow title={<span className="text-primary">Formatear código</span>} onClick={() => void formatDocument()} />
+              <ListRow title={<span className="text-primary">Cargar HTML por defecto</span>} onClick={() => void loadDefault()} />
+              {hasOverride && <ListRow title="Restaurar por defecto" destructive onClick={() => void resetToDefault()} />}
+            </ListGroup>
+
+            <Button size="lg" onClick={() => { void hapticTap(); void save(); }} disabled={saving} className="w-full md:w-auto">
+              {saving ? <Spinner size="sm" className="text-primary-foreground" /> : null}
+              {saving ? "Guardando…" : "Guardar"}
+            </Button>
           </>
         )}
       </div>
+      {confirmDialog}
     </div>
   );
 }

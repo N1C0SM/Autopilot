@@ -78,6 +78,10 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [comparing, setComparing] = useState(false);
   const [refreshAt, setRefreshAt] = useState(0);
+  /** Fotos cuya imagen falló al cargar: se muestra un hueco compuesto, nunca la imagen rota del navegador. */
+  const [broken, setBroken] = useState<Set<string>>(new Set());
+  /** Fotos con el primer reintento de firmado en curso: mientras dura no se dice "no disponible". */
+  const [retrying, setRetrying] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const activeRef = useRef(true);
   const requestIdRef = useRef(0);
@@ -120,6 +124,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       lastRefreshAttemptRef.current = Date.now();
       setPhotos(list);
       setSigned(batch.urls);
+      setBroken(new Set());
       refreshAtRef.current = batch.refreshAtMs;
       setRefreshAt(batch.refreshAtMs);
     } catch (error) {
@@ -153,6 +158,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           return next;
         });
         retriedRef.current.clear();
+        setBroken(new Set());
       }
       const nextRefresh = batch.urls.size > 0 ? batch.refreshAtMs : Date.now() + SIGN_RETRY_MS;
       refreshAtRef.current = nextRefresh;
@@ -202,10 +208,35 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       const url = batch.urls.get(key);
       if (!url) return;
       setSigned((prev) => new Map(prev).set(key, url));
+      setBroken((prev) => {
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     } catch (error) {
       console.error("Failed to re-sign a progress photo URL", error);
     }
   }, []);
+
+  const onImageError = (photo: Photo) => {
+    const key = photo.photo_url;
+    const firstFailure = !retriedRef.current.has(key);
+    setBroken((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+    if (firstFailure) setRetrying((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+    void handleImageError(photo).finally(() => {
+      if (!firstFailure) return;
+      setRetrying((prev) => {
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    });
+  };
+
+  /** Etiqueta del hueco de una foto que falló: neutra mientras se reintenta, "no disponible" solo cuando ya no hay más intentos. */
+  const failedLabel = (key: string, pending?: string) => (retrying.has(key) ? pending : "Foto no disponible");
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -383,16 +414,16 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
     return (
       <span className="block min-w-0">
         <span className="block aspect-[3/4] overflow-hidden rounded-xl bg-secondary">
-          {url ? (
+          {url && !broken.has(photo.photo_url) ? (
             <img
               src={url}
               alt={`${caption}: foto del ${formatDate(photo.taken_at)}`}
               decoding="async"
-              onError={() => void handleImageError(photo)}
+              onError={() => onImageError(photo)}
               className="h-full w-full object-cover"
             />
           ) : (
-            <PhotoPlaceholder />
+            <PhotoPlaceholder label={url ? failedLabel(photo.photo_url) : undefined} />
           )}
         </span>
         <span className="mt-2 block type-headline">{caption}</span>
@@ -523,17 +554,17 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   aria-label={`Progreso: ver foto del ${formatDate(photo.taken_at)}`}
                   className="relative aspect-[3/4] overflow-hidden rounded-[10px] bg-secondary transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  {photoUrl ? (
+                  {photoUrl && !broken.has(photo.photo_url) ? (
                     <img
                       src={photoUrl}
                       alt={`Foto de progreso del ${formatDate(photo.taken_at)}`}
                       loading="lazy"
                       decoding="async"
-                      onError={() => void handleImageError(photo)}
+                      onError={() => onImageError(photo)}
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <PhotoPlaceholder />
+                    <PhotoPlaceholder label={photoUrl ? failedLabel(photo.photo_url) : undefined} />
                   )}
                   <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-1.5 py-0.5 type-caption2 font-medium tabular-nums text-white backdrop-blur-md">
                     {shortDate(photo.taken_at)}
@@ -610,16 +641,16 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             )}
 
             <div className="flex max-h-[85dvh] max-w-lg flex-col items-center" onClick={(e) => e.stopPropagation()}>
-              {signed.get(photos[viewingPhoto].photo_url) ? (
+              {signed.get(photos[viewingPhoto].photo_url) && !broken.has(photos[viewingPhoto].photo_url) ? (
                 <img loading="lazy" decoding="async"
                   src={signed.get(photos[viewingPhoto].photo_url)}
                   alt={`Foto de progreso del ${formatDate(photos[viewingPhoto].taken_at)}`}
-                  onError={() => void handleImageError(photos[viewingPhoto])}
+                  onError={() => onImageError(photos[viewingPhoto])}
                   className="max-h-[75dvh] rounded-xl object-contain"
                 />
               ) : (
                 <div className="flex h-[60dvh] w-[80vw] max-w-lg items-center justify-center overflow-hidden rounded-xl bg-secondary">
-                  <PhotoPlaceholder label="Preparando la foto…" />
+                  <PhotoPlaceholder label={signed.get(photos[viewingPhoto].photo_url) ? failedLabel(photos[viewingPhoto].photo_url, "Preparando la foto…") : "Preparando la foto…"} />
                 </div>
               )}
               <p className="mt-3 type-subhead text-white/70">

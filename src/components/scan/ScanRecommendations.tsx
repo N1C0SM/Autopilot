@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BookOpen, ChevronRight, Dumbbell } from "lucide-react";
+import { BookOpen, Dumbbell } from "lucide-react";
 import { euro, usePlanAvailability, type PlanAvailability } from "@/lib/planCatalog";
 import { isIOSNative } from "@/lib/platform";
 import { hapticTap } from "@/lib/native";
@@ -97,7 +97,7 @@ function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
   const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan, plans });
 
   return (
-    <section className="max-w-3xl mx-auto mb-12 px-4">
+    <section>
       <h2 className="type-title2">Lo que te recomendamos</h2>
       <p className="type-body mt-2">
         Lo que más te limita ahora: <span className="font-semibold">{limitation}</span>.
@@ -111,19 +111,20 @@ function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
         onClick={() => void hapticTap()}
         className="flex items-start gap-4 mt-6 min-h-[44px] active:opacity-60 transition-opacity"
       >
-        {rec.kind === "guia" ? (
-          <BookOpen className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-        ) : (
-          <Dumbbell className="w-7 h-7 text-primary shrink-0" strokeWidth={1.75} />
-        )}
+        <div className="flex w-10 shrink-0 items-center justify-center pt-0.5">
+          {rec.kind === "guia" ? (
+            <BookOpen className="w-7 h-7 text-primary" strokeWidth={1.75} />
+          ) : (
+            <Dumbbell className="w-7 h-7 text-primary" strokeWidth={1.75} />
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <div className="type-headline">
             {rec.name}{rec.price ? ` · ${rec.price}` : ""}
           </div>
           <div className="type-subhead text-muted-foreground mt-0.5">{rec.why}</div>
-          <div className="type-subhead font-semibold text-primary mt-2">{rec.cta}</div>
+          <div className="type-headline text-primary mt-2">{rec.cta}</div>
         </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground/60 shrink-0 mt-0.5" />
       </Link>
 
       <p className="mt-6 type-footnote text-muted-foreground">

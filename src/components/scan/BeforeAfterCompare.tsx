@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { signedUrlFor } from "@/lib/storageSign";
+import { ScanImage } from "@/components/scan/ScanResultParts";
 
 type Prev = {
   id: string;
@@ -65,37 +66,25 @@ export default function BeforeAfterCompare({
   const dateLabel = new Date(prev.taken_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <section aria-labelledby="scan-before-after" className="mx-auto mb-10 w-full max-w-md text-left">
+    <section aria-labelledby="scan-before-after" className="w-full text-left">
       <div className="mb-4 flex items-end justify-between gap-3">
-        <h3 id="scan-before-after" className="type-title3">Antes vs. ahora</h3>
+        <h2 id="scan-before-after" className="type-title2">Antes vs. ahora</h2>
         <p className={`flex items-center gap-1 type-subhead font-semibold tabular-nums ${trendColor}`}>
-          <TrendIcon className="h-4 w-4" aria-hidden="true" />
+          <TrendIcon className="h-5 w-5" aria-hidden="true" />
           {delta > 0 ? "+" : ""}
           {delta.toFixed(1)} físico
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <figure className="min-w-0">
-          <img loading="lazy" decoding="async"
-            src={photoUrl}
-            alt="Scan anterior"
-            className="aspect-[3/4] w-full rounded-xl bg-secondary object-cover"
-          />
+          <ScanImage src={photoUrl} alt="Scan anterior" className="aspect-[3/4] w-full rounded-2xl" />
           <figcaption className="mt-2">
             <span className="block type-subhead text-muted-foreground">Antes · {dateLabel}</span>
             <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{pPhys.toFixed(1)}</span>
           </figcaption>
         </figure>
         <figure className="min-w-0">
-          {currentPhoto ? (
-            <img loading="lazy" decoding="async"
-              src={currentPhoto}
-              alt="Scan actual"
-              className="aspect-[3/4] w-full rounded-xl bg-secondary object-cover"
-            />
-          ) : (
-            <div className="aspect-[3/4] w-full rounded-xl bg-secondary" />
-          )}
+          <ScanImage src={currentPhoto} alt="Scan actual" className="aspect-[3/4] w-full rounded-2xl" />
           <figcaption className="mt-2">
             <span className="block type-subhead font-semibold text-primary">Ahora</span>
             <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{currentScores.physique.toFixed(1)}</span>

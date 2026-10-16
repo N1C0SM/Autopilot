@@ -18,6 +18,18 @@ interface Post {
   author_name: string | null;
 }
 
+/** Cover with a composed gap when the URL is missing or fails to load. */
+const PostCover = ({ url, title }: { url: string | null; title: string }) => {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="flex aspect-video items-center justify-center overflow-hidden rounded-2xl bg-secondary">
+      {url && !failed
+        ? <img src={url} alt={title} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+        : <Newspaper className="h-8 w-8 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />}
+    </div>
+  );
+};
+
 const Blog = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,21 +61,21 @@ const Blog = () => {
         <meta property="og:type" content="website" />
       </Helmet>
 
-      <nav className="app-chrome sticky top-0 z-50 border-b">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4 pt-safe">
-          <Link to="/" className="type-headline text-primary">Autopilot</Link>
+      <nav className="app-chrome sep-b sticky top-0 z-50 pt-safe">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+          <Link to="/" className="flex min-h-[44px] items-center type-headline text-primary transition-opacity active:opacity-60">Autopilot</Link>
           <Link to="/scan" className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
             Diagnóstico gratis
           </Link>
         </div>
       </nav>
 
-      <main className="container mx-auto max-w-4xl px-4 pb-safe pt-8 sm:pt-16">
+      <main className="container mx-auto max-w-5xl px-4 pb-safe pt-8 sm:pt-16">
         <header className="mb-10 max-w-xl">
-          <h1 className="type-large-title">
+          <h1 className="type-large-title sm:text-[48px] sm:leading-[52px]">
             Entrenamiento, nutrición e <span className="text-primary">hipertrofia real</span>
           </h1>
-          <p className="mt-2 type-body text-muted-foreground">
+          <p className="mt-3 type-body text-muted-foreground">
             Guías prácticas para hombres de 25 a 40 años. Sin humo, sin programas mágicos.
           </p>
         </header>
@@ -73,19 +85,15 @@ const Blog = () => {
         ) : posts.length === 0 ? (
           <EmptyState icon={Newspaper} title="Aún no hay artículos" description="Publicaremos guías nuevas muy pronto." />
         ) : (
-          <div className="grid gap-x-6 gap-y-9 sm:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-10 pb-10 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((p) => (
               <Link
                 key={p.id}
                 to={`/blog/${p.slug}`}
                 onClick={() => void hapticTap()}
-                className="group block transition-opacity duration-100 active:opacity-70"
+                className="block transition-opacity duration-100 active:opacity-70"
               >
-                <div className="aspect-video overflow-hidden rounded-2xl bg-card">
-                  {p.cover_url && (
-                    <img src={p.cover_url} alt={p.title} loading="lazy" className="h-full w-full object-cover" />
-                  )}
-                </div>
+                <PostCover url={p.cover_url} title={p.title} />
                 <p className="mt-3 type-footnote text-muted-foreground">
                   {p.published_at && new Date(p.published_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
                   {p.published_at && p.reading_minutes ? " · " : ""}

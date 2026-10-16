@@ -22,6 +22,7 @@ describe("short public home", () => {
     open();
     const main = screen.getByRole("main");
     expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Tu entrenamiento.");
+    expect(within(main).getByRole("img", { name: "Pantalla de Autopilot con el entrenamiento del día" })).toBeInTheDocument();
     fireEvent.click(within(main).getAllByRole("link", { name: /Crear mi rutina gratis/ })[0]);
     expect(screen.getByTestId("destination")).toHaveTextContent("/onboarding");
   });

@@ -38,7 +38,7 @@ function ExitIntent({ onCta }: { onCta: () => void }) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && close()}>
       <DialogContent className="max-w-md">
-        <DialogTitle className="type-title1 text-center">
+        <DialogTitle className="type-title2 text-center">
           Ya tienes el análisis inicial, ahora elige un plan con entrenador
         </DialogTitle>
         <DialogDescription className="type-subhead text-muted-foreground text-center">
@@ -51,7 +51,7 @@ function ExitIntent({ onCta }: { onCta: () => void }) {
           Ahora no
         </Button>
         <div className="flex items-center justify-center gap-2 type-footnote text-muted-foreground">
-          <ShieldCheck className="w-4 h-4 text-primary" />
+          <ShieldCheck className="w-4 h-4 shrink-0" aria-hidden="true" />
           Requiere tarjeta · No se cobra hasta el día 8
         </div>
       </DialogContent>

@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Menu } from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 
 const navigation = [
   ["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ["/equipo", "Equipo"],
@@ -49,25 +51,29 @@ export default function PublicLayout({ title, description, children }: { title: 
       <meta name="twitter:image" content="https://autopilotplan.com/og-image.png" />
     </Helmet>
     <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-2 focus:z-[60] focus:bg-background focus:p-3">Saltar al contenido</a>
-    <header className="app-chrome sticky top-0 z-50 border-b">
-      <div className="container mx-auto flex h-16 min-w-0 items-center justify-between gap-3 px-4">
-        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center font-display text-xl font-bold text-primary">Autopilot</Link>
+    <header className="app-chrome sep-b sticky top-0 z-50 pt-safe">
+      <div className="container mx-auto flex h-14 min-w-0 items-center justify-between gap-3 px-4">
+        <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center type-headline text-primary transition-opacity active:opacity-60">Autopilot</Link>
         <nav aria-label="Navegación principal" className="hidden items-center gap-1 lg:flex">
-          {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 text-sm transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground active:opacity-70"}`}>{label}</NavLink>)}
-          <Button variant="ghost" asChild className="min-h-11"><Link to="/login">Iniciar sesión</Link></Button>
-          <Button asChild className="min-h-11"><Link to="/onboarding">Crear mi rutina</Link></Button>
+          {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 type-subhead transition-colors active:opacity-60 ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
+          <Button variant="plain" asChild><Link to="/login">Iniciar sesión</Link></Button>
+          <Button variant="tinted" asChild><Link to="/onboarding">Crear mi rutina</Link></Button>
         </nav>
-        <div className="flex items-center gap-2 lg:hidden">
-          <Button asChild size="sm" className="min-h-11 px-3 text-xs"><Link to="/onboarding">Crear mi rutina</Link></Button>
+        <div className="flex items-center lg:hidden">
+          <Button variant="plain" asChild><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina</Link></Button>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-            <SheetTrigger asChild><Button variant="outline" size="icon" className="h-11 w-11" aria-label="Abrir menú"><Menu className="h-5 w-5" /></Button></SheetTrigger>
-            <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-5">
-              <SheetTitle className="font-display text-xl text-primary">Autopilot</SheetTitle>
+            <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={1.75} /></Button></SheetTrigger>
+            <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>
+              <SheetTitle className="text-primary">Autopilot</SheetTitle>
               <SheetDescription>Elige qué quieres consultar.</SheetDescription>
-              <nav aria-label="Menú móvil" className="mt-6 flex flex-col gap-1">
-                <Link to="/" onClick={() => setMenuOpen(false)} className="min-h-11 rounded-md px-3 py-3">Inicio</Link>
-                {navigation.map(([to, label]) => <NavLink key={to} to={to} onClick={() => setMenuOpen(false)} className={({ isActive }) => `min-h-11 rounded-md px-3 py-3 ${isActive ? "bg-secondary text-primary" : "hover:bg-secondary active:bg-secondary"}`}>{label}</NavLink>)}
-                <Link to="/login" onClick={() => setMenuOpen(false)} className="min-h-11 rounded-md px-3 py-3">Iniciar sesión</Link>
+              <nav aria-label="Menú móvil" className="mt-6 space-y-6">
+                <ListGroup inset>
+                  <ListRow to="/" chevron title={<span className={pathname === "/" ? "text-primary" : undefined}>Inicio</span>} onClick={() => setMenuOpen(false)} />
+                  {navigation.map(([to, label]) => <ListRow key={to} to={to} chevron title={<span className={pathname === to ? "text-primary" : undefined}>{label}</span>} onClick={() => setMenuOpen(false)} />)}
+                </ListGroup>
+                <ListGroup inset>
+                  <ListRow to="/login" chevron title="Iniciar sesión" onClick={() => setMenuOpen(false)} />
+                </ListGroup>
               </nav>
             </SheetContent>
           </Sheet>
@@ -75,18 +81,18 @@ export default function PublicLayout({ title, description, children }: { title: 
       </div>
     </header>
     <main id="contenido" className="min-w-0 scroll-mt-20">{children}</main>
-    <footer className="border-t border-border px-4 py-7">
-      <div className="container mx-auto flex max-w-6xl flex-col gap-4 text-sm text-muted-foreground sm:flex-row sm:items-start sm:justify-between">
-        <p className="py-3"><span className="font-display font-bold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
-        <div className="flex flex-wrap items-start gap-x-5">
-          <Link to="/preguntas-frecuentes" className="inline-flex min-h-11 items-center hover:text-foreground active:opacity-70">Ayuda</Link>
-          <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center hover:text-foreground active:opacity-70">Para entrenadores</Link>
-          <Link to="/blog" className="inline-flex min-h-11 items-center hover:text-foreground active:opacity-70">Blog</Link>
-          <details>
-            <summary className="min-h-11 cursor-pointer py-3">Información legal</summary>
+    <footer className="sep-t px-5 pb-[calc(2rem+var(--safe-bottom))] pt-8">
+      <div className="container mx-auto flex max-w-6xl flex-col gap-4 type-footnote text-muted-foreground sm:flex-row sm:items-start sm:justify-between">
+        <p className="py-3"><span className="font-semibold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
+        <div className="flex flex-wrap items-start gap-x-6">
+          <Link to="/preguntas-frecuentes" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Ayuda</Link>
+          <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Para entrenadores</Link>
+          <Link to="/blog" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Blog</Link>
+          <details className="group">
+            <summary className="flex min-h-11 list-none items-center gap-1 py-3 transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">Información legal<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary>
             <div className="flex flex-col">
-              {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="min-h-11 py-3" to={`/legal/${slug}`}>{label}</Link>)}
-              <Link to="/connect" className="min-h-11 py-3">Conectar con IA</Link>
+              {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="min-h-11 py-3 transition-opacity active:opacity-60" to={`/legal/${slug}`}>{label}</Link>)}
+              <Link to="/connect" className="min-h-11 py-3 transition-opacity active:opacity-60">Conectar con IA</Link>
             </div>
           </details>
         </div>

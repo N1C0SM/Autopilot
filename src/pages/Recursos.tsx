@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
-import { ArrowLeft, Newspaper, ShoppingBag } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronLeft, Newspaper, ShoppingBag } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
 import { withBookRef } from "@/lib/buyLink";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
@@ -35,7 +36,7 @@ const RowThumb = ({ src, alt, fallback: Fallback }: { src?: string | null; alt: 
   }
   return (
     <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-secondary">
-      <Fallback className="h-6 w-6 text-primary" strokeWidth={1.75} />
+      <Fallback className="h-6 w-6 text-muted-foreground" strokeWidth={1.75} />
     </span>
   );
 };
@@ -50,6 +51,8 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const [recos, setRecos] = useState<Reco[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [flags, setFlags] = useState({ blog: true, ebooks: true, recos: true });
+  /** Solo para mostrar carga y vacío: se marca al terminar las consultas, salga bien o mal. */
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -106,21 +109,43 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
         .order("published_at", { ascending: false })
         .limit(6);
       if (p) setPosts(p as Post[]);
-    })();
+    })().finally(() => setLoaded(true));
   }, []);
+
+  const hasRecos = flags.recos && recos.length > 0;
+  const hasEbooks = flags.ebooks && ebooks.length > 0;
+  const hasPosts = flags.blog && posts.length > 0;
 
   const body = (
       <main className={embedded ? "w-full space-y-10 py-2" : "mx-auto w-full max-w-5xl space-y-10 px-4 pb-safe pt-6 md:py-10"}>
+        {/* Embebida, el título grande lo pinta la pantalla anfitriona: aquí solo va la descripción. */}
         <header>
-          <h1 className="type-large-title">
-            Todo lo que <span className="text-primary">complementa</span> tu plan
-          </h1>
-          <p className="mt-2 max-w-xl type-body text-muted-foreground">
+          {embedded ? null : (
+            <h1 className="type-large-title">
+              Todo lo que <span className="text-primary">complementa</span> tu plan
+            </h1>
+          )}
+          <p className={embedded ? "max-w-xl type-subhead text-muted-foreground" : "mt-2 max-w-xl type-body text-muted-foreground"}>
             Guías, material recomendado y los últimos artículos del equipo.
           </p>
         </header>
 
-        {flags.recos && recos.length > 0 && (
+        {!loaded && (
+          <div className="flex min-h-[40dvh] items-center justify-center">
+            <Spinner size="lg" label="Cargando recursos" />
+          </div>
+        )}
+
+        {loaded && !hasRecos && !hasEbooks && !hasPosts && (
+          <EmptyState
+            className="min-h-[40dvh]"
+            icon={Newspaper}
+            title="Sin recursos todavía"
+            description="Cuando haya guías, material recomendado o artículos nuevos, aparecerán aquí."
+          />
+        )}
+
+        {hasRecos && (
           <section>
             <h2 className="type-title2 mb-3">Lo que sí funciona</h2>
             <ListGroup>
@@ -131,7 +156,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                   title={<span className="line-clamp-2">{r.title}</span>}
                   subtitle={
                     <>
-                      {r.badge && <span className="block truncate type-footnote text-primary">{sentenceCase(r.badge)}</span>}
+                      {r.badge && <span className="block truncate type-footnote text-muted-foreground">{sentenceCase(r.badge)}</span>}
                       <span className="line-clamp-2">{previewIntro(r.description)}</span>
                     </>
                   }
@@ -144,7 +169,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           </section>
         )}
 
-        {flags.ebooks && ebooks.length > 0 && (
+        {hasEbooks && (
           <section>
             <h2 className="type-title2">Guías en PDF</h2>
             <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
@@ -161,7 +186,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                 >
                   <BookCover title={e.title} src={e.cover_url} />
                   <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>
-                  <p className="mt-0.5 type-subhead font-semibold text-primary">{e.price || "Gratis"}</p>
+                  <p className="mt-0.5 type-subhead font-semibold text-muted-foreground">{e.price || "Gratis"}</p>
                 </button>
               ))}
             </div>
@@ -173,7 +198,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           </section>
         )}
 
-        {flags.blog && posts.length > 0 && (
+        {hasPosts && (
           <section>
             <div className="mb-3 flex items-baseline justify-between gap-4">
               <h2 className="type-title2">Últimos artículos</h2>
@@ -211,13 +236,17 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
         <meta name="description" content="Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot." />
         <link rel="canonical" href="https://autopilotplan.com/recursos" />
       </Helmet>
-      <header className="app-chrome sticky top-0 z-40 border-b">
-        <div className="container mx-auto max-w-7xl flex items-center justify-between h-14 px-4">
+      <header className="app-chrome sticky top-0 z-40 border-b-[0.5px]">
+        <div className="container mx-auto flex h-14 max-w-7xl items-center gap-1 px-4">
+          <button
+            type="button"
+            onClick={() => { void hapticTap(); navigate(-1); }}
+            className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60"
+          >
+            <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
+            <span className="type-body">Atrás</span>
+          </button>
           {user && <SidebarTrigger />}
-          <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); navigate(-1); }} aria-label="Volver">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <span className="w-11" />
         </div>
       </header>
       {body}

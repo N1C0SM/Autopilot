@@ -1,4 +1,4 @@
-import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
 import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -108,6 +108,16 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
     type?: string | null;
   } | null>(null);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
+  /** Imágenes de ejercicio que fallaron al cargar: la miniatura y la ficha usan su hueco compuesto, nunca la imagen rota. */
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+  const usableImage = (src?: string | null) => (src && !failedImages.has(src) ? src : null);
+  const handleImageError = (event: SyntheticEvent) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    const src = target.getAttribute("src");
+    if (!src) return;
+    setFailedImages((prev) => (prev.has(src) ? prev : new Set(prev).add(src)));
+  };
 
   const handleCopy = async () => {
     void hapticTap();
@@ -144,7 +154,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6" onErrorCapture={handleImageError}>
       <h2 className="sr-only">Rutina semanal</h2>
 
       <div
@@ -157,10 +167,11 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
           const isToday = day === todayName;
           const isExpanded = expandedDay === day;
           const summary = plan ? sessionTitle(plan) : "descanso";
+          // El día elegido va tintado (el relleno macizo es solo para el botón de abrir la sesión).
           const tone = isExpanded
-            ? "bg-primary text-primary-foreground"
-            : isToday
             ? "bg-primary/15 text-primary"
+            : isToday
+            ? "bg-secondary text-primary"
             : plan
             ? "bg-secondary text-foreground"
             : "text-muted-foreground/60";
@@ -208,7 +219,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
                   <ListRow
                     key={`${selectedDay}-${ex.exercise_id || ex.name}-${i}`}
                     // La miniatura es la portada del vídeo: al tocar la fila se abre la ficha, cuyo héroe es el vídeo.
-                    leading={<ExerciseThumb image={image} video={video} name={ex.name} size="sm" />}
+                    leading={<ExerciseThumb image={usableImage(image)} video={video} name={ex.name} size="sm" />}
                     title={<span className="line-clamp-2 whitespace-normal">{ex.name}</span>}
                     subtitle={info ? <span className="block truncate">{info}</span> : undefined}
                     value={<span className="tabular-nums">{ex.series} × {ex.reps}</span>}
@@ -290,7 +301,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
       <ExerciseFocus
         exercise={detail ? {
           name: detail.name,
-          image: detail.image,
+          image: usableImage(detail.image),
           video: detail.video,
           series: detail.series,
           reps: detail.reps,

@@ -5,7 +5,7 @@ import SettingsPanel from "./SettingsPanel";
 const mocks = vi.hoisted(() => ({
   user: { id: "user", email: "test@example.com" },
   tier: "full", paid: "paid", status: "active", end: null as string | null, travelUntil: null as string | null,
-  ios: false, plan: null as string | null,
+  ios: false, plan: null as string | null, avatar: "" as string,
   availability: { days: "2", hours: "0.92", training_days: [1, 3], auto_calculated: true, sport_schedules: { running: "18:00" } } as Record<string, unknown>,
   saves: [] as Record<string, unknown>[],
   updates: [] as { table: string; row: Record<string, unknown> }[],
@@ -17,7 +17,7 @@ vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, s
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: (table: string) => {
     const query = { select: () => query, eq: () => query, maybeSingle: () => query,
-      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "profiles" ? { subscription_tier: mocks.tier, payment_status: mocks.paid, subscription_status: mocks.status, subscription_end: mocks.end, travel_mode_until: mocks.travelUntil, travel_equipment: "gomas" } : table === "onboarding" ? { availability: mocks.availability } : null, error: null }).then(resolve),
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "profiles" ? { avatar_url: mocks.avatar, name: "Ana Ruiz", subscription_tier: mocks.tier, payment_status: mocks.paid, subscription_status: mocks.status, subscription_end: mocks.end, travel_mode_until: mocks.travelUntil, travel_equipment: "gomas" } : table === "onboarding" ? { availability: mocks.availability } : null, error: null }).then(resolve),
       upsert: (row: Record<string, unknown>) => { mocks.saves.push(row); return Promise.resolve({ error: null }); },
       update: (row: Record<string, unknown>) => { mocks.updates.push({ table, row }); return query; },
     }; return query;
@@ -27,7 +27,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
 } }));
 beforeEach(() => {
   mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.travelUntil = null; mocks.saves = []; mocks.updates = [];
-  mocks.ios = false; mocks.plan = null;
+  mocks.ios = false; mocks.plan = null; mocks.avatar = "";
   mocks.toast.error.mockClear(); mocks.toast.success.mockClear(); mocks.toast.info.mockClear();
 });
 afterEach(cleanup);
@@ -159,5 +159,20 @@ describe("settings purchase surfaces", () => {
     expect(screen.queryByRole("button", { name: /Mejorar a|Ver /i })).not.toBeInTheDocument();
     expect(screen.queryByText(/7 días de prueba/)).not.toBeInTheDocument();
     expect(container).not.toHaveTextContent("€");
+  });
+});
+
+describe("settings profile avatar", () => {
+  it("falls back to the initial when the avatar image fails to load", async () => {
+    mocks.avatar = "https://cdn.test/avatar.jpg"; show();
+    const button = await screen.findByRole("button", { name: "Cambiar foto de perfil" });
+    const image = await waitFor(() => {
+      const img = button.querySelector("img");
+      expect(img).not.toBeNull();
+      return img as HTMLImageElement;
+    });
+    fireEvent.error(image);
+    expect(button.querySelector("img")).toBeNull();
+    expect(within(button).getByText("A")).toBeInTheDocument();
   });
 });

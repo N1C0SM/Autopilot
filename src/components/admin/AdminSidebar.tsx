@@ -4,13 +4,14 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle } from "lucide-react";
 import type { AdminSection } from "@/pages/Admin";
 import { hapticTap } from "@/lib/native";
 
@@ -21,17 +22,20 @@ interface Props {
   onSignOut: () => void;
 }
 
-const NAV_ITEMS: { title: string; section: AdminSection; icon: typeof LayoutDashboard }[] = [
+type NavItem = { title: string; section: AdminSection; icon: typeof LayoutDashboard };
+
+const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
   { title: "Métricas", section: "metrics", icon: BarChart3 },
   { title: "Usuarios", section: "users", icon: Users },
+  { title: "Entrenadores", section: "trainers", icon: UserCog },
   { title: "Recordatorios", section: "reminders", icon: Mail },
   { title: "Ejercicios", section: "exercises", icon: Dumbbell },
   { title: "Drive · Libros", section: "drive", icon: FolderOpen },
   { title: "Reglas", section: "rules", icon: SlidersHorizontal },
   { title: "Landing", section: "landing", icon: Globe },
   { title: "Blog", section: "blog", icon: FileText },
-  { title: "Físicos objetivo", section: "physiques", icon: Target },
+  { title: "Físicos", section: "physiques", icon: Target },
   { title: "Emails", section: "emails", icon: MailOpen },
   { title: "Planes y productos", section: "products", icon: Layers },
   { title: "Pagos", section: "payments", icon: CreditCard },
@@ -42,47 +46,46 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
+  const navButton = (item: NavItem) => (
+    <SidebarMenuItem key={item.section}>
+      <SidebarMenuButton
+        isActive={section === item.section}
+        aria-current={section === item.section ? "page" : undefined}
+        tooltip={item.title}
+        className="data-[active=true]:bg-primary/15 data-[active=true]:hover:bg-primary/20"
+        onClick={() => { void hapticTap(); onNavigate(item.section); }}
+      >
+        <item.icon aria-hidden="true" />
+        {!collapsed && (
+          <span className="flex flex-1 items-center justify-between gap-2">
+            <span className="truncate">{item.title}</span>
+            {item.section === "users" && (
+              <span className="type-footnote tabular-nums text-muted-foreground">{userCount}</span>
+            )}
+          </span>
+        )}
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent>
-        {/* Brand */}
-        <div className="p-4 border-b border-sidebar-border">
-          {!collapsed ? (
-            <span className="type-headline text-primary">Autopilot</span>
-          ) : (
-            <span className="type-headline text-primary">A</span>
-          )}
-          {!collapsed && <span className="type-caption1 text-muted-foreground ml-2">Admin</span>}
-        </div>
+      <SidebarHeader className="px-4 pb-1 pt-4 group-data-[collapsible=icon]:px-2">
+        {collapsed ? (
+          <span className="type-headline text-center text-primary">A</span>
+        ) : (
+          <div className="flex items-baseline gap-2">
+            <span className="type-title3 text-primary">Autopilot</span>
+            <span className="type-subhead text-muted-foreground">Admin</span>
+          </div>
+        )}
+      </SidebarHeader>
 
+      <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navegación</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV_ITEMS.map((item) => {
-                const isActive = section === item.section;
-                return (
-                  <SidebarMenuItem key={item.section}>
-                    <SidebarMenuButton
-                      onClick={() => { void hapticTap(); onNavigate(item.section); }}
-                      className={`transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
-                    >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && (
-                        <span className="flex-1 flex items-center justify-between">
-                          {item.title}
-                          {item.section === "users" && (
-                            <span className="type-caption2 bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
-                              {userCount}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <SidebarMenu>{NAV_ITEMS.map(navButton)}</SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -90,8 +93,8 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => { void hapticTap(); onSignOut(); }} className="text-muted-foreground hover:text-destructive active:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
+            <SidebarMenuButton tooltip="Cerrar sesión" onClick={() => { void hapticTap(); onSignOut(); }} className="text-destructive hover:text-destructive active:text-destructive">
+              <LogOut aria-hidden="true" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>

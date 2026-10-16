@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { hapticTap } from "@/lib/native";
+import { hapticSelection, hapticTap } from "@/lib/native";
 import type { Json } from "@/integrations/supabase/types";
 
 export interface OnboardingEditable {
@@ -63,6 +63,7 @@ const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
     hours: av?.hours?.toString() ?? "",
   });
   const [saving, setSaving] = useState(false);
+  const formId = useId();
 
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const num = (v: string) => (v.trim() === "" ? null : Number(v));
@@ -100,104 +101,133 @@ const OnboardingEditor = ({ userId, data, onSaved, onCancel }: Props) => {
     onSaved({ ...(data as OnboardingEditable), ...payload } as OnboardingEditable);
   };
 
+  const field = (key: string) => `${formId}-${key}`;
+
   return (
-    <section className="space-y-5">
-      <h2 className="type-title3">Editar onboarding</h2>
-
-      <div className="grid sm:grid-cols-3 gap-4">
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Edad</Label>
-          <Input type="number" inputMode="decimal" value={form.age} onChange={(e) => set("age", e.target.value)} />
+    <section className="space-y-8" aria-labelledby={field("title")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 id={field("title")} className="type-title3">Editar datos del cliente</h2>
+          <p className="mt-0.5 type-subhead text-muted-foreground">Los cambios se aplican al cuestionario del cliente.</p>
         </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Altura (cm)</Label>
-          <Input type="number" inputMode="decimal" value={form.height} onChange={(e) => set("height", e.target.value)} />
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Peso (kg)</Label>
-          <Input type="number" inputMode="decimal" value={form.weight} onChange={(e) => set("weight", e.target.value)} />
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Sexo</Label>
-          <Select value={form.sex || "__none__"} onValueChange={(v) => set("sex", v === "__none__" ? "" : v)}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">—</SelectItem>
-              <SelectItem value="male">Hombre</SelectItem>
-              <SelectItem value="female">Mujer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Equipamiento</Label>
-          <Select value={form.equipment_type} onValueChange={(v) => set("equipment_type", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {EQUIPMENT.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Intensidad (1-10)</Label>
-          <Input type="number" inputMode="numeric" min={1} max={10} value={form.intensity_level} onChange={(e) => set("intensity_level", e.target.value)} />
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Objetivo</Label>
-          <Select value={form.goal || "__none__"} onValueChange={(v) => set("goal", v === "__none__" ? "" : v)}>
-            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">—</SelectItem>
-              {GOALS.map((g) => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Días / semana</Label>
-          <Input type="number" inputMode="numeric" min={1} max={7} value={form.days} onChange={(e) => set("days", e.target.value)} />
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Horas por sesión</Label>
-          <Input type="number" inputMode="decimal" step="0.5" value={form.hours} onChange={(e) => set("hours", e.target.value)} />
-        </div>
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Meta específica / skill</Label>
-          <Input value={form.specific_goal} onChange={(e) => set("specific_goal", e.target.value)} />
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Deportes</Label>
-          <Input value={form.sports} onChange={(e) => set("sports", e.target.value)} />
-        </div>
-      </div>
-
-      <div>
-        <Label className="type-subhead mb-1.5 block text-muted-foreground">Lesiones / condiciones</Label>
-        <Textarea rows={2} value={form.injuries} onChange={(e) => set("injuries", e.target.value)} />
-      </div>
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Preferencias nutricionales</Label>
-          <Textarea rows={2} value={form.nutrition_preferences} onChange={(e) => set("nutrition_preferences", e.target.value)} />
-        </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Alergias</Label>
-          <Textarea rows={2} value={form.allergies} onChange={(e) => set("allergies", e.target.value)} />
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <Button onClick={save} disabled={saving} onPointerDown={() => void hapticTap()}>
-          {saving && <Spinner size="sm" className="mr-2" />}
-          Guardar
-        </Button>
-        <Button variant="plain" onClick={onCancel} disabled={saving}>
+        <Button variant="plain" size="sm" className="-mr-3 shrink-0" onClick={() => { void hapticTap(); onCancel(); }} disabled={saving}>
           Cancelar
         </Button>
       </div>
+
+      <FormGroup header="Cuerpo">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="min-w-0">
+            <Label htmlFor={field("age")} className={LABEL}>Edad</Label>
+            <Input id={field("age")} type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" className="tabular-nums" value={form.age} onChange={(e) => set("age", e.target.value)} />
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("sex")} className={LABEL}>Sexo</Label>
+            <Select value={form.sex || "__none__"} onValueChange={(v) => { void hapticSelection(); set("sex", v === "__none__" ? "" : v); }}>
+              <SelectTrigger id={field("sex")}><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">—</SelectItem>
+                <SelectItem value="male">Hombre</SelectItem>
+                <SelectItem value="female">Mujer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("height")} className={LABEL}>Altura (cm)</Label>
+            <Input id={field("height")} type="number" inputMode="decimal" enterKeyHint="next" className="tabular-nums" value={form.height} onChange={(e) => set("height", e.target.value)} />
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("weight")} className={LABEL}>Peso (kg)</Label>
+            <Input id={field("weight")} type="number" inputMode="decimal" enterKeyHint="next" className="tabular-nums" value={form.weight} onChange={(e) => set("weight", e.target.value)} />
+          </div>
+        </div>
+      </FormGroup>
+
+      <FormGroup header="Objetivo">
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="min-w-0">
+            <Label htmlFor={field("goal")} className={LABEL}>Objetivo</Label>
+            <Select value={form.goal || "__none__"} onValueChange={(v) => { void hapticSelection(); set("goal", v === "__none__" ? "" : v); }}>
+              <SelectTrigger id={field("goal")}><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">—</SelectItem>
+                {GOALS.map((g) => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("specific-goal")} className={LABEL}>Meta específica o skill</Label>
+            <Input id={field("specific-goal")} enterKeyHint="next" value={form.specific_goal} onChange={(e) => set("specific_goal", e.target.value)} />
+          </div>
+        </div>
+      </FormGroup>
+
+      <FormGroup header="Entrenamiento">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="min-w-0">
+            <Label htmlFor={field("equipment")} className={LABEL}>Equipamiento</Label>
+            <Select value={form.equipment_type} onValueChange={(v) => { void hapticSelection(); set("equipment_type", v); }}>
+              <SelectTrigger id={field("equipment")}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {EQUIPMENT.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("intensity")} className={LABEL}>Intensidad (1–10)</Label>
+            <Input id={field("intensity")} type="number" inputMode="numeric" pattern="[0-9]*" min={1} max={10} enterKeyHint="next" className="tabular-nums" value={form.intensity_level} onChange={(e) => set("intensity_level", e.target.value)} />
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("days")} className={LABEL}>Días por semana</Label>
+            <Input id={field("days")} type="number" inputMode="numeric" pattern="[0-9]*" min={1} max={7} enterKeyHint="next" className="tabular-nums" value={form.days} onChange={(e) => set("days", e.target.value)} />
+          </div>
+          <div className="min-w-0">
+            <Label htmlFor={field("hours")} className={LABEL}>Horas por sesión</Label>
+            <Input id={field("hours")} type="number" inputMode="decimal" step="0.5" enterKeyHint="next" className="tabular-nums" value={form.hours} onChange={(e) => set("hours", e.target.value)} />
+          </div>
+        </div>
+        <div className="mt-3 min-w-0">
+          <Label htmlFor={field("sports")} className={LABEL}>Deportes</Label>
+          <Input id={field("sports")} enterKeyHint="next" value={form.sports} onChange={(e) => set("sports", e.target.value)} />
+        </div>
+      </FormGroup>
+
+      <FormGroup header="Salud y nutrición">
+        <div className="space-y-3">
+          <div className="min-w-0">
+            <Label htmlFor={field("injuries")} className={LABEL}>Lesiones o condiciones</Label>
+            <Textarea id={field("injuries")} rows={2} value={form.injuries} onChange={(e) => set("injuries", e.target.value)} />
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="min-w-0">
+              <Label htmlFor={field("nutrition")} className={LABEL}>Preferencias nutricionales</Label>
+              <Textarea id={field("nutrition")} rows={2} value={form.nutrition_preferences} onChange={(e) => set("nutrition_preferences", e.target.value)} />
+            </div>
+            <div className="min-w-0">
+              <Label htmlFor={field("allergies")} className={LABEL}>Alergias</Label>
+              <Textarea id={field("allergies")} rows={2} value={form.allergies} onChange={(e) => set("allergies", e.target.value)} />
+            </div>
+          </div>
+        </div>
+      </FormGroup>
+
+      {/* Acción en tinte: el botón dorado macizo de la ficha es «Guardar» (planes). */}
+      <Button variant="tinted" size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); void save(); }} disabled={saving}>
+        {saving && <Spinner size="sm" label="Guardando" />}
+        {saving ? "Guardando…" : "Guardar datos"}
+      </Button>
     </section>
   );
 };
+
+const LABEL = "mb-1.5 block px-1 type-subhead font-normal text-muted-foreground";
+
+/** Grupo de campos con cabecera de lista agrupada, sin caja: los campos ya van en gris sobre negro. */
+const FormGroup = ({ header, children }: { header: string; children: ReactNode }) => (
+  <div>
+    <h3 className="type-group-header px-1 pb-2">{header}</h3>
+    {children}
+  </div>
+);
 
 export default OnboardingEditor;

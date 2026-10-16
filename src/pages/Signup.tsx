@@ -10,7 +10,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Mail, Eye, EyeOff, Gift, Smartphone, Sparkles, Zap } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
-import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthNotice, AuthSymbol } from "@/components/auth/AuthScreenParts";
+import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice, AuthSymbol } from "@/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
 import { useAuth } from "@/contexts/AuthContext";
 import { track } from "@/lib/analytics";
@@ -196,7 +196,7 @@ const Signup = () => {
         }
       >
         <AuthHero
-          mark={<AuthSymbol icon={Mail} size="lg" />}
+          mark={<AuthSymbol icon={Mail} />}
           title="Verifica tu correo"
           description={
             <>
@@ -260,9 +260,9 @@ const Signup = () => {
       </Button>
       <p className="text-center type-footnote text-muted-foreground">
         Al crear una cuenta aceptas nuestros{" "}
-        <Link to="/legal/terminos" className="underline underline-offset-2 active:opacity-60">Términos</Link>
-        {" y "}
-        <Link to="/legal/privacidad" className="underline underline-offset-2 active:opacity-60">Política de privacidad</Link>.
+        <Link to="/legal/terminos" className="underline underline-offset-2 active:opacity-60">términos</Link>
+        {" y la "}
+        <Link to="/legal/privacidad" className="underline underline-offset-2 active:opacity-60">política de privacidad</Link>.
       </p>
     </div>
   );
@@ -299,11 +299,12 @@ const Signup = () => {
           {fromScan && scanCtx?.result && (
             <AuthNotice
               icon={
-                scanCtx.currentImg ? (
-                  <img loading="lazy" decoding="async" src={scanCtx.currentImg} alt="Tu scan" className="h-10 w-10 rounded-[10px] object-cover" />
-                ) : (
-                  <Zap strokeWidth={1.75} />
-                )
+                <AuthImage
+                  src={scanCtx.currentImg}
+                  alt="Tu scan"
+                  className="h-10 w-10 rounded-[10px] object-cover"
+                  fallback={<Zap strokeWidth={1.75} />}
+                />
               }
               title="Tu AI Report está reservado"
             >

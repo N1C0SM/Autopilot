@@ -4,14 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { AlertCircle, Briefcase, Check } from "lucide-react";
 import { TrainerApplyModal } from "@/components/TrainerOffer";
+import { hapticTap } from "@/lib/native";
 
 type PublicPlan = { name: string; description: string; price: number; currency: string; billing_interval: string; max_clients: number; features: unknown; accepting_new_subscriptions: boolean };
 
 const Shell = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-background flex items-center justify-center px-5">
-    <div className="max-w-lg w-full rounded-2xl bg-card p-8 text-center space-y-4">{children}</div>
+  <div className="flex min-h-dvh items-center justify-center bg-background px-5 py-10 text-foreground pt-safe pb-safe">
+    <div className="w-full max-w-md text-center">{children}</div>
   </div>
+);
+
+const Squircle = ({ children }: { children: React.ReactNode }) => (
+  <div className="mx-auto flex h-[72px] w-[72px] items-center justify-center rounded-[22%] bg-card">{children}</div>
 );
 
 /** Landing B2B. Solo existe si el admin lo activó y lo hizo visible (validado en servidor). */
@@ -20,17 +27,25 @@ export default function ForTrainers() {
   const [open, setOpen] = useState(false);
   useEffect(() => { void supabase.rpc("get_trainer_plan_public").then(({ data }) => setPlan(data?.[0] ?? null)); }, []);
   if (plan === undefined) return <Shell><Spinner size="lg" className="mx-auto" /></Shell>;
-  if (!plan) return <Shell><h1 className="font-display text-xl font-bold">Página no disponible</h1><Button asChild variant="outline"><Link to="/">Volver al inicio</Link></Button></Shell>;
+  if (!plan) return <Shell>
+    <Squircle><Briefcase className="h-8 w-8 text-primary" strokeWidth={1.75} /></Squircle>
+    <h1 className="mt-5 type-title2">Página no disponible</h1>
+    <Button asChild variant="plain" className="mt-4"><Link to="/">Volver al inicio</Link></Button>
+  </Shell>;
   return (
     <Shell>
-      <p className="text-xs font-semibold text-primary">Autopilot para entrenadores</p>
-      <h1 className="font-display text-2xl font-bold">Gestiona a tus clientes con Autopilot.</h1>
-      <p className="text-sm text-muted-foreground">{plan.description}</p>
-      <p className="text-sm font-semibold">Plan a medida de tu número de clientes y tu forma de trabajar.</p>
-      <ul className="text-sm text-left space-y-1">{(Array.isArray(plan.features) ? plan.features as string[] : []).filter((f) => !/cliente/i.test(f) || !/\d/.test(f)).map((f) => <li key={f}>· {f}</li>)}</ul>
-      {plan.accepting_new_subscriptions
-        ? <Button variant="hero" className="w-full" onClick={() => setOpen(true)}>Personalizar mi acceso</Button>
-        : <p className="text-sm text-muted-foreground">Ahora mismo no aceptamos nuevas altas.</p>}
+      <Squircle><Briefcase className="h-8 w-8 text-primary" strokeWidth={1.75} /></Squircle>
+      <p className="mt-6 type-subhead text-primary">Autopilot para entrenadores</p>
+      <h1 className="mt-1 type-title1">Gestiona a tus clientes con Autopilot.</h1>
+      <p className="mt-3 type-body text-muted-foreground">{plan.description}</p>
+      <ul className="mt-8 space-y-3 text-left">{(Array.isArray(plan.features) ? plan.features as string[] : []).filter((f) => !/cliente/i.test(f) || !/\d/.test(f)).map((f) => <li key={f} className="flex items-start gap-3 type-subhead"><Check className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />{f}</li>)}</ul>
+      <p className="mt-6 type-subhead font-semibold">Plan a medida de tu número de clientes y tu forma de trabajar.</p>
+      <div className="mt-6">
+        {plan.accepting_new_subscriptions
+          ? <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); setOpen(true); }}>Personalizar mi acceso</Button>
+          : <p className="type-subhead text-muted-foreground">Ahora mismo no aceptamos nuevas altas.</p>}
+        <Button asChild variant="plain" className="mt-1"><Link to="/" onClick={() => void hapticTap()}>Volver al inicio</Link></Button>
+      </div>
       <TrainerApplyModal plan={plan} open={open} onClose={() => setOpen(false)} />
     </Shell>
   );
@@ -59,5 +74,5 @@ export function AcceptInvitation() {
       setMsg(key ? ERRORS[key] : "No se ha podido aceptar la invitación.");
     });
   }, [user, loading, token, navigate]);
-  return <Shell>{msg ? <><p className="text-sm">{msg}</p><Button asChild variant="outline"><Link to="/dashboard">Ir a mi panel</Link></Button></> : <Spinner size="lg" className="mx-auto" />}</Shell>;
+  return <Shell>{msg ? <EmptyState icon={AlertCircle} title={msg} action={<Button asChild variant="plain"><Link to="/dashboard">Ir a mi panel</Link></Button>} /> : <Spinner size="lg" className="mx-auto" />}</Shell>;
 }

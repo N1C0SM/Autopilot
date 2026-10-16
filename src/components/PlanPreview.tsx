@@ -77,8 +77,8 @@ const PlanPreview = ({ focus, goal, weight, sex, days = 4, registered = false, h
         ))}
       </ListGroup>
 
-      <div className="flex items-start gap-4 px-1">
-        <div className="flex w-10 shrink-0 justify-center pt-0.5">
+      <div className="flex items-start gap-4 px-4">
+        <div className="flex w-7 shrink-0 justify-center pt-0.5">
           <Utensils className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />
         </div>
         <div className="min-w-0 flex-1">

@@ -1,29 +1,34 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
+import { Inbox, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { SectionHeader } from "@/components/ui/section-header";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { hapticTap, hapticSelection } from "@/lib/native";
+import { hapticSelection } from "@/lib/native";
 import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import type { Database } from "@/integrations/supabase/types";
 import ConsumerPlansAdmin from "./ConsumerPlansAdmin";
+import { ChipBar, Field, FieldRow, MONO_FIELD } from "./AdminOpsParts";
 
 type Config = Database["public"]["Tables"]["product_configs"]["Row"];
 type Row = { user_id: string; email: string; name: string | null; plan: ConsumerPlan; trainer: string | null };
 type Trainer = { user_id: string; email: string };
+type PlanFilter = "all" | ConsumerPlan | "pending";
 
 export default function ProductsAdmin() {
   const [cfg, setCfg] = useState<Config | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
-  const [filter, setFilter] = useState<"all" | ConsumerPlan | "pending">("pending");
+  const [filter, setFilter] = useState<PlanFilter>("pending");
 
   const load = async () => {
     const [{ data: c }, { data: profiles }, { data: assigns }, { data: roles }] = await Promise.all([
@@ -71,83 +76,144 @@ export default function ProductsAdmin() {
   const count = (p: ConsumerPlan) => rows.filter((r) => r.plan === p).length;
   const pendingCount = rows.filter((r) => r.plan === "coach" && !r.trainer).length;
 
+  const filters: Array<{ value: PlanFilter; label: string }> = [
+    { value: "pending", label: `Coach sin entrenador (${pendingCount})` },
+    { value: "free", label: `Free (${count("free")})` },
+    { value: "plus", label: `Plus (${count("plus")})` },
+    { value: "coach", label: `Coach (${count("coach")})` },
+    { value: "all", label: "Todos" },
+  ];
+
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="max-w-5xl space-y-8">
       <ConsumerPlansAdmin />
-      <section className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {([["pending", `Coach sin entrenador (${pendingCount})`], ["free", `Free (${count("free")})`], ["plus", `Plus (${count("plus")})`], ["coach", `Coach (${count("coach")})`], ["all", "Todos"]] as const).map(([k, l]) => (
-            <Button key={k} size="sm" variant={filter === k ? "default" : "secondary"} onClick={() => { void hapticSelection(); setFilter(k); }}>{l}</Button>
-          ))}
-        </div>
-        <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card px-4">
-          {visible.length === 0 && <p className="py-4 type-subhead text-muted-foreground">No hay usuarios en este grupo.</p>}
-          {visible.slice(0, 200).map((r) => (
-            <div key={r.user_id} className="flex flex-wrap items-center gap-3 py-2 type-subhead">
-              <div className="flex-1 min-w-[12rem] truncate">{r.name || r.email} <span className="text-muted-foreground">· {r.email}</span></div>
-              <span className="type-footnote capitalize text-muted-foreground w-14">{r.plan}</span>
-              {r.plan === "coach" && (
-                <select className="field w-auto"
-                  value={trainers.find((t) => t.email === r.trainer)?.user_id || ""}
-                  onChange={(e) => void assign(r.user_id, r.email, e.target.value)}>
-                  <option value="">Sin entrenador</option>
-                  {trainers.map((t) => <option key={t.user_id} value={t.user_id}>{t.email}</option>)}
-                </select>
-              )}
-            </div>
-          ))}
-        </div>
+
+      <section className="max-w-3xl space-y-3">
+        <SectionHeader title="Usuarios por plan" />
+        <ChipBar<PlanFilter> options={filters} value={filter} onChange={setFilter} aria-label="Filtrar por plan" />
+        {visible.length === 0 ? (
+          <EmptyState icon={Users} title="No hay usuarios en este grupo" />
+        ) : (
+          <ListGroup>
+            {visible.slice(0, 200).map((r) => (
+              <ListRow
+                key={r.user_id}
+                title={r.name || r.email}
+                subtitle={
+                  r.name || r.plan === "coach" ? (
+                    <>
+                      {r.name ? <span className="block truncate">{r.email}</span> : null}
+                      {r.plan === "coach" ? (
+                        <select
+                          aria-label={`Entrenador de ${r.name || r.email}`}
+                          className="field mt-2 w-full max-w-xs text-foreground"
+                          value={trainers.find((t) => t.email === r.trainer)?.user_id || ""}
+                          onChange={(e) => void assign(r.user_id, r.email, e.target.value)}
+                        >
+                          <option value="">Sin entrenador</option>
+                          {trainers.map((t) => <option key={t.user_id} value={t.user_id}>{t.email}</option>)}
+                        </select>
+                      ) : null}
+                    </>
+                  ) : undefined
+                }
+                value={<span className="type-subhead capitalize">{r.plan}</span>}
+              />
+            ))}
+          </ListGroup>
+        )}
       </section>
 
       {cfg && (
-        <section className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="type-title3">Autopilot para entrenadores</h2>
-              <p className="type-subhead text-muted-foreground">Estado: <span className="font-semibold text-foreground">{cfg.enabled ? "activado" : "desactivado"}</span></p>
-              {!cfg.enabled && <p className="mt-1 type-subhead text-muted-foreground">El producto está construido pero actualmente no está disponible públicamente.</p>}
-            </div>
-            {cfg.enabled
-              ? <Button variant="tinted" onClick={() => { void hapticTap(); void save({ enabled: false }); }}>Desactivar</Button>
-              : <Button onClick={() => { void hapticTap(); setConfirm(true); }}>Activar</Button>}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="type-subhead space-y-1">Nombre<Input defaultValue={cfg.name} onBlur={(e) => void save({ name: e.target.value })} /></label>
-            <label className="type-subhead space-y-1">Precio<Input type="number" inputMode="decimal" defaultValue={cfg.price} onBlur={(e) => void save({ price: Number(e.target.value) })} /></label>
-            <label className="type-subhead space-y-1">Moneda<Input defaultValue={cfg.currency} onBlur={(e) => void save({ currency: e.target.value.toUpperCase() })} /></label>
-            <label className="type-subhead space-y-1">Periodicidad
-              <select className="field w-full" defaultValue={cfg.billing_interval} onChange={(e) => void save({ billing_interval: e.target.value })}>
-                <option value="month">Mensual</option><option value="year">Anual</option>
-              </select>
-            </label>
-            <label className="type-subhead space-y-1">Máximo de clientes (interno, no se muestra)<Input type="number" inputMode="numeric" defaultValue={cfg.max_clients} onBlur={(e) => void save({ max_clients: Number(e.target.value) })} /></label>
-            <label className="type-subhead space-y-1">Enlace de pago Stripe (Payment Link)<Input type="url" placeholder="https://buy.stripe.com/..." defaultValue={cfg.stripe_price_id_live || ""} onBlur={(e) => void save({ stripe_price_id_live: e.target.value || null })} /></label>
-          </div>
-          <label className="type-subhead space-y-1 block">Descripción<Textarea defaultValue={cfg.description} onBlur={(e) => void save({ description: e.target.value })} /></label>
-          <label className="type-subhead space-y-1 block">Funciones incluidas (una por línea)
-            <Textarea defaultValue={(cfg.features as string[]).join("\n")} onBlur={(e) => void save({ features: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })} />
-          </label>
-          <div className="flex flex-wrap gap-6 type-subhead">
-            <label className="flex items-center gap-2"><Switch checked={cfg.publicly_visible} onCheckedChange={(v) => void save({ publicly_visible: v })} />Visible públicamente</label>
-            <label className="flex items-center gap-2"><Switch checked={cfg.accepting_new_subscriptions} onCheckedChange={(v) => void save({ accepting_new_subscriptions: v })} />Acepta nuevas altas</label>
+        <section className="max-w-2xl space-y-4">
+          <SectionHeader title="Autopilot para entrenadores" />
+          <div className="space-y-6">
+            <ListGroup footer={cfg.enabled ? undefined : "El producto está construido pero actualmente no está disponible públicamente."}>
+              <ListRow
+                title="Producto activado"
+                trailing={
+                  <Switch
+                    aria-label="Producto activado"
+                    checked={cfg.enabled}
+                    onCheckedChange={(v) => { void hapticSelection(); if (v) setConfirm(true); else void save({ enabled: false }); }}
+                  />
+                }
+              />
+            </ListGroup>
+
+            <ListGroup>
+              <FieldRow label="Nombre" htmlFor="trainer-plan-name">
+                <Input id="trainer-plan-name" enterKeyHint="next" defaultValue={cfg.name} onBlur={(e) => void save({ name: e.target.value })} />
+              </FieldRow>
+              <FieldRow columns>
+                <Field label="Precio" htmlFor="trainer-plan-price">
+                  <Input id="trainer-plan-price" type="number" inputMode="decimal" enterKeyHint="next" defaultValue={cfg.price} onBlur={(e) => void save({ price: Number(e.target.value) })} />
+                </Field>
+                <Field label="Moneda" htmlFor="trainer-plan-currency">
+                  <Input id="trainer-plan-currency" autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="next" defaultValue={cfg.currency} onBlur={(e) => void save({ currency: e.target.value.toUpperCase() })} />
+                </Field>
+              </FieldRow>
+              <FieldRow label="Periodicidad" htmlFor="trainer-plan-interval">
+                <select id="trainer-plan-interval" className="field w-full text-foreground" defaultValue={cfg.billing_interval} onChange={(e) => void save({ billing_interval: e.target.value })}>
+                  <option value="month">Mensual</option><option value="year">Anual</option>
+                </select>
+              </FieldRow>
+              <FieldRow label="Máximo de clientes (interno, no se muestra)" htmlFor="trainer-plan-max">
+                <Input id="trainer-plan-max" type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" defaultValue={cfg.max_clients} onBlur={(e) => void save({ max_clients: Number(e.target.value) })} />
+              </FieldRow>
+              <FieldRow label="Enlace de pago Stripe (Payment Link)" htmlFor="trainer-plan-link">
+                <Input
+                  id="trainer-plan-link" type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="next"
+                  className={MONO_FIELD} placeholder="https://buy.stripe.com/..." defaultValue={cfg.stripe_price_id_live || ""}
+                  onBlur={(e) => void save({ stripe_price_id_live: e.target.value || null })}
+                />
+              </FieldRow>
+              <FieldRow label="Descripción" htmlFor="trainer-plan-description">
+                <Textarea id="trainer-plan-description" defaultValue={cfg.description} onBlur={(e) => void save({ description: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Funciones incluidas (una por línea)" htmlFor="trainer-plan-features">
+                <Textarea id="trainer-plan-features" defaultValue={(cfg.features as string[]).join("\n")} onBlur={(e) => void save({ features: e.target.value.split("\n").map((s) => s.trim()).filter(Boolean) })} />
+              </FieldRow>
+            </ListGroup>
+
+            <ListGroup>
+              <ListRow
+                title="Visible públicamente"
+                trailing={<Switch aria-label="Visible públicamente" checked={cfg.publicly_visible} onCheckedChange={(v) => { void hapticSelection(); void save({ publicly_visible: v }); }} />}
+              />
+              <ListRow
+                title="Acepta nuevas altas"
+                trailing={<Switch aria-label="Acepta nuevas altas" checked={cfg.accepting_new_subscriptions} onCheckedChange={(v) => { void hapticSelection(); void save({ accepting_new_subscriptions: v }); }} />}
+              />
+            </ListGroup>
           </div>
         </section>
       )}
 
-      <section className="space-y-3">
-        <h2 className="type-title3">Solicitudes de entrenadores ({apps.length})</h2>
-        {apps.length === 0 && <p className="type-subhead text-muted-foreground">Aún no hay solicitudes.</p>}
-        <div className="divide-y divide-border/60 overflow-hidden rounded-2xl bg-card px-4">
-          {apps.map((a) => (
-            <div key={a.id} className="py-3 type-subhead flex flex-wrap gap-x-4 gap-y-1">
-              <span className="type-headline">{a.quiz_answers?.name || "—"}</span>
-              <a className="text-primary" href={`mailto:${a.email}`}>{a.email}</a>
-              {a.quiz_answers?.phone && <span>{a.quiz_answers.phone}</span>}
-              <span className="text-muted-foreground">{a.quiz_answers?.clients} clientes · {a.quiz_answers?.tools} · {a.quiz_answers?.goal}</span>
-              <span className="type-footnote text-muted-foreground ml-auto">{new Date(a.created_at).toLocaleDateString("es-ES")}</span>
-            </div>
-          ))}
-        </div>
+      <section className="max-w-3xl space-y-3">
+        <SectionHeader title={`Solicitudes de entrenadores (${apps.length})`} />
+        {apps.length === 0 ? (
+          <EmptyState icon={Inbox} title="Aún no hay solicitudes" />
+        ) : (
+          <ListGroup>
+            {apps.map((a) => (
+              <ListRow
+                key={a.id}
+                title={a.quiz_answers?.name || "—"}
+                subtitle={
+                  <>
+                    <span className="block truncate">
+                      <a href={`mailto:${a.email}`} className="text-primary active:opacity-60">{a.email}</a>
+                      {a.quiz_answers?.phone ? ` · ${a.quiz_answers.phone}` : ""}
+                    </span>
+                    <span className="block">{a.quiz_answers?.clients} clientes · {a.quiz_answers?.tools} · {a.quiz_answers?.goal}</span>
+                  </>
+                }
+                value={<span className="type-footnote">{new Date(a.created_at).toLocaleDateString("es-ES")}</span>}
+              />
+            ))}
+          </ListGroup>
+        )}
       </section>
 
       <AlertDialog open={confirm} onOpenChange={setConfirm}>

@@ -1,17 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, UserRound, UserX } from "lucide-react";
+import { UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
-import { hapticTap } from "@/lib/native";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +33,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resigning, setResigning] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -129,27 +128,49 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
   };
 
   if (loading) {
-    return <div className="flex justify-center py-16"><Spinner size="lg" className="text-primary" /></div>;
+    return (
+      <div className="flex flex-1 items-center justify-center py-16">
+        <Spinner size="lg" className="text-primary" />
+      </div>
+    );
   }
 
+  const displayName = name.trim();
+  const canResign = assignedClientCount === 0;
+
   return (
-    <div className="w-full min-w-0 max-w-xl mx-auto space-y-8 pt-2">
-      <form onSubmit={handleSave} className="space-y-8">
-        <div className="flex flex-col items-center text-center">
-          <Avatar className="h-20 w-20 shrink-0">
-            <AvatarImage src={photoPreview || photoUrl || undefined} alt={name || "Foto de perfil"} />
-            <AvatarFallback><UserRound className="h-8 w-8" strokeWidth={1.75} /></AvatarFallback>
-          </Avatar>
-          <h1 className="mt-4 type-title2 max-w-full truncate">{name.trim() || "Mi perfil"}</h1>
-          <p className="mt-1 type-subhead text-muted-foreground">Actualiza el nombre y la foto que ven tus clientes.</p>
-          <Label
+    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-6 pb-2 pt-2">
+      <form onSubmit={handleSave} className="flex flex-col gap-6">
+        {/* Cabecera al estilo Apple ID: la foto y el nombre que ven tus clientes. */}
+        <div className="flex flex-col items-center px-4 text-center">
+          <button
+            type="button"
+            aria-label="Cambiar foto de perfil"
+            onClick={() => { void hapticTap(); photoInputRef.current?.click(); }}
+            className="rounded-full transition-opacity active:opacity-70"
+          >
+            <Avatar className="h-20 w-20 shrink-0">
+              <AvatarImage src={photoPreview || photoUrl || undefined} alt="" className="object-cover" />
+              <AvatarFallback className="bg-secondary text-muted-foreground">
+                {displayName ? (
+                  <span aria-hidden="true" className="font-rounded type-large-title">{displayName.charAt(0).toUpperCase()}</span>
+                ) : (
+                  <UserRound className="h-9 w-9" strokeWidth={1.75} />
+                )}
+              </AvatarFallback>
+            </Avatar>
+          </button>
+          <p className="mt-3 max-w-full truncate type-title2">{displayName || "Tu perfil"}</p>
+          {user?.email ? <p className="max-w-full truncate type-body text-muted-foreground">{user.email}</p> : null}
+          <label
             htmlFor="trainer-photo"
             onClick={() => { void hapticTap(); }}
-            className="mt-1 inline-flex min-h-11 cursor-pointer items-center px-3 type-body font-normal text-primary transition-opacity active:opacity-60"
+            className="mt-1 inline-flex min-h-11 cursor-pointer items-center px-3 type-body text-primary transition-opacity active:opacity-60"
           >
             Cambiar foto
-          </Label>
+          </label>
           <input
+            ref={photoInputRef}
             id="trainer-photo"
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -164,76 +185,89 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
               setPhotoFile(file);
             }}
           />
-          <p className="type-footnote text-muted-foreground">Imagen de hasta 5 MB.</p>
+          {photoFile ? (
+            <p className="type-footnote text-muted-foreground">Guarda los cambios para usar la foto nueva.</p>
+          ) : null}
         </div>
 
-        <div>
-          <Label htmlFor="trainer-name" className="type-group-header block pl-4 pb-1.5 font-normal">Nombre</Label>
-          <Input
-            id="trainer-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={80}
-            required
-            autoCapitalize="words"
-            autoComplete="name"
-            enterKeyHint="done"
-          />
-        </div>
-
-        <ListGroup footer="Tus clientes asignados seguirán viendo tu nombre y foto en su dashboard.">
+        <ListGroup footer="Tus clientes asignados seguirán viendo tu nombre y foto en su dashboard. Foto de hasta 5 MB.">
+          <div className="group/row flex min-h-[44px] items-center px-4">
+            <div className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 group-[:not(:last-child)]/row:sep-b">
+              <label htmlFor="trainer-name" className="shrink-0 type-body">Nombre</label>
+              <Input
+                id="trainer-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={80}
+                required
+                placeholder="Tu nombre"
+                autoCapitalize="words"
+                autoComplete="name"
+                enterKeyHint="done"
+                className="h-11 min-w-0 flex-1 bg-transparent px-0 text-right"
+              />
+            </div>
+          </div>
           <ListRow
-            title={<Label htmlFor="trainer-public-profile" className="type-body font-normal">Mostrar mi perfil públicamente</Label>}
+            title={<label htmlFor="trainer-public-profile">Perfil público</label>}
+            subtitle="Apareces en la página de entrenadores."
             trailing={
               <Switch
                 id="trainer-public-profile"
                 checked={publicProfileVisible}
-                onCheckedChange={setPublicProfileVisible}
+                onCheckedChange={(visible) => { void hapticSelection(); setPublicProfileVisible(visible); }}
                 aria-label="Mostrar mi perfil en la página pública de entrenadores"
               />
             }
           />
+          <button
+            type="submit"
+            disabled={saving}
+            onClick={() => { void hapticTap(); }}
+            className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left type-body text-primary transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40"
+          >
+            {saving ? <Spinner size="sm" className="text-current" label="Guardando" /> : null}
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </button>
         </ListGroup>
-
-        <Button type="submit" size="lg" disabled={saving} variant="hero" className="w-full">
-          {saving ? <Spinner size="sm" className="text-primary-foreground" /> : null}
-          Guardar cambios
-        </Button>
       </form>
 
-      <section className="space-y-1">
-        <h2 className="type-group-header px-4 pb-1.5">Cuenta de entrenador</h2>
-        {assignedClientCount > 0 && (
-          <p className="px-4 pb-2 type-subhead text-muted-foreground">
-            El administrador debe reasignar {assignedClientCount === 1 ? "tu cliente" : `tus ${assignedClientCount} clientes`} antes de que puedas renunciar.
-          </p>
-        )}
-        <div className="flex flex-col items-stretch sm:flex-row sm:flex-wrap">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="plain" disabled={resigning || assignedClientCount > 0} className="w-full sm:w-auto">
-                {resigning ? <Spinner size="sm" /> : <UserX className="h-5 w-5" />}
-                Renunciar al rol
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Renunciar al rol de entrenador?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Se quitará tu acceso al panel de entrenador. Tu cuenta de Autopilot y tus datos personales no se eliminarán.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction destructive onClick={handleResign}>Sí, renunciar</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button variant="plain" onClick={handleSignOut} className="w-full text-destructive sm:w-auto">
-            <LogOut className="h-5 w-5" />Cerrar sesión
-          </Button>
-        </div>
-      </section>
+      <ListGroup header="Sesión" footer="Cierra tu sesión en este dispositivo.">
+        <ListRow title="Cerrar sesión" destructive onClick={() => { void handleSignOut(); }} />
+      </ListGroup>
+
+      <ListGroup
+        header="Cuenta de entrenador"
+        footer={canResign
+          ? undefined
+          : `El administrador debe reasignar ${assignedClientCount === 1 ? "tu cliente" : `tus ${assignedClientCount} clientes`} antes de que puedas renunciar.`}
+      >
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button
+              type="button"
+              disabled={resigning || !canResign}
+              onClick={() => { void hapticNotify("warning"); }}
+              className="flex min-h-[44px] w-full items-center gap-3 px-4 text-left type-body text-destructive transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40"
+            >
+              <span className="min-w-0 flex-1 truncate">Renunciar al rol</span>
+              {resigning ? <Spinner size="sm" /> : null}
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Renunciar al rol de entrenador?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Se quitará tu acceso al panel de entrenador. Tu cuenta de Autopilot y tus datos personales no se eliminarán.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction destructive onClick={handleResign}>Sí, renunciar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </ListGroup>
     </div>
   );
 };

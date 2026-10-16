@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FeatureRow } from "@/components/workout-parts/FeatureRow";
 import { hapticSelection, hapticTap } from "@/lib/native";
+import { skipAutoFocusOnTouch } from "@/components/user-core/skipAutoFocusOnTouch";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -52,6 +53,7 @@ const RPEDialog = ({ open, onConfirm }: Props) => {
       <DialogContent
         dismissible={false}
         className="gap-6 pt-6 sm:max-w-md [&>button:last-child]:hidden"
+        onOpenAutoFocus={skipAutoFocusOnTouch}
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

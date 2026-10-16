@@ -1,4 +1,4 @@
-import { Check, Package } from "lucide-react";
+import { Check, ChevronRight, Package } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -6,6 +6,7 @@ import BookCover from "@/components/BookCover";
 import { rememberBookPurchase } from "@/lib/buyLink";
 import { track } from "@/lib/analytics";
 import { hapticTap } from "@/lib/native";
+import { skipAutoFocusOnTouch } from "@/components/chrome-chat/skipAutoFocusOnTouch";
 
 export interface PreviewBook {
   id?: string;
@@ -46,7 +47,7 @@ export default function BookPreviewModal({
 
   return (
     <Dialog open={!!book} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
         <div className="flex flex-col items-center text-center">
           <div className="w-36">
             <BookCover title={book.title} src={book.cover_url} />
@@ -80,7 +81,7 @@ export default function BookPreviewModal({
         <div className="space-y-2">
           {book.url ? (
             <>
-              <p className="text-center font-rounded text-3xl font-bold tabular-nums">{book.price || "Gratis"}</p>
+              <p className="text-center type-large-title font-rounded tabular-nums">{book.price || "Gratis"}</p>
               <Button asChild variant="hero" size="lg" className="w-full">
                 <a href={book.url} target="_blank" rel="noreferrer" onClick={() => buy(book, "preview_modal")}>
                   Comprar ahora
@@ -106,6 +107,7 @@ export default function BookPreviewModal({
               <p className="type-headline">¿Quieres todas las guías?</p>
               <p className="truncate type-footnote text-muted-foreground">{pack!.title}{pack!.price ? ` · ${pack!.price}` : ""}</p>
             </div>
+            <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/60" aria-hidden="true" />
           </a>
         )}
       </DialogContent>

@@ -102,7 +102,7 @@ const DayPicker = ({ header, isOn, onToggle, pressed }: {
           <button key={d.v} type="button" aria-label={d.l} aria-pressed={pressed ? on : undefined}
             onClick={() => { void hapticSelection(); onToggle(d.v); }}
             className={cn("mx-auto flex aspect-square w-full min-w-[44px] max-w-[52px] items-center justify-center rounded-full type-headline transition-colors active:opacity-70",
-              on ? "bg-primary text-primary-foreground" : "bg-card")}>
+              on ? "bg-primary/15 text-primary" : "bg-card")}>
             {d.s}
           </button>
         );
@@ -205,19 +205,23 @@ const Configurator = () => {
   const last = titles.length - 1;
   const goBack = () => { if (saving) return; if (step === 0) navigate("/"); else setStep((s) => s - 1); };
 
-  const footer = step < last ? (
-    <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); setStep((s) => s + 1); }} disabled={!valid[step]}>
-      Continuar
-    </Button>
-  ) : (
-    <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticImpact(); void save(); }} disabled={!accept || saving}>
-      {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" label="Guardando" />}
-      {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
-    </Button>
+  const footer = (
+    <div className="pb-2">
+      {step < last ? (
+        <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); setStep((s) => s + 1); }} disabled={!valid[step]}>
+          Continuar
+        </Button>
+      ) : (
+        <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticImpact(); void save(); }} disabled={!accept || saving}>
+          {saving && <Spinner size="sm" className="mr-2 text-primary-foreground" label="Guardando" />}
+          {user ? "Guardar mi plan" : "Guardar mi plan gratis"}
+        </Button>
+      )}
+    </div>
   );
 
   return (
-    <Screen title={`${step + 1} de ${titles.length}`} onBack={goBack} footer={footer}>
+    <Screen title={`${step + 1} de ${titles.length}`} onBack={goBack} maxWidth="sm" contentClassName="pt-2" footer={footer}>
       <PageHead title="Diseña tu plan · Autopilot" description="Configura tu plan de entrenamiento y nutrición en un minuto." path="/onboarding" />
       <div className="h-1 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
         <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-ios" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
@@ -231,7 +235,7 @@ const Configurator = () => {
             <Choices options={MODE} value={c.mode} onChange={(v) => set("mode", String(v))} />
             {c.mode === "pareja" && (
               <Field header="Tu pareja de entreno">
-                <Input type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} />
+                <Input type="email" inputMode="email" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="done" aria-label="Email de tu pareja de entreno" placeholder="Email de tu pareja de entreno" value={c.partner_email} onChange={(e) => set("partner_email", e.target.value)} />
               </Field>
             )}
             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
@@ -253,10 +257,10 @@ const Configurator = () => {
             <Choices header="Comidas al día" options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
             <Choices header="¿Te gusta cocinar?" options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
             <Field header="¿Algo que no quieras ver? (opcional)">
-              <Input autoComplete="off" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
+              <Input autoComplete="off" enterKeyHint="next" aria-label="Alimentos que no quieres ver" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </Field>
             <Field header="Tu peso en kg (opcional)">
-              <Input type="number" inputMode="decimal" min="30" max="350" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} />
+              <Input type="number" inputMode="decimal" enterKeyHint="done" min="30" max="350" aria-label="Tu peso en kg" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} />
             </Field>
           </>
         )}
@@ -265,7 +269,7 @@ const Configurator = () => {
           <>
             <DayPicker header="Día de tu revisión semanal" pressed={false} isOn={(v) => c.checkin_dow === v} onToggle={(v) => set("checkin_dow", v)} />
             <Field header="¿A qué hora?">
-              <select value={c.checkin_time} onChange={(e) => set("checkin_time", e.target.value)} className="field w-full rounded-xl px-3">
+              <select aria-label="Hora de la revisión" value={c.checkin_time} onChange={(e) => set("checkin_time", e.target.value)} className="field w-full">
                 {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
@@ -283,7 +287,7 @@ const Configurator = () => {
               <ListRow title="Revisión" value={`${DOW.find((d) => d.v === c.checkin_dow)?.l} a las ${c.checkin_time}`} />
               <ListRow title="Estilo" value={label(STYLE, c.style)} />
             </ListGroup>
-            <label className="flex min-h-[44px] items-start gap-3 px-1 type-footnote text-muted-foreground">
+            <label className="flex min-h-[44px] items-start gap-3 px-4 type-footnote text-muted-foreground">
               <Checkbox checked={accept} onCheckedChange={(v) => { void hapticSelection(); setAccept(!!v); }} className="mt-0.5" />
               <span>Acepto los <Link to="/legal/terminos" className="text-primary">términos</Link>, la <Link to="/legal/privacidad" className="text-primary">privacidad</Link> y el tratamiento de mis datos de salud para preparar mi plan.</span>
             </label>

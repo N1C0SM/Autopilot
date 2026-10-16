@@ -2,6 +2,7 @@ import type { DayPlan, GymExerciseEntry } from "../_shared/training-types.ts";
 import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
 import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
+import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -44,6 +45,8 @@ interface UserConfig {
   exerciseType: string; // Gimnasio | Calistenia | Mixto
   intensityLevel: number;
   specificGoal: string;
+  /** Lagging groups the user approved from a scan («… · Prioridad: hombros, pecho» in specific_goal). */
+  priorityMuscles: string[];
 }
 
 interface Rules {
@@ -403,6 +406,132 @@ function pickExercisesForSession(
         priority: 2,
         fatigue_level: ex.fatigue_level || "Media",
       });
+    }
+  }
+
+  // STEP 3.7: Scan priority. Once the normal session is built, add one exercise for each lagging
+  // group this session trains (arms count on their related days: biceps with back, triceps with
+  // chest). Room comes first from base series of non-priority groups (down to the P1 minimum), then
+  // from secondary exercises of groups that keep another one, never the session's only push or
+  // pull. A dry run decides first, so a session is left untouched when the extra does not fit.
+  // Nothing here runs when the user has no priority, so those plans stay exactly as before.
+  const RELATED_TARGET: Record<string, string> = { "Bíceps": "Espalda", "Tríceps": "Pecho", "Glúteos": "Piernas" };
+  const allPriority = config.priorityMuscles ?? [];
+  const sessionPriority = allPriority.filter((m) =>
+    targetMuscles.includes(m) || (RELATED_TARGET[m] !== undefined && targetMuscles.includes(RELATED_TARGET[m])));
+
+  function makeRoom(need: number, keep: string[]): boolean {
+    let over = totalSets + need - rules.max_sets_per_session;
+    if (over <= 0) return true;
+    // One set at a time across the non-priority base lifts, so no single lift takes the whole cut.
+    const eligible = picked.filter((p) => (p.priority ?? 2) === 1 && !keep.includes(p.muscle_group || "") && p.series > rules.series_p1_min);
+    const cuts = new Map<PickedExercise, number>();
+    for (let progressed = true; over > 0 && progressed;) {
+      progressed = false;
+      for (const p of eligible) {
+        if (over <= 0) break;
+        const cut = cuts.get(p) ?? 0;
+        if (p.series - cut <= rules.series_p1_min) continue;
+        cuts.set(p, cut + 1);
+        over -= 1;
+        progressed = true;
+      }
+    }
+    const groups: Record<string, number> = {};
+    const patterns: Record<string, number> = {};
+    for (const p of picked) {
+      groups[p.muscle_group || ""] = (groups[p.muscle_group || ""] || 0) + 1;
+      patterns[p.movement_pattern || "Otro"] = (patterns[p.movement_pattern || "Otro"] || 0) + 1;
+    }
+    const drops: PickedExercise[] = [];
+    for (const level of [3, 2]) {
+      for (let i = picked.length - 1; i >= 0 && over > 0; i--) {
+        const p = picked[i];
+        const group = p.muscle_group || "";
+        const pattern = p.movement_pattern || "Otro";
+        if ((p.priority ?? 2) !== level || keep.includes(group) || groups[group] < 2) continue;
+        // Never the session's only push, pull or required pattern.
+        if ((pattern === "Empuje" || pattern === "Tirón" || rules.required_patterns.includes(pattern)) && patterns[pattern] < 2) continue;
+        drops.push(p);
+        groups[group] -= 1;
+        patterns[pattern] -= 1;
+        over -= p.series;
+      }
+    }
+    if (over > 0) return false;
+    // A drop can free more than needed: give the surplus back to the cuts.
+    for (const p of [...cuts.keys()].reverse()) {
+      if (over >= 0) break;
+      const back = Math.min(cuts.get(p) ?? 0, -over);
+      cuts.set(p, (cuts.get(p) ?? 0) - back);
+      over += back;
+    }
+    for (const [p, cut] of cuts) {
+      p.series -= cut;
+      totalSets -= cut;
+    }
+    for (const p of drops) {
+      picked.splice(picked.indexOf(p), 1);
+      usedIds.delete(p.exercise_id);
+      const pattern = p.movement_pattern || "Otro";
+      patternCounts[pattern] = Math.max(0, (patternCounts[pattern] || 0) - 1);
+      totalSets -= p.series;
+    }
+    return true;
+  }
+
+  if (sessionPriority.length) {
+    // STEP 3.5/3.6 add exercises without counting them: recount before measuring room.
+    totalSets = picked.reduce((n, p) => n + p.series, 0);
+    for (const key of Object.keys(patternCounts)) delete patternCounts[key];
+    for (const p of picked) patternCounts[p.movement_pattern || "Otro"] = (patternCounts[p.movement_pattern || "Otro"] || 0) + 1;
+  }
+  const extraOrder: Record<number, number> = { 2: 0, 1: 1, 3: 2 }; // a complement first, then a base lift, then an accessory
+  const unbalances = (pattern: string) => {
+    const push = (patternCounts["Empuje"] || 0) + (pattern === "Empuje" ? 1 : 0);
+    const pull = (patternCounts["Tirón"] || 0) + (pattern === "Tirón" ? 1 : 0);
+    return Math.abs(push - pull) > rules.push_pull_max_diff ? 1 : 0;
+  };
+  for (const muscle of sessionPriority) {
+    const candidates = (exerciseLib[muscle] || [])
+      .filter((ex) => !usedIds.has(ex.id))
+      .filter((ex) => !(exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia"))
+      .filter((ex) => !(exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio"))
+      .filter((ex) => (ex.level ?? 1) <= userLevel + 1)
+      .filter((ex) => !(ex.movement_pattern === "Bisagra" && ex.load_level === "Alta" && heavyHingeCount >= rules.max_heavy_hinges))
+      // Skill progressions are injected later; do not pick them twice.
+      .filter((ex) => !(skillProfile?.skillTag && ex.skill_tag === skillProfile.skillTag && ex.progression_order !== null))
+      .sort((a, b) =>
+        unbalances(a.movement_pattern || "Otro") - unbalances(b.movement_pattern || "Otro")
+        || (extraOrder[a.priority ?? 2] ?? 1) - (extraOrder[b.priority ?? 2] ?? 1)
+        || Math.abs((a.level ?? 1) - userLevel) - Math.abs((b.level ?? 1) - userLevel)
+        || (a.recommended_order ?? 2) - (b.recommended_order ?? 2));
+    for (const ex of candidates) {
+      const pattern = ex.movement_pattern || "Otro";
+      const scheme = getRepScheme(getEffectiveStimulus(ex.stimulus_type, goal, skillProfile), ex.priority ?? 2, rules);
+      // A base lift as the extra takes the P1 minimum: it adds volume without crowding out the day.
+      const series = (ex.priority ?? 2) === 1 ? rules.series_p1_min : scheme.series;
+      if (!makeRoom(series, allPriority)) continue;
+      picked.push({
+        exercise_id: ex.id,
+        name: ex.name,
+        series,
+        reps: scheme.reps,
+        weight: "",
+        rest: scheme.rest,
+        image_url: ex.image_url || undefined,
+        video_url: ex.video_url || undefined,
+        muscle_group: ex.muscle_group,
+        exercise_type: ex.exercise_type,
+        movement_pattern: pattern,
+        priority: ex.priority ?? 2,
+        fatigue_level: ex.fatigue_level || "Media",
+      });
+      usedIds.add(ex.id);
+      patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
+      totalSets += series;
+      if (pattern === "Bisagra" && ex.load_level === "Alta") heavyHingeCount++;
+      break;
     }
   }
 
@@ -911,6 +1040,7 @@ serve(async (req) => {
       exerciseType: equipmentType,
       intensityLevel,
       specificGoal,
+      priorityMuscles: parsePriorityMuscles(specificGoal),
     };
 
     const { data: allExercises } = await supabase

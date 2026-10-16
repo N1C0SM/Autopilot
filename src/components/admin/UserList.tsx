@@ -1,19 +1,20 @@
-import { useState, type ReactNode } from "react";
-import { Search, Shield, UserCog, CalendarIcon, X } from "lucide-react";
+import { useState } from "react";
+import { Search, CalendarIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import { hapticTap, hapticSelection } from "@/lib/native";
+import { hapticTap } from "@/lib/native";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Profile } from "@/pages/Admin";
 import CreateTestAccountDialog, { type TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ListGroup } from "@/components/ui/list";
-import { SectionHeader } from "@/components/ui/section-header";
-import { PaymentDot, PlanStatusBadge, StatusBadge } from "@/components/ui/status-badge";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ChipBar } from "./AdminOpsParts";
 
 interface Props {
   users: Profile[];
@@ -37,8 +38,8 @@ const STATUS_FILTERS = [
 const isTraveling = (u: Profile) =>
   !!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date();
 
-// Fila única de usuario: 56px, avatar/icono, título, meta y a la derecha
-// como máximo un badge de estado + un punto de pago.
+// Fila única de usuario: avatar, nombre, meta y, a la derecha, el estado del plan
+// y un punto de pago (solo clientes). Toda la fila abre la ficha.
 const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; onClick: () => void }) => {
   const name = u.name?.trim() || u.email;
   const meta =
@@ -49,38 +50,28 @@ const UserRow = ({ user: u, kind, onClick }: { user: Profile; kind: UserKind; on
         : `${u.name?.trim() ? `${u.email} · ` : ""}Alta ${new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}`;
 
   return (
-    <button
-      type="button"
-      onClick={() => { void hapticTap(); onClick(); }}
-      className="sep-t flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors first:border-t-0 active:bg-accent"
-    >
-      {kind === "user" ? (
-        <Avatar className="h-9 w-9 shrink-0">
-          <AvatarImage src={u.avatar_url || undefined} alt={name} />
-          <AvatarFallback className="bg-secondary type-footnote font-semibold text-muted-foreground">
+    <ListRow
+      onClick={onClick}
+      leading={
+        <Avatar className="h-9 w-9">
+          <AvatarImage src={u.avatar_url || undefined} alt="" />
+          <AvatarFallback className="type-footnote font-semibold text-muted-foreground">
             {name.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-      ) : (
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-          {kind === "admin" ? <Shield className="h-4 w-4" /> : <UserCog className="h-4 w-4" />}
-        </span>
-      )}
-
-      <span className="min-w-0 flex-1">
-        <span className="block truncate type-headline">{name}</span>
-        <span className="block truncate type-footnote text-muted-foreground">{meta}</span>
-      </span>
-
-      {kind === "user" ? (
-        <>
-          <PlanStatusBadge planStatus={u.plan_status} traveling={isTraveling(u)} />
-          <PaymentDot status={u.payment_status} />
-        </>
-      ) : (
-        <StatusBadge tone="accent">{kind === "admin" ? "Admin" : "Entrenador"}</StatusBadge>
-      )}
-    </button>
+      }
+      title={<span className="block truncate">{name}</span>}
+      subtitle={<span className="block truncate">{meta}</span>}
+      value={
+        kind === "user" ? (
+          <span className="flex items-center gap-2">
+            <PlanStatusBadge planStatus={u.plan_status} traveling={isTraveling(u)} className="type-caption1" />
+            <PaymentDot status={u.payment_status} title={undefined} />
+          </span>
+        ) : undefined
+      }
+      chevron
+    />
   );
 };
 
@@ -89,24 +80,21 @@ const UserGroup = ({
   users,
   kind,
   onSelectUser,
-  empty,
 }: {
   title: string;
   users: Profile[];
   kind: UserKind;
   onSelectUser: (user: Profile) => void;
-  empty?: ReactNode;
 }) => (
   <ListGroup header={title}>
-    {users.length === 0
-      ? empty
-      : users.map((u) => (
-          <UserRow key={u.user_id} user={u} kind={kind} onClick={() => onSelectUser(u)} />
-        ))}
+    {users.map((u) => (
+      <UserRow key={u.user_id} user={u} kind={kind} onClick={() => onSelectUser(u)} />
+    ))}
   </ListGroup>
 );
 
 const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCreated }: Props) => {
+  const isMobile = useIsMobile();
   const trainerSet = trainerIds ?? new Set<string>();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
@@ -154,19 +142,20 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
       : dateRange.from.toLocaleDateString("es-ES", { day: "numeric", month: "short" })
     : "";
 
+  const noResults = regularUsers.length === 0 && trainerUsers.length === 0 && adminUsers.length === 0;
+
   return (
     <div>
-      <SectionHeader
-        title="Usuarios"
-        hint={`${regularUsers.length} usuarios · ${trainerSet.size} entrenadores · ${adminIds.size} admin`}
-        action={<CreateTestAccountDialog onCreated={onTestAccountCreated} />}
-        className="mb-3"
-      />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4">
+        <p className="type-subhead text-muted-foreground">
+          {regularUsers.length} usuarios · {trainerSet.size} entrenadores · {adminIds.size} admin
+        </p>
+        <CreateTestAccountDialog onCreated={onTestAccountCreated} />
+      </div>
 
-      {/* Una sola fila de filtros: búsqueda, fecha y estados (desplazable en horizontal) */}
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2">
         <div className="relative min-w-0 flex-1 md:max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search" enterKeyHint="search" autoCapitalize="none" autoCorrect="off" spellCheck={false}
             placeholder="Buscar por nombre o email…"
@@ -181,20 +170,19 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
           <PopoverTrigger asChild>
             <Button
               variant="secondary"
-              className={cn("shrink-0 gap-2 px-3 font-normal", dateRange?.from && "bg-primary/15 text-primary")}
+              className={cn("min-w-[44px] shrink-0 gap-2 px-3 font-normal", dateRange?.from && "bg-primary/15 text-primary")}
               aria-label="Filtrar por fecha de registro"
             >
               <CalendarIcon className="h-4 w-4 shrink-0" />
               {rangeLabel ? <span className="type-footnote">{rangeLabel}</span> : null}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-50 bg-popover" align="end">
+          <PopoverContent className="w-auto p-0" align="end" onOpenAutoFocus={isMobile ? (e) => e.preventDefault() : undefined}>
             <Calendar
               mode="range"
               selected={dateRange}
               onSelect={setDateRange}
-              numberOfMonths={2}
-              initialFocus
+              numberOfMonths={isMobile ? 1 : 2}
               className={cn("p-3 pointer-events-auto")}
             />
           </PopoverContent>
@@ -211,60 +199,46 @@ const UserList = ({ users, adminIds, trainerIds, onSelectUser, onTestAccountCrea
             <X className="h-4 w-4" />
           </Button>
         )}
-
-        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => { void hapticSelection(); setFilter(f.value); }}
-              aria-pressed={filter === f.value}
-              className={cn(
-                "h-11 shrink-0 rounded-full px-4 type-footnote font-semibold transition-colors active:opacity-70",
-                filter === f.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div className="space-y-6">
-        <UserGroup
-          title={`Clientes (${regularUsers.length})`}
-          users={regularUsers}
-          kind="user"
-          onSelectUser={onSelectUser}
-          empty={
-            <EmptyState
-              icon={Search}
-              title="Sin usuarios"
-              description="Ajusta la búsqueda o los filtros para ver resultados."
-            />
-          }
+      <ChipBar options={STATUS_FILTERS} value={filter} onChange={setFilter} aria-label="Filtrar por estado" className="mb-4" />
+
+      {noResults ? (
+        <EmptyState
+          icon={Search}
+          title="Sin usuarios"
+          description="Ajusta la búsqueda o los filtros para ver resultados."
         />
+      ) : (
+        <div className="space-y-6">
+          {regularUsers.length > 0 && (
+            <UserGroup
+              title={`Clientes (${regularUsers.length})`}
+              users={regularUsers}
+              kind="user"
+              onSelectUser={onSelectUser}
+            />
+          )}
 
-        {trainerUsers.length > 0 && (
-          <UserGroup
-            title={`Entrenadores (${trainerUsers.length})`}
-            users={trainerUsers}
-            kind="trainer"
-            onSelectUser={onSelectUser}
-          />
-        )}
+          {trainerUsers.length > 0 && (
+            <UserGroup
+              title={`Entrenadores (${trainerUsers.length})`}
+              users={trainerUsers}
+              kind="trainer"
+              onSelectUser={onSelectUser}
+            />
+          )}
 
-        {adminUsers.length > 0 && (
-          <UserGroup
-            title={`Administradores (${adminUsers.length})`}
-            users={adminUsers}
-            kind="admin"
-            onSelectUser={onSelectUser}
-          />
-        )}
-      </div>
+          {adminUsers.length > 0 && (
+            <UserGroup
+              title={`Administradores (${adminUsers.length})`}
+              users={adminUsers}
+              kind="admin"
+              onSelectUser={onSelectUser}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 };

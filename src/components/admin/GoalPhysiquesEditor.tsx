@@ -1,12 +1,29 @@
-import { errorMessage } from"@/lib/runtimeValues";
-import { useEffect, useState } from"react";
-import { supabase } from"@/integrations/supabase/client";
-import { Button } from"@/components/ui/button";
-import { Input } from"@/components/ui/input";
-import { Label } from"@/components/ui/label";
-import { Switch } from"@/components/ui/switch";
-import { Loader2, Plus, Trash2, Upload, Target } from"lucide-react";
-import { toast } from"sonner";
+import { errorMessage } from "@/lib/runtimeValues";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Target, UserRound } from "lucide-react";
+import { toast } from "sonner";
+import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
+import { skipAutoFocusOnTouch } from "@/components/admin-library/touchAutoFocus";
 
 interface GoalPhysique {
   id: string;
@@ -17,16 +34,45 @@ interface GoalPhysique {
 }
 
 const uploadImage = async (file: File) => {
-  const ext = file.name.split(".").pop() ||"jpg";
-  const path =`goal-physiques/${Date.now()}.${ext}`;
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `goal-physiques/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: false });
   if (error) throw error;
   return supabase.storage.from("site-assets").getPublicUrl(path).data.publicUrl;
 };
 
+/** Foto con respaldo compuesto: sin URL o con la carga fallida se ve el hueco gris, nunca la imagen rota. */
+const PhysiqueImage = ({ src, alt, className }: { src: string; alt: string; className?: string }) => {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className={cn("relative shrink-0 overflow-hidden bg-secondary", className)}>
+      {src && !failed ? (
+        <img
+          loading="lazy"
+          decoding="async"
+          src={src}
+          alt={alt}
+          onError={() => setFailed(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <UserRound className="h-1/2 w-1/2 text-muted-foreground/60" strokeWidth={1.75} aria-hidden="true" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const GoalPhysiquesEditor = () => {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<GoalPhysique[]>([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     setLoading(true);
@@ -39,14 +85,22 @@ const GoalPhysiquesEditor = () => {
   };
   useEffect(() => { load(); }, []);
 
+  const openEditor = (id: string) => {
+    setEditingId(id);
+    setSheetOpen(true);
+  };
+
   const add = async () => {
+    void hapticTap();
     const { data, error } = await supabase
       .from("goal_physiques")
-      .insert({ name:"Nuevo físico", image_url:"", sort_order: items.length, visible: true })
+      .insert({ name: "Nuevo físico", image_url: "", sort_order: items.length, visible: true })
       .select()
       .single();
     if (error) { toast.error("No se pudo crear"); return; }
-    setItems((p) => [...p, data as GoalPhysique]);
+    const created = data as GoalPhysique;
+    setItems((p) => [...p, created]);
+    openEditor(created.id);
   };
 
   const update = (id: string, patch: Partial<GoalPhysique>) => {
@@ -62,11 +116,17 @@ const GoalPhysiquesEditor = () => {
         visible: it.visible,
       })
       .eq("id", it.id);
-    if (error) toast.error("Error al guardar"); else toast.success("Guardado");
+    if (error) {
+      void hapticNotify("error");
+      toast.error("Error al guardar");
+      return false;
+    }
+    void hapticNotify("success");
+    toast.success("Guardado");
+    return true;
   };
 
   const remove = async (id: string) => {
-    if (!confirm("¿Eliminar este físico de referencia?")) return;
     const { error } = await supabase.from("goal_physiques").delete().eq("id", id);
     if (error) { toast.error("No se pudo eliminar"); return; }
     setItems((p) => p.filter((it) => it.id !== id));
@@ -75,6 +135,7 @@ const GoalPhysiquesEditor = () => {
   const onPhoto = async (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploading(true);
     try {
       const url = await uploadImage(file);
       update(id, { image_url: url });
@@ -82,93 +143,152 @@ const GoalPhysiquesEditor = () => {
       await supabase.from("goal_physiques").update({ image_url: url }).eq("id", id);
       toast.success("Foto subida");
     } catch (err: unknown) {
-      toast.error(errorMessage(err) ??"Error al subir");
+      toast.error(errorMessage(err) ?? "Error al subir");
+    } finally {
+      setUploading(false);
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <Spinner size="lg" />
       </div>
     );
   }
 
+  const editing = items.find((it) => it.id === editingId) ?? null;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="font-display text-2xl font-bold flex items-center gap-2">
-                        Físicos objetivo
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Físicos de referencia que verán los usuarios en el AI Scan. Pueden elegir uno como objetivo en vez de subir su propia foto.
-          </p>
-        </div>
-        <Button onClick={add} variant="hero" size="sm">
-          <Plus className="w-4 h-4" />
+    <div className="space-y-6 md:max-w-2xl">
+      <div className="space-y-4">
+        <p className="type-subhead text-muted-foreground">
+          Físicos de referencia que verán los usuarios en el AI Scan. Pueden elegir uno como objetivo en vez de subir su propia foto.
+        </p>
+        <Button type="button" size="lg" className="w-full md:w-auto" onClick={add}>
           Añadir físico
         </Button>
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl bg-card py-16 text-center type-subhead text-muted-foreground">
-          Aún no hay físicos de referencia. Añade el primero con una foto y un nombre.
-        </div>
+        <EmptyState
+          icon={Target}
+          title="Aún no hay físicos"
+          description="Añade el primero con una foto y un nombre."
+        />
       ) : (
-        <div className="grid sm:grid-cols-2 gap-4">
+        <ListGroup>
           {items.map((it) => (
-            <div key={it.id} className="rounded-2xl bg-card p-4 space-y-3">
-              <div className="flex gap-3">
-                <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-xl border border-border bg-secondary">
-                  {it.image_url ? (
-                    <img loading="lazy" decoding="async" src={it.image_url} alt={it.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground text-center px-2">
-                      Sin foto
-                    </div>
-                  )}
-                  <label className="absolute inset-0 cursor-pointer flex items-end justify-center pb-2 opacity-0 hover:opacity-100 transition bg-background/60">
-                    <span className="text-xs flex items-center gap-1 text-primary">
-                      <Upload className="w-3 h-3" /> Subir
-                    </span>
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onPhoto(it.id, e)} />
-                  </label>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <Label className="type-footnote text-muted-foreground">Nombre</Label>
-                  <Input
-                    value={it.name}
-                    onChange={(e) => update(it.id, { name: e.target.value })}
-                    placeholder="Físico de referencia"
-                  />
-                </div>
-              </div>
-              {/* La fila envuelve: si no cabe, los botones bajan en vez de salirse de la tarjeta. */}
-              {/* Una sola línea: el interruptor y los botones nunca se apilan.
-                  Si el ancho aprieta, se recorta la etiqueta, no se baja nada. */}
-              <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-                <div className="flex min-w-0 items-center gap-2 text-xs">
-                  <Switch
-                    className="shrink-0"
-                    checked={it.visible}
-                    onCheckedChange={(v) => update(it.id, { visible: v })}
-                  />
-                  <span className="truncate text-muted-foreground">{it.visible ?"Visible" :"Oculto"}</span>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button size="sm" variant="outline" className="px-2.5" onClick={() => save(it)}>
-                    Guardar
-                  </Button>
-                  <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-destructive hover:text-destructive" onClick={() => remove(it.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <ListRow
+              key={it.id}
+              leading={<PhysiqueImage key={it.image_url} src={it.image_url} alt="" className="h-14 w-14 rounded-[10px]" />}
+              title={it.name.trim() || "Sin nombre"}
+              value={it.visible ? "Visible" : "Oculto"}
+              chevron
+              onClick={() => openEditor(it.id)}
+            />
           ))}
-        </div>
+        </ListGroup>
       )}
+
+      <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DialogContent aria-describedby={undefined} onOpenAutoFocus={skipAutoFocusOnTouch}>
+          <DialogHeader>
+            <DialogTitle>Físico objetivo</DialogTitle>
+          </DialogHeader>
+          {editing ? (
+            <>
+              <PhysiqueImage
+                key={editing.image_url}
+                src={editing.image_url}
+                alt={editing.name}
+                className="mx-auto h-48 w-36 rounded-2xl"
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => onPhoto(editing.id, e)}
+              />
+              <ListGroup inset>
+                <ListRow
+                  title={<span className="text-primary">{editing.image_url ? "Cambiar foto" : "Subir foto"}</span>}
+                  trailing={uploading ? <Spinner size="sm" /> : undefined}
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                />
+              </ListGroup>
+              <div>
+                <Label htmlFor="physique-name" className="mb-1.5 block font-normal text-muted-foreground">
+                  Nombre
+                </Label>
+                <Input
+                  id="physique-name"
+                  value={editing.name}
+                  onChange={(e) => update(editing.id, { name: e.target.value })}
+                  placeholder="Físico de referencia"
+                  autoCapitalize="words"
+                  enterKeyHint="done"
+                />
+              </div>
+              <ListGroup inset footer="Si lo ocultas, los usuarios no lo verán en el AI Scan.">
+                <ListRow
+                  title="Visible"
+                  trailing={
+                    <Switch
+                      aria-label="Visible"
+                      checked={editing.visible}
+                      onCheckedChange={(v) => { void hapticSelection(); update(editing.id, { visible: v }); }}
+                    />
+                  }
+                />
+              </ListGroup>
+              <Button
+                type="button"
+                size="lg"
+                className="w-full"
+                onClick={async () => {
+                  void hapticTap();
+                  if (await save(editing)) setSheetOpen(false);
+                }}
+              >
+                Guardar
+              </Button>
+              <Button
+                type="button"
+                variant="plain"
+                className="w-full text-destructive"
+                onClick={() => {
+                  void hapticTap();
+                  setDeleteTarget({ id: editing.id, name: editing.name.trim() || "este físico" });
+                  setSheetOpen(false);
+                  setDeleteOpen(true);
+                }}
+              >
+                Eliminar físico
+              </Button>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar físico</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se quitará {deleteTarget?.name} de los físicos de referencia. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction destructive onClick={() => { if (deleteTarget) void remove(deleteTarget.id); }}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

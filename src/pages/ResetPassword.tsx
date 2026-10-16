@@ -71,7 +71,7 @@ const ResetPassword = () => {
           noindex
         />
         <AuthHero
-          mark={<AuthSymbol icon={Check} size="lg" />}
+          mark={<AuthSymbol icon={Check} />}
           title="Contraseña actualizada"
           description="Ya puedes iniciar sesión con la nueva."
         />

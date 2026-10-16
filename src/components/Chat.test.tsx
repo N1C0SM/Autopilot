@@ -1,10 +1,12 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Chat from "./Chat";
-const mocks = vi.hoisted(() => ({ load: vi.fn(), send: vi.fn(), sent: vi.fn(), error: vi.fn(), realtime: null as ((payload: { new: unknown }) => void) | null }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), send: vi.fn(), sent: vi.fn(), error: vi.fn(), upload: vi.fn(), realtime: null as ((payload: { new: unknown }) => void) | null }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: { id: "trainer" } }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: () => { const query = { select: () => query, eq: () => query, order: mocks.load, insert: (payload: unknown) => { mocks.sent(payload); return { select: () => ({ single: mocks.send }) }; } }; return query; },
+  auth: { getUser: () => Promise.resolve({ data: { user: { id: "trainer" } } }) },
+  storage: { from: () => ({ upload: mocks.upload, getPublicUrl: (path: string) => ({ data: { publicUrl: `https://cdn.test/${path}` } }) }) },
   channel: () => { const channel = { on: (_event: unknown, _filter: unknown, callback: typeof mocks.realtime) => { mocks.realtime = callback; return channel; }, subscribe: () => channel }; return channel; }, removeChannel: vi.fn(),
 } }));
 vi.mock("@/hooks/useVideoCall", () => ({ useVideoCall: () => ({ state: "idle", clearError: vi.fn() }) }));
@@ -12,7 +14,7 @@ vi.mock("@/components/call/CallOverlay", () => ({ default: () => null }));
 vi.mock("@/components/AIDisclaimer", () => ({ default: () => null }));
 vi.mock("@/lib/storageSign", () => ({ signedUrlsFor: () => Promise.resolve(new Map()) }));
 vi.mock("sonner", () => ({ toast: { error: mocks.error, info: vi.fn() } }));
-beforeEach(() => { vi.clearAllMocks(); mocks.load.mockResolvedValue({ data: [], error: null }); mocks.send.mockResolvedValue({ data: { id: "sent-1", sender_id: "trainer", content: "Mensaje de prueba", created_at: "2026-10-09T12:00:00Z" }, error: null }); }); afterEach(cleanup);
+beforeEach(() => { vi.clearAllMocks(); mocks.load.mockResolvedValue({ data: [], error: null }); mocks.upload.mockResolvedValue({ error: null }); Object.assign(URL, { createObjectURL: vi.fn(() => "blob:preview"), revokeObjectURL: vi.fn() }); mocks.send.mockResolvedValue({ data: { id: "sent-1", sender_id: "trainer", content: "Mensaje de prueba", created_at: "2026-10-09T12:00:00Z" }, error: null }); }); afterEach(cleanup);
 describe("trainer chat reliability", () => {
   it("explains the internal admin audience instead of showing client instructions", async () => {
     render(<Chat conversationUserId="trainer" audience="team" layout="fill" />);
@@ -46,5 +48,16 @@ describe("trainer chat reliability", () => {
     act(() => mocks.realtime?.({ new: { id: "sent-1", sender_id: "trainer", content: "Mensaje de prueba", created_at: "2026-10-09T12:00:00Z" } }));
     expect(screen.getAllByText("Mensaje de prueba")).toHaveLength(1);
     expect(mocks.sent).toHaveBeenCalledWith(expect.objectContaining({ conversation_user_id: "client", sender_id: "trainer" }));
+  });
+  it.each([
+    ["image", "foto.jpg", "image/jpeg", "📷 Foto"],
+    ["video", "clip.mp4", "video/mp4", "📹 Video"],
+  ])("keeps the stored placeholder text when a %s is sent without a message", async (mediaType, name, mime, content) => {
+    const { container } = render(<Chat conversationUserId="client" isAdmin />);
+    await screen.findByText(/Empieza la conversación/);
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    fireEvent.change(input, { target: { files: [new File(["x"], name, { type: mime })] } });
+    fireEvent.click(await screen.findByRole("button", { name: "Enviar mensaje" }));
+    await waitFor(() => expect(mocks.sent).toHaveBeenCalledWith(expect.objectContaining({ content, media_type: mediaType, media_url: expect.stringContaining("https://cdn.test/trainer/chat/client/") })));
   });
 });

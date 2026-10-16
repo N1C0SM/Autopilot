@@ -10,8 +10,18 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { EmptyState } from "@/components/ui/empty-state";
-import { hapticTap } from "@/lib/native";
-import { Plus, Trash2, Save, ExternalLink, Image as ImageIcon, Sparkles, FileText } from "lucide-react";
+import { hapticSelection, hapticTap } from "@/lib/native";
+import { Sparkles, FileText, MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ImageWithFallback, InlineBack, MONO_FIELD } from "@/components/admin/content/AdminContentParts";
+import { useConfirm } from "@/components/admin/content/useConfirm";
+
+const FIELD_LABEL = "mb-1.5 block text-muted-foreground";
 
 interface Post {
   id: string;
@@ -46,6 +56,7 @@ const BlogPostsEditor = () => {
   const [aiTopic, setAiTopic] = useState("");
   const [aiAudience, setAiAudience] = useState("");
   const [generating, setGenerating] = useState(false);
+  const { ask, dialog: confirmDialog } = useConfirm();
 
   const generateWithAI = async () => {
     if (!aiTopic.trim()) { toast.error("Escribe de qué quieres que hable el artículo"); return; }
@@ -135,7 +146,7 @@ const BlogPostsEditor = () => {
   };
 
   const remove = async (id: string) => {
-    if (!confirm("¿Eliminar este artículo? Esta acción no se puede deshacer.")) return;
+    if (!(await ask({ title: "¿Eliminar este artículo?", description: "Esta acción no se puede deshacer." }))) return;
     const { error } = await supabase.from("blog_posts").delete().eq("id", id);
     if (error) { toast.error("Error: " + error.message); return; }
     toast.success("Artículo eliminado");
@@ -162,43 +173,58 @@ const BlogPostsEditor = () => {
   if (editing) {
     return (
       <div className="mx-auto max-w-3xl space-y-8">
-        <div className="flex items-center justify-between gap-3">
-          <Button variant="plain" className="-ml-3" onClick={() => setEditing(null)}>← Volver a la lista</Button>
-          <div className="flex items-center gap-3">
-            <Label className="type-footnote text-muted-foreground">Publicado</Label>
-            <Switch checked={editing.published} onCheckedChange={(v) => { void hapticTap(); setEditing({ ...editing, published: v }); }} />
-            <Button variant="hero" onClick={save} disabled={saving}>
-              {saving ? <Spinner size="sm" className="mr-1.5 text-primary-foreground" /> : <Save className="w-4 h-4 mr-1.5" />}
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-          </div>
-        </div>
+        <InlineBack label="Blog" onClick={() => setEditing(null)} />
+
+        <ListGroup>
+          <ListRow
+            title="Publicado"
+            subtitle={editing.published ? "Visible en /blog para todo el mundo." : "Borrador: solo lo ves tú."}
+            trailing={
+              <Switch
+                aria-label="Publicado"
+                checked={editing.published}
+                onCheckedChange={(v) => { void hapticSelection(); setEditing({ ...editing, published: v }); }}
+              />
+            }
+          />
+        </ListGroup>
 
         <div className="space-y-5">
           <div>
-            <Label>Título</Label>
+            <Label htmlFor="post-title" className={FIELD_LABEL}>Título</Label>
             <Input
-              className="mt-1.5"
+              id="post-title"
+              autoCapitalize="sentences"
+              enterKeyHint="next"
               value={editing.title}
               onChange={(e) => setEditing({ ...editing, title: e.target.value, slug: editing.slug || slugify(e.target.value) })}
               placeholder="Cómo ganar músculo con 30 años sin tiempo"
             />
           </div>
-          <div className="grid sm:grid-cols-2 gap-5">
+          <div className="grid gap-5 sm:grid-cols-2">
             <div>
-              <Label>Slug (URL)</Label>
+              <Label htmlFor="post-slug" className={FIELD_LABEL}>Slug (URL)</Label>
               <Input
-                className="mt-1.5"
+                id="post-slug"
+                className={MONO_FIELD}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="next"
                 value={editing.slug}
                 onChange={(e) => setEditing({ ...editing, slug: slugify(e.target.value) })}
                 placeholder="ganar-musculo-30-anos"
               />
-              <p className="type-footnote text-muted-foreground mt-1.5 px-1">URL: /blog/{editing.slug || "..."}</p>
+              <p className="mt-1.5 px-1 type-footnote text-muted-foreground">
+                URL: <span className="font-mono">/blog/{editing.slug || "…"}</span>
+              </p>
             </div>
             <div>
-              <Label>Autor</Label>
+              <Label htmlFor="post-author" className={FIELD_LABEL}>Autor</Label>
               <Input
-                className="mt-1.5"
+                id="post-author"
+                autoCapitalize="words"
+                enterKeyHint="next"
                 value={editing.author_name || ""}
                 onChange={(e) => setEditing({ ...editing, author_name: e.target.value })}
               />
@@ -206,37 +232,35 @@ const BlogPostsEditor = () => {
           </div>
 
           <div>
-            <Label>Extracto (aparece en la lista del blog)</Label>
+            <Label htmlFor="post-excerpt" className={FIELD_LABEL}>Extracto (aparece en la lista del blog)</Label>
             <Textarea
-              className="mt-1.5"
+              id="post-excerpt"
               rows={2}
               value={editing.excerpt || ""}
               onChange={(e) => setEditing({ ...editing, excerpt: e.target.value })}
-              placeholder="Un resumen corto que enganche al lector..."
+              placeholder="Un resumen corto que enganche al lector…"
             />
           </div>
 
           <div>
-            <Label>Portada</Label>
-            <div className="mt-1.5 flex items-center gap-4">
-              {editing.cover_url ? (
-                <img loading="lazy" decoding="async" src={editing.cover_url} alt="" className="w-32 h-20 object-cover rounded-[10px]" />
-              ) : (
-                <div className="w-32 h-20 rounded-[10px] bg-secondary flex items-center justify-center">
-                  <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex flex-col items-start gap-1">
+            <p className={FIELD_LABEL + " type-subhead font-medium"}>Portada</p>
+            <div className="flex items-center gap-4">
+              <ImageWithFallback
+                src={editing.cover_url}
+                className="h-20 w-32 shrink-0 rounded-[10px] object-cover"
+                iconClassName="h-6 w-6"
+              />
+              <div className="flex flex-col items-start">
                 <label className="inline-flex">
                   <input type="file" accept="image/*" className="hidden" disabled={uploading}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCover(f); }} />
                   <span className="pressable inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 type-body text-primary active:opacity-60">
-                    {uploading ? <Spinner size="sm" /> : <ImageIcon className="w-4 h-4" />}
-                    {uploading ? "Subiendo..." : "Subir portada"}
+                    {uploading ? <Spinner size="sm" /> : null}
+                    {uploading ? "Subiendo…" : editing.cover_url ? "Cambiar portada" : "Subir portada"}
                   </span>
                 </label>
                 {editing.cover_url && (
-                  <Button type="button" variant="plain" className="text-destructive" onClick={() => setEditing({ ...editing, cover_url: "" })}>
+                  <Button type="button" variant="plain" className="-ml-4 text-destructive" onClick={() => setEditing({ ...editing, cover_url: "" })}>
                     Quitar portada
                   </Button>
                 )}
@@ -245,24 +269,29 @@ const BlogPostsEditor = () => {
           </div>
 
           <div>
-            <Label>Contenido (Markdown)</Label>
+            <Label htmlFor="post-body" className={FIELD_LABEL}>Contenido (Markdown)</Label>
             <Textarea
-              className="mt-1.5 font-mono md:text-sm"
+              id="post-body"
+              className={MONO_FIELD}
               rows={20}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={editing.body_markdown}
               onChange={(e) => setEditing({ ...editing, body_markdown: e.target.value })}
               placeholder={"# Encabezado\n\nPárrafo con **negrita** y [enlaces](https://...).\n\n## Subtítulo\n\n- Lista\n- De\n- Items"}
             />
-            <p className="type-footnote text-muted-foreground mt-1.5 px-1">Soporta Markdown completo (#, **, listas, enlaces, código, tablas).</p>
+            <p className="mt-1.5 px-1 type-footnote text-muted-foreground">Soporta Markdown completo (#, **, listas, enlaces, código, tablas).</p>
           </div>
         </div>
 
         <section className="space-y-4">
-          <h3 className="type-group-header px-1">SEO (opcional)</h3>
+          <h3 className="type-group-header px-4">SEO (opcional)</h3>
           <div>
-            <Label>SEO title (sobrescribe el título)</Label>
+            <Label htmlFor="post-seo-title" className={FIELD_LABEL}>SEO title (sobrescribe el título)</Label>
             <Input
-              className="mt-1.5"
+              id="post-seo-title"
+              enterKeyHint="next"
               value={editing.seo_title || ""}
               onChange={(e) => setEditing({ ...editing, seo_title: e.target.value })}
               placeholder="Máx 60 caracteres"
@@ -270,9 +299,9 @@ const BlogPostsEditor = () => {
             />
           </div>
           <div>
-            <Label>Meta description</Label>
+            <Label htmlFor="post-seo-description" className={FIELD_LABEL}>Meta description</Label>
             <Textarea
-              className="mt-1.5"
+              id="post-seo-description"
               rows={2}
               value={editing.seo_description || ""}
               onChange={(e) => setEditing({ ...editing, seo_description: e.target.value })}
@@ -281,68 +310,68 @@ const BlogPostsEditor = () => {
             />
           </div>
         </section>
+
+        <Button size="lg" className="w-full md:w-auto" onClick={save} disabled={saving}>
+          {saving ? <Spinner size="sm" className="text-primary-foreground" /> : null}
+          {saving ? "Guardando…" : "Guardar"}
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="type-title1">Blog</h2>
-          <p className="type-subhead text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
-        </div>
-        <Button variant="hero" onClick={createNew}>
-          <Plus className="w-4 h-4 mr-1.5" /> Nuevo artículo
-        </Button>
+      <div className="space-y-4">
+        <p className="type-subhead text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
+        <Button size="lg" className="w-full md:w-auto" onClick={createNew}>Nuevo artículo</Button>
       </div>
 
-      <div className="flex items-start gap-4">
-        <Sparkles className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
-        <div className="min-w-0 flex-1 space-y-4">
-          <div>
+      <section className="space-y-4">
+        <div className="flex items-start gap-4">
+          <Sparkles className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+          <div className="min-w-0">
             <p className="type-headline">Escribir con IA</p>
             <p className="type-subhead text-muted-foreground">
               La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.
             </p>
           </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <Label>¿De qué trata?</Label>
-              <Input
-                className="mt-1.5"
-                value={aiTopic}
-                onChange={(e) => setAiTopic(e.target.value)}
-                placeholder="Cuántos días entrenar a la semana si trabajas 10 horas"
-              />
-            </div>
-            <div>
-              <Label>Para quién (opcional)</Label>
-              <Input
-                className="mt-1.5"
-                value={aiAudience}
-                onChange={(e) => setAiAudience(e.target.value)}
-                placeholder="Hombres de 30-45 con poco tiempo"
-              />
-            </div>
-          </div>
-          <Button variant="tinted" onClick={generateWithAI} disabled={generating}>
-            {generating ? <Spinner size="sm" className="mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
-            {generating ? "Escribiendo borrador..." : "Generar borrador"}
-          </Button>
         </div>
-      </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="ai-topic" className={FIELD_LABEL}>¿De qué trata?</Label>
+            <Input
+              id="ai-topic"
+              autoCapitalize="sentences"
+              enterKeyHint="next"
+              value={aiTopic}
+              onChange={(e) => setAiTopic(e.target.value)}
+              placeholder="Cuántos días entrenar a la semana si trabajas 10 horas"
+            />
+          </div>
+          <div>
+            <Label htmlFor="ai-audience" className={FIELD_LABEL}>Para quién (opcional)</Label>
+            <Input
+              id="ai-audience"
+              autoCapitalize="sentences"
+              enterKeyHint="done"
+              value={aiAudience}
+              onChange={(e) => setAiAudience(e.target.value)}
+              placeholder="Hombres de 30-45 con poco tiempo"
+            />
+          </div>
+        </div>
+        <Button variant="tinted" className="w-full sm:w-auto" onClick={generateWithAI} disabled={generating}>
+          {generating ? <Spinner size="sm" /> : null}
+          {generating ? "Escribiendo borrador…" : "Generar borrador"}
+        </Button>
+      </section>
 
       {posts.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="Aún no hay artículos."
+          title="Aún no hay artículos"
           description="Escribe el primero o pide un borrador a la IA."
-          action={
-            <Button variant="plain" onClick={createNew}>
-              <Plus className="w-4 h-4 mr-1.5" /> Crear el primero
-            </Button>
-          }
+          action={<Button variant="plain" onClick={createNew}>Crear el primero</Button>}
         />
       ) : (
         <ListGroup header="Artículos">
@@ -350,39 +379,41 @@ const BlogPostsEditor = () => {
             <ListRow
               key={p.id}
               leading={
-                p.cover_url ? (
-                  <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-[10px] object-cover" />
-                ) : (
-                  <div className="w-16 h-12 rounded-[10px] bg-secondary" />
-                )
+                <ImageWithFallback
+                  src={p.cover_url}
+                  fallbackIcon={FileText}
+                  className="h-12 w-12 rounded-[10px] object-cover"
+                />
               }
-              title={
-                <span className="flex items-center gap-2">
-                  <span className="truncate">{p.title}</span>
-                  <span className={`type-caption1 shrink-0 ${p.published ? "text-primary" : "text-muted-foreground"}`}>
-                    {p.published ? "Publicado" : "Borrador"}
-                  </span>
-                </span>
-              }
-              subtitle={`/blog/${p.slug}`}
+              title={p.title}
+              subtitle={<span className="block truncate font-mono">/blog/{p.slug}</span>}
+              value={p.published ? "Publicado" : "Borrador"}
               onClick={() => setEditing(p)}
               aria-label={`Editar ${p.title}`}
               trailing={
-                <span className="flex items-center">
-                  {p.published && (
-                    <a href={`/blog/${p.slug}`} target="_blank" rel="noreferrer" className="pressable flex min-h-[44px] min-w-[44px] items-center justify-center text-muted-foreground active:opacity-60" title="Ver" aria-label="Ver artículo">
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={() => remove(p.id)} aria-label="Eliminar">
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="-mr-2 text-muted-foreground" aria-label={`Opciones de ${p.title}`} onClick={() => void hapticTap()}>
+                      <MoreHorizontal className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    {p.published ? (
+                      <DropdownMenuItem asChild>
+                        <a href={`/blog/${p.slug}`} target="_blank" rel="noreferrer">Ver artículo</a>
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(p.id)}>
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               }
             />
           ))}
         </ListGroup>
       )}
+      {confirmDialog}
     </div>
   );
 };

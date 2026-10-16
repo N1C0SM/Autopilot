@@ -9,6 +9,28 @@ type Testimonial = {
   photo_url: string | null;
 };
 
+// Falls back to the initial when there is no photo or it fails to load.
+function TestimonialAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (photoUrl && !failed) {
+    return (
+      <img
+        loading="lazy"
+        decoding="async"
+        src={photoUrl}
+        alt={name}
+        onError={() => setFailed(true)}
+        className="w-11 h-11 shrink-0 rounded-full bg-secondary object-cover"
+      />
+    );
+  }
+  return (
+    <div className="w-11 h-11 shrink-0 rounded-full bg-secondary flex items-center justify-center type-headline text-muted-foreground">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 export default function SocialProofStrip() {
   const [items, setItems] = useState<Testimonial[]>([]);
 
@@ -27,25 +49,13 @@ export default function SocialProofStrip() {
   if (items.length === 0) return null;
 
   return (
-    <section className="max-w-3xl mx-auto mt-12 px-4">
-      <h2 className="type-title2 text-center">Otros con tu mismo punto de partida</h2>
-      <div className="grid sm:grid-cols-3 gap-8 mt-8">
+    <section>
+      <h2 className="type-title2">Otros con tu mismo punto de partida</h2>
+      <div className="grid sm:grid-cols-3 gap-8 mt-6">
         {items.map((t) => (
           <figure key={t.id}>
             <div className="flex items-center gap-3 mb-3">
-              {t.photo_url ? (
-                <img
-                  loading="lazy"
-                  decoding="async"
-                  src={t.photo_url}
-                  alt={t.name}
-                  className="w-11 h-11 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center type-headline text-primary">
-                  {t.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <TestimonialAvatar name={t.name} photoUrl={t.photo_url} />
               <figcaption className="min-w-0">
                 <div className="type-headline truncate">{t.name}</div>
                 {t.result && <div className="type-subhead text-primary truncate">{t.result}</div>}

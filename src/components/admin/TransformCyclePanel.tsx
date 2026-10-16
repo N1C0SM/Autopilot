@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
   const [start, setStart] = useState(cycleStartDate || "");
   const [decision, setDecision] = useState(renewalDecision || "");
   const [saving, setSaving] = useState(false);
+  const formId = useId();
 
   const save = async () => {
     setSaving(true);
@@ -49,11 +50,11 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
 
   return (
     <section className="space-y-5">
-      <div className="flex items-start gap-3">
-        <CalendarClock className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+      <div className="flex items-start gap-4">
+        <CalendarClock className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
         <div className="min-w-0">
           <h3 className="type-headline">Ciclo Transformación 12 semanas</h3>
-          <p className="type-subhead text-muted-foreground">
+          <p className="mt-0.5 type-subhead text-muted-foreground tabular-nums">
             {start
               ? `${week !== null ? `Semana ${Math.min(week, 12)} de 12 · ` : ""}Termina el ${formatDateES(end)}`
               : "Sin fecha de inicio: el cliente no verá el aviso de renovación"}
@@ -62,13 +63,14 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Fecha de inicio del ciclo</Label>
-          <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} disabled={disabled} />
+        <div className="min-w-0">
+          <Label htmlFor={`${formId}-start`} className={LABEL}>Fecha de inicio del ciclo</Label>
+          <Input id={`${formId}-start`} type="date" className="tabular-nums" value={start} onChange={(e) => setStart(e.target.value)} disabled={disabled} />
         </div>
-        <div>
-          <Label className="type-subhead mb-1.5 block text-muted-foreground">Decisión al terminar</Label>
+        <div className="min-w-0">
+          <Label htmlFor={`${formId}-decision`} className={LABEL}>Decisión al terminar</Label>
           <select
+            id={`${formId}-decision`}
             value={decision}
             onChange={(e) => setDecision(e.target.value)}
             disabled={disabled}
@@ -84,14 +86,17 @@ const TransformCyclePanel = ({ userId, cycleStartDate, renewalDecision, disabled
         </div>
       </div>
 
+      {/* En tinte: el botón dorado macizo de la ficha es «Guardar» (planes). */}
       {!disabled && (
-        <Button onClick={save} disabled={saving} onPointerDown={() => void hapticTap()}>
-          {saving && <Spinner size="sm" className="mr-2" />}
+        <Button variant="tinted" size="lg" className="w-full md:w-auto" onClick={() => { void hapticTap(); void save(); }} disabled={saving}>
+          {saving && <Spinner size="sm" label="Guardando" />}
           {saving ? "Guardando…" : "Guardar ciclo"}
         </Button>
       )}
     </section>
   );
 };
+
+const LABEL = "mb-1.5 block px-1 type-subhead font-normal text-muted-foreground";
 
 export default TransformCyclePanel;

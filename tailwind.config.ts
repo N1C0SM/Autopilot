@@ -136,7 +136,7 @@ export default {
         "fade-in": "fade-in 0.6s ease-out forwards",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "ios-spinner": "ios-spinner 0.8s linear infinite",
-        "sheet-up": "sheet-up 0.42s cubic-bezier(0.32, 0.72, 0, 1) both",
+        "sheet-up": "sheet-up 0.42s cubic-bezier(0.32, 0.72, 0, 1) backwards",
         "sheet-down": "sheet-down 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
         "alert-in": "alert-in 0.24s cubic-bezier(0.32, 0.72, 0, 1) both",
         "alert-out": "alert-out 0.16s ease-out both",

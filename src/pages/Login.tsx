@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { signInWithApple } from "@/lib/nativeAuth";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
-import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero } from "@/components/auth/AuthScreenParts";
+import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage } from "@/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
 import { appleSignInEnabled } from "@/lib/platform";
 import { hapticNotify, hapticTap } from "@/lib/native";
@@ -150,10 +150,13 @@ const Login = () => {
         mark={
           <AnimatePresence mode="wait" initial={false}>
             {known ? (
-              <motion.div key="avatar" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={swap} className="mx-auto h-16 w-16">
-                {known.avatar
-                  ? <img src={known.avatar} alt="" className="h-16 w-16 rounded-full object-cover" />
-                  : <span className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary type-title2">{(known.name || known.id).charAt(0).toUpperCase()}</span>}
+              <motion.div key="avatar" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={swap} className="mx-auto h-20 w-20">
+                <AuthImage
+                  src={known.avatar}
+                  alt=""
+                  className="h-20 w-20 rounded-full object-cover"
+                  fallback={<span className="flex h-20 w-20 items-center justify-center rounded-full bg-secondary type-title1">{(known.name || known.id).charAt(0).toUpperCase()}</span>}
+                />
               </motion.div>
             ) : (
               <motion.div key="mark" initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={swap}>

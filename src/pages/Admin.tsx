@@ -1,18 +1,16 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Users as UsersIcon } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
-import { hapticTap } from "@/lib/native";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminStats from "@/components/admin/AdminStats";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminMobileNav from "@/components/admin/AdminMobileNav";
 import AdminMobileHeader from "@/components/admin/AdminMobileHeader";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { SectionHeader } from "@/components/ui/section-header";
 import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
@@ -56,6 +54,24 @@ export interface Profile {
 
 export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account";
 
+const SECTION_TITLES: Record<AdminSection, string> = {
+  dashboard: "Dashboard",
+  metrics: "Métricas",
+  users: "Usuarios",
+  trainers: "Entrenadores",
+  reminders: "Recordatorios",
+  exercises: "Ejercicios",
+  drive: "Drive · Libros",
+  rules: "Reglas",
+  landing: "Landing",
+  blog: "Blog",
+  physiques: "Físicos",
+  payments: "Pagos",
+  emails: "Emails",
+  products: "Planes y productos",
+  account: "Mi cuenta",
+};
+
 const Admin = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -69,6 +85,7 @@ const Admin = () => {
   const [section, setSection] = useState<AdminSection>(() =>
     new URLSearchParams(window.location.search).get("s") === "account" ? "account" : "dashboard");
   const isMobile = useIsMobile();
+  const contentRef = useRef<HTMLElement>(null);
 
   const refreshUsers = useCallback(async () => {
     const [profilesResult, rolesResult] = await Promise.all([
@@ -161,21 +178,12 @@ const Admin = () => {
   // Hide the currently-logged-in admin from every list
   const users = allUsers.filter((u) => u.user_id !== user?.id);
 
-  const sectionTitle =
-    section === "dashboard" ? "Panel general" :
-    section === "users" ? (selectedUser ? selectedUser.email : "Usuarios") :
-    section === "trainers" ? "Entrenadores" :
-    section === "reminders" ? "Recordatorios de pago" :
-    section === "exercises" ? "Biblioteca de ejercicios" :
-    section === "drive" ? "Autopilot Drive · Libros" :
-    section === "rules" ? "Reglas de generación" :
-    section === "landing" ? "Contenido de la landing" :
-    section === "blog" ? "Blog · Artículos SEO" :
-    section === "physiques" ? "Físicos objetivo · AI Scan" :
-    section === "payments" ? "Pagos · Stripe" :
-    section === "products" ? "Planes y productos" :
-    section === "metrics" ? "Métricas" :
-    section === "account" ? "Mi cuenta" : "";
+  // Una ficha abierta es una pantalla empujada: su barra lleva el nombre y "‹ Usuarios".
+  const detailUser = section === "users" ? selectedUser : null;
+  const sectionTitle = detailUser
+    ? detailUser.name?.trim() || detailUser.email.split("@")[0] || "Usuario"
+    : SECTION_TITLES[section];
+  const closeUserDetail = () => setSelectedUser(null);
 
   const handleSignOut = async () => { sessionStorage.removeItem("autopilot_section"); await signOut(); navigate("/login", { replace: true }); };
 
@@ -192,15 +200,17 @@ const Admin = () => {
         )}
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Cabecera móvil: logo + menú Admin */}
           <AdminMobileHeader
             title={sectionTitle}
             section={section}
             onNavigate={handleNavigate}
             onSignOut={handleSignOut}
+            contentRef={contentRef}
+            layoutKey={`${section}:${detailUser?.user_id ?? ""}`}
+            onBack={detailUser ? closeUserDetail : undefined}
+            backLabel="Usuarios"
           />
 
-          {/* Top bar escritorio / tablet */}
           <header className="app-chrome hidden md:flex h-14 border-b sticky top-0 z-50 items-center px-4 gap-3">
             <SidebarTrigger />
             <h1 className="type-headline truncate">
@@ -209,11 +219,17 @@ const Admin = () => {
           </header>
 
           <main
-            className="flex-1 min-w-0 overflow-x-hidden py-3 sm:py-5 md:py-6 lg:py-8 pl-[max(0.75rem,var(--safe-left,0px))] pr-[max(0.75rem,var(--safe-right,0px))] sm:pl-5 sm:pr-5 md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[var(--mobile-nav-content-padding)] md:pb-8"
+            ref={contentRef}
+            className="flex-1 min-w-0 overflow-x-hidden pt-2 md:pt-6 lg:pt-8 pl-[max(1rem,var(--safe-left,0px))] pr-[max(1rem,var(--safe-right,0px))] sm:pl-[max(1.25rem,var(--safe-left,0px))] sm:pr-[max(1.25rem,var(--safe-right,0px))] md:pl-6 md:pr-6 lg:pl-8 lg:pr-8 pb-[var(--mobile-nav-content-padding)] md:pb-8"
           >
+            {!detailUser && (
+              <h1 data-nav-title className="type-large-title pb-2 pt-1 md:hidden">
+                {sectionTitle}
+              </h1>
+            )}
             <Suspense fallback={<div className="flex min-h-40 items-center justify-center" aria-hidden><Spinner /></div>}>
             {section === "dashboard" && (
-              <div className="max-w-5xl space-y-6">
+              <div className="max-w-5xl space-y-8">
                 <AdminStats users={clients} />
 
                 <ListGroup header="Requiere atención">
@@ -244,44 +260,41 @@ const Admin = () => {
                   />
                 </ListGroup>
 
-                <div>
-                  <SectionHeader title="Usuarios recientes" className="mb-2" />
-                  {clients.length === 0 ? (
-                    <EmptyState
-                      icon={UsersIcon}
-                      title="Todavía no hay usuarios"
-                      description="Cuando alguien se registre aparecerá aquí."
-                    />
-                  ) : (
-                    <ListGroup>
-                      {[...clients]
-                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                        .slice(0, 5)
-                        .map((u) => (
-                          <ListRow
-                            key={u.user_id}
-                            onClick={() => handleSelectUser(u)}
-                            leading={
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary type-subhead font-semibold text-muted-foreground">
-                                {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
-                              </span>
-                            }
-                            title={u.name?.trim() || u.email}
-                            subtitle={new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                            trailing={
-                              <span className="flex items-center gap-2">
-                                <PlanStatusBadge
-                                  planStatus={u.plan_status}
-                                  traveling={!!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()}
-                                />
-                                <PaymentDot status={u.payment_status} />
-                              </span>
-                            }
-                          />
-                        ))}
-                    </ListGroup>
-                  )}
-                </div>
+                {clients.length === 0 ? (
+                  <EmptyState
+                    icon={UsersIcon}
+                    title="Todavía no hay usuarios"
+                    description="Cuando alguien se registre aparecerá aquí."
+                  />
+                ) : (
+                  <ListGroup header="Usuarios recientes">
+                    {[...clients]
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .slice(0, 5)
+                      .map((u) => (
+                        <ListRow
+                          key={u.user_id}
+                          onClick={() => handleSelectUser(u)}
+                          leading={
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary type-subhead font-semibold text-muted-foreground">
+                              {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
+                            </span>
+                          }
+                          title={u.name?.trim() || u.email}
+                          subtitle={new Date(u.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                          trailing={
+                            <span className="flex items-center gap-2">
+                              <PlanStatusBadge
+                                planStatus={u.plan_status}
+                                traveling={!!u.travel_mode_until && new Date(u.travel_mode_until) >= new Date()}
+                              />
+                              <PaymentDot status={u.payment_status} />
+                            </span>
+                          }
+                        />
+                      ))}
+                  </ListGroup>
+                )}
               </div>
             )}
 
@@ -298,7 +311,7 @@ const Admin = () => {
                 ) : (
                   <UserDetail
                     profile={selectedUser}
-                    onBack={() => setSelectedUser(null)}
+                    onBack={closeUserDetail}
                     onUpdate={updateUserInList}
                     isTargetTrainer={trainerIds.has(selectedUser.user_id)}
                     isTargetAdmin={adminIds.has(selectedUser.user_id)}
@@ -408,7 +421,7 @@ function QuickAction({ label, value, danger, onClick }: { label: string; value: 
       title={label}
       value={<span className={`font-rounded font-semibold tabular-nums ${danger && value > 0 ? "text-destructive" : ""}`}>{value}</span>}
       chevron
-      onClick={() => { void hapticTap(); onClick(); }}
+      onClick={onClick}
     />
   );
 }

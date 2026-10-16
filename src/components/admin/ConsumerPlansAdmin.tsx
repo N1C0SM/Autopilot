@@ -3,7 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticSelection } from "@/lib/native";
 import { toast } from "sonner";
+import { Field, FieldRow } from "./AdminOpsParts";
 
 type PlanRow = {
   key: string; name: string; tagline: string; description: string; price: number; trial_days: number;
@@ -37,44 +40,61 @@ export default function ConsumerPlansAdmin() {
 
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="type-title2">Planes públicos</h2>
-        <p className="type-subhead text-muted-foreground">Lo que cambies aquí se ve al momento en la portada y en /planes. Los enlaces de cobro siguen en Pagos.</p>
+      <p className="type-subhead text-muted-foreground">Lo que cambies aquí se ve al momento en la portada y en /planes. Los enlaces de cobro siguen en Pagos.</p>
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
+        {plans.map((p) => {
+          const visible = p.enabled && p.publicly_visible;
+          const id = (field: string) => `plan-${p.key}-${field}`;
+          return (
+            <ListGroup key={p.key} header={p.name}>
+              <ListRow
+                title={visible ? "Visible en la web" : "Oculto"}
+                trailing={
+                  <Switch
+                    aria-label={`Mostrar ${p.name}`}
+                    checked={visible}
+                    onCheckedChange={(v) => { void hapticSelection(); void save(p.key, { enabled: v, publicly_visible: v }); }}
+                  />
+                }
+              />
+              <FieldRow label="Nombre" htmlFor={id("name")}>
+                <Input id={id("name")} enterKeyHint="next" defaultValue={p.name} onBlur={(e) => e.target.value !== p.name && void save(p.key, { name: e.target.value })} />
+              </FieldRow>
+              <FieldRow label="Frase corta" htmlFor={id("tagline")}>
+                <Input id={id("tagline")} enterKeyHint="next" defaultValue={p.tagline} onBlur={(e) => e.target.value !== p.tagline && void save(p.key, { tagline: e.target.value })} />
+              </FieldRow>
+              <FieldRow columns>
+                <Field label="Precio €/mes" htmlFor={id("price")}>
+                  <Input id={id("price")} type="number" inputMode="decimal" enterKeyHint="next" min={0} defaultValue={p.price} onBlur={(e) => Number(e.target.value) !== Number(p.price) && void save(p.key, { price: Number(e.target.value) || 0 })} />
+                </Field>
+                <Field label="Días de prueba" htmlFor={id("trial")}>
+                  <Input id={id("trial")} type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" min={0} defaultValue={p.trial_days} onBlur={(e) => Number(e.target.value) !== p.trial_days && void save(p.key, { trial_days: Number(e.target.value) || 0 })} />
+                </Field>
+              </FieldRow>
+              <FieldRow label="Incluye (una por línea)" htmlFor={id("features")}>
+                <Textarea id={id("features")} rows={5} defaultValue={(p.features || []).join("\n")} onBlur={(e) => void save(p.key, { features: lines(e.target.value) })} />
+              </FieldRow>
+              <FieldRow label="No incluye (una por línea)" htmlFor={id("not-included")}>
+                <Textarea id={id("not-included")} rows={2} defaultValue={(p.not_included || []).join("\n")} onBlur={(e) => void save(p.key, { not_included: lines(e.target.value) })} />
+              </FieldRow>
+              <FieldRow label="Texto del botón" htmlFor={id("cta")}>
+                <Input id={id("cta")} enterKeyHint="done" defaultValue={p.cta} onBlur={(e) => e.target.value !== p.cta && void save(p.key, { cta: e.target.value })} />
+              </FieldRow>
+              <ListRow
+                title="Acepta altas nuevas"
+                trailing={
+                  <Switch
+                    aria-label="Acepta altas nuevas"
+                    checked={p.accepting_new_subscriptions}
+                    onCheckedChange={(v) => { void hapticSelection(); void save(p.key, { accepting_new_subscriptions: v }); }}
+                  />
+                }
+              />
+            </ListGroup>
+          );
+        })}
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        {plans.map((p) => (
-          <div key={p.key} className={`space-y-3 rounded-2xl bg-card p-4 ${p.enabled && p.publicly_visible ? "" : "opacity-60"}`}>
-            <div className="flex items-center justify-between gap-2">
-              <Input aria-label="Nombre" className="type-headline" defaultValue={p.name} onBlur={(e) => e.target.value !== p.name && void save(p.key, { name: e.target.value })} />
-              <Switch aria-label={`Mostrar ${p.name}`} checked={p.enabled && p.publicly_visible} onCheckedChange={(v) => void save(p.key, { enabled: v, publicly_visible: v })} />
-            </div>
-            <label className="block space-y-1 type-footnote text-muted-foreground">Frase corta
-              <Input defaultValue={p.tagline} onBlur={(e) => e.target.value !== p.tagline && void save(p.key, { tagline: e.target.value })} />
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="space-y-1 type-footnote text-muted-foreground">Precio €/mes
-                <Input type="number" inputMode="decimal" min={0} defaultValue={p.price} onBlur={(e) => Number(e.target.value) !== Number(p.price) && void save(p.key, { price: Number(e.target.value) || 0 })} />
-              </label>
-              <label className="space-y-1 type-footnote text-muted-foreground">Días de prueba
-                <Input type="number" inputMode="numeric" min={0} defaultValue={p.trial_days} onBlur={(e) => Number(e.target.value) !== p.trial_days && void save(p.key, { trial_days: Number(e.target.value) || 0 })} />
-              </label>
-            </div>
-            <label className="block space-y-1 type-footnote text-muted-foreground">Incluye (una por línea)
-              <Textarea rows={5} defaultValue={(p.features || []).join("\n")} onBlur={(e) => void save(p.key, { features: lines(e.target.value) })} />
-            </label>
-            <label className="block space-y-1 type-footnote text-muted-foreground">No incluye (una por línea)
-              <Textarea rows={2} defaultValue={(p.not_included || []).join("\n")} onBlur={(e) => void save(p.key, { not_included: lines(e.target.value) })} />
-            </label>
-            <label className="block space-y-1 type-footnote text-muted-foreground">Texto del botón
-              <Input defaultValue={p.cta} onBlur={(e) => e.target.value !== p.cta && void save(p.key, { cta: e.target.value })} />
-            </label>
-            <label className="flex items-center justify-between type-subhead">Acepta altas nuevas
-              <Switch checked={p.accepting_new_subscriptions} onCheckedChange={(v) => void save(p.key, { accepting_new_subscriptions: v })} />
-            </label>
-          </div>
-        ))}
-      </div>
-      <p className="type-footnote text-muted-foreground">Cambiar el precio aquí cambia lo que se muestra; el importe real lo cobra el enlace de Stripe configurado en Pagos, así que actualízalo también allí.</p>
+      <p className="px-4 type-footnote text-muted-foreground">Cambiar el precio aquí cambia lo que se muestra; el importe real lo cobra el enlace de Stripe configurado en Pagos, así que actualízalo también allí.</p>
     </section>
   );
 }

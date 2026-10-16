@@ -37,8 +37,7 @@ function StickyBar({ onCta }: { onCta: () => void }) {
               <div className="type-footnote text-muted-foreground truncate">{[plans.plus && `${plans.plusName} desde ${euro(plans.plusPrice)}/mes`, plans.coach && `Nicolás en ${plans.coachName}`, "no se cobra hasta el día 8"].filter(Boolean).join(" · ")}</div>
             </div>
             <Button
-              size="sm"
-              className="shrink-0 min-h-[44px] px-5"
+              className="shrink-0 rounded-full px-5"
               onClick={() => {
                 void hapticTap();
                 onCta();

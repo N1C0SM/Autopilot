@@ -3,8 +3,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import TrainingPlanView from "./TrainingPlanView";
 vi.mock("@/hooks/useExerciseMetadata", () => ({ useExerciseMetadata: () => ({ byId: {}, byName: {} }) }));
-vi.mock("@/components/ExerciseMedia", () => ({ ExerciseThumb: () => null }));
-vi.mock("@/components/ExerciseFocus", () => ({ default: () => null }));
+vi.mock("@/components/ExerciseMedia", () => ({
+  ExerciseThumb: ({ image }: { image?: string | null }) =>
+    image ? <img data-testid="thumb-image" src={image} alt="" /> : <span data-testid="thumb-placeholder" />,
+}));
+vi.mock("@/components/ExerciseFocus", () => ({
+  default: ({ exercise }: { exercise: { name: string; image?: string | null } | null }) =>
+    exercise ? (
+      <div data-testid="focus">
+        {exercise.image ? <img data-testid="focus-image" src={exercise.image} alt="" /> : <span data-testid="focus-placeholder" />}
+      </div>
+    ) : null,
+}));
 vi.mock("@/components/AIDisclaimer", () => ({ default: () => null }));
 vi.mock("./CalendarExportDialog", () => ({ default: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</> }));
 afterEach(() => {
@@ -83,5 +93,23 @@ describe("weekly plan access", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Lunes, Piernas" }));
     expect(screen.getByText("2 ejercicios · 6 series")).toBeVisible();
+  });
+
+  it("falls back to the composed placeholder when an exercise image fails to load", () => {
+    setToday("2026-10-12T12:00:00"); // lunes
+    render(
+      <TrainingPlanView
+        dayPlans={[{ day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [{ ...squat, image_url: "https://cdn.test/squat.jpg" }] }]}
+        onOpenWorkout={vi.fn()}
+      />,
+    );
+    fireEvent.error(screen.getByTestId("thumb-image"));
+    expect(screen.queryByTestId("thumb-image")).toBeNull();
+    expect(screen.getByTestId("thumb-placeholder")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Sentadilla"));
+    expect(screen.getByTestId("focus")).toBeInTheDocument();
+    expect(screen.queryByTestId("focus-image")).toBeNull();
+    expect(screen.getByTestId("focus-placeholder")).toBeInTheDocument();
   });
 });

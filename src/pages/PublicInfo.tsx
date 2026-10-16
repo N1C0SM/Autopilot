@@ -1,12 +1,15 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ChevronDown, ClipboardList, LineChart, Target } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import PublicLayout from "@/components/PublicLayout";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { publicFaqs, publicPageMeta } from "@/lib/publicCopy";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { track } from "@/lib/analytics";
+import { hapticTap } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
 import type { PlanKey } from "@/config/tiers";
 
@@ -25,9 +28,9 @@ function TeamTestimonials() {
     return () => { active = false; };
   }, []);
   if (!items.length) return null;
-  return <section className="mx-auto max-w-4xl px-5 pb-10"><h2 className="mb-5 font-display text-2xl font-bold">Experiencias de nuestros alumnos</h2>
-    {items.map((item, index) => <blockquote key={`${item.name}-${index}`} className="border-t border-border py-5"><p className="leading-relaxed">“{item.text}”</p><footer className="mt-3 text-sm text-muted-foreground">{item.name} · {item.result}</footer></blockquote>)}
-  </section>;
+  return <section className="mx-auto max-w-6xl px-5 pb-10 sm:px-8"><div className="max-w-3xl"><h2 className="mb-3 type-title2">Experiencias de nuestros alumnos</h2>
+    {items.map((item, index) => <blockquote key={`${item.name}-${index}`} className="sep-t py-5"><p className="type-body">“{item.text}”</p><footer className="mt-2 type-footnote text-muted-foreground">{item.name} · {item.result}</footer></blockquote>)}
+  </div></section>;
 }
 
 function ExplainerVideo() {
@@ -41,7 +44,7 @@ function ExplainerVideo() {
     return () => { active = false; };
   }, []);
   if (!video.url) return null;
-  return <div className="mx-auto max-w-4xl px-5 pb-8"><video src={video.url} poster={video.poster || undefined} controls playsInline preload="metadata" aria-label="Presentación de Autopilot" className="aspect-video w-full rounded-lg bg-card" /></div>;
+  return <div className="mx-auto max-w-6xl px-5 pb-8 sm:px-8"><video src={video.url} poster={video.poster || undefined} controls playsInline preload="metadata" aria-label="Presentación de Autopilot" className="aspect-video w-full max-w-4xl rounded-2xl bg-card" /></div>;
 }
 
 export default function PublicInfo({ page }: { page: Page }) {
@@ -55,35 +58,37 @@ export default function PublicInfo({ page }: { page: Page }) {
     navigate(plan === "free" ? "/onboarding" : `/signup?plan=${plan}`);
   };
   return <PublicLayout title={info.title} description={info.description}>
-    <div className="mx-auto max-w-6xl px-5 pb-8 pt-10 sm:pt-14">
-      <Link to="/" className="mb-5 inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground active:opacity-70">← Inicio</Link>
-      <h1 className="font-display text-3xl font-bold sm:text-5xl">{info.title}</h1>
-      <p className="mt-4 max-w-2xl leading-relaxed text-muted-foreground">{info.description}</p>
+    <div className="mx-auto max-w-6xl px-5 pb-8 pt-10 sm:px-8 sm:pt-16">
+      <h1 className="type-large-title sm:text-[48px] sm:leading-[52px]">{info.title}</h1>
+      <p className="mt-4 max-w-2xl type-body text-muted-foreground">{info.description}</p>
     </div>
-    <Suspense fallback={<p role="status" className="px-5 py-10 text-center text-muted-foreground">Cargando…</p>}>
-      {page === "plans" && <section className="mx-auto max-w-6xl px-5 pb-10" aria-label="Elige tu plan">
+    <Suspense fallback={<div className="flex justify-center py-16"><Spinner size="lg" /></div>}>
+      {page === "plans" && <section className="mx-auto max-w-6xl px-5 pb-10 sm:px-8" aria-label="Elige tu plan">
         <PricingTiers onSelect={selectPlan} />
-        {plans.coach && <details className="mt-8 border-y border-border"><summary className="min-h-11 cursor-pointer py-4 font-medium">¿Qué tipo de ayuda necesito?</summary><ComparisonTable /></details>}
-        <p className="mt-6 text-sm text-muted-foreground">Los planes mensuales se renuevan automáticamente. Gestiona la cancelación desde Ajustes → Suscripción. <Link to="/preguntas-frecuentes" className="text-primary underline">Resolver dudas</Link></p>
+        {plans.coach && <details className="group mt-8 rounded-2xl bg-card px-4"><summary className="flex min-h-12 list-none items-center justify-between gap-3 py-3 type-body transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">¿Qué tipo de ayuda necesito?<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary><ComparisonTable /></details>}
+        <p className="mt-6 type-footnote text-muted-foreground">Los planes mensuales se renuevan automáticamente. Gestiona la cancelación desde Ajustes → Suscripción. <Link to="/preguntas-frecuentes" className="text-primary">Resolver dudas</Link></p>
       </section>}
       {page === "how" && <>
-        <ol className="mx-auto grid max-w-6xl gap-6 px-5 pb-10 md:grid-cols-3">
+        <ol className="mx-auto grid max-w-6xl gap-6 px-5 pb-10 sm:px-8 md:grid-cols-3 md:gap-10">
           {[
-            ["Cuéntanos tu objetivo", "Indica tu nivel, el material y los días que puedes entrenar."],
-            ["Crea tu rutina", `Empieza gratis.${plans.plus ? ` Si quieres nutrición y progresión de cargas automática, elige ${plans.plusName}.` : ""}${plans.coach ? ` ${plans.coachName} añade a Nicolás revisando tu plan.` : ""}`],
-            ["Registra y progresa", "Guarda tus series y compara tus entrenamientos para ver cómo avanzas."],
-          ].map(([title, text], index) => <li key={title} className="border-t border-border pt-4"><span className="text-sm text-primary">0{index + 1}</span><h2 className="mt-2 font-display text-xl font-bold">{title}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text}</p></li>)}
+            [Target, "Cuéntanos tu objetivo", "Indica tu nivel, el material y los días que puedes entrenar."],
+            [ClipboardList, "Crea tu rutina", `Empieza gratis.${plans.plus ? ` Si quieres nutrición y progresión de cargas automática, elige ${plans.plusName}.` : ""}${plans.coach ? ` ${plans.coachName} añade a Nicolás revisando tu plan.` : ""}`],
+            [LineChart, "Registra y progresa", "Guarda tus series y compara tus entrenamientos para ver cómo avanzas."],
+          ].map(([Icon, title, text]) => { const I = Icon as typeof Target; return <li key={title as string} className="flex items-start gap-4">
+            <span className="flex w-10 shrink-0 justify-center pt-0.5"><I className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" /></span>
+            <div className="min-w-0"><h2 className="type-headline">{title as string}</h2><p className="mt-1 type-subhead text-muted-foreground">{text as string}</p></div>
+          </li>; })}
         </ol>
         <ExplainerVideo />
         <div id="demo" className="scroll-mt-20"><ProductPreview onPlans={() => navigate("/planes")} onFree={() => navigate("/onboarding")} /></div>
-        <p className="mx-auto max-w-6xl px-5 pb-8 text-sm text-muted-foreground">También puedes <Link to="/scan" className="text-primary underline">hacer el análisis inicial con IA</Link>.</p>
+        <p className="mx-auto max-w-6xl px-5 pb-8 type-subhead text-muted-foreground sm:px-8">También puedes <Link to="/scan" className="text-primary">hacer el análisis inicial con IA</Link>.</p>
       </>}
       {page === "team" && <><TrainersSection /><TeamTestimonials /></>}
-      {page === "faq" && <section className="mx-auto max-w-3xl px-5 pb-10" aria-label="Respuestas">
+      {page === "faq" && <section className="mx-auto max-w-6xl px-5 pb-10 sm:px-8" aria-label="Respuestas">
         <Helmet><script type="application/ld+json">{JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map(faq => ({ "@type": "Question", name: faq.q, acceptedAnswer: { "@type": "Answer", text: faq.a } })) })}</script></Helmet>
-        <Accordion type="single" collapsible>{faqs.map((faq, index) => <AccordionItem key={faq.q} value={`faq-${index}`}><AccordionTrigger className="min-h-11 text-left">{faq.q}</AccordionTrigger><AccordionContent className="leading-relaxed text-muted-foreground">{faq.a}</AccordionContent></AccordionItem>)}</Accordion>
+        <Accordion type="single" collapsible className="max-w-3xl rounded-2xl bg-card px-4 [&>:last-child]:border-b-0">{faqs.map((faq, index) => <AccordionItem key={faq.q} value={`faq-${index}`}><AccordionTrigger className="min-h-11 text-left">{faq.q}</AccordionTrigger><AccordionContent>{faq.a}</AccordionContent></AccordionItem>)}</Accordion>
       </section>}
     </Suspense>
-    <div className="border-t border-border px-5 py-8 text-center"><Button variant="hero" size="lg" asChild><Link to="/onboarding">Crear mi rutina gratis</Link></Button></div>
+    <div className="px-5 py-14 text-center"><Button variant={page === "plans" ? "tinted" : "hero"} size="lg" asChild className="w-full max-w-sm sm:w-auto sm:px-10"><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina gratis</Link></Button></div>
   </PublicLayout>;
 }

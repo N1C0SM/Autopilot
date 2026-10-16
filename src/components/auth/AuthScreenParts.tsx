@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
  * arriba, campos en una lista agrupada y una sola acción dorada abajo.
  */
 
-/** El icono de la app, con la misma silueta y acabado que en la bienvenida. */
+/** El icono de la app: la misma silueta, tamaño y acabado que en la bienvenida. */
 export const AuthAppMark = ({ className }: { className?: string }) => (
   <div
     className={cn(
-      "mx-auto flex h-16 w-16 items-center justify-center rounded-[22%] border border-primary/20 bg-background shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]",
+      "mx-auto flex h-20 w-20 items-center justify-center rounded-[22%] border border-primary/20 bg-background shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]",
       className,
     )}
   >
@@ -24,17 +24,29 @@ export const AuthAppMark = ({ className }: { className?: string }) => (
 
 type IconComponent = ComponentType<{ className?: string; strokeWidth?: number | string }>;
 
-/** Símbolo en squircle para lo que no es la app en sí (recuperar, enviado, hecho). */
-export const AuthSymbol = ({ icon: Icon, size = "md" }: { icon: IconComponent; size?: "md" | "lg" }) => (
-  <div
-    className={cn(
-      "mx-auto flex items-center justify-center rounded-[22%] bg-card",
-      size === "lg" ? "h-[72px] w-[72px]" : "h-16 w-16",
-    )}
-  >
-    <Icon className={cn("text-primary", size === "lg" ? "h-8 w-8" : "h-7 w-7")} strokeWidth={1.75} />
+/** Símbolo en squircle (recuperar, enviado, hecho): mismo tamaño que el icono de la app. */
+export const AuthSymbol = ({ icon: Icon }: { icon: IconComponent }) => (
+  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22%] bg-card">
+    <Icon className="h-9 w-9 text-primary" strokeWidth={1.75} />
   </div>
 );
+
+/** Imagen de contenido con respaldo compuesto si falta la URL o falla la carga. */
+export const AuthImage = ({
+  src,
+  alt,
+  className,
+  fallback,
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+  fallback: ReactNode;
+}) => {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (!src || failedSrc === src) return <>{fallback}</>;
+  return <img src={src} alt={alt} className={className} loading="lazy" decoding="async" onError={() => setFailedSrc(src)} />;
+};
 
 /** Protagonista: símbolo, titular `type-title1` y una línea gris. */
 export const AuthHero = ({
@@ -50,7 +62,7 @@ export const AuthHero = ({
 }) => (
   <div className="text-center">
     {mark}
-    <h1 className="mt-6 type-title1">{title}</h1>
+    <h1 className="mt-7 type-title1">{title}</h1>
     {description ? (
       <p className="mx-auto mt-2 max-w-[34ch] type-subhead text-muted-foreground">{description}</p>
     ) : null}

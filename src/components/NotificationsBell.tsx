@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
+import { skipAutoFocusOnTouch } from "@/components/user-core/skipAutoFocusOnTouch";
 
 interface Notification {
   id: string;
@@ -80,20 +81,27 @@ const NotificationsBell = ({ userId }: Props) => {
     return `${days}d`;
   };
 
+  // Iconos informativos: en gris; el dorado queda para lo seleccionado y la acción.
   const typeIcon = (type: string) => {
     switch (type) {
-      case "plan_renewed": return <CalendarSync />;
-      case "macros_adjusted": return <Zap />;
-      case "reminder": return <Dumbbell />;
-      default: return <Inbox />;
+      case "plan_renewed": return <CalendarSync className="text-muted-foreground" />;
+      case "macros_adjusted": return <Zap className="text-muted-foreground" />;
+      case "reminder": return <Dumbbell className="text-muted-foreground" />;
+      default: return <Inbox className="text-muted-foreground" />;
     }
   };
 
   return (
     <Sheet open={open} onOpenChange={handleOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" onClick={() => void hapticTap()}>
-          <Bell className="h-5 w-5" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : "Notificaciones"}
+          onClick={() => void hapticTap()}
+        >
+          <Bell className="h-5 w-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 type-caption2 font-bold tabular-nums text-primary-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -101,7 +109,7 @@ const NotificationsBell = ({ userId }: Props) => {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="min-h-[50dvh] sm:mx-auto sm:max-w-md">
+      <SheetContent side="bottom" className="min-h-[50dvh] sm:mx-auto sm:max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
         <SheetHeader>
           <SheetTitle>Notificaciones</SheetTitle>
           <SheetDescription className="sr-only">Tus avisos recientes</SheetDescription>

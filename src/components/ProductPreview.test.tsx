@@ -65,6 +65,12 @@ describe("public product preview", () => {
     await waitFor(() => expect(screen.getByText(/No incluido en Gratis/)).toBeVisible());
   });
 
+  it("opens nutrition from the summary row on the home screen", async () => {
+    render(<ProductPreview onPlans={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: /^Nutrición 1\.420/ }));
+    await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
+  });
+
   it("lets a visitor move to pricing without registering", () => {
     const onPlans = vi.fn();
     render(<ProductPreview onPlans={onPlans} />);

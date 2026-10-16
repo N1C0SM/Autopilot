@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowUp, WifiOff, MessageCircle, Image, Video, X, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { ArrowUp, WifiOff, Image, Video, X, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import ChatMessages from "@/components/chat/ChatMessages";
 import ChatMediaGallery from "@/components/chat/ChatMediaGallery";
@@ -11,7 +11,12 @@ import AIDisclaimer from "@/components/AIDisclaimer";
 import CallOverlay from "@/components/call/CallOverlay";
 import { useVideoCall } from "@/hooks/useVideoCall";
 import { EmptyState } from "@/components/ui/empty-state";
-import { hapticTap } from "@/lib/native";
+import { Spinner } from "@/components/ui/spinner";
+import { ImageWithFallback, VideoWithFallback } from "@/components/chrome-chat/ImageWithFallback";
+import { hapticSelection, hapticTap } from "@/lib/native";
+
+// Same raised thumb as ui/tabs (UISegmentedControl), kept as buttons for aria-pressed semantics.
+const SEGMENT_ACTIVE = "bg-[#636366] font-semibold text-foreground shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]";
 
 interface Message {
   id: string;
@@ -223,37 +228,35 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
   return (
     <>
-      <div className={`flex min-w-0 flex-col overflow-hidden ${layout === "fill" ? "h-full min-h-0 flex-1 bg-background" : "h-[min(42rem,calc(100dvh-12rem))] min-h-[20rem] rounded-2xl border border-border bg-card"}`}>
+      <div className={`flex min-w-0 flex-col overflow-hidden ${layout === "fill" ? "h-full min-h-0 flex-1 bg-background" : "h-[min(42rem,calc(100dvh-12rem))] min-h-[20rem] rounded-2xl bg-card"}`}>
         {/* Header with tabs */}
-        <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border/60 px-3 py-2">
-          <div className="flex min-w-0 flex-1 rounded-[9px] bg-secondary p-0.5 sm:flex-none">
-          <button
-            type="button"
-            onClick={() => { void hapticTap(); setActiveTab("chat"); }}
-            aria-label={chatTitle}
-            aria-pressed={activeTab === "chat"}
-            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 type-subhead font-semibold transition-colors active:opacity-70 sm:flex-none ${
-              activeTab === "chat" ? "bg-card text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            <span className="sm:hidden">Chat</span>
-            <span className="hidden sm:inline">{chatTitle}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => { void hapticTap(); setActiveTab("media"); }}
-            aria-pressed={activeTab === "media"}
-            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 type-subhead font-semibold transition-colors active:opacity-70 sm:flex-none ${
-              activeTab === "media" ? "bg-card text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            <Image className="w-4 h-4" />
-            Archivos
-            {mediaCount > 0 && (
-              <span className="type-caption2 tabular-nums text-muted-foreground">{mediaCount}</span>
-            )}
-          </button>
+        <div className="sep-b flex min-h-11 min-w-0 shrink-0 items-center gap-2 px-3 py-2">
+          <div className="flex h-9 min-w-0 flex-1 rounded-[9px] bg-[rgba(118,118,128,0.24)] p-0.5 sm:flex-none">
+            <button
+              type="button"
+              onClick={() => { void hapticSelection(); setActiveTab("chat"); }}
+              aria-label={chatTitle}
+              aria-pressed={activeTab === "chat"}
+              className={`relative flex h-full min-w-0 flex-1 items-center justify-center rounded-[7px] px-3 type-footnote transition-[background-color,box-shadow] duration-200 ease-ios-standard before:absolute before:inset-x-0 before:-inset-y-1.5 active:opacity-70 sm:flex-none ${
+                activeTab === "chat" ? SEGMENT_ACTIVE : "font-medium text-foreground"
+              }`}
+            >
+              <span className="truncate sm:hidden">Chat</span>
+              <span className="hidden truncate sm:inline">{chatTitle}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { void hapticSelection(); setActiveTab("media"); }}
+              aria-pressed={activeTab === "media"}
+              className={`relative flex h-full min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 type-footnote transition-[background-color,box-shadow] duration-200 ease-ios-standard before:absolute before:inset-x-0 before:-inset-y-1.5 active:opacity-70 sm:flex-none ${
+                activeTab === "media" ? SEGMENT_ACTIVE : "font-medium text-foreground"
+              }`}
+            >
+              Archivos
+              {mediaCount > 0 && (
+                <span className="type-caption2 tabular-nums text-muted-foreground">{mediaCount}</span>
+              )}
+            </button>
           </div>
           {isAdmin && (
             <Button
@@ -261,7 +264,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               size="sm"
               variant="ghost"
               className="ml-auto h-11 w-11 shrink-0 gap-1.5 p-0 text-primary active:opacity-70 sm:w-auto sm:px-3"
-              onClick={call.startCall}
+              onClick={() => { void hapticTap(); void call.startCall(); }}
               disabled={call.state !== "idle"}
               title="Videollamada dentro de Autopilot"
               aria-label="Iniciar videollamada"
@@ -276,7 +279,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               size="sm"
               variant="ghost"
               className="ml-auto h-11 w-11 shrink-0 gap-1.5 p-0 text-primary active:opacity-70 sm:w-auto sm:px-3"
-              onClick={onRequestVideoCall}
+              onClick={() => { void hapticTap(); onRequestVideoCall(); }}
               aria-label={callLabel}
               title={callLabel}
             >
@@ -293,9 +296,9 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
             <AIDisclaimer variant="compact" />
           </div>
         )}
-        {connectionLost && !loadError && <div role="status" className="flex shrink-0 items-center gap-3 px-4 py-1"><WifiOff className="h-5 w-5 shrink-0 text-primary" /><span className="min-w-0 flex-1 type-footnote text-muted-foreground">La conexión en directo se interrumpió.</span><button type="button" className="min-h-11 shrink-0 type-subhead font-semibold text-primary active:opacity-60" onClick={() => void loadMessages()}>Actualizar</button></div>}
-        {loading ? <div role="status" className="flex min-h-0 flex-1 items-center justify-center gap-2 type-subhead text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Cargando conversación…</div>
-          : loadError ? <div role="alert" className="flex min-h-0 flex-1 items-center justify-center"><EmptyState icon={RefreshCw} title={loadError} description="Revisa la conexión y vuelve a intentarlo." action={<button type="button" className="min-h-11 px-4 type-headline text-primary active:opacity-60" onClick={() => void loadMessages()}>Reintentar</button>} /></div>
+        {connectionLost && !loadError && <div role="status" className="flex shrink-0 items-center gap-3 px-4 py-1"><WifiOff className="h-5 w-5 shrink-0 text-muted-foreground" /><span className="min-w-0 flex-1 type-footnote text-muted-foreground">La conexión en directo se interrumpió.</span><button type="button" className="min-h-11 shrink-0 type-subhead font-semibold text-primary active:opacity-60" onClick={() => { void hapticTap(); void loadMessages(); }}>Actualizar</button></div>}
+        {loading ? <div role="status" className="flex min-h-0 flex-1 items-center justify-center gap-2 type-subhead text-muted-foreground"><Spinner size="md" aria-hidden="true" /> Cargando conversación…</div>
+          : loadError ? <div role="alert" className="flex min-h-0 flex-1 items-center justify-center"><EmptyState icon={RefreshCw} title={loadError} description="Revisa la conexión y vuelve a intentarlo." action={<button type="button" className="min-h-11 px-4 type-headline text-primary active:opacity-60" onClick={() => { void hapticTap(); void loadMessages(); }}>Reintentar</button>} /></div>
           : activeTab === "chat" ? <ChatMessages messages={messages} onViewMedia={setViewMedia} emptyMessage={emptyMessage} />
           : <ChatMediaGallery messages={messages} onViewMedia={setViewMedia} />}
 
@@ -304,7 +307,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
           <div className="flex shrink-0 items-center gap-3 px-4 py-2">
             <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-secondary">
               {previewFile.type === "image" ? (
-                <img loading="lazy" decoding="async" src={previewFile.url} alt="" className="w-full h-full object-cover" />
+                <ImageWithFallback src={previewFile.url} alt="" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <Video className="w-6 h-6 text-muted-foreground" />
@@ -313,19 +316,19 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
             </div>
             <span className="min-w-0 flex-1 type-subhead text-muted-foreground">{previewFile.type === "image" ? "Foto lista" : "Vídeo listo"}</span>
-            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => setPreviewFile(null)} aria-label="Quitar archivo adjunto"><X className="w-4 h-4" /></Button>
+            <Button type="button" variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-muted-foreground" onClick={() => { void hapticTap(); setPreviewFile(null); }} aria-label="Quitar archivo adjunto"><X className="h-5 w-5" /></Button>
           </div>
         )}
 
         {/* Input */}
-        <div className="shrink-0 border-t border-border/60 px-2 pt-2 sm:px-3" style={{ paddingBottom: layout === "fill" ? "max(0.5rem, var(--safe-bottom, 0px))" : "0.5rem" }}>
+        <div className="sep-t shrink-0 px-2 pt-2 sm:px-3" style={{ paddingBottom: layout === "fill" ? "max(0.5rem, var(--safe-bottom, 0px))" : "0.5rem" }}>
             {isAdmin && aiSuggestions.length > 0 && (
               <div className="mb-2 space-y-1.5">
                 {aiSuggestions.map((s, i) => (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => { setNewMsg(s.text); setAiSuggestions([]); }}
+                    onClick={() => { void hapticTap(); setNewMsg(s.text); setAiSuggestions([]); }}
                     className="min-h-11 w-full break-words rounded-xl bg-secondary px-3 py-2 text-left transition-opacity active:opacity-70"
                   >
                     <div className="type-footnote font-semibold text-muted-foreground">{s.label}</div>
@@ -335,18 +338,18 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               </div>
             )}
             <form onSubmit={(e) => { e.preventDefault(); void hapticTap(); sendMessage(); }} className="flex min-w-0 items-end gap-1">
-              <Button type="button" variant="ghost" size="icon" onClick={() => fileRef.current?.click()} className="h-11 w-11 shrink-0 text-muted-foreground active:opacity-60" aria-label="Adjuntar foto o vídeo" disabled={sending || uploading || loading || !!loadError}>
+              <Button type="button" variant="ghost" size="icon" onClick={() => { void hapticTap(); fileRef.current?.click(); }} className="h-11 w-11 shrink-0 text-muted-foreground active:opacity-60" aria-label="Adjuntar foto o vídeo" disabled={sending || uploading || loading || !!loadError}>
                 <Image className="w-5 h-5" />
               </Button>
               <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFileSelect} />
               {isAdmin && (
-                <Button type="button" variant="ghost" size="icon" onClick={fetchAISuggestions} disabled={aiSuggestLoading || sending || loading || !!loadError} className="h-11 w-11 shrink-0 text-muted-foreground active:opacity-60" aria-label="Sugerir respuesta con IA" title="Sugerir respuesta con IA">
-                  {aiSuggestLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                <Button type="button" variant="ghost" size="icon" onClick={() => { void hapticTap(); void fetchAISuggestions(); }} disabled={aiSuggestLoading || sending || loading || !!loadError} className="h-11 w-11 shrink-0 text-muted-foreground active:opacity-60" aria-label="Sugerir respuesta con IA" title="Sugerir respuesta con IA">
+                  {aiSuggestLoading ? <Spinner size="md" /> : <Sparkles className="h-5 w-5" />}
                 </Button>
               )}
-              <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Escribe un mensaje…" aria-label="Mensaje" disabled={sending || loading || !!loadError} className="h-11 min-w-0 flex-1 rounded-full border-border/60 bg-transparent px-4 text-[17px] md:text-sm" />
+              <Input value={newMsg} onChange={(e) => setNewMsg(e.target.value)} placeholder="Escribe un mensaje…" aria-label="Mensaje" enterKeyHint="send" disabled={sending || loading || !!loadError} className="min-w-0 flex-1 rounded-full px-4" />
               <Button type="submit" size="icon" className="h-11 w-11 shrink-0 rounded-full transition-transform active:scale-95 disabled:bg-secondary disabled:text-muted-foreground disabled:opacity-100" aria-label={sending ? "Enviando mensaje" : "Enviar mensaje"} disabled={sending || loading || !!loadError || (!newMsg.trim() && !previewFile)}>
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="h-5 w-5" strokeWidth={2.5} />}
+                {sending ? <Spinner size="sm" /> : <ArrowUp className="h-5 w-5" strokeWidth={2.5} />}
               </Button>
             </form>
         </div>
@@ -355,16 +358,16 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
 
       {/* Media Viewer */}
       {viewMedia && (
-        <div role="dialog" aria-modal="true" aria-label="Archivo del chat" className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setViewMedia(null)}>
-          <button type="button" onClick={() => setViewMedia(null)} aria-label="Cerrar archivo" className="absolute right-4 flex h-11 w-11 items-center justify-center text-white/80 active:opacity-60" style={{ top: "calc(var(--safe-top, 0px) + 0.5rem)" }}>
-            <X className="w-6 h-6" />
+        <div role="dialog" aria-modal="true" aria-label="Archivo del chat" className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4" onClick={() => setViewMedia(null)}>
+          <button type="button" onClick={() => setViewMedia(null)} aria-label="Cerrar archivo" className="absolute right-4 flex h-11 w-11 items-center justify-center text-white active:opacity-60" style={{ top: "calc(var(--safe-top, 0px) + 0.5rem)" }}>
+            <X className="h-6 w-6" />
           </button>
-          <div onClick={(e) => e.stopPropagation()} className="max-w-3xl max-h-[85vh]">
+          <div onClick={(e) => e.stopPropagation()} className="max-h-[85dvh] max-w-3xl">
             {viewMedia.type === "image" ? (
-              <img loading="lazy" decoding="async" src={viewMedia.url} alt="" className="max-h-[85vh] rounded-xl object-contain" />
+              <ImageWithFallback src={viewMedia.url} alt="" className="max-h-[85dvh] rounded-xl object-contain" fallbackClassName="h-64 w-64" />
             ) : (
               // Sin autoPlay: se abre con los controles y el usuario pulsa play
-              <video src={viewMedia.url} controls className="max-h-[85vh] rounded-xl" />
+              <VideoWithFallback src={viewMedia.url} controls className="max-h-[85dvh] rounded-xl" fallbackClassName="h-64 w-64" />
             )}
           </div>
         </div>

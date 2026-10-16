@@ -1,11 +1,15 @@
-import { errorMessage, functionErrorMessage } from"@/lib/runtimeValues";
-import { getExerciseTrackingConfig, TRACKING_MODES } from"@/lib/exerciseTrackingConfig";
-import { useState, useEffect, useMemo, useRef } from"react";
-import { supabase } from"@/integrations/supabase/client";
-import { Button } from"@/components/ui/button";
-import { Input } from"@/components/ui/input";
-import { Label } from"@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from"@/components/ui/dialog";
+import { errorMessage, functionErrorMessage } from "@/lib/runtimeValues";
+import { getExerciseTrackingConfig, TRACKING_MODES } from "@/lib/exerciseTrackingConfig";
+import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Spinner } from "@/components/ui/spinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,17 +19,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from"@/components/ui/alert-dialog";
-import { toast } from"sonner";
-import { Plus, Trash2, Dumbbell, Edit2, Search, X, ArrowLeftRight, Video, VideoOff, Image as ImageIcon, ImageOff, RefreshCw, AlertTriangle, Sparkles, Loader2, ImagePlus } from"lucide-react";
-import type { Exercise } from"@/types/training";
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
+  Check, Dumbbell, Image as ImageIcon, ImageOff, Play, RefreshCw, AlertTriangle, Search, Video, VideoOff, X,
+  type LucideIcon,
+} from "lucide-react";
+import type { Exercise } from "@/types/training";
 import {
   MUSCLE_GROUPS, EXERCISE_TYPES, MOVEMENT_PATTERNS, LEVELS,
   PRIORITIES, STIMULUS_TYPES, LOAD_LEVELS, FATIGUE_LEVELS, RECOMMENDED_ORDERS, SKILL_TAGS,
-} from"@/types/training";
-import VideoEmbed, { toEmbedUrl } from"@/components/VideoEmbed";
-import ExerciseMedia, { ExerciseThumb } from"@/components/ExerciseMedia";
-import { ExercisePreviewSheet, type ExercisePreviewData } from"@/components/ExercisePreviewSheet";
+} from "@/types/training";
+import ExerciseMedia, { ExerciseThumb } from "@/components/ExerciseMedia";
+import { ExercisePreviewSheet, type ExercisePreviewData } from "@/components/ExercisePreviewSheet";
+import { hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
+import { skipAutoFocusOnTouch } from "@/components/admin-library/touchAutoFocus";
+import { WithImageFallback } from "@/components/admin-library/WithImageFallback";
 
 /**
  * Versión del estilo visual actual. Debe coincidir con MEDIA_STYLE_VERSION de la
@@ -73,15 +83,19 @@ const ALL_MUSCLE_GROUPS = [...MUSCLE_GROUPS,"Otro"] as const;
 
 /* ── Helpers ── */
 
+const SELECT_CLASS =
+  "field w-full text-foreground focus-visible:outline-none md:focus-visible:ring-2 md:focus-visible:ring-primary/40";
+
 const SmallSelect = ({ value, onChange, options, placeholder }: {
   value: string; onChange: (v: string) => void;
   options: readonly string[]; placeholder?: string;
 }) => (
   <select
-    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-    value={value} onChange={(e) => onChange(e.target.value)}
+    className={SELECT_CLASS}
+    value={value}
+    onChange={(e) => { void hapticSelection(); onChange(e.target.value); }}
   >
-    <option value="">{placeholder ||"—"}</option>
+    <option value="">{placeholder || "—"}</option>
     {options.map((o) => <option key={o} value={o}>{o}</option>)}
   </select>
 );
@@ -91,55 +105,106 @@ const NumSelect = ({ value, onChange, options }: {
   options: readonly { value: number; label: string }[];
 }) => (
   <select
-    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-    value={value ??""} onChange={(e) => onChange(parseInt(e.target.value) || 1)}
+    className={SELECT_CLASS}
+    value={value ?? ""}
+    onChange={(e) => { void hapticSelection(); onChange(parseInt(e.target.value) || 1); }}
   >
     {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
   </select>
 );
 
-const GROUP_COLORS: Record<string, string> = {
-  Pecho:"bg-secondary text-muted-foreground border-border/60",
-  Espalda:"bg-secondary text-muted-foreground border-border/60",
-  Hombros:"bg-secondary text-muted-foreground border-border/60",
-  Bíceps:"bg-secondary text-muted-foreground border-border/60",
-  Tríceps:"bg-secondary text-muted-foreground border-border/60",
-  Piernas:"bg-secondary text-muted-foreground border-border/60",
-  Glúteos:"bg-secondary text-muted-foreground border-border/60",
-  Core:"bg-secondary text-muted-foreground border-border/60",
-  Cardio:"bg-secondary text-muted-foreground border-border/60",
-"Cuerpo completo":"bg-secondary text-muted-foreground border-border/60",
-  Otro:"bg-secondary text-muted-foreground border-border/60",
+/** Campo suelto con su etiqueta encima. */
+const FormField = ({ label, children, className }: { label: string; children: ReactNode; className?: string }) => (
+  <label className={cn("block min-w-0", className)}>
+    <span className="mb-1.5 block type-subhead text-muted-foreground">{label}</span>
+    {children}
+  </label>
+);
+
+/** Sección de la hoja: cabecera de grupo y contenido apilado. */
+const FormSection = ({ title, children }: { title: string; children: ReactNode }) => (
+  <section>
+    <h3 className="type-group-header px-4 pb-1.5">{title}</h3>
+    <div className="space-y-3">{children}</div>
+  </section>
+);
+
+const Hint = ({ children }: { children: ReactNode }) => (
+  <p className="type-footnote text-muted-foreground">{children}</p>
+);
+
+const TRACKING_LABELS: Record<string, string> = {
+  weighted_reps: "KG + Repes",
+  bodyweight_reps: "Peso corporal (PC)",
+  weighted_bodyweight: "Lastre + Repes",
+  seconds_only: "Segundos",
+  assisted_reps: "Asistida + Repes",
 };
 
-const LEVEL_COLORS: Record<number, string> = {
-  1:"bg-secondary text-muted-foreground",
-  2:"bg-primary/10 text-primary/80",
-  3:"bg-primary/20 text-primary",
+const CRITERIA = [
+  { key: "is_stable" as const, label: "Estable", hint: "Permite ejecución sin que el equilibrio limite la carga" },
+  { key: "is_progressable" as const, label: "Progresable", hint: "Se puede aumentar carga/reps sesión a sesión" },
+  { key: "high_tension" as const, label: "Alta tensión", hint: "Genera mucha tensión en el músculo objetivo" },
+];
+
+/* ── Fila de la biblioteca ── */
+
+type MediaTone = "ok" | "missing" | "stale" | "error";
+
+const MEDIA_TONE_CLASS: Record<MediaTone, string> = {
+  ok: "text-muted-foreground",
+  missing: "text-muted-foreground/60",
+  stale: "text-primary",
+  error: "text-destructive",
 };
 
-const STIMULUS_COLORS: Record<string, string> = {
-  Fuerza:"bg-secondary text-muted-foreground",
-  Hipertrofia:"bg-secondary text-muted-foreground",
-  Resistencia:"bg-secondary text-muted-foreground",
-  Isométrico:"bg-secondary text-muted-foreground",
+const MediaStatus = ({ tone, icon: Icon, label }: { tone: MediaTone; icon: LucideIcon; label: string }) => (
+  <span className={cn("inline-flex items-center gap-1", MEDIA_TONE_CLASS[tone])}>
+    <Icon className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
+    {label}
+  </span>
+);
+
+/** Clasificación y estado de medios de un ejercicio, para el subtítulo de su fila. */
+const ExerciseMeta = ({ exercise: ex }: { exercise: ExerciseRow }) => {
+  const categories = [ex.muscle_group, ex.exercise_type].filter((c): c is string => Boolean(c));
+  return (
+    <>
+      <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+        {categories.map((category) => (
+          <span key={category} className="rounded-full bg-secondary px-2 py-0.5 text-muted-foreground">
+            {category}
+          </span>
+        ))}
+        {categories.length === 0 && <span>Sin clasificar</span>}
+        <MediaStatus
+          tone={ex.image_url ? "ok" : "missing"}
+          icon={ex.image_url ? ImageIcon : ImageOff}
+          label={ex.image_url ? "Imagen" : "Sin imagen"}
+        />
+        <MediaStatus
+          tone={ex.video_url ? "ok" : "missing"}
+          icon={ex.video_url ? Video : VideoOff}
+          label={ex.video_url ? "Vídeo" : "Sin vídeo"}
+        />
+        {hasOutdatedMedia(ex) && <MediaStatus tone="stale" icon={RefreshCw} label="Estilo antiguo" />}
+        {ex.media_error && <MediaStatus tone="error" icon={AlertTriangle} label="Error" />}
+      </span>
+      {ex.media_error ? <span className="mt-1 line-clamp-2 block text-destructive">{ex.media_error}</span> : null}
+    </>
+  );
 };
-
-/* ── Chips de estado de medios ── */
-
-const MEDIA_BADGE_BASE ="flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 type-caption2 font-medium";
-const MEDIA_BADGE_ON =`${MEDIA_BADGE_BASE} border-primary/30 bg-primary/15 text-primary`;
-const MEDIA_BADGE_OFF =`${MEDIA_BADGE_BASE} border-border bg-secondary/60 text-muted-foreground`;
 
 /* ── Exercise Form Dialog ── */
 
 const ExerciseFormDialog = ({
-  open, onOpenChange, initial, onSave, loading, allExercises, onMediaChange,
+  open, onOpenChange, initial, onSave, onDelete, loading, allExercises, onMediaChange,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initial?: Exercise | null;
   onSave: (data: Partial<Exercise>) => void;
+  onDelete?: (exercise: Exercise) => void;
   loading: boolean;
   allExercises: Exercise[];
   onMediaChange?: () => void;
@@ -151,6 +216,7 @@ const ExerciseFormDialog = ({
   const [imgAiLoading, setImgAiLoading] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [genStatus, setGenStatus] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const fnErrorMessage = functionErrorMessage;
 
@@ -293,313 +359,326 @@ const ExerciseFormDialog = ({
 
   const selectedAlt = allExercises.find((e) => e.id === form.alternative_id);
 
+  const allCriteria = (form.is_stable ?? true) && (form.is_progressable ?? true) && (form.high_tension ?? true);
+  const trackingOptions = [
+    ["", "Automático", "Se deduce por el nombre y el tipo"],
+    ...Object.entries(TRACKING_MODES).map(([k, c]) => [k, TRACKING_LABELS[k], c.description]),
+  ] as [string, string, string][];
+  const trackingConfig = getExerciseTrackingConfig({
+    name: form.name,
+    skill_tag: form.skill_tag,
+    movement_pattern: form.movement_pattern,
+    exercise_type: form.exercise_type,
+    tracking_mode: form.tracking_mode,
+  });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-        {/* Hero: vídeo del ejercicio arriba del todo (se reproduce al pasar el ratón) */}
-        <div className="-mx-6 -mt-6 mb-1 overflow-hidden border-b border-border bg-black">
-          <ExerciseMedia video={form.video_url} image={form.image_url} name={form.name} />
-        </div>
-
+      <DialogContent className="sm:max-w-lg" aria-describedby={undefined} onOpenAutoFocus={skipAutoFocusOnTouch}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ExerciseThumb image={form.image_url} name={form.name} size="xs" />
-            {initial ?"Editar ejercicio" :"Nuevo ejercicio"}
-          </DialogTitle>
+          <DialogTitle>{initial ? "Editar ejercicio" : "Nuevo ejercicio"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-5 pt-2">
 
-          {/* Basic info */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Información básica</p>
+        {/* Vídeo del ejercicio arriba del todo, o su imagen si aún no tiene vídeo */}
+        <WithImageFallback image={form.image_url}>
+          {(image) => <ExerciseMedia video={form.video_url} image={image} name={form.name} className="rounded-[14px]" />}
+        </WithImageFallback>
+
+        <div className="space-y-6 pt-1">
+          <FormSection title="Información básica">
             <div>
-              <Label className="text-xs">Nombre</Label>
-              <div className="flex gap-2 mt-1">
-                <Input value={form.name ||""} onChange={(e) => set("name", e.target.value)} placeholder="Press banca" />
-                <Button type="button" variant="secondary" size="sm" onClick={autofillWithAI} disabled={aiLoading || !form.name?.trim()} className="shrink-0 gap-1.5">
-                  {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  IA
+              <label htmlFor="exercise-name" className="mb-1.5 block type-subhead text-muted-foreground">Nombre</label>
+              <div className="flex gap-2">
+                <Input
+                  id="exercise-name"
+                  value={form.name || ""}
+                  onChange={(e) => set("name", e.target.value)}
+                  placeholder="Press banca"
+                  autoCapitalize="sentences"
+                  enterKeyHint="done"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  aria-label="Clasificar con IA"
+                  onClick={() => { void hapticTap(); void autofillWithAI(); }}
+                  disabled={aiLoading || !form.name?.trim()}
+                  className="shrink-0 gap-1.5 px-3.5"
+                >
+                  {aiLoading ? <Spinner size="sm" className="text-current" /> : null}
+                  Clasificar
                 </Button>
               </div>
-              <p className="type-caption2 text-muted-foreground mt-1">Escribe el nombre y pulsa IA para clasificar automáticamente todos los campos.</p>
+              <p className="mt-1.5 type-footnote text-muted-foreground">
+                Escribe el nombre y pulsa Clasificar para rellenar los campos con IA.
+              </p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Categoría · grupo muscular</Label>
-                <SmallSelect value={form.muscle_group ||""} onChange={(v) => set("muscle_group", v)} options={ALL_MUSCLE_GROUPS} placeholder="Seleccionar..." />
-              </div>
-              <div>
-                <Label className="text-xs">Tipo</Label>
-                <SmallSelect value={form.exercise_type ||""} onChange={(v) => set("exercise_type", v)} options={EXERCISE_TYPES} placeholder="Tipo..." />
-              </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField label="Grupo muscular">
+                <SmallSelect value={form.muscle_group || ""} onChange={(v) => set("muscle_group", v)} options={ALL_MUSCLE_GROUPS} placeholder="Seleccionar…" />
+              </FormField>
+              <FormField label="Tipo">
+                <SmallSelect value={form.exercise_type || ""} onChange={(v) => set("exercise_type", v)} options={EXERCISE_TYPES} placeholder="Tipo…" />
+              </FormField>
             </div>
-          </div>
+          </FormSection>
 
-          {/* Classification */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Clasificación</p>
+          <FormSection title="Clasificación">
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Patrón</Label>
-                <SmallSelect value={form.movement_pattern ||""} onChange={(v) => set("movement_pattern", v)} options={MOVEMENT_PATTERNS} placeholder="Patrón..." />
-              </div>
-              <div>
-                <Label className="text-xs">Estímulo</Label>
-                <SmallSelect value={form.stimulus_type ||""} onChange={(v) => set("stimulus_type", v)} options={STIMULUS_TYPES} placeholder="Estímulo..." />
-              </div>
-              <div>
-                <Label className="text-xs">Nivel</Label>
+              <FormField label="Patrón">
+                <SmallSelect value={form.movement_pattern || ""} onChange={(v) => set("movement_pattern", v)} options={MOVEMENT_PATTERNS} placeholder="Patrón…" />
+              </FormField>
+              <FormField label="Estímulo">
+                <SmallSelect value={form.stimulus_type || ""} onChange={(v) => set("stimulus_type", v)} options={STIMULUS_TYPES} placeholder="Estímulo…" />
+              </FormField>
+              <FormField label="Nivel">
                 <NumSelect value={form.level} onChange={(v) => set("level", v)} options={LEVELS} />
-              </div>
-              <div>
-                <Label className="text-xs">Prioridad</Label>
+              </FormField>
+              <FormField label="Prioridad">
                 <NumSelect value={form.priority} onChange={(v) => set("priority", v)} options={PRIORITIES} />
-              </div>
+              </FormField>
             </div>
-          </div>
+          </FormSection>
 
-          {/* Generation params */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Parámetros de generación</p>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs">Carga</Label>
-                <SmallSelect value={form.load_level ||""} onChange={(v) => set("load_level", v)} options={LOAD_LEVELS} placeholder="—" />
-              </div>
-              <div>
-                <Label className="text-xs">Fatiga</Label>
-                <SmallSelect value={form.fatigue_level ||""} onChange={(v) => set("fatigue_level", v)} options={FATIGUE_LEVELS} placeholder="—" />
-              </div>
-              <div>
-                <Label className="text-xs">Orden</Label>
-                <NumSelect value={form.recommended_order} onChange={(v) => set("recommended_order", v)} options={RECOMMENDED_ORDERS} />
-              </div>
-            </div>
-          </div>
-
-          {/* Hard criteria */}
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Criterios obligatorios</p>
-            <p className="type-caption2 text-muted-foreground -mt-1">Si alguno está desactivado, el ejercicio NO se incluirá en planes generados.</p>
+          <FormSection title="Parámetros de generación">
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { key:"is_stable" as const, label:"Estable", hint:"Permite ejecución sin que el equilibrio limite la carga" },
-                { key:"is_progressable" as const, label:"Progresable", hint:"Se puede aumentar carga/reps sesión a sesión" },
-                { key:"high_tension" as const, label:"Alta tensión", hint:"Genera mucha tensión en el músculo objetivo" },
-              ].map(({ key, label, hint }) => {
-                const checked = form[key] ?? true;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => set(key, !checked)}
-                    title={hint}
-                    className={`rounded-lg border p-2 text-left transition-colors ${
-                      checked
-                        ?"border-primary/50 bg-primary/10"
-                        :"border-border bg-secondary/40 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium">{label}</span>
-                      <span className={`type-caption2 font-bold ${checked ?"text-primary" :"text-muted-foreground"}`}>
-                        {checked ?"SÍ" :"NO"}
-                      </span>
-                    </div>
-                    <p className="type-caption2 text-muted-foreground mt-0.5 leading-tight">{hint}</p>
-                  </button>
-                );
-              })}
+              <FormField label="Carga">
+                <SmallSelect value={form.load_level || ""} onChange={(v) => set("load_level", v)} options={LOAD_LEVELS} placeholder="—" />
+              </FormField>
+              <FormField label="Fatiga">
+                <SmallSelect value={form.fatigue_level || ""} onChange={(v) => set("fatigue_level", v)} options={FATIGUE_LEVELS} placeholder="—" />
+              </FormField>
+              <FormField label="Orden">
+                <NumSelect value={form.recommended_order} onChange={(v) => set("recommended_order", v)} options={RECOMMENDED_ORDERS} />
+              </FormField>
             </div>
-          </div>
+          </FormSection>
 
-          {/* Tracking mode */}
-          <div className="space-y-2">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Modo de registro / métricas</p>
-            <div className="grid grid-cols-1 gap-1.5">
-              {([
-                ["","Automático","Se deduce por el nombre y el tipo"],
-                ...Object.entries(TRACKING_MODES).map(([k, c]) => [k, ({ weighted_reps:"KG + Repes", bodyweight_reps:"Peso corporal (PC)", weighted_bodyweight:"Lastre + Repes", seconds_only:"Segundos", assisted_reps:"Asistida + Repes" } as Record<string, string>)[k], c.description]),
-              ] as [string, string, string][]).map(([k, label, desc]) => {
-                const active = (form.tracking_mode ||"") === k;
-                return (
-                  <button key={k ||"auto"} type="button" onClick={() => set("tracking_mode", k ==="weighted_reps" || k ==="bodyweight_reps" || k ==="weighted_bodyweight" || k ==="seconds_only" || k ==="assisted_reps" ? k : null)}
-                    className={`rounded-lg border px-3 py-2 text-left transition-colors ${active ?"border-primary bg-primary/10" :"border-border hover:border-primary/40"}`}>
-                    <span className="block text-sm font-medium">{label}</span>
-                    <span className="block text-[11px] text-muted-foreground">{desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {(() => {
-              const c = getExerciseTrackingConfig({ name: form.name, skill_tag: form.skill_tag, movement_pattern: form.movement_pattern, exercise_type: form.exercise_type, tracking_mode: form.tracking_mode });
-              return (
-                <div className="grid grid-cols-[40px_52px_1fr_1fr_24px] gap-2 rounded-lg bg-secondary/40 px-3 py-2 type-caption2 font-semibold uppercase text-muted-foreground">
-                  <span>Serie</span><span>Previa</span><span>{c.fixedBodyweight ?"PC" : c.weightLabel}</span><span>{c.valueLabel}</span><span>✓</span>
-                </div>
-              );
-            })()}
-          </div>
+          <ListGroup
+            inset
+            header="Criterios obligatorios"
+            footer="Si alguno está desactivado, el ejercicio no se incluirá en los planes generados."
+          >
+            {CRITERIA.map(({ key, label, hint }) => (
+              <ListRow
+                key={key}
+                title={label}
+                subtitle={hint}
+                trailing={
+                  <Switch
+                    aria-label={label}
+                    checked={form[key] ?? true}
+                    onCheckedChange={(v) => { void hapticSelection(); set(key, v); }}
+                  />
+                }
+              />
+            ))}
+          </ListGroup>
 
-          {/* Skill Progression */}
           <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Progresión de Skill</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">Skill</Label>
-                <SmallSelect value={form.skill_tag ||""} onChange={(v) => set("skill_tag", v || null)} options={SKILL_TAGS} placeholder="Ninguno" />
+            <ListGroup inset header="Modo de registro">
+              {trackingOptions.map(([k, label, desc]) => {
+                const active = (form.tracking_mode || "") === k;
+                return (
+                  <ListRow
+                    key={k || "auto"}
+                    title={label}
+                    subtitle={desc}
+                    trailing={active ? <Check className="h-5 w-5 text-primary" strokeWidth={2.5} role="img" aria-label="Seleccionado" /> : undefined}
+                    onClick={() => set("tracking_mode", k === "weighted_reps" || k === "bodyweight_reps" || k === "weighted_bodyweight" || k === "seconds_only" || k === "assisted_reps" ? k : null)}
+                  />
+                );
+              })}
+            </ListGroup>
+            <div>
+              <p className="mb-1.5 px-4 type-footnote text-muted-foreground">Así se verá cada serie al registrarla.</p>
+              <div className="grid grid-cols-[40px_52px_1fr_1fr_20px] items-center gap-2 rounded-[10px] bg-secondary px-3 py-2 type-caption1 font-medium text-muted-foreground">
+                <span className="truncate">Serie</span>
+                <span className="truncate">Previa</span>
+                <span className="truncate">{trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel}</span>
+                <span className="truncate">{trackingConfig.valueLabel}</span>
+                <Check className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
               </div>
-              <div>
-                <Label className="text-xs">Orden progresión</Label>
+            </div>
+          </div>
+
+          <FormSection title="Progresión de skill">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField label="Skill">
+                <SmallSelect value={form.skill_tag || ""} onChange={(v) => set("skill_tag", v || null)} options={SKILL_TAGS} placeholder="Ninguno" />
+              </FormField>
+              <FormField label="Orden de progresión">
                 <Input
-                  type="number" min={1} max={20}
-                  className="h-9"
-                  value={form.progression_order ??""}
+                  type="number"
+                  inputMode="numeric"
+                  enterKeyHint="done"
+                  min={1}
+                  max={20}
+                  value={form.progression_order ?? ""}
                   onChange={(e) => set("progression_order", e.target.value ? parseInt(e.target.value) : null)}
-                  placeholder="1=básico"
+                  placeholder="1 = básico"
                 />
-              </div>
+              </FormField>
             </div>
-            <p className="type-caption2 text-muted-foreground">Asigna un skill y orden para crear cadenas de progresión (1=más fácil → mayor=más difícil)</p>
-          </div>
+            <Hint>Asigna un skill y un orden para crear cadenas de progresión (1 = más fácil, mayor = más difícil).</Hint>
+          </FormSection>
 
-          {/* Imagen */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <ImagePlus className="w-3.5 h-3.5" /> Imagen del ejercicio
-            </p>
-            <div className="flex items-center gap-3">
-              <ExerciseThumb image={form.image_url} name={form.name} size="lg" />
-              <div className="flex-1 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <label className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-medium cursor-pointer hover:bg-secondary/70 transition-colors">
-                    {imgUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
-                    {form.image_url ?"Cambiar imagen" :"Subir imagen"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={imgUploading}
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) uploadImage(f);
-                        e.target.value ="";
-                      }}
-                    />
-                  </label>
-                  {initial?.id && (
-                    <Button type="button" variant="secondary" size="sm" onClick={generateImageWithAI} disabled={imgAiLoading} className="h-[30px] gap-1.5 px-3 text-xs">
-                      {imgAiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      {form.image_url ?"Otra foto con IA" :"Generar foto con IA"}
-                    </Button>
-                  )}
-                </div>
-                {form.image_url && (
-                  <button type="button" onClick={() => set("image_url", null)} className="block type-caption2 text-muted-foreground hover:text-destructive">
-                    Quitar imagen
-                  </button>
-                )}
-                <p className="type-caption2 text-muted-foreground">Se mostrará al usuario en su plan. Las fotos generadas con IA usan siempre el mismo estilo que los vídeos.</p>
+          <section>
+            <h3 className="type-group-header px-4 pb-1.5">Imagen del ejercicio</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <WithImageFallback image={form.image_url}>
+                  {(image) => <ExerciseThumb image={image} name={form.name} size="lg" />}
+                </WithImageFallback>
+                <p className="min-w-0 flex-1 type-footnote text-muted-foreground">
+                  Se mostrará al usuario en su plan. Las fotos generadas con IA usan siempre el mismo estilo que los vídeos.
+                </p>
               </div>
-
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={imgUploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadImage(f);
+                  e.target.value = "";
+                }}
+              />
+              <ListGroup inset>
+                <ListRow
+                  title={<span className="text-primary">{form.image_url ? "Cambiar imagen" : "Subir imagen"}</span>}
+                  trailing={imgUploading ? <Spinner size="sm" /> : undefined}
+                  disabled={imgUploading}
+                  onClick={() => imageInputRef.current?.click()}
+                />
+                {initial?.id ? (
+                  <ListRow
+                    title={<span className="text-primary">{form.image_url ? "Otra foto con IA" : "Generar foto con IA"}</span>}
+                    trailing={imgAiLoading ? <Spinner size="sm" /> : undefined}
+                    disabled={imgAiLoading}
+                    onClick={generateImageWithAI}
+                  />
+                ) : null}
+                {form.image_url ? (
+                  <ListRow title="Quitar imagen" destructive onClick={() => set("image_url", null)} />
+                ) : null}
+              </ListGroup>
             </div>
-          </div>
+          </section>
 
-          {/* Video */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <Video className="w-3.5 h-3.5" /> Vídeo del ejercicio
-            </p>
+          <FormSection title="Vídeo del ejercicio">
             <Input
-              value={form.video_url ||""}
+              type="url"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              aria-label="URL del vídeo"
+              value={form.video_url || ""}
               onChange={(e) => set("video_url", e.target.value)}
-              placeholder="YouTube, Vimeo o MP4 directo (https://...)"
-              className="h-9"
+              placeholder="YouTube, Vimeo o MP4 directo (https://…)"
+              className="font-mono !type-footnote"
             />
             {initial?.id ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={generateVideoWithAI}
-                disabled={genLoading}
-                className="gap-1.5 self-start"
-              >
-                {genLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                {genStatus || (form.video_url ?"Generar otro vídeo con IA" :"Generar vídeo con IA")}
-              </Button>
+              <ListGroup inset>
+                <ListRow
+                  title={<span className="text-primary">{genStatus || (form.video_url ? "Generar otro vídeo con IA" : "Generar vídeo con IA")}</span>}
+                  trailing={genLoading ? <Spinner size="sm" /> : undefined}
+                  disabled={genLoading}
+                  onClick={generateVideoWithAI}
+                />
+              </ListGroup>
             ) : (
-              <p className="type-caption2 text-muted-foreground">Guarda el ejercicio y después podrás generar su vídeo con IA.</p>
+              <Hint>Guarda el ejercicio y después podrás generar su vídeo con IA.</Hint>
             )}
-            <p className="type-caption2 text-muted-foreground">
-              Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento.
-            </p>
-            <p className="type-caption2 text-muted-foreground">El vídeo se ve arriba, en la cabecera del ejercicio.</p>
+            <Hint>
+              Pega cualquier URL de YouTube (incluye Shorts), Vimeo o un .mp4 directo, o genera el vídeo con IA. Se mostrará al usuario en su entrenamiento y se ve arriba, en la cabecera del ejercicio.
+            </Hint>
+          </FormSection>
 
-          </div>
-
-          {/* Alternative exercise */}
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <ArrowLeftRight className="w-3.5 h-3.5" /> Alternativa
-            </p>
+          <FormSection title="Alternativa">
             {selectedAlt ? (
-              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/30 bg-primary/5">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{selectedAlt.name}</p>
-                  <p className="type-caption2 text-muted-foreground">{selectedAlt.exercise_type} · {selectedAlt.muscle_group}</p>
-                </div>
-                <button onClick={() => set("alternative_id", null)} className="p-1 rounded hover:bg-secondary">
-                  <X className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              </div>
+              <ListGroup inset>
+                <ListRow
+                  title={selectedAlt.name}
+                  subtitle={[selectedAlt.exercise_type, selectedAlt.muscle_group].filter(Boolean).join(" · ")}
+                  trailing={
+                    <button
+                      type="button"
+                      aria-label="Quitar alternativa"
+                      onClick={() => { void hapticTap(); set("alternative_id", null); }}
+                      className="-mr-3 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground active:opacity-60"
+                    >
+                      <X className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden="true" />
+                    </button>
+                  }
+                />
+              </ListGroup>
             ) : (
-              <div className="space-y-2">
+              <>
                 <Input
-                  placeholder="Buscar alternativa..."
+                  type="search"
+                  enterKeyHint="search"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-label="Buscar alternativa"
+                  placeholder="Buscar alternativa…"
                   value={altSearch}
                   onChange={(e) => setAltSearch(e.target.value)}
-                  className="h-8 text-xs"
                 />
-                {altSearch && (
-                  <div className="max-h-32 overflow-y-auto rounded-md border bg-popover">
-                    {altCandidates.length > 0 ? altCandidates.map((e) => (
-                      <button
-                        key={e.id}
-                        onClick={() => { set("alternative_id", e.id); setAltSearch(""); }}
-                        className="w-full text-left px-3 py-1.5 text-xs hover:bg-accent transition-colors flex items-center justify-between"
-                      >
-                        <span className="font-medium truncate">{e.name}</span>
-                        <span className="type-caption2 text-muted-foreground shrink-0 ml-2">{e.exercise_type}</span>
-                      </button>
-                    )) : (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">Sin resultados</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {(() => {
-            const allCriteria = (form.is_stable ?? true) && (form.is_progressable ?? true) && (form.high_tension ?? true);
-            return (
-              <>
-                {!allCriteria && (
-                  <p className="text-[11px] text-destructive text-center">
-                    Debe cumplir los 3 criterios obligatorios para añadirse a la biblioteca.
-                  </p>
-                )}
-                <Button
-                  className="w-full"
-                  onClick={() => onSave(form)}
-                  disabled={loading || !form.name?.trim() || !allCriteria}
-                >
-                  {initial ?"Guardar cambios" :"Añadir ejercicio"}
-                </Button>
+                {altSearch ? (
+                  altCandidates.length > 0 ? (
+                    <ListGroup inset>
+                      <div className="max-h-56 overflow-y-auto overscroll-contain">
+                        {altCandidates.map((e) => (
+                          <ListRow
+                            key={e.id}
+                            title={e.name}
+                            value={e.exercise_type}
+                            onClick={() => { set("alternative_id", e.id); setAltSearch(""); }}
+                          />
+                        ))}
+                      </div>
+                    </ListGroup>
+                  ) : (
+                    <p className="px-4 type-footnote text-muted-foreground">Sin resultados</p>
+                  )
+                ) : null}
               </>
-            );
-          })()}
+            )}
+          </FormSection>
+
+          <div className="space-y-2 pt-2">
+            {!allCriteria && (
+              <p className="text-center type-footnote text-destructive">
+                Debe cumplir los 3 criterios obligatorios para añadirse a la biblioteca.
+              </p>
+            )}
+            <Button
+              type="button"
+              size="lg"
+              className="w-full"
+              onClick={() => { void hapticTap(); onSave(form); }}
+              disabled={loading || !form.name?.trim() || !allCriteria}
+            >
+              {loading ? <Spinner size="sm" className="text-primary-foreground" /> : null}
+              {initial ? "Guardar cambios" : "Añadir ejercicio"}
+            </Button>
+            {initial && onDelete ? (
+              <Button
+                type="button"
+                variant="plain"
+                className="w-full text-destructive"
+                onClick={() => { void hapticTap(); onDelete(initial); }}
+              >
+                Eliminar ejercicio
+              </Button>
+            ) : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -610,6 +689,7 @@ const ExerciseFormDialog = ({
 
 const ExerciseLibrary = () => {
   const [exercises, setExercises] = useState<ExerciseRow[]>([]);
+  const [fetched, setFetched] = useState(false);
   const [preview, setPreview] = useState<ExercisePreviewData | null>(null);
   const [loading, setLoading] = useState(false);
   const [mediaBatchOpen, setMediaBatchOpen] = useState(false);
@@ -626,6 +706,8 @@ const ExerciseLibrary = () => {
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseRow | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   /**
    * Las columnas de medios (media_style_version, *_generated_at, media_error)
    * llegan con la migración 20261006130000. Si todavía no está aplicada, la
@@ -645,6 +727,7 @@ const ExerciseLibrary = () => {
     if (!full.error) {
       setMediaColumnsReady(true);
       setExercises((full.data ?? []) as unknown as ExerciseRow[]);
+      setFetched(true);
       return;
     }
 
@@ -659,6 +742,7 @@ const ExerciseLibrary = () => {
       ...row,
       media_style_version: MEDIA_STYLE_VERSION,
     })));
+    setFetched(true);
   };
 
   useEffect(() => { fetchExercises(); }, []);
@@ -914,215 +998,198 @@ const ExerciseLibrary = () => {
     toast.success("Ejercicio eliminado");
   };
 
-  const levelLabel = (l: number) => LEVELS.find((x) => x.value === l)?.label ||"";
-  const priorityLabel = (p: number) => PRIORITIES.find((x) => x.value === p)?.label ||"";
-  const orderLabel = (o: number) => RECOMMENDED_ORDERS.find((x) => x.value === o)?.label ||"";
+  const openEditor = (exercise: ExerciseRow) => {
+    setEditingExercise(exercise);
+    setDialogOpen(true);
+  };
+
+  const requestDelete = (exercise: Exercise) => {
+    setDeleteTarget({ id: exercise.id, name: exercise.name });
+    setDialogOpen(false);
+    setEditingExercise(null);
+    setDeleteOpen(true);
+  };
 
   return (
-    <div className="mb-6 rounded-2xl bg-card p-4 sm:p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/25 bg-primary/10">
-            <Dumbbell className="h-4 w-4 text-primary" />
-          </div>
-          <div>
-            <h2 className="sr-only">Biblioteca de ejercicios</h2>
-            <p className="text-xs text-muted-foreground">{filtered.length} de {exercises.length} ejercicios</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {mediaBatch ? (
-            <>
-              <p role="status" className="text-xs text-muted-foreground">
-                {mediaBatch.current}/{mediaBatch.total} · errores: {mediaBatch.errors} · {mediaBatch.exercise}: {mediaBatch.task}
-              </p>
-              <Button type="button" variant="secondary" size="sm" onClick={cancelMediaQueue} className="gap-1.5">
-                <X className="h-3.5 w-3.5" />
-                Cancelar
-              </Button>
-            </>
-          ) : (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              disabled={pendingQueue.length === 0 || !mediaColumnsReady}
-              title={!mediaColumnsReady ?"Falta aplicar la migración de medios: supabase db push" : undefined}
-              onClick={() => setMediaBatchOpen(true)}
-              className="gap-1.5"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Generar pendientes ({pendingQueue.length})
-            </Button>
-          )}
-        </div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <p className="type-subhead text-muted-foreground">
+          {fetched ? `${filtered.length} de ${exercises.length} ejercicios` : null}
+        </p>
+        {!mediaBatch && (
+          <Button
+            type="button"
+            variant="plain"
+            size="sm"
+            className="-mr-3 h-11 px-3"
+            disabled={pendingQueue.length === 0 || !mediaColumnsReady}
+            onClick={() => { void hapticTap(); setMediaBatchOpen(true); }}
+          >
+            Generar pendientes ({pendingQueue.length})
+          </Button>
+        )}
       </div>
 
+      {mediaBatch && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <p role="status" className="min-w-0 type-footnote text-muted-foreground">
+              {mediaBatch.current}/{mediaBatch.total} · errores: {mediaBatch.errors} · {mediaBatch.exercise}: {mediaBatch.task}
+            </p>
+            <Button
+              type="button"
+              variant="plain"
+              size="sm"
+              className="-mr-3 h-11 shrink-0 px-3"
+              onClick={() => { void hapticTap(); cancelMediaQueue(); }}
+            >
+              Cancelar
+            </Button>
+          </div>
+          <Progress value={((mediaBatch.current - 1) / mediaBatch.total) * 100} aria-label="Progreso de la cola de medios" />
+        </div>
+      )}
+
       {!mediaColumnsReady && (
-        <p className="sr-only" role="status">
-          Faltan las columnas de medios en la base de datos: aplica supabase db push para activar el marcado de estilos y errores.
+        <p role="status" className="type-footnote text-muted-foreground">
+          Faltan las columnas de medios en la base de datos: aplica supabase db push para activar la generación y el marcado de estilos y errores.
         </p>
       )}
 
-        <div className="space-y-4">
-          {/* Search + Add */}
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                className="pl-9 h-10"
-                placeholder="Buscar ejercicio..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              )}
-            </div>
-            <Button onClick={() => { setEditingExercise(null); setDialogOpen(true); }}>
-              <Plus className="w-4 h-4 mr-1" /> Nuevo
-            </Button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="space-y-1 text-xs text-muted-foreground">
-              <span>Músculo</span>
-              <select
-                className="flex h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
-                value={filterGroup ??""}
-                onChange={(event) => setFilterGroup(event.target.value || null)}
-                aria-label="Filtrar ejercicios por músculo"
-              >
-                <option value="">Todos los músculos</option>
-                {Object.keys(groupCounts).sort((a, b) => a.localeCompare(b,"es")).map((group) => (
-                  <option key={group} value={group}>{group} · {groupCounts[group]}</option>
-                ))}
-              </select>
-            </label>
-            <label className="space-y-1 text-xs text-muted-foreground">
-              <span>Tipo de ejercicio</span>
-              <select
-                className="flex h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
-                value={filterType ??""}
-                onChange={(event) => setFilterType(event.target.value || null)}
-                aria-label="Filtrar ejercicios por tipo"
-              >
-                <option value="">Todos los tipos</option>
-                {EXERCISE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
-              </select>
-            </label>
-          </div>
+      <Button
+        type="button"
+        size="lg"
+        className="w-full md:w-auto"
+        onClick={() => { void hapticTap(); setEditingExercise(null); setDialogOpen(true); }}
+      >
+        Nuevo ejercicio
+      </Button>
 
-          {/* Chips de estado de medios */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {mediaFilterOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setMediaFilter(option.value)}
-                aria-pressed={mediaFilter === option.value}
-                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                  mediaFilter === option.value
-                    ?"border-primary/40 bg-primary/15 text-primary"
-                    :"border-border bg-secondary/40 text-muted-foreground hover:bg-secondary/70"
-                }`}
-              >
-                {option.label} · {option.count}
-              </button>
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground"
+          strokeWidth={2}
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          enterKeyHint="search"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label="Buscar ejercicio"
+          className="pl-10 pr-11 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
+          placeholder="Buscar ejercicio…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        {search && (
+          <button
+            type="button"
+            aria-label="Borrar búsqueda"
+            onClick={() => { void hapticTap(); setSearch(""); }}
+            className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-muted-foreground active:opacity-60"
+          >
+            <X className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block min-w-0">
+          <span className="mb-1.5 block type-subhead text-muted-foreground">Músculo</span>
+          <select
+            className={SELECT_CLASS}
+            value={filterGroup ?? ""}
+            onChange={(event) => { void hapticSelection(); setFilterGroup(event.target.value || null); }}
+            aria-label="Filtrar ejercicios por músculo"
+          >
+            <option value="">Todos</option>
+            {Object.keys(groupCounts).sort((a, b) => a.localeCompare(b, "es")).map((group) => (
+              <option key={group} value={group}>{group} · {groupCounts[group]}</option>
             ))}
-          </div>
+          </select>
+        </label>
+        <label className="block min-w-0">
+          <span className="mb-1.5 block type-subhead text-muted-foreground">Tipo</span>
+          <select
+            className={SELECT_CLASS}
+            value={filterType ?? ""}
+            onChange={(event) => { void hapticSelection(); setFilterType(event.target.value || null); }}
+            aria-label="Filtrar ejercicios por tipo"
+          >
+            <option value="">Todos</option>
+            {EXERCISE_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+          </select>
+        </label>
+      </div>
 
-          {/* Lista única y limpia */}
-          {filtered.length > 0 ? (
-            <div className="divide-y divide-border/70 overflow-hidden rounded-2xl bg-card">
-              {filtered.map((ex) => (
-                <div
-                  key={ex.id}
-                  className="group flex items-start gap-3 bg-card px-3.5 py-3 transition-colors hover:bg-secondary/40"
-                >
+      {/* Chips de estado de medios */}
+      <div className="flex flex-wrap items-center gap-2">
+        {mediaFilterOptions.map((option) => {
+          const selected = mediaFilter === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => { void hapticSelection(); setMediaFilter(option.value); }}
+              aria-pressed={selected}
+              className={cn(
+                "relative h-9 rounded-full px-3.5 type-subhead font-medium transition-colors duration-100 before:absolute before:inset-x-0 before:-inset-y-1",
+                selected ? "bg-primary/15 text-primary active:bg-primary/25" : "bg-secondary text-muted-foreground active:bg-accent",
+              )}
+            >
+              {option.label} · <span className="tabular-nums">{option.count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {!fetched ? (
+        <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+      ) : filtered.length > 0 ? (
+        <ListGroup>
+          {filtered.map((ex) => (
+            <ListRow
+              key={ex.id}
+              leading={
+                <WithImageFallback image={ex.image_url}>
+                  {(image) => <ExerciseThumb image={image} video={ex.video_url} name={ex.name} size="md" />}
+                </WithImageFallback>
+              }
+              title={ex.name}
+              subtitle={<ExerciseMeta exercise={ex} />}
+              trailing={
+                ex.video_url || ex.image_url ? (
                   <button
                     type="button"
-                    onClick={() => setPreview({
-                      name: ex.name,
-                      image: ex.image_url,
-                      video: ex.video_url,
-                      detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" ·") || null,
-                    })}
                     aria-label={`Ver el vídeo de ${ex.name}`}
-                    className="shrink-0 rounded-xl transition-opacity hover:opacity-80"
+                    onClick={() => {
+                      void hapticTap();
+                      setPreview({
+                        name: ex.name,
+                        image: ex.image_url,
+                        video: ex.video_url,
+                        detail: [ex.muscle_group, ex.exercise_type].filter(Boolean).join(" · ") || null,
+                      });
+                    }}
+                    className="-mr-3 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground active:opacity-60"
                   >
-                    <ExerciseThumb image={ex.image_url} video={ex.video_url} name={ex.name} size="sm" />
+                    <Play className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden="true" />
                   </button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{ex.name}</p>
-                    {/* Clasificación y estado de medios en la misma fila que envuelve:
-                        antes las insignias iban en su propia columna a la derecha y
-                        se comían el nombre del ejercicio. */}
-                    <div className="mt-1 flex flex-wrap items-center gap-1">
-                      {[ex.muscle_group, ex.exercise_type].filter(Boolean).map((category) => (
-                        <span
-                          key={category}
-                          className="rounded-full border border-border bg-secondary/60 px-1.5 py-0.5 text-xs text-muted-foreground"
-                        >
-                          {category}
-                        </span>
-                      ))}
-                      {!ex.muscle_group && !ex.exercise_type && (
-                        <span className="text-xs text-muted-foreground">Sin clasificar</span>
-                      )}
-                      <span className={ex.image_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
-                        {ex.image_url ? <ImageIcon className="h-2.5 w-2.5" /> : <ImageOff className="h-2.5 w-2.5" />}
-                        {ex.image_url ?"Imagen" :"Sin imagen"}
-                      </span>
-                      <span className={ex.video_url ? MEDIA_BADGE_ON : MEDIA_BADGE_OFF}>
-                        {ex.video_url ? <Video className="h-2.5 w-2.5" /> : <VideoOff className="h-2.5 w-2.5" />}
-                        {ex.video_url ?"Vídeo" :"Sin vídeo"}
-                      </span>
-                      {hasOutdatedMedia(ex) && (
-                        <span className={MEDIA_BADGE_OFF} title="Generado con una versión de estilo anterior">
-                          <RefreshCw className="h-2.5 w-2.5" /> Estilo antiguo
-                        </span>
-                      )}
-                      {ex.media_error && (
-                        <span
-                          className={`${MEDIA_BADGE_BASE} border-destructive/40 bg-destructive/10 text-destructive`}
-                          title={ex.media_error}
-                        >
-                          <AlertTriangle className="h-2.5 w-2.5" /> Error
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <button
-                      onClick={() => { setEditingExercise(ex); setDialogOpen(true); }}
-                      className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-                      title="Editar"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => deleteExercise(ex.id)}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Dumbbell className="w-10 h-10 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground">
-                {exercises.length === 0 ?"No hay ejercicios aún. Añade el primero." :"Sin resultados para esta búsqueda."}
-              </p>
-            </div>
-          )}
-        </div>
+                ) : undefined
+              }
+              onClick={() => openEditor(ex)}
+            />
+          ))}
+        </ListGroup>
+      ) : (
+        <EmptyState
+          icon={exercises.length === 0 ? Dumbbell : Search}
+          title={exercises.length === 0 ? "Aún no hay ejercicios" : "Sin resultados"}
+          description={exercises.length === 0 ? "Añade el primero con el botón Nuevo ejercicio." : "Prueba con otra búsqueda o cambia los filtros."}
+        />
+      )}
 
       {/* Form Dialog */}
       <ExerciseFormDialog
@@ -1130,6 +1197,7 @@ const ExerciseLibrary = () => {
         onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditingExercise(null); }}
         initial={editingExercise}
         onSave={handleSave}
+        onDelete={requestDelete}
         loading={loading}
         allExercises={exercises}
         onMediaChange={fetchExercises}
@@ -1155,6 +1223,23 @@ const ExerciseLibrary = () => {
               }}
             >
               Generar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar ejercicio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se eliminará {deleteTarget?.name} de la biblioteca, junto con su imagen y su vídeo guardados. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction destructive onClick={() => { if (deleteTarget) void deleteExercise(deleteTarget.id); }}>
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

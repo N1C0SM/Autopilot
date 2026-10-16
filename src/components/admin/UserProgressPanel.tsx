@@ -1,11 +1,17 @@
 import { WorkoutReview } from "@/components/dashboard/WorkoutReview";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Trophy, Activity, ClipboardCheck, Plane, Dumbbell, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Plane, ChevronDown, AlertTriangle, TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { SectionHeader } from "@/components/ui/section-header";
+import { hapticSelection, hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
+import { skipAutoFocusOnTouch } from "@/components/admin-user-detail/skipAutoFocusOnTouch";
 
 interface Props {
   userId: string;
@@ -44,11 +50,11 @@ interface InitialTests {
   plank_seconds?: number;
 }
 
-const TEST_LABELS: Record<keyof InitialTests, { label: string; emoji: string; unit: string }> = {
-  pullups: { label: "Dominadas máx.", emoji: "💪", unit: "reps" },
-  pushups: { label: "Flexiones máx.", emoji: "🔥", unit: "reps" },
-  squats: { label: "Sentadillas máx.", emoji: "🦵", unit: "reps" },
-  plank_seconds: { label: "Plancha", emoji: "🧘", unit: "seg" },
+const TEST_LABELS: Record<keyof InitialTests, { label: string; unit: string }> = {
+  pullups: { label: "Dominadas máx.", unit: "reps" },
+  pushups: { label: "Flexiones máx.", unit: "reps" },
+  squats: { label: "Sentadillas máx.", unit: "reps" },
+  plank_seconds: { label: "Plancha", unit: "s" },
 };
 
 const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) => {
@@ -139,8 +145,8 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+      <div className="flex items-center justify-center py-16">
+        <Spinner size="lg" className="text-primary" label="Cargando progreso" />
       </div>
     );
   }
@@ -170,47 +176,57 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
   );
 
   const latestDate = latestSessionDate ? new Date(`${latestSessionDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" }) : "—";
+  const hasTests = !!tests && Object.values(tests).some((v) => v != null && v !== 0);
+  const nothingYet = !hasTests && rpeData.length === 0 && sessions.length === 0 && prs.length === 0;
+  const missing = [
+    rpeData.length === 0 && { title: "Evolución del RPE", value: "Sin registros" },
+    sessions.length === 0 && { title: "Sesiones", value: "Ninguna registrada" },
+    prs.length === 0 && { title: "Récords personales", value: "Ninguno" },
+    !hasTests && { title: "Tests de nivel iniciales", value: "No completados" },
+  ].filter((item): item is { title: string; value: string } => Boolean(item));
+  const setsSummary = (log: WorkoutLog, empty: string) =>
+    log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || empty;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-10">
       {loadError && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-4 flex items-start gap-3 text-sm">
-          <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-          <div>
-            <div className="font-medium text-destructive">{loadError}</div>
-            <div className="text-xs text-muted-foreground mt-1">Comprueba las políticas de acceso del entrenador asignado y vuelve a abrir la ficha.</div>
+        <div className="flex items-start gap-4">
+          <AlertTriangle className="mt-0.5 h-7 w-7 shrink-0 text-destructive" strokeWidth={1.75} />
+          <div className="min-w-0">
+            <p className="type-headline text-destructive">{loadError}</p>
+            <p className="mt-0.5 type-subhead text-muted-foreground">Comprueba las políticas de acceso del entrenador asignado y vuelve a abrir la ficha.</p>
           </div>
         </div>
       )}
       {realtimeError && (
-        <div className="text-xs text-primary" role="status">No se pudo conectar con las actualizaciones en directo.</div>
+        <p className="type-footnote text-muted-foreground" role="status">No se pudo conectar con las actualizaciones en directo.</p>
       )}
 
-      {/* Immediate coach view: one compact row, full detail on demand */}
+      {/* Lo primero que mira el entrenador: el último entreno, con el detalle a un toque. */}
       {latestSession.length > 0 && (
-        <>
-          <div className="bg-primary/10 border border-primary/30 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+        <section className="space-y-4">
+          <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wider text-primary font-bold">
+              <p className="flex items-center gap-1.5 type-footnote text-muted-foreground">
+                {realtimeConnected && <span className="h-2 w-2 shrink-0 rounded-full bg-success" aria-hidden="true" />}
                 Último entreno{realtimeConnected ? " · en directo" : ""}
-              </div>
-              <div className="text-sm font-semibold truncate mt-0.5">
-                {latestSession[0].day_label} · {latestDate}
-              </div>
+              </p>
+              <h2 className="mt-0.5 break-words type-title2">{latestSession[0].day_label}</h2>
+              <p className="type-subhead text-muted-foreground">{latestDate}</p>
             </div>
-            <div className="text-right text-xs text-muted-foreground shrink-0">
-              <div><span className="font-bold text-foreground">{latestSessionDone}/{latestSessionTotal}</span> series</div>
-              <div>{latestSessionVolume.toLocaleString("es-ES")} kg</div>
-            </div>
-            <Button size="sm" variant="outline" className="shrink-0" onClick={() => setReviewOpen(true)}>
-              Ver
+            <Button variant="plain" size="sm" className="-mr-3.5 shrink-0" onClick={() => { void hapticTap(); setReviewOpen(true); }}>
+              Ver detalle
             </Button>
           </div>
+          <div className="grid grid-cols-2">
+            <Stat value={`${latestSessionDone}/${latestSessionTotal}`} label="Series hechas" />
+            <Stat value={latestSessionVolume.toLocaleString("es-ES")} unit="kg" label="Volumen" className="sep-l pl-4" />
+          </div>
           <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-            <DialogContent className="max-w-2xl max-h-[85dvh] overflow-y-auto">
+            <DialogContent className="sm:max-w-2xl" onOpenAutoFocus={skipAutoFocusOnTouch}>
               <DialogHeader>
                 <DialogTitle>{latestSession[0].day_label} · {latestDate}</DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="tabular-nums">
                   {latestSessionDone}/{latestSessionTotal} series · {latestSessionVolume.toLocaleString("es-ES")} kg de volumen
                 </DialogDescription>
               </DialogHeader>
@@ -222,181 +238,183 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
                   rpe={completedReviewSession[1].find(log => log.rpe != null)?.rpe}
                 />
               )}
-              <div className="space-y-1.5">
+              <ListGroup inset>
                 {latestSession.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between gap-3 text-xs">
-                    <span className="font-medium truncate">{log.exercise_name}</span>
-                    <span className="text-muted-foreground text-right shrink-0">
-                      {log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || "Sin series"}
-                    </span>
-                  </div>
+                  <ListRow key={log.id} title={log.exercise_name} subtitle={<span className="tabular-nums">{setsSummary(log, "Sin series")}</span>} />
                 ))}
-              </div>
+              </ListGroup>
             </DialogContent>
           </Dialog>
-        </>
+        </section>
       )}
 
-      {/* Travel mode banner */}
       {isTraveling && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 flex items-center gap-3">
-          <Plane className="w-5 h-5 text-primary shrink-0" />
-          <div className="flex-1">
-            <div className="text-sm font-medium text-primary">Modo viaje activo</div>
-            <div className="text-xs text-muted-foreground">
-              Hasta {new Date(travelModeUntil!).toLocaleDateString("es-ES", { day: "numeric", month: "long" })} · Equipamiento: {travelEquipment || "Sin equipamiento"}
-            </div>
+        <div className="flex items-start gap-4">
+          <Plane className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+          <div className="min-w-0">
+            <p className="type-headline">Modo viaje activo</p>
+            <p className="mt-0.5 type-subhead text-muted-foreground">
+              Hasta el {new Date(travelModeUntil!).toLocaleDateString("es-ES", { day: "numeric", month: "long" })} · Equipamiento: {travelEquipment || "Sin equipamiento"}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Initial tests */}
-      <div className="bg-card rounded-xl p-5 border border-border">
-        <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <ClipboardCheck className="w-4 h-4 text-primary" />
-          Tests de nivel iniciales
-        </h2>
-        {tests && Object.values(tests).some((v) => v != null && v !== 0) ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {(Object.keys(TEST_LABELS) as (keyof InitialTests)[]).map((k) => (
-              <div key={k} className="bg-secondary/30 rounded-lg p-3 text-center">
-                <div className="text-2xl mb-1">{TEST_LABELS[k].emoji}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{TEST_LABELS[k].label}</div>
-                <div className="text-lg font-bold font-display mt-1">
-                  {tests[k] ?? "—"} <span className="text-xs text-muted-foreground font-normal">{tests[k] != null ? TEST_LABELS[k].unit : ""}</span>
+      {nothingYet ? (
+        <EmptyState
+          icon={TrendingUp}
+          title="Sin actividad todavía"
+          description="Cuando registre entrenos verás aquí sus series, su esfuerzo y sus récords."
+        />
+      ) : (
+        <>
+          {/* RPE: cifra media protagonista y la tendencia directamente sobre negro */}
+          {rpeData.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-end justify-between gap-3">
+                <SectionHeader title="Evolución del RPE" hint={`${rpeData.length} ${rpeData.length === 1 ? "sesión" : "sesiones"}`} className="min-w-0" />
+                <div className="shrink-0 text-right">
+                  <div className="font-rounded text-[28px] font-bold leading-[34px] tabular-nums">{avgRPE}</div>
+                  <div className="type-caption1 text-muted-foreground">Media</div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">El usuario no completó los tests iniciales.</p>
-        )}
-      </div>
-
-      {/* RPE evolution */}
-      <div className="bg-card rounded-xl p-5 border border-border">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold font-display text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Activity className="w-4 h-4 text-primary" />
-            Evolución de RPE
-          </h2>
-          <div className="text-xs text-muted-foreground">
-            Promedio: <span className="font-bold text-foreground">{avgRPE}</span> · {rpeData.length} sesiones
-          </div>
-        </div>
-        {rpeData.length > 0 ? (
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rpeData} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={10} tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis domain={[0, 10]} stroke="hsl(var(--muted-foreground))" fontSize={10} tick={{ fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "0.5rem",
-                    fontSize: "12px",
-                  }}
-                  labelStyle={{ color: "hsl(var(--foreground))" }}
-                />
-                <Line type="monotone" dataKey="rpe" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: "hsl(var(--primary))", r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Sin registros de RPE todavía.</p>
-        )}
-      </div>
-
-      {/* Sesiones ejecutadas: lo que el cliente hizo realmente, serie a serie */}
-      <div className="bg-card rounded-xl p-4 sm:p-5 border border-border">
-        <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <Dumbbell className="w-4 h-4 text-primary" />
-          Últimas sesiones ({sessions.length})
-        </h2>
-        {sessions.length > 0 ? (
-          <div className="space-y-2">
-            {sessions.slice(0, 12).map(([key, logs]) => {
-              const [date, dayLabel] = key.split("|");
-              const open = expandedSession === key;
-              const done = logs.reduce((sum, log) => sum + log.sets_completed.filter((set) => set.done).length, 0);
-              const total = logs.reduce((sum, log) => sum + log.sets_completed.length, 0);
-              const rpe = logs.find((log) => log.rpe != null)?.rpe;
-              return (
-                <div key={key} className="border border-border rounded-lg overflow-hidden">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setExpandedSession(open ? null : key)}
-                    className="w-full h-auto px-3 py-3 justify-between rounded-none"
-                  >
-                    <span className="text-left min-w-0">
-                      <span className="block text-sm font-semibold">{dayLabel} · {new Date(`${date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
-                      <span className="block text-xs text-muted-foreground">{done}/{total} series{rpe ? ` · RPE ${rpe}` : " · Sin cerrar"}</span>
-                    </span>
-                    {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </Button>
-                  {open && (
-                    <div className="border-t border-border px-3 py-2 space-y-2">
-                      {logs.map((log) => (
-                        <div key={log.id} className="flex items-start justify-between gap-3 text-xs">
-                          <span className="font-medium min-w-0">{log.exercise_name}</span>
-                          <span className="text-muted-foreground text-right shrink-0">
-                            {log.sets_completed.filter((set) => set.done).map((set) => `${set.weight || "—"} kg × ${set.reps}`).join(" · ") || "Sin series completadas"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              {rpeData.length >= 2 ? (
+                <div className="h-44">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={rpeData} margin={{ top: 8, right: 8, bottom: 0, left: -24 }}>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                      <YAxis domain={[0, 10]} axisLine={false} tickLine={false} fontSize={12} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                      <Tooltip
+                        cursor={{ stroke: "hsl(var(--border))" }}
+                        contentStyle={{
+                          background: "hsl(var(--secondary))",
+                          border: "none",
+                          borderRadius: 12,
+                          fontSize: 13,
+                        }}
+                        labelStyle={{ color: "hsl(var(--muted-foreground))" }}
+                        itemStyle={{ color: "hsl(var(--foreground))" }}
+                      />
+                      <Line type="monotone" dataKey="rpe" name="RPE" stroke="hsl(var(--primary))" strokeWidth={2.5} dot={{ fill: "hsl(var(--primary))", r: 3, strokeWidth: 0 }} activeDot={{ r: 5, strokeWidth: 0 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Todavía no ha registrado ninguna sesión.</p>
-        )}
-      </div>
+              ) : (
+                <p className="type-footnote text-muted-foreground">Con una sola sesión aún no hay evolución que mostrar.</p>
+              )}
+            </section>
+          )}
 
-      {/* Personal Records */}
-      <div className="bg-card rounded-xl p-5 border border-border">
-        <h2 className="font-bold font-display mb-4 text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-primary" />
-          Récords personales ({prs.length})
-        </h2>
-        {prs.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs">Ejercicio</TableHead>
-                <TableHead className="text-xs text-right">Peso</TableHead>
-                <TableHead className="text-xs text-right">Reps</TableHead>
-                <TableHead className="text-xs text-right">1RM est.</TableHead>
-                <TableHead className="text-xs text-right">Fecha</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {prs.map((pr) => (
-                <TableRow key={pr.id}>
-                  <TableCell className="font-medium text-sm">{pr.exercise_name}</TableCell>
-                  <TableCell className="text-right text-sm">{pr.weight} kg</TableCell>
-                  <TableCell className="text-right text-sm">{pr.reps}</TableCell>
-                  <TableCell className="text-right text-sm font-bold text-primary">
-                    {pr.estimated_1rm ? `${Number(pr.estimated_1rm).toFixed(1)} kg` : "—"}
-                  </TableCell>
-                  <TableCell className="text-right text-xs text-muted-foreground">
-                    {new Date(pr.achieved_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" })}
-                  </TableCell>
-                </TableRow>
+          {/* Sesiones ejecutadas: lo que el cliente hizo realmente, serie a serie */}
+          {sessions.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader title="Últimas sesiones" hint={`${sessions.length} registradas`} />
+              <div className="overflow-hidden rounded-2xl bg-card">
+                {sessions.slice(0, 12).map(([key, logs], index) => {
+                  const [date, dayLabel] = key.split("|");
+                  const open = expandedSession === key;
+                  const done = logs.reduce((sum, log) => sum + log.sets_completed.filter((set) => set.done).length, 0);
+                  const total = logs.reduce((sum, log) => sum + log.sets_completed.length, 0);
+                  const rpe = logs.find((log) => log.rpe != null)?.rpe;
+                  return (
+                    <div key={key} className={cn(index > 0 && "sep-t")}>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        onClick={() => { void hapticSelection(); setExpandedSession(open ? null : key); }}
+                        className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate type-body">{dayLabel} · {new Date(`${date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+                          <span className="block type-footnote text-muted-foreground tabular-nums">{done}/{total} series{rpe ? ` · RPE ${rpe}` : " · Sin cerrar"}</span>
+                        </span>
+                        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios", open && "rotate-180")} strokeWidth={2.5} aria-hidden="true" />
+                      </button>
+                      {open && (
+                        <ul className="space-y-2.5 px-4 pb-4 pt-1">
+                          {logs.map((log) => (
+                            <li key={log.id} className="min-w-0">
+                              <p className="break-words type-subhead">{log.exercise_name}</p>
+                              <p className="break-words type-footnote text-muted-foreground tabular-nums">{setsSummary(log, "Sin series completadas")}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {prs.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader title="Récords personales" hint={`${prs.length} registrados`} />
+              <ListGroup>
+                {prs.map((pr) => (
+                  <ListRow
+                    key={pr.id}
+                    title={pr.exercise_name}
+                    subtitle={
+                      <span className="tabular-nums">
+                        {pr.weight} kg × {pr.reps} · {new Date(pr.achieved_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "2-digit" })}
+                      </span>
+                    }
+                    trailing={
+                      <span className="text-right">
+                        <span className="block font-rounded type-headline tabular-nums">
+                          {pr.estimated_1rm ? `${Number(pr.estimated_1rm).toFixed(1)} kg` : "—"}
+                        </span>
+                        <span className="block type-caption2 text-muted-foreground">1RM est.</span>
+                      </span>
+                    }
+                  />
+                ))}
+              </ListGroup>
+            </section>
+          )}
+
+          {hasTests && tests && (
+            <section className="space-y-3">
+              <SectionHeader title="Tests de nivel iniciales" />
+              <div className="grid grid-cols-2 gap-y-5 sm:grid-cols-4">
+                {(Object.keys(TEST_LABELS) as (keyof InitialTests)[]).map((k, index) => (
+                  <Stat
+                    key={k}
+                    value={tests[k] ?? "—"}
+                    unit={tests[k] != null ? TEST_LABELS[k].unit : undefined}
+                    label={TEST_LABELS[k].label}
+                    className={cn(index % 2 === 1 && "sep-l pl-4", index === 2 && "sm:sep-l sm:pl-4")}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Lo que aún no tiene datos se dice en una sola lista, no con avisos sueltos por sección. */}
+          {missing.length > 0 && (
+            <ListGroup header="Sin datos todavía">
+              {missing.map((item) => (
+                <ListRow key={item.title} title={item.title} value={item.value} />
               ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <p className="text-sm text-muted-foreground">Aún no ha registrado récords personales.</p>
-        )}
-      </div>
+            </ListGroup>
+          )}
+        </>
+      )}
     </div>
   );
 };
+
+/** Cifra al estilo de Salud: número grande redondeado y su etiqueta debajo. */
+const Stat = ({ value, unit, label, className }: { value: ReactNode; unit?: string; label: string; className?: string }) => (
+  <div className={cn("min-w-0", className)}>
+    <div className="truncate font-rounded text-[28px] font-bold leading-[34px] tabular-nums">
+      {value}
+      {unit ? <span className="ml-1 type-subhead font-semibold text-muted-foreground">{unit}</span> : null}
+    </div>
+    <div className="truncate type-footnote text-muted-foreground">{label}</div>
+  </div>
+);
 
 export default UserProgressPanel;

@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { motion } from "framer-motion";
-import { Target, Sparkles, Trash2, Upload, Loader2, Trophy, ImageOff } from "lucide-react";
+import { Sparkles, Upload, Trophy, ImageOff, CheckCircle2, TrendingUp, MessageSquare, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Spinner } from "@/components/ui/spinner";
+import { SectionHeader } from "@/components/ui/section-header";
+import { hapticTap } from "@/lib/native";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { signedUrlsFor, signedUrlFor, storagePathFor } from "@/lib/storageSign";
 import {
@@ -114,7 +117,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
       });
       if (error || !data || data.error) throw new Error(error?.message || data?.error || "Error IA");
       setComparison(data as Comparison);
-      if (data.congratulate) toast.success(`🎉 ¡${data.similarity}%! Muy cerca del objetivo`);
+      if (data.congratulate) toast.success(`Similitud del ${data.similarity} %: muy cerca del objetivo`);
     } catch (e) {
       toast.error("Error al comparar: " + (e instanceof Error ? e.message : "Inténtalo de nuevo."));
     }
@@ -190,203 +193,187 @@ const UserGoalPanel = ({ userId, email }: Props) => {
   const latestSignedUrl = latestPhoto ? signed.get(latestPhoto.photo_url) : undefined;
 
   if (loading) {
-    return <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 text-primary animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Spinner size="lg" className="text-primary" label="Cargando objetivo" />
+      </div>
+    );
   }
 
+  const takenAt = (photo: PhotoRow, options: Intl.DateTimeFormatOptions) =>
+    new Date(photo.taken_at + "T00:00:00").toLocaleDateString("es-ES", options);
+
   return (
-    <div className="space-y-6">
-      {/* Hero header */}
-      <div className="bg-card rounded-xl p-5 border border-border">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
-            <Target className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-display font-bold">Físico objetivo</h2>
-            <p className="text-xs text-muted-foreground">Toda su rutina y nutrición se orienta hacia esta meta visual.</p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <p className="type-subhead text-muted-foreground">Toda su rutina y su nutrición se orientan hacia esta meta visual.</p>
 
-      {/* Goal vs current side by side */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        {/* Goal */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider font-bold text-primary">🎯 Objetivo</span>
-            {goalUrl && (
-              <div className="flex gap-1">
-                <label className="cursor-pointer">
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
-                  <span className="text-[10px] px-2 py-1 rounded-md bg-secondary hover:bg-secondary/80 transition-colors flex items-center gap-1">
-                    <Upload className="w-3 h-3" /> Cambiar
-                  </span>
-                </label>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <button className="text-[10px] px-2 py-1 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors flex items-center gap-1" disabled={removing}>
-                      <Trash2 className="w-3 h-3" /> Quitar
-                    </button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Eliminar objetivo?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Se quitará la foto objetivo de {email}. Podrás subir otra después.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleRemoveGoal} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                        Eliminar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            )}
-          </div>
-          <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
-            {goalUrl ? (
-              goalSignedUrl ? (
-                <img loading="lazy" decoding="async" src={goalSignedUrl} alt="Físico objetivo" className="w-full h-full object-contain" />
+      {/* Objetivo y estado actual, lado a lado */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <figure className="min-w-0 space-y-2">
+          <figcaption className="px-1 type-footnote text-muted-foreground">Objetivo</figcaption>
+          {goalUrl ? (
+            <PhotoFrame src={goalSignedUrl} alt="Físico objetivo" pendingText="Preparando la foto objetivo…" />
+          ) : (
+            <label className={cn("flex aspect-[3/4] w-full cursor-pointer flex-col items-center justify-center rounded-2xl bg-card p-4 text-center transition-colors duration-100 active:bg-accent", uploading && "pointer-events-none")}>
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
+              {uploading ? (
+                <Spinner size="lg" className="text-primary" label="Subiendo" />
               ) : (
-                <div className="text-center p-6">
-                  <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">Preparando la foto objetivo…</p>
-                </div>
-              )
-            ) : (
-              <label className="cursor-pointer w-full h-full flex flex-col items-center justify-center text-center p-6">
+                <>
+                  <Upload className="h-7 w-7 text-primary" strokeWidth={1.75} />
+                  <span className="mt-3 type-headline">Subir foto objetivo</span>
+                  <span className="mt-1 type-footnote text-muted-foreground">JPG o PNG · máx. 8 MB</span>
+                </>
+              )}
+            </label>
+          )}
+          {goalUrl && (
+            <div className="flex items-center gap-4 px-1">
+              <label className="inline-flex min-h-11 cursor-pointer items-center type-subhead text-primary transition-opacity active:opacity-60">
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
-                {uploading ? (
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                    <span className="text-sm font-medium">Subir foto objetivo</span>
-                    <span className="text-xs text-muted-foreground mt-1">JPG/PNG · máx 8MB</span>
-                  </>
-                )}
+                {uploading ? "Subiendo…" : "Cambiar"}
               </label>
-            )}
-          </div>
-        </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button type="button" className="min-h-11 type-subhead text-destructive transition-opacity active:opacity-60 disabled:opacity-40" disabled={removing} onPointerDown={() => void hapticTap()}>
+                    Quitar
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar objetivo?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Se quitará la foto objetivo de {email}. Podrás subir otra después.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction destructive onClick={handleRemoveGoal}>
+                      Eliminar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </figure>
 
-        {/* Latest progress */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider font-bold text-muted-foreground">📷 Última foto</span>
-            {latestPhoto && (
-              <span className="text-[10px] text-muted-foreground">
-                {new Date(latestPhoto.taken_at + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-              </span>
-            )}
-          </div>
-          <div className="aspect-[3/4] bg-secondary/30 flex items-center justify-center">
-            {latestPhoto ? (
-              latestSignedUrl ? (
-                <img loading="lazy" decoding="async" src={latestSignedUrl} alt="Estado actual" className="w-full h-full object-contain" />
-              ) : (
-                <div className="text-center p-6">
-                  <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-xs text-muted-foreground">Preparando la última foto…</p>
-                </div>
-              )
-            ) : (
-              <div className="text-center p-6">
-                <ImageOff className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">El usuario aún no ha subido fotos de progreso</p>
-              </div>
-            )}
-          </div>
-        </div>
+        <figure className="min-w-0 space-y-2">
+          <figcaption className="truncate px-1 type-footnote text-muted-foreground">
+            Última foto{latestPhoto ? ` · ${takenAt(latestPhoto, { day: "numeric", month: "short", year: "numeric" })}` : ""}
+          </figcaption>
+          {latestPhoto ? (
+            <PhotoFrame src={latestSignedUrl} alt="Estado actual" pendingText="Preparando la última foto…" />
+          ) : (
+            <div className="flex aspect-[3/4] w-full flex-col items-center justify-center rounded-2xl bg-card p-4 text-center">
+              <ImageOff className="h-7 w-7 text-muted-foreground" strokeWidth={1.75} />
+              <p className="mt-3 type-footnote text-muted-foreground">Aún no ha subido fotos de progreso</p>
+            </div>
+          )}
+        </figure>
       </div>
 
-      {/* AI Comparison */}
-      <div className="bg-card rounded-xl p-5 border border-border">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <h3 className="font-display font-bold text-sm">Análisis IA: cercanía al objetivo</h3>
+      {/* Análisis con IA: la cifra de similitud es la protagonista */}
+      <section className="space-y-4">
+        <div className="flex items-start gap-4">
+          <Sparkles className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+          <div className="min-w-0 flex-1">
+            <h3 className="type-headline">Cercanía al objetivo</h3>
+            <p className="mt-0.5 type-subhead text-muted-foreground">
+              {!goalUrl
+                ? "Sube una foto objetivo para empezar."
+                : !latestPhoto
+                  ? "Pídele al usuario que suba al menos una foto de progreso."
+                  : "Compara su última foto con el objetivo."}
+            </p>
+            <Button
+              variant="plain"
+              size="sm"
+              className="-ml-3.5 mt-1"
+              onClick={() => { void hapticTap(); void runComparison(); }}
+              disabled={comparing || !goalUrl || !latestPhoto}
+            >
+              {comparing ? <><Spinner size="sm" className="text-primary" label="Analizando" /> Analizando…</> : "Comparar con IA"}
+            </Button>
           </div>
-          <Button variant="default" size="sm" onClick={runComparison} disabled={comparing || !goalUrl || !latestPhoto}>
-            {comparing ? <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> Analizando...</> : <><Sparkles className="w-3.5 h-3.5 mr-1" /> Comparar con IA</>}
-          </Button>
         </div>
-
-        {!goalUrl && (
-          <p className="text-xs text-muted-foreground">Sube una foto objetivo para empezar.</p>
-        )}
-        {goalUrl && !latestPhoto && (
-          <p className="text-xs text-muted-foreground">Pídele al usuario que suba al menos una foto de progreso.</p>
-        )}
 
         {comparison && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-muted-foreground">Similitud con el objetivo</span>
-                <span className={`text-2xl font-bold font-display ${comparison.congratulate ? "text-primary" : "text-foreground"}`}>
-                  {comparison.similarity}%
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="type-subhead text-muted-foreground">Similitud con el objetivo</span>
+                <span className={cn("font-rounded text-[34px] font-bold leading-[41px] tabular-nums", comparison.congratulate ? "text-primary" : "text-foreground")}>
+                  {comparison.similarity}
+                  <span className="ml-0.5 type-title3 text-muted-foreground">%</span>
                 </span>
               </div>
-              <Progress value={comparison.similarity} className="h-2" />
+              <Progress value={comparison.similarity} className="mt-2" />
             </div>
 
             {comparison.congratulate && (
-              <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 flex items-start gap-2">
-                <Trophy className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <div className="font-bold text-primary mb-0.5">¡Enhorabuena!</div>
-                  <div className="text-muted-foreground">El usuario está muy cerca del objetivo. Plantéale renovarlo.</div>
-                </div>
-              </div>
+              <Insight icon={Trophy} title="Muy cerca del objetivo" tint>
+                El usuario está muy cerca del objetivo. Plantéale renovarlo.
+              </Insight>
             )}
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div className="bg-secondary/30 rounded-lg p-3">
-                <div className="text-[10px] uppercase tracking-wider font-bold text-primary mb-1">✅ Ya conseguido</div>
-                <p className="text-xs text-foreground/90">{comparison.strengths}</p>
-              </div>
-              <div className="bg-secondary/30 rounded-lg p-3">
-                <div className="text-[10px] uppercase tracking-wider font-bold text-primary mb-1">⚡ A mejorar</div>
-                <p className="text-xs text-foreground/90">{comparison.gaps}</p>
-              </div>
-            </div>
-
-            <div className="bg-secondary/20 rounded-lg p-3 border border-border">
-              <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">💬 Feedback</div>
-              <p className="text-sm">{comparison.feedback}</p>
-            </div>
-          </motion.div>
+            <Insight icon={CheckCircle2} title="Ya conseguido">{comparison.strengths}</Insight>
+            <Insight icon={TrendingUp} title="A mejorar">{comparison.gaps}</Insight>
+            <Insight icon={MessageSquare} title="Valoración">{comparison.feedback}</Insight>
+          </div>
         )}
-      </div>
+      </section>
 
-      {/* Timeline of progress photos */}
+      {/* Evolución de fotos */}
       {allPhotos.length > 0 && (
-        <div className="bg-card rounded-xl p-5 border border-border">
-          <h3 className="font-display font-bold text-sm mb-3">Evolución reciente ({allPhotos.length})</h3>
+        <section className="space-y-3">
+          <SectionHeader size="sm" title="Evolución reciente" hint={`${allPhotos.length} ${allPhotos.length === 1 ? "foto" : "fotos"}`} />
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {allPhotos.map((p) => (
-              <div key={p.id} className="aspect-[3/4] rounded-lg overflow-hidden border border-border relative">
-                {signed.get(p.photo_url) ? (
-                  <img src={signed.get(p.photo_url)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-secondary/40" />
-                )}
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-                  <span className="text-[9px] text-white font-medium">
-                    {new Date(p.taken_at + "T00:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                  </span>
-                </div>
-              </div>
+              <figure key={p.id} className="min-w-0 space-y-1">
+                <PhotoFrame src={signed.get(p.photo_url)} alt="" cover />
+                <figcaption className="px-0.5 type-caption1 text-muted-foreground tabular-nums">{takenAt(p, { day: "numeric", month: "short" })}</figcaption>
+              </figure>
             ))}
           </div>
+        </section>
+      )}
+    </div>
+  );
+};
+
+/** Foto en un hueco 3:4 con respaldo compuesto si aún no hay URL firmada o la carga falla. */
+const PhotoFrame = ({ src, alt, pendingText, cover }: { src?: string; alt: string; pendingText?: string; cover?: boolean }) => {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [src]);
+  return (
+    <div className={cn("flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-card", cover ? "rounded-xl" : "rounded-2xl")}>
+      {src && !failed ? (
+        <img
+          loading="lazy"
+          decoding="async"
+          src={src}
+          alt={alt}
+          onError={() => setFailed(true)}
+          className={cn("h-full w-full", cover ? "object-cover" : "object-contain")}
+        />
+      ) : (
+        <div className="flex flex-col items-center p-4 text-center">
+          <ImageOff className={cn("text-muted-foreground", cover ? "h-5 w-5" : "h-7 w-7")} strokeWidth={1.75} aria-hidden="true" />
+          {pendingText && !failed ? <p className="mt-3 type-footnote text-muted-foreground">{pendingText}</p> : null}
         </div>
       )}
     </div>
   );
 };
+
+const Insight = ({ icon: Icon, title, tint, children }: { icon: LucideIcon; title: string; tint?: boolean; children: ReactNode }) => (
+  <div className="flex items-start gap-4">
+    <Icon className={cn("mt-0.5 h-6 w-6 shrink-0", tint ? "text-primary" : "text-muted-foreground")} strokeWidth={1.75} aria-hidden="true" />
+    <div className="min-w-0">
+      <p className="type-headline">{title}</p>
+      <p className="mt-0.5 break-words type-subhead text-muted-foreground">{children}</p>
+    </div>
+  </div>
+);
 
 export default UserGoalPanel;

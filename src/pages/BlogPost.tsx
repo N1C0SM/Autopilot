@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { FileQuestion, ChevronLeft } from "lucide-react";
+import { FileQuestion, ChevronLeft, ImageOff } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,22 @@ interface Post {
   author_name: string | null;
 }
 
+/** Image from the article body, with a composed gap if it fails to load. */
+const BodyImage = ({ src, alt }: { src?: string; alt?: string }) => {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <span className="my-8 flex aspect-video items-center justify-center rounded-2xl bg-secondary"><ImageOff className="h-8 w-8 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" /></span>;
+  }
+  return <img src={src} alt={alt ?? ""} loading="lazy" decoding="async" onError={() => setFailed(true)} className="rounded-2xl" />;
+};
+
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [coverFailed, setCoverFailed] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -104,8 +114,8 @@ const BlogPost = () => {
         })}</script>
       </Helmet>
 
-      <nav className="app-chrome sticky top-0 z-50 border-b">
-        <div className="container mx-auto flex h-14 items-center justify-between px-4 pt-safe">
+      <nav className="app-chrome sep-b sticky top-0 z-50 pt-safe">
+        <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <Link to="/blog" onClick={() => void hapticTap()} className="-ml-2 flex min-h-[44px] items-center gap-0.5 pr-2 type-body text-primary transition-opacity active:opacity-60">
             <ChevronLeft className="h-6 w-6" strokeWidth={2.25} /> Blog
           </Link>
@@ -117,7 +127,7 @@ const BlogPost = () => {
 
       <article className="container mx-auto max-w-3xl px-4 pb-safe pt-8 sm:pt-12">
         <header className="mb-8">
-          <h1 className="type-large-title sm:text-5xl sm:leading-[1.1]">{post.title}</h1>
+          <h1 className="type-large-title sm:text-[48px] sm:leading-[52px]">{post.title}</h1>
           <p className="mt-3 type-footnote text-muted-foreground">
             {[
               post.author_name ? `Por ${post.author_name}` : "",
@@ -129,12 +139,14 @@ const BlogPost = () => {
 
         {post.cover_url && (
           <div className="mb-10 overflow-hidden rounded-2xl">
-            <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} className="h-auto w-full object-cover" />
+            {coverFailed
+              ? <div className="flex aspect-video items-center justify-center bg-secondary"><ImageOff className="h-8 w-8 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" /></div>
+              : <img loading="lazy" decoding="async" src={post.cover_url} alt={post.title} onError={() => setCoverFailed(true)} className="h-auto w-full object-cover" />}
           </div>
         )}
 
-        <div className="prose prose-invert prose-lg max-w-none prose-headings:font-display prose-a:text-primary prose-strong:text-foreground">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body_markdown}</ReactMarkdown>
+        <div className="prose prose-invert prose-lg max-w-none prose-a:text-primary prose-a:no-underline prose-strong:text-foreground">
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ img: ({ src, alt }) => <BodyImage src={src} alt={alt} /> }}>{post.body_markdown}</ReactMarkdown>
         </div>
 
         <aside className="mx-auto mt-16 max-w-sm text-center">

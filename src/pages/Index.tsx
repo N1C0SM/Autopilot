@@ -1,4 +1,4 @@
-import { ArrowRight, Dumbbell, LineChart, Play, SlidersHorizontal } from "lucide-react";
+import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
@@ -9,7 +9,8 @@ import { track } from "@/lib/analytics";
 import { type PlanKey } from "@/config/tiers";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/lib/publicCopy";
-import dashboardPreview from "@/assets/dashboard-preview.png";
+import PublicHeroPhone from "@/components/PublicHeroPhone";
+import { hapticTap } from "@/lib/native";
 
 const ProductPreview = lazy(() => import("@/components/ProductPreview"));
 const PricingTiers = lazy(() => import("@/components/PricingTiers"));
@@ -85,82 +86,82 @@ export default function Index() {
         })}</script>
     </Helmet>
     {/* 1 · Hero */}
-    <section className="px-5 pb-6 pt-8 sm:px-8 sm:pb-8 sm:pt-16">
-      <div className="mx-auto grid max-w-6xl items-center gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-12">
-        <div className="motion-safe:animate-fade-in">
-          <h1 className="font-display text-[clamp(1.9rem,9vw,4rem)] font-bold leading-[1.04] tracking-tight"><span className="whitespace-nowrap">Tu entrenamiento.</span> <span className="whitespace-nowrap">Tu nutrición.</span> <span className="text-primary whitespace-nowrap">Tu progreso.</span></h1>
-          <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground sm:text-lg">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Button variant="hero" size="lg" asChild className="min-h-12"><Link to="/onboarding" onClick={() => track("cta_click", { cta: "free_signup", source: "hero" })}>Crear mi rutina gratis <ArrowRight className="h-4 w-4" /></Link></Button>
-            <Button variant="outline" size="lg" asChild className="min-h-12"><a href="#demo" onClick={() => track("plan_preview_view", { source: "hero" })}><Play className="h-4 w-4" /> Probar la demo</a></Button>
-          </div>
-          <p className="mt-4 text-sm text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
+    <section className="px-5 pt-10 sm:px-8 sm:pt-16">
+      <div className="mx-auto max-w-3xl text-center">
+        <h1 className="type-large-title sm:text-[48px] sm:leading-[52px] md:text-[64px] md:leading-[68px]"><span className="block">Tu entrenamiento.</span> <span className="block">Tu nutrición.</span> <span className="block text-primary">Tu progreso.</span></h1>
+        <p className="mx-auto mt-5 max-w-md type-body text-muted-foreground md:max-w-xl md:text-[21px] md:leading-[28px]">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
+        <div className="mx-auto mt-8 flex max-w-sm flex-col items-stretch gap-1 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
+          <Button variant="hero" size="lg" asChild className="sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>
+          <Button variant="plain" size="lg" asChild><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
         </div>
-        <img src={dashboardPreview} alt="Pantalla de Autopilot con el entrenamiento del día" width={1280} height={720} fetchPriority="high" decoding="async" className="aspect-video w-full rounded-lg border border-border object-cover" />
+        <p className="mt-4 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
       </div>
+      <div className="mt-12 sm:mt-14"><PublicHeroPhone /></div>
     </section>
 
     {/* 2 · Demo */}
-    <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 border-t border-border">
-      <p className="mx-auto max-w-6xl px-5 pt-5 text-sm text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
+    <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-14 sm:pt-20">
+      <p className="mx-auto max-w-6xl px-5 type-footnote text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
         <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
       </Suspense>
     </section>
 
     {/* 3 · Precios */}
-    <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 border-t border-border px-5 py-12 sm:px-8 sm:py-16">
+    <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-6xl">
-        <h2 id="precios-titulo" className="font-display text-3xl font-bold sm:text-4xl">Empieza gratis. Paga solo si te aporta.</h2>
-        <p className="mt-3 max-w-2xl text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
+        <h2 id="precios-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza gratis. Paga solo si te aporta.</h2>
+        <p className="mt-3 max-w-2xl type-body text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
         <div className="mt-8">
           <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
             <PricingTiers onSelect={selectPlan} />
           </Suspense>
         </div>
-        <p className="mt-6 text-center text-sm"><Link to="/planes" className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">Ver la comparativa completa</Link></p>
+        <p className="mt-6 text-center"><Link to="/planes" className="inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver la comparativa completa</Link></p>
       </div>
     </section>
 
     {/* 4 · Cómo funciona */}
-    <section aria-labelledby="como-titulo" className="border-t border-border px-5 py-12 sm:px-8 sm:py-16">
+    <section aria-labelledby="como-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-6xl">
-        <h2 id="como-titulo" className="font-display text-3xl font-bold sm:text-4xl">Cómo funciona</h2>
-        <ol className="mt-8 grid gap-6 md:grid-cols-3">
+        <h2 id="como-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Cómo funciona</h2>
+        <ol className="mt-8 grid gap-6 md:grid-cols-3 md:gap-10">
           {[
             [SlidersHorizontal, "Personaliza", "Objetivo, nivel, días, lesiones y material: gimnasio, casa o calistenia."],
             [Dumbbell, "Entrena", "Sigue tu sesión y apunta kg y repeticiones de cada serie."],
             [LineChart, "Progresa", "Consulta récords, volumen y peso. En Plus, la carga siguiente se calcula con tus registros."],
-          ].map(([Icon, title, text], i) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="border-t border-border pt-5">
-            <div className="flex items-center gap-3"><I className="h-5 w-5 text-primary" aria-hidden="true" /><span className="text-sm text-muted-foreground">0{i + 1}</span></div>
-            <h3 className="mt-3 font-display text-xl font-bold">{title as string}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{text as string}</p>
+          ].map(([Icon, title, text]) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="flex items-start gap-4">
+            <span className="flex w-10 shrink-0 justify-center pt-0.5"><I className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <h3 className="type-headline">{title as string}</h3>
+              <p className="mt-1 type-subhead text-muted-foreground">{text as string}</p>
+            </div>
           </li>; })}
         </ol>
-        <p className="mt-8 max-w-2xl text-sm leading-relaxed text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: el análisis corporal por foto y el asistente de dudas.</p>
+        <p className="mt-8 max-w-2xl type-footnote text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: el análisis corporal por foto y el asistente de dudas.</p>
       </div>
     </section>
 
     {/* 5 · Fundador + FAQ + CTA */}
-    <section aria-labelledby="fundador-titulo" className="border-t border-border px-5 py-12 sm:px-8 sm:py-16">
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+    <section aria-labelledby="fundador-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div>
-          <h2 id="fundador-titulo" className="font-display text-3xl font-bold sm:text-4xl">Quién está detrás</h2>
-          <p className="mt-4 leading-relaxed text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde por chat</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
-          <p className="mt-3 text-sm text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas por chat no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
+          <h2 id="fundador-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Quién está detrás</h2>
+          <p className="mt-4 type-body text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde por chat</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
+          <p className="mt-3 type-footnote text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas por chat no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
         </div>
         <div>
-          <h2 className="font-display text-2xl font-bold">Dudas frecuentes</h2>
-          <Accordion type="single" collapsible className="mt-4">
-            {faqs.map((f, i) => <AccordionItem key={f.q} value={`f${i}`}><AccordionTrigger className="min-h-12 text-left">{f.q}</AccordionTrigger><AccordionContent className="leading-relaxed text-muted-foreground">{f.a}</AccordionContent></AccordionItem>)}
+          <h2 className="type-title2">Dudas frecuentes</h2>
+          <Accordion type="single" collapsible className="mt-4 rounded-2xl bg-card px-4 [&>:last-child]:border-b-0">
+            {faqs.map((f, i) => <AccordionItem key={f.q} value={`f${i}`}><AccordionTrigger className="min-h-12 text-left">{f.q}</AccordionTrigger><AccordionContent>{f.a}</AccordionContent></AccordionItem>)}
           </Accordion>
-          <Link to="/preguntas-frecuentes" className="mt-3 inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">Ver todas las dudas</Link>
+          <Link to="/preguntas-frecuentes" className="mt-2 inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver todas las dudas</Link>
         </div>
       </div>
-      <div className="mx-auto mt-14 max-w-6xl border-t border-border pt-10 text-center">
-        <h2 className="font-display text-2xl font-bold sm:text-3xl">Empieza a entrenar con Autopilot</h2>
-        <p className="mt-2 text-muted-foreground">Gratis y sin tarjeta.</p>
-        <Button variant="hero" size="lg" asChild className="mt-6 min-h-12"><Link to="/onboarding" onClick={() => track("cta_click", { cta: "free_signup", source: "final" })}>Crear mi rutina gratis <ArrowRight className="h-4 w-4" /></Link></Button>
+      <div className="mx-auto mt-16 max-w-md text-center sm:mt-24">
+        <h2 className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza a entrenar con Autopilot</h2>
+        <p className="mt-2 type-body text-muted-foreground">Gratis y sin tarjeta.</p>
+        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
       </div>
     </section>
   </PublicLayout>;

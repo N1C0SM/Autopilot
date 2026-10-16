@@ -3,19 +3,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { MessageCircle, LogOut, Search, Users as UsersIcon, UserRound } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import Chat from "@/components/Chat";
 import FloatingMobileNav from "@/components/mobile/FloatingMobileNav";
-import InfoHint from "@/components/InfoHint";
 import UserDetail from "@/components/admin/UserDetail";
 import TrainerSelfProfile from "@/components/trainer/TrainerSelfProfile";
+import TrainerShell from "@/components/trainer/TrainerShell";
 import type { Profile } from "@/pages/Admin";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Spinner } from "@/components/ui/spinner";
-import { hapticTap } from "@/lib/native";
 import { PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -29,11 +27,20 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarProvider,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 
 type TrainerSection = "users" | "chat" | "profile";
+
+// Un solo vocabulario: barra lateral, cabecera de escritorio y título grande del móvil.
+const SECTION_TITLES: Record<TrainerSection, string> = {
+  users: "Clientes",
+  chat: "Chat con admin",
+  profile: "Mi perfil",
+};
+
+/** Título de la ficha: el nombre del cliente, nunca el email entero. */
+const clientName = (profile: Profile) => profile.name?.trim() || profile.email.split("@")[0];
 
 const TrainerSidebar = ({
   section,
@@ -49,25 +56,25 @@ const TrainerSidebar = ({
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const items: { title: string; section: TrainerSection; icon: typeof UsersIcon }[] = [
-    { title: "Mis usuarios", section: "users", icon: UsersIcon },
-    { title: "Chat con admin", section: "chat", icon: MessageCircle },
-    { title: "Mi perfil", section: "profile", icon: UserRound },
+    { title: SECTION_TITLES.users, section: "users", icon: UsersIcon },
+    { title: SECTION_TITLES.chat, section: "chat", icon: MessageCircle },
+    { title: SECTION_TITLES.profile, section: "profile", icon: UserRound },
   ];
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <div className="p-4 border-b border-sidebar-border">
+        <div className="px-4 py-5">
           {!collapsed ? (
             <>
-              <span className="type-headline text-primary">Autopilot</span>
-              <span className="type-footnote text-muted-foreground ml-2">Entrenador</span>
+              <span className="type-title3 text-primary">Autopilot</span>
+              <span className="ml-2 type-footnote text-muted-foreground">Entrenador</span>
             </>
           ) : (
-            <span className="type-headline text-primary">A</span>
+            <span className="type-title3 text-primary">A</span>
           )}
         </div>
         <SidebarGroup>
-          <SidebarGroupLabel>Navegación</SidebarGroupLabel>
+          <SidebarGroupLabel>Menú</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => {
@@ -76,16 +83,15 @@ const TrainerSidebar = ({
                   <SidebarMenuItem key={item.section}>
                     <SidebarMenuButton
                       onClick={() => { onNavigate(item.section); if (isMobile) setOpenMobile(false); }}
-                      className={`min-h-11 cursor-pointer transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : "hover:bg-sidebar-accent/50"}`}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`transition-colors active:bg-sidebar-accent ${isActive ? "bg-sidebar-accent text-sidebar-primary font-medium" : ""}`}
                     >
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && (
-                        <span className="flex-1 flex items-center justify-between">
+                        <span className="flex flex-1 items-center justify-between">
                           {item.title}
                           {item.section === "users" && (
-                            <span className="type-caption1 tabular-nums bg-sidebar-accent text-sidebar-accent-foreground px-1.5 py-0.5 rounded-full">
-                              {userCount}
-                            </span>
+                            <span className="type-footnote tabular-nums text-muted-foreground">{userCount}</span>
                           )}
                         </span>
                       )}
@@ -100,7 +106,7 @@ const TrainerSidebar = ({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} className="min-h-11 cursor-pointer text-muted-foreground active:text-destructive hover:text-destructive">
+            <SidebarMenuButton onClick={onSignOut} className="text-muted-foreground active:text-destructive hover:text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               {!collapsed && <span>Cerrar sesión</span>}
             </SidebarMenuButton>
@@ -194,7 +200,7 @@ const TrainerPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-dvh items-center justify-center bg-background">
         <Spinner size="lg" className="text-primary" />
       </div>
     );
@@ -204,12 +210,12 @@ const TrainerPage = () => {
   const handleSignOut = async () => { await signOut(); navigate("/login", { replace: true }); };
 
   const goSection = (s: TrainerSection) => { setSection(s); setSelected(null); };
-  const sectionTitle = section === "users" ? "Mis clientes" : section === "chat" ? "Chat con admin" : "Mi perfil";
+  const closeClient = () => setSelected(null);
   const visibleUsers = users.filter((u) => u.email.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
     <SidebarProvider>
-      <div className="min-h-dvh flex w-full bg-background">
+      <div className="flex w-full bg-background md:min-h-dvh">
         <div className="hidden md:block">
           <TrainerSidebar
             section={section}
@@ -218,31 +224,22 @@ const TrainerPage = () => {
             onSignOut={handleSignOut}
           />
         </div>
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="app-chrome border-b sticky top-0 z-40 pt-[env(safe-area-inset-top)]">
-            <div className="h-14 flex items-center px-4 gap-3">
-              <SidebarTrigger className="hidden md:inline-flex" />
-              <span className="min-w-0 flex-1 truncate text-center md:text-left type-headline md:type-subhead md:font-medium md:text-muted-foreground">
-                {selected ? (selected.name?.trim() || selected.email) : <><span className="md:hidden">{section === "chat" ? sectionTitle : ""}</span><span className="max-md:hidden">{sectionTitle}</span></>}
-              </span>
-              <button
-                type="button"
-                onClick={() => { void hapticTap(); void handleSignOut(); }}
-                aria-label="Cerrar sesión"
-                className="md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors active:bg-accent active:text-destructive"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          </header>
-          <main className={`flex-1 p-4 md:p-6 lg:p-8 max-w-5xl mx-auto w-full pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 ${section === "chat" && !selected ? "max-md:flex max-md:flex-col max-md:h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] max-md:overflow-hidden max-md:pb-[calc(6rem+env(safe-area-inset-bottom))]" : ""}`}>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TrainerShell
+            title={SECTION_TITLES[section]}
+            screenKey={selected ? `${section}:${selected.user_id}` : section}
+            detail={selected ? {
+              title: clientName(selected),
+              backLabel: SECTION_TITLES.users,
+              backAriaLabel: "Volver a clientes",
+              onBack: closeClient,
+            } : null}
+          >
             {selected ? (
-              <div>
-                {/* La ficha ya trae su propia flecha de volver: el botón grande
-                    duplicaba la acción y gastaba 100 px de scroll en cada cliente. */}
+              <div className="min-w-0">
                 <UserDetail
                   profile={selected}
-                  onBack={() => setSelected(null)}
+                  onBack={closeClient}
                   restricted
                   onUpdate={(uid, updates) => {
                     setUsers((u) => u.map((p) => (p.user_id === uid ? { ...p, ...updates } : p)));
@@ -251,52 +248,50 @@ const TrainerPage = () => {
                 />
               </div>
             ) : section === "users" ? (
-              <div className="space-y-6">
-                <div className="flex items-end justify-between gap-3 pt-2">
-                  <div className="min-w-0">
-                    <h1 className="type-large-title flex items-center gap-2">
-                      Clientes
-                      <InfoHint text="El administrador gestiona tus asignaciones. Pulsa en un cliente para revisar su plan, progreso y actividad." />
-                    </h1>
-                    <p className="mt-1 type-subhead text-muted-foreground">
-                      {users.length === 0
-                        ? "Tus clientes y sus cambios aparecen aquí en directo."
-                        : `${users.length} ${users.length === 1 ? "asignado" : "asignados"}. Sus cambios aparecen aquí en directo.`}
+              <div className="flex min-w-0 flex-1 flex-col gap-4">
+                {users.length > 0 && (
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="type-subhead tabular-nums text-muted-foreground">
+                      {users.length} {users.length === 1 ? "cliente asignado" : "clientes asignados"}
                     </p>
+                    {/* Solo se anuncia cuando está conectado: un «Conectando…» eterno
+                        es ruido y promete algo que puede no llegar. */}
+                    {realtimeConnected ? (
+                      <span className="flex shrink-0 items-center gap-1.5 type-footnote text-muted-foreground" aria-live="polite">
+                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-success" />
+                        En directo
+                      </span>
+                    ) : null}
                   </div>
-                  {/* Solo se anuncia cuando está conectado: un «Conectando…» eterno
-                      es ruido y promete algo que puede no llegar. */}
-                  {realtimeConnected ? (
-                    <span className="flex shrink-0 items-center gap-1.5 pb-1 type-footnote text-muted-foreground" aria-live="polite">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      En directo
-                    </span>
-                  ) : null}
-                </div>
+                )}
                 {users.length > 3 && (
-                  <Input
-                    type="search"
-                    enterKeyHint="search"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    placeholder="Buscar por email…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    aria-label="Buscar usuario asignado"
-                  />
+                  <div className="relative">
+                    <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="search"
+                      enterKeyHint="search"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      placeholder="Buscar por email…"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      aria-label="Buscar usuario asignado"
+                      className="pl-10"
+                    />
+                  </div>
                 )}
                 {users.length === 0 ? (
                   <EmptyState
                     icon={UsersIcon}
                     title="Aún no tienes clientes asignados"
                     description="Pide al administrador que te asigne clientes para empezar a seguir su progreso."
-                    className="py-20"
+                    className="flex-1 md:py-20"
                   />
                 ) : visibleUsers.length === 0 ? (
-                  <EmptyState icon={Search} title="Sin coincidencias" description="Prueba con otro email." className="py-16" />
+                  <EmptyState icon={Search} title="Sin coincidencias" description="Prueba con otro email." className="flex-1 md:py-16" />
                 ) : (
-                  <ListGroup>
+                  <ListGroup footer="El administrador gestiona tus asignaciones. Los cambios de tus clientes aparecen aquí al momento.">
                     {visibleUsers.map((u) => (
                       <ListRow
                         key={u.user_id}
@@ -304,7 +299,7 @@ const TrainerPage = () => {
                         chevron
                         leading={
                           <Avatar className="h-10 w-10 shrink-0">
-                            <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} />
+                            <AvatarImage src={u.avatar_url || undefined} alt={u.name?.trim() || "Foto del cliente"} className="object-cover" />
                             <AvatarFallback className="bg-secondary type-subhead font-semibold text-muted-foreground">
                               {(u.name?.trim() || u.email).charAt(0).toUpperCase()}
                             </AvatarFallback>
@@ -312,9 +307,9 @@ const TrainerPage = () => {
                         }
                         title={<span className="block truncate type-headline">{u.name?.trim() || u.email}</span>}
                         subtitle={
-                          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                             {/* Sin nombre no repetimos el email dos veces. */}
-                            {u.name?.trim() ? <span className="break-all">{u.email}</span> : null}
+                            {u.name?.trim() ? <span className="min-w-0 max-w-full truncate">{u.email}</span> : null}
                             <PlanStatusBadge planStatus={u.plan_status} />
                           </span>
                         }
@@ -327,21 +322,22 @@ const TrainerPage = () => {
               <TrainerSelfProfile assignedClientCount={users.length} />
             ) : (
               user && (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <div className="flex items-center gap-1.5 mb-3 type-footnote text-muted-foreground">
-                    <span>Chat interno con el equipo</span>
-                    <InfoHint text="Canal privado con el administrador para dudas, incidencias o cambios en los planes de tus usuarios. Tus usuarios no ven esta conversación." />
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+                  <p className="type-subhead text-muted-foreground">
+                    Canal privado con el administrador. Tus clientes no ven esta conversación.
+                  </p>
+                  {/* Alto fijo en escritorio: la conversación hace scroll dentro y el campo queda a la vista. */}
+                  <div className="flex min-h-0 flex-1 flex-col md:h-[min(42rem,calc(100dvh-12rem))] md:flex-none">
+                    <Chat conversationUserId={user.id} audience="team" layout="fill" />
                   </div>
-                  <div className="min-h-0 flex-1"><Chat conversationUserId={user.id} audience="team" layout="fill" /></div>
-                  <p className="type-footnote text-muted-foreground mt-3 text-center">Conversación privada con el administrador.</p>
                 </div>
               )
             )}
-          </main>
+          </TrainerShell>
         </div>
       </div>
       <FloatingMobileNav
-        className="trainer-mobile-nav"
+        className="trainer-mobile-nav mobile-tabbar"
         active={section}
         items={[
           { key: "users", label: "Clientes", icon: UsersIcon },

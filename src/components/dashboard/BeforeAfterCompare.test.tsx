@@ -32,6 +32,16 @@ describe("before and after compare", () => {
     expect(screen.getByAltText("Después")).toHaveAttribute("src", "https://signed.test/new");
   });
 
+  it("replaces a photo that fails to load with a composed placeholder", () => {
+    render(<BeforeAfterCompare photos={photos} signed={signed} onClose={vi.fn()} />);
+
+    fireEvent.error(screen.getByAltText("Antes"));
+
+    expect(screen.queryByAltText("Antes")).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Antes: foto no disponible" })).toBeInTheDocument();
+    expect(screen.getByAltText("Después")).toBeInTheDocument();
+  });
+
   it("asks to close from the Cerrar button and from Escape", () => {
     const onClose = vi.fn();
     render(<BeforeAfterCompare photos={photos} signed={signed} onClose={onClose} />);

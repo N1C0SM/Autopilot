@@ -22,18 +22,18 @@ const Legal = () => {
         <meta name="robots" content="index,follow" />
       </Helmet>
 
-    <p className="type-subhead text-muted-foreground">{doc.summary}</p>
-        <p className="mt-2 type-footnote text-muted-foreground">Versión {LEGAL_VERSION} · Actualizado {LEGAL_LAST_UPDATED}</p>
+      <p className="type-subhead text-muted-foreground">{doc.summary}</p>
+      <p className="mt-2 type-footnote text-muted-foreground">Versión {LEGAL_VERSION} · Actualizado {LEGAL_LAST_UPDATED}</p>
 
-      <article className="mt-8 space-y-7">
+      <article className="selectable mt-8 space-y-7">
         {doc.sections.map((s, i) => (
           <section key={i}>
             {s.heading && <h2 className="mb-2 type-title3">{s.heading}</h2>}
             {s.paragraphs?.map((p, j) => (
-              <p key={j} className="mb-3 type-callout leading-relaxed text-foreground/85">{p}</p>
+              <p key={j} className="mb-3 type-callout leading-relaxed">{p}</p>
             ))}
             {s.list && (
-              <ul className="space-y-2 pl-5 type-callout leading-relaxed text-foreground/85 list-disc marker:text-muted-foreground">
+              <ul className="list-disc space-y-2 pl-5 type-callout leading-relaxed marker:text-muted-foreground">
                 {s.list.map((it, j) => <li key={j}>{it}</li>)}
               </ul>
             )}
@@ -51,7 +51,7 @@ const Legal = () => {
         )}
       </ListGroup>
 
-      <p className="mt-10 px-1 type-footnote text-muted-foreground">
+      <p className="mt-10 type-footnote text-muted-foreground">
         Este documento es un borrador adaptado al servicio actual de Autopilot. Antes de su publicación definitiva debe ser revisado por un abogado o tu Delegado de Protección de Datos (DPO).
       </p>
     </Screen>
