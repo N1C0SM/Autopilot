@@ -210,12 +210,12 @@ body.keyboard-open main {
 
     /* Apple HIG — the platform's system font. On Apple devices this resolves to
        San Francisco with its own optical sizing and tracking tables; elsewhere to
-       that platform's UI font. No HTTP request, no fallback flash on first paint.
-       `--font-rounded` is SF Pro Rounded, used for large numerals (Fitness, Health). */
-    --font-display: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-sans: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-body: -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --font-rounded: ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+       Inter, mirroring SF Pro's neutral geometry, aperture shapes and proportions.
+       `--font-rounded` is SF Pro Rounded on Apple, Inter on non-Apple. */
+    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Inter", system-ui, -apple-system, sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Inter", system-ui, -apple-system, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Inter", system-ui, -apple-system, sans-serif;
+    --font-rounded: ui-rounded, 'SF Pro Rounded', "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
     --gradient-hero: linear-gradient(135deg, hsl(44 78% 72%) 0%, hsl(38 66% 52%) 100%);
     --gradient-gold: linear-gradient(180deg, hsl(44 78% 74%) 0%, hsl(40 66% 52%) 100%);
@@ -243,20 +243,20 @@ body.keyboard-open main {
     -moz-osx-font-smoothing: grayscale;
     /* Let the system font pick its optical size per text size. */
     font-optical-sizing: auto;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  /* The system font tracks itself per size (San Francisco ships a tracking
-     table), so headings keep `letter-spacing: normal`. Hand-tightening on top of
-     it reads tighter than anything UIKit draws. */
+  /* The system font tracks itself per size; with Inter / Web, tight negative tracking gives
+     the exact crisp density of San Francisco headlines. */
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 700;
-    letter-spacing: normal;
+    letter-spacing: -0.02em;
     text-wrap: balance;
   }
-  h1 { line-height: 1.2; }
-  h2 { line-height: 1.25; }
-  h3 { line-height: 1.25; }
+  h1 { line-height: 1.2; letter-spacing: -0.025em; }
+  h2 { line-height: 1.25; letter-spacing: -0.02em; }
+  h3 { line-height: 1.25; letter-spacing: -0.015em; }
 
   :focus-visible {
     outline: 2px solid hsl(var(--primary) / 0.9);
@@ -273,7 +273,7 @@ body.keyboard-open main {
   /* Bar material (navigation bar, tab bar, toolbars). */
   .app-chrome {
     border-color: hsl(var(--border) / 0.75);
-    background: hsl(var(--background) / 0.72);
+    background: hsl(var(--background) / 0.82);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
     backdrop-filter: saturate(180%) blur(20px);
   }
@@ -383,11 +383,17 @@ body.keyboard-open main {
     color: hsl(var(--primary));
   }
 
-  /* Hairline separators: half a point, one device pixel on a Retina screen. */
+  /* Hairline separators: half a point on Retina, 1px on standard displays so it never drops. */
   .sep-t { border-top: 0.5px solid hsl(var(--border)); }
   .sep-b { border-bottom: 0.5px solid hsl(var(--border)); }
   .sep-l { border-left: 0.5px solid hsl(var(--border)); }
   .sep-r { border-right: 0.5px solid hsl(var(--border)); }
+  @media not all and (min-resolution: 144dpi) {
+    .sep-t { border-top-width: 1px; }
+    .sep-b { border-bottom-width: 1px; }
+    .sep-l { border-left-width: 1px; }
+    .sep-r { border-right-width: 1px; }
+  }
 
   /* Safe-area padding helpers. */
   .pt-safe { padding-top: var(--safe-top); }
@@ -407,6 +413,33 @@ body.keyboard-open main {
 /* Tabs deslizables en móvil sin barra de scroll visible */
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Scrollbars prémium estilo macOS/iOS en Web (Chrome, Edge, Firefox en Windows y Linux) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border) / 0.5) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--secondary) / 0.8);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
 
 /* Sonner ignores `offset` under 600px and pins toasts 20px from the top, which puts
    them over the clock and the Dynamic Island. Keep them below the status bar. */

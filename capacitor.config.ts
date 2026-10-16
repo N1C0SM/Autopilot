@@ -29,6 +29,7 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: "DARK",
       backgroundColor: "#000000",
+      overlaysWebView: true,
     },
     Keyboard: {
       // "native" redimensiona el WebView: los inputs y la barra inferior

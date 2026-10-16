@@ -15,7 +15,11 @@ export function initPlatformClasses() {
   if (typeof document === "undefined" || !isNativeApp()) return;
   const root = document.documentElement;
   root.classList.add("native");
-  if (isIOSNative()) root.classList.add("ios");
+  if (isIOSNative()) {
+    root.classList.add("ios");
+  } else {
+    root.classList.add("android");
+  }
   // Una app no se amplía con pellizco; el tamaño de texto lo decide el sistema.
   const viewport = document.querySelector('meta[name="viewport"]');
   viewport?.setAttribute(
@@ -29,7 +33,7 @@ export async function initNative() {
   try {
     const { StatusBar, Style } = await import("@capacitor/status-bar");
     await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: "#000000" });
+    await StatusBar.setOverlaysWebView({ overlay: true });
   } catch { /* This native capability may be unavailable on the current platform. */ }
   try {
     const { SplashScreen } = await import("@capacitor/splash-screen");
