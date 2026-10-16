@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, Moon,
-  TrendingDown, Plus, X, Trophy, Info, Play,
+  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -1333,7 +1333,35 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                       className="overflow-hidden"
                     >
                       <div className="pt-4">
-                        {/* Minimal: la sugerencia (sobrecarga progresiva / entrenador) va en gris dentro de cada casilla */}
+                        {/* Sugerencia de sobrecarga progresiva y cálculo de la siguiente carga */}
+                        {progression && !allDone && (
+                          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-card px-3.5 py-2.5">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <TrendingUp className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} aria-hidden="true" />
+                              <div className="min-w-0">
+                                <p className="type-subhead font-semibold leading-tight text-foreground">
+                                  {progression.label === "Subir"
+                                    ? `Siguiente carga: ${progression.weight} kg`
+                                    : progression.label === "Añadir rep"
+                                      ? "Siguiente objetivo: +1 rep"
+                                      : progression.label === "Mantener"
+                                        ? (progression.weight ? `Mantener ${progression.weight} kg` : "Mantener carga")
+                                        : (progression.weight ? `Repetir ${progression.weight} kg` : "Repetir objetivo")}
+                                </p>
+                                <p className="line-clamp-1 type-caption1 text-muted-foreground">{progression.reason}</p>
+                              </div>
+                            </div>
+                            {(progression.label === "Subir" || progression.label === "Añadir rep") && (
+                              <button
+                                type="button"
+                                onClick={() => applyProgression(ex.name, progression)}
+                                className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 type-caption1 font-semibold text-primary transition-opacity active:opacity-60"
+                              >
+                                Aplicar
+                              </button>
+                            )}
+                          </div>
+                        )}
 
                         {/* Column headers */}
                         <div className={`${SET_GRID} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>

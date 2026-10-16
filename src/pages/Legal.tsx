@@ -50,10 +50,6 @@ const Legal = () => {
           ),
         )}
       </ListGroup>
-
-      <p className="mt-10 type-footnote text-muted-foreground">
-        Este documento es un borrador adaptado al servicio actual de Autopilot. Antes de su publicación definitiva debe ser revisado por un abogado o tu Delegado de Protección de Datos (DPO).
-      </p>
     </Screen>
   );
 };

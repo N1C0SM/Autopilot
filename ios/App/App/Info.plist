@@ -40,9 +40,11 @@
 		</dict>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Autopilot usa la cámara para que puedas añadir fotos de progreso y de perfil.</string>
+	<string>Autopilot usa la cámara para escanear tu físico y añadir fotos de progreso o perfil.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Autopilot accede a tus fotos solo cuando eliges una imagen para tu progreso o perfil.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Autopilot guarda infografías y fotos de tu progreso en tu fototeca cuando decides descargarlas.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
