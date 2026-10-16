@@ -14,7 +14,8 @@ const MAX_CONTENT_LENGTH_BYTES = 6 * 1024 * 1024
 // quedar accesible de forma permanente y anónima (el bucket público anterior
 // convertía esta función en hosting gratuito de imágenes).
 const BUCKET = 'progress-photos'
-const SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 7
+// 1 año — la URL viaja en el email y debe seguir siendo válida meses después.
+const SIGNED_URL_TTL_SEC = 60 * 60 * 24 * 365
 
 const RL_WINDOW_SECONDS = 60
 const RL_LIMIT_IP = 8 // usuarios anónimos (sin sesión)
