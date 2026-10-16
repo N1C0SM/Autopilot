@@ -778,24 +778,24 @@ const Dashboard = () => {
 
         <div className={`flex min-w-0 flex-1 flex-col ${workoutMode ? "h-dvh overflow-hidden" : ""}`}>
           {/* Top bar */}
-          <header className={`app-chrome sticky top-0 z-50 flex h-14 items-center gap-3 border-b-[0.5px] px-4 ${workoutMode ? "hidden" : ""}`}>
+          <header className={`app-chrome sticky top-0 z-50 flex h-14 lg:h-16 items-center gap-3 border-b-[0.5px] px-4 lg:px-6 ${workoutMode ? "hidden" : ""}`}>
             <SidebarTrigger />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <h1 className="truncate type-headline">
+                <h1 className="truncate type-headline lg:text-[18px]">
                   {SECTION_LABELS[section]}
                 </h1>
                 {sectionHelp && <InfoHint text={sectionHelp} />}
               </div>
-              <p className="hidden truncate type-caption1 text-muted-foreground sm:block">
+              <p className="hidden truncate type-caption1 text-muted-foreground sm:block lg:text-[13px]">
                 {SECTION_HINTS[section]}
               </p>
             </div>
             {user && <NotificationsBell userId={user.id} />}
           </header>
 
-          <main className={`min-w-0 flex-1 overflow-y-auto ${workoutMode ? "h-dvh p-0" : "p-4 md:p-6 lg:p-8"}`}>
-            <div className={`${workoutMode ? "h-full w-full" : "max-w-7xl mx-auto w-full"}`}>
+          <main className={`min-w-0 flex-1 overflow-y-auto ${workoutMode ? "h-dvh p-0" : "p-4 md:p-8 lg:p-10 lg:pt-8"}`}>
+            <div className={`${workoutMode ? "h-full w-full" : "max-w-6xl mx-auto w-full"}`}>
               {pageContent}
             </div>
           </main>

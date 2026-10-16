@@ -154,7 +154,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6" onErrorCapture={handleImageError}>
+    <div className="mx-auto flex w-full max-w-2xl lg:max-w-4xl flex-col gap-6" onErrorCapture={handleImageError}>
       <h2 className="sr-only">Rutina semanal</h2>
 
       <div
@@ -187,7 +187,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
                 void hapticSelection();
                 setExpandedDay(isExpanded ? null : day);
               }}
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full type-subhead font-semibold transition-colors duration-100 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-100 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 plan ? "active:opacity-60" : "cursor-default"
               } ${tone}`}
             >
