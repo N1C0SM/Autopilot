@@ -579,7 +579,7 @@ const Dashboard = () => {
           {/* El plan de la semana estaba a 4 toques (Progreso). Ahora es un toque,
               y solo se ofrece cuando no hay una sesión en marcha. */}
           {!workoutMode && !autoStartWorkout && (
-            <TabsList aria-label="Entrenar o ver el plan" className="mx-auto mb-4 flex w-full max-w-md">
+            <TabsList aria-label="Entrenar o ver el plan" className="mx-auto mb-4 flex w-full max-w-md lg:max-w-lg">
               <TabsTrigger value="tracker">Entrenar</TabsTrigger>
               <TabsTrigger value="plan">Rutina semanal</TabsTrigger>
             </TabsList>
@@ -663,7 +663,7 @@ const Dashboard = () => {
           }}
           className="w-full min-w-0 space-y-4"
         >
-          <TabsList aria-label="Tu progreso" className="flex w-full md:max-w-md">
+          <TabsList aria-label="Tu progreso" className="flex w-full lg:max-w-lg">
             <TabsTrigger value="evolution">Fuerza</TabsTrigger>
             <TabsTrigger value="photos">Físico</TabsTrigger>
             <TabsTrigger value="records">Récords</TabsTrigger>
@@ -675,7 +675,7 @@ const Dashboard = () => {
               forceMount
               tabIndex={-1}
               // En el móvil el panel crece con su contenido (con un suelo para la gráfica) y la página hace scroll.
-              className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden md:h-[calc(100dvh-12rem)] md:overflow-hidden"
+              className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden lg:min-h-[560px] md:h-[calc(100dvh-12rem)] md:overflow-hidden"
             >
               <WorkoutProgress userId={user.id} compact />
             </TabsContent>

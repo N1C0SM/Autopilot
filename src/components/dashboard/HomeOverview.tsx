@@ -269,7 +269,7 @@ const HomeOverview = ({
         </h2>
 
         {scheduledDays.length > 0 && (
-          // La semana de un vistazo: punto bajo los días con sesión, hoy marcado.
+          // La semana de un vistazo — clickable: navega a Entrenamiento
           <ol aria-label="Tu semana" className="mt-6 grid grid-cols-7 md:max-w-sm lg:max-w-xs">
             {DAYS_ORDER.map((day, index) => {
               const isToday = index === todayIndex;
@@ -277,24 +277,23 @@ const HomeOverview = ({
               const doneToday = isToday && completedToday;
               return (
                 <li key={day} className="flex flex-col items-center gap-1">
-                  <span className="sr-only">
-                    {`${day}${isToday ? ", hoy" : ""}: ${doneToday ? "completado" : trains ? "con sesión" : "descanso"}`}
-                  </span>
-                  <span
-                    aria-hidden="true"
+                  <button
+                    type="button"
+                    aria-label={`${day}${isToday ? ", hoy" : ""}: ${doneToday ? "completado" : trains ? "con sesión" : "descanso"} — ver entrenamiento`}
+                    onClick={() => { void hapticTap(); onNavigate("training"); }}
                     className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full type-subhead",
+                      "flex h-9 w-9 items-center justify-center rounded-full type-subhead transition-opacity active:opacity-60",
                       doneToday
                         ? "bg-primary text-primary-foreground"
                         : isToday
                           ? "bg-primary/15 font-semibold text-primary"
                           : trains
-                            ? "text-foreground"
-                            : "text-muted-foreground",
+                            ? "text-foreground hover:bg-secondary"
+                            : "text-muted-foreground hover:bg-secondary/50",
                     )}
                   >
                     {doneToday ? <Check className="h-[18px] w-[18px]" strokeWidth={2.5} /> : DAY_LETTERS[index]}
-                  </span>
+                  </button>
                   <span
                     aria-hidden="true"
                     className={cn("h-[5px] w-[5px] rounded-full", trains && !doneToday ? "bg-primary" : "bg-transparent")}
