@@ -691,6 +691,14 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleUpload}
+      />
     </div>
   );
 };

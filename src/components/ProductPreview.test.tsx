@@ -15,6 +15,23 @@ vi.mock("@/components/dashboard/ExerciseProgressChart", () => ({
     createElement("button", { onClick: () => onMetricChange("bestEstimated1RmKg") }, "Fuerza estimada"),
   ),
 }));
+
+vi.mock("@/lib/planCatalog", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/planCatalog")>("@/lib/planCatalog");
+  return {
+    ...actual,
+    usePlanAvailability: () => ({
+      plans: actual.fallbackCatalog(),
+      coach: true,
+      plus: true,
+      coachPrice: 49,
+      plusPrice: 29,
+      coachName: "Coach",
+      plusName: "Plus",
+      paidNames: "Plus y Coach",
+    }),
+  };
+});
 afterEach(cleanup);
 
 describe("public product preview", () => {

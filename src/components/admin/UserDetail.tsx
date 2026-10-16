@@ -201,15 +201,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       if (np?.macros_json) {
         const m = jsonObject(np.macros_json);
         const cargados = { protein: m.protein?.toString() || "", carbs: m.carbs?.toString() || "", fats: m.fats?.toString() || "" };
-        // Datos antiguos fuera de rango: se recalculan en vez de bloquear el guardado.
-        if (nutritionMacroError(cargados)) {
-          const w = Number((onb as OnboardingData | null)?.weight);
-          const fixed = Number.isFinite(w) && w > 0 ? MACRO_TEMPLATES.gain_muscle.calc(w) : null;
-          setMacros(fixed ? { protein: String(fixed.protein), carbs: String(fixed.carbs), fats: String(fixed.fats) } : { protein: "", carbs: "", fats: "" });
-          toast.info(fixed ? "Los macros guardados no eran válidos: se han recalculado. Revisa y pulsa Guardar." : "Los macros guardados no eran válidos: rellénalos y pulsa Guardar.", { id: "macro-heal" });
-        } else {
-          setMacros(cargados);
-        }
+        setMacros(cargados);
       }
       if (np?.meals_json) {
         const meals = np.meals_json;
