@@ -674,8 +674,7 @@ const Dashboard = () => {
               value="evolution"
               forceMount
               tabIndex={-1}
-              // En el móvil el panel crece con su contenido (con un suelo para la gráfica) y la página hace scroll.
-              className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden lg:min-h-[560px] md:h-[calc(100dvh-12rem)] md:overflow-hidden"
+              className="mt-0 flex min-h-[420px] flex-col data-[state=inactive]:hidden lg:min-h-0 lg:h-[calc(100dvh-10rem)] md:h-[calc(100dvh-12rem)] md:overflow-hidden"
             >
               <WorkoutProgress userId={user.id} compact />
             </TabsContent>

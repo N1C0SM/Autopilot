@@ -150,19 +150,44 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
         />
       ) : (
         <>
-          <div className={compact ? "mt-2 flex flex-1 flex-col" : "mt-2"}>
-            <ExerciseProgressChart
-              compact={compact}
-              exerciseName={selectedExercise}
-              history={history}
-              metric={selectedMetric}
-              onMetricChange={setMetric}
-            />
+          {/* En web: 2 columnas — selector + stats izquierda, gráfica derecha */}
+          <div className={compact ? "mt-2 flex flex-1 flex-col lg:flex-row lg:gap-10 lg:items-start" : "mt-2 lg:flex lg:gap-10 lg:items-start"}>
+            {/* Columna izquierda: selector y stats (solo en lg) */}
+            {latest && (
+              <div className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:pt-2">
+                <section aria-label="Última sesión">
+                  <h3 className="type-footnote text-muted-foreground mb-3">Última sesión · {latest.sessionLabel}</h3>
+                  <dl className="grid grid-cols-2 gap-y-4">
+                    {stats.map((stat) => (
+                      <div key={stat.label} className="flex flex-col gap-0.5">
+                        <dd className="flex items-baseline gap-x-0.5">
+                          <span className="font-rounded text-[28px] font-bold tabular-nums leading-none">{stat.value}</span>
+                          {stat.unit && <span className="type-footnote text-muted-foreground">{stat.unit}</span>}
+                        </dd>
+                        <dt className="type-footnote text-muted-foreground">{stat.label}</dt>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+              </div>
+            )}
+
+            {/* Gráfica — ocupa todo en móvil, flex-1 en lg */}
+            <div className={compact ? "flex flex-1 flex-col" : "flex-1"}>
+              <ExerciseProgressChart
+                compact={compact}
+                exerciseName={selectedExercise}
+                history={history}
+                metric={selectedMetric}
+                onMetricChange={setMetric}
+              />
+            </div>
           </div>
+
+          {/* Stats en móvil/tablet — oculto en lg */}
           {latest && (
-            <section aria-label="Última sesión" className="mt-6 shrink-0">
+            <section aria-label="Última sesión" className="mt-6 shrink-0 lg:hidden">
               <h3 className="type-footnote text-muted-foreground">Última sesión · {latest.sessionLabel}</h3>
-              {/* Fila de estadísticas al estilo Salud: cifra + etiqueta, separadas por hairlines. 2 × 2 bajo 390 px. */}
               <dl className="mt-2 grid grid-cols-2 min-[390px]:grid-cols-4">
                 {stats.map((stat, index) => (
                   <div key={stat.label} className={`flex min-w-0 flex-col-reverse py-2 ${STAT_CELL[index]}`}>

@@ -85,8 +85,8 @@ const PRsList = ({ userId }: Props) => {
   const topHasEstimate = top.estimated_1rm != null;
 
   return (
-    <div className="space-y-8">
-      <section aria-label="Tu mejor marca" className="pt-1">
+    <div className="space-y-8 lg:grid lg:grid-cols-[280px_1fr] lg:gap-12 lg:space-y-0 lg:items-start">
+      <section aria-label="Tu mejor marca" className="pt-1 lg:sticky lg:top-4">
         <Trophy className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />
         <p className="mt-3 font-rounded text-[56px] font-bold leading-none tabular-nums">
           {topHasEstimate ? top.estimated_1rm : top.weight}
@@ -100,7 +100,7 @@ const PRsList = ({ userId }: Props) => {
       </section>
 
       <ListGroup header="Tus récords personales">
-        {prs.slice(0, 10).map((pr) => (
+        {prs.slice(0, 20).map((pr) => (
           <ListRow
             key={pr.id}
             title={pr.exercise_name}

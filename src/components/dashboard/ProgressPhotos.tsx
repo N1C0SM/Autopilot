@@ -433,7 +433,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-8">
+    <div className="mx-auto w-full max-w-2xl lg:max-w-5xl space-y-8">
       {loading && (
         <div className="grid grid-cols-3 gap-2" role="status" aria-label="Cargando fotos de progreso">
           {[0, 1, 2, 3, 4, 5].map((item) => <Skeleton key={item} className="aspect-[3/4] rounded-[10px]" />)}
@@ -496,7 +496,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             type="button"
             onClick={openCompare}
             aria-label="Abrir comparación"
-            className="mt-4 grid w-full grid-cols-2 gap-3 text-left transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-4 grid w-full grid-cols-2 lg:grid-cols-2 lg:max-w-xl gap-3 text-left transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {heroPhoto(heroBefore, "Antes")}
             {heroPhoto(heroAfter, "Ahora")}
@@ -540,7 +540,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       {ready && Object.entries(grouped).map(([month, monthPhotos]) => (
         <section key={month}>
           <h3 className="mb-3 type-headline first-letter:uppercase">{monthLabel(month)}</h3>
-          <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-6">
             {monthPhotos.map((photo) => {
               const photoUrl = signed.get(photo.photo_url);
               return (
