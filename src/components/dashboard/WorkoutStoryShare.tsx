@@ -239,64 +239,113 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
 
 export function WorkoutStoryShare(props: Props) {
   const [busy, setBusy] = useState(false);
-  const variant: Variant = "resumen";
-  const download = (blob: Blob) => {
+  const [activeVariant, setActiveVariant] = useState<Variant>("resumen");
+
+  const download = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "autopilot-entreno.png"; a.click();
+    a.href = url; a.download = filename; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
+
+  // Texto enriquecido para compartir por WhatsApp / mensajes
+  const shareText = () => {
+    const lines: string[] = [];
+    if (props.records.length) lines.push(`🏆 ${props.records[0]}`);
+    if (props.volumeKg > 0) lines.push(`💪 ${Math.round(props.volumeKg).toLocaleString("es-ES")} kg de carga total`);
+    lines.push(`${props.sets} series · ${props.exercises} ejercicios`);
+    if (props.muscles.length) lines.push(props.muscles.slice(0, 3).join(", "));
+    lines.push("Autopilot — autopilotplan.com");
+    return lines.join("\n");
+  };
+
   const run = async (mode: "share" | "download") => {
     setBusy(true);
     try {
-      const blob = await renderStory(props, variant);
-      const file = new File([blob], "autopilot-entreno.png", { type: "image/png" });
-      if (mode === "share" && navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: "Mi entreno en Autopilot" });
-        } catch (shareError) {
-          // El usuario canceló el menú nativo: no hay nada que hacer.
-          if ((shareError as Error)?.name === "AbortError") return;
-          // La imagen SÍ se creó; el fallo es solo del menú de compartir.
-          console.error("Native share failed, falling back to download", shareError);
-          download(blob);
-          toast.error("No se pudo abrir el menú de compartir. Imagen descargada, súbela a tu historia.");
+      const filename = `autopilot-entreno-${activeVariant}.png`;
+      const blob = await renderStory(props, activeVariant);
+      const file = new File([blob], filename, { type: "image/png" });
+
+      if (mode === "share") {
+        // Intenta compartir imagen + texto (WhatsApp, Instagram, Mensajes…)
+        const shareData: ShareData = {
+          files: [file],
+          title: props.title || "Mi entrenamiento en Autopilot",
+          text: shareText(),
+        };
+        if (navigator.canShare?.(shareData)) {
+          try {
+            await navigator.share(shareData);
+            return;
+          } catch (shareError) {
+            if ((shareError as Error)?.name === "AbortError") return;
+            // Fallo del menú: fallback a descarga
+            console.error("Native share failed, falling back to download", shareError);
+          }
         }
+        // Si no soporta files, intenta compartir solo texto
+        if (navigator.canShare?.({ text: shareText() })) {
+          try {
+            await navigator.share({ title: "Mi entrenamiento en Autopilot", text: shareText() });
+          } catch { /* AbortError o similar — ignorar */ }
+        }
+        download(blob, filename);
+        toast.success("Imagen descargada. Súbela a tu historia.");
       } else {
-        download(blob);
-        if (mode === "share") toast.success("Imagen descargada. Súbela a tu historia.");
+        download(blob, filename);
       }
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") toast.error("No se pudo crear la imagen");
     } finally { setBusy(false); }
   };
-  // Tintado, no relleno: el botón dorado macizo de la pantalla es la acción principal de abajo.
+
   return (
-    <div className="flex w-full min-w-0 gap-2">
-      <Button
-        type="button"
-        variant="tinted"
-        size="lg"
-        disabled={busy}
-        onClick={() => { void hapticTap(); void run("share"); }}
-        className="min-w-0 flex-1 px-4"
-      >
-        {busy
-          ? <Spinner size="sm" label="Creando imagen" className="text-primary [&>svg]:!size-full" />
-          : <Share aria-hidden="true" />}
-        <span className="truncate">Compartir en historias</span>
-      </Button>
-      <Button
-        type="button"
-        variant="secondary"
-        size="lg"
-        disabled={busy}
-        onClick={() => { void hapticTap(); void run("download"); }}
-        className="w-[50px] shrink-0 px-0"
-        aria-label="Descargar imagen"
-      >
-        <Download aria-hidden="true" />
-      </Button>
+    <div className="flex w-full min-w-0 flex-col gap-3">
+      {/* Selector de variante */}
+      <div className="flex gap-2" role="group" aria-label="Tipo de imagen">
+        {(["resumen", "musculos"] as Variant[]).map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => { void hapticTap(); setActiveVariant(v); }}
+            className={`flex-1 rounded-xl py-2 type-footnote font-semibold transition-colors duration-100 ${
+              activeVariant === v
+                ? "bg-primary/15 text-primary"
+                : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            {v === "resumen" ? "Resumen" : "Músculos"}
+          </button>
+        ))}
+      </div>
+
+      {/* Botones de acción */}
+      <div className="flex w-full min-w-0 gap-2">
+        <Button
+          type="button"
+          variant="tinted"
+          size="lg"
+          disabled={busy}
+          onClick={() => { void hapticTap(); void run("share"); }}
+          className="min-w-0 flex-1 px-4"
+        >
+          {busy
+            ? <Spinner size="sm" label="Creando imagen" className="text-primary [&>svg]:!size-full" />
+            : <Share aria-hidden="true" />}
+          <span className="truncate">Compartir</span>
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          disabled={busy}
+          onClick={() => { void hapticTap(); void run("download"); }}
+          className="w-[50px] shrink-0 px-0"
+          aria-label="Descargar imagen"
+        >
+          <Download aria-hidden="true" />
+        </Button>
+      </div>
     </div>
   );
 }
