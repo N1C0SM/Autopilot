@@ -1705,21 +1705,10 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                 </p>
 
                 <div className="mt-4 -ml-3 flex flex-wrap items-center">
-                  {user && userEmail && (
-                    <Button
-                      variant="plain"
-                      size="sm"
-                      onClick={() => { void hapticTap(); resendByEmail(); }}
-                      disabled={emailSending || autoSaving}
-                    >
-                      {(emailSending || autoSaving) && <Spinner size="sm" />}
-                      {autoSaved ? "Reenviar por email" : "Enviar por email"}
-                    </Button>
-                  )}
                   <Button
                     variant="plain"
                     size="sm"
-                    onClick={() => { void hapticTap(); handleShare(); }}
+                    onClick={() => { void hapticTap(); void handleShare(); }}
                     disabled={sharing}
                   >
                     {sharing && <Spinner size="sm" />}
