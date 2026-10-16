@@ -74,11 +74,11 @@ const Choices = ({ header, options, value, onChange }: {
         return (
           <button key={o.v} type="button" aria-pressed={on}
             onClick={() => { void hapticSelection(); onChange(o.v); }}
-            className="group/row flex min-h-[56px] w-full items-center gap-3 pl-4 text-left transition-colors duration-100 active:bg-accent">
-            <span className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-3 pr-4 group-[:not(:last-child)]/row:sep-b">
+            className="group/row flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 pl-4 sm:pl-5 text-left transition-colors duration-100 active:bg-accent">
+            <span className="flex min-h-[56px] sm:min-h-[60px] min-w-0 flex-1 items-center gap-3 py-3 sm:py-3.5 pr-4 sm:pr-5 group-[:not(:last-child)]/row:sep-b">
               <span className="min-w-0 flex-1">
-                <span className="block type-headline">{o.l}</span>
-                {o.d ? <span className="mt-0.5 block type-subhead text-muted-foreground">{o.d}</span> : null}
+                <span className="block type-headline sm:text-[18px]">{o.l}</span>
+                {o.d ? <span className="mt-0.5 block type-subhead sm:text-[15px] text-muted-foreground">{o.d}</span> : null}
               </span>
               <Check aria-hidden="true" strokeWidth={2.75}
                 className={cn("h-5 w-5 shrink-0 text-primary", on ? "opacity-100" : "opacity-0")} />
@@ -221,13 +221,13 @@ const Configurator = () => {
   );
 
   return (
-    <Screen title={`${step + 1} de ${titles.length}`} onBack={goBack} maxWidth="sm" contentClassName="pt-2" footer={footer}>
+    <Screen title={`${step + 1} de ${titles.length}`} onBack={goBack} maxWidth="md" contentClassName="pt-2 sm:pt-4" footer={footer}>
       <PageHead title="Diseña tu plan · Autopilot" description="Configura tu plan de entrenamiento y nutrición en un minuto." path="/onboarding" />
-      <div className="h-1 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
         <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-ios" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
       </div>
-      <h1 className="mt-7 type-title1">{titles[step]}</h1>
-      <p className="mt-2 type-subhead text-muted-foreground">{leads[step]}</p>
+      <h1 className="mt-6 sm:mt-8 type-title1 sm:text-[34px] sm:leading-[40px]">{titles[step]}</h1>
+      <p className="mt-2 type-subhead sm:text-[17px] sm:leading-[24px] text-muted-foreground">{leads[step]}</p>
 
       <div className="mt-8 space-y-8 pb-4">
         {step === 0 && (

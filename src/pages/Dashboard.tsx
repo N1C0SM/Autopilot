@@ -7,7 +7,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Clock, Dumbbell, Flag, Lock } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -108,7 +108,12 @@ const Dashboard = () => {
    * Si eligió un plan en la web, ese manda.
    */
   const wantsCoach = (user?.user_metadata as { training_style?: string } | undefined)?.training_style === "coach";
+  const [searchParams] = useSearchParams();
   const [section, setSectionState] = useState<MobileTab>(() => {
+    const fromParam = searchParams.get("section");
+    if (fromParam && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(fromParam)) {
+      return fromParam as MobileTab;
+    }
     try {
       const saved = sessionStorage.getItem("autopilot_section");
       if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
@@ -129,7 +134,29 @@ const Dashboard = () => {
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
-  const [trainingView, setTrainingView] = useState<"tracker" | "plan">("tracker");
+  const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
+    const fromParam = searchParams.get("view");
+    if (fromParam === "plan" || fromParam === "tracker") return fromParam;
+    try {
+      const saved = sessionStorage.getItem("autopilot_training_view");
+      if (saved === "plan" || saved === "tracker") {
+        sessionStorage.removeItem("autopilot_training_view");
+        return saved;
+      }
+    } catch { /* storage no disponible */ }
+    return "tracker";
+  });
+
+  useEffect(() => {
+    const sec = searchParams.get("section");
+    if (sec && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(sec)) {
+      setSectionState(sec as MobileTab);
+    }
+    const vw = searchParams.get("view");
+    if (vw === "plan" || vw === "tracker") {
+      setTrainingView(vw);
+    }
+  }, [searchParams]);
   const [firstWeek, setFirstWeek] = useState<{
     dayNumber: number;
     startDate: string;

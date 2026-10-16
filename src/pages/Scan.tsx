@@ -651,17 +651,11 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
       } catch { /* Best-effort browser feature; the primary flow remains available. */ }
       setPendingResult(r);
       // Si está logueado saltamos el formulario de lead (ya tenemos su email)
-      if (user && isPaid && routeUserId) {
+      if (user && isPaid) {
         setTimeout(() => {
           setResult(r);
           // El plan NUNCA se toca solo: lo aplica el usuario con «Aplicar a mi plan».
           saveAndEmailScan(r, { silent: false });
-        }, 400);
-      } else if (user && isPaid) {
-        // Logueado y pagado en /scan general: muestra resultado sin tocar el plan
-        setTimeout(() => {
-          setResult(r);
-          saveAndEmailScan(r, { silent: true });
         }, 400);
       } else if (user) {
         // Logueado no pagado: muestra resultado y envía email a la cuenta
@@ -802,8 +796,12 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
       onOpenPlan();
       return;
     }
-    try { sessionStorage.setItem("autopilot_section", "training"); } catch { /* sin almacenamiento */ }
-    navigate("/dashboard");
+    try {
+      sessionStorage.setItem("autopilot_section", "training");
+      sessionStorage.setItem("autopilot_training_view", "plan");
+    } catch { /* sin almacenamiento */ }
+    const target = user ? `/dashboard/user/${user.id}?section=training&view=plan` : "/dashboard?section=training&view=plan";
+    navigate(target);
   };
 
   const applyScanToPlan = async (r: Result, retry = false) => {
@@ -1731,7 +1729,7 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
               </section>
 
               {/* Estado de aplicación al plan: patrón de la bienvenida, sin caja */}
-              {routeUserId && user && (
+              {(user || routeUserId) && (
                 <section aria-label="Tu plan">
                   {planApplyState === "idle" && (
                     <FindingRow
@@ -2273,27 +2271,22 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                 </section>
               ) : (
                 <section className="mx-auto w-full max-w-sm space-y-2">
-                  {routeUserId && (
+                  {(user || routeUserId) && (
                     <Button size="lg" className="w-full" onClick={openPlan}>
                       Ver mi plan
                     </Button>
                   )}
-                  {routeUserId && user && canApplyPlan && hasScanInferences(result, scanOnboarding) && (planApplyState === "idle" || planApplyState === "error") && (
+                  {user && canApplyPlan && hasScanInferences(result, scanOnboarding) && (planApplyState === "idle" || planApplyState === "error") && (
                     <Button
                       variant="secondary"
                       size="lg"
                       className="w-full"
                       onClick={() => { void hapticTap(); applyScanToPlan(result, planApplyState === "error"); }}
                     >
-                      Aplicar a mi plan
+                      {planApplyState === "error" ? "Reintentar aplicar a mi plan" : "Aplicar a mi plan"}
                     </Button>
                   )}
-                  {!routeUserId && user && (
-                    <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(`/scan/user/${user.id}`); }}>
-                      Ir a mi progreso
-                    </Button>
-                  )}
-                  {!routeUserId && !user && (
+                  {!user && !routeUserId && (
                     <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(signupWithPlan); }}>
                       Empezar mi plan
                     </Button>
@@ -2301,7 +2294,7 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                   <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); reset(); }}>
                     Hacer otro scan
                   </Button>
-                  {user && routeUserId && (
+                  {user && (
                     <Button
                       variant="plain"
                       className="w-full text-destructive"

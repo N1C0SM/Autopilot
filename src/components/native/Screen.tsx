@@ -33,9 +33,9 @@ interface ScreenProps {
 }
 
 const WIDTH: Record<NonNullable<ScreenProps["maxWidth"]>, string> = {
-  sm: "max-w-sm",
-  md: "max-w-xl",
-  lg: "max-w-3xl",
+  sm: "max-w-md",
+  md: "max-w-xl md:max-w-2xl",
+  lg: "max-w-3xl md:max-w-4xl",
   full: "max-w-none",
 };
 

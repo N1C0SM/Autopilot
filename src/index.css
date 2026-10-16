@@ -336,12 +336,12 @@ body.keyboard-open main {
   .label-text { font-size: 15px; line-height: 20px; }
   .menu-item  { min-height: 44px; padding-inline: 16px; font-size: 17px; line-height: 22px; }
   @media (min-width: 768px) {
-    .btn-md   { height: 40px; font-size: 14px; line-height: 20px; }
-    .btn-sm   { height: 32px; font-size: 13px; line-height: 18px; }
-    .btn-icon { height: 40px; width: 40px; }
-    .field    { height: 40px; font-size: 14px; line-height: 20px; }
-    .label-text { font-size: 14px; }
-    .menu-item  { min-height: 32px; padding-inline: 12px; font-size: 14px; line-height: 20px; }
+    .btn-md   { height: 44px; font-size: 16px; line-height: 22px; }
+    .btn-sm   { height: 36px; font-size: 14px; line-height: 20px; }
+    .btn-icon { height: 44px; width: 44px; }
+    .field    { height: 44px; font-size: 16px; line-height: 22px; }
+    .label-text { font-size: 15px; }
+    .menu-item  { min-height: 40px; padding-inline: 14px; font-size: 16px; line-height: 22px; }
   }
 
   /* Menu / popover material (context menus, pickers). */
