@@ -142,8 +142,9 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
     }
   };
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://enebrcdrdnfkyduzyrzm.supabase.co";
   const feedUrl = token
-    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${token}`
+    ? `${supabaseUrl}/functions/v1/calendar-feed?token=${token}`
     : "";
 
   const copyLink = async () => {

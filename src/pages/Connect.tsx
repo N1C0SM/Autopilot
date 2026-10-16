@@ -8,7 +8,8 @@ import Screen from "@/components/native/Screen";
 import { toast } from "sonner";
 import { hapticNotify } from "@/lib/native";
 
-const mcpUrl = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/mcp`;
+const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "enebrcdrdnfkyduzyrzm";
+const mcpUrl = `https://${projectId}.supabase.co/functions/v1/mcp`;
 
 const linkClass = "text-primary transition-opacity active:opacity-60";
 

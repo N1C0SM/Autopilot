@@ -8,7 +8,7 @@ import logWeight from "./tools/log-weight";
 // Direct Supabase host issuer required by mcp-js. Build from the project ref
 // literal (Vite inlines VITE_SUPABASE_PROJECT_ID at build time), never from
 // the .lovable.cloud proxy URL.
-const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID ?? "project-ref-unset";
+const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID || "enebrcdrdnfkyduzyrzm";
 
 export default defineMcp({
   name: "autopilot-mcp",

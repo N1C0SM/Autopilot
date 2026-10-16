@@ -7,8 +7,8 @@ import Screen from "@/components/native/Screen";
 import { Button } from "@/components/ui/button";
 import { hapticTap } from "@/lib/native";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string) || "https://enebrcdrdnfkyduzyrzm.supabase.co";
+const SUPABASE_ANON = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string) || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuZWJyY2RyZG5ma3lkdXp5cnptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODIzMjksImV4cCI6MjA4ODU1ODMyOX0.X-E8IIiL4hxkAeE4immBPbcAbi25LuW8yYT0xzWqovU";
 
 type State = "loading" | "valid" | "already" | "invalid" | "submitting" | "done" | "error";
 
