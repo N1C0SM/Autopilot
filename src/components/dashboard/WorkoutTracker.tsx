@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, Moon,
-  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play,
+  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -49,6 +49,7 @@ import {
 } from "@/lib/workoutSuperset";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { addExerciseLoad } from "@/lib/muscleMapping";
+import { FreeWorkoutPicker } from "./FreeWorkoutPicker";
 
 interface Props {
   userId: string;
@@ -126,6 +127,23 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   // Superseries: solo en memoria durante la sesión (no se guardan ni se envían).
   const [supersetLinks, setSupersetLinks] = useState<SupersetLinks>({});
   const restChainRef = useRef<number[] | null>(null);
+
+  // Modo libre: plan virtual sin day_label, el usuario añade sus ejercicios
+  const FREE_DAY = "__libre__";
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [freeExercises, setFreeExercises] = useState<Array<{
+    name: string;
+    exercise_id: string;
+    muscle_group?: string | null;
+    exercise_type?: string | null;
+    image_url?: string | null;
+    video_url?: string | null;
+    tracking_mode?: string | null;
+    series: number;
+    reps: number;
+    rest: string;
+    weight: string | null;
+  }>>([]);
   const restWasRunningRef = useRef(false);
   const exerciseLogsRef = useRef(exerciseLogs);
   const exerciseMetadata = useExerciseMetadata(dayPlans);
@@ -141,9 +159,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   const currentDate = formatLocalDate(new Date());
   const [selectedDate, setSelectedDate] = useState(currentDate);
   const currentPlan = dayPlans.find((p) => p.day === selectedDay);
-  const trainingTitle = formatTrainingTitle(currentPlan?.routine_name, currentPlan?.muscle_focus);
-  const currentPlanSignature = JSON.stringify(currentPlan || null);
-  const planExercises = currentPlan?.exercises;
+  // En modo libre usamos un plan virtual con los ejercicios añadidos manualmente
+  const freePlan = selectedDay === FREE_DAY && freeExercises.length > 0
+    ? { day: FREE_DAY, type: "gimnasio" as const, exercises: freeExercises, routine_name: "Sesión libre", muscle_focus: null, sport: null, intensity: null, duration: null }
+    : undefined;
+  const activePlan = freePlan ?? currentPlan;
+  const trainingTitle = formatTrainingTitle(activePlan?.routine_name, activePlan?.muscle_focus);
+  const currentPlanSignature = JSON.stringify(activePlan || null);
+  const planExercises = activePlan?.exercises;
   const exerciseNames = useMemo(() => (planExercises ?? []).map((exercise) => exercise.name), [planExercises]);
   const startWorkout = (exerciseIndex = 0) => {
     if (!logsReady || loadError) return;
@@ -246,11 +269,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
         data.forEach((row) => {
           logs[row.exercise_name] = row.sets_completed as unknown as WorkoutSetLog[];
         });
-        const base = currentPlan?.type === "gimnasio" && currentPlan.exercises ? createWorkoutSetLogs(currentPlan.exercises, prev) : {};
+        const base = activePlan?.type === "gimnasio" && activePlan.exercises ? createWorkoutSetLogs(activePlan.exercises, prev) : {};
         Object.keys(logs).forEach((k) => { if (!Array.isArray(logs[k]) || logs[k].length === 0) delete logs[k]; });
         setExerciseLogs({ ...base, ...logs });
-      } else if (currentPlan?.type === "gimnasio" && currentPlan.exercises) {
-        setExerciseLogs(createWorkoutSetLogs(currentPlan.exercises, prev));
+      } else if (activePlan?.type === "gimnasio" && activePlan.exercises) {
+        setExerciseLogs(createWorkoutSetLogs(activePlan.exercises, prev));
       } else {
         setExerciseLogs({});
       }
@@ -352,7 +375,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   // imagen ya está en memoria y la transición es instantánea.
   useEffect(() => {
     if (!started || workoutCompleted || expandedExercise === null) return;
-    const list = currentPlan?.exercises || [];
+    const list = activePlan?.exercises || [];
     for (const idx of [expandedExercise - 1, expandedExercise + 1, expandedExercise + 2]) {
       const ex = list[idx];
       if (!ex) continue;
@@ -470,7 +493,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     }
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
-    const exerciseIndex = currentPlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
+    const exerciseIndex = activePlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
     const sets = exerciseLogs[exerciseName] || [];
 
     // Superserie: mientras el siguiente miembro de la cadena tenga series
@@ -522,7 +545,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       // cadena por el primer ejercicio con series pendientes.
       const chain = getSupersetChain(exerciseNames, supersetLinks, exerciseIndex);
       restChainRef.current = chain.length > 1 ? chain : null;
-      if (chain.length === 1 && setIndex === sets.length - 1 && currentPlan?.exercises?.[exerciseIndex + 1]) {
+      if (chain.length === 1 && setIndex === sets.length - 1 && activePlan?.exercises?.[exerciseIndex + 1]) {
         setExpandedExercise(exerciseIndex + 1);
       }
     }
@@ -764,7 +787,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     const weight = parsePositiveWeight(set.weight);
     return total + (weight !== null ? weight * Math.max(0, set.reps) : 0);
   }, 0);
-  const muscleSetCounts = (currentPlan?.exercises || []).reduce<Record<string, number>>((counts, exercise) => {
+  const muscleSetCounts = (activePlan?.exercises || []).reduce<Record<string, number>>((counts, exercise) => {
     const completedSetsForExercise = (exerciseLogs[exercise.name] || [])
       .filter((set) => set.done && !isWorkoutSetWarmup(set)).length;
     if (completedSetsForExercise === 0) return counts;
@@ -780,7 +803,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   }, 0);
   const musclesWorked = Object.keys(muscleSetCounts);
   const progressPercent = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
-  const completedExercises = currentPlan?.exercises?.filter((exercise) => {
+  const completedExercises = activePlan?.exercises?.filter((exercise) => {
     const sets = exerciseLogs[exercise.name] || [];
     return sets.length > 0 && sets.every((set) => set.done);
   }).length || 0;
