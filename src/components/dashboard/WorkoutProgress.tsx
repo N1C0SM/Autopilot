@@ -96,9 +96,10 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       className={compact ? "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" : "flex flex-col"}
     >
       {exercises.length > 0 && (
-        // Botón de menú sobre negro: el <select> nativo transparente encima abre el selector del sistema.
-        <div className="relative flex min-h-[44px] max-w-full items-center gap-1 self-start rounded-lg transition-opacity duration-100 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
-          <span className="min-w-0 truncate type-title3">{selectedExercise}</span>
+        // Selector de ejercicio — ocupa todo el ancho en web, compacto en móvil
+        <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-secondary/50 px-4 transition-opacity duration-100 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[56px] lg:rounded-2xl lg:px-5">
+          <Dumbbell className="h-5 w-5 shrink-0 text-primary lg:h-6 lg:w-6" strokeWidth={1.75} aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate type-title3 lg:text-[22px] lg:leading-7">{selectedExercise}</span>
           <ChevronsUpDown className="h-[18px] w-[18px] shrink-0 text-primary" strokeWidth={2.25} aria-hidden="true" />
           <select
             aria-label="Ejercicio"

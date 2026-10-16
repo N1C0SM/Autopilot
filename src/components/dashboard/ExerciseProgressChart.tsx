@@ -59,11 +59,11 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
   return (
     <div className={compact ? "flex h-full min-h-0 flex-1 flex-col" : "flex flex-col"}>
       <div className="min-w-0">
-        <p className="font-rounded text-[48px] font-bold leading-none tabular-nums min-[390px]:text-[56px]">
+        <p className="font-rounded text-[48px] font-bold leading-none tabular-nums min-[390px]:text-[56px] lg:text-[72px]">
           {latest !== null ? round(latest) : "—"}
-          <span className="ml-1.5 type-title3 text-muted-foreground">{unit}</span>
+          <span className="ml-1.5 type-title3 lg:text-[22px] text-muted-foreground">{unit}</span>
         </p>
-        <p className="mt-2 type-subhead tabular-nums text-muted-foreground">
+        <p className="mt-2 type-subhead tabular-nums text-muted-foreground lg:text-[15px]">
           {totalChange !== null && hasLine && (
             <>
               <span className={totalChange >= 0 ? "font-semibold text-success" : "font-semibold text-foreground"}>
