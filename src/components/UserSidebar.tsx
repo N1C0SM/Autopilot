@@ -60,20 +60,23 @@ const UserSidebar = ({
       <SidebarContent>
 
         {/* ── Logo ── */}
-        <div className={cn("flex items-center", collapsed ? "justify-center px-0 py-5" : "px-5 py-5")}>
+        <div className={cn(
+          "flex items-center",
+          collapsed ? "justify-center px-0 py-6" : "px-6 py-6",
+        )}>
           <span className={cn(
             "font-display font-bold tracking-tight text-primary",
-            collapsed ? "text-[18px]" : "text-[20px]"
+            collapsed ? "text-[17px]" : "text-[22px]",
           )}>
             {collapsed ? "A" : "Autopilot"}
           </span>
         </div>
 
         {/* ── Separador sutil ── */}
-        <div className="mx-3 mb-2 h-px bg-sidebar-border/60" />
+        <div className="mx-4 mb-3 h-px bg-sidebar-border/50" />
 
         {/* ── Navegación principal ── */}
-        <SidebarMenu className="px-2 gap-0.5">
+        <SidebarMenu className="px-3 gap-1">
           {NAV_ITEMS.filter((item) => !hiddenSections.includes(item.section)).map((item) => {
             const isActive = section === item.section;
             const isLocked = lockedSections.includes(item.section);
@@ -85,41 +88,42 @@ const UserSidebar = ({
                     <SidebarMenuButton
                       onClick={() => onNavigate(item.section)}
                       className={cn(
-                        "h-10 rounded-xl px-3 gap-3 transition-all duration-100",
-                        "hover:bg-sidebar-accent/70",
-                        "active:scale-[0.97] active:opacity-80",
+                        // web: más alto y con más padding
+                        "h-11 rounded-xl px-3.5 gap-3.5 transition-all duration-100",
+                        "hover:bg-sidebar-accent/60",
+                        "active:scale-[0.97] active:opacity-75",
                         isActive
                           ? "bg-sidebar-accent text-sidebar-primary font-semibold"
-                          : "text-sidebar-foreground/70 font-normal",
+                          : "text-sidebar-foreground/60 font-normal",
                       )}
                     >
-                      {/* Indicador dorado lateral para item activo */}
+                      {/* Indicador dorado lateral */}
                       {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-primary" />
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-primary" />
                       )}
                       <item.icon
                         className={cn(
-                          "shrink-0",
-                          collapsed ? "h-[18px] w-[18px]" : "h-4 w-4",
-                          isActive ? "text-primary" : "text-sidebar-foreground/50",
+                          "shrink-0 transition-colors",
+                          collapsed ? "h-5 w-5" : "h-[18px] w-[18px]",
+                          isActive ? "text-primary" : "text-sidebar-foreground/40",
                         )}
                       />
                       {!collapsed && (
                         <span className="flex flex-1 items-center justify-between min-w-0">
                           <span className={cn(
-                            "truncate type-subhead",
-                            isLocked && "text-sidebar-foreground/40",
+                            "truncate text-[15px] leading-[22px]",
+                            isLocked && "text-sidebar-foreground/35",
                           )}>
                             {item.title}
                           </span>
-                          {isLocked && <Lock className="h-3 w-3 shrink-0 text-sidebar-foreground/30" />}
+                          {isLocked && <Lock className="h-3 w-3 shrink-0 text-sidebar-foreground/25" />}
                         </span>
                       )}
                     </SidebarMenuButton>
                   </TooltipTrigger>
                   <TooltipContent
                     side="right"
-                    className="type-footnote max-w-[220px] bg-card border-border text-foreground"
+                    className="text-[13px] max-w-[220px] bg-card border-border text-foreground"
                   >
                     {isLocked
                       ? `${item.title} — no incluido en tu plan`
@@ -134,36 +138,30 @@ const UserSidebar = ({
       </SidebarContent>
 
       {/* ── Footer: avatar + cerrar sesión ── */}
-      <SidebarFooter className="pb-3">
-        <div className="mx-3 mb-2 h-px bg-sidebar-border/60" />
+      <SidebarFooter className="pb-4">
+        <div className="mx-4 mb-3 h-px bg-sidebar-border/50" />
 
         {/* Perfil */}
         {profileName && (
           <div className={cn(
-            "flex items-center gap-2.5 px-3 py-2 rounded-xl mx-2",
-            "hover:bg-sidebar-accent/50 transition-colors cursor-default",
+            "flex items-center gap-3 px-4 py-2.5 rounded-xl mx-2",
+            "hover:bg-sidebar-accent/40 transition-colors cursor-default",
             collapsed && "justify-center px-0 mx-0",
           )}>
             <div className={cn(
-              "rounded-full bg-primary/20 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-primary/30",
-              collapsed ? "h-8 w-8" : "h-7 w-7",
+              "rounded-full bg-primary/15 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-primary/25",
+              collapsed ? "h-8 w-8" : "h-8 w-8",
             )}>
               {profileAvatar ? (
-                <img
-                  loading="lazy"
-                  decoding="async"
-                  src={profileAvatar}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[11px] font-bold text-primary">
+                <span className="text-[12px] font-bold text-primary">
                   {profileName.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
             {!collapsed && (
-              <span className="type-footnote text-sidebar-foreground/70 truncate leading-tight">
+              <span className="text-[13px] text-sidebar-foreground/60 truncate leading-tight">
                 {profileName}
               </span>
             )}
@@ -171,18 +169,18 @@ const UserSidebar = ({
         )}
 
         {/* Cerrar sesión */}
-        <SidebarMenu className="px-2">
+        <SidebarMenu className="px-3 mt-1">
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={onSignOut}
               className={cn(
-                "h-9 rounded-xl px-3 gap-3 transition-all duration-100",
-                "text-sidebar-foreground/40 hover:text-destructive hover:bg-destructive/10",
+                "h-10 rounded-xl px-3.5 gap-3.5 transition-all duration-100",
+                "text-sidebar-foreground/35 hover:text-destructive hover:bg-destructive/10",
                 "active:opacity-70",
               )}
             >
-              <LogOut className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="type-subhead">Cerrar sesión</span>}
+              <LogOut className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && <span className="text-[15px]">Cerrar sesión</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
