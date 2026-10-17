@@ -1,3 +1,4 @@
+import { generatePlanGuarded } from "@/lib/planShield";
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 import { getConsumerPlan, type BillingProfile } from "@/lib/entitlements";
@@ -113,6 +114,8 @@ export type ScanApplyOutcome =
   | "needs_profile"
   /** El servidor conservó la rutina (cuenta Free): se deshacen los cambios. */
   | "kept"
+  /** La rutina es personalizada y el usuario decidió conservarla. */
+  | "custom_kept"
   /** La sesión ya no existe en el servidor (p. ej. se cerró en otro dispositivo): hay que volver a entrar. */
   | "session_expired"
   /** Se cortó la conexión con el servidor: no se puede saber si llegó a regenerarse. */
@@ -256,7 +259,12 @@ export async function applyScanPlan(
     }
   }
 
-  const { data, error } = await client.functions.invoke("generate-plan", { body: { user_id: userId } });
+  const guarded = await generatePlanGuarded(client as never, { user_id: userId }, { userId });
+  const { data, error } = guarded;
+  if (guarded.kept) {
+    await restore();
+    return result("custom_kept", { baseline: before });
+  }
   if (error) {
     // Coach: el plan lo prepara su entrenador; lo aprobado queda guardado para él.
     if (functionStatus(error) === 403) return applied("sent_to_coach", before);
