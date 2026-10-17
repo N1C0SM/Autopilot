@@ -13,3 +13,4 @@
 - Manual routines carry `custom: true` per day in `training_plan.workouts_json`; generate-plan refuses to overwrite them unless `force: true`, and clients call it via `generatePlanGuarded` (`src/lib/planShield.ts`) — the autopilot never silently replaces user work.
 - Admin roadmap persists versions and tasks in admin-only RLS tables; AI only proposes changes and completion requires a known capability evidence ID, preventing invented completion and silent scope changes.
 - The uploaded roadmap is a one-time seed catalog with stable task IDs; initialization never overwrites saved edits or resurrects deleted tasks, while the current version is switched atomically through an admin-only RPC.
+- Roadmap implementation assistance prepares a copyable Lovable request, never executes code changes from the runtime app, preserving review and release boundaries.
