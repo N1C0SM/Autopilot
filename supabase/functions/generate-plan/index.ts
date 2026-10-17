@@ -3,6 +3,11 @@ import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
 import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
+const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastrad|disco/i;
+function isBodyweightOk(ex: { name?: string | null; exercise_type?: string | null }): boolean {
+  if (ex.exercise_type === "Gimnasio") return false;
+  return !GYM_EQUIPMENT_RE.test(ex.name || "");
+}
 import { applyWeightEstimation } from "../_shared/exercise-weight-estimation.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -190,7 +195,7 @@ function pickExercisesForSession(
     for (const ex of muscleExercises) {
       // Equipment type filtering: strict enforcement
       if (exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia") continue;
-      if (exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio") continue;
+      if (exerciseType === "Calistenia" && !isBodyweightOk(ex)) continue;
       // Mixto allows everything
       if ((ex.level ?? 1) > userLevel + 1) continue;
       allAvailable.push(ex);
@@ -389,7 +394,7 @@ function pickExercisesForSession(
     const fallback = Object.values(exerciseLib).flat()
       .filter(ex => {
         if (exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia") return false;
-        if (exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio") return false;
+        if (exerciseType === "Calistenia" && !isBodyweightOk(ex)) return false;
         return true;
       })
       .slice(0, MIN_EXERCISES);
@@ -497,7 +502,7 @@ function pickExercisesForSession(
     const candidates = (exerciseLib[muscle] || [])
       .filter((ex) => !usedIds.has(ex.id))
       .filter((ex) => !(exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia"))
-      .filter((ex) => !(exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio"))
+      .filter((ex) => !(exerciseType === "Calistenia" && !isBodyweightOk(ex)))
       .filter((ex) => (ex.level ?? 1) <= userLevel + 1)
       .filter((ex) => !(ex.movement_pattern === "Bisagra" && ex.load_level === "Alta" && heavyHingeCount >= rules.max_heavy_hinges))
       // Skill progressions are injected later; do not pick them twice.
@@ -1212,7 +1217,9 @@ serve(async (req) => {
         });
         
         // Apply estimation only to exercises without user adjustments
-        day.exercises = applyWeightEstimation(day.exercises, scanData, userWeightData);
+        day.exercises = equipmentType === "Calistenia"
+          ? day.exercises.map((e: any) => ({ ...e, weight: "" }))
+          : applyWeightEstimation(day.exercises, scanData, userWeightData);
       }
     }
 
@@ -1233,7 +1240,7 @@ serve(async (req) => {
       }));
 
       // Apply weight estimation to skill progressions (SCAN DATA PRIORITIZED)
-      progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
+      if (equipmentType !== "Calistenia") progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
 
       // Distribute progressions across gym days that train relevant muscles
       let progIdx = 0;
