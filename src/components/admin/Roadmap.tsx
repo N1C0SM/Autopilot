@@ -1,21 +1,16 @@
-import { useEffect, useState } from "react";
-import { Info } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
-import { EmptyState } from "@/components/ui/empty-state";
-
-const ROADMAP_URL = "https://roadmap-wizardry-76.lovable.app";
+import { useState } from "react";
+import { Info, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ListGroup, ListRow } from "@/components/ui/list";
+import { hapticTap } from "@/lib/native";
 
 export default function RoadmapAdmin() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const ROADMAP_URL = "https://roadmap-wizardry-76.lovable.app";
 
-  useEffect(() => {
-    // Try to load the roadmap
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000); // Give it 2 seconds to load
-    return () => clearTimeout(timer);
-  }, []);
+  const openRoadmap = () => {
+    void hapticTap();
+    window.open(ROADMAP_URL, "_blank");
+  };
 
   return (
     <div className="space-y-6">
@@ -31,30 +26,19 @@ export default function RoadmapAdmin() {
         </div>
       </div>
 
-      {error ? (
-        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-destructive">
-          <p>No se pudo cargar el roadmap externo.</p>
-          <p className="text-sm mt-1">Puedes verlo directamente en: <a href={ROADMAP_URL} target="_blank" rel="noopener noreferrer" className="underline">roadmap-wizardry-76.lovable.app</a></p>
-        </div>
-      ) : (
-        <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl border bg-card shadow-sm relative">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-card z-10">
-              <Spinner size="lg" label="Cargando roadmap..." />
-            </div>
-          )}
-          <iframe
-            src={ROADMAP_URL}
-            className="h-full w-full border-0"
-            title="Roadmap"
-            allow="fullscreen"
-          />
-        </div>
-      )}
+      <ListGroup>
+        <ListRow
+          icon={<ExternalLink />}
+          title="Abrir roadmap en Lovable"
+          aria-label="Abrir roadmap"
+          chevron
+          onClick={openRoadmap}
+        />
+      </ListGroup>
 
       <div className="rounded-xl bg-primary/5 p-4 text-sm text-primary/80">
         <strong>¿Cómo funciona?</strong> Este roadmap se sincroniza automáticamente con Lovable. 
-        Cuando actualices tu roadmap allí, se refrescará aquí automáticamente.
+        Haz clic en "Abrir roadmap" para verlo y editarlo.
       </div>
     </div>
   );
