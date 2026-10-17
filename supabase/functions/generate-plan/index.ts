@@ -912,8 +912,10 @@ serve(async (req) => {
     if (!user) throw new Error("Not authenticated");
 
     let targetUserId = user.id;
+    let force = false;
     try {
       const body = await req.json();
+      force = body?.force === true;
       if (body.user_id && body.user_id !== user.id) {
         const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
           supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
@@ -951,6 +953,18 @@ serve(async (req) => {
         const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
         if (readyError) throw readyError;
         return new Response(JSON.stringify({ success: true, existing: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // Escudo: una rutina hecha a mano nunca se sustituye sin que el usuario lo confirme.
+    if (!force) {
+      const { data: current } = await supabase.from("training_plan").select("workouts_json")
+        .eq("user_id", targetUserId).maybeSingle();
+      const days = Array.isArray(current?.workouts_json) ? (current!.workouts_json as unknown as DayPlan[]) : [];
+      if (days.some((d) => d?.custom === true)) {
+        return new Response(JSON.stringify({ success: false, protected: true, current: days }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
