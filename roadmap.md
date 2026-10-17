@@ -1,7 +1,8 @@
 # Roadmap
-- [ ] Roadmap interactivo en Admin con las 40 versiones del documento
-- [ ] Lluvia de ideas con clasificación IA, evidencia y guardián del foco
-- [ ] Verificar permisos, edición y clasificación de ideas
+- [x] Roadmap interactivo en Admin con las 40 versiones del documento
+- [x] Lluvia de ideas guardada, evidencia y guardián del foco
+- [x] Verificar permisos, edición persistente, eliminación y aviso de foco
+- [ ] Verificar clasificación IA: bloqueada por saldo agotado del proveedor configurado
 - [x] Capturas App Store
 - [x] Imágenes faltantes Academia
 - [x] Publicar

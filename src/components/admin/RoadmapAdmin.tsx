@@ -43,6 +43,7 @@ export default function RoadmapAdmin() {
   const [deleting, setDeleting] = useState<Item | null>(null);
 
   const load = useCallback(async () => {
+    setLoading(true);
     setError(false);
     try {
       const [v, i] = await Promise.all([
@@ -56,12 +57,17 @@ export default function RoadmapAdmin() {
       }
       // Missing IDs are inserted, never replacing saved edits or completion states.
       const savedIds = new Set((i.data ?? []).map(row => row.id));
-      const missing = !v.data?.length ? master.items.filter(row => !savedIds.has(row.id)).map(row => ({ ...row, status: seedEvidence[row.title] ? 'done' : 'pending', evidence: seedEvidence[row.title] ?? '' })) : [];
+      const needsSeed = !v.data?.some(row => row.seed_initialized);
+      const missing = needsSeed ? master.items.filter(row => !savedIds.has(row.id)).map(row => ({ ...row, status: seedEvidence[row.title] ? 'done' : 'pending', evidence: seedEvidence[row.title] ?? '' })) : [];
       if (missing.length) {
         const seeded = await supabase.from('roadmap_items').upsert(missing, { onConflict: 'id', ignoreDuplicates: true });
         if (seeded.error) throw seeded.error;
       }
-      if (!v.data?.length || missing.length) {
+      if (needsSeed) {
+        const marked = await supabase.from('roadmap_versions').update({ seed_initialized: true }).in('id', master.versions.map(row => row.id));
+        if (marked.error) throw marked.error;
+      }
+      if (!v.data?.length || needsSeed) {
         const [freshV, freshI] = await Promise.all([supabase.from('roadmap_versions').select('*').order('position'), supabase.from('roadmap_items').select('*').order('position').order('created_at')]);
         if (freshV.error || freshI.error) throw freshV.error ?? freshI.error;
         setVersions(freshV.data ?? []); setItems(freshI.data ?? []);
