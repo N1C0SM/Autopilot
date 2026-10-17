@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
-import { Clock, ArrowRight, ArrowLeft, BookOpen, GraduationCap, BarChart3, Atom, Dumbbell, PersonStanding, CalendarRange, Apple, Moon, HelpCircle, HeartPulse, Zap, Timer } from "lucide-react";
+import { Clock, ArrowRight, ArrowLeft, BookOpen, GraduationCap, BarChart3, Atom, Dumbbell, PersonStanding, CalendarRange, Apple, Moon, HelpCircle, HeartPulse, Brain, Timer } from "lucide-react";
 import { CATEGORIES, LEVEL_LABEL, EVIDENCE_LABEL, categoryBySlug, type Level, type Evidence } from "@/lib/academy";
 
 interface Post {
@@ -22,7 +22,7 @@ const LEVELS: (Level | "all")[] = ["all", "beginner", "intermediate", "advanced"
 
 const ICONS: Record<string, typeof BookOpen> = {
   fundamentos: GraduationCap, "sobrecarga-progresiva": BarChart3, hipertrofia: Dumbbell, biomecanica: Atom,
-  "sistema-nervioso-fuerza": Zap, programacion: CalendarRange, tecnica: Timer, calistenia: PersonStanding,
+  "sistema-nervioso-fuerza": Brain, programacion: CalendarRange, tecnica: Timer, calistenia: PersonStanding,
   nutricion: Apple, recuperacion: Moon, mitos: HelpCircle, "entrenamiento-avanzado": HeartPulse,
 };
 

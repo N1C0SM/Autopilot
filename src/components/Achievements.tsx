@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Trophy, Target, Zap, Award, Star } from "lucide-react";
+import { Flame, Trophy, Target, Award, Medal, Star } from "lucide-react";
 
 interface Achievement {
   id: string;
@@ -54,7 +54,7 @@ const Achievements = ({ userId }: Props) => {
       const list: Achievement[] = [
         {
           id: "first_day",
-          icon: Zap,
+          icon: Medal,
           title: "Primer Paso",
           description: "Completa tu primer día",
           unlocked: total >= 1,

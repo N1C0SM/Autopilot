@@ -16,7 +16,7 @@ import { toast } from "sonner";
 const ENABLE_CALENDAR = false;
 
 import {
-  User, Crown, ExternalLink, Calendar, CalendarClock, Check, Zap, Unplug, RefreshCw,
+  User, Crown, ExternalLink, Calendar, CalendarClock, Check, Unplug, Link2, RefreshCw,
   Download, FileText,
 } from "lucide-react";
 import {
@@ -754,7 +754,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           </>
         ) : (
           <ListRow
-            icon={<Zap />}
+            icon={<Link2 />}
             title={<span className="text-primary">Conectar</span>}
             aria-label="Conectar Google Calendar"
             disabled={gcalLoading}
