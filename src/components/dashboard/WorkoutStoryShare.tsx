@@ -23,7 +23,10 @@ interface Props {
 
 const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
   const img = new Image();
-  img.onload = () => res(img); img.onerror = rej; img.src = src;
+  const t = setTimeout(() => rej(new Error("image timeout")), 5000);
+  img.onload = () => { clearTimeout(t); res(img); };
+  img.onerror = (e) => { clearTimeout(t); rej(e); };
+  img.src = src;
 });
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number, maxLines = 2) {
@@ -326,7 +329,13 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
     const [front, back] = await Promise.all([loadImage(frontAnatomy), loadImage(backAnatomy)]);
     drawMusculos(ctx, p, W, H, front, back, logo);
   }
-  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("no blob"))), "image/png"));
+  const blob = await new Promise<Blob | null>((res) => {
+    try { c.toBlob((b) => res(b), "image/png"); } catch { res(null); }
+  });
+  if (blob && blob.size > 0) return blob;
+  // Respaldo: algunos WebKit fallan con toBlob; usamos dataURL.
+  const dataUrl = c.toDataURL("image/png");
+  return await (await fetch(dataUrl)).blob();
 }
 
 export function WorkoutStoryShare(props: Props) {
