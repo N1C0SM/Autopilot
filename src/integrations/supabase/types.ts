@@ -702,9 +702,11 @@ export type Database = {
           is_pack: boolean
           kind: string
           pack_items: string[]
+          pages: number | null
           parent_id: string | null
           price: string
           published: boolean
+          reading_minutes: number | null
           sort_order: number
           title: string
           updated_at: string
@@ -724,9 +726,11 @@ export type Database = {
           is_pack?: boolean
           kind?: string
           pack_items?: string[]
+          pages?: number | null
           parent_id?: string | null
           price?: string
           published?: boolean
+          reading_minutes?: number | null
           sort_order?: number
           title?: string
           updated_at?: string
@@ -746,9 +750,11 @@ export type Database = {
           is_pack?: boolean
           kind?: string
           pack_items?: string[]
+          pages?: number | null
           parent_id?: string | null
           price?: string
           published?: boolean
+          reading_minutes?: number | null
           sort_order?: number
           title?: string
           updated_at?: string
