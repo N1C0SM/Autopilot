@@ -58,42 +58,44 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
 
   return (
     <div className={compact ? "flex h-full min-h-0 flex-1 flex-col" : "flex flex-col"}>
-      <div className="min-w-0">
-        <p className="font-rounded text-[48px] font-bold leading-none tabular-nums min-[390px]:text-[56px] lg:text-[72px]">
-          {latest !== null ? round(latest) : "—"}
-          <span className="ml-1.5 type-title3 lg:text-[22px] text-muted-foreground">{unit}</span>
-        </p>
-        <p className="mt-2 type-subhead tabular-nums text-muted-foreground lg:text-[15px]">
-          {totalChange !== null && hasLine && (
-            <>
-              <span className={totalChange >= 0 ? "font-semibold text-success" : "font-semibold text-foreground"}>
-                {totalChange > 0 ? "+" : ""}{round(totalChange)} % desde el inicio
+      {/* Info compacta arriba */}
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-rounded text-[32px] font-bold leading-none tabular-nums lg:text-[40px]">
+            {latest !== null ? round(latest) : "—"}
+            <span className="ml-1 type-subhead text-muted-foreground">{unit}</span>
+          </p>
+          <p className="mt-1.5 type-footnote tabular-nums text-muted-foreground">
+            {totalChange !== null && hasLine && (
+              <span className={totalChange >= 0 ? "font-medium text-success" : "font-medium text-foreground"}>
+                {totalChange > 0 ? "+" : ""}{round(totalChange)}%
               </span>
-              {" · "}
-            </>
-          )}
-          {best !== null && hasLine && <>Mejor {round(best)} {unit} · </>}
-          {sessions}
-        </p>
+            )}
+            {totalChange !== null && hasLine && best !== null && hasLine && " · "}
+            {best !== null && hasLine && <>{round(best)} {unit}</>}
+            {(totalChange !== null && hasLine || best !== null && hasLine) && " · "}
+            {sessions}
+          </p>
+        </div>
+        
+        <Tabs
+          value={metric}
+          onValueChange={(next) => {
+            void hapticSelection();
+            onMetricChange(next as Metric);
+          }}
+          className="shrink-0"
+        >
+          <TabsList aria-label="Métrica" className="h-8">
+            {METRICS.map(([k, label]) => (
+              <TabsTrigger key={k} value={k} className="px-2.5 py-1 text-xs">{label}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
-      <Tabs
-        value={metric}
-        onValueChange={(next) => {
-          void hapticSelection();
-          onMetricChange(next as Metric);
-        }}
-        className="mt-5"
-      >
-        <TabsList aria-label="Métrica" className="w-full md:w-auto">
-          {METRICS.map(([k, label]) => (
-            <TabsTrigger key={k} value={k}>{label}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
       {hasLine ? (
-        <div className={`mt-4 w-full ${plotClass}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>
+        <div className={`mt-3 w-full ${plotClass}`} role="img" aria-label={`Gráfica de ${exerciseName}`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeWidth={0.5} />
@@ -138,7 +140,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
           icon={Dumbbell}
           title="Sin carga registrada"
           description="El 1RM y el volumen salen de las series con peso. En Reps ves tu evolución."
-          className={`mt-4 py-6 ${plotClass}`}
+          className={`mt-3 py-6 ${plotClass}`}
         />
       ) : (
         <ProgressInlineState
@@ -149,7 +151,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
               ? "Registra otra sesión de este ejercicio y aquí verás tu línea de progreso."
               : "Registra otra sesión con peso y aquí verás tu línea de progreso."
           }
-          className={`mt-4 py-6 ${plotClass}`}
+          className={`mt-3 py-6 ${plotClass}`}
         />
       )}
     </div>

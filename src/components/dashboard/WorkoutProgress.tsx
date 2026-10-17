@@ -96,11 +96,11 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       className={compact ? "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" : "flex flex-col"}
     >
       {exercises.length > 0 && (
-        // Selector de ejercicio — ocupa todo el ancho en web, compacto en móvil
-        <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-secondary/50 px-4 transition-opacity duration-100 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[56px] lg:rounded-2xl lg:px-5">
-          <Dumbbell className="h-5 w-5 shrink-0 text-primary lg:h-6 lg:w-6" strokeWidth={1.75} aria-hidden="true" />
-          <span className="min-w-0 flex-1 truncate type-title3 lg:text-[22px] lg:leading-7">{selectedExercise}</span>
-          <ChevronsUpDown className="h-[18px] w-[18px] shrink-0 text-primary" strokeWidth={2.25} aria-hidden="true" />
+        // Selector de ejercicio — más discreto
+        <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-secondary/50 px-3 transition-opacity duration-100 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[48px] lg:rounded-xl lg:px-4">
+          <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground lg:h-5 lg:w-5" strokeWidth={1.75} aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate type-subhead text-foreground lg:type-headline">{selectedExercise}</span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
           <select
             aria-label="Ejercicio"
             value={selectedExercise}
@@ -117,9 +117,8 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
 
       {loading ? (
         <div role="status" aria-label="Cargando historial" className={fill}>
-          <Skeleton className="h-6 w-44" />
-          <Skeleton className="mt-4 h-12 w-32" />
-          <Skeleton className={`mt-6 rounded-xl ${compact ? "min-h-[160px] flex-1" : "h-52"}`} />
+          <Skeleton className="mt-4 h-8 w-32" />
+          <Skeleton className={`mt-4 rounded-xl ${compact ? "min-h-[200px] flex-1" : "h-64"}`} />
         </div>
       ) : loadError ? (
         <div role="alert" className={fill}>
@@ -150,59 +149,15 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
           className={compact ? "flex-1 py-8" : "py-8"}
         />
       ) : (
-        <>
-          {/* En web: 2 columnas — selector + stats izquierda, gráfica derecha */}
-          <div className={compact ? "mt-2 flex flex-1 flex-col lg:flex-row lg:gap-10 lg:items-start" : "mt-2 lg:flex lg:gap-10 lg:items-start"}>
-            {/* Columna izquierda: selector y stats (solo en lg) */}
-            {latest && (
-              <div className="hidden lg:flex lg:flex-col lg:w-64 lg:shrink-0 lg:pt-2">
-                <section aria-label="Última sesión">
-                  <h3 className="type-footnote text-muted-foreground mb-3">Última sesión · {latest.sessionLabel}</h3>
-                  <dl className="grid grid-cols-2 gap-y-4">
-                    {stats.map((stat) => (
-                      <div key={stat.label} className="flex flex-col gap-0.5">
-                        <dd className="flex items-baseline gap-x-0.5">
-                          <span className="font-rounded text-[28px] font-bold tabular-nums leading-none">{stat.value}</span>
-                          {stat.unit && <span className="type-footnote text-muted-foreground">{stat.unit}</span>}
-                        </dd>
-                        <dt className="type-footnote text-muted-foreground">{stat.label}</dt>
-                      </div>
-                    ))}
-                  </dl>
-                </section>
-              </div>
-            )}
-
-            {/* Gráfica — ocupa todo en móvil, flex-1 en lg */}
-            <div className={compact ? "flex flex-1 flex-col" : "flex-1"}>
-              <ExerciseProgressChart
-                compact={compact}
-                exerciseName={selectedExercise}
-                history={history}
-                metric={selectedMetric}
-                onMetricChange={setMetric}
-              />
-            </div>
-          </div>
-
-          {/* Stats en móvil/tablet — oculto en lg */}
-          {latest && (
-            <section aria-label="Última sesión" className="mt-6 shrink-0 lg:hidden">
-              <h3 className="type-footnote text-muted-foreground">Última sesión · {latest.sessionLabel}</h3>
-              <dl className="mt-2 grid grid-cols-2 min-[390px]:grid-cols-4">
-                {stats.map((stat, index) => (
-                  <div key={stat.label} className={`flex min-w-0 flex-col-reverse py-2 ${STAT_CELL[index]}`}>
-                    <dt className="truncate type-footnote text-muted-foreground">{stat.label}</dt>
-                    <dd className="flex flex-wrap items-baseline gap-x-0.5">
-                      <span className="font-rounded type-title3 font-bold tabular-nums">{stat.value}</span>
-                      {stat.unit && <span className="type-footnote text-muted-foreground">{stat.unit}</span>}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          )}
-        </>
+        <div className={compact ? "mt-3 flex flex-1 flex-col" : "mt-3"}>
+          <ExerciseProgressChart
+            compact={compact}
+            exerciseName={selectedExercise}
+            history={history}
+            metric={selectedMetric}
+            onMetricChange={setMetric}
+          />
+        </div>
       )}
     </div>
   );
