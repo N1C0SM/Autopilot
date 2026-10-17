@@ -18,7 +18,7 @@ import UserSidebar from "@/components/UserSidebar";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
-interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string; is_pack?: boolean }
+interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string; is_pack?: boolean; pages?: number | null; minutes?: number | null }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
 interface Post { slug: string; title: string; excerpt: string | null; cover_url: string | null }
 
@@ -75,7 +75,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
       const { data: libraryBooks } = booksFolder
         ? await supabase
             .from("library_books")
-            .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack")
+            .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack, pages, reading_minutes")
             .eq("published", true)
             .eq("is_folder", false)
             .eq("parent_id", booksFolder.id)
@@ -98,6 +98,8 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""), b.id),
           price: b.price || "",
           is_pack: !!b.is_pack,
+          pages: (b as any).pages ?? null,
+          minutes: (b as any).reading_minutes ?? null,
         });
       }
 
@@ -199,6 +201,11 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                   <BookCover title={e.title} src={e.cover_url} />
                   <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>
                   <p className="mt-0.5 type-subhead font-semibold text-muted-foreground">{e.price || "Gratis"}</p>
+                  {(e.is_pack || e.pages || e.minutes) && (
+                    <p className="mt-0.5 type-caption1 text-muted-foreground">
+                      {[e.is_pack ? "Pack" : "PDF", e.pages ? `${e.pages} págs.` : null, e.minutes ? `${e.minutes} min de lectura` : null].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                 </button>
               ))}
             </div>
