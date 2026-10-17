@@ -426,16 +426,19 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       const dataUrl = await renderScanCardDataUrl();
       if (!dataUrl) throw new Error("no card");
 
-      const res = await shareFileOrImage({
+      // Liberar el botón antes de abrir el menú nativo (iOS puede no resolver nunca)
+      setSharing(false);
+      shareFileOrImage({
         dataUrl,
         filename: `autopilot-scan-${Date.now()}.png`,
         title: "Mi AI Physique Scan",
         text: "Mi físico analizado por IA en autopilotplan.com/scan",
+      }).then((res) => {
+        if (res.downloaded) toast.success("Tarjeta descargada");
+      }).catch((e: unknown) => {
+        console.error("[SCAN-SHARE]", e);
+        toast.error("No se pudo compartir");
       });
-
-      if (res.downloaded) {
-        toast.success("Tarjeta descargada");
-      }
     } catch (e: unknown) {
       console.error(e);
       toast.error("No se pudo generar la tarjeta");
