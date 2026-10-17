@@ -5,7 +5,6 @@ import {
   Brain,
   ScanLine,
   TrendingUp,
-  Zap,
   ArrowRight,
   Lock,
   ArrowDown,
@@ -126,7 +125,7 @@ const AIScanSection = () => {
                 </div>
                 <div className="bg-background/60 border border-primary/40 rounded-2xl p-4 relative overflow-hidden glow-shadow">
                   <div className="text-[10px] uppercase tracking-widest text-primary mb-1 flex items-center gap-1">
-                    <Zap className="w-3 h-3" /> Tu potencial
+                    <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" /> Tu potencial
                   </div>
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold font-display text-gradient">

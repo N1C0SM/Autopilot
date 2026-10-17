@@ -8,7 +8,7 @@ import Screen from "@/components/native/Screen";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Mail, Eye, EyeOff, Gift, Smartphone, Sparkles, Zap } from "lucide-react";
+import { Mail, Eye, EyeOff, Gift, Smartphone, Sparkles, Camera } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice, AuthSymbol } from "@/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
@@ -303,7 +303,7 @@ const Signup = () => {
                   src={scanCtx.currentImg}
                   alt="Tu scan"
                   className="h-10 w-10 rounded-[10px] object-cover"
-                  fallback={<Zap strokeWidth={1.75} />}
+                  fallback={<Camera strokeWidth={1.75} />}
                 />
               }
               title="Tu AI Report está reservado"
