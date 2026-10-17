@@ -632,6 +632,7 @@ const Dashboard = () => {
                     ))}
                   </div>
                 </div>
+              )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
                 <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
                   setTrainingDay(day);
