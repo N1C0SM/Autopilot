@@ -105,6 +105,7 @@ const SiteContentEditor = () => {
   const [trainer, setTrainer] = useState({ trainer_name: "", trainer_photo_url: "", trainer_bio: "", contact_phone: "" });
   const [hero, setHero] = useState({ hero_video_url: "", hero_video_poster_url: "" });
   const [stores, setStores] = useState({ app_store_url: "", play_store_url: "" });
+  const [showAppDownload, setShowAppDownload] = useState(true);
   const [transformationSlots, setTransformationSlots] = useState(10);
   const [videoUploading, setVideoUploading] = useState(false);
   const [posterUploading, setPosterUploading] = useState(false);
@@ -173,7 +174,7 @@ const SiteContentEditor = () => {
   const load = async () => {
     setLoading(true);
     const [{ data: s }, { data: t }] = await Promise.all([
-      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
+      supabase.from("settings").select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, ebooks, recommendations, guide_ebook_url, landing_ebooks_count, landing_recommendations_count").limit(1).maybeSingle(),
       supabase.from("site_testimonials").select("*").order("sort_order"),
     ]);
     if (s) {
@@ -192,6 +193,7 @@ const SiteContentEditor = () => {
         app_store_url: s.app_store_url || "",
         play_store_url: s.play_store_url || "",
       });
+      setShowAppDownload(s.show_app_download ?? true);
       setTransformationSlots(Math.max(0, Number(s.transformation_slots ?? 10)));
       setSections({
         show_blog: s.show_blog ?? true,
@@ -353,6 +355,13 @@ const SiteContentEditor = () => {
       toast.success("Enlaces de la app actualizados");
     }
     setSaving(false);
+  };
+
+  const toggleAppDownload = async (v: boolean) => {
+    setShowAppDownload(v);
+    const { error } = await supabase.from("settings").update({ show_app_download: v }).eq("id", settingsId);
+    if (error) { setShowAppDownload(!v); toast.error("Error al guardar"); }
+    else toast.success(v ? "Acceso a la app visible en la web" : "Acceso a la app oculto");
   };
 
   const saveTransformationSlots = async () => {
@@ -836,6 +845,13 @@ const SiteContentEditor = () => {
         description="Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web (ideal antes de estar publicado)."
       >
         <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="show-app-download" className={FIELD_LABEL}>Mostrar «App móvil» en la web</Label>
+              <p className="type-footnote text-muted-foreground">Enlace a la página de instalación (APK Android e iPhone desde Safari). Apágalo cuando estés en las tiendas.</p>
+            </div>
+            <Switch id="show-app-download" checked={showAppDownload} onCheckedChange={(v) => void toggleAppDownload(v)} />
+          </div>
           <div>
             <Label htmlFor="app-store-url" className={FIELD_LABEL}>URL App Store (iOS)</Label>
             <Input

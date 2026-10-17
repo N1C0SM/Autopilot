@@ -1354,6 +1354,7 @@ export type Database = {
           price_id_yearly_test: string | null
           recommendations: Json
           referral_coupon_id: string | null
+          show_app_download: boolean
           show_blog: boolean
           show_ebooks: boolean
           show_plan_coach: boolean
@@ -1404,6 +1405,7 @@ export type Database = {
           price_id_yearly_test?: string | null
           recommendations?: Json
           referral_coupon_id?: string | null
+          show_app_download?: boolean
           show_blog?: boolean
           show_ebooks?: boolean
           show_plan_coach?: boolean
@@ -1454,6 +1456,7 @@ export type Database = {
           price_id_yearly_test?: string | null
           recommendations?: Json
           referral_coupon_id?: string | null
+          show_app_download?: boolean
           show_blog?: boolean
           show_ebooks?: boolean
           show_plan_coach?: boolean
@@ -2146,6 +2149,7 @@ export type Database = {
           landing_recommendations_count: number
           play_store_url: string
           recommendations: Json
+          show_app_download: boolean
           show_blog: boolean
           show_ebooks: boolean
           show_recommendations: boolean
