@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dumbbell, Video } from "lucide-react";
 import VideoEmbed, { toEmbedUrl } from "@/components/VideoEmbed";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,8 @@ export const ExerciseThumb = ({
 }: ThumbProps) => {
   const box = aspect === "video" ? "aspect-video w-28" : THUMB_SIZES[size];
   const hasVideo = Boolean(video && isDirectFile(video));
+  const [broken, setBroken] = useState<string | null>(null);
+  const showImage = image && broken !== image;
 
   return (
     <div
@@ -51,12 +54,13 @@ export const ExerciseThumb = ({
         completed ? "bg-primary/15" : "bg-secondary"
       } ${className}`}
     >
-      {image ? (
+      {showImage ? (
         <img
           src={image}
           alt={name ?? ""}
           loading="lazy"
           decoding="async"
+          onError={() => setBroken(image)}
           className={`h-full w-full object-cover ${completed ? "opacity-70" : ""}`}
         />
       ) : (
