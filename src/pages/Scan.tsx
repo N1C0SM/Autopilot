@@ -37,7 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import NavBar from "@/components/native/NavBar";
-import { hapticTap, hapticSelection } from "@/lib/native";
+import { hapticTap, hapticSelection, shareFileOrImage } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
 import { applyScanPlan, canApplyScanToPlan, hasScanInferences, userSpecificGoal, type ScanApplyResult } from "@/lib/scanApply";
 import { toast } from "sonner";
@@ -424,28 +424,17 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
     try {
       const dataUrl = await renderScanCardDataUrl();
       if (!dataUrl) throw new Error("no card");
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], "autopilot-scan.png", { type: "image/png" });
 
-      const navAny = navigator;
-      if (navAny.canShare?.({ files: [file] })) {
-        try {
-          await navAny.share({
-            files: [file],
-            title: "Mi AI Physique Scan",
-            text: "Mi físico analizado por IA en autopilotplan.com/scan",
-          });
-          return;
-        } catch {
-          // fall through to download
-        }
+      const res = await shareFileOrImage({
+        dataUrl,
+        filename: "autopilot-scan.png",
+        title: "Mi AI Physique Scan",
+        text: "Mi físico analizado por IA en autopilotplan.com/scan",
+      });
+
+      if (res.downloaded) {
+        toast.success("Tarjeta descargada");
       }
-
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = "autopilot-scan.png";
-      link.click();
-      toast.success("Tarjeta descargada");
     } catch (e: unknown) {
       console.error(e);
       toast.error("No se pudo generar la tarjeta");

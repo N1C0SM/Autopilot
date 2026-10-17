@@ -137,3 +137,129 @@ export async function registerBackButton(handler: () => boolean) {
     return () => {};
   }
 }
+
+export interface NativeShareOptions {
+  title?: string;
+  text?: string;
+  filename?: string;
+  blob?: Blob;
+  dataUrl?: string;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const res = (reader.result as string) || "";
+      const base64 = res.includes(",") ? res.split(",")[1] : res;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Comparte una imagen o archivo abriendo el menú nativo de iOS (UIActivityViewController)
+ * o Android (Intent chooser). Soporta WhatsApp, Instagram Stories, Mensajes, AirDrop, etc.
+ * En la web usa Web Share API si está disponible, o realiza fallback a descarga directa.
+ */
+export async function shareFileOrImage(
+  options: NativeShareOptions,
+): Promise<{ shared: boolean; downloaded?: boolean }> {
+  const filename = options.filename || `autopilot-${Date.now()}.png`;
+
+  if (isNative()) {
+    try {
+      const { Filesystem, Directory } = await import("@capacitor/filesystem");
+      const { Share } = await import("@capacitor/share");
+
+      let base64 = "";
+      if (options.dataUrl) {
+        base64 = options.dataUrl.includes(",")
+          ? options.dataUrl.split(",")[1]
+          : options.dataUrl;
+      } else if (options.blob) {
+        base64 = await blobToBase64(options.blob);
+      }
+
+      if (!base64) {
+        throw new Error("No image data provided to share");
+      }
+
+      // Escribimos en CacheDirectory para que iOS cree una URL file:// limpia
+      const saved = await Filesystem.writeFile({
+        path: filename,
+        data: base64,
+        directory: Directory.Cache,
+      });
+
+      await Share.share({
+        title: options.title || "Autopilot",
+        text: options.text,
+        files: [saved.uri],
+        dialogTitle: options.title || "Compartir",
+      });
+
+      return { shared: true };
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message?.toLowerCase() || "";
+      const name = (err as Error)?.name || "";
+      // Si el usuario simplemente cerró la hoja de compartir nativa, no consideramos error
+      if (name === "AbortError" || msg.includes("cancel") || msg.includes("dismiss")) {
+        return { shared: false };
+      }
+      console.warn("Fallo en compartir nativo, recurriendo a web fallback:", err);
+    }
+  }
+
+  // Web fallback con Web Share API (si soporta files)
+  if (typeof navigator !== "undefined" && typeof window !== "undefined") {
+    let blob = options.blob;
+    if (!blob && options.dataUrl) {
+      try {
+        const res = await fetch(options.dataUrl);
+        blob = await res.blob();
+      } catch { /* ignora */ }
+    }
+
+    if (blob) {
+      const file = new File([blob], filename, { type: blob.type || "image/png" });
+      const shareData: ShareData = {
+        files: [file],
+        title: options.title || "Autopilot",
+        text: options.text,
+      };
+
+      if (navigator.canShare?.(shareData)) {
+        try {
+          await navigator.share(shareData);
+          return { shared: true };
+        } catch (shareErr: unknown) {
+          if ((shareErr as Error)?.name === "AbortError") {
+            return { shared: false };
+          }
+        }
+      }
+    }
+
+    // Fallback de descarga en navegador tradicional
+    const downloadUrl =
+      options.dataUrl || (blob ? URL.createObjectURL(blob) : null);
+    if (downloadUrl) {
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      if (!options.dataUrl && blob) {
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000);
+      }
+      return { shared: false, downloaded: true };
+    }
+  }
+
+  return { shared: false };
+}
+

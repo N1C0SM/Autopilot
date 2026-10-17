@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Share, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { hapticTap } from "@/lib/native";
+import { hapticTap, shareFileOrImage } from "@/lib/native";
 import { toast } from "sonner";
 import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
@@ -266,39 +266,29 @@ export function WorkoutStoryShare(props: Props) {
     try {
       const filename = `autopilot-entreno-${activeVariant}.png`;
       const blob = await renderStory(props, activeVariant);
-      const file = new File([blob], filename, { type: "image/png" });
 
-      if (mode === "share") {
-        // Intenta compartir imagen + texto (WhatsApp, Instagram, Mensajes…)
-        const shareData: ShareData = {
-          files: [file],
-          title: props.title || "Mi entrenamiento en Autopilot",
-          text: shareText(),
-        };
-        if (navigator.canShare?.(shareData)) {
-          try {
-            await navigator.share(shareData);
-            return;
-          } catch (shareError) {
-            if ((shareError as Error)?.name === "AbortError") return;
-            // Fallo del menú: fallback a descarga
-            console.error("Native share failed, falling back to download", shareError);
-          }
-        }
-        // Si no soporta files, intenta compartir solo texto
-        if (navigator.canShare?.({ text: shareText() })) {
-          try {
-            await navigator.share({ title: "Mi entrenamiento en Autopilot", text: shareText() });
-          } catch { /* AbortError o similar — ignorar */ }
-        }
+      if (mode === "download") {
         download(blob, filename);
-        toast.success("Imagen descargada. Súbela a tu historia.");
-      } else {
-        download(blob, filename);
+        return;
       }
-    } catch (e) {
-      if ((e as Error)?.name !== "AbortError") toast.error("No se pudo crear la imagen");
-    } finally { setBusy(false); }
+
+      const res = await shareFileOrImage({
+        blob,
+        filename,
+        title: props.title || "Mi entrenamiento en Autopilot",
+        text: shareText(),
+      });
+
+      if (res.downloaded) {
+        toast.success("Imagen descargada. Súbela a tu historia.");
+      }
+    } catch (e: unknown) {
+      if ((e as Error)?.name !== "AbortError") {
+        toast.error("No se pudo crear la imagen");
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
