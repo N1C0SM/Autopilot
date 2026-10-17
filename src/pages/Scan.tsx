@@ -426,16 +426,19 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       const dataUrl = await renderScanCardDataUrl();
       if (!dataUrl) throw new Error("no card");
 
-      const res = await shareFileOrImage({
+      // Liberar el botón antes de abrir el menú nativo (iOS puede no resolver nunca)
+      setSharing(false);
+      shareFileOrImage({
         dataUrl,
         filename: `autopilot-scan-${Date.now()}.png`,
         title: "Mi AI Physique Scan",
         text: "Mi físico analizado por IA en autopilotplan.com/scan",
+      }).then((res) => {
+        if (res.downloaded) toast.success("Tarjeta descargada");
+      }).catch((e: unknown) => {
+        console.error("[SCAN-SHARE]", e);
+        toast.error("No se pudo compartir");
       });
-
-      if (res.downloaded) {
-        toast.success("Tarjeta descargada");
-      }
     } catch (e: unknown) {
       console.error(e);
       toast.error("No se pudo generar la tarjeta");
@@ -454,7 +457,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     if (!shareRef.current) return null;
     // Extra tick para que fuentes/layout se asienten
     await new Promise<void>((r) => setTimeout(r, 150));
-    // Asegurar que TODAS las <img loading="lazy" decoding="async"> internas (foto del usuario, etc.) están decodificadas
+    // Asegurar que TODAS las <img loading="eager" decoding="sync"> internas (foto del usuario, etc.) están decodificadas
     // antes de capturar — si no, html-to-image las pinta vacías.
     try {
       const imgs = Array.from(shareRef.current.querySelectorAll("img"));
@@ -2380,7 +2383,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   {/* Top Bar / Official Autopilot Brand Identity */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-                      <img loading="lazy" decoding="async"
+                      <img loading="eager" decoding="sync"
                         src={autopilotLogo}
                         alt="Autopilot"
                         style={{
@@ -2475,7 +2478,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                               alignItems: "center",
                             }}
                           >
-                            <img loading="lazy" decoding="async"
+                            <img loading="eager" decoding="sync"
                               src={photos[0].src}
                               style={{
                                 width: "100%",
@@ -2695,7 +2698,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                   borderRight: "1px solid rgba(250,204,21,0.25)",
                                 }}
                               >
-                                <img loading="lazy" decoding="async"
+                                <img loading="eager" decoding="sync"
                                   src={p.src}
                                   style={{
                                     width: "100%",
@@ -3013,7 +3016,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         gap: 10,
                       }}
                     >
-                      <img loading="lazy" decoding="async"
+                      <img loading="eager" decoding="sync"
                         src={autopilotLogo}
                         alt="Autopilot"
                         style={{ width: 28, height: 28, borderRadius: "50%", background: "#000" }}
