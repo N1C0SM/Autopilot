@@ -325,16 +325,16 @@ export function WorkoutStoryShare(props: Props) {
       <div className="flex w-full min-w-0 gap-2">
         <Button
           type="button"
-          variant="tinted"
+          variant="hero"
           size="lg"
           disabled={busy}
           onClick={() => { void hapticTap(); void run("share"); }}
-          className="min-w-0 flex-1 px-4"
+          className="min-w-0 flex-1 px-4 shadow-sm"
         >
           {busy
-            ? <Spinner size="sm" label="Creando imagen" className="text-primary [&>svg]:!size-full" />
+            ? <Spinner size="sm" label="Creando imagen" className="text-primary-foreground [&>svg]:!size-full" />
             : <Share aria-hidden="true" />}
-          <span className="truncate">Compartir</span>
+          <span className="truncate">Compartir en Stories</span>
         </Button>
         <Button
           type="button"

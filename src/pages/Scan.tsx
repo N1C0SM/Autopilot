@@ -28,6 +28,7 @@ import {
   Sprout,
   Ruler,
   ClipboardList,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -1726,16 +1727,28 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                   Orientación visual aproximada. No sustituye una valoración profesional.
                 </p>
 
-                <div className="mt-4 -ml-3 flex flex-wrap items-center">
-                  <Button
-                    variant="plain"
-                    size="sm"
-                    onClick={() => { void hapticTap(); void handleShare(); }}
-                    disabled={sharing}
-                  >
-                    {sharing && <Spinner size="sm" />}
-                    Compartir mi resultado
-                  </Button>
+                <div className="mt-6 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="size-4 text-primary" aria-hidden="true" />
+                        <h4 className="type-headline font-semibold text-foreground">Comparte tu diagnóstico</h4>
+                      </div>
+                      <p className="mt-1 type-footnote text-muted-foreground">
+                        Genera una Story para Instagram con tu análisis, fotos y objetivos.
+                      </p>
+                    </div>
+                    <Button
+                      variant="hero"
+                      size="default"
+                      className="shrink-0 shadow-sm"
+                      onClick={() => { void hapticTap(); void handleShare(); }}
+                      disabled={sharing}
+                    >
+                      {sharing ? <Spinner size="sm" /> : <Share2 className="size-4" aria-hidden="true" />}
+                      Compartir en Stories
+                    </Button>
+                  </div>
                 </div>
               </section>
 
