@@ -220,7 +220,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
 
           <div className="order-1 mx-auto w-full max-w-[22rem] md:order-2">
             <PhoneFrame screenClassName="h-[37rem]">
-              <PhoneAppBar avatar={<OwnerAvatar photo={owner.photo} initial={ownerInitial} />} />
+              <PhoneAppBar avatar={<>L</>} />
 
               <div className="flex-1 overflow-y-auto px-4 pb-28 pt-2">
                 {view === "home" && (
