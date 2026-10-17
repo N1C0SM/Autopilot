@@ -8,6 +8,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen } from "lucide-react";
+import autopilotLogo from "@/assets/autopilot-logo.png";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -64,12 +65,12 @@ const UserSidebar = ({
           "flex items-center",
           collapsed ? "justify-center px-0 py-6" : "px-6 py-6",
         )}>
-          <span className={cn(
-            "font-display font-bold tracking-tight text-primary",
-            collapsed ? "text-[17px]" : "text-[22px]",
-          )}>
-            {collapsed ? "A" : "Autopilot"}
-          </span>
+          <img src={autopilotLogo} alt="Autopilot" className="h-8 w-8 rounded-full object-cover" />
+          {!collapsed && (
+            <span className="ml-3 font-display text-[15px] font-semibold uppercase tracking-[0.3em] text-foreground">
+              Autopilot
+            </span>
+          )}
         </div>
 
         {/* ── Separador sutil ── */}

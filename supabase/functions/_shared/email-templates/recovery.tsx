@@ -1,7 +1,7 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-import { Body, Button, Container, Head, Heading, Html, Preview, Section, Text } from 'npm:@react-email/components@0.0.22'
+import { Body, Button, Container, Head, Heading, Html, Preview, Section, Text, Img } from 'npm:@react-email/components@0.0.22'
 import { email as s } from '../email-styles.ts'
 
 interface RecoveryEmailProps {
@@ -16,7 +16,8 @@ export const RecoveryEmail = ({ confirmationUrl }: RecoveryEmailProps) => (
     <Body style={s.main}>
       <Container style={s.container}>
         <Section style={s.header}>
-          <Text style={s.logo}>● Autopilot</Text>
+          <Img src="https://autopilotplan.com/pwa-192.png" width="44" height="44" alt="Autopilot" style={s.logoImg} />
+          <Text style={s.logo}>Autopilot</Text>
         </Section>
         <Section style={s.body}>
           <Heading style={s.h1}>Restablece tu contraseña</Heading>
