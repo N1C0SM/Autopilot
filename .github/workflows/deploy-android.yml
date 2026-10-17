@@ -3,14 +3,17 @@ name: Deploy Android
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
-    name: Build AAB & Upload to Play Store
+    name: Build APK + AAB
     runs-on: ubuntu-latest
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,11 +44,24 @@ jobs:
         env:
           CAP_DEV: "0"
 
+      - name: Build installable APK
+        run: chmod +x gradlew && ./gradlew assembleDebug
+        working-directory: android
+
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: autopilot-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
       - name: Decode keystore
+        if: ${{ env.HAS_KEYSTORE == 'true' }}
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/autopilot-release.jks
 
       - name: Create keystore.properties
+        if: ${{ env.HAS_KEYSTORE == 'true' }}
         run: |
           cat > android/keystore.properties << EOF
           storeFile=autopilot-release.jks
@@ -55,10 +71,12 @@ jobs:
           EOF
 
       - name: Build release AAB
+        if: ${{ env.HAS_KEYSTORE == 'true' }}
         run: ./gradlew bundleRelease
         working-directory: android
 
       - name: Upload AAB artifact
+        if: ${{ env.HAS_KEYSTORE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-release-aab
