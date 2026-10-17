@@ -4,16 +4,17 @@
  *
  * Paleta:
  *   --background: #000000  (systemBackground dark)
- *   --card:       #1C1C1E  (secondarySystemGroupedBackground)
- *   --primary:    #C9A44A  (dorado marca, hsl(43 61% 60%))
+ *   --card:       #111216  (secondarySystemGroupedBackground)
+ *   --primary:    #FFAA3C  (dorado marca, hsl(43 61% 60%))
  *   --foreground: #FFFFFF
  *   --muted-fg:   #98989E  (secondaryLabel iOS)
- *   --border:     #38383A  (opaque separator)
+ *   --border:     #1f2024  (opaque separator)
  */
 
 export const email = {
   main: {
-    backgroundColor: '#000000',
+    backgroundColor: '#ffffff',
+    padding: '24px 12px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", Arial, sans-serif',
     WebkitFontSmoothing: 'antialiased' as const,
   },
@@ -22,28 +23,34 @@ export const email = {
     maxWidth: '560px',
     margin: '0 auto',
     padding: '0',
+    backgroundColor: '#08090b',
+    borderRadius: '28px',
+    border: '1px solid #1f2024',
+    overflow: 'hidden' as const,
   },
 
   /** Cabecera con logotipo y línea dorada */
   header: {
-    backgroundColor: '#000000',
-    padding: '40px 32px 0',
-    borderBottom: '1px solid #38383A',
+    backgroundColor: '#08090b',
+    padding: '36px 32px 0',
+    borderTop: '2px solid #FFAA3C',
+    borderBottom: '1px solid #1f2024',
   },
 
   logo: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Arial, sans-serif',
-    fontSize: '20px',
+    fontSize: '13px',
     fontWeight: 700 as const,
-    color: '#C9A44A',
-    letterSpacing: '-0.02em',
+    color: '#FFFFFF',
+    letterSpacing: '0.42em',
+    textTransform: 'uppercase' as const,
     margin: '0 0 24px',
     display: 'block' as const,
   },
 
   /** Cuerpo principal */
   body: {
-    backgroundColor: '#000000',
+    backgroundColor: '#08090b',
     padding: '32px 32px 0',
   },
 
@@ -90,11 +97,11 @@ export const email = {
 
   /** Botón CTA principal — dorado de marca */
   button: {
-    backgroundColor: '#C9A44A',
-    color: '#000000',
+    backgroundColor: '#FFAA3C',
+    color: '#08090b',
     fontSize: '15px',
     fontWeight: 700 as const,
-    borderRadius: '12px',
+    borderRadius: '999px',
     padding: '14px 28px',
     textDecoration: 'none',
     display: 'inline-block' as const,
@@ -108,16 +115,16 @@ export const email = {
 
   /** Card oscura para destacar info (código OTP, stats, etc.) */
   card: {
-    backgroundColor: '#1C1C1E',
-    borderRadius: '16px',
+    backgroundColor: '#111216',
+    borderRadius: '22px',
     padding: '20px 24px',
     margin: '0 0 24px',
-    border: '1px solid #38383A',
+    border: '1px solid #1f2024',
   },
 
   /** Separador sutil */
   hr: {
-    borderColor: '#38383A',
+    borderColor: '#1f2024',
     borderTopWidth: '1px',
     borderStyle: 'solid' as const,
     borderBottomWidth: 0,
@@ -131,18 +138,18 @@ export const email = {
     fontFamily: '"SF Mono", "Fira Code", "Courier New", Courier, monospace',
     fontSize: '32px',
     fontWeight: 700 as const,
-    color: '#C9A44A',
+    color: '#FFAA3C',
     letterSpacing: '6px',
-    backgroundColor: '#1C1C1E',
+    backgroundColor: '#111216',
     padding: '16px 24px',
     borderRadius: '12px',
     display: 'inline-block' as const,
-    border: '1px solid #38383A',
+    border: '1px solid #1f2024',
     margin: '0 0 24px',
   },
 
   link: {
-    color: '#C9A44A',
+    color: '#FFAA3C',
     textDecoration: 'underline' as const,
     wordBreak: 'break-all' as const,
   },
@@ -154,9 +161,9 @@ export const email = {
 
   /** Footer de cierre */
   footer: {
-    backgroundColor: '#000000',
+    backgroundColor: '#08090b',
     padding: '24px 32px 40px',
-    borderTop: '1px solid #38383A',
+    borderTop: '1px solid #1f2024',
   },
 
   footerText: {
