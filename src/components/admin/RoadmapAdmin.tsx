@@ -169,7 +169,8 @@ export default function RoadmapAdmin() {
       <TabsList className="max-w-full"><TabsTrigger value="versions"><Route className="size-4 mr-2" />Versiones</TabsTrigger><TabsTrigger value="ideas"><Lightbulb className="size-4 mr-2" />Ideas ({inbox.length})</TabsTrigger><TabsTrigger value="history"><Archive className="size-4 mr-2" />Historial</TabsTrigger></TabsList>
       <TabsContent value="versions" className="mt-6">
         <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-6">
-          <nav aria-label="Versiones del Roadmap" className="lg:border-r lg:border-border lg:pr-4 space-y-3">
+          <div className="lg:hidden"><Select value={selected} onValueChange={setSelected}><SelectTrigger aria-label="Seleccionar versión"><SelectValue /></SelectTrigger><SelectContent>{versions.map(v => <SelectItem key={v.id} value={v.id}>v{v.id} · {v.title}{v.is_current ? ' · Actual' : ''}</SelectItem>)}<SelectItem value="ice">Ideas en hielo</SelectItem></SelectContent></Select></div>
+          <nav aria-label="Versiones del Roadmap" className="hidden lg:block lg:border-r lg:border-border lg:pr-4 space-y-3">
             {[1,2,3,4].map(phase => <div key={phase}><p className="text-xs text-muted-foreground mb-2">{phase} · {phaseNames[phase-1]}</p><div className="grid grid-cols-5 lg:grid-cols-2 gap-1">{versions.filter(v => v.phase === phase).map(v => <Button key={v.id} variant={selected === v.id ? 'tinted' : 'ghost'} size="sm" aria-label={`Ver versión ${v.id}`} aria-pressed={selected === v.id} onClick={() => setSelected(v.id)} className="justify-start"><span className="tabular-nums">{v.id}</span>{v.is_current && <Circle className="size-2 fill-current" />}</Button>)}</div></div>)}
             <Button variant={selected === 'ice' ? 'tinted' : 'ghost'} onClick={() => setSelected('ice')}><Archive />Ideas en hielo</Button>
           </nav>

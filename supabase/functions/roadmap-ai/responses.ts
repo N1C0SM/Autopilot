@@ -25,7 +25,10 @@ export function createResponsesCall(
     fetch: runIdFetch.fetch,
   });
   const reasoning = config.model !== "openai/chat-latest";
+  let callError: unknown;
   const result = streamText({
+    maxRetries: 0,
+    onError: ({ error }) => { callError = error; },
     output: Output.object({ schema: OutputSchema }),
     model: provider.responses(config.model),
     // AI SDK 6 lacks `instructions`: rename this key to `system` there.
@@ -48,6 +51,7 @@ export function createResponsesCall(
   });
   return {
     result,
+    getError: () => callError,
     response: () =>
       withLovableAiGatewayRunIdHeader(result.toUIMessageStreamResponse({ sendReasoning: true }), runIdFetch),
   };
