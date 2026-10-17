@@ -96,19 +96,19 @@ export default function OnboardingChoice() {
                 {/* Beneficios */}
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
                     <span>Plan ultra-personalizado desde el día 1</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
                     <span>Pesos estimados según tu masa muscular</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
                     <span>Análisis de composición corporal y postura</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
                     <span>Insights premium desbloqueados</span>
                   </li>
                 </ul>
@@ -149,19 +149,19 @@ export default function OnboardingChoice() {
                 {/* Beneficios */}
                 <ul className="mb-6 space-y-2">
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
                     <span>Plan personalizado básico</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
                     <span>Sin necesidad de fotos</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
                     <span>Más rápido de completar</span>
                   </li>
                   <li className="flex items-start gap-2 text-sm opacity-50">
-                    <Zap className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
                     <span className="line-through">Pesos personalizados con scan</span>
                   </li>
                 </ul>
