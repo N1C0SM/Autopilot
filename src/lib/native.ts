@@ -28,6 +28,18 @@ export function initPlatformClasses() {
   );
 }
 
+let splashHidden = false;
+
+/** Oculta el Splash Screen nativo con una transición suave cuando la interfaz está lista. */
+export async function hideSplashScreen(fadeOutDuration = 300) {
+  if (!isNative() || splashHidden) return;
+  splashHidden = true;
+  try {
+    const { SplashScreen } = await import("@capacitor/splash-screen");
+    await SplashScreen.hide({ fadeOutDuration });
+  } catch { /* This native capability may be unavailable on the current platform. */ }
+}
+
 export async function initNative() {
   if (!isNative()) return;
   try {
@@ -35,10 +47,11 @@ export async function initNative() {
     await StatusBar.setStyle({ style: Style.Dark });
     await StatusBar.setOverlaysWebView({ overlay: true });
   } catch { /* This native capability may be unavailable on the current platform. */ }
-  try {
-    const { SplashScreen } = await import("@capacitor/splash-screen");
-    await SplashScreen.hide();
-  } catch { /* This native capability may be unavailable on the current platform. */ }
+
+  // Salvaguarda: si por red o auth la app tardase, se oculta suavemente tras 2.5 s
+  setTimeout(() => {
+    void hideSplashScreen(300);
+  }, 2500);
   // Con el teclado abierto ocultamos la barra inferior para que no tape
   // el campo de texto (chat, formularios, onboarding).
   try {

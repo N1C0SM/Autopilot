@@ -69,8 +69,9 @@ describe("dashboard home overview", () => {
     expect(nutritionCard.parentElement).toBe(progressCard.parentElement);
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
-    expect(within(startButton).getByText("Empezar")).toBeVisible();
-    expect(screen.getAllByRole("button")[0]).toBe(startButton);
+    const allButtons = screen.getAllByRole("button");
+    expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(nutritionCard));
+    expect(allButtons.indexOf(startButton)).toBeLessThan(allButtons.indexOf(progressCard));
     fireEvent.click(nutritionCard);
     expect(onNavigate).toHaveBeenLastCalledWith("nutrition");
     fireEvent.click(progressCard);
@@ -132,7 +133,7 @@ describe("dashboard home overview", () => {
     render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} completedToday />);
 
     expect(screen.getByText("Entrenamiento completado")).toBeVisible();
-    expect(screen.getByRole("list", { name: "Tu semana" })).toHaveTextContent(`${today}, hoy: completado`);
+    expect(screen.getByRole("button", { name: new RegExp(`${today}, hoy: completado`) })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Ver progreso de la sesión" }));
     expect(onNavigate).toHaveBeenCalledWith("progress");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);

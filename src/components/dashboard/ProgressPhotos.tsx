@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { signedUrlsWithExpiry, storagePathFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
 import { evolutionLabel, photoPose } from "@/components/progress/progressPhotos";
+import { compressImage } from "@/lib/imageCompression";
 
 interface Photo {
   id: string;
@@ -61,8 +62,8 @@ const ALLOWED_IMAGE_TYPES: Record<string, string> = {
 
 /** Marcador para fotos cuya URL firmada aún no está lista (nunca `src=""`). */
 const PhotoPlaceholder = ({ label = "Cargando foto…" }: { label?: string }) => (
-  <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-secondary text-muted-foreground">
-    <ImageOff className="h-5 w-5" aria-hidden="true" />
+  <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-secondary/70 text-muted-foreground animate-pulse">
+    <ImageOff className="h-5 w-5 opacity-40" aria-hidden="true" />
     <span className="px-1 text-center type-caption2">{label}</span>
   </div>
 );
@@ -259,11 +260,12 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           continue;
         }
         try {
+          const optimizedFile = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
           const path = `${userId}/${crypto.randomUUID()}.${ext}`;
 
           const { error: uploadError } = await supabase.storage
             .from(BUCKET)
-            .upload(path, file, { upsert: false });
+            .upload(path, optimizedFile, { upsert: false });
           if (uploadError) throw uploadError;
 
           // Guardamos la RUTA (no una URL pública: el bucket es privado).

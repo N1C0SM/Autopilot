@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
     }
     await sb.from("rate_limits").insert({ key });
 
-    const { currentImage, backImage, objectiveImage } = await req.json();
+    const { currentImage, backImage, objectiveImage, gender, height_cm, weight_kg, age } = await req.json();
     if (!currentImage && !backImage) {
       return new Response(
         JSON.stringify({ error: "Sube al menos una foto (de delante o de atrás) para poder analizarla" }),
@@ -273,10 +273,19 @@ Deno.serve(async (req) => {
         ? "SOLO tienes la vista frontal: NO evalúes ni puntúes espalda alta, dorsales, deltoides posterior, glúteos ni isquios. Omite esos grupos de muscle_breakdown en lugar de inventarlos. IMPORTANTE: con esta única vista DEBES cubrir TODOS los grupos frontales visibles (Pecho, Deltoides, Brazos, Core/abdomen, Cuádriceps) — nunca te limites a uno o dos grupos: cada uno con su lectura y su score. Di en summary que falta la vista de espalda."
         : "SOLO tienes la vista trasera: NO evalúes ni puntúes pecho, abdomen, bíceps ni cuádriceps desde delante. Omite esos grupos de muscle_breakdown en lugar de inventarlos. IMPORTANTE: con esta única vista DEBES cubrir TODOS los grupos posteriores visibles (Espalda alta, Dorsales, Deltoides posterior, Tríceps, Cadena posterior glúteo+isquio, Gemelos) — nunca te limites a uno o dos grupos: cada uno con su lectura y su score. Di en summary que falta la vista frontal.";
 
+    const anchorNotes: string[] = [];
+    if (gender) anchorNotes.push(`género: ${gender === "female" ? "mujer" : "hombre"}`);
+    if (height_cm) anchorNotes.push(`altura: ${height_cm} cm`);
+    if (weight_kg) anchorNotes.push(`peso real en báscula: ${weight_kg} kg`);
+    if (age) anchorNotes.push(`edad: ${age} años`);
+    const anchorsText = anchorNotes.length > 0
+      ? `DATOS BIOMÉTRICOS DE REFERENCIA: ${anchorNotes.join(", ")}. Úsalos como ancla fija para no contradecir su peso ni altura.`
+      : "No se aportaron datos biométricos previos: estima por proporción visual estandarizada.";
+
     const userContent: Array<{ type: "text"; text: string } | { type: "image"; image: string }> = [
       {
         type: "text",
-        text: `Recibes ${order.length} imagen(es) — ${viewsText}. ${coverageRule} ${monthsRule} Devuelve una orientación visual honesta y útil en español, sin lenguaje médico.`,
+        text: `Recibes ${order.length} imagen(es) — ${viewsText}. ${coverageRule} ${monthsRule} ${anchorsText} Devuelve una orientación visual honesta, clínicamente consistente y útil en español, sin lenguaje médico.`,
       },
     ];
     if (currentImage) userContent.push({ type: "image", image: currentImage });
@@ -286,10 +295,15 @@ Deno.serve(async (req) => {
     const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
     const { text } = await generateText({
       model: gateway("google/gemini-2.5-flash"),
+      temperature: 0.1,
       maxOutputTokens: 4000,
       system:
         [
-          'Eres un scanner profesional de composición corporal y biomecánica con base de datos de miles de físicos reales (culturistas natural, atletas, población general). NO eres ChatGPT: tu valor es la PRECISIÓN CLÍNICA — números concretos, diagnóstico por grupo muscular, postura, proporciones, y un protocolo accionable. Evita generalidades vacías; cada frase debe poder defenderse mirando la foto.',
+          'Eres un scanner profesional de composición corporal y biomecánica con base de datos de miles de físicos reales (culturistas natural, atletas, población general). NO eres ChatGPT: tu valor es la PRECISIÓN CLÍNICA Y REPRODUCIBLE — números concretos, diagnóstico por grupo muscular, postura, proporciones, y un protocolo accionable. Evita generalidades vacías; cada frase debe poder defenderse mirando la foto.',
+          'REGLA DE CONSISTENCIA DETERMINISTA: Tu análisis debe ser consistente y reproducible. No varíes las puntuaciones arbitrariamente entre lecturas similares. Utiliza criterios objetivos de corte muscular e iluminación.',
+          'CRITERIOS ANCLA DE % GRASA (Hombres): <9% vascularidad en core y estrías visibles; 9-11% 6-pack nítido y serratos; 12-14% pared abdominal visible con leve tejido adiposo bajo; 15-18% abdomen plano sin corte profundo; 19-22% abdomen redondeado sin definición; >22% grasa abdominal pronunciada.',
+          'CRITERIOS ANCLA DE % GRASA (Mujeres): <16% definición de competición; 16-19% línea alba marcada y deltoides limpios; 20-23% vientre plano atlético; 24-27% complexión sana media; >28% acumulación en caderas/abdomen.',
+          'Si se proporciona el peso real (weight_kg), body_composition.weight_kg DEBE coincidir con dicho peso real (o +/- 0.5 kg), y lean_mass_kg debe calcularse exactamente como weight_kg * (1 - (body_fat_pct / 100)).',
           'Recibes 1 o 2 fotos del usuario (y opcionalmente una tercera de físico OBJETIVO). El texto del usuario te dice, en orden, qué vista es cada imagen (FRONTAL o TRASERA). FRONTAL: pecho, deltoides anterior/medial, bíceps, abdomen, oblicuos, cuádriceps, simetría frontal. TRASERA: trapecio, dorsales, romboides, deltoides posterior, tríceps, espalda baja, glúteos, isquios, postura. Valora SOLO lo visible en las vistas recibidas; nunca puntúes ni menciones como observado un grupo que no se ve.',
           'Devuelve SOLO JSON válido, sin markdown ni texto extra. Todo en español neutro.',
           'SCORES honestos (no infles): attractiveness/potential/physique/style 0-10. similarity 0-100 (0 si no hay objetivo). NO devuelvas percentile ni aesthetic_age: no son mediciones validadas. confidence 0-100: tu confianza real según número de vistas, luz y calidad (una sola vista o mala luz → máximo 60). views_detected: array con las vistas recibidas y usadas ("frontal", "trasera"). photo_quality_notes: hasta 3 notas si algo limita el análisis (poca luz, lejano, ropa ancha…).',

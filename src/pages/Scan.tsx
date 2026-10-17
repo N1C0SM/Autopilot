@@ -330,6 +330,12 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
   const [editingObjective, setEditingObjective] = useState(false);
   const [hasObjectiveChoice, setHasObjectiveChoice] = useState<"unset" | "yes" | "no">("unset");
   const [savedGoalText, setSavedGoalText] = useState<string | null>(null);
+  const [userBiometrics, setUserBiometrics] = useState<{
+    height?: number;
+    weight?: number;
+    age?: number;
+    gender?: string;
+  }>({});
 
   // Funnel state
   const [phase, setPhase] = useState<Phase>("upload");
@@ -361,10 +367,18 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
       });
     supabase
       .from("onboarding")
-      .select("goal_photo_url, goal, specific_goal")
+      .select("goal_photo_url, goal, specific_goal, height, weight, age, gender")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
+        if (data) {
+          setUserBiometrics({
+            height: data.height ? Number(data.height) : undefined,
+            weight: data.weight ? Number(data.weight) : undefined,
+            age: data.age ? Number(data.age) : undefined,
+            gender: data.gender || undefined,
+          });
+        }
         const url = data?.goal_photo_url ?? null;
         if (url) {
           setSavedObjectivePath(url);
@@ -632,7 +646,15 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
     }, 300);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-physique", {
-        body: { currentImage: currentImg, backImage: backImg, objectiveImage: objectiveImg },
+        body: {
+          currentImage: currentImg,
+          backImage: backImg,
+          objectiveImage: objectiveImg,
+          height_cm: userBiometrics.height,
+          weight_kg: userBiometrics.weight,
+          age: userBiometrics.age,
+          gender: userBiometrics.gender,
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

@@ -252,7 +252,7 @@ const HomeOverview = ({
   return (
     <div className="mx-auto flex w-full flex-1 flex-col lg:max-w-5xl">
       {/* En web: dos columnas — saludo + semana a la izquierda, acción a la derecha */}
-      <div className="lg:grid lg:grid-cols-[1fr_auto] lg:gap-12 lg:items-start">
+      <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[1fr_320px] lg:gap-x-12 lg:items-start">
         <div>
         <p className="type-subhead font-semibold text-muted-foreground">{greetingDate}</p>
         <h2 data-nav-title className="mt-0.5 type-large-title lg:text-[44px] lg:leading-[52px]">
@@ -305,8 +305,8 @@ const HomeOverview = ({
         )}
         </div>
 
-        {/* Columna derecha en web: acción principal */}
-        <div className="hidden lg:flex lg:flex-col lg:min-w-[320px] lg:max-w-sm lg:pt-16">
+        {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
+        <div className="flex flex-1 flex-col justify-center py-8 md:py-10 lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16">
           {canStart ? (
             <button
               type="button"
@@ -326,7 +326,7 @@ const HomeOverview = ({
                   ))}
                 </span>
               )}
-              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-ios-standard group-active:scale-[0.98] group-active:opacity-80">
+              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-ios-standard group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
                 Empezar
               </span>
             </button>
@@ -337,7 +337,15 @@ const HomeOverview = ({
               title="Entrenamiento completado"
               description="Tu registro ya está guardado."
               action={(
-                <Button type="button" variant="plain" onClick={() => { void hapticTap(); onNavigate("progress"); }}>
+                <Button
+                  type="button"
+                  variant="plain"
+                  aria-label="Ver progreso de la sesión"
+                  onClick={() => {
+                    void hapticTap();
+                    onNavigate("progress");
+                  }}
+                >
                   Ver progreso
                 </Button>
               )}
@@ -352,63 +360,6 @@ const HomeOverview = ({
             />
           )}
         </div>
-      </div>
-
-      {/* Acción principal — solo en móvil/tablet */}
-      <div className="flex flex-1 flex-col justify-center py-8 md:py-10 lg:hidden">
-        {canStart ? (
-          <button
-            type="button"
-            onClick={() => {
-              void hapticTap();
-              if (onStartWorkout) onStartWorkout();
-              else onNavigate("training");
-            }}
-            className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-            aria-label={`Empezar ${sessionTitle}`}
-          >
-            <span className="line-clamp-3 type-title1">{sessionTitle}</span>
-            {sessionDetail.length > 0 && (
-              <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
-                {sessionDetail.map((part, index) => (
-                  <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
-                ))}
-              </span>
-            )}
-            <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-ios-standard group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex">
-              Empezar
-            </span>
-          </button>
-        ) : completedToday ? (
-          <EmptyState
-            className="py-0"
-            icon={Check}
-            title="Entrenamiento completado"
-            description="Tu registro ya está guardado."
-            action={(
-              <Button
-                type="button"
-                variant="plain"
-                aria-label="Ver progreso de la sesión"
-                onClick={() => {
-                  void hapticTap();
-                  onNavigate("progress");
-                }}
-              >
-                Ver progreso
-              </Button>
-            )}
-          />
-        ) : (
-          <EmptyState
-            className="py-0"
-            icon={Moon}
-            title="Día de recuperación"
-            description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
-            action={<Button type="button" variant="plain" onClick={openWeek}>Ver rutina semanal</Button>}
-          />
-        )}
-      </div>
 
       {/* Filas secundarias: Nutrición + Progreso */}
       <div className="-mx-3 flex flex-col md:grid md:grid-cols-2 md:gap-2 lg:mt-8 lg:mx-0 lg:gap-4">
@@ -450,6 +401,7 @@ const HomeOverview = ({
             ) : "Sin sesiones esta semana"
           }
         />
+      </div>
       </div>
     </div>
   );

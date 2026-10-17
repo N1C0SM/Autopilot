@@ -80,7 +80,18 @@ export function useExerciseMetadata(dayPlans: DayPlan[]): ExerciseMetadataIndex 
             index.byName[item.name] = item;
           }
         }
-        if (!cancelled) setMetadata(index);
+        if (!cancelled) {
+          setMetadata(index);
+          // Precarga proactiva en caché de navegador para carga instantánea
+          if (typeof window !== "undefined") {
+            for (const item of Object.values(index.byId)) {
+              if (item.image_url) {
+                const img = new Image();
+                img.src = item.image_url;
+              }
+            }
+          }
+        }
       } catch (error) {
         if (cancelled) return;
         console.error("Failed to load exercise categories and videos", error);

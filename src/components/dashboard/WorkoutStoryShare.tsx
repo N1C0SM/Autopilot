@@ -193,8 +193,8 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
     ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, Math.max(16, (mw - 60) * prog), 8, 4); ctx.fill();
   });
 
-  ctx.textAlign = "center"; ctx.fillStyle = "#636366"; ctx.font = `500 27px ${F}`;
-  ctx.fillText("Entrenamiento completado", W / 2, H - 88);
+  ctx.textAlign = "center"; ctx.fillStyle = "#8e8e93"; ctx.font = `600 28px ${F}`;
+  ctx.fillText("autopilotplan.com · Tu rutina y registro gratis", W / 2, H - 88);
 }
 
 function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement) {
@@ -221,6 +221,8 @@ function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: num
   const s = drawBigKg(ctx, fmt(p.volumeKg), W / 2, 1620, W - 240, 230);
   ctx.textAlign = "center"; ctx.fillStyle = "#8e8e93"; ctx.font = `500 38px ${F}`;
   ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4));
+  ctx.font = `600 28px ${F}`;
+  ctx.fillText("autopilotplan.com · Tu rutina y registro gratis", W / 2, H - 88);
 }
 
 export async function renderStory(p: Props, variant: Variant): Promise<Blob> {

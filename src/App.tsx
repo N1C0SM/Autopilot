@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import ForTrainers, { AcceptInvitation } from "@/pages/ForTrainers";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -45,6 +45,17 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Spinner } from "@/components/ui/spinner";
 import { isNativeApp } from "@/lib/platform";
+import { hideSplashScreen } from "@/lib/native";
+
+const NativeSplashSync = () => {
+  const { loading } = useAuth();
+  useEffect(() => {
+    if (!loading) {
+      void hideSplashScreen(300);
+    }
+  }, [loading]);
+  return null;
+};
 
 const RootRoute = () => (isNativeApp() ? <Welcome /> : <Index />);
 
@@ -87,6 +98,7 @@ const App = () => (
   <ErrorBoundary>
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <NativeSplashSync />
       <TooltipProvider>
         <Toaster />
         <Sonner />
