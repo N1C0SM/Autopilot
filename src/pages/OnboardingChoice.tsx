@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Camera, FileText, Sparkles, Crown } from "lucide-react";
+import { Camera, FileText, Sparkles, Crown, ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import PageHead from "@/components/PageHead";
 import { track } from "@/lib/analytics";
@@ -31,6 +31,12 @@ export default function OnboardingChoice() {
     navigate("/onboarding");
   };
 
+  const goBack = () => {
+    void hapticTap();
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
+  };
+
   return (
     <>
       <PageHead
@@ -39,7 +45,20 @@ export default function OnboardingChoice() {
         path="/onboarding-choice"
       />
       
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
+      <div className="flex min-h-screen flex-col">
+        <header className="app-chrome pt-safe">
+          <div className="container mx-auto flex h-14 max-w-2xl items-center px-4">
+            <button
+              type="button"
+              onClick={goBack}
+              className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60"
+            >
+              <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
+              <span className="type-body">Atrás</span>
+            </button>
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-2xl">
           {/* Header */}
           <motion.div
@@ -185,6 +204,7 @@ export default function OnboardingChoice() {
             </p>
           </motion.div>
         </div>
+      </div>
       </div>
     </>
   );
