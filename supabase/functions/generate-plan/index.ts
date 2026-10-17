@@ -935,7 +935,7 @@ serve(async (req) => {
     const includeNutrition = hasNutrition(billing);
     // An admin regenerating their own plan skips the plan limits so every flow can be tested.
     const { data: callerIsAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-    const adminSelf = !!callerIsAdmin && targetUserId === user.id;
+    const adminSelf = !!callerIsAdmin; // admins may regenerate any user (support fixes)
     // Only Coach has a human reviewer; Plus is self-service and regenerates its own plan.
     if (getConsumerPlan(billing) === "coach" && targetUserId === user.id && !callerIsAdmin) {
       return new Response(JSON.stringify({ error: "Tu entrenador prepara y revisa tu plan." }), {
