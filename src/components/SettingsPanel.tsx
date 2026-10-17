@@ -11,6 +11,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+
+// Calendar feature - enabled in v1.6, hidden in v1.0
+const ENABLE_CALENDAR = false;
+
 import {
   User, Crown, ExternalLink, Calendar, CalendarClock, Check, Zap, Unplug, RefreshCw,
   Download, FileText,
