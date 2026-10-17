@@ -690,9 +690,6 @@ const Dashboard = () => {
         </div>
       )}
 
-      {coaching && consumerPlan === "plus" && section === "chat" && (
-        <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
-      )}
       {consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
       {consumerPlan === "coach" && coachAssigned && section === "chat" && (
         <div className={chatFills ? "flex min-h-0 w-full flex-1 flex-col" : "w-full"}>
