@@ -71,6 +71,13 @@
       "when": 1792251024740,
       "tag": "0009_show_app_download",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792262373445,
+      "tag": "0010_new_users_start_free",
+      "breakpoints": true
     }
   ]
 }
