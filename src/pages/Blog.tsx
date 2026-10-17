@@ -60,6 +60,7 @@ const Blog = () => {
     posts.forEach((p) => { if (p.category) m[p.category] = (m[p.category] || 0) + 1; });
     return m;
   }, [posts]);
+  const uncategorized = useMemo(() => posts.filter((p) => !p.category), [posts]);
 
   const chip = (active: boolean) =>
     `shrink-0 h-9 px-4 rounded-full text-sm transition-colors ${active ? "bg-foreground text-background font-medium" : "bg-secondary text-muted-foreground hover:text-foreground"}`;
