@@ -1217,7 +1217,9 @@ serve(async (req) => {
         });
         
         // Apply estimation only to exercises without user adjustments
-        day.exercises = applyWeightEstimation(day.exercises, scanData, userWeightData);
+        day.exercises = equipmentType === "Calistenia"
+          ? day.exercises.map((e: any) => ({ ...e, weight: "" }))
+          : applyWeightEstimation(day.exercises, scanData, userWeightData);
       }
     }
 
@@ -1238,7 +1240,7 @@ serve(async (req) => {
       }));
 
       // Apply weight estimation to skill progressions (SCAN DATA PRIORITIZED)
-      progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
+      if (equipmentType !== "Calistenia") progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
 
       // Distribute progressions across gym days that train relevant muscles
       let progIdx = 0;
