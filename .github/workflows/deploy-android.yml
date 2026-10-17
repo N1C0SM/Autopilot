@@ -76,6 +76,7 @@ jobs:
         working-directory: android
 
       - name: Upload AAB artifact
+        if: ${{ env.HAS_KEYSTORE == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: android-release-aab
