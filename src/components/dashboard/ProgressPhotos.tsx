@@ -135,15 +135,20 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
 
       const list = (data as any[]) || [];
       
-      // Cargar los datos del scan si hay ID
+      // Cargar los datos del scan si hay ID (solo para nueva funcionalidad)
       const photosWithScan = await Promise.all(list.map(async (photo) => {
         if (photo.scan_history_id) {
-          const { data: scan } = await supabase
-            .from("scan_history")
-            .select("id")
-            .eq("id", photo.scan_history_id)
-            .maybeSingle();
-          return { ...photo, scan };
+          try {
+            const { data: scan } = await supabase
+              .from("scan_history")
+              .select("id")
+              .eq("id", photo.scan_history_id)
+              .maybeSingle();
+            return { ...photo, scan };
+          } catch (scanError) {
+            console.warn("Failed to load scan for photo", photo.id, scanError);
+            return { ...photo, scan: null };
+          }
         }
         return { ...photo, scan: null };
       }));
