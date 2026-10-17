@@ -11,6 +11,7 @@ const androidSteps = [
   "Abre el archivo descargado desde las notificaciones o la carpeta Descargas.",
   "Si Android lo pide, pulsa Ajustes y activa «Permitir desde esta fuente».",
   "Vuelve atrás, pulsa Instalar y después Abrir.",
+  "Si aparece «Google Play Protect», pulsa «Más detalles» y luego «Instalar de todas formas». Si no sale esa opción, abre Play Store → tu foto → Play Protect → ⚙️ y desactiva «Analizar apps» mientras instalas.",
 ];
 
 const iosSteps = [
