@@ -1,4 +1,4 @@
 # Roadmap
 - [x] Capturas App Store
-- [ ] Imágenes faltantes Academia
-- [ ] Publicar
+- [x] Imágenes faltantes Academia
+- [x] Publicar
