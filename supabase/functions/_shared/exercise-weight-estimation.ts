@@ -159,6 +159,7 @@ export function estimateExerciseWeight(
 
 /**
  * Aplica la estimación de pesos a una lista de ejercicios
+ * Respeta pesos existentes (establecidos por el usuario)
  */
 export function applyWeightEstimation<T extends { name: string; weight?: string }>(
   exercises: T[],
@@ -166,12 +167,12 @@ export function applyWeightEstimation<T extends { name: string; weight?: string 
   userData: UserData | null | undefined,
 ): T[] {
   return exercises.map((ex) => {
-    // Si ya tiene peso asignado, respetarlo
+    // PRIORITY 1: If already has weight assigned, respect it (user preference)
     if (ex.weight && ex.weight.trim() !== "") {
       return ex;
     }
     
-    // Estimar peso basándose en scan (prioridad) o datos del usuario (fallback)
+    // PRIORITY 2: Estimate weight based on scan (priority) or user data (fallback)
     const estimatedWeight = estimateExerciseWeight(ex.name, scanData, userData);
     
     return {

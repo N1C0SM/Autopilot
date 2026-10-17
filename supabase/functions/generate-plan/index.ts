@@ -1097,12 +1097,119 @@ serve(async (req) => {
 
     console.log(`[GENERATE-PLAN] User: level=${userLevel}, intensity=${intensityLevel}, goal=${goal}, equipment=${equipmentType}, specificGoal="${specificGoal}"`);
 
+    // ─── LOAD EXISTING PLAN AND USER PREFERENCES TO PRESERVE ADJUSTMENTS ───
+    const [existingPlanResult, preferencesResult] = await Promise.all([
+      supabase
+        .from("training_plan")
+        .select("workouts_json")
+        .eq("user_id", targetUserId)
+        .maybeSingle(),
+      supabase
+        .from("exercise_user_preferences")
+        .select("original_exercise_name, preferred_exercise_name, preferred_weight")
+        .eq("user_id", targetUserId),
+    ]);
+    
+    const existingWorkouts = existingPlanResult.data?.workouts_json 
+      ? (existingPlanResult.data.workouts_json as unknown as DayPlan[])
+      : [];
+    
+    // Build maps of user preferences
+    const exerciseSwaps = new Map<string, string>();
+    const exerciseWeights = new Map<string, string>();
+    
+    if (preferencesResult.data) {
+      for (const pref of preferencesResult.data) {
+        if (pref.preferred_exercise_name) {
+          exerciseSwaps.set(pref.original_exercise_name, pref.preferred_exercise_name);
+        }
+        if (pref.preferred_weight) {
+          exerciseWeights.set(pref.original_exercise_name, pref.preferred_weight);
+        }
+      }
+      console.log(`[GENERATE-PLAN] Loaded ${exerciseSwaps.size} exercise swaps and ${exerciseWeights.size} weight preferences`);
+    }
+    
+    // Also check existing plan for exercises (fallback if preferences not yet migrated)
+    const existingExerciseMap = new Map<string, { weight: string; series?: number; reps?: string }>();
+    for (const day of existingWorkouts) {
+      if (day.type === "gimnasio" && day.exercises) {
+        for (const ex of day.exercises) {
+          const key = `${day.day}:${ex.name}`;
+          existingExerciseMap.set(key, {
+            weight: ex.weight || "",
+            series: ex.series,
+            reps: typeof ex.reps === "string" ? ex.reps : undefined,
+          });
+        }
+      }
+    }
+    
+    if (existingExerciseMap.size > 0) {
+      console.log(`[GENERATE-PLAN] Found ${existingExerciseMap.size} existing exercises in plan`);
+    }
+
     const gymSplit = getGymSplit(Math.min(daysAvailable, 6), skillProfile);
     const weeklyPlan = buildWeeklyPlan(gymSplit, sports, Math.min(daysAvailable, 7), config, exerciseLib, rules, skillProfile);
 
-    // ─── APPLY WEIGHT ESTIMATION (PRIORITIZES SCAN DATA) ───
+    // ─── APPLY USER PREFERENCES (SWAPS + WEIGHTS) ───
+    // Priority: USER PREFERENCE > SCAN DATA > ONBOARDING
     for (const day of weeklyPlan) {
       if (day.type === "gimnasio" && day.exercises) {
+        day.exercises = day.exercises.map((ex) => {
+          const key = `${day.day}:${ex.name}`;
+          const existing = existingExerciseMap.get(key);
+          
+          // PRIORITY 1A: User has swapped this exercise for another
+          const swappedName = exerciseSwaps.get(ex.name);
+          if (swappedName) {
+            console.log(`[GENERATE-PLAN] Applying user swap: ${ex.name} → ${swappedName}`);
+            // Find the swapped exercise details from the library
+            const swappedEx = Object.values(exerciseLib)
+              .flat()
+              .find((e) => e.name === swappedName);
+            
+            if (swappedEx) {
+              ex = {
+                ...ex,
+                exercise_id: swappedEx.id,
+                name: swappedName,
+                image_url: swappedEx.image_url || ex.image_url,
+                video_url: swappedEx.video_url || ex.video_url,
+                muscle_group: swappedEx.muscle_group,
+                exercise_type: swappedEx.exercise_type,
+              };
+            }
+          }
+          
+          // PRIORITY 1B: User has a preferred weight for this exercise
+          const preferredWeight = exerciseWeights.get(ex.name);
+          if (preferredWeight && preferredWeight.trim() !== "") {
+            console.log(`[GENERATE-PLAN] Applying user preferred weight for ${ex.name}: ${preferredWeight}`);
+            return {
+              ...ex,
+              weight: preferredWeight,
+              series: existing?.series ?? ex.series,
+              reps: existing?.reps ?? ex.reps,
+            };
+          }
+          
+          // PRIORITY 1C: User has manually set this exercise in existing plan
+          if (existing && existing.weight && existing.weight.trim() !== "") {
+            console.log(`[GENERATE-PLAN] Preserving existing plan weight for ${ex.name}: ${existing.weight}`);
+            return {
+              ...ex,
+              weight: existing.weight,
+              series: existing.series ?? ex.series,
+              reps: existing.reps ?? ex.reps,
+            };
+          }
+          
+          // PRIORITY 2: New exercise or never touched → estimate from scan/onboarding
+          return ex;
+        });
+        
+        // Apply estimation only to exercises without user adjustments
         day.exercises = applyWeightEstimation(day.exercises, scanData, userData);
       }
     }

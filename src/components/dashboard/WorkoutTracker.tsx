@@ -1302,7 +1302,27 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                         current={swaps[ex.name]}
                         movementPattern={metadata?.movement_pattern}
                         muscleGroup={metadata?.muscle_group}
-                        onSelect={(name) => setSwaps((s) => { const next = { ...s }; if (name) next[ex.name] = name; else delete next[ex.name]; return next; })}
+                        onSelect={async (name) => {
+                          setSwaps((s) => {
+                            const next = { ...s };
+                            if (name) next[ex.name] = name;
+                            else delete next[ex.name];
+                            return next;
+                          });
+                          // Save preference to database
+                          try {
+                            await supabase.from("exercise_user_preferences").upsert({
+                              user_id: userId,
+                              original_exercise_name: ex.name,
+                              preferred_exercise_name: name || null,
+                              last_used_at: new Date().toISOString(),
+                            }, {
+                              onConflict: "user_id,original_exercise_name",
+                            });
+                          } catch (error) {
+                            console.error("Failed to save exercise swap preference:", error);
+                          }
+                        }}
                       />
                       </span>
                     )}
