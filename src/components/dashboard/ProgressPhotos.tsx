@@ -121,13 +121,8 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
         .from("progress_photos")
         .select(`
           *,
-          scan:scan_history!scan_history_id(
-            id,
-            result,
-            attractiveness,
-            potential,
-            physique,
-            style
+          scan:scan_history_id(
+            id
           )
         `)
         .eq("user_id", userId)
