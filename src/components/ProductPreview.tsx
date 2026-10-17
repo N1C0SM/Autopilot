@@ -91,6 +91,11 @@ const chatMessages: { from: "trainer" | "me"; text: string; time: string }[] = [
   { from: "trainer", text: "Perfecto, sube a 20 kg la próxima. Para el remo te dejo alternativa con mancuerna en el plan.", time: "9:16" },
 ];
 
+const aiMessages: { from: "assistant" | "me"; text: string }[] = [
+  { from: "me", text: "La máquina de remo está ocupada, ¿qué hago?" },
+  { from: "assistant", text: "Haz remo con mancuerna: mismas 3 series de 11. Apoya la mano en el banco y tira hacia la cadera." },
+];
+
 /** Exercise picture with a composed gap if the URL fails to load. */
 function DemoImage({ src, alt, className, draggable }: { src: string; alt: string; className?: string; draggable?: boolean }) {
   const [failed, setFailed] = useState(false);
@@ -116,15 +121,18 @@ export default function ProductPreview({ onPlans, onFree }: { onPlans: () => voi
 function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFree?: () => void }) {
   const [view, setView] = useState<View>("home");
   const plans = usePlanAvailability();
-  // The chat tab sells Coach: it disappears when Coach is hidden in Admin → Planes.
-  const shownViews = views.filter((v) => v.key !== "chat" || plans.coach);
-  useEffect(() => { if (view === "chat" && !plans.coach) setView("home"); }, [view, plans.coach]);
+  // Chat mirrors the app: Coach talks to Nicolás; with Coach hidden, Plus shows the AI assistant.
+  const aiChat = !plans.coach;
+  const shownViews = views.filter((v) => v.key !== "chat" || plans.coach || plans.plus);
+  useEffect(() => { if (view === "chat" && !plans.coach && !plans.plus) setView("home"); }, [view, plans.coach, plans.plus]);
   const paidLabel = [plans.plus && plans.plusName, plans.coach && plans.coachName].filter(Boolean).join(" y ") || "planes de pago";
   const side: Record<View, { title: string; points: string[] }> = {
     ...baseSide,
     home: { ...baseSide.home, points: [baseSide.home.points[0], baseSide.home.points[1], plans.coach ? `La nutrición y el chat con Nicolás dependen del plan elegido.` : baseSide.home.points[2]] },
     nutrition: { ...baseSide.nutrition, title: `Tu plan de nutrición, incluido desde ${plans.plus ? plans.plusName : plans.coachName}.` },
-    chat: { ...baseSide.chat, points: [baseSide.chat.points[0], baseSide.chat.points[1], `El chat personal es exclusivo del plan ${plans.coachName}.`] },
+    chat: aiChat
+      ? { title: "Pregunta lo que quieras de tu plan.", points: ["Dudas de técnica, alternativas de ejercicios o comidas.", "Responde un asistente con IA que conoce tu rutina y tus macros.", `Incluido en ${plans.plusName}; no forma parte de Gratis.`] }
+      : { ...baseSide.chat, points: [baseSide.chat.points[0], baseSide.chat.points[1], `El chat personal es exclusivo del plan ${plans.coachName}.`] },
   };
   // Nombre y foto reales de Ajustes (get_public_settings): si cambias la foto, la demo cambia.
   const [owner, setOwner] = useState<{ name: string; photo: string | null }>({ name: "Nicolás", photo: null });
@@ -377,7 +385,31 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                   </div>
                 )}
 
-                {view === "chat" && (
+                {view === "chat" && aiChat && (
+                  <div>
+                    <h1 className="type-large-title">Chat</h1>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-1.5 type-subhead font-semibold"><Lock className="h-4 w-4 text-primary" aria-hidden="true" />Plan {plans.plusName}</span>
+                      <span className="type-footnote text-muted-foreground">No incluido en Gratis</span>
+                    </div>
+                    <div className="mt-5 space-y-2">
+                      {aiMessages.map((m, i) => (
+                        <div key={i} className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[85%] rounded-[18px] px-3.5 py-2 type-subhead ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-secondary"}`}>
+                            <p>{m.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div aria-hidden className="mt-5 flex items-center gap-2 rounded-full bg-secondary py-1.5 pl-4 pr-1.5">
+                      <span className="flex-1 type-subhead text-muted-foreground">Pregunta sobre tu plan…</span>
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground"><Send className="h-4 w-4" /></span>
+                    </div>
+                    <p className="mt-4 type-footnote text-muted-foreground">Conversación de ejemplo con el asistente IA de {plans.plusName}.</p>
+                  </div>
+                )}
+
+                {view === "chat" && !aiChat && (
                   <div>
                     <h1 className="type-large-title">{titles.chat}</h1>
                     <div className="mt-3 flex items-center justify-between gap-3">
