@@ -170,7 +170,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
       {
         heading: "4. Planes y precios",
         list: [
-          "Plus (Entrenamiento): 29 €/mes. Plan de entrenamiento y nutrición que se adapta a ti, con IA avanzada y análisis corporal. No incluye entrenador humano.",
+          "Plus (Entrenamiento): 14,99 €/mes. Plan de entrenamiento y nutrición que se adapta a ti, con IA avanzada y análisis corporal. No incluye entrenador humano.",
           "Coach (Completo): 49 €/mes. Todo lo de Plus más un entrenador real asignado: revisiones, check-ins y chat directo.",
           "7 días de prueba en los planes mensuales: se solicita tarjeta al contratar y no se cobra nada si cancelas antes del día 8.",
           "Los precios incluyen los impuestos aplicables. Cualquier cambio futuro se comunicará con al menos 30 días de antelación.",
