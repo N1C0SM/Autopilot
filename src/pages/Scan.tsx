@@ -458,32 +458,28 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     // antes de capturar — si no, html-to-image las pinta vacías.
     try {
       const imgs = Array.from(shareRef.current.querySelectorAll("img"));
+      // En iOS las imágenes "lazy" fuera de pantalla nunca se cargan: forzamos carga inmediata.
+      imgs.forEach((img) => { img.loading = "eager"; });
       await Promise.all(
         imgs.map((img) => {
           if (img.complete && img.naturalWidth > 0) return Promise.resolve();
           return new Promise<void>((resolve) => {
             img.onload = () => resolve();
             img.onerror = () => resolve();
+            setTimeout(resolve, 4000);
           });
         })
       );
-      // Algunos navegadores necesitan un decode explícito
       await Promise.all(
         imgs.map((img) => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()))
       );
     } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     try {
-      // Llamamos dos veces: la primera "calienta" caches de fuentes/imágenes y la
-      // segunda devuelve la imagen final ya con todo embebido correctamente.
-      // Es un workaround conocido de html-to-image cuando hay <img loading="lazy" decoding="async"> con data URLs.
-      await toPng(shareRef.current, { cacheBust: true, pixelRatio: 1, backgroundColor: "#070709" });
-      // Ajustamos la resolución si el PNG superase el límite razonable.
+      // skipFonts: en la app de iPhone descargar fuentes externas bloquea la captura.
+      const opts = { cacheBust: false, skipFonts: true, backgroundColor: "#070709" };
+      await toPng(shareRef.current, { ...opts, pixelRatio: 1 }).catch(() => null);
       for (const ratio of [1, 0.85, 0.75]) {
-        const url = await toPng(shareRef.current, {
-          cacheBust: true,
-          pixelRatio: ratio,
-          backgroundColor: "#070709",
-        });
+        const url = await toPng(shareRef.current, { ...opts, pixelRatio: ratio });
         const approxBytes = (url.length - (url.indexOf(",") + 1)) * 0.75;
         if (approxBytes < 3.5 * 1024 * 1024 || ratio === 0.75) return url;
       }

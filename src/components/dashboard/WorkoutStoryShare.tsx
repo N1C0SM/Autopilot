@@ -23,7 +23,10 @@ interface Props {
 
 const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
   const img = new Image();
-  img.onload = () => res(img); img.onerror = rej; img.src = src;
+  const t = setTimeout(() => rej(new Error("image timeout")), 5000);
+  img.onload = () => { clearTimeout(t); res(img); };
+  img.onerror = (e) => { clearTimeout(t); rej(e); };
+  img.src = src;
 });
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number, maxLines = 2) {
