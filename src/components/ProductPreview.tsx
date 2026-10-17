@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar, PhoneWeek } from "@/components/PublicPhone";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneTabBar, PhoneWeek, demoWeek } from "@/components/PublicPhone";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { track } from "@/lib/analytics";
 import { buildExerciseHistory } from "@/lib/workoutMetrics";
@@ -194,6 +194,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
   const changeView = (key: View) => { void hapticSelection(); setView(key); track("plan_preview_view", { source: "public_demo", section: key }); };
 
   const lastEntry = demoHistory[progressExercise][demoHistory[progressExercise].length - 1];
+  const week = demoWeek();
 
   return (
     <section id="ver-app" aria-labelledby="preview-heading" className="scroll-mt-24 px-5 py-14 sm:px-8 sm:py-20">
@@ -226,7 +227,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 {view === "home" && (
                   <>
                     <h1 className="sr-only">Hoy</h1>
-                    <PhoneHome name={ownerFirst} plans={plans} exerciseCount={exercises.length} heading onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />
+                    <PhoneHome name={ownerFirst} plans={plans} heading onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />
                   </>
                 )}
 
@@ -415,8 +416,8 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                     <h1 className="type-large-title">{titles.progress}</h1>
                     <p className="mt-1 type-subhead text-muted-foreground">Tu progreso · muestra ficticia</p>
                     <div className="mt-5">
-                      <PhoneWeek done={[0, 2]} today={4} />
-                      <p className="mt-3 type-subhead"><span className="font-semibold">2 de 3 sesiones previstas</span> <span className="text-muted-foreground">· la rutina marca tus días</span></p>
+                      <PhoneWeek planned={week.planned} today={week.today} />
+                      <p className="mt-3 type-subhead"><span className="font-semibold">{week.done} de {week.planned.length} sesiones esta semana</span> <span className="text-muted-foreground">· la rutina marca tus días</span></p>
                     </div>
                     <div className="relative mt-6">
                       <select

@@ -84,7 +84,7 @@ describe("public product preview", () => {
 
   it("opens nutrition from the summary row on the home screen", async () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: /^Nutrición 1\.420/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Nutrición 2 de 3 comidas/ }));
     await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
   });
 
