@@ -53,7 +53,7 @@ export interface Profile {
   renewal_decision?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "roadmap" | "account";
 
 const SECTION_TITLES: Record<AdminSection, string> = {
   dashboard: "Dashboard",
@@ -70,6 +70,7 @@ const SECTION_TITLES: Record<AdminSection, string> = {
   payments: "Pagos",
   emails: "Emails",
   products: "Planes y productos",
+  roadmap: "Roadmap",
   account: "Mi cuenta",
 };
 
@@ -385,6 +386,12 @@ const Admin = () => {
             )}
 
             {section === "products" && <ProductsAdmin />}
+
+            {section === "roadmap" && (
+              <Suspense fallback={<SectionFallback />}>
+                <RoadmapAdmin />
+              </Suspense>
+            )}
 
             {section === "account" && (
               <div className="max-w-2xl">
