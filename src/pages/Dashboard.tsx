@@ -506,8 +506,9 @@ const Dashboard = () => {
         <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
       )}
 
-      {/* Chat IA disponible siempre - sin depender de Coach */}
-      {section === "chat" && (
+      {/* Chat IA disponible siempre - sin depender de Coach.
+          Coach lo excluye: su chat con el entrenador se renderiza más abajo (duplicaría la conversación). */}
+      {section === "chat" && consumerPlan !== "coach" && (
         <div className="w-full">
           {user && (
             <Suspense fallback={<SectionFallback />}>
