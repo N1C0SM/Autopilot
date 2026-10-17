@@ -2425,7 +2425,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         <span style={{ fontSize: 14 }}>●</span> ANÁLISIS IA
                       </div>
                       <div style={{ fontSize: 12, color: "#FFAA3C", fontWeight: 700, letterSpacing: 1, fontFamily: "monospace" }}>
-                        ID SUJETO: #AP-{result.physique ? Math.abs(Math.round(result.physique * 1147)).toString().padStart(5, "0") : "08492"}
+                        {new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "short" }).toUpperCase()}
                       </div>
                     </div>
                   </div>
@@ -2995,7 +2995,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   >
                     <div>
                       <div style={{ fontSize: 13, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 700 }}>
-                        AUTOPILOT BIO-LAB // ESCÁNER CORPORAL CON IA GRATIS
+                        A U T O P I L O T · autopilotplan.com
                       </div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginTop: 2 }}>
                         Descubre tu % graso y tu rutina ideal en 30 segundos
