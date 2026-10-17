@@ -359,9 +359,12 @@ export function WorkoutStoryShare(props: Props) {
 
       if (mode === "download") {
         download(blob, filename);
+        toast.success("Imagen descargada");
         return;
       }
 
+      // En móvil nativo: abre menú de compartir (WhatsApp, Instagram, etc.)
+      // En web: descarga directamente
       const res = await shareFileOrImage({
         blob,
         filename,
@@ -371,6 +374,8 @@ export function WorkoutStoryShare(props: Props) {
 
       if (res.downloaded) {
         toast.success("Imagen descargada. Súbela a tu historia.");
+      } else if (res.shared) {
+        toast.success("Compartido exitosamente");
       }
     } catch (e: unknown) {
       if ((e as Error)?.name !== "AbortError") {
