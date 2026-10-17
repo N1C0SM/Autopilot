@@ -368,7 +368,7 @@ const Dashboard = () => {
   };
 
   // Wait for the profile: before it loads every user looks like "free".
-  useEffect(() => { if (!loading && hideChat && section === "chat") setSectionState("home"); }, [loading, hideChat, section]);
+  useEffect(() => { if (!loading && consumerPlan !== "plus" && consumerPlan !== "coach" && section === "chat") setSectionState("home"); }, [loading, consumerPlan, section]);
 
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
