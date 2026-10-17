@@ -33,6 +33,7 @@ const GoalPhysiquesEditor = lazy(() => import("@/components/admin/GoalPhysiquesE
 const ProductsAdmin = lazy(() => import("@/components/admin/ProductsAdmin"));
 const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
+const RoadmapAdmin = lazy(() => import("@/components/admin/RoadmapAdmin"));
 
 export interface Profile {
   user_id: string;
@@ -84,7 +85,7 @@ const Admin = () => {
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [section, setSection] = useState<AdminSection>(() =>
-    new URLSearchParams(window.location.search).get("s") === "account" ? "account" : "dashboard");
+    { const requested = new URLSearchParams(window.location.search).get("s"); return requested && Object.prototype.hasOwnProperty.call(SECTION_TITLES, requested) ? requested as AdminSection : "dashboard"; });
   const isMobile = useIsMobile();
   const contentRef = useRef<HTMLElement>(null);
 
@@ -150,6 +151,7 @@ const Admin = () => {
 
   const handleNavigate = (s: AdminSection) => {
     setSection(s);
+    window.history.replaceState(null, "", `${window.location.pathname}?s=${s}`);
     if (s !== "users") setSelectedUser(null);
   };
 
@@ -385,6 +387,7 @@ const Admin = () => {
             )}
 
             {section === "products" && <ProductsAdmin />}
+            {section === "roadmap" && <RoadmapAdmin />}
 
             {section === "account" && (
               <div className="max-w-2xl">

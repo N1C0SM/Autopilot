@@ -1,4 +1,7 @@
 # Roadmap
+- [ ] Roadmap interactivo en Admin con las 40 versiones del documento
+- [ ] Lluvia de ideas con clasificación IA, evidencia y guardián del foco
+- [ ] Verificar permisos, edición y clasificación de ideas
 - [x] Capturas App Store
 - [x] Imágenes faltantes Academia
 - [x] Publicar
