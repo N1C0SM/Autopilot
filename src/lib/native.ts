@@ -199,24 +199,24 @@ export async function shareFileOrImage(
       console.log("[SHARE] File saved at:", saved.uri);
 
       // En iOS y Android, Share.share abre el menú nativo de compartir
-      const shareResult = await Share.share({
+      await Share.share({
         title: options.title || "Autopilot",
         text: options.text,
         files: [saved.uri],
-        dialogTitle: options.title || "Compartir",
+        dialogTitle: "Compartir",
       });
 
-      console.log("[SHARE] Share result:", shareResult);
+      console.log("[SHARE] Share completed successfully");
 
-      // Limpiamos el archivo temporal después de compartir
-      try {
-        await Filesystem.deleteFile({
+      // Limpiamos el archivo temporal después de compartir (sin esperar)
+      setTimeout(() => {
+        Filesystem.deleteFile({
           path: filename,
           directory: Directory.Cache,
+        }).catch(() => {
+          // No es crítico si falla la limpieza
         });
-      } catch {
-        // No es crítico si falla la limpieza
-      }
+      }, 1000);
 
       return { shared: true };
     } catch (err: unknown) {
@@ -225,7 +225,8 @@ export async function shareFileOrImage(
       console.error("[SHARE] Native share error:", err);
       
       // Si el usuario simplemente cerró la hoja de compartir nativa, no consideramos error
-      if (name === "AbortError" || msg.includes("cancel") || msg.includes("dismiss")) {
+      if (name === "AbortError" || msg.includes("cancel") || msg.includes("dismiss") || msg.includes("user cancel")) {
+        console.log("[SHARE] User cancelled share");
         return { shared: false };
       }
       
@@ -276,10 +277,12 @@ export async function shareFileOrImage(
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-      if (!options.dataUrl && blob) {
-        setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000);
-      }
+      setTimeout(() => {
+        document.body.removeChild(a);
+        if (!options.dataUrl && blob) {
+          URL.revokeObjectURL(downloadUrl);
+        }
+      }, 100);
       return { shared: false, downloaded: true };
     }
   }

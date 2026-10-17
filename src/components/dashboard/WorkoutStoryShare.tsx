@@ -352,6 +352,8 @@ export function WorkoutStoryShare(props: Props) {
   };
 
   const run = async (mode: "share" | "download") => {
+    if (busy) return;
+    
     setBusy(true);
     try {
       const filename = `autopilot-entreno-${activeVariant}-${Date.now()}.png`;
@@ -360,20 +362,26 @@ export function WorkoutStoryShare(props: Props) {
       if (mode === "download") {
         download(blob, filename);
         toast.success("Imagen descargada");
+        setBusy(false);
         return;
       }
 
       // En móvil nativo: abre menú de compartir (WhatsApp, Instagram, etc.)
       // En web: descarga directamente o usa Web Share API
-      const res = await shareFileOrImage({
-        blob,
-        filename,
-        title: props.title || "Mi entrenamiento en Autopilot",
-        text: shareText(),
-      });
+      const res = await Promise.race([
+        shareFileOrImage({
+          blob,
+          filename,
+          title: props.title || "Mi entrenamiento en Autopilot",
+          text: shareText(),
+        }),
+        new Promise<{ shared: boolean; downloaded?: boolean }>((_, reject) => 
+          setTimeout(() => reject(new Error("Timeout al compartir")), 15000)
+        )
+      ]);
 
       if (res.shared) {
-        toast.success("Compartido exitosamente");
+        toast.success("Compartido");
       } else if (res.downloaded) {
         toast.success("Imagen descargada");
       } else {
@@ -386,8 +394,8 @@ export function WorkoutStoryShare(props: Props) {
       console.error("[SHARE] Error:", e);
       
       // No mostramos error si el usuario simplemente canceló
-      if (name !== "AbortError" && !msg.toLowerCase().includes("cancel")) {
-        toast.error(msg || "No se pudo crear la imagen");
+      if (name !== "AbortError" && !msg.toLowerCase().includes("cancel") && !msg.includes("Timeout")) {
+        toast.error("No se pudo compartir");
       }
     } finally {
       setBusy(false);
@@ -427,7 +435,7 @@ export function WorkoutStoryShare(props: Props) {
           {busy
             ? <Spinner size="sm" label="Creando imagen" className="text-primary-foreground [&>svg]:!size-full" />
             : <Share aria-hidden="true" />}
-          <span className="truncate">Compartir en Stories</span>
+          <span className="truncate">Compartir</span>
         </Button>
         <Button
           type="button"
