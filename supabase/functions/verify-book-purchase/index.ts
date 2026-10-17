@@ -53,9 +53,8 @@ Deno.serve(async (req) => {
 
     // Never search recent sales or replace a session's reference with browser data.
     const sessionRef = session.client_reference_id || "";
-    const resolvedRef = sessionRef || ref;
-    const bookId = bookIdFromReference(resolvedRef);
-    if (!bookId || (ref && ref !== resolvedRef)) return json({ error: "El pago no corresponde a esta compra." }, 403);
+    const bookId = bookIdFromReference(sessionRef);
+    if (!bookId || (ref && ref !== sessionRef)) return json({ error: "El pago no corresponde a esta compra." }, 403);
     const { data: book, error: bookError } = await supabaseAdmin.from("library_books")
       .select("id, title, kind, price, file_path, published, is_folder, buy_url, buy_url_test, buy_url_live")
       .eq("id", bookId).maybeSingle();
