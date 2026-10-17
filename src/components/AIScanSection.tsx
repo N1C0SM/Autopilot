@@ -5,7 +5,6 @@ import {
   Brain,
   ScanLine,
   TrendingUp,
-  Zap,
   ArrowRight,
   Lock,
   ArrowDown,

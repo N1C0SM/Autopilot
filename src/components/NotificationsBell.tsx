@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Bell, BellOff, CalendarSync, Dumbbell, Inbox, Zap } from "lucide-react";
+import { Bell, BellOff, CalendarSync, Dumbbell, Inbox, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -85,7 +85,7 @@ const NotificationsBell = ({ userId }: Props) => {
   const typeIcon = (type: string) => {
     switch (type) {
       case "plan_renewed": return <CalendarSync className="text-muted-foreground" />;
-      case "macros_adjusted": return <Zap className="text-muted-foreground" />;
+      case "macros_adjusted": return <Target className="text-muted-foreground" />;
       case "reminder": return <Dumbbell className="text-muted-foreground" />;
       default: return <Inbox className="text-muted-foreground" />;
     }

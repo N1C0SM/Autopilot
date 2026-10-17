@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Camera, FileText, Sparkles, Zap, Crown } from "lucide-react";
+import { Camera, FileText, Sparkles, Crown } from "lucide-react";
 import { motion } from "framer-motion";
 import PageHead from "@/components/PageHead";
 import { track } from "@/lib/analytics";
