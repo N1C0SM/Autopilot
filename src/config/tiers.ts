@@ -23,7 +23,7 @@ export const TIERS = {
   training: {
     key: "training" as const,
     name: "Plus",
-    price: 29,
+    price: 14.99,
     interval: "month" as const,
     trial_days: 7,
     recommended: true,
