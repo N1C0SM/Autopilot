@@ -120,10 +120,12 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       const { data, error } = await supabase
         .from("progress_photos")
         .select(`
-          *,
-          scan:scan_history_id(
-            id
-          )
+          id,
+          photo_url,
+          note,
+          taken_at,
+          created_at,
+          scan_history_id
         `)
         .eq("user_id", userId)
         .order("taken_at", { ascending: false })
@@ -131,13 +133,27 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       if (error) throw error;
       if (!activeRef.current || requestId !== requestIdRef.current) return;
 
-      const list = (data as Photo[]) || [];
+      const list = (data as any[]) || [];
+      
+      // Cargar los datos del scan si hay ID
+      const photosWithScan = await Promise.all(list.map(async (photo) => {
+        if (photo.scan_history_id) {
+          const { data: scan } = await supabase
+            .from("scan_history")
+            .select("id")
+            .eq("id", photo.scan_history_id)
+            .maybeSingle();
+          return { ...photo, scan };
+        }
+        return { ...photo, scan: null };
+      }));
+      
       const batch = await signedUrlsWithExpiry(BUCKET, list.map((p) => p.photo_url));
       if (!activeRef.current || requestId !== requestIdRef.current) return;
 
       retriedRef.current.clear();
       lastRefreshAttemptRef.current = Date.now();
-      setPhotos(list);
+      setPhotos(photosWithScan as Photo[]);
       setSigned(batch.urls);
       setBroken(new Set());
       refreshAtRef.current = batch.refreshAtMs;
