@@ -3,7 +3,7 @@ import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
 import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
-const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastrad|disco/i;
+const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|barra t\b|trap bar|glute-ham|ghr|farmer/i;
 function isBodyweightOk(ex: { name?: string | null; exercise_type?: string | null }): boolean {
   if (ex.exercise_type === "Gimnasio") return false;
   return !GYM_EQUIPMENT_RE.test(ex.name || "");
@@ -766,27 +766,27 @@ interface RoutineDay { name: string; muscles: string[]; }
 function getGymSplit(daysAvailable: number, skillProfile: SkillProfile | null): RoutineDay[] {
   const baseSplit = (() => {
     if (daysAvailable >= 6) return [
-      { name: "Push A", muscles: ["Pecho", "Hombros", "Tríceps"] },
-      { name: "Pull A", muscles: ["Espalda", "Bíceps"] },
-      { name: "Legs A", muscles: ["Piernas", "Glúteos"] },
+      { name: "Push A", muscles: ["Pecho", "Hombros", "Tríceps", "Serrato"] },
+      { name: "Pull A", muscles: ["Espalda", "Bíceps", "Romboides", "Trapecios"] },
+      { name: "Legs A", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Gemelos"] },
       { name: "Push B", muscles: ["Pecho", "Hombros", "Tríceps"] },
-      { name: "Pull B", muscles: ["Espalda", "Bíceps"] },
-      { name: "Legs B", muscles: ["Piernas", "Glúteos", "Core"] },
+      { name: "Pull B", muscles: ["Espalda", "Bíceps", "Lumbares", "Antebrazos"] },
+      { name: "Legs B", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Aductores", "Abductores", "Core"] },
     ];
     if (daysAvailable >= 4) return [
-      { name: "Upper A", muscles: ["Pecho", "Espalda", "Hombros"] },
-      { name: "Lower A", muscles: ["Piernas", "Glúteos", "Core"] },
-      { name: "Upper B", muscles: ["Pecho", "Espalda", "Bíceps", "Tríceps"] },
-      { name: "Lower B", muscles: ["Piernas", "Glúteos", "Core"] },
+      { name: "Upper A", muscles: ["Pecho", "Espalda", "Hombros", "Romboides"] },
+      { name: "Lower A", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Gemelos", "Core"] },
+      { name: "Upper B", muscles: ["Pecho", "Espalda", "Bíceps", "Tríceps", "Trapecios"] },
+      { name: "Lower B", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Aductores", "Abductores", "Core"] },
     ];
     if (daysAvailable >= 3) return [
-      { name: "Full Body A", muscles: ["Pecho", "Espalda", "Piernas"] },
+      { name: "Full Body A", muscles: ["Pecho", "Espalda", "Piernas", "Gemelos"] },
       { name: "Full Body B", muscles: ["Hombros", "Piernas", "Core"] },
-      { name: "Full Body C", muscles: ["Espalda", "Pecho", "Glúteos"] },
+      { name: "Full Body C", muscles: ["Espalda", "Pecho", "Glúteos", "Isquiotibiales"] },
     ];
     return [
       { name: "Full Body A", muscles: ["Pecho", "Espalda", "Piernas", "Core"] },
-      { name: "Full Body B", muscles: ["Hombros", "Piernas", "Glúteos", "Core"] },
+      { name: "Full Body B", muscles: ["Hombros", "Piernas", "Glúteos", "Isquiotibiales", "Core"] },
     ];
   })();
 
