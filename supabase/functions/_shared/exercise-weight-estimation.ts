@@ -140,7 +140,8 @@ export function estimateExerciseWeight(
   
   // FALLBACK: Usar peso corporal del onboarding
   if (userData?.weight) {
-    const weightMatch = userData.weight.match(/(\d+(?:[.,]\d+)?)/);
+    // El peso llega como número desde la base de datos o como texto ("84 kg").
+    const weightMatch = String(userData.weight).match(/(\d+(?:[.,]\d+)?)/);
     if (weightMatch) {
       const bodyWeight = parseFloat(weightMatch[1].replace(",", "."));
       if (bodyWeight > 0) {
