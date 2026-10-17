@@ -91,16 +91,17 @@ interface PhoneHomeProps {
   onSession?: () => void;
   onNutrition?: () => void;
   onProgress?: () => void;
+  name?: string;
 }
 
 /** "Hoy" screen of the app: greeting, week, today's session and two summary rows. */
-export function PhoneHome({ plans, exerciseCount, heading, onSession, onNutrition, onProgress }: PhoneHomeProps) {
+export function PhoneHome({ plans, exerciseCount, heading, onSession, onNutrition, onProgress, name = "Laura" }: PhoneHomeProps) {
   const Greeting = heading ? "h4" : "p";
   return (
     <div className="space-y-6">
       <div>
         <p className="type-subhead text-muted-foreground">Viernes 25 · Semana 3 de 12</p>
-        <Greeting className="mt-1 type-large-title">Hola, Laura.<span className="block text-muted-foreground">Hoy toca fuerza.</span></Greeting>
+        <Greeting className="mt-1 type-large-title">Hola, {name}.<span className="block text-muted-foreground">Hoy toca fuerza.</span></Greeting>
       </div>
       <PhoneWeek done={[0, 2]} today={4} />
       <div className="space-y-4">

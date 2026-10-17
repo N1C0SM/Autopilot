@@ -220,13 +220,13 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
 
           <div className="order-1 mx-auto w-full max-w-[22rem] md:order-2">
             <PhoneFrame screenClassName="h-[37rem]">
-              <PhoneAppBar avatar={<>L</>} />
+              <PhoneAppBar avatar={<OwnerAvatar photo={owner.photo} initial={ownerInitial} />} />
 
               <div className="flex-1 overflow-y-auto px-4 pb-28 pt-2">
                 {view === "home" && (
                   <>
                     <h1 className="sr-only">Hoy</h1>
-                    <PhoneHome plans={plans} exerciseCount={exercises.length} heading onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />
+                    <PhoneHome name={ownerFirst} plans={plans} exerciseCount={exercises.length} heading onSession={() => changeView("training")} onNutrition={() => changeView("nutrition")} onProgress={() => changeView("progress")} />
                   </>
                 )}
 
