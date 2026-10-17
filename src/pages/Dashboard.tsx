@@ -668,7 +668,7 @@ const Dashboard = () => {
           }}
           className="w-full min-w-0 space-y-4"
         >
-          <TabsList aria-label="Tu progreso" className="flex w-full lg:max-w-lg">
+          <TabsList aria-label="Tu progreso" className="mx-auto mb-4 flex w-full max-w-md lg:max-w-lg">
             <TabsTrigger value="evolution">Fuerza</TabsTrigger>
             <TabsTrigger value="photos">Físico</TabsTrigger>
             <TabsTrigger value="records">Récords</TabsTrigger>
