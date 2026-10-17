@@ -53,13 +53,17 @@ serve(async (req) => {
       : (settings?.price_id_test || "");
     if (!priceId) throw new Error(`Price ID for ${paymentMode} mode not configured in settings`);
 
+    const ALLOWED_ORIGINS = ["https://autopilotplan.com", "https://www.autopilotplan.com", "https://autopilotplan.lovable.app"];
+    const reqOrigin = req.headers.get("origin") || "";
+    const safeOrigin = ALLOWED_ORIGINS.includes(reqOrigin) || /^https:\/\/[a-z0-9-]+\.lovable\.app$/.test(reqOrigin) ? reqOrigin : "https://autopilotplan.com";
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "payment",
-      success_url: `${req.headers.get("origin")}/payment-success`,
-      cancel_url: `${req.headers.get("origin")}/signup`,
+      success_url: `${safeOrigin}/payment-success`,
+      cancel_url: `${safeOrigin}/signup`,
       metadata: { user_id: user.id },
     });
 

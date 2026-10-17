@@ -170,16 +170,6 @@ Deno.serve(async (req) => {
           !!profile?.email &&
           profile.email.toLowerCase() === effectiveRecipient.toLowerCase()
       }
-    } else if (role === 'anon' && templateName === 'scan-diagnosis') {
-      // Visitante del escáner: solo puede recibir su propio diagnóstico y solo si
-      // acaba de dejar su email en el formulario de leads (ventana de 15 minutos).
-      const sinceIso = new Date(Date.now() - 15 * 60 * 1000).toISOString()
-      const { count } = await supabase
-        .from('scan_leads')
-        .select('id', { count: 'exact', head: true })
-        .ilike('email', effectiveRecipient)
-        .gte('created_at', sinceIso)
-      allowed = (count ?? 0) > 0
     }
 
     if (!allowed) {
@@ -227,7 +217,7 @@ Deno.serve(async (req) => {
       status: 'suppressed',
     })
 
-    console.log('Email suppressed', { effectiveRecipient, templateName })
+    console.log('Email suppressed', { templateName })
     return new Response(
       JSON.stringify({ success: false, reason: 'email_suppressed' }),
       {
@@ -422,7 +412,7 @@ Deno.serve(async (req) => {
     })
   }
 
-  console.log('Transactional email enqueued', { templateName, effectiveRecipient })
+  console.log('Transactional email enqueued', { templateName })
 
   return new Response(
     JSON.stringify({ success: true, queued: true }),

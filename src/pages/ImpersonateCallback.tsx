@@ -15,7 +15,8 @@ export default function ImpersonateCallback() {
     const params = new URLSearchParams(window.location.search);
     const token_hash = params.get("th");
     const email = params.get("e");
-    const redirect = params.get("to") || "/dashboard";
+    const rawTo = params.get("to") || "";
+    const redirect = rawTo.startsWith("/") && !rawTo.startsWith("//") && !rawTo.startsWith("/\\") ? rawTo : "/dashboard";
 
     if (!token_hash || !email) {
       setError("Faltan parámetros de impersonación");

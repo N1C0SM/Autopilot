@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     if (context) messages.push({ role: "system", content: `Contexto del cliente: ${context}` });
     if (Array.isArray(history)) {
       for (const m of history.slice(-6)) {
-        if (m?.role && m?.content) messages.push({ role: m.role, content: m.content });
+        if ((m?.role === "user" || m?.role === "assistant") && typeof m?.content === "string") messages.push({ role: m.role, content: m.content.slice(0, 4000) });
       }
     }
     messages.push({ role: "user", content: lastUserMessage });

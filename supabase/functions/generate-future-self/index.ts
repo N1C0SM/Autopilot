@@ -1,9 +1,11 @@
+import { getAuthedUser } from "../_shared/require-user.ts";
 import { errorMessage } from "../_shared/runtime-values.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (!(await getAuthedUser(req))) return new Response(JSON.stringify({ error: "Inicia sesión para usar el Scan." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   try {
     const ip =
