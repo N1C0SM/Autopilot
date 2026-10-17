@@ -352,20 +352,31 @@ export function WorkoutStoryShare(props: Props) {
   };
 
   const run = async (mode: "share" | "download") => {
-    if (busy) return;
+    console.log("[WORKOUT-SHARE] Starting run, mode:", mode, "busy:", busy);
+    if (busy) {
+      console.log("[WORKOUT-SHARE] Already busy, ignoring");
+      return;
+    }
     
     setBusy(true);
+    console.log("[WORKOUT-SHARE] Set busy to true");
+    
     try {
       const filename = `autopilot-entreno-${activeVariant}-${Date.now()}.png`;
+      console.log("[WORKOUT-SHARE] Rendering story, variant:", activeVariant);
+      
       const blob = await renderStory(props, activeVariant);
+      console.log("[WORKOUT-SHARE] Story rendered, blob size:", blob.size);
 
       if (mode === "download") {
+        console.log("[WORKOUT-SHARE] Download mode");
         download(blob, filename);
         toast.success("Imagen descargada");
         setBusy(false);
         return;
       }
 
+      console.log("[WORKOUT-SHARE] Calling shareFileOrImage");
       // En móvil nativo: abre menú de compartir (WhatsApp, Instagram, etc.)
       // En web: descarga directamente o usa Web Share API
       const res = await Promise.race([
@@ -376,9 +387,14 @@ export function WorkoutStoryShare(props: Props) {
           text: shareText(),
         }),
         new Promise<{ shared: boolean; downloaded?: boolean }>((_, reject) => 
-          setTimeout(() => reject(new Error("Timeout al compartir")), 15000)
+          setTimeout(() => {
+            console.log("[WORKOUT-SHARE] Timeout reached");
+            reject(new Error("Timeout al compartir"));
+          }, 15000)
         )
       ]);
+
+      console.log("[WORKOUT-SHARE] Share result:", res);
 
       if (res.shared) {
         toast.success("Compartido");
@@ -386,18 +402,19 @@ export function WorkoutStoryShare(props: Props) {
         toast.success("Imagen descargada");
       } else {
         // Usuario canceló el menú de compartir
-        console.log("[SHARE] Usuario canceló compartir");
+        console.log("[WORKOUT-SHARE] Usuario canceló compartir");
       }
     } catch (e: unknown) {
       const name = (e as Error)?.name || "";
       const msg = (e as Error)?.message || "";
-      console.error("[SHARE] Error:", e);
+      console.error("[WORKOUT-SHARE] Error:", { name, msg, error: e });
       
       // No mostramos error si el usuario simplemente canceló
       if (name !== "AbortError" && !msg.toLowerCase().includes("cancel") && !msg.includes("Timeout")) {
         toast.error("No se pudo compartir");
       }
     } finally {
+      console.log("[WORKOUT-SHARE] Finally block, setting busy to false");
       setBusy(false);
     }
   };
