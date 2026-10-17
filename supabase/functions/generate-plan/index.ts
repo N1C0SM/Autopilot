@@ -973,7 +973,7 @@ serve(async (req) => {
       console.log(`[GENERATE-PLAN] No scan data available, will use onboarding weight as fallback`);
     }
 
-    const userData = {
+    const userWeightData = {
       weight: onb.weight,
       gender: onb.gender,
     };
@@ -1212,7 +1212,7 @@ serve(async (req) => {
         });
         
         // Apply estimation only to exercises without user adjustments
-        day.exercises = applyWeightEstimation(day.exercises, scanData, userData);
+        day.exercises = applyWeightEstimation(day.exercises, scanData, userWeightData);
       }
     }
 
@@ -1233,7 +1233,7 @@ serve(async (req) => {
       }));
 
       // Apply weight estimation to skill progressions (SCAN DATA PRIORITIZED)
-      progressionExercises = applyWeightEstimation(progressionExercises, scanData, userData);
+      progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
 
       // Distribute progressions across gym days that train relevant muscles
       let progIdx = 0;
