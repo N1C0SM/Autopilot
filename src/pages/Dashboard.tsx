@@ -91,8 +91,7 @@ const Dashboard = () => {
   const [coaching, setCoaching] = useState(false);
   const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
   const plans = usePlanAvailability();
-  // Coach customers keep their chat; everyone else stops seeing it while Coach is hidden in Admin.
-  const hideChat = !plans.coach && consumerPlan !== "coach";
+  // El chat está siempre visible (aunque no tenga coach)
   const [coachAssigned, setCoachAssigned] = useState(true);
   const [nutrition, setNutrition] = useState(false);
   const [preparingRoutine, setPreparingRoutine] = useState(false);
@@ -497,14 +496,19 @@ const Dashboard = () => {
         // Plus preseleccionado siempre: es el plan que queremos vender primero.
         <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
       )}
-      {!coaching && section === "chat" && (
-        // El chat exige Coach, pero no dejamos al usuario de gratis sin salida hacia Plus.
-        <PlanPaywall
-          plan="coach"
-          onChoose={() => handleCompletePayment("full")}
-          onSeeOther={() => setSection("nutrition")}
-          otherLabel={`Ver ${plans.plusName} · ${euro(plans.plusPrice)}/mes`}
-        />
+
+      {/* Chat IA disponible siempre - sin depender de Coach */}
+      {section === "chat" && (
+        <div className="w-full">
+          {user && (
+            <Suspense fallback={<SectionFallback />}>
+              <Chat
+                conversationUserId={user.id}
+                layout="panel"
+              />
+            </Suspense>
+          )}
+        </div>
       )}
 
       {coaching && planStatus === "plan_pending" && (section === "home" || section === "training") && (
@@ -754,7 +758,7 @@ const Dashboard = () => {
         profileName={profileName}
         profileAvatar={profileAvatar}
         userId={user?.id}
-        lockedTabs={!coaching ? ["nutrition", "chat"] : consumerPlan !== "coach" ? ["chat"] : []}
+        lockedTabs={!coaching ? ["nutrition"] : []}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         workoutMode={workoutMode}
@@ -781,7 +785,7 @@ const Dashboard = () => {
             onSignOut={handleSignOut}
             profileName={profileName}
             profileAvatar={profileAvatar}
-            lockedSections={!coaching ? ["nutrition", "chat"] : consumerPlan !== "coach" ? ["chat"] : []}
+            lockedSections={!coaching ? ["nutrition"] : []}
             hiddenSections={hideChat ? ["chat"] : []}
           />
         </div>
