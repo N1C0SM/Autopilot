@@ -1,3 +1,4 @@
+import { generatePlanGuarded } from "@/lib/planShield";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -151,7 +152,7 @@ const MySchedule = () => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const tasks = [supabase.functions.invoke("generate-plan")];
+      const tasks = [generatePlanGuarded(supabase, {}, { userId: user.id })];
       if (gcalTok) tasks.push(supabase.functions.invoke("gcal-sync"));
 
       const [planRes, syncRes] = await Promise.all(tasks);
