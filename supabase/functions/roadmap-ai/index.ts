@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
       if (!item || seen.has(p.id) || (p.version_id !== null && !validVersions.has(p.version_id))) throw new Error('invalid_output');
       seen.add(p.id);
       const evidence = evidenceFor(item.title);
-      return { ...p, reason: p.reason.slice(0, 1500), status: evidence ? 'done' : item.status === 'done' ? 'done' : 'pending', evidence };
+      return { ...p, reason: p.reason.slice(0, 1500), status: evidence || item.status === 'done' ? 'done' : item.status === 'pending' ? 'pending' : 'idea', evidence };
     });
     if (proposals.length !== items.length) throw new Error('invalid_output');
     return reply({ proposals });
