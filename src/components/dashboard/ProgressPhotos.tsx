@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff } from "lucide-react";
+import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff, Sparkles } from "lucide-react";
 import BeforeAfterCompare from "./BeforeAfterCompare";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,6 +29,15 @@ interface Photo {
   note: string;
   taken_at: string;
   created_at: string;
+  scan_history_id?: string | null;
+  scan?: {
+    id: string;
+    result: Record<string, unknown>;
+    attractiveness: number;
+    potential: number;
+    physique: number;
+    style: number;
+  } | null;
 }
 
 interface Props {
@@ -110,7 +119,17 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
     try {
       const { data, error } = await supabase
         .from("progress_photos")
-        .select("*")
+        .select(`
+          *,
+          scan:scan_history!scan_history_id(
+            id,
+            result,
+            attractiveness,
+            potential,
+            physique,
+            style
+          )
+        `)
         .eq("user_id", userId)
         .order("taken_at", { ascending: false })
         .order("created_at", { ascending: false });
@@ -593,6 +612,22 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             onClick={() => setViewingPhoto(null)}
           >
             <div className="absolute right-[max(1rem,var(--safe-right))] top-[max(1rem,var(--safe-top))] z-10 flex gap-2">
+              {photos[viewingPhoto].scan && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Ver análisis"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void hapticTap();
+                    // Navigate to scan history with this scan
+                    window.location.href = `/dashboard?tab=scan&scan_id=${photos[viewingPhoto].scan?.id}`;
+                  }}
+                  className="bg-white/15 text-white backdrop-blur-md active:bg-white/25"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"

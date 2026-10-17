@@ -994,7 +994,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         objectiveImg ? uploadDataUrl(objectiveImg, "objective") : Promise.resolve(null),
       ]);
 
-      const { error: insErr } = await supabase.from("scan_history").insert({
+      const { error: insErr, data: scanRecord } = await supabase.from("scan_history").insert({
         user_id: user.id,
         current_photo_url: front?.path ?? null,
         back_photo_url: back?.path ?? null,
@@ -1008,8 +1008,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         months_with_plan: r.months_with_plan ?? r.estimated_months ?? null,
         months_without_plan: r.months_without_plan ?? null,
         emailed_to: userEmail,
-      });
+      }).select('id').single();
       if (insErr) console.warn("scan_history insert", insErr);
+      
+      const scanId = scanRecord?.id;
 
       // La foto frontal del scan también queda en «Físico» (diario de progreso).
       for (const [ph, label] of [[front, "Scan · frente"], [back, "Scan · espalda"]] as const) {
@@ -1019,6 +1021,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
           photo_url: ph.path,
           note: label,
           taken_at: toLocalDateString(),
+          scan_history_id: scanId ?? null,
         });
         if (phErr) console.warn("progress_photos insert", phErr);
       }
