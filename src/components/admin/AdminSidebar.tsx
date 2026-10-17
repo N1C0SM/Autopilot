@@ -11,7 +11,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, UserCog, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle, Route } from "lucide-react";
 import type { AdminSection } from "@/pages/Admin";
 import { hapticTap } from "@/lib/native";
 
@@ -27,6 +27,7 @@ type NavItem = { title: string; section: AdminSection; icon: typeof LayoutDashbo
 const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
   { title: "Métricas", section: "metrics", icon: BarChart3 },
+  { title: "Roadmap", section: "roadmap", icon: Route },
   { title: "Usuarios", section: "users", icon: Users },
   { title: "Entrenadores", section: "trainers", icon: UserCog },
   { title: "Recordatorios", section: "reminders", icon: Mail },

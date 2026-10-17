@@ -78,6 +78,20 @@
       "when": 1792262373445,
       "tag": "0010_new_users_start_free",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792280615509,
+      "tag": "0011_admin_roadmap",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792281133963,
+      "tag": "0012_roadmap_seed_completion",
+      "breakpoints": true
     }
   ]
 }

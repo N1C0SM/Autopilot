@@ -12,6 +12,7 @@ import {
   Layers,
   FolderOpen,
   ChevronLeft,
+  Route,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import NavBar from "@/components/native/NavBar";
@@ -34,6 +35,7 @@ interface Props {
 }
 
 const MENU: { label: string; section: AdminSection; icon: typeof Users }[] = [
+  { label: "Roadmap", section: "roadmap", icon: Route },
   { label: "Usuarios", section: "users", icon: Users },
   { label: "Entrenadores", section: "trainers", icon: UserCog },
   { label: "Planes y productos", section: "products", icon: Layers },

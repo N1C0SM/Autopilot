@@ -1,0 +1,15 @@
+CREATE TABLE public.roadmap_versions (id text PRIMARY KEY, title text NOT NULL, objective text NOT NULL DEFAULT '', phase integer NOT NULL DEFAULT 1, position integer NOT NULL DEFAULT 0, is_current boolean NOT NULL DEFAULT false, release_stage text NOT NULL DEFAULT 'internal' CHECK (release_stage IN ('internal','beta','rc','released')), release_notes text NOT NULL DEFAULT '', updated_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.roadmap_versions TO authenticated;
+GRANT ALL ON public.roadmap_versions TO service_role;
+ALTER TABLE public.roadmap_versions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY roadmap_versions_admin ON public.roadmap_versions FOR ALL TO authenticated USING (public.has_role(auth.uid(),'admin')) WITH CHECK (public.has_role(auth.uid(),'admin'));
+CREATE UNIQUE INDEX roadmap_one_current ON public.roadmap_versions ((is_current)) WHERE is_current;
+CREATE TABLE public.roadmap_items (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL CHECK (char_length(title) BETWEEN 1 AND 250), description text NOT NULL DEFAULT '', version_id text REFERENCES public.roadmap_versions(id) ON DELETE SET NULL, status text NOT NULL DEFAULT 'pending' CHECK (status IN ('idea','pending','in_progress','done')), source text NOT NULL DEFAULT 'manual', evidence text NOT NULL DEFAULT '', ai_reason text NOT NULL DEFAULT '', effort text NOT NULL DEFAULT 'medium' CHECK (effort IN ('small','medium','large')), position integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.roadmap_items TO authenticated;
+GRANT ALL ON public.roadmap_items TO service_role;
+ALTER TABLE public.roadmap_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY roadmap_items_admin ON public.roadmap_items FOR ALL TO authenticated USING (public.has_role(auth.uid(),'admin')) WITH CHECK (public.has_role(auth.uid(),'admin'));
+CREATE INDEX roadmap_items_version ON public.roadmap_items(version_id);
+CREATE FUNCTION public.roadmap_set_current(target text) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ BEGIN IF NOT public.has_role(auth.uid(),'admin') THEN RAISE EXCEPTION 'Forbidden'; END IF; PERFORM pg_advisory_xact_lock(784219); IF NOT EXISTS(SELECT 1 FROM public.roadmap_versions WHERE id=target) THEN RAISE EXCEPTION 'Unknown version'; END IF; UPDATE public.roadmap_versions SET is_current=false WHERE is_current; UPDATE public.roadmap_versions SET is_current=true,updated_at=now() WHERE id=target; END $$;
+REVOKE ALL ON FUNCTION public.roadmap_set_current(text) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION public.roadmap_set_current(text) TO authenticated,service_role;

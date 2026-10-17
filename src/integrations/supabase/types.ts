@@ -1199,6 +1199,98 @@ export type Database = {
         }
         Relationships: []
       }
+      roadmap_items: {
+        Row: {
+          ai_reason: string
+          created_at: string
+          description: string
+          effort: string
+          evidence: string
+          id: string
+          position: number
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          version_id: string | null
+        }
+        Insert: {
+          ai_reason?: string
+          created_at?: string
+          description?: string
+          effort?: string
+          evidence?: string
+          id?: string
+          position?: number
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Update: {
+          ai_reason?: string
+          created_at?: string
+          description?: string
+          effort?: string
+          evidence?: string
+          id?: string
+          position?: number
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_versions: {
+        Row: {
+          id: string
+          is_current: boolean
+          objective: string
+          phase: number
+          position: number
+          release_notes: string
+          release_stage: string
+          seed_initialized: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          is_current?: boolean
+          objective?: string
+          phase?: number
+          position?: number
+          release_notes?: string
+          release_stage?: string
+          seed_initialized?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_current?: boolean
+          objective?: string
+          phase?: number
+          position?: number
+          release_notes?: string
+          release_stage?: string
+          seed_initialized?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scan_card_uploads: {
         Row: {
           anon_session_id: string | null
@@ -2242,6 +2334,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      roadmap_set_current: { Args: { target: string }; Returns: undefined }
       trainer_assign_user_by_email: {
         Args: { _email: string }
         Returns: string
