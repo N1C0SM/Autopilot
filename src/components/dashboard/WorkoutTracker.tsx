@@ -684,9 +684,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   };
 
   const finishWorkout = async () => {
-    const allDone = Object.values(exerciseLogs).flat().every((s) => s.done) && Object.keys(exerciseLogs).length > 0;
-    if (allDone) {
-      await handleRPEConfirm(null);
+    // Con al menos una serie hecha, terminar siempre cierra la sesión y abre las tarjetas de resumen.
+    const anyDone = Object.values(exerciseLogs).flat().some((s) => s.done);
+    if (anyDone) {
+      await handleRPEConfirm(sessionRpe);
       return;
     }
 
