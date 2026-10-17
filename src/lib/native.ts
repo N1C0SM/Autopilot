@@ -187,29 +187,50 @@ export async function shareFileOrImage(
         throw new Error("No image data provided to share");
       }
 
-      // Escribimos en CacheDirectory para que iOS cree una URL file:// limpia
+      console.log("[SHARE] Writing file to cache:", filename);
+      
+      // Escribimos en CacheDirectory para que iOS/Android cree una URL file:// limpia
       const saved = await Filesystem.writeFile({
         path: filename,
         data: base64,
         directory: Directory.Cache,
       });
 
-      await Share.share({
+      console.log("[SHARE] File saved at:", saved.uri);
+
+      // En iOS y Android, Share.share abre el menú nativo de compartir
+      const shareResult = await Share.share({
         title: options.title || "Autopilot",
         text: options.text,
         files: [saved.uri],
         dialogTitle: options.title || "Compartir",
       });
 
+      console.log("[SHARE] Share result:", shareResult);
+
+      // Limpiamos el archivo temporal después de compartir
+      try {
+        await Filesystem.deleteFile({
+          path: filename,
+          directory: Directory.Cache,
+        });
+      } catch {
+        // No es crítico si falla la limpieza
+      }
+
       return { shared: true };
     } catch (err: unknown) {
       const msg = (err as Error)?.message?.toLowerCase() || "";
       const name = (err as Error)?.name || "";
+      console.error("[SHARE] Native share error:", err);
+      
       // Si el usuario simplemente cerró la hoja de compartir nativa, no consideramos error
       if (name === "AbortError" || msg.includes("cancel") || msg.includes("dismiss")) {
         return { shared: false };
       }
-      console.warn("Fallo en compartir nativo, recurriendo a web fallback:", err);
+      
+      // Re-lanzamos el error para que el componente lo maneje
+      throw new Error(`Error al compartir: ${msg || "Error desconocido"}`);
     }
   }
 
@@ -225,31 +246,34 @@ export async function shareFileOrImage(
 
     if (blob) {
       const file = new File([blob], filename, { type: blob.type || "image/png" });
-      const shareData: ShareData = {
-        files: [file],
-        title: options.title || "Autopilot",
-        text: options.text,
-      };
-
-      if (navigator.canShare?.(shareData)) {
+      
+      // Primero intentamos Web Share API nativa del navegador
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share(shareData);
+          await navigator.share({
+            files: [file],
+            title: options.title || "Autopilot",
+            text: options.text,
+          });
           return { shared: true };
         } catch (shareErr: unknown) {
-          if ((shareErr as Error)?.name === "AbortError") {
+          const name = (shareErr as Error)?.name || "";
+          if (name === "AbortError") {
             return { shared: false };
           }
+          // Si falla el share, caemos al fallback de descarga
+          console.warn("[SHARE] Web Share API falló, usando descarga:", shareErr);
         }
       }
     }
 
     // Fallback de descarga en navegador tradicional
-    const downloadUrl =
-      options.dataUrl || (blob ? URL.createObjectURL(blob) : null);
+    const downloadUrl = options.dataUrl || (blob ? URL.createObjectURL(blob) : null);
     if (downloadUrl) {
       const a = document.createElement("a");
       a.href = downloadUrl;
       a.download = filename;
+      a.style.display = "none";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -260,6 +284,6 @@ export async function shareFileOrImage(
     }
   }
 
-  return { shared: false };
+  throw new Error("No se pudo compartir ni descargar la imagen");
 }
 

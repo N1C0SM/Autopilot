@@ -364,7 +364,7 @@ export function WorkoutStoryShare(props: Props) {
       }
 
       // En móvil nativo: abre menú de compartir (WhatsApp, Instagram, etc.)
-      // En web: descarga directamente
+      // En web: descarga directamente o usa Web Share API
       const res = await shareFileOrImage({
         blob,
         filename,
@@ -372,14 +372,22 @@ export function WorkoutStoryShare(props: Props) {
         text: shareText(),
       });
 
-      if (res.downloaded) {
-        toast.success("Imagen descargada. Súbela a tu historia.");
-      } else if (res.shared) {
+      if (res.shared) {
         toast.success("Compartido exitosamente");
+      } else if (res.downloaded) {
+        toast.success("Imagen descargada");
+      } else {
+        // Usuario canceló el menú de compartir
+        console.log("[SHARE] Usuario canceló compartir");
       }
     } catch (e: unknown) {
-      if ((e as Error)?.name !== "AbortError") {
-        toast.error("No se pudo crear la imagen");
+      const name = (e as Error)?.name || "";
+      const msg = (e as Error)?.message || "";
+      console.error("[SHARE] Error:", e);
+      
+      // No mostramos error si el usuario simplemente canceló
+      if (name !== "AbortError" && !msg.toLowerCase().includes("cancel")) {
+        toast.error(msg || "No se pudo crear la imagen");
       }
     } finally {
       setBusy(false);
