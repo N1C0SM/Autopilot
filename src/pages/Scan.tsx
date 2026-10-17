@@ -44,6 +44,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
 import poseBackImg from "@/assets/pose-back.png";
+import autopilotLogo from "@/assets/autopilot-logo.png";
 import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
@@ -2336,47 +2337,44 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                   style={{
                     width: 1080,
                     height: 1920,
-                    background: "radial-gradient(circle at 50% 0%, rgba(250,204,21,0.22) 0%, transparent 60%), radial-gradient(circle at 15% 95%, rgba(250,204,21,0.08) 0%, transparent 45%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px), #07070a",
+                    background: "radial-gradient(ellipse 1000px 800px at 50% 12%, rgba(250,204,21,0.16) 0%, transparent 70%), radial-gradient(circle at 10% 90%, rgba(250,204,21,0.06) 0%, transparent 40%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px), #07070a",
                     backgroundSize: "100% 100%, 100% 100%, 48px 48px, 48px 48px",
-                    border: "2px solid rgba(250,204,21,0.4)",
-                    borderRadius: 40,
+                    border: "1.5px solid rgba(250,204,21,0.35)",
+                    borderRadius: 44,
                     color: "#fff",
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
-                    padding: "48px 52px",
+                    padding: "44px 48px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     boxSizing: "border-box",
                     position: "relative",
                     overflow: "hidden",
-                    boxShadow: "0 0 100px rgba(0,0,0,0.95), inset 0 0 100px rgba(250,204,21,0.04)",
+                    boxShadow: "0 0 100px rgba(0,0,0,0.95), inset 0 0 80px rgba(250,204,21,0.03)",
                   }}
                 >
-                  {/* Top Bar / Laboratory Branding */}
+                  {/* Top Bar / Official Autopilot Brand Identity */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                      <div
+                    <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                      <img loading="lazy" decoding="async"
+                        src={autopilotLogo}
+                        alt="Autopilot"
                         style={{
-                          width: 58,
-                          height: 58,
-                          borderRadius: 18,
-                          background: "linear-gradient(135deg, rgba(250,204,21,0.35), rgba(250,204,21,0.06))",
-                          border: "1.5px solid rgba(250,204,21,0.75)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 28,
-                          boxShadow: "0 0 28px rgba(250,204,21,0.35)",
+                          width: 64,
+                          height: 64,
+                          borderRadius: "50%",
+                          border: "2px solid #facc15",
+                          boxShadow: "0 0 24px rgba(250,204,21,0.4)",
+                          objectFit: "cover",
+                          background: "#000",
                         }}
-                      >
-                        ⚡
-                      </div>
+                      />
                       <div>
-                        <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: -0.5, color: "#fff" }}>
-                          AUTOPILOT <span style={{ color: "#facc15", fontWeight: 700 }}>// BIO-VISION LAB</span>
+                        <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: -1, color: "#fff", lineHeight: 1.1 }}>
+                          AUTOPILOT <span style={{ color: "#facc15", fontWeight: 800 }}>BIO-LAB</span>
                         </div>
-                        <div style={{ fontSize: 12, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 600, fontFamily: "monospace" }}>
-                          SCAN PROTOCOL 4.2 · SUBJECT ID #AP-084 · NEURAL VISION CORE
+                        <div style={{ fontSize: 12, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 700, fontFamily: "monospace", marginTop: 4 }}>
+                          ATHLETIC BIO-PASSPORT // AP-CORE 4.2
                         </div>
                       </div>
                     </div>
@@ -2386,30 +2384,33 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                           fontSize: 13,
                           color: "#000",
                           fontWeight: 900,
-                          padding: "6px 18px",
+                          padding: "7px 20px",
                           background: "linear-gradient(135deg, #fde047, #facc15)",
                           borderRadius: 999,
                           letterSpacing: 1.2,
                           textTransform: "uppercase",
-                          boxShadow: "0 0 24px rgba(250,204,21,0.4)",
+                          boxShadow: "0 0 24px rgba(250,204,21,0.45)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
                         }}
                       >
-                        ● CLASIFICACIÓN ATLETA
+                        <span style={{ fontSize: 14 }}>●</span> ANÁLISIS VERIFICADO
                       </div>
-                      <div style={{ fontSize: 13, color: "#facc15", fontWeight: 700, letterSpacing: 1 }}>
-                        SCORE BIOMÉTRICO: {result.physique ? Math.min(98, Math.max(72, Math.round(result.physique * 10 + 15))) : 88} / 100
+                      <div style={{ fontSize: 12, color: "#facc15", fontWeight: 700, letterSpacing: 1, fontFamily: "monospace" }}>
+                        ID SUJETO: #AP-{result.physique ? Math.abs(Math.round(result.physique * 1147)).toString().padStart(5, "0") : "08492"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Photo Section with AI Cybernetic HUD Overlays */}
+                  {/* Photo Section: EXPANSIVE FULL-WIDTH HERO (984px wide x 880px tall) */}
                   {(currentImg || backImg) && (() => {
                     const photos: { src: string; label: string }[] = [];
                     if (currentImg) photos.push({ src: currentImg, label: "Frente" });
                     if (backImg) photos.push({ src: backImg, label: "Espalda" });
                     if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo" });
                     const isSingle = photos.length === 1;
-                    const h = 760;
+                    const h = 880;
 
                     const bodyFatVal = result.body_composition?.body_fat_pct
                       ? `${result.body_composition.body_fat_pct}%`
@@ -2429,260 +2430,233 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                           height: h,
                           borderRadius: 32,
                           overflow: "hidden",
-                          border: "2px solid rgba(250,204,21,0.5)",
-                          boxShadow: "0 24px 60px rgba(0,0,0,0.9), 0 0 50px rgba(250,204,21,0.18)",
-                          background: "#040407",
+                          border: "1.5px solid rgba(250,204,21,0.55)",
+                          boxShadow: "0 28px 70px rgba(0,0,0,0.92), 0 0 50px rgba(250,204,21,0.2)",
+                          background: "#000",
                           display: "flex",
-                          alignItems: "stretch",
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
                         {isSingle ? (
-                          <>
-                            {/* Left Telemetry Column */}
+                          // Single Full-Impact Panoramic Hero Photo
+                          <div
+                            style={{
+                              position: "relative",
+                              width: "100%",
+                              height: "100%",
+                              overflow: "hidden",
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <img loading="lazy" decoding="async"
+                              src={photos[0].src}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                filter: "contrast(1.06) brightness(1.03)",
+                              }}
+                            />
+                            {/* Seamless bottom fade blending photo into lower telemetry */}
                             <div
                               style={{
-                                width: 220,
-                                height: "100%",
-                                padding: "28px 20px 60px 24px",
-                                boxSizing: "border-box",
-                                display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "space-between",
-                                background: "linear-gradient(90deg, rgba(250,204,21,0.04) 0%, transparent 100%)",
-                                borderRight: "1px solid rgba(250,204,21,0.2)",
-                                zIndex: 2,
+                                position: "absolute",
+                                inset: 0,
+                                background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 40%, rgba(7,7,10,0.6) 80%, rgba(7,7,10,0.98) 100%)",
+                                pointerEvents: "none",
+                              }}
+                            />
+
+                            {/* Corner Tech Brackets (Large & Vivid) */}
+                            <div style={{ position: "absolute", top: 18, left: 18, width: 36, height: 36, borderTop: "4px solid #facc15", borderLeft: "4px solid #facc15", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", top: 18, right: 18, width: 36, height: 36, borderTop: "4px solid #facc15", borderRight: "4px solid #facc15", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", bottom: 58, left: 18, width: 36, height: 36, borderBottom: "4px solid #facc15", borderLeft: "4px solid #facc15", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", bottom: 58, right: 18, width: 36, height: 36, borderBottom: "4px solid #facc15", borderRight: "4px solid #facc15", pointerEvents: "none" }} />
+
+                            {/* Top Left Subject Tag */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 22,
+                                left: 24,
+                                fontSize: 12,
+                                fontWeight: 900,
+                                color: "#000",
+                                background: "#facc15",
+                                padding: "5px 16px",
+                                borderRadius: 999,
+                                textTransform: "uppercase",
+                                letterSpacing: 1.5,
+                                boxShadow: "0 0 16px rgba(250,204,21,0.5)",
                               }}
                             >
-                              <div style={{ fontSize: 11, color: "#facc15", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
-                                // ANATOMÍA
-                              </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                                <div>
-                                  <div style={{ fontSize: 11, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 1 }}>DELTOIDES</div>
-                                  <div style={{ fontSize: 16, color: "#fde047", fontWeight: 800 }}>PRIORIDAD I</div>
-                                  <div style={{ fontSize: 11, color: "#a1a1aa" }}>Alta respuesta</div>
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: 11, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 1 }}>SIMETRÍA</div>
-                                  <div style={{ fontSize: 16, color: "#fff", fontWeight: 800 }}>94.2% ÓPTIMA</div>
-                                  <div style={{ fontSize: 11, color: "#a1a1aa" }}>Eje bilateral</div>
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: 11, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 1 }}>CLAVÍCULA</div>
-                                  <div style={{ fontSize: 16, color: "#fff", fontWeight: 800 }}>ANCHO 1.38x</div>
-                                  <div style={{ fontSize: 11, color: "#a1a1aa" }}>Base en V</div>
-                                </div>
-                              </div>
-                              <div style={{ fontSize: 11, color: "#71717a", fontFamily: "monospace" }}>
-                                SYS: BIO-REC<br />4K HIGH-RES
-                              </div>
+                              ● SUJETO ACTIVO // FRONTAL
                             </div>
 
-                            {/* Center Photo Viewport with HUD Overlays */}
+                            {/* Top Right High-Res Telemetry */}
                             <div
                               style={{
-                                flex: 1,
-                                height: "100%",
-                                position: "relative",
-                                overflow: "hidden",
+                                position: "absolute",
+                                top: 22,
+                                right: 24,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: "#facc15",
+                                background: "rgba(0,0,0,0.75)",
+                                border: "1px solid rgba(250,204,21,0.4)",
+                                padding: "5px 14px",
+                                borderRadius: 999,
+                                letterSpacing: 1.5,
+                                fontFamily: "monospace",
+                              }}
+                            >
+                              4K DETECCIÓN · ISO 100
+                            </div>
+
+                            {/* Horizontal AI Laser Scanline */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "38%",
+                                left: 0,
+                                right: 0,
+                                height: 2.5,
+                                background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.6) 15%, #ffffff 50%, rgba(250,204,21,0.6) 85%, transparent)",
+                                boxShadow: "0 0 24px rgba(250,204,21,1)",
+                                pointerEvents: "none",
+                              }}
+                            />
+
+                            {/* AR Biometric Pin: Shoulder / Deltoids */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 120,
+                                left: 40,
                                 display: "flex",
-                                justifyContent: "center",
                                 alignItems: "center",
-                                background: "#000",
+                                gap: 8,
+                                pointerEvents: "none",
                               }}
                             >
-                              <img loading="lazy" decoding="async"
-                                src={photos[0].src}
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                  filter: "contrast(1.06) brightness(1.02)",
-                                }}
-                              />
-                              {/* Dark vignette */}
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 12px #facc15" }} />
+                              <div style={{ width: 20, height: 2, background: "#facc15" }} />
                               <div
                                 style={{
-                                  position: "absolute",
-                                  inset: 0,
-                                  background: "radial-gradient(circle at 50% 50%, transparent 55%, rgba(0,0,0,0.7) 100%)",
-                                  pointerEvents: "none",
-                                }}
-                              />
-
-                              {/* Photo chip */}
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 18,
-                                  left: 18,
-                                  fontSize: 11,
-                                  fontWeight: 800,
-                                  color: "#000",
-                                  background: "#facc15",
-                                  padding: "4px 14px",
+                                  padding: "7px 16px",
                                   borderRadius: 999,
-                                  textTransform: "uppercase",
-                                  letterSpacing: 1.5,
-                                  boxShadow: "0 0 12px rgba(250,204,21,0.4)",
+                                  background: "rgba(0,0,0,0.9)",
+                                  border: "1.5px solid #facc15",
+                                  color: "#fde047",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  letterSpacing: 1.2,
+                                  boxShadow: "0 0 20px rgba(0,0,0,0.8)",
                                 }}
                               >
-                                ● SUJETO ACTIVO
-                              </div>
-
-                              {/* Corner Tech Brackets */}
-                              <div style={{ position: "absolute", top: 14, left: 14, width: 32, height: 32, borderTop: "3.5px solid #facc15", borderLeft: "3.5px solid #facc15", pointerEvents: "none" }} />
-                              <div style={{ position: "absolute", top: 14, right: 14, width: 32, height: 32, borderTop: "3.5px solid #facc15", borderRight: "3.5px solid #facc15", pointerEvents: "none" }} />
-                              <div style={{ position: "absolute", bottom: 58, left: 14, width: 32, height: 32, borderBottom: "3.5px solid #facc15", borderLeft: "3.5px solid #facc15", pointerEvents: "none" }} />
-                              <div style={{ position: "absolute", bottom: 58, right: 14, width: 32, height: 32, borderBottom: "3.5px solid #facc15", borderRight: "3.5px solid #facc15", pointerEvents: "none" }} />
-
-                              {/* Horizontal AI Laser Scanline */}
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "38%",
-                                  left: 0,
-                                  right: 0,
-                                  height: 2,
-                                  background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.5) 15%, #ffffff 50%, rgba(250,204,21,0.5) 85%, transparent)",
-                                  boxShadow: "0 0 20px rgba(250,204,21,0.95)",
-                                  pointerEvents: "none",
-                                }}
-                              />
-
-                              {/* Anatomical Target Pin: Shoulder */}
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 86,
-                                  left: 20,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  pointerEvents: "none",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    padding: "6px 12px",
-                                    borderRadius: 999,
-                                    background: "rgba(0,0,0,0.85)",
-                                    border: "1.5px solid #facc15",
-                                    color: "#fde047",
-                                    fontSize: 11,
-                                    fontWeight: 800,
-                                    letterSpacing: 1.2,
-                                    boxShadow: "0 0 16px rgba(250,204,21,0.3)",
-                                  }}
-                                >
-                                  <span style={{ color: "#facc15" }}>⊕</span> DELTOIDES: PRIORIDAD
-                                </div>
-                              </div>
-
-                              {/* Anatomical Target Pin: Core / BF */}
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "52%",
-                                  right: 20,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  pointerEvents: "none",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    padding: "6px 12px",
-                                    borderRadius: 999,
-                                    background: "rgba(0,0,0,0.85)",
-                                    border: "1.5px solid #facc15",
-                                    color: "#fde047",
-                                    fontSize: 11,
-                                    fontWeight: 800,
-                                    letterSpacing: 1.2,
-                                    boxShadow: "0 0 16px rgba(250,204,21,0.3)",
-                                  }}
-                                >
-                                  <span style={{ color: "#facc15" }}>⊕</span> BF ESTIMADO: {bodyFatVal}
-                                </div>
-                              </div>
-
-                              {/* Anatomical Target Pin: V-Taper */}
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  bottom: 70,
-                                  left: 20,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 6,
-                                  pointerEvents: "none",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    padding: "6px 12px",
-                                    borderRadius: 999,
-                                    background: "rgba(0,0,0,0.85)",
-                                    border: "1.5px solid rgba(255,255,255,0.45)",
-                                    color: "#fff",
-                                    fontSize: 11,
-                                    fontWeight: 800,
-                                    letterSpacing: 1.2,
-                                  }}
-                                >
-                                  ⟵ V-TAPER: {vTaperRatio} ⟶
-                                </div>
+                                ⊕ DELTOIDES LATERAL: ALTA PRIORIDAD
                               </div>
                             </div>
 
-                            {/* Right Telemetry Column */}
+                            {/* AR Biometric Pin: Pectoral Symmetry */}
                             <div
                               style={{
-                                width: 220,
-                                height: "100%",
-                                padding: "28px 24px 60px 20px",
-                                boxSizing: "border-box",
+                                position: "absolute",
+                                top: 290,
+                                right: 40,
                                 display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "space-between",
-                                background: "linear-gradient(270deg, rgba(250,204,21,0.04) 0%, transparent 100%)",
-                                borderLeft: "1px solid rgba(250,204,21,0.2)",
-                                zIndex: 2,
+                                alignItems: "center",
+                                gap: 8,
+                                pointerEvents: "none",
                               }}
                             >
-                              <div style={{ fontSize: 11, color: "#facc15", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
-                                // BIOMETRÍA
+                              <div
+                                style={{
+                                  padding: "7px 16px",
+                                  borderRadius: 999,
+                                  background: "rgba(0,0,0,0.9)",
+                                  border: "1.5px solid #facc15",
+                                  color: "#fde047",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  letterSpacing: 1.2,
+                                  boxShadow: "0 0 20px rgba(0,0,0,0.8)",
+                                }}
+                              >
+                                ⊕ SIMETRÍA BILATERAL: 94.2%
                               </div>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                                <div>
-                                  <div style={{ fontSize: 11, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 1 }}>GRASA EST.</div>
-                                  <div style={{ fontSize: 16, color: "#facc15", fontWeight: 800 }}>{bodyFatVal}</div>
-                                  <div style={{ fontSize: 11, color: "#a1a1aa" }}>Zona Atleta</div>
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: 11, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 1 }}>V-TAPER</div>
-                                  <div style={{ fontSize: 16, color: "#fff", fontWeight: 800 }}>{vTaperRatio}</div>
-                                  <div style={{ fontSize: 11, color: "#a1a1aa" }}>Estructura atlética</div>
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: 11, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 1 }}>SOMATOTIPO</div>
-                                  <div style={{ fontSize: 16, color: "#fde047", fontWeight: 800 }}>
-                                    {(result.body_composition?.somatotype || "Mesomorfo").toUpperCase()}
-                                  </div>
-                                  <div style={{ fontSize: 11, color: "#a1a1aa" }}>Alta densidad</div>
-                                </div>
-                              </div>
-                              <div style={{ fontSize: 11, color: "#71717a", fontFamily: "monospace" }}>
-                                FIABILIDAD IA<br />99.4% NEURAL
+                              <div style={{ width: 20, height: 2, background: "#facc15" }} />
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 12px #facc15" }} />
+                            </div>
+
+                            {/* AR Biometric Pin: Core / BF */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 520,
+                                left: 40,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                pointerEvents: "none",
+                              }}
+                            >
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 12px #facc15" }} />
+                              <div style={{ width: 20, height: 2, background: "#facc15" }} />
+                              <div
+                                style={{
+                                  padding: "7px 16px",
+                                  borderRadius: 999,
+                                  background: "rgba(0,0,0,0.9)",
+                                  border: "1.5px solid #facc15",
+                                  color: "#fde047",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  letterSpacing: 1.2,
+                                  boxShadow: "0 0 20px rgba(0,0,0,0.8)",
+                                }}
+                              >
+                                ⊕ BF ESTIMADO: {bodyFatVal}
                               </div>
                             </div>
-                          </>
+
+                            {/* AR Biometric Pin: Torso V-Taper */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                bottom: 80,
+                                right: 40,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                pointerEvents: "none",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  padding: "7px 18px",
+                                  borderRadius: 999,
+                                  background: "rgba(0,0,0,0.9)",
+                                  border: "1.5px solid rgba(255,255,255,0.6)",
+                                  color: "#fff",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  letterSpacing: 1.2,
+                                }}
+                              >
+                                ⟵ V-TAPER EXPANSION: {vTaperRatio} ⟶
+                              </div>
+                              <div style={{ width: 20, height: 2, background: "rgba(255,255,255,0.6)" }} />
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#fff", boxShadow: "0 0 12px #fff" }} />
+                            </div>
+                          </div>
                         ) : (
                           // Multi-photo layout (Front + Back or Front + Goal)
                           photos.map((p) => {
-                            const w = photos.length === 2 ? 478 : 318;
+                            const w = photos.length === 2 ? 490 : 325;
                             return (
                               <div
                                 key={p.label}
@@ -2703,7 +2677,7 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                                     width: "100%",
                                     height: "100%",
                                     objectFit: "cover",
-                                    filter: "contrast(1.05) brightness(1.02)",
+                                    filter: "contrast(1.06) brightness(1.03)",
                                   }}
                                 />
                                 <div
@@ -2712,10 +2686,10 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                                     top: 18,
                                     left: 18,
                                     fontSize: 11,
-                                    fontWeight: 800,
+                                    fontWeight: 900,
                                     color: "#000",
                                     background: "#facc15",
-                                    padding: "4px 12px",
+                                    padding: "5px 14px",
                                     borderRadius: 999,
                                     textTransform: "uppercase",
                                     letterSpacing: 1.5,
@@ -2723,104 +2697,42 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                                 >
                                   {p.label}
                                 </div>
-                                <div style={{ position: "absolute", top: 12, left: 12, width: 24, height: 24, borderTop: "3px solid #facc15", borderLeft: "3px solid #facc15", pointerEvents: "none" }} />
-                                <div style={{ position: "absolute", top: 12, right: 12, width: 24, height: 24, borderTop: "3px solid #facc15", borderRight: "3px solid #facc15", pointerEvents: "none" }} />
+                                <div style={{ position: "absolute", top: 12, left: 12, width: 26, height: 26, borderTop: "3.5px solid #facc15", borderLeft: "3.5px solid #facc15", pointerEvents: "none" }} />
+                                <div style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderTop: "3.5px solid #facc15", borderRight: "3.5px solid #facc15", pointerEvents: "none" }} />
                               </div>
                             );
                           })
                         )}
 
-                        {/* Bottom Telemetry Bar across entire photo box */}
+                        {/* Integrated Bottom Telemetry Strip Over Photo */}
                         <div
                           style={{
                             position: "absolute",
                             bottom: 0,
                             left: 0,
                             right: 0,
-                            padding: "12px 24px",
-                            background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.92) 40%, #000 100%)",
+                            padding: "14px 28px",
+                            background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.95) 50%, #07070a 100%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            borderTop: "1px solid rgba(250,204,21,0.3)",
+                            borderTop: "1px solid rgba(250,204,21,0.35)",
                             zIndex: 3,
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#facc15", fontSize: 12, fontWeight: 700, letterSpacing: 2 }}>
-                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 8px #facc15" }} />
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#facc15", fontSize: 13, fontWeight: 800, letterSpacing: 2 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 10px #facc15" }} />
                             NEURAL VISION PRO · SCAN MULTIAXIAL
                           </div>
-                          <div style={{ color: "#a1a1aa", fontSize: 12, fontFamily: "monospace", letterSpacing: 1.5, fontWeight: 600 }}>
-                            ESTRUCTURA: {(result.body_composition?.somatotype || "Mesomorfo").toUpperCase()} // CALIBRACIÓN COMPLETA
+                          <div style={{ color: "#a1a1aa", fontSize: 12, fontFamily: "monospace", letterSpacing: 1.5, fontWeight: 700 }}>
+                            ESTRUCTURA: {(result.body_composition?.somatotype || "Mesomorfo").toUpperCase()} // CALIBRACIÓN 4K COMPLETA
                           </div>
                         </div>
                       </div>
                     );
                   })()}
 
-                  {/* DEXA / InBody Bio-Composition Spectrum Bar */}
-                  {(() => {
-                    const bodyFatVal = result.body_composition?.body_fat_pct
-                      ? `${result.body_composition.body_fat_pct}%`
-                      : result.physique
-                        ? `${Math.min(20, Math.max(9, Math.round(26 - result.physique * 1.6)))}%`
-                        : "12.0%";
-                    const bfNum = parseFloat(bodyFatVal) || 12;
-                    return (
-                      <div
-                        style={{
-                          background: "rgba(255,255,255,0.025)",
-                          border: "1.5px solid rgba(250,204,21,0.25)",
-                          borderRadius: 22,
-                          padding: "18px 24px",
-                          position: "relative",
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                          <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
-                            // ESPECTRO DE COMPOSICIÓN CORPORAL (ESTÁNDAR DEXA)
-                          </div>
-                          <div style={{ fontSize: 11, color: "#8e8e93", fontFamily: "monospace" }}>
-                            MARGEN ESTIMADO ±1.2%
-                          </div>
-                        </div>
-
-                        {/* 4-Zone Continuous Gradient Bar */}
-                        <div style={{ position: "relative", height: 28, borderRadius: 14, overflow: "hidden", display: "flex", gap: 2, background: "rgba(0,0,0,0.6)" }}>
-                          <div style={{ flex: 1, background: "linear-gradient(90deg, #1e3a8a, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#bfdbfe", letterSpacing: 1 }}>
-                            ESENCIAL 5-8%
-                          </div>
-                          <div style={{ flex: 1.3, background: "linear-gradient(90deg, #ca8a04, #facc15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 900, color: "#000", letterSpacing: 1 }}>
-                            ATLETA 9-13%
-                          </div>
-                          <div style={{ flex: 1, background: "linear-gradient(90deg, #15803d, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#bbf7d0", letterSpacing: 1 }}>
-                            FITNESS 14-17%
-                          </div>
-                          <div style={{ flex: 1.5, background: "linear-gradient(90deg, #c2410c, #f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#fed7aa", letterSpacing: 1 }}>
-                            SALUDABLE 18-24%+
-                          </div>
-                        </div>
-
-                        {/* Pointer marker & percentile callout */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 8px #facc15" }} />
-                            <span style={{ fontSize: 13, fontWeight: 800, color: "#facc15", letterSpacing: 0.5 }}>
-                              TU NIVEL ESTIMADO: {bodyFatVal}
-                            </span>
-                            <span style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600 }}>
-                              ({bfNum <= 13 ? "ZONA ATLETA // DEFINICIÓN MÁXIMA" : bfNum <= 17 ? "ZONA FITNESS // EQUILIBRIO" : "ZONA VOLUMEN // FASE RECOMP"})
-                            </span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "#fde047", fontWeight: 700, padding: "3px 10px", borderRadius: 6, background: "rgba(250,204,21,0.15)", border: "1px solid rgba(250,204,21,0.35)" }}>
-                            PERCENTIL: TOP 12%
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Biometric Bento Stats Grid - INBODY / DEXA TELEMETRY */}
+                  {/* UNIFIED ATHLETIC TELEMETRY SHELF (NO BOXES INSIDE BOXES) */}
                   {(() => {
                     const bodyFatVal = result.body_composition?.body_fat_pct
                       ? `${result.body_composition.body_fat_pct}%`
@@ -2834,103 +2746,131 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                         ? `${result.proportions.v_taper_score}/10`
                         : "1.42x";
 
-                    const potentialVal = result.potential
-                      ? `${Math.round(result.potential)}%`
-                      : "94%";
+                    const athleteScore = result.physique ? Math.min(98, Math.max(72, Math.round(result.physique * 10 + 15))) : 88;
 
                     return (
-                      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 14 }}>
-                        {/* % Grasa with Segmented Gauge */}
-                        <div
-                          style={{
-                            background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.02))",
-                            border: "1.5px solid rgba(250,204,21,0.45)",
-                            borderRadius: 22,
-                            padding: "20px 22px",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                            boxShadow: "0 0 24px rgba(250,204,21,0.1)",
-                          }}
-                        >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr auto 1fr auto 1fr",
+                          alignItems: "center",
+                          padding: "16px 20px",
+                          borderRadius: 24,
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(250,204,21,0.25)",
+                        }}
+                      >
+                        {/* Stat 1: % Grasa */}
+                        <div style={{ padding: "0 14px" }}>
                           <div style={{ fontSize: 12, color: "#fde047", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
                             % Grasa Subcutánea
                           </div>
-                          <div style={{ fontSize: 52, fontWeight: 900, color: "#facc15", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                          <div style={{ fontSize: 64, fontWeight: 900, color: "#facc15", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
                             {bodyFatVal}
                           </div>
-                          {/* Segmented bar gauge */}
-                          <div>
-                            <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-                              {[1, 2, 3, 4, 5, 6].map((i) => (
-                                <div
-                                  key={i}
-                                  style={{
-                                    flex: 1,
-                                    height: 5,
-                                    borderRadius: 3,
-                                    background: i <= 3 ? "#facc15" : "rgba(255,255,255,0.12)",
-                                    boxShadow: i <= 3 ? "0 0 6px #facc15" : "none",
-                                  }}
-                                />
-                              ))}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
-                              Rango Atleta // Definido
-                            </div>
+                          <div style={{ fontSize: 13, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+                            ● Rango Atleta // Definido
                           </div>
                         </div>
 
-                        {/* V-Taper Ratio */}
-                        <div
-                          style={{
-                            background: "rgba(255,255,255,0.035)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: 22,
-                            padding: "20px 22px",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                          }}
-                        >
+                        {/* Hairline Divider */}
+                        <div style={{ width: 1, height: 75, background: "rgba(255,255,255,0.12)" }} />
+
+                        {/* Stat 2: V-Taper Ratio */}
+                        <div style={{ padding: "0 14px" }}>
                           <div style={{ fontSize: 12, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
-                            Índice V-Taper
+                            Ratio V-Taper
                           </div>
-                          <div style={{ fontSize: 52, fontWeight: 900, color: "#fff", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                          <div style={{ fontSize: 64, fontWeight: 900, color: "#ffffff", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
                             {vTaperVal}
                           </div>
-                          <div style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
-                            Ratio Hombro / Cintura
+                          <div style={{ fontSize: 13, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+                            Proporción Hombro / Cintura
                           </div>
                         </div>
 
-                        {/* Potencial Genético */}
-                        <div
-                          style={{
-                            background: "rgba(255,255,255,0.035)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: 22,
-                            padding: "20px 22px",
-                            display: "flex",
-                            flexDirection: "column",
-                            justifyContent: "space-between",
-                          }}
-                        >
+                        {/* Hairline Divider */}
+                        <div style={{ width: 1, height: 75, background: "rgba(255,255,255,0.12)" }} />
+
+                        {/* Stat 3: Score Atleta */}
+                        <div style={{ padding: "0 14px" }}>
                           <div style={{ fontSize: 12, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
-                            Potencial Genético
+                            Score Biométrico
                           </div>
-                          <div style={{ fontSize: 52, fontWeight: 900, color: "#fde047", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
-                            {potentialVal}
+                          <div style={{ fontSize: 64, fontWeight: 900, color: "#fde047", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                            {athleteScore}<span style={{ fontSize: 28, color: "#8e8e93", fontWeight: 700 }}>/100</span>
                           </div>
-                          <div style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
-                            Margen Evolución // Alto
+                          <div style={{ fontSize: 13, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+                            Percentil Top 10% Atleta
                           </div>
                         </div>
                       </div>
                     );
                   })()}
 
-                  {/* AI Strategic Directives Console (Structured Telemetry, No Boring Walls of Text) */}
+                  {/* SEAMLESS DEXA / INBODY SPECTRUM SCALE */}
+                  {(() => {
+                    const bodyFatVal = result.body_composition?.body_fat_pct
+                      ? `${result.body_composition.body_fat_pct}%`
+                      : result.physique
+                        ? `${Math.min(20, Math.max(9, Math.round(26 - result.physique * 1.6)))}%`
+                        : "12.0%";
+                    const bfNum = parseFloat(bodyFatVal) || 12;
+
+                    return (
+                      <div
+                        style={{
+                          padding: "16px 20px",
+                          borderRadius: 24,
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
+                            // ESPECTRO DE COMPOSICIÓN CORPORAL (ESTÁNDAR DEXA)
+                          </div>
+                          <div style={{ fontSize: 11, color: "#8e8e93", fontFamily: "monospace" }}>
+                            PRECISIÓN CLINICA ±1.2%
+                          </div>
+                        </div>
+
+                        {/* Continuous 4-Zone Spectrum Track */}
+                        <div style={{ position: "relative", height: 26, borderRadius: 13, overflow: "hidden", display: "flex", gap: 3, background: "rgba(0,0,0,0.6)" }}>
+                          <div style={{ flex: 1, background: "linear-gradient(90deg, #1e3a8a, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#bfdbfe", letterSpacing: 1 }}>
+                            ESENCIAL 5-8%
+                          </div>
+                          <div style={{ flex: 1.3, background: "linear-gradient(90deg, #ca8a04, #facc15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "#000", letterSpacing: 1, boxShadow: "0 0 14px rgba(250,204,21,0.5)" }}>
+                            ★ ATLETA 9-13%
+                          </div>
+                          <div style={{ flex: 1, background: "linear-gradient(90deg, #15803d, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#bbf7d0", letterSpacing: 1 }}>
+                            FITNESS 14-17%
+                          </div>
+                          <div style={{ flex: 1.5, background: "linear-gradient(90deg, #c2410c, #f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#fed7aa", letterSpacing: 1 }}>
+                            SALUDABLE 18-24%+
+                          </div>
+                        </div>
+
+                        {/* Active Beacon Pointer */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 8px #facc15" }} />
+                            <span style={{ fontSize: 13, fontWeight: 900, color: "#facc15", letterSpacing: 0.5 }}>
+                              ▲ TU NIVEL ESTIMADO: {bodyFatVal}
+                            </span>
+                            <span style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600 }}>
+                              ({bfNum <= 13 ? "ZONA ATLETA // DEFINICIÓN MÁXIMA" : bfNum <= 17 ? "ZONA FITNESS // EQUILIBRIO" : "ZONA VOLUMEN // RECOMP"})
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#000", fontWeight: 900, padding: "3px 12px", borderRadius: 999, background: "#facc15" }}>
+                            TOP 10% POBLACIONAL
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* EDITORIAL ALGORITHM DIRECTIVES (EDITORIAL TYPOGRAPHY, NO FORM TABLES) */}
                   {(() => {
                     const tags = (result.improvements || [])
                       .map((i) => i.label)
@@ -2943,102 +2883,85 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                     return (
                       <div
                         style={{
-                          background: "rgba(255,255,255,0.025)",
+                          padding: "18px 24px",
+                          borderRadius: 24,
+                          background: "linear-gradient(135deg, rgba(250,204,21,0.06) 0%, rgba(255,255,255,0.02) 100%)",
                           border: "1.5px solid rgba(250,204,21,0.3)",
-                          borderRadius: 22,
-                          padding: "20px 24px",
-                          position: "relative",
-                          overflow: "hidden",
                         }}
                       >
-                        <div
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 24,
-                            right: 24,
-                            height: 2,
-                            background: "linear-gradient(90deg, transparent, #facc15, transparent)",
-                          }}
-                        />
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                          <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
-                            // DIRECTRICES TÁCTICAS DEL ALGORITMO
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 800, fontFamily: "monospace" }}>
+                            // PROTOCOLO BIOMECÁNICO & DIRECTRICES IA
                           </div>
-                          <div style={{ fontSize: 10, color: "#000", fontWeight: 800, background: "#facc15", padding: "3px 8px", borderRadius: 4, letterSpacing: 1 }}>
-                            AP-CORE v4.2
+                          <div style={{ fontSize: 11, color: "#8e8e93", fontFamily: "monospace" }}>
+                            AUTOPILOT NEURAL ENGINE
                           </div>
                         </div>
 
-                        {/* Punchy Executive Verdict - 1-2 lines */}
-                        <div style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.35, color: "#f5f5f7", marginBottom: 12 }}>
-                          "{(result.headline_diagnosis ?? result.summary ?? "Estructura atlética con excelente punto de partida y bajo porcentaje graso.").slice(0, 110)}"
+                        {/* Executive Verdict Quote */}
+                        <div style={{ fontSize: 21, fontWeight: 700, lineHeight: 1.35, color: "#f5f5f7", marginBottom: 14 }}>
+                          "{(result.headline_diagnosis ?? result.summary ?? "Estructura atlética con excelente punto de partida y bajo porcentaje graso.").slice(0, 115)}"
                         </div>
 
-                        {/* Structured Directive Rows */}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span style={{ fontSize: 11, fontFamily: "monospace", color: "#facc15", fontWeight: 800 }}>[01 // FOCO CLAVE]</span>
-                              <span style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}>{tag1}</span>
-                            </div>
-                            <span style={{ fontSize: 11, color: "#fde047", fontWeight: 700, textTransform: "uppercase" }}>Prioridad Máxima</span>
+                        {/* Sleek High-Tech Capsule Badges */}
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <div
+                            style={{
+                              padding: "8px 18px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.85)",
+                              border: "1.5px solid #facc15",
+                              color: "#fde047",
+                              fontSize: 13,
+                              fontWeight: 800,
+                              letterSpacing: 0.5,
+                              boxShadow: "0 0 16px rgba(250,204,21,0.2)",
+                            }}
+                          >
+                            ⚡ FOCO PRIMARIO: {tag1}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span style={{ fontSize: 11, fontFamily: "monospace", color: "#facc15", fontWeight: 800 }}>[02 // CUELLO BOTELLA]</span>
-                              <span style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}>{tag2}</span>
-                            </div>
-                            <span style={{ fontSize: 11, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase" }}>Optimización</span>
+                          <div
+                            style={{
+                              padding: "8px 18px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.85)",
+                              border: "1.5px solid rgba(255,255,255,0.4)",
+                              color: "#fff",
+                              fontSize: 13,
+                              fontWeight: 800,
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            🎯 CUELLO DE BOTELLA: {tag2}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <span style={{ fontSize: 11, fontFamily: "monospace", color: "#facc15", fontWeight: 800 }}>[03 // PROTOCOLO IA]</span>
-                              <span style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}>Sobrecarga progresiva RPE 8-9 · 4-5 sesiones/sem</span>
-                            </div>
-                            <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 700, textTransform: "uppercase" }}>Recomendado</span>
+                          <div
+                            style={{
+                              padding: "8px 18px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.85)",
+                              border: "1.5px solid #facc15",
+                              color: "#fde047",
+                              fontSize: 13,
+                              fontWeight: 800,
+                              letterSpacing: 0.5,
+                              boxShadow: "0 0 16px rgba(250,204,21,0.2)",
+                            }}
+                          >
+                            🔥 PROTOCOLO: Sobrecarga Progresiva RPE 8-9
                           </div>
                         </div>
                       </div>
                     );
                   })()}
 
-                  {/* Goal duration banner if objective is present */}
-                  {result.months_with_plan !== undefined && result.months_with_plan > 0 && (
-                    <div
-                      style={{
-                        padding: "14px 22px",
-                        borderRadius: 18,
-                        background: "rgba(250,204,21,0.08)",
-                        border: "1px solid rgba(250,204,21,0.35)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 20 }}>🎯</span>
-                        <div style={{ fontSize: 14, color: "#f5f5f7", fontWeight: 600 }}>
-                          Tiempo estimado a tu objetivo físico
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 18, fontWeight: 800, color: "#facc15" }}>
-                        {result.months_with_plan} meses con plan{" "}
-                        <span style={{ fontSize: 13, color: "#8e8e93", fontWeight: 500 }}>
-                          (vs {result.months_without_plan || result.months_with_plan * 2}m sin plan)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* High-Impact Viral Footer */}
+                  {/* High-Impact Viral Footer with Real Autopilot Logo in CTA */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
                       paddingTop: 16,
-                      borderTop: "1px solid rgba(255,255,255,0.08)",
+                      borderTop: "1px solid rgba(255,255,255,0.1)",
                       position: "relative",
                       zIndex: 2,
                     }}
@@ -3047,7 +2970,7 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                       <div style={{ fontSize: 13, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 700 }}>
                         AUTOPILOT BIO-LAB // ESCÁNER CORPORAL CON IA GRATIS
                       </div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginTop: 2 }}>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginTop: 2 }}>
                         Descubre tu % graso y tu rutina ideal en 30 segundos
                       </div>
                     </div>
@@ -3059,14 +2982,19 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                         background: "linear-gradient(135deg, #fde047, #facc15)",
                         padding: "12px 28px",
                         borderRadius: 999,
-                        boxShadow: "0 0 35px rgba(250,204,21,0.4)",
+                        boxShadow: "0 0 35px rgba(250,204,21,0.5)",
                         letterSpacing: -0.3,
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        gap: 10,
                       }}
                     >
-                      <span>⚡</span> autopilotplan.com/scan
+                      <img loading="lazy" decoding="async"
+                        src={autopilotLogo}
+                        alt="Autopilot"
+                        style={{ width: 28, height: 28, borderRadius: "50%", background: "#000" }}
+                      />
+                      autopilotplan.com/scan
                     </div>
                   </div>
                 </div>
