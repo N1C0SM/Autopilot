@@ -64,12 +64,23 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
       // Libros publicados desde tu biblioteca privada
       const modeRes = await supabase.rpc("get_payment_mode");
       const live = modeRes?.data === "live";
-      const { data: libraryBooks } = await supabase
+      // Solo se muestra lo que está dentro de la carpeta «Libros» del Drive.
+      const { data: booksFolder } = await supabase
         .from("library_books")
-        .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack")
-        .eq("published", true)
-        .eq("is_folder", false)
-        .order("sort_order", { ascending: true });
+        .select("id")
+        .eq("is_folder", true)
+        .ilike("title", "libros")
+        .limit(1)
+        .maybeSingle();
+      const { data: libraryBooks } = booksFolder
+        ? await supabase
+            .from("library_books")
+            .select("id, title, description, price, cover_path, buy_url_test, buy_url_live, is_pack")
+            .eq("published", true)
+            .eq("is_folder", false)
+            .eq("parent_id", booksFolder.id)
+            .order("sort_order", { ascending: true })
+        : { data: [] };
 
       const fromLibrary: Ebook[] = [];
       for (const b of libraryBooks || []) {
