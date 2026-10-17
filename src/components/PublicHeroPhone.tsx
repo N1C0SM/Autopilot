@@ -41,7 +41,7 @@ export default function PublicHeroPhone() {
       <PhoneFrame screenClassName="h-[37rem]">
         <PhoneAppBar avatar={<OwnerAvatar photo={owner.photo} initial={ownerInitial} />} />
         <div className="flex-1 overflow-hidden px-4 pt-3">
-          <PhoneHome plans={plans} exerciseCount={3} name={ownerFirst} />
+          <PhoneHome plans={plans} name={ownerFirst} />
         </div>
       </PhoneFrame>
     </div>

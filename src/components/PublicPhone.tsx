@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import { Dumbbell, Lock, MessageCircle, Bell, type LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ListRow } from "@/components/ui/list";
+import { Apple, Bell, Sparkles, type LucideIcon } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { OverviewRow } from "@/components/dashboard/HomeOverview";
 import type { PlanAvailability } from "@/lib/planCatalogCore";
 import { cn } from "@/lib/utils";
 
@@ -37,9 +36,11 @@ export function PhoneFrame({ children, className, screenClassName }: { children:
 /** Bell and avatar, top right, as in the app's root screens. */
 export function PhoneAppBar({ avatar }: { avatar: ReactNode }) {
   return (
-    <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-3 px-4">
-      <Bell className="h-5 w-5" />
-      <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
+    <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-2 px-3">
+      <span className="flex h-11 w-11 items-center justify-center"><Bell className="h-[22px] w-[22px]" /></span>
+      <span className="flex h-11 w-11 items-center justify-center">
+        <span className="flex h-[30px] w-[30px] items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
+      </span>
     </div>
   );
 }
@@ -69,23 +70,41 @@ export function PhoneTabBar({ tabs, active, onSelect, label = "Secciones de la d
 
 const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
 
-/** Seven days with a dot under each finished session and a tinted circle on today. */
-export function PhoneWeek({ done, today }: { done: number[]; today: number }) {
+/**
+ * Example week of the public phones, built around the visitor's real today so the
+ * picture reads like the app opened right now: four planned days, today always one of them.
+ */
+export function demoWeek(now = new Date()) {
+  const today = (now.getDay() + 6) % 7;
+  const base = [0, 2, 4];
+  const planned = base.includes(today) ? base : [...base, today].sort((a, b) => a - b);
+  const done = planned.filter((d) => d < today).length;
+  const label = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(now);
+  return { today, planned, done, date: label.charAt(0).toLocaleUpperCase("es") + label.slice(1) };
+}
+
+/** Same week strip as the app's "Hoy": today tinted, a dot under each planned day. */
+export function PhoneWeek({ planned, today }: { planned: number[]; today: number }) {
   return (
-    <div aria-hidden className="grid grid-cols-7">
-      {DAYS.map((d, i) => (
-        <div key={d} className="flex flex-col items-center gap-1">
-          <span className={cn("flex h-9 w-9 items-center justify-center rounded-full type-subhead", i === today ? "bg-primary/15 font-semibold text-primary" : "text-muted-foreground")}>{d}</span>
-          <span className={cn("h-1 w-1 rounded-full", done.includes(i) ? "bg-primary" : "bg-transparent")} />
-        </div>
-      ))}
-    </div>
+    <ol aria-hidden className="grid grid-cols-7">
+      {DAYS.map((d, i) => {
+        const trains = planned.includes(i);
+        return (
+          <li key={d} className="flex flex-col items-center gap-1">
+            <span className={cn("flex h-9 w-9 items-center justify-center rounded-full type-subhead", i === today ? "bg-primary/15 font-semibold text-primary" : trains ? "text-foreground" : "text-muted-foreground")}>{d}</span>
+            <span className={cn("h-[5px] w-[5px] rounded-full", trains ? "bg-primary" : "bg-transparent")} />
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
+/** Example session shown on the phones; mirrors the demo tracker (3 exercises × 3 series, 90 s rest). */
+export const DEMO_SESSION = { title: "Fuerza cuerpo completo", exercises: 3, series: 9, minutes: 20 };
+
 interface PhoneHomeProps {
   plans: PlanAvailability;
-  exerciseCount: number;
   /** Render the greeting as a heading (the interactive demo) instead of plain text (the hero picture). */
   heading?: boolean;
   onSession?: () => void;
@@ -94,51 +113,54 @@ interface PhoneHomeProps {
   name?: string;
 }
 
-/** "Hoy" screen of the app: greeting, week, today's session and two summary rows. */
-export function PhoneHome({ plans, exerciseCount, heading, onSession, onNutrition, onProgress, name = "Laura" }: PhoneHomeProps) {
-  const Greeting = heading ? "h4" : "p";
+/**
+ * "Hoy" screen of the app, drawn with the same layout, copy and rows as the real
+ * mobile HomeOverview (date, greeting, week, session + Empezar, Nutrición, Progreso).
+ */
+export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }: PhoneHomeProps) {
+  const Greeting = heading ? "h2" : "p";
+  const week = demoWeek();
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="type-subhead text-muted-foreground">Viernes 25 · Semana 3 de 12</p>
-        <Greeting className="mt-1 type-large-title">Hola, {name}.<span className="block text-muted-foreground">Hoy toca fuerza.</span></Greeting>
+    <div className="flex flex-col">
+      <p className="type-subhead font-semibold text-muted-foreground">{week.date}</p>
+      <Greeting className="mt-0.5 type-large-title">
+        {name ? `Hola, ${name}.` : "Hola."}
+        <span className="block text-muted-foreground">A entrenar.</span>
+      </Greeting>
+      <div className="mt-6"><PhoneWeek planned={week.planned} today={week.today} /></div>
+
+      <div className="py-8">
+        {(() => {
+          const body = (
+            <>
+              <span className="line-clamp-3 type-title1">{DEMO_SESSION.title}</span>
+              <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
+                {DEMO_SESSION.exercises} ejercicios · {DEMO_SESSION.series} series · unos {DEMO_SESSION.minutes} min
+              </span>
+              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-ios-standard group-active:scale-[0.98] group-active:opacity-80">
+                Empezar
+              </span>
+            </>
+          );
+          return onSession
+            ? <button type="button" onClick={onSession} aria-label={`Empezar ${DEMO_SESSION.title}`} className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background">{body}</button>
+            : <div className="block w-full">{body}</div>;
+        })()}
       </div>
-      <PhoneWeek done={[0, 2]} today={4} />
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Dumbbell className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-          <div className="min-w-0">
-            <p className="type-title3">Fuerza cuerpo completo</p>
-            <p className="type-subhead text-muted-foreground">{exerciseCount} ejercicios · ~45 min</p>
-          </div>
-        </div>
-        {onSession
-          ? <Button type="button" variant="hero" size="lg" className="w-full" onClick={onSession}>Ver sesión de hoy</Button>
-          : <div aria-hidden className="btn-lg flex w-full items-center justify-center bg-primary font-semibold text-primary-foreground">Ver sesión de hoy</div>}
-      </div>
-      <div className="-mx-4">
-        <ListRow
-          leading={<span aria-hidden><ProgressRing value={62} size={32} stroke={4} /></span>}
-          title={<span className="inline-flex items-center gap-1.5 font-semibold">Nutrición <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" /></span>}
-          subtitle="1.420 / 2.300 kcal"
-          chevron
+
+      <div className="-mx-3 flex flex-col">
+        <OverviewRow
+          title="Nutrición"
           onClick={onNutrition}
+          icon={<ProgressRing value={67} size={32} stroke={3.5}><Apple className="h-[14px] w-[14px]" strokeWidth={2.25} /></ProgressRing>}
+          description="2 de 3 comidas · 2.300 kcal"
         />
-        <ListRow
-          leading={<span aria-hidden><ProgressRing value={67} size={32} stroke={4} /></span>}
-          title={<span className="font-semibold">Progreso semanal</span>}
-          subtitle="2 de 3 sesiones"
-          chevron
+        <OverviewRow
+          title="Progreso"
           onClick={onProgress}
+          icon={<ProgressRing value={(week.done / week.planned.length) * 100} size={32} stroke={3.5}><Sparkles className="h-[14px] w-[14px]" strokeWidth={2.25} /></ProgressRing>}
+          description={`${week.done} de ${week.planned.length} sesiones esta semana`}
         />
-      </div>
-      <div className="flex gap-3">
-        <MessageCircle className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-        <p className="type-footnote text-muted-foreground">
-          {plans.coach
-            ? <><span className="font-semibold text-foreground">En {plans.coachName}:</span> recibes seguimiento humano y ajustes de tu plan. Gratis tienes registro y progreso.</>
-            : <>Gratis tienes rutina, registro y progreso{plans.plus ? `; ${plans.plusName} añade nutrición y progresión automática` : ""}.</>}
-        </p>
       </div>
     </div>
   );

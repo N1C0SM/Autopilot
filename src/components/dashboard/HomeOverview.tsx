@@ -72,8 +72,12 @@ interface ChatPreviewMessage {
   created_at: string;
 }
 
-/** Fila de la lista de la bienvenida: icono a la izquierda, título, una línea gris y chevron. Sin caja. */
-const OverviewRow = ({
+/**
+ * Fila de la lista de la bienvenida: icono a la izquierda, título, una línea gris y chevron. Sin caja.
+ * Exportada para que los teléfonos de la web pública pinten exactamente la misma fila.
+ * Sin onClick se pinta como imagen estática (no enfocable).
+ */
+export const OverviewRow = ({
   icon,
   title,
   description,
@@ -82,24 +86,33 @@ const OverviewRow = ({
   icon: ReactNode;
   title: string;
   description: ReactNode;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={() => {
-      void hapticTap();
-      onClick();
-    }}
-    className="flex min-h-[64px] w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors duration-100 ease-ios-standard active:bg-secondary focus-visible:bg-secondary focus-visible:outline-none"
-  >
-    <span aria-hidden="true" className="flex w-10 shrink-0 justify-center">{icon}</span>
-    <span className="min-w-0 flex-1">
-      <span className="block type-headline">{title}</span>
-      <span className="mt-0.5 block type-subhead tabular-nums text-muted-foreground">{description}</span>
-    </span>
-    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
-  </button>
-);
+  onClick?: () => void;
+}) => {
+  const className = "flex min-h-[64px] w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors duration-100 ease-ios-standard active:bg-secondary focus-visible:bg-secondary focus-visible:outline-none";
+  const inner = (
+    <>
+      <span aria-hidden="true" className="flex w-10 shrink-0 justify-center">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block type-headline">{title}</span>
+        <span className="mt-0.5 block type-subhead tabular-nums text-muted-foreground">{description}</span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
+    </>
+  );
+  if (!onClick) return <div className={className}>{inner}</div>;
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void hapticTap();
+        onClick();
+      }}
+      className={className}
+    >
+      {inner}
+    </button>
+  );
+};
 
 const HomeOverview = ({
   dayPlans,
