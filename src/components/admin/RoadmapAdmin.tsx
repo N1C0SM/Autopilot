@@ -13,7 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import master from '@/lib/roadmap/master.json';
-import { needsFocusWarning, statusLabels } from '@/lib/roadmap/rules';
+import { needsFocusWarning, statusLabels, findExistingIdea, filterRoadmapIdeas } from '@/lib/roadmap/rules';
 
 type Item = Tables<'roadmap_items'>;
 type Version = Tables<'roadmap_versions'>;
@@ -35,6 +35,9 @@ export default function RoadmapAdmin() {
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState('1.0');
   const [search, setSearch] = useState('');
+  const [catalogVersion, setCatalogVersion] = useState('all');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [duplicates, setDuplicates] = useState<{ title: string; existing: Item }[]>([]);
   const [ideas, setIdeas] = useState(() => localStorage.getItem('autopilot:roadmap-ideas') ?? '');
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [editing, setEditing] = useState<Partial<Item> | null>(null);
@@ -118,7 +121,19 @@ export default function RoadmapAdmin() {
     const lines = ideas.split('\n').map(l => l.replace(/^[-*•]\s*/, '').trim()).filter(Boolean);
     if (!lines.length) return;
     await run(async () => {
-      const { data, error: saveError } = await supabase.from('roadmap_items').insert(lines.slice(0, 100).map((line, idx) => ({ title: line.slice(0, 250), description: line.length > 250 ? line : '', status: 'idea', source: 'brainstorm', position: items.length + idx }))).select();
+      const fresh = await supabase.from('roadmap_items').select('*');
+      if (fresh.error) throw fresh.error;
+      const existingItems = fresh.data ?? [];
+      const repeated: { title: string; existing: Item }[] = [];
+      const unique: string[] = [];
+      for (const line of lines.slice(0, 100)) {
+        const match = findExistingIdea(line.slice(0, 250), existingItems);
+        if (match) repeated.push({ title: line, existing: match });
+        else if (!findExistingIdea(line.slice(0, 250), unique.map(title => ({ title: title.slice(0, 250) })))) unique.push(line);
+      }
+      setDuplicates(repeated);
+      if (!unique.length) { setIdeas(lines.slice(100).join('\n')); toast.info('Estas ideas ya están en el Roadmap.'); return; }
+      const { data, error: saveError } = await supabase.from('roadmap_items').insert(unique.map((line, idx) => ({ title: line.slice(0, 250), description: line.length > 250 ? line : '', status: 'idea', source: 'brainstorm', position: items.length + idx }))).select();
       if (saveError) throw saveError;
       setItems(prev => [...prev, ...(data ?? [])]);
       setIdeas(lines.slice(100).join('\n')); toast.success('Ideas guardadas');
@@ -193,8 +208,10 @@ export default function RoadmapAdmin() {
         <h3 className="type-title2">Lluvia de ideas</h3>
         <Textarea aria-label="Lluvia de ideas" placeholder="Una idea por línea…" value={ideas} onChange={e => setIdeas(e.target.value)} className="min-h-40" />
         <div className="flex flex-wrap gap-2"><Button disabled={busy || !ideas.trim()} onClick={() => void captureIdeas()}><Plus />Guardar ideas</Button><Button variant="tinted" disabled={busy || !inbox.length} onClick={() => void classify(inbox)}>{busy ? <Spinner /> : <Wand2 />}Ordenar con IA{inbox.length > 25 ? ' (25)' : ''}</Button></div>
+        {duplicates.length > 0 && <section role="status" className="space-y-2 border-l-2 border-primary pl-4"><h4 className="font-semibold">Ya están en el Roadmap</h4>{duplicates.map((row, index) => <p key={index} className="text-sm break-words">{row.title} · {row.existing.version_id ? `v${row.existing.version_id}` : 'Hielo'} · {statusLabels[row.existing.status as keyof typeof statusLabels]}{row.existing.status === 'done' ? ' · Ya implementado' : ''}</p>)}</section>}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{inbox.map(taskCard)}</div>
         {!inbox.length && <p className="text-muted-foreground py-6">Sin ideas pendientes de ordenar.</p>}
+        <section className="border-t border-border pt-6 space-y-4"><h3 className="type-title2">Consultar ideas y tareas</h3><div className="flex flex-wrap gap-3"><Select value={catalogVersion} onValueChange={setCatalogVersion}><SelectTrigger className="w-full sm:w-64" aria-label="Filtrar ideas por versión"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas las versiones</SelectItem>{versions.map(v => <SelectItem key={v.id} value={v.id}>v{v.id} · {v.title}</SelectItem>)}<SelectItem value="ice">Hielo</SelectItem></SelectContent></Select><Input aria-label="Buscar ideas en el Roadmap" placeholder="Buscar ideas y tareas" className="flex-1 min-w-40" value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)} /></div><p className="text-sm text-muted-foreground">{filterRoadmapIdeas(items, catalogVersion, catalogSearch).length} ideas y tareas</p><div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{filterRoadmapIdeas(items, catalogVersion, catalogSearch).map(taskCard)}</div></section>
       </TabsContent>
       <TabsContent value="history" className="mt-6 space-y-5">
         <h3 className="type-title2">Historial de versiones</h3>
