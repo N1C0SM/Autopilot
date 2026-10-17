@@ -1020,10 +1020,12 @@ serve(async (req) => {
       ? (scheduleResult.data!.gym_slots as Array<{ day: number; start: string; duration: number }>)
       : [];
     const scheduleDays = gymSlots.length > 0 ? gymSlots.length : null;
+    console.log(`[GENERATE-PLAN] onb.availability raw:`, onb.availability);
     const daysAvailable = scheduleDays ?? parseInt(
       typeof onb.availability === "object" && onb.availability !== null
         ? String(jsonObject(onb.availability).days || "4") : "4"
     );
+    console.log(`[GENERATE-PLAN] daysAvailable computed: ${daysAvailable} (scheduleDays: ${scheduleDays})`);
     if (scheduleDays) {
       console.log(`[GENERATE-PLAN] Using user_schedule: ${scheduleDays} gym slots/week`);
     }

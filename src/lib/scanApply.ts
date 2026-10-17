@@ -14,6 +14,9 @@ export type ScanInferences = {
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
   muscle_breakdown?: MuscleScore[];
+  protocol?: {
+    training_days_per_week?: number;
+  };
 };
 
 /** Objetivos que puede proponer el scan (los mismos que el configurador y el editor del admin; «skill_based» no lo propone nunca). */
@@ -43,6 +46,15 @@ export function buildScanPlanUpdates(r: ScanInferences, current?: Current): Tabl
   // intensity_level es un entero en la base de datos: 7,5 haría fallar el guardado.
   if (typeof r.inferred_intensity === "number" && Number.isFinite(r.inferred_intensity)) {
     updates.intensity_level = Math.round(Math.min(10, Math.max(1, r.inferred_intensity)));
+  }
+  // APLICAR DÍAS DE ENTRENAMIENTO del scan
+  console.log("[SCAN-APPLY] protocol data:", r.protocol);
+  if (r.protocol?.training_days_per_week && Number.isInteger(r.protocol.training_days_per_week)) {
+    const days = Math.min(7, Math.max(2, r.protocol.training_days_per_week));
+    console.log(`[SCAN-APPLY] Setting availability.days to ${days} from scan protocol`);
+    updates.availability = { days };
+  } else {
+    console.log("[SCAN-APPLY] No training_days_per_week found in protocol, not setting availability");
   }
   return updates;
 }
@@ -171,6 +183,12 @@ export async function applyScanPlan(
   r: ScanInferences,
   opts: { retryOf?: ScanApplyResult | null } = {},
 ): Promise<ScanApplyResult> {
+  console.log("[APPLY-SCAN] Starting with scan data:", {
+    hasProtocol: !!r.protocol,
+    trainingDays: r.protocol?.training_days_per_week,
+    hasGoal: !!r.inferred_goal,
+    hasBreakdown: !!r.muscle_breakdown?.length
+  });
   const result = (outcome: ScanApplyOutcome, extra: Partial<ScanApplyResult> = {}): ScanApplyResult => ({ outcome, priorities: [], ...extra });
   if (!scanHasSignal(r)) return result("no_changes");
 
