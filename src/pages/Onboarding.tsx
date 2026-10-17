@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Zap, Upload, Image as ImageIcon, X, Crown } from "lucide-react";
+import { ArrowLeft, ArrowRight, Sparkles, Calendar as CalendarIcon, Check, Loader2, Link2, Upload, Image as ImageIcon, X, Crown } from "lucide-react";
 import { track } from "@/lib/analytics";
 import PageHead from "@/components/PageHead";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1047,7 +1047,7 @@ const Onboarding = () => {
                   </div>
                 ) : (
                   <Button onClick={handleConnectGoogle} disabled={gcalLoading} variant="outline" size="sm" className="w-full">
-                    {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
+                    {gcalLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
                     Conectar Google Calendar
                   </Button>
                 )}
