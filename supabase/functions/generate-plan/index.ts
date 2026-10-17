@@ -3,6 +3,7 @@ import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
 import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
+import { applyWeightEstimation } from "../_shared/exercise-weight-estimation.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -948,15 +949,34 @@ serve(async (req) => {
       }
     }
 
-    // Fetch rules, onboarding and user_schedule in parallel
-    const [onbResult, rulesResult, scheduleResult] = await Promise.all([
+    // Fetch rules, onboarding, user_schedule AND scan data in parallel
+    const [onbResult, rulesResult, scheduleResult, scanResult] = await Promise.all([
       supabase.from("onboarding").select("*").eq("user_id", targetUserId).single(),
       supabase.from("training_rules").select("*").limit(1).single(),
       supabase.from("user_schedule").select("gym_slots").eq("user_id", targetUserId).maybeSingle(),
+      supabase.from("physique_analysis").select("body_composition, created_at").eq("user_id", targetUserId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     ]);
 
     const onb = onbResult.data;
     if (onbResult.error || !onb) throw new Error("Onboarding data not found");
+
+    // Extract scan data if available (PRIORITIZE SCAN FOR WEIGHT ESTIMATION)
+    const scanData = scanResult.data?.body_composition 
+      ? (typeof scanResult.data.body_composition === "object" && scanResult.data.body_composition !== null
+          ? scanResult.data.body_composition as { lean_mass_kg?: number; weight_kg?: number; body_fat_pct?: number }
+          : null)
+      : null;
+    
+    if (scanData) {
+      console.log(`[GENERATE-PLAN] Scan data found: lean_mass=${scanData.lean_mass_kg}kg, weight=${scanData.weight_kg}kg, bf=${scanData.body_fat_pct}%`);
+    } else {
+      console.log(`[GENERATE-PLAN] No scan data available, will use onboarding weight as fallback`);
+    }
+
+    const userData = {
+      weight: onb.weight,
+      gender: onb.gender,
+    };
 
     // Build rules object — fallback to defaults if no row
     let rules: Rules = DEFAULT_RULES;
@@ -1080,9 +1100,16 @@ serve(async (req) => {
     const gymSplit = getGymSplit(Math.min(daysAvailable, 6), skillProfile);
     const weeklyPlan = buildWeeklyPlan(gymSplit, sports, Math.min(daysAvailable, 7), config, exerciseLib, rules, skillProfile);
 
+    // ─── APPLY WEIGHT ESTIMATION (PRIORITIZES SCAN DATA) ───
+    for (const day of weeklyPlan) {
+      if (day.type === "gimnasio" && day.exercises) {
+        day.exercises = applyWeightEstimation(day.exercises, scanData, userData);
+      }
+    }
+
     // ─── Inject skill progressions into gym days ───
     if (skillProgressions.length > 0 && skillProfile) {
-      const progressionExercises = skillProgressions.map(ex => ({
+      let progressionExercises = skillProgressions.map(ex => ({
         exercise_id: ex.id,
         name: ex.name,
         series: rules.series_p1_max,
@@ -1095,6 +1122,9 @@ serve(async (req) => {
         exercise_type: ex.exercise_type,
         is_progression: true,
       }));
+
+      // Apply weight estimation to skill progressions (SCAN DATA PRIORITIZED)
+      progressionExercises = applyWeightEstimation(progressionExercises, scanData, userData);
 
       // Distribute progressions across gym days that train relevant muscles
       let progIdx = 0;
