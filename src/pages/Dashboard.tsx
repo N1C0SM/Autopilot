@@ -45,6 +45,8 @@ const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgres
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/pages/Recursos"));
 const Scan = lazy(() => import("@/pages/Scan"));
+const PlanEditor = lazy(() => import("@/components/dashboard/PlanEditor"));
+const FreeSessionBuilder = lazy(() => import("@/components/dashboard/FreeSessionBuilder"));
 
 const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
@@ -133,6 +135,9 @@ const Dashboard = () => {
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
     if (fromParam === "plan" || fromParam === "tracker") return fromParam;
@@ -622,9 +627,10 @@ const Dashboard = () => {
                   autoStart={autoStartWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
                   onSessionModeChange={setWorkoutMode}
-                  onCancel={() => setWorkoutMode(false)}
+                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); }}
                   onExit={() => {
                     setWorkoutMode(false);
+                    setFreePlans(null);
                     setSection("home");
                     void fetchData();
                   }}
@@ -633,6 +639,33 @@ const Dashboard = () => {
             </Suspense>
           </TabsContent>
         </Tabs>
+      )}
+
+      {user && (
+        <Suspense fallback={null}>
+          <PlanEditor
+            open={editorOpen}
+            onOpenChange={setEditorOpen}
+            userId={user.id}
+            dayPlans={dayPlans}
+            onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
+          />
+          <FreeSessionBuilder
+            open={freeOpen}
+            onOpenChange={setFreeOpen}
+            onStart={(exercises) => {
+              const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
+              setFreePlans([
+                ...dayPlans.filter((p) => p.day !== today),
+                { day: today, type: "gimnasio", routine_name: "Entrenamiento libre", muscle_focus: "", exercises },
+              ]);
+              setTrainingDay(today);
+              setFreeOpen(false);
+              setTrainingView("tracker");
+              setAutoStartWorkout(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {hasPlan && section === "nutrition" && isTrainingOnly && (
