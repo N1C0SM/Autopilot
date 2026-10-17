@@ -72,14 +72,6 @@ const SECTION_TITLES: Record<AdminSection, string> = {
   account: "Mi cuenta",
   roadmap: "Roadmap",
 };
-  landing: "Landing",
-  blog: "Blog",
-  physiques: "Físicos",
-  payments: "Pagos",
-  emails: "Emails",
-  products: "Planes y productos",
-  account: "Mi cuenta",
-};
 
 const Admin = () => {
   const { user, signOut } = useAuth();

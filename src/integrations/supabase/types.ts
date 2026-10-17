@@ -409,6 +409,36 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_user_preferences: {
+        Row: {
+          created_at: string
+          id: string
+          last_used_at: string
+          original_exercise_name: string
+          preferred_exercise_name: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          original_exercise_name: string
+          preferred_exercise_name?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_used_at?: string
+          original_exercise_name?: string
+          preferred_exercise_name?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           alternative_id: string | null
@@ -1088,6 +1118,7 @@ export type Database = {
           id: string
           note: string | null
           photo_url: string
+          scan_history_id: string | null
           taken_at: string
           user_id: string
         }
@@ -1096,6 +1127,7 @@ export type Database = {
           id?: string
           note?: string | null
           photo_url: string
+          scan_history_id?: string | null
           taken_at?: string
           user_id: string
         }
@@ -1104,6 +1136,7 @@ export type Database = {
           id?: string
           note?: string | null
           photo_url?: string
+          scan_history_id?: string | null
           taken_at?: string
           user_id?: string
         }

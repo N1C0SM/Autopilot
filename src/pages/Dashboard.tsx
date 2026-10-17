@@ -368,7 +368,7 @@ const Dashboard = () => {
   };
 
   // Wait for the profile: before it loads every user looks like "free".
-  useEffect(() => { if (!loading && hideChat && section === "chat") setSectionState("home"); }, [loading, hideChat, section]);
+  useEffect(() => { if (!loading && consumerPlan !== "plus" && consumerPlan !== "coach" && section === "chat") setSectionState("home"); }, [loading, consumerPlan, section]);
 
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
@@ -408,6 +408,8 @@ const Dashboard = () => {
   }
 
   const hasPlan = planStatus === "plan_ready";
+  // Chat solo para planes de pago: Coach está oculto en el catálogo, Plus mantiene chat.
+  const hideChat = consumerPlan !== "plus" && consumerPlan !== "coach";
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";

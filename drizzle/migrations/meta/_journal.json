@@ -57,6 +57,13 @@
       "when": 1791987375048,
       "tag": "0007_blog_posts_cover_alt_related",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792237691855,
+      "tag": "0008_create_exercise_user_preferences",
+      "breakpoints": true
     }
   ]
 }

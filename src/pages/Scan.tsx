@@ -369,7 +369,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       });
     supabase
       .from("onboarding")
-      .select("goal_photo_url, goal, specific_goal, height, weight, age, gender")
+      .select("goal_photo_url, goal, specific_goal, height, weight, age, sex")
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -378,7 +378,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
             height: data.height ? Number(data.height) : undefined,
             weight: data.weight ? Number(data.weight) : undefined,
             age: data.age ? Number(data.age) : undefined,
-            gender: data.gender || undefined,
+            gender: data.sex || undefined,
           });
         }
         const url = data?.goal_photo_url ?? null;
