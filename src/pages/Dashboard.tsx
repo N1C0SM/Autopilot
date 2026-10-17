@@ -45,6 +45,8 @@ const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgres
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/pages/Recursos"));
 const Scan = lazy(() => import("@/pages/Scan"));
+const PlanEditor = lazy(() => import("@/components/dashboard/PlanEditor"));
+const FreeSessionBuilder = lazy(() => import("@/components/dashboard/FreeSessionBuilder"));
 
 const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
@@ -133,6 +135,9 @@ const Dashboard = () => {
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
     if (fromParam === "plan" || fromParam === "tracker") return fromParam;
@@ -598,6 +603,16 @@ const Dashboard = () => {
           {/* Un solo panel: lo que se ve depende también de si hay una sesión en marcha. */}
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
+              {!workoutMode && !autoStartWorkout && (
+                <div className="mx-auto mb-4 grid w-full max-w-md grid-cols-2 gap-2 lg:max-w-lg">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { void hapticTap(); setFreeOpen(true); }}>
+                    Entrenamiento libre
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { void hapticTap(); setEditorOpen(true); }}>
+                    Editar mi rutina
+                  </Button>
+                </div>
+              )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
                 <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
                   setTrainingDay(day);
@@ -605,15 +620,17 @@ const Dashboard = () => {
                 }} />
               ) : (
                 <WorkoutTracker
+                  key={freePlans ? "free" : "plan"}
                   userId={user.id}
-                  dayPlans={dayPlans}
+                  dayPlans={freePlans ?? dayPlans}
                   initialDay={trainingDay}
                   autoStart={autoStartWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
                   onSessionModeChange={setWorkoutMode}
-                  onCancel={() => setWorkoutMode(false)}
+                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); }}
                   onExit={() => {
                     setWorkoutMode(false);
+                    setFreePlans(null);
                     setSection("home");
                     void fetchData();
                   }}
@@ -622,6 +639,33 @@ const Dashboard = () => {
             </Suspense>
           </TabsContent>
         </Tabs>
+      )}
+
+      {user && (
+        <Suspense fallback={null}>
+          <PlanEditor
+            open={editorOpen}
+            onOpenChange={setEditorOpen}
+            userId={user.id}
+            dayPlans={dayPlans}
+            onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
+          />
+          <FreeSessionBuilder
+            open={freeOpen}
+            onOpenChange={setFreeOpen}
+            onStart={(exercises) => {
+              const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
+              setFreePlans([
+                ...dayPlans.filter((p) => p.day !== today),
+                { day: today, type: "gimnasio", routine_name: "Entrenamiento libre", muscle_focus: "", exercises },
+              ]);
+              setTrainingDay(today);
+              setFreeOpen(false);
+              setTrainingView("tracker");
+              setAutoStartWorkout(true);
+            }}
+          />
+        </Suspense>
       )}
 
       {hasPlan && section === "nutrition" && isTrainingOnly && (
