@@ -60,6 +60,7 @@ const Blog = () => {
     posts.forEach((p) => { if (p.category) m[p.category] = (m[p.category] || 0) + 1; });
     return m;
   }, [posts]);
+  const uncategorized = useMemo(() => posts.filter((p) => !p.category), [posts]);
 
   const chip = (active: boolean) =>
     `shrink-0 h-9 px-4 rounded-full text-sm transition-colors ${active ? "bg-foreground text-background font-medium" : "bg-secondary text-muted-foreground hover:text-foreground"}`;
@@ -96,6 +97,7 @@ const Blog = () => {
         </header>
 
         {cat === "all" ? (
+          <>
           <section aria-label="Rutas de aprendizaje" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CATEGORIES.map((c, i) => {
               const Icon = ICONS[c.slug] || BookOpen;
@@ -125,6 +127,29 @@ const Blog = () => {
               );
             })}
           </section>
+          {uncategorized.length > 0 && (
+            <section aria-label="Otros artículos" className="mt-14">
+              <h2 className="text-2xl font-bold font-display tracking-tight mb-4">Otros artículos</h2>
+              <ol className="space-y-3">
+                {uncategorized.map((p) => (
+                  <li key={p.id}>
+                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5 hover:border-primary/60 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold tracking-tight group-hover:text-primary transition-colors">{p.title}</h3>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                          {p.level && <span>{LEVEL_LABEL[p.level as Level]}</span>}
+                          {p.evidence_level && <span>· {EVIDENCE_LABEL[p.evidence_level as Evidence]?.label}</span>}
+                          {p.reading_minutes ? <span className="inline-flex items-center gap-1">· <Clock className="w-3 h-3" /> {p.reading_minutes} min</span> : null}
+                        </div>
+                      </div>
+                      <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+          </>
         ) : (
           <>
             <button onClick={() => openCat("all")} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 h-11">
