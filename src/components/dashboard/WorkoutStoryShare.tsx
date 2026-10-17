@@ -84,10 +84,20 @@ function roundedPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
   ctx.stroke();
 }
 
+// Firma común a todo lo que sale de Autopilot (stories, scan, emails).
+function drawSignature(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#FFAA3C"; ctx.beginPath(); ctx.arc(W / 2 - 190, H - 96, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#fafafa"; ctx.font = `700 28px ${F}`;
+  ctx.fillText("A U T O P I L O T", W / 2, H - 96);
+  ctx.fillStyle = "#71717a"; ctx.font = `500 22px ${F}`;
+  ctx.fillText("autopilotplan.com", W / 2, H - 56);
+}
+
 function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
   // Deep obsidian athletic background
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#09090c");
+  bg.addColorStop(0, "#08090b");
   bg.addColorStop(0.35, "#060608");
   bg.addColorStop(1, "#020203");
   ctx.fillStyle = bg;
@@ -95,17 +105,17 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
 
   // Ambient top gold glow
   const glow = ctx.createRadialGradient(W / 2, 100, 10, W / 2, 100, 650);
-  glow.addColorStop(0, "rgba(234, 179, 8, 0.085)");
-  glow.addColorStop(0.5, "rgba(234, 179, 8, 0.025)");
+  glow.addColorStop(0, "rgba(255, 170, 60, 0.085)");
+  glow.addColorStop(0.5, "rgba(255, 170, 60, 0.025)");
   glow.addColorStop(1, "rgba(0, 0, 0, 0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
 
   // Subtle top hairline accent
   const line = ctx.createLinearGradient(0, 0, W, 0);
-  line.addColorStop(0, "rgba(234, 179, 8, 0)");
-  line.addColorStop(0.5, "rgba(234, 179, 8, 0.35)");
-  line.addColorStop(1, "rgba(234, 179, 8, 0)");
+  line.addColorStop(0, "rgba(255, 170, 60, 0)");
+  line.addColorStop(0.5, "rgba(255, 170, 60, 0.35)");
+  line.addColorStop(1, "rgba(255, 170, 60, 0)");
   ctx.fillStyle = line;
   ctx.fillRect(0, 0, W, 2);
 }
@@ -178,11 +188,11 @@ function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props, logo?: H
   const by = 168;
 
   ctx.save();
-  ctx.shadowColor = isPr ? "rgba(234, 179, 8, 0.35)" : "rgba(16, 185, 129, 0.35)";
+  ctx.shadowColor = isPr ? "rgba(255, 170, 60, 0.35)" : "rgba(16, 185, 129, 0.35)";
   ctx.shadowBlur = 16;
   const grad = ctx.createLinearGradient(76, by, 76 + bw, by);
   if (isPr) {
-    grad.addColorStop(0, "rgba(234, 179, 8, 0.2)");
+    grad.addColorStop(0, "rgba(255, 170, 60, 0.2)");
     grad.addColorStop(1, "rgba(245, 158, 11, 0.08)");
   } else {
     grad.addColorStop(0, "rgba(16, 185, 129, 0.2)");
@@ -192,18 +202,18 @@ function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props, logo?: H
   ctx.beginPath();
   ctx.roundRect(76, by, bw, bh, 31);
   ctx.fill();
-  ctx.strokeStyle = isPr ? "rgba(234, 179, 8, 0.45)" : "rgba(16, 185, 129, 0.45)";
+  ctx.strokeStyle = isPr ? "rgba(255, 170, 60, 0.45)" : "rgba(16, 185, 129, 0.45)";
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
 
   // Badge icon dot & label
-  ctx.fillStyle = isPr ? "#facc15" : "#34d399";
+  ctx.fillStyle = isPr ? "#FFAA3C" : "#34d399";
   ctx.beginPath();
   ctx.arc(106, by + bh / 2, 6, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = isPr ? "#facc15" : "#34d399";
+  ctx.fillStyle = isPr ? "#FFAA3C" : "#34d399";
   ctx.font = `700 ${fs}px ${F}`;
   ctx.fillText(hi.label, 124, by + bh / 2);
 }
@@ -259,7 +269,7 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
   // Autopilot glowing gold hairline under the hero
   const gold = ctx.createLinearGradient(104, 0, W - 104, 0);
   gold.addColorStop(0, "rgba(234,179,8,0)");
-  gold.addColorStop(0.5, "#facc15");
+  gold.addColorStop(0.5, "#FFAA3C");
   gold.addColorStop(1, "rgba(234,179,8,0)");
   ctx.fillStyle = gold;
   ctx.fillRect(104, panelY + 360, W - 208, 3);
@@ -280,12 +290,12 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
     ctx.fillStyle = "#a1a1aa"; ctx.font = `600 24px ${F}`; ctx.fillText(label.toUpperCase(), x + 30, my + 200);
     ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, mw - 60, 8, 4); ctx.fill();
     const g = ctx.createLinearGradient(x + 30, 0, x + mw - 30, 0);
-    g.addColorStop(0, "#fde047"); g.addColorStop(1, "#f59e0b");
+    g.addColorStop(0, "#FFC56B"); g.addColorStop(1, "#FF7828");
     ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, Math.max(16, (mw - 60) * prog), 8, 4); ctx.fill();
   });
 
   ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#71717a"; ctx.font = `600 26px ${F}`;
-  ctx.fillText("autopilotplan.com · Tu rutina y registro inteligente", W / 2, H - 88);
+  drawSignature(ctx, W, H);
 }
 
 function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement, logo?: HTMLImageElement | null) {
@@ -306,14 +316,14 @@ function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: num
     ctx.fillStyle = hot ? "rgba(255,140,40,0.14)" : "rgba(255,255,255,0.05)";
     ctx.strokeStyle = hot ? "rgba(255,150,50,0.7)" : "rgba(255,255,255,0.18)"; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.roundRect(x, y, widths[i], 76, 38); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = hot ? "#facc15" : "#fafafa"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(m, x + widths[i] / 2, y + 38);
+    ctx.fillStyle = hot ? "#FFAA3C" : "#fafafa"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(m, x + widths[i] / 2, y + 38);
     x += widths[i] + 16;
   });
   const s = drawBigKg(ctx, fmt(p.volumeKg), W / 2, 1620, W - 240, 230);
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#a1a1aa"; ctx.font = `500 36px ${F}`;
   ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4));
   ctx.font = `600 26px ${F}`; ctx.fillStyle = "#71717a";
-  ctx.fillText("autopilotplan.com · Tu rutina y registro inteligente", W / 2, H - 88);
+  drawSignature(ctx, W, H);
 }
 
 export async function renderStory(p: Props, variant: Variant): Promise<Blob> {

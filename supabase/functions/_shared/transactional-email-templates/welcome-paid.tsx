@@ -16,7 +16,7 @@ const WelcomePaidEmail = ({ name, dashboardUrl = 'https://autopilotplan.com/dash
     <Body style={s.main}>
       <Container style={s.container}>
         <Section style={s.header}>
-          <Text style={s.logo}>Autopilot</Text>
+          <Text style={s.logo}>● Autopilot</Text>
         </Section>
         <Section style={s.body}>
           <Heading style={s.h1}>

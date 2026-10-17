@@ -2364,9 +2364,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   style={{
                     width: 1080,
                     height: 1920,
-                    background: "radial-gradient(ellipse 1000px 800px at 50% 12%, rgba(250,204,21,0.16) 0%, transparent 70%), radial-gradient(circle at 10% 90%, rgba(250,204,21,0.06) 0%, transparent 40%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px), #07070a",
+                    background: "radial-gradient(ellipse 1000px 800px at 50% 12%, rgba(255,170,60,0.16) 0%, transparent 70%), radial-gradient(circle at 10% 90%, rgba(255,170,60,0.06) 0%, transparent 40%), linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px), #08090b",
                     backgroundSize: "100% 100%, 100% 100%, 48px 48px, 48px 48px",
-                    border: "1.5px solid rgba(250,204,21,0.35)",
+                    border: "1.5px solid rgba(255,170,60,0.35)",
                     borderRadius: 44,
                     color: "#fff",
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
@@ -2377,7 +2377,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     boxSizing: "border-box",
                     position: "relative",
                     overflow: "hidden",
-                    boxShadow: "0 0 100px rgba(0,0,0,0.95), inset 0 0 80px rgba(250,204,21,0.03)",
+                    boxShadow: "0 0 100px rgba(0,0,0,0.95), inset 0 0 80px rgba(255,170,60,0.03)",
                   }}
                 >
                   {/* Top Bar / Official Autopilot Brand Identity */}
@@ -2390,18 +2390,18 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                           width: 64,
                           height: 64,
                           borderRadius: "50%",
-                          border: "2px solid #facc15",
-                          boxShadow: "0 0 24px rgba(250,204,21,0.4)",
+                          border: "2px solid #FFAA3C",
+                          boxShadow: "0 0 24px rgba(255,170,60,0.4)",
                           objectFit: "cover",
                           background: "#000",
                         }}
                       />
                       <div>
                         <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: -1, color: "#fff", lineHeight: 1.1 }}>
-                          AUTOPILOT <span style={{ color: "#facc15", fontWeight: 800 }}>BIO-LAB</span>
+                          A U T O P I L O T
                         </div>
                         <div style={{ fontSize: 12, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 700, fontFamily: "monospace", marginTop: 4 }}>
-                          ATHLETIC BIO-PASSPORT // AP-CORE 4.2
+                          // LECTURA DEL FÍSICO · SCAN
                         </div>
                       </div>
                     </div>
@@ -2412,19 +2412,19 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                           color: "#000",
                           fontWeight: 900,
                           padding: "7px 20px",
-                          background: "linear-gradient(135deg, #fde047, #facc15)",
+                          background: "linear-gradient(135deg, #FFC56B, #FFAA3C)",
                           borderRadius: 999,
                           letterSpacing: 1.2,
                           textTransform: "uppercase",
-                          boxShadow: "0 0 24px rgba(250,204,21,0.45)",
+                          boxShadow: "0 0 24px rgba(255,170,60,0.45)",
                           display: "flex",
                           alignItems: "center",
                           gap: 6,
                         }}
                       >
-                        <span style={{ fontSize: 14 }}>●</span> ANÁLISIS VERIFICADO
+                        <span style={{ fontSize: 14 }}>●</span> ANÁLISIS IA
                       </div>
-                      <div style={{ fontSize: 12, color: "#facc15", fontWeight: 700, letterSpacing: 1, fontFamily: "monospace" }}>
+                      <div style={{ fontSize: 12, color: "#FFAA3C", fontWeight: 700, letterSpacing: 1, fontFamily: "monospace" }}>
                         ID SUJETO: #AP-{result.physique ? Math.abs(Math.round(result.physique * 1147)).toString().padStart(5, "0") : "08492"}
                       </div>
                     </div>
@@ -2457,8 +2457,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                           height: h,
                           borderRadius: 32,
                           overflow: "hidden",
-                          border: "1.5px solid rgba(250,204,21,0.55)",
-                          boxShadow: "0 28px 70px rgba(0,0,0,0.92), 0 0 50px rgba(250,204,21,0.2)",
+                          border: "1.5px solid rgba(255,170,60,0.55)",
+                          boxShadow: "0 28px 70px rgba(0,0,0,0.92), 0 0 50px rgba(255,170,60,0.2)",
                           background: "#000",
                           display: "flex",
                           alignItems: "center",
@@ -2498,10 +2498,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                             />
 
                             {/* Corner Tech Brackets (Large & Vivid) */}
-                            <div style={{ position: "absolute", top: 18, left: 18, width: 36, height: 36, borderTop: "4px solid #facc15", borderLeft: "4px solid #facc15", pointerEvents: "none" }} />
-                            <div style={{ position: "absolute", top: 18, right: 18, width: 36, height: 36, borderTop: "4px solid #facc15", borderRight: "4px solid #facc15", pointerEvents: "none" }} />
-                            <div style={{ position: "absolute", bottom: 58, left: 18, width: 36, height: 36, borderBottom: "4px solid #facc15", borderLeft: "4px solid #facc15", pointerEvents: "none" }} />
-                            <div style={{ position: "absolute", bottom: 58, right: 18, width: 36, height: 36, borderBottom: "4px solid #facc15", borderRight: "4px solid #facc15", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", top: 18, left: 18, width: 36, height: 36, borderTop: "4px solid #FFAA3C", borderLeft: "4px solid #FFAA3C", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", top: 18, right: 18, width: 36, height: 36, borderTop: "4px solid #FFAA3C", borderRight: "4px solid #FFAA3C", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", bottom: 58, left: 18, width: 36, height: 36, borderBottom: "4px solid #FFAA3C", borderLeft: "4px solid #FFAA3C", pointerEvents: "none" }} />
+                            <div style={{ position: "absolute", bottom: 58, right: 18, width: 36, height: 36, borderBottom: "4px solid #FFAA3C", borderRight: "4px solid #FFAA3C", pointerEvents: "none" }} />
 
                             {/* Top Left Subject Tag */}
                             <div
@@ -2512,12 +2512,12 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                 fontSize: 12,
                                 fontWeight: 900,
                                 color: "#000",
-                                background: "#facc15",
+                                background: "#FFAA3C",
                                 padding: "5px 16px",
                                 borderRadius: 999,
                                 textTransform: "uppercase",
                                 letterSpacing: 1.5,
-                                boxShadow: "0 0 16px rgba(250,204,21,0.5)",
+                                boxShadow: "0 0 16px rgba(255,170,60,0.5)",
                               }}
                             >
                               ● SUJETO ACTIVO // FRONTAL
@@ -2531,9 +2531,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                 right: 24,
                                 fontSize: 11,
                                 fontWeight: 800,
-                                color: "#facc15",
+                                color: "#FFAA3C",
                                 background: "rgba(0,0,0,0.75)",
-                                border: "1px solid rgba(250,204,21,0.4)",
+                                border: "1px solid rgba(255,170,60,0.4)",
                                 padding: "5px 14px",
                                 borderRadius: 999,
                                 letterSpacing: 1.5,
@@ -2551,8 +2551,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                 left: 0,
                                 right: 0,
                                 height: 2.5,
-                                background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.6) 15%, #ffffff 50%, rgba(250,204,21,0.6) 85%, transparent)",
-                                boxShadow: "0 0 24px rgba(250,204,21,1)",
+                                background: "linear-gradient(90deg, transparent, rgba(255,170,60,0.6) 15%, #ffffff 50%, rgba(255,170,60,0.6) 85%, transparent)",
+                                boxShadow: "0 0 24px rgba(255,170,60,1)",
                                 pointerEvents: "none",
                               }}
                             />
@@ -2569,15 +2569,15 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                 pointerEvents: "none",
                               }}
                             >
-                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 12px #facc15" }} />
-                              <div style={{ width: 20, height: 2, background: "#facc15" }} />
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FFAA3C", boxShadow: "0 0 12px #FFAA3C" }} />
+                              <div style={{ width: 20, height: 2, background: "#FFAA3C" }} />
                               <div
                                 style={{
                                   padding: "7px 16px",
                                   borderRadius: 999,
                                   background: "rgba(0,0,0,0.9)",
-                                  border: "1.5px solid #facc15",
-                                  color: "#fde047",
+                                  border: "1.5px solid #FFAA3C",
+                                  color: "#FFC56B",
                                   fontSize: 12,
                                   fontWeight: 800,
                                   letterSpacing: 1.2,
@@ -2605,8 +2605,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                   padding: "7px 16px",
                                   borderRadius: 999,
                                   background: "rgba(0,0,0,0.9)",
-                                  border: "1.5px solid #facc15",
-                                  color: "#fde047",
+                                  border: "1.5px solid #FFAA3C",
+                                  color: "#FFC56B",
                                   fontSize: 12,
                                   fontWeight: 800,
                                   letterSpacing: 1.2,
@@ -2615,8 +2615,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                               >
                                 ⊕ SIMETRÍA BILATERAL: 94.2%
                               </div>
-                              <div style={{ width: 20, height: 2, background: "#facc15" }} />
-                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 12px #facc15" }} />
+                              <div style={{ width: 20, height: 2, background: "#FFAA3C" }} />
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FFAA3C", boxShadow: "0 0 12px #FFAA3C" }} />
                             </div>
 
                             {/* AR Biometric Pin: Core / BF */}
@@ -2631,15 +2631,15 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                 pointerEvents: "none",
                               }}
                             >
-                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 12px #facc15" }} />
-                              <div style={{ width: 20, height: 2, background: "#facc15" }} />
+                              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#FFAA3C", boxShadow: "0 0 12px #FFAA3C" }} />
+                              <div style={{ width: 20, height: 2, background: "#FFAA3C" }} />
                               <div
                                 style={{
                                   padding: "7px 16px",
                                   borderRadius: 999,
                                   background: "rgba(0,0,0,0.9)",
-                                  border: "1.5px solid #facc15",
-                                  color: "#fde047",
+                                  border: "1.5px solid #FFAA3C",
+                                  color: "#FFC56B",
                                   fontSize: 12,
                                   fontWeight: 800,
                                   letterSpacing: 1.2,
@@ -2695,7 +2695,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                   display: "flex",
                                   justifyContent: "center",
                                   alignItems: "center",
-                                  borderRight: "1px solid rgba(250,204,21,0.25)",
+                                  borderRight: "1px solid rgba(255,170,60,0.25)",
                                 }}
                               >
                                 <img loading="eager" decoding="sync"
@@ -2715,7 +2715,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                     fontSize: 11,
                                     fontWeight: 900,
                                     color: "#000",
-                                    background: "#facc15",
+                                    background: "#FFAA3C",
                                     padding: "5px 14px",
                                     borderRadius: 999,
                                     textTransform: "uppercase",
@@ -2724,8 +2724,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                                 >
                                   {p.label}
                                 </div>
-                                <div style={{ position: "absolute", top: 12, left: 12, width: 26, height: 26, borderTop: "3.5px solid #facc15", borderLeft: "3.5px solid #facc15", pointerEvents: "none" }} />
-                                <div style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderTop: "3.5px solid #facc15", borderRight: "3.5px solid #facc15", pointerEvents: "none" }} />
+                                <div style={{ position: "absolute", top: 12, left: 12, width: 26, height: 26, borderTop: "3.5px solid #FFAA3C", borderLeft: "3.5px solid #FFAA3C", pointerEvents: "none" }} />
+                                <div style={{ position: "absolute", top: 12, right: 12, width: 26, height: 26, borderTop: "3.5px solid #FFAA3C", borderRight: "3.5px solid #FFAA3C", pointerEvents: "none" }} />
                               </div>
                             );
                           })
@@ -2739,16 +2739,16 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                             left: 0,
                             right: 0,
                             padding: "14px 28px",
-                            background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.95) 50%, #07070a 100%)",
+                            background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.95) 50%, #08090b 100%)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            borderTop: "1px solid rgba(250,204,21,0.35)",
+                            borderTop: "1px solid rgba(255,170,60,0.35)",
                             zIndex: 3,
                           }}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#facc15", fontSize: 13, fontWeight: 800, letterSpacing: 2 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 10px #facc15" }} />
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#FFAA3C", fontSize: 13, fontWeight: 800, letterSpacing: 2 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FFAA3C", boxShadow: "0 0 10px #FFAA3C" }} />
                             NEURAL VISION PRO · SCAN MULTIAXIAL
                           </div>
                           <div style={{ color: "#a1a1aa", fontSize: 12, fontFamily: "monospace", letterSpacing: 1.5, fontWeight: 700 }}>
@@ -2784,15 +2784,15 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                           padding: "16px 20px",
                           borderRadius: 24,
                           background: "rgba(255,255,255,0.03)",
-                          border: "1px solid rgba(250,204,21,0.25)",
+                          border: "1px solid rgba(255,170,60,0.25)",
                         }}
                       >
                         {/* Stat 1: % Grasa */}
                         <div style={{ padding: "0 14px" }}>
-                          <div style={{ fontSize: 12, color: "#fde047", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
+                          <div style={{ fontSize: 12, color: "#FFC56B", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
                             % Grasa Subcutánea
                           </div>
-                          <div style={{ fontSize: 64, fontWeight: 900, color: "#facc15", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                          <div style={{ fontSize: 64, fontWeight: 900, color: "#FFAA3C", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
                             {bodyFatVal}
                           </div>
                           <div style={{ fontSize: 13, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
@@ -2824,7 +2824,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                           <div style={{ fontSize: 12, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
                             Score Biométrico
                           </div>
-                          <div style={{ fontSize: 64, fontWeight: 900, color: "#fde047", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                          <div style={{ fontSize: 64, fontWeight: 900, color: "#FFC56B", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
                             {athleteScore}<span style={{ fontSize: 28, color: "#8e8e93", fontWeight: 700 }}>/100</span>
                           </div>
                           <div style={{ fontSize: 13, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
@@ -2854,7 +2854,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                          <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
+                          <div style={{ fontSize: 12, color: "#FFAA3C", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800, fontFamily: "monospace" }}>
                             // ESPECTRO DE COMPOSICIÓN CORPORAL (ESTÁNDAR DEXA)
                           </div>
                           <div style={{ fontSize: 11, color: "#8e8e93", fontFamily: "monospace" }}>
@@ -2867,7 +2867,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                           <div style={{ flex: 1, background: "linear-gradient(90deg, #1e3a8a, #3b82f6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#bfdbfe", letterSpacing: 1 }}>
                             ESENCIAL 5-8%
                           </div>
-                          <div style={{ flex: 1.3, background: "linear-gradient(90deg, #ca8a04, #facc15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "#000", letterSpacing: 1, boxShadow: "0 0 14px rgba(250,204,21,0.5)" }}>
+                          <div style={{ flex: 1.3, background: "linear-gradient(90deg, #ca8a04, #FFAA3C)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, color: "#000", letterSpacing: 1, boxShadow: "0 0 14px rgba(255,170,60,0.5)" }}>
                             ★ ATLETA 9-13%
                           </div>
                           <div style={{ flex: 1, background: "linear-gradient(90deg, #15803d, #22c55e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#bbf7d0", letterSpacing: 1 }}>
@@ -2881,15 +2881,15 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         {/* Active Beacon Pointer */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 8px #facc15" }} />
-                            <span style={{ fontSize: 13, fontWeight: 900, color: "#facc15", letterSpacing: 0.5 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#FFAA3C", boxShadow: "0 0 8px #FFAA3C" }} />
+                            <span style={{ fontSize: 13, fontWeight: 900, color: "#FFAA3C", letterSpacing: 0.5 }}>
                               ▲ TU NIVEL ESTIMADO: {bodyFatVal}
                             </span>
                             <span style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600 }}>
                               ({bfNum <= 13 ? "ZONA ATLETA // DEFINICIÓN MÁXIMA" : bfNum <= 17 ? "ZONA FITNESS // EQUILIBRIO" : "ZONA VOLUMEN // RECOMP"})
                             </span>
                           </div>
-                          <div style={{ fontSize: 11, color: "#000", fontWeight: 900, padding: "3px 12px", borderRadius: 999, background: "#facc15" }}>
+                          <div style={{ fontSize: 11, color: "#000", fontWeight: 900, padding: "3px 12px", borderRadius: 999, background: "#FFAA3C" }}>
                             TOP 10% POBLACIONAL
                           </div>
                         </div>
@@ -2912,12 +2912,12 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         style={{
                           padding: "18px 24px",
                           borderRadius: 24,
-                          background: "linear-gradient(135deg, rgba(250,204,21,0.06) 0%, rgba(255,255,255,0.02) 100%)",
-                          border: "1.5px solid rgba(250,204,21,0.3)",
+                          background: "linear-gradient(135deg, rgba(255,170,60,0.06) 0%, rgba(255,255,255,0.02) 100%)",
+                          border: "1.5px solid rgba(255,170,60,0.3)",
                         }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                          <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 800, fontFamily: "monospace" }}>
+                          <div style={{ fontSize: 12, color: "#FFAA3C", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 800, fontFamily: "monospace" }}>
                             // PROTOCOLO BIOMECÁNICO & DIRECTRICES IA
                           </div>
                           <div style={{ fontSize: 11, color: "#8e8e93", fontFamily: "monospace" }}>
@@ -2937,12 +2937,12 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                               padding: "8px 18px",
                               borderRadius: 999,
                               background: "rgba(0,0,0,0.85)",
-                              border: "1.5px solid #facc15",
-                              color: "#fde047",
+                              border: "1.5px solid #FFAA3C",
+                              color: "#FFC56B",
                               fontSize: 13,
                               fontWeight: 800,
                               letterSpacing: 0.5,
-                              boxShadow: "0 0 16px rgba(250,204,21,0.2)",
+                              boxShadow: "0 0 16px rgba(255,170,60,0.2)",
                             }}
                           >
                             ⚡ FOCO PRIMARIO: {tag1}
@@ -2966,12 +2966,12 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                               padding: "8px 18px",
                               borderRadius: 999,
                               background: "rgba(0,0,0,0.85)",
-                              border: "1.5px solid #facc15",
-                              color: "#fde047",
+                              border: "1.5px solid #FFAA3C",
+                              color: "#FFC56B",
                               fontSize: 13,
                               fontWeight: 800,
                               letterSpacing: 0.5,
-                              boxShadow: "0 0 16px rgba(250,204,21,0.2)",
+                              boxShadow: "0 0 16px rgba(255,170,60,0.2)",
                             }}
                           >
                             🔥 PROTOCOLO: Sobrecarga Progresiva RPE 8-9
@@ -3006,10 +3006,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         fontSize: 20,
                         fontWeight: 900,
                         color: "#000",
-                        background: "linear-gradient(135deg, #fde047, #facc15)",
+                        background: "linear-gradient(135deg, #FFC56B, #FFAA3C)",
                         padding: "12px 28px",
                         borderRadius: 999,
-                        boxShadow: "0 0 35px rgba(250,204,21,0.5)",
+                        boxShadow: "0 0 35px rgba(255,170,60,0.5)",
                         letterSpacing: -0.3,
                         display: "flex",
                         alignItems: "center",
@@ -3076,21 +3076,21 @@ const StatBox = ({
   <div
     style={{
       background: highlight
-        ? "linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.03))"
+        ? "linear-gradient(135deg, rgba(255,170,60,0.14), rgba(255,170,60,0.03))"
         : "rgba(255,255,255,0.04)",
-      border: highlight ? "1.5px solid rgba(250,204,21,0.45)" : "1px solid rgba(255,255,255,0.1)",
+      border: highlight ? "1.5px solid rgba(255,170,60,0.45)" : "1px solid rgba(255,255,255,0.1)",
       borderRadius: 24,
       padding: "24px 18px",
       display: "flex",
       flexDirection: "column",
       justifyContent: "space-between",
-      boxShadow: highlight ? "0 0 24px rgba(250,204,21,0.12)" : "none",
+      boxShadow: highlight ? "0 0 24px rgba(255,170,60,0.12)" : "none",
     }}
   >
     <div
       style={{
         fontSize: 13,
-        color: highlight ? "#fde047" : "#8e8e93",
+        color: highlight ? "#FFC56B" : "#8e8e93",
         textTransform: "uppercase",
         letterSpacing: 2,
         fontWeight: 700,
@@ -3104,7 +3104,7 @@ const StatBox = ({
         fontSize: 48,
         fontWeight: 800,
         letterSpacing: -1.5,
-        color: highlight ? "#facc15" : "#f5f5f7",
+        color: highlight ? "#FFAA3C" : "#f5f5f7",
         lineHeight: 1,
         margin: "6px 0",
       }}
