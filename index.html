@@ -69,6 +69,6 @@
       <!--prerender:content-->
     </div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));</script>
+    <script>if ("serviceWorker" in navigator && !window.Capacitor?.isNativePlatform()) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));</script>
   </body>
 </html>
