@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, Moon,
-  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play, Zap,
+  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
