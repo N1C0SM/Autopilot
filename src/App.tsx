@@ -18,6 +18,7 @@ const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const BookDownload = lazy(() => import("./pages/BookDownload"));
 const SharedBook = lazy(() => import("./pages/SharedBook"));
 
+const OnboardingChoice = lazy(() => import("./pages/OnboardingChoice"));
 const Onboarding = lazy(() => import("./pages/Configurator"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Settings = lazy(() => import("./pages/Settings"));
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/descarga-libro" element={<BookDownload />} />
             <Route path="/d/:token" element={<SharedBook />} />
 
+            <Route path="/onboarding-choice" element={<OnboardingChoice />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<DashboardRedirect />} />
             <Route path="/dashboard/user/:userId" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

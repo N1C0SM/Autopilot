@@ -212,7 +212,7 @@ const Dashboard = () => {
       setProfileAvatar(profile.avatar_url || "");
 
       if (profile.plan_status === "onboarding") {
-        navigate("/onboarding");
+        navigate("/onboarding-choice");
         return;
       }
 
@@ -223,7 +223,7 @@ const Dashboard = () => {
         .eq("user_id", user.id)
         .maybeSingle();
       if (!onb) {
-        navigate("/onboarding");
+        navigate("/onboarding-choice");
         return;
       }
 

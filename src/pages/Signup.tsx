@@ -163,7 +163,7 @@ const Signup = () => {
     void hapticTap();
     setResending(true);
     try {
-      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: authRedirect("/onboarding") } });
+      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: authRedirect("/onboarding-choice") } });
       if (error) { void hapticNotify("error"); toast.error("No se ha podido reenviar. Espera un momento y vuelve a intentarlo."); }
       else { setResendCooldown(60); void hapticNotify("success"); toast.success("Enlace reenviado. Revisa tu correo."); }
     } catch { void hapticNotify("error"); toast.error("No se ha podido reenviar el correo."); }
@@ -250,7 +250,7 @@ const Signup = () => {
             if (selectedPlan) {
               try { sessionStorage.setItem("autopilot_selected_plan", selectedPlan); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
             }
-            const result = await signInWithApple("/onboarding");
+            const result = await signInWithApple("/onboarding-choice");
             if (result.error) { void hapticNotify("error"); toast.error("No se pudo continuar con Apple"); }
           }}
         />
@@ -414,7 +414,7 @@ const Signup = () => {
       {!fromQuiz && (
         <p className="mt-6 text-center type-subhead text-muted-foreground">
           ¿Aún no has configurado tu plan?{" "}
-          <Link to="/onboarding" onClick={() => void hapticTap()} className="inline-flex min-h-11 items-center font-medium text-primary transition-opacity active:opacity-60">
+          <Link to="/onboarding-choice" onClick={() => void hapticTap()} className="inline-flex min-h-11 items-center font-medium text-primary transition-opacity active:opacity-60">
             Diséñalo gratis
           </Link>
         </p>

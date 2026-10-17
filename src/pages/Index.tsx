@@ -91,7 +91,7 @@ export default function Index() {
         <h1 className="type-large-title sm:text-[48px] sm:leading-[52px] md:text-[64px] md:leading-[68px]"><span className="block">Tu entrenamiento.</span> <span className="block">Tu nutrición.</span> <span className="block text-primary">Tu progreso.</span></h1>
         <p className="mx-auto mt-5 max-w-md type-body text-muted-foreground md:max-w-xl md:text-[21px] md:leading-[28px]">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
         <div className="mx-auto mt-8 flex max-w-sm flex-col items-stretch gap-1 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
-          <Button variant="hero" size="lg" asChild className="sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>
+          <Button variant="hero" size="lg" asChild className="sm:px-10"><Link to="/onboarding-choice" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>
           <Button variant="plain" size="lg" asChild><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
         </div>
         <p className="mt-4 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
@@ -103,7 +103,7 @@ export default function Index() {
     <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-14 sm:pt-20">
       <p className="mx-auto max-w-6xl px-5 type-footnote text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
-        <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
+        <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding-choice"); }} />
       </Suspense>
     </section>
 
@@ -161,7 +161,7 @@ export default function Index() {
       <div className="mx-auto mt-16 max-w-md text-center sm:mt-24">
         <h2 className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza a entrenar con Autopilot</h2>
         <p className="mt-2 type-body text-muted-foreground">Gratis y sin tarjeta.</p>
-        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
+        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding-choice" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
       </div>
     </section>
   </PublicLayout>;

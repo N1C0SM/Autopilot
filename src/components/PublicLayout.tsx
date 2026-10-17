@@ -57,10 +57,10 @@ export default function PublicLayout({ title, description, children }: { title: 
         <nav aria-label="Navegación principal" className="hidden items-center gap-1 lg:flex">
           {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 type-subhead transition-colors active:opacity-60 ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
           <Button variant="plain" asChild><Link to="/login">Iniciar sesión</Link></Button>
-          <Button variant="tinted" asChild><Link to="/onboarding">Crear mi rutina</Link></Button>
+          <Button variant="tinted" asChild><Link to="/onboarding-choice">Crear mi rutina</Link></Button>
         </nav>
         <div className="flex items-center lg:hidden">
-          <Button variant="plain" asChild><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina</Link></Button>
+          <Button variant="plain" asChild><Link to="/onboarding-choice" onClick={() => void hapticTap()}>Crear mi rutina</Link></Button>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={1.75} /></Button></SheetTrigger>
             <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>
