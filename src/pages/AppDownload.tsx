@@ -48,6 +48,9 @@ export default function AppDownload() {
         <a href={APK_URL} rel="noopener">Descargar APK</a>
       </Button>
       <Steps items={androidSteps} />
+      <p className="mt-5 rounded-2xl border border-border bg-background/60 p-4 text-xs text-muted-foreground">
+        ¿Ya la tienes? Para actualizar, descarga de nuevo e instala encima: tus datos se mantienen.
+      </p>
     </section>
   );
 

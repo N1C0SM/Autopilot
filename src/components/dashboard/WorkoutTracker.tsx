@@ -571,16 +571,48 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       rpe: rpe ?? sessionRpe,
     }));
 
+    const pendingKey = `autopilot:series-pendientes:${userId}`;
     const write = saveQueueRef.current.then(async () => {
       if (rows.length === 0) return;
-      const { error } = await supabase.from("workout_logs").upsert(rows, {
-        onConflict: "user_id,day_label,logged_at,exercise_name",
-      });
-      if (error) throw error;
+      try {
+        const { error } = await supabase.from("workout_logs").upsert(rows, {
+          onConflict: "user_id,day_label,logged_at,exercise_name",
+        });
+        if (error) throw error;
+        localStorage.removeItem(pendingKey);
+      } catch (e) {
+        // Sin cobertura: guardamos en el móvil y se envía al volver la señal.
+        try { localStorage.setItem(pendingKey, JSON.stringify(rows)); } catch { /* lleno */ }
+        throw e;
+      }
     });
     saveQueueRef.current = write.catch(() => undefined);
     await write;
   };
+
+  // Al recuperar la señal, envía las series que quedaron guardadas en el móvil.
+  useEffect(() => {
+    const pendingKey = `autopilot:series-pendientes:${userId}`;
+    const flush = async () => {
+      const raw = localStorage.getItem(pendingKey);
+      if (!raw) return;
+      try {
+        const rows = JSON.parse(raw);
+        const { error } = await supabase.from("workout_logs").upsert(rows, {
+          onConflict: "user_id,day_label,logged_at,exercise_name",
+        });
+        if (!error) {
+          localStorage.removeItem(pendingKey);
+          setSaveError(false);
+          setSaveStatus("saved");
+          setSavedAt(new Date());
+        }
+      } catch { /* se reintenta en el próximo evento */ }
+    };
+    void flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [userId]);
 
   const cancelPendingAutosave = () => {
     saveAttemptRef.current += 1;
