@@ -97,6 +97,7 @@ const Blog = () => {
         </header>
 
         {cat === "all" ? (
+          <>
           <section aria-label="Rutas de aprendizaje" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {CATEGORIES.map((c, i) => {
               const Icon = ICONS[c.slug] || BookOpen;
