@@ -268,7 +268,7 @@ const priorityLine = (muscles: string[]) =>
 
 type PlanApplyCopy = { title: string; description: string; tone: "ok" | "warn" };
 
-const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean; onOpenPlan?: () => void; onPlanChanged?: () => void } = {}) => {
+const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { inline?: boolean; onOpenPlan?: () => void; onStartWorkout?: () => void; onPlanChanged?: () => void } = {}) => {
   const plans = usePlanAvailability();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -814,6 +814,25 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
       sessionStorage.setItem("autopilot_training_view", "plan");
     } catch { /* sin almacenamiento */ }
     const target = user ? `/dashboard/user/${user.id}?section=training&view=plan` : "/dashboard?section=training&view=plan";
+    navigate(target);
+  };
+
+  const startWorkoutFromScan = () => {
+    void hapticTap();
+    if (result && canApplyPlan && hasScanInferences(result, scanOnboarding) && planApplyState === "idle") {
+      void applyScanToPlan(result);
+    }
+    if (onStartWorkout) {
+      onStartWorkout();
+      return;
+    }
+    try {
+      sessionStorage.setItem("autopilot_section", "training");
+      sessionStorage.setItem("autopilot_training_view", "tracker");
+    } catch { /* sin almacenamiento */ }
+    const target = user
+      ? `/dashboard/user/${user.id}?section=training&view=tracker&autostart=true`
+      : `/dashboard?section=training&view=tracker&autostart=true`;
     navigate(target);
   };
 
@@ -2286,9 +2305,15 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
               ) : (
                 <section className="mx-auto w-full max-w-sm space-y-2">
                   {(user || routeUserId) && (
-                    <Button size="lg" className="w-full" onClick={openPlan}>
-                      Ver mi plan
-                    </Button>
+                    <>
+                      <Button size="lg" variant="hero" className="w-full gap-2 shadow-sm" onClick={startWorkoutFromScan}>
+                        <Dumbbell className="h-4 w-4" aria-hidden="true" />
+                        Comenzar entrenamiento de hoy
+                      </Button>
+                      <Button size="lg" variant="secondary" className="w-full" onClick={openPlan}>
+                        Ver rutina semanal
+                      </Button>
+                    </>
                   )}
                   {user && canApplyPlan && hasScanInferences(result, scanOnboarding) && (planApplyState === "idle" || planApplyState === "error") && (
                     <Button

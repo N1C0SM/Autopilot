@@ -524,6 +524,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       if (!isWarmup && w && prevBest > 0 && w > prevBest) {
         const diff = Math.round((w - prevBest) * 10) / 10;
         setLivePRs((prev) => ({ ...prev, [`${exerciseName}#${setIndex}`]: `+${diff} kg` }));
+        void hapticImpact("heavy");
+        void hapticNotify("success");
+        toast.success(`¡Nuevo récord personal en ${exerciseName}! +${diff} kg`, { icon: "🏆" });
         try { navigator.vibrate?.([30, 60, 30]); } catch { /* noop */ }
       }
     } else {
@@ -1358,11 +1361,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                       <div className="pt-4">
                         {/* Sugerencia de sobrecarga progresiva y cálculo de la siguiente carga */}
                         {progression && !allDone && (
-                          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-card px-3.5 py-2.5">
+                          <div className="mb-3.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card px-3.5 py-2.5 shadow-sm">
                             <div className="flex min-w-0 items-center gap-2.5">
-                              <TrendingUp className="h-4 w-4 shrink-0 text-primary" strokeWidth={2} aria-hidden="true" />
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                                <TrendingUp className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                              </div>
                               <div className="min-w-0">
-                                <p className="type-subhead font-semibold leading-tight text-foreground">
+                                <p className="type-subhead font-bold leading-tight text-foreground">
                                   {progression.label === "Subir"
                                     ? `Siguiente carga: ${progression.weight} kg`
                                     : progression.label === "Añadir rep"
@@ -1377,8 +1382,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                             {(progression.label === "Subir" || progression.label === "Añadir rep") && (
                               <button
                                 type="button"
-                                onClick={() => applyProgression(ex.name, progression)}
-                                className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 type-caption1 font-semibold text-primary transition-opacity active:opacity-60"
+                                onClick={() => {
+                                  void hapticImpact("medium");
+                                  applyProgression(ex.name, progression);
+                                }}
+                                className="shrink-0 rounded-xl bg-primary px-3 py-1.5 type-caption1 font-bold text-primary-foreground shadow-sm transition-transform active:scale-95"
                               >
                                 Aplicar
                               </button>
@@ -1490,10 +1498,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                             </div>
 
                             {livePR && (
-                              <p className="mt-1.5 flex items-center gap-1.5 type-footnote font-medium text-primary">
-                                <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                                Récord · {livePR}
-                              </p>
+                              <div className="mt-2 flex items-center gap-1.5 self-start rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
+                                <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
+                                <span>Récord personal · {livePR}</span>
+                              </div>
                             )}
 
                             {/* Dropset: bajadas dentro de la misma serie, sin descanso entre ellas */}

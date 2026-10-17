@@ -156,6 +156,11 @@ const Dashboard = () => {
     if (vw === "plan" || vw === "tracker") {
       setTrainingView(vw);
     }
+    if (searchParams.get("autostart") === "true") {
+      setAutoStartWorkout(true);
+      setTrainingView("tracker");
+      setWorkoutMode(true);
+    }
   }, [searchParams]);
   const [firstWeek, setFirstWeek] = useState<{
     dayNumber: number;
@@ -690,6 +695,12 @@ const Dashboard = () => {
                 onOpenPlan={() => {
                   setAutoStartWorkout(false);
                   setTrainingView("plan");
+                  setSection("training");
+                }}
+                onStartWorkout={() => {
+                  setAutoStartWorkout(true);
+                  setTrainingView("tracker");
+                  setWorkoutMode(true);
                   setSection("training");
                 }}
                 onPlanChanged={() => { void fetchData(); }}
