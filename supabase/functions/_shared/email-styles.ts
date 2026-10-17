@@ -37,6 +37,12 @@ export const email = {
     borderBottom: '1px solid #1f2024',
   },
 
+  logoImg: {
+    borderRadius: '50%',
+    display: 'block' as const,
+    margin: '0 0 14px',
+  },
+
   logo: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Arial, sans-serif',
     fontSize: '13px',
