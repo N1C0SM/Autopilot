@@ -3,6 +3,7 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import { hapticTap, isNative } from "@/lib/native";
 
 // Sizes come from the `.btn-*` component classes in index.css (UIKit metrics on the
 // phone, compact from `md` up) so a utility passed at the call site still wins.
@@ -47,9 +48,15 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    // Main actions give a light tap in the native app, like iOS buttons.
+    const primary = !variant || variant === "default" || variant === "hero" || variant === "destructive";
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (primary && isNative()) void hapticTap();
+      onClick?.(event);
+    };
+    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} onClick={handleClick} {...props} />;
   },
 );
 Button.displayName = "Button";
