@@ -598,6 +598,16 @@ const Dashboard = () => {
           {/* Un solo panel: lo que se ve depende también de si hay una sesión en marcha. */}
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
+              {!workoutMode && !autoStartWorkout && (
+                <div className="mx-auto mb-4 grid w-full max-w-md grid-cols-2 gap-2 lg:max-w-lg">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { void hapticTap(); setFreeOpen(true); }}>
+                    Entrenamiento libre
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => { void hapticTap(); setEditorOpen(true); }}>
+                    Editar mi rutina
+                  </Button>
+                </div>
+              )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
                 <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
                   setTrainingDay(day);
@@ -605,8 +615,9 @@ const Dashboard = () => {
                 }} />
               ) : (
                 <WorkoutTracker
+                  key={freePlans ? "free" : "plan"}
                   userId={user.id}
-                  dayPlans={dayPlans}
+                  dayPlans={freePlans ?? dayPlans}
                   initialDay={trainingDay}
                   autoStart={autoStartWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
