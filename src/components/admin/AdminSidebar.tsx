@@ -11,7 +11,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, UserCog, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle, Roadmap } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle } from "lucide-react";
 import type { AdminSection } from "@/pages/Admin";
 import { hapticTap } from "@/lib/native";
 

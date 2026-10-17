@@ -32,7 +32,6 @@ const EmailTemplatesEditor = lazy(() => import("@/components/admin/EmailTemplate
 const GoalPhysiquesEditor = lazy(() => import("@/components/admin/GoalPhysiquesEditor"));
 const ProductsAdmin = lazy(() => import("@/components/admin/ProductsAdmin"));
 const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
-const RoadmapAdmin = lazy(() => import("@/components/admin/Roadmap"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 
 export interface Profile {
@@ -53,7 +52,7 @@ export interface Profile {
   renewal_decision?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "roadmap" | "account";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account";
 
 const SECTION_TITLES: Record<AdminSection, string> = {
   dashboard: "Dashboard",
@@ -70,7 +69,6 @@ const SECTION_TITLES: Record<AdminSection, string> = {
   payments: "Pagos",
   emails: "Emails",
   products: "Planes y productos",
-  roadmap: "Roadmap",
   account: "Mi cuenta",
 };
 
@@ -386,12 +384,6 @@ const Admin = () => {
             )}
 
             {section === "products" && <ProductsAdmin />}
-
-            {section === "roadmap" && (
-              <Suspense fallback={<SectionFallback />}>
-                <RoadmapAdmin />
-              </Suspense>
-            )}
 
             {section === "account" && (
               <div className="max-w-2xl">
