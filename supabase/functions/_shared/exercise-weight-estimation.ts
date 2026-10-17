@@ -32,13 +32,11 @@ const EXERCISE_COEFFICIENTS: Record<string, {
   "Press banca inclinado": { leanMass: 0.55, bodyWeight: 0.42, bilateral: true },
   "Press con mancuernas": { leanMass: 0.30, bodyWeight: 0.23, bilateral: false },
   "Aperturas con mancuernas": { leanMass: 0.18, bodyWeight: 0.14, bilateral: false },
-  "Fondos en paralelas": { leanMass: 0.70, bodyWeight: 0.55, bilateral: true },
   
   // Espalda
   "Peso muerto": { leanMass: 1.00, bodyWeight: 0.75, bilateral: true },
   "Remo con barra": { leanMass: 0.55, bodyWeight: 0.42, bilateral: true },
   "Remo con mancuerna": { leanMass: 0.28, bodyWeight: 0.22, bilateral: false },
-  "Dominadas": { leanMass: 0.85, bodyWeight: 0.70, bilateral: true },
   "Jalones al pecho": { leanMass: 0.60, bodyWeight: 0.45, bilateral: true },
   "Pull-over": { leanMass: 0.25, bodyWeight: 0.19, bilateral: false },
   
@@ -115,6 +113,8 @@ export function estimateExerciseWeight(
   scanData: ScanData | null | undefined,
   userData: UserData | null | undefined,
 ): string {
+  // Bodyweight moves start at 0 kg added load unless the name explicitly asks for a weight belt.
+  if (/dominad|fondo|pull-?up|chin-?up|dip|flexi|push-?up|muscle.?up/i.test(exerciseName) && !/lastr|cintur/i.test(exerciseName)) return "";
   const coefficient = findExerciseCoefficient(exerciseName);
   
   // Si no tenemos coeficiente para este ejercicio, devolver vacío
