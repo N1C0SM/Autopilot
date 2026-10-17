@@ -32,6 +32,7 @@ const EmailTemplatesEditor = lazy(() => import("@/components/admin/EmailTemplate
 const GoalPhysiquesEditor = lazy(() => import("@/components/admin/GoalPhysiquesEditor"));
 const ProductsAdmin = lazy(() => import("@/components/admin/ProductsAdmin"));
 const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
+const RoadmapAdmin = lazy(() => import("@/components/admin/Roadmap"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 
 export interface Profile {
