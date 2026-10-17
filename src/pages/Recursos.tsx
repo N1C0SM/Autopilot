@@ -1,3 +1,4 @@
+import PublicLayout from "@/components/PublicLayout";
 import { parseRecommendations } from "@/lib/siteContent";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -225,6 +226,12 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   );
 
   if (embedded) return body;
+
+  if (!user) return (
+    <PublicLayout title="Recursos: guías y artículos de entrenamiento · Autopilot" description="Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot.">
+      {body}
+    </PublicLayout>
+  );
 
   return (
     <SidebarProvider>
