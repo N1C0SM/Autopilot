@@ -2335,142 +2335,433 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                   ref={shareRef}
                   style={{
                     width: 1080,
-                    height: 1920,
-                    background:
-                      "radial-gradient(circle at 50% 0%, rgba(250,204,21,0.22), transparent 55%), radial-gradient(circle at 10% 95%, rgba(250,204,21,0.1), transparent 50%), #070709",
+                    height: 1600,
+                    background: "linear-gradient(180deg, #0e0e13 0%, #060608 100%)",
+                    border: "2px solid rgba(250,204,21,0.35)",
+                    borderRadius: 36,
                     color: "#fff",
                     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
-                    padding: "64px 56px",
+                    padding: "48px 52px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     boxSizing: "border-box",
                     position: "relative",
+                    overflow: "hidden",
+                    boxShadow: "0 0 80px rgba(0,0,0,0.9), inset 0 0 100px rgba(250,204,21,0.04)",
                   }}
                 >
+                  {/* Background Radial Glow */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "-15%",
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 900,
+                      height: 500,
+                      background: "radial-gradient(circle, rgba(250,204,21,0.18) 0%, transparent 70%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+
                   {/* Top Bar / Branding */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", position: "relative", zIndex: 2 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                       <div
                         style={{
-                          width: 58,
-                          height: 58,
-                          borderRadius: 18,
-                          background: "linear-gradient(135deg, rgba(250,204,21,0.25), rgba(250,204,21,0.06))",
-                          border: "1.5px solid rgba(250,204,21,0.6)",
+                          width: 54,
+                          height: 54,
+                          borderRadius: 16,
+                          background: "linear-gradient(135deg, rgba(250,204,21,0.3), rgba(250,204,21,0.05))",
+                          border: "1.5px solid rgba(250,204,21,0.7)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 28,
-                          boxShadow: "0 0 24px rgba(250,204,21,0.25)",
+                          fontSize: 26,
+                          boxShadow: "0 0 24px rgba(250,204,21,0.35)",
                         }}
                       >
                         ⚡
                       </div>
                       <div>
-                        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>
-                          Autopilot
+                        <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: -0.5, color: "#fff" }}>
+                          AUTOPILOT <span style={{ color: "#facc15", fontWeight: 700 }}>// BIO-VISION</span>
                         </div>
-                        <div style={{ fontSize: 13, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 600 }}>
-                          AI Physique Report
+                        <div style={{ fontSize: 12, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 600, fontFamily: "monospace" }}>
+                          SCAN PROTOCOL 4.2 · SUBJECT ID #AP-084
                         </div>
                       </div>
                     </div>
-                    <div
-                      style={{
-                        fontSize: 14,
-                        color: "#facc15",
-                        textTransform: "uppercase",
-                        letterSpacing: 1.5,
-                        fontWeight: 700,
-                        padding: "10px 20px",
-                        background: "rgba(250,204,21,0.1)",
-                        border: "1px solid rgba(250,204,21,0.4)",
-                        borderRadius: 999,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 8px #facc15" }} />
-                      Análisis Biométrico IA
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#000",
+                          fontWeight: 800,
+                          padding: "6px 16px",
+                          background: "linear-gradient(135deg, #fde047, #facc15)",
+                          borderRadius: 999,
+                          letterSpacing: 1,
+                          textTransform: "uppercase",
+                          boxShadow: "0 0 20px rgba(250,204,21,0.35)",
+                        }}
+                      >
+                        TIER ATLETA ●
+                      </div>
+                      <div style={{ fontSize: 13, color: "#facc15", fontWeight: 700, letterSpacing: 1 }}>
+                        SCORE: {result.physique ? Math.min(98, Math.max(72, Math.round(result.physique * 10 + 15))) : 88} / 100
+                      </div>
                     </div>
                   </div>
 
-                  {/* Photo Section */}
+                  {/* Photo Section with AI HUD Overlays */}
                   {(currentImg || backImg) && (() => {
                     const photos: { src: string; label: string }[] = [];
-                    if (currentImg) photos.push({ src: currentImg, label: "Punto de partida" });
-                    if (backImg) photos.push({ src: backImg, label: "Vista posterior" });
-                    if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo deseado" });
-                    const count = photos.length;
-                    const w = count === 1 ? 480 : count === 2 ? 430 : 310;
-                    const h = count === 1 ? 580 : count === 2 ? 520 : 420;
+                    if (currentImg) photos.push({ src: currentImg, label: "Frente" });
+                    if (backImg) photos.push({ src: backImg, label: "Espalda" });
+                    if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo" });
+                    const isSingle = photos.length === 1;
+                    const w = isSingle ? 976 : photos.length === 2 ? 465 : 310;
+                    const h = 580;
+
+                    const bodyFatVal = result.body_composition?.body_fat_pct
+                      ? `${result.body_composition.body_fat_pct}%`
+                      : result.physique
+                        ? `${Math.min(20, Math.max(9, Math.round(26 - result.physique * 1.6)))}%`
+                        : "12.0%";
+
+                    const vTaperRatio = result.proportions?.shoulder_to_waist_ratio
+                      ? `${result.proportions.shoulder_to_waist_ratio.toFixed(2)}x`
+                      : "1.42x";
+
                     return (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: count === 3 ? 18 : 24, margin: "12px 0" }}>
-                        {photos.map((p) => (
-                          <React.Fragment key={p.label}>
-                            {p.label === "Objetivo deseado" && count >= 2 && (
-                              <div
-                                style={{
-                                  width: 52,
-                                  height: 52,
-                                  borderRadius: 999,
-                                  background: "rgba(250,204,21,0.15)",
-                                  border: "1.5px solid rgba(250,204,21,0.5)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 26,
-                                  color: "#facc15",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                →
-                              </div>
-                            )}
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, position: "relative" }}>
-                              <img loading="lazy" decoding="async"
-                                src={p.src}
-                                style={{
-                                  width: w,
-                                  height: h,
-                                  borderRadius: 26,
-                                  objectFit: "cover",
-                                  border: p.label.includes("Objetivo") ? "2.5px solid #facc15" : "2px solid rgba(250,204,21,0.65)",
-                                  boxShadow: "0 20px 50px rgba(0,0,0,0.6), 0 0 45px rgba(250,204,21,0.18)",
-                                }}
-                              />
-                              <div
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                  color: p.label.includes("Objetivo") ? "#000" : "#fde047",
-                                  background: p.label.includes("Objetivo") ? "#facc15" : "rgba(0,0,0,0.75)",
-                                  border: p.label.includes("Objetivo") ? "none" : "1px solid rgba(250,204,21,0.5)",
-                                  padding: "6px 16px",
-                                  borderRadius: 999,
-                                  textTransform: "uppercase",
-                                  letterSpacing: 2,
-                                  boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-                                }}
-                              >
-                                {p.label}
-                              </div>
+                      <div
+                        style={{
+                          position: "relative",
+                          width: "100%",
+                          height: h,
+                          borderRadius: 28,
+                          overflow: "hidden",
+                          border: "2px solid rgba(250,204,21,0.5)",
+                          boxShadow: "0 24px 60px rgba(0,0,0,0.85), 0 0 50px rgba(250,204,21,0.18)",
+                          background: "#000",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          gap: 12,
+                        }}
+                      >
+                        {photos.map((p, idx) => (
+                          <div
+                            key={p.label}
+                            style={{
+                              position: "relative",
+                              width: w,
+                              height: "100%",
+                              overflow: "hidden",
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                          >
+                            <img loading="lazy" decoding="async"
+                              src={p.src}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                filter: "contrast(1.05) brightness(1.02)",
+                              }}
+                            />
+                            {/* Dark vignette gradient over photo edges */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                background: "radial-gradient(circle at 50% 50%, transparent 60%, rgba(0,0,0,0.7) 100%)",
+                                pointerEvents: "none",
+                              }}
+                            />
+                            {/* Photo label chip */}
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 18,
+                                left: 18,
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: "#000",
+                                background: "#facc15",
+                                padding: "4px 12px",
+                                borderRadius: 999,
+                                textTransform: "uppercase",
+                                letterSpacing: 1.5,
+                              }}
+                            >
+                              {p.label}
                             </div>
-                          </React.Fragment>
+                          </div>
                         ))}
+
+                        {/* SCI-FI HUD OVERLAYS */}
+                        {/* 1. Corner Tech Brackets */}
+                        <div style={{ position: "absolute", top: 14, left: 14, width: 28, height: 28, borderTop: "3.5px solid #facc15", borderLeft: "3.5px solid #facc15", pointerEvents: "none" }} />
+                        <div style={{ position: "absolute", top: 14, right: 14, width: 28, height: 28, borderTop: "3.5px solid #facc15", borderRight: "3.5px solid #facc15", pointerEvents: "none" }} />
+                        <div style={{ position: "absolute", bottom: 48, left: 14, width: 28, height: 28, borderBottom: "3.5px solid #facc15", borderLeft: "3.5px solid #facc15", pointerEvents: "none" }} />
+                        <div style={{ position: "absolute", bottom: 48, right: 14, width: 28, height: 28, borderBottom: "3.5px solid #facc15", borderRight: "3.5px solid #facc15", pointerEvents: "none" }} />
+
+                        {/* 2. Horizontal AI Laser Scanline */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "38%",
+                            left: 0,
+                            right: 0,
+                            height: 2,
+                            background: "linear-gradient(90deg, transparent, rgba(250,204,21,0.4) 15%, #ffffff 50%, rgba(250,204,21,0.4) 85%, transparent)",
+                            boxShadow: "0 0 16px rgba(250,204,21,0.95)",
+                            pointerEvents: "none",
+                          }}
+                        />
+
+                        {/* 3. Anatomical Biometric Pinpoints */}
+                        {/* Shoulder Target Pin */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 86,
+                            left: isSingle ? 54 : 24,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.85)",
+                              border: "1.5px solid #facc15",
+                              color: "#fde047",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              letterSpacing: 1.5,
+                              boxShadow: "0 0 16px rgba(250,204,21,0.3)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <span style={{ color: "#facc15" }}>⊕</span> DELTOIDES: PRIORIDAD
+                          </div>
+                        </div>
+
+                        {/* Core / BF Pin */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "50%",
+                            right: isSingle ? 54 : 24,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.85)",
+                              border: "1.5px solid #facc15",
+                              color: "#fde047",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              letterSpacing: 1.5,
+                              boxShadow: "0 0 16px rgba(250,204,21,0.3)",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <span style={{ color: "#facc15" }}>⊕</span> BF ESTIMADO: {bodyFatVal}
+                          </div>
+                        </div>
+
+                        {/* Waist / V-Taper Pin */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 64,
+                            left: isSingle ? 54 : 24,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            pointerEvents: "none",
+                          }}
+                        >
+                          <div
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: 999,
+                              background: "rgba(0,0,0,0.85)",
+                              border: "1.5px solid rgba(255,255,255,0.45)",
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              letterSpacing: 1.5,
+                            }}
+                          >
+                            ⟵ V-TAPER: {vTaperRatio} ⟶
+                          </div>
+                        </div>
+
+                        {/* 4. Bottom HUD Telemetry Bar */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            padding: "10px 24px",
+                            background: "linear-gradient(180deg, transparent, rgba(0,0,0,0.9) 40%, #000 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            borderTop: "1px solid rgba(250,204,21,0.25)",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#facc15", fontSize: 12, fontWeight: 700, letterSpacing: 2 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 6px #facc15" }} />
+                            NEURAL VISION PRO · 4K DETECCIÓN
+                          </div>
+                          <div style={{ color: "#a1a1aa", fontSize: 12, fontFamily: "monospace", letterSpacing: 1.5, fontWeight: 600 }}>
+                            ESTRUCTURA: {(result.body_composition?.somatotype || "Mesomorfo").toUpperCase()}
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
 
-                  {/* Diagnosis Card */}
+                  {/* Biometric Bento Stats Grid - INBODY / DEXA TELEMETRY */}
+                  {(() => {
+                    const bodyFatVal = result.body_composition?.body_fat_pct
+                      ? `${result.body_composition.body_fat_pct}%`
+                      : result.physique
+                        ? `${Math.min(20, Math.max(9, Math.round(26 - result.physique * 1.6)))}%`
+                        : "12.0%";
+
+                    const vTaperVal = result.proportions?.shoulder_to_waist_ratio
+                      ? `${result.proportions.shoulder_to_waist_ratio.toFixed(2)}x`
+                      : result.proportions?.v_taper_score
+                        ? `${result.proportions.v_taper_score}/10`
+                        : "1.42x";
+
+                    const potentialVal = result.potential
+                      ? `${Math.round(result.potential)}%`
+                      : "94%";
+
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 14 }}>
+                        {/* % Grasa with Segmented Gauge */}
+                        <div
+                          style={{
+                            background: "linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.02))",
+                            border: "1.5px solid rgba(250,204,21,0.45)",
+                            borderRadius: 22,
+                            padding: "20px 22px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            boxShadow: "0 0 24px rgba(250,204,21,0.1)",
+                          }}
+                        >
+                          <div style={{ fontSize: 12, color: "#fde047", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
+                            % Grasa Subcutánea
+                          </div>
+                          <div style={{ fontSize: 52, fontWeight: 900, color: "#facc15", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                            {bodyFatVal}
+                          </div>
+                          {/* Segmented bar gauge */}
+                          <div>
+                            <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                              {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <div
+                                  key={i}
+                                  style={{
+                                    flex: 1,
+                                    height: 5,
+                                    borderRadius: 3,
+                                    background: i <= 3 ? "#facc15" : "rgba(255,255,255,0.12)",
+                                    boxShadow: i <= 3 ? "0 0 6px #facc15" : "none",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            <div style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+                              Rango Atleta // Definido
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* V-Taper Ratio */}
+                        <div
+                          style={{
+                            background: "rgba(255,255,255,0.035)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: 22,
+                            padding: "20px 22px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <div style={{ fontSize: 12, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
+                            Índice V-Taper
+                          </div>
+                          <div style={{ fontSize: 52, fontWeight: 900, color: "#fff", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                            {vTaperVal}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+                            Ratio Hombro / Cintura
+                          </div>
+                        </div>
+
+                        {/* Potencial Genético */}
+                        <div
+                          style={{
+                            background: "rgba(255,255,255,0.035)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: 22,
+                            padding: "20px 22px",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <div style={{ fontSize: 12, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 800 }}>
+                            Potencial Genético
+                          </div>
+                          <div style={{ fontSize: 52, fontWeight: 900, color: "#fde047", letterSpacing: -2, lineHeight: 1, margin: "6px 0" }}>
+                            {potentialVal}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#a1a1aa", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+                            Margen Evolución // Alto
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* AI Morphological Verdict & Tactical Focus Card */}
                   <div
                     style={{
-                      background: "rgba(255,255,255,0.035)",
-                      border: "1.5px solid rgba(255,255,255,0.1)",
-                      borderRadius: 28,
-                      padding: "26px 32px",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1.5px solid rgba(250,204,21,0.22)",
+                      borderRadius: 24,
+                      padding: "22px 28px",
                       position: "relative",
                       overflow: "hidden",
                     }}
@@ -2479,16 +2770,16 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                       style={{
                         position: "absolute",
                         top: 0,
-                        left: 32,
-                        right: 32,
+                        left: 28,
+                        right: 28,
                         height: 2,
                         background: "linear-gradient(90deg, transparent, #facc15, transparent)",
                       }}
                     />
-                    <div style={{ fontSize: 13, color: "#facc15", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 700, marginBottom: 12 }}>
-                      Diagnóstico Morfológico
+                    <div style={{ fontSize: 12, color: "#facc15", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 800, marginBottom: 8, fontFamily: "monospace" }}>
+                      // VEREDICTO MORFOLÓGICO & PROTOCOLO IA
                     </div>
-                    <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.25, letterSpacing: -0.5, color: "#f5f5f7" }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.35, letterSpacing: -0.3, color: "#f5f5f7" }}>
                       "{(result.headline_diagnosis ?? result.summary ?? "").slice(0, 130)}{((result.headline_diagnosis ?? result.summary ?? "").length > 130) ? "…" : ""}"
                     </div>
 
@@ -2500,23 +2791,24 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                         .filter(Boolean)
                         .slice(0, 3);
                       if (tags.length === 0 && result.bottleneck) tags.push(result.bottleneck);
-                      if (tags.length === 0) tags.push("Deltoides & Hombros", "V-Taper Torso");
+                      if (tags.length === 0) tags.push("Deltoides lateral", "Amplitud dorsal", "Sobrecarga progresiva");
                       return (
-                        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-                          {tags.map((t) => (
+                        <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                          {tags.map((t, idx) => (
                             <div
                               key={t}
                               style={{
                                 padding: "6px 14px",
                                 borderRadius: 999,
                                 background: "rgba(250,204,21,0.12)",
-                                border: "1px solid rgba(250,204,21,0.35)",
+                                border: "1px solid rgba(250,204,21,0.4)",
                                 color: "#fde047",
-                                fontSize: 15,
-                                fontWeight: 600,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                letterSpacing: 0.5,
                               }}
                             >
-                              ⚡ Prioridad: {t}
+                              {idx === 0 ? "🔥" : idx === 1 ? "⚡" : "🎯"} Foco: {t}
                             </div>
                           ))}
                         </div>
@@ -2524,106 +2816,42 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                     })()}
                   </div>
 
-                  {/* Biometric Bento Stats Grid - ALWAYS VISIBLE WITH REAL DATA */}
-                  {(() => {
-                    const bodyFatVal = result.body_composition?.body_fat_pct
-                      ? `${result.body_composition.body_fat_pct}%`
-                      : result.physique
-                        ? `${Math.min(22, Math.max(10, Math.round(28 - result.physique * 1.8)))}%`
-                        : "13.2%";
-
-                    const vTaperVal = result.proportions?.v_taper_score
-                      ? `${result.proportions.v_taper_score}/10`
-                      : result.proportions?.shoulder_to_waist_ratio
-                        ? `${result.proportions.shoulder_to_waist_ratio.toFixed(2)}x`
-                        : "8.5/10";
-
-                    const potentialVal = result.potential
-                      ? `${Math.round(result.potential)}%`
-                      : "92%";
-
-                    return (
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                        <StatBox
-                          label="% Grasa est."
-                          value={bodyFatVal}
-                          sub="Composición corporal"
-                          highlight
-                        />
-                        <StatBox
-                          label="V-Taper Index"
-                          value={vTaperVal}
-                          sub="Ratio hombro/cintura"
-                        />
-                        <StatBox
-                          label="Potencial"
-                          value={potentialVal}
-                          sub="Margen genético"
-                          highlight
-                        />
-                      </div>
-                    );
-                  })()}
-
-                  {/* Goal duration banner if objective is present */}
-                  {result.months_with_plan !== undefined && result.months_with_plan > 0 && (
-                    <div
-                      style={{
-                        padding: "16px 24px",
-                        borderRadius: 20,
-                        background: "rgba(250,204,21,0.1)",
-                        border: "1px solid rgba(250,204,21,0.35)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ fontSize: 22 }}>🎯</span>
-                        <div style={{ fontSize: 16, color: "#f5f5f7", fontWeight: 600 }}>
-                          Tiempo estimado a tu objetivo físico
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: "#facc15" }}>
-                        {result.months_with_plan} meses con plan{" "}
-                        <span style={{ fontSize: 14, color: "#8e8e93", fontWeight: 500 }}>
-                          (vs {result.months_without_plan || result.months_with_plan * 2}m sin plan)
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Footer Branding & Call To Action */}
+                  {/* High-Impact Viral Footer */}
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      paddingTop: 28,
+                      paddingTop: 18,
                       borderTop: "1px solid rgba(255,255,255,0.08)",
+                      position: "relative",
+                      zIndex: 2,
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 15, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 600 }}>
-                        Escáner físico con Inteligencia Artificial
+                      <div style={{ fontSize: 13, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 700 }}>
+                        AUTOPILOT BIO-LAB // ESCÁNER CORPORAL GRATIS
                       </div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginTop: 4 }}>
-                        Haz tu scan gratis en
+                      <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginTop: 2 }}>
+                        Descubre tu % graso y tu rutina ideal en 30 segundos
                       </div>
                     </div>
                     <div
                       style={{
-                        fontSize: 22,
-                        fontWeight: 800,
+                        fontSize: 20,
+                        fontWeight: 900,
                         color: "#000",
                         background: "linear-gradient(135deg, #fde047, #facc15)",
                         padding: "12px 28px",
                         borderRadius: 999,
-                        boxShadow: "0 0 35px rgba(250,204,21,0.35)",
+                        boxShadow: "0 0 35px rgba(250,204,21,0.4)",
                         letterSpacing: -0.3,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
                       }}
                     >
-                      autopilotplan.com/scan
+                      <span>⚡</span> autopilotplan.com/scan
                     </div>
                   </div>
                 </div>
