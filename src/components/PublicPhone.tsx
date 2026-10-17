@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
-import { Dumbbell, Lock, MessageCircle, Bell, type LucideIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ListRow } from "@/components/ui/list";
+import { Apple, Bell, Sparkles, type LucideIcon } from "lucide-react";
 import { ProgressRing } from "@/components/ui/progress-ring";
+import { OverviewRow } from "@/components/dashboard/HomeOverview";
 import type { PlanAvailability } from "@/lib/planCatalogCore";
 import { cn } from "@/lib/utils";
 
@@ -37,9 +36,11 @@ export function PhoneFrame({ children, className, screenClassName }: { children:
 /** Bell and avatar, top right, as in the app's root screens. */
 export function PhoneAppBar({ avatar }: { avatar: ReactNode }) {
   return (
-    <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-3 px-4">
-      <Bell className="h-5 w-5" />
-      <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
+    <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-2 px-3">
+      <span className="flex h-11 w-11 items-center justify-center"><Bell className="h-[22px] w-[22px]" /></span>
+      <span className="flex h-11 w-11 items-center justify-center">
+        <span className="flex h-[30px] w-[30px] items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
+      </span>
     </div>
   );
 }
@@ -75,7 +76,8 @@ const DAYS = ["L", "M", "X", "J", "V", "S", "D"];
  */
 export function demoWeek(now = new Date()) {
   const today = (now.getDay() + 6) % 7;
-  const planned = Array.from(new Set([0, 2, 4, today].includes(today) && [0, 2, 4].includes(today) ? [0, 2, 4, 5] : [0, 2, 4, today])).sort();
+  const base = [0, 2, 4];
+  const planned = base.includes(today) ? base : [...base, today].sort((a, b) => a - b);
   const done = planned.filter((d) => d < today).length;
   const label = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(now);
   return { today, planned, done, date: label.charAt(0).toLocaleUpperCase("es") + label.slice(1) };
