@@ -1,3 +1,5 @@
+import { Play, PencilLine } from "lucide-react";
+import { isManualPlan } from "@/lib/planShield";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/components/dashboard/PlanPaywall";
 import { parseMacroTargets } from "@/lib/nutrition";
@@ -604,13 +606,31 @@ const Dashboard = () => {
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
               {!workoutMode && !autoStartWorkout && (
-                <div className="mx-auto mb-4 grid w-full max-w-md grid-cols-2 gap-2 lg:max-w-lg">
-                  <Button type="button" variant="outline" size="sm" onClick={() => { void hapticTap(); setFreeOpen(true); }}>
-                    Entrenamiento libre
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => { void hapticTap(); setEditorOpen(true); }}>
-                    Editar mi rutina
-                  </Button>
+                <div className="mx-auto mb-4 w-full max-w-md lg:max-w-2xl">
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      {isManualPlan(dayPlans) ? "Rutina personalizada · protegida" : "Piloto automático"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Entrenamiento libre", hint: "Elige y empieza", Icon: Play, on: () => setFreeOpen(true) },
+                      { label: "Editar mi rutina", hint: "Tu semana, a tu manera", Icon: PencilLine, on: () => setEditorOpen(true) },
+                    ].map(({ label, hint, Icon, on }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => { void hapticTap(); on(); }}
+                        className="group flex min-h-[64px] items-center gap-3 rounded-2xl border border-border/70 bg-card/60 px-3 py-3 text-left backdrop-blur-xl transition active:scale-[0.98] hover:border-primary/40"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary"><Icon className="h-4 w-4" aria-hidden /></span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{label}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{hint}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (

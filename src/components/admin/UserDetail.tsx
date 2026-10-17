@@ -1,3 +1,4 @@
+import { generatePlanGuarded } from "@/lib/planShield";
 import { getSportSchedules, getCustomActivities } from "@/lib/availability";
 import { jsonObject, jsonString } from "@/lib/runtimeValues";
 import { useState, useEffect, type ReactNode } from "react";
@@ -379,9 +380,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       return;
     }
     setGenerating(true);
-    const { data, error } = await supabase.functions.invoke("generate-plan", {
-      body: { user_id: profile.user_id },
-    });
+    const { data, error } = await generatePlanGuarded(supabase, { user_id: profile.user_id });
+    if (data?.protected) { setGenerating(false); toast.info("Se ha conservado la rutina personalizada del cliente."); return; }
     const failMsg = String(error?.message || data?.error || "");
     if (error || !data?.success) {
       toast.error(

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
 import ForTrainers, { AcceptInvitation } from "@/pages/ForTrainers";
 import AppDownload from "@/pages/AppDownload";
+import PlanShieldDialog from "@/components/dashboard/PlanShieldDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -104,6 +105,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PlanShieldDialog />
         <BrowserRouter>
           <NativeDeepLinks />
           <ImpersonationBanner />
