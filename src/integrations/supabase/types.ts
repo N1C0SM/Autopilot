@@ -1261,6 +1261,7 @@ export type Database = {
           position: number
           release_notes: string
           release_stage: string
+          seed_initialized: boolean
           title: string
           updated_at: string
         }
@@ -1272,6 +1273,7 @@ export type Database = {
           position?: number
           release_notes?: string
           release_stage?: string
+          seed_initialized?: boolean
           title: string
           updated_at?: string
         }
@@ -1283,6 +1285,7 @@ export type Database = {
           position?: number
           release_notes?: string
           release_stage?: string
+          seed_initialized?: boolean
           title?: string
           updated_at?: string
         }
