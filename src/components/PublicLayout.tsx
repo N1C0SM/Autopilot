@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
+import { supabase } from "@/integrations/supabase/client";
 
 const navigation = [
   ["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ["/equipo", "Equipo"],
@@ -15,6 +16,15 @@ const navigation = [
 export default function PublicLayout({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname, hash } = useLocation();
+  const [showApp, setShowApp] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void supabase.rpc("get_public_settings").then(({ data }) => {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (alive && row) setShowApp(row.show_app_download !== false);
+    });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     let observer: MutationObserver | undefined;
     const scrollToAnchor = () => {
@@ -56,6 +66,7 @@ export default function PublicLayout({ title, description, children }: { title: 
         <Link to="/" aria-label="Autopilot, inicio" className="inline-flex min-h-11 items-center type-headline text-primary transition-opacity active:opacity-60">Autopilot</Link>
         <nav aria-label="Navegación principal" className="hidden items-center gap-1 lg:flex">
           {navigation.map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex min-h-11 items-center px-3 type-subhead transition-colors active:opacity-60 ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}>{label}</NavLink>)}
+          {showApp && <NavLink to="/app" className="inline-flex min-h-11 items-center px-3 type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">App móvil</NavLink>}
           <Button variant="plain" asChild><Link to="/login">Iniciar sesión</Link></Button>
           <Button variant="tinted" asChild><Link to="/onboarding-choice">Crear mi rutina</Link></Button>
         </nav>
@@ -70,6 +81,7 @@ export default function PublicLayout({ title, description, children }: { title: 
                 <ListGroup inset>
                   <ListRow to="/" chevron title={<span className={pathname === "/" ? "text-primary" : undefined}>Inicio</span>} onClick={() => setMenuOpen(false)} />
                   {navigation.map(([to, label]) => <ListRow key={to} to={to} chevron title={<span className={pathname === to ? "text-primary" : undefined}>{label}</span>} onClick={() => setMenuOpen(false)} />)}
+                  {showApp && <ListRow to="/app" chevron title="App móvil" onClick={() => setMenuOpen(false)} />}
                 </ListGroup>
                 <ListGroup inset>
                   <ListRow to="/login" chevron title="Iniciar sesión" onClick={() => setMenuOpen(false)} />
@@ -87,6 +99,7 @@ export default function PublicLayout({ title, description, children }: { title: 
         <div className="flex flex-wrap items-start gap-x-6">
           <Link to="/preguntas-frecuentes" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Ayuda</Link>
           <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Para entrenadores</Link>
+          {showApp && <Link to="/app" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">App móvil</Link>}
           <Link to="/blog" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Blog</Link>
           <details className="group">
             <summary className="flex min-h-11 list-none items-center gap-1 py-3 transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">Información legal<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary>
