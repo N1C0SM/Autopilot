@@ -216,7 +216,7 @@ export async function shareFileOrImage(
         }).catch(() => {
           // No es crítico si falla la limpieza
         });
-      }, 1000);
+      }, 120000);
 
       return { shared: true };
     } catch (err: unknown) {
