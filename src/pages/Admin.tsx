@@ -52,7 +52,7 @@ export interface Profile {
   renewal_decision?: string | null;
 }
 
-export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account";
+export type AdminSection = "dashboard" | "metrics" | "users" | "trainers" | "reminders" | "exercises" | "drive" | "rules" | "landing" | "blog" | "physiques" | "payments" | "emails" | "products" | "account" | "roadmap";
 
 const SECTION_TITLES: Record<AdminSection, string> = {
   dashboard: "Dashboard",
@@ -63,6 +63,15 @@ const SECTION_TITLES: Record<AdminSection, string> = {
   exercises: "Ejercicios",
   drive: "Drive · Libros",
   rules: "Reglas",
+  landing: "Landing",
+  blog: "Blog",
+  physiques: "Físicos",
+  payments: "Pagos",
+  emails: "Emails",
+  products: "Planes y productos",
+  account: "Mi cuenta",
+  roadmap: "Roadmap",
+};
   landing: "Landing",
   blog: "Blog",
   physiques: "Físicos",
