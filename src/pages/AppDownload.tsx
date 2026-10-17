@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/autopilot-logo.png";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-export const APK_URL = `${SUPABASE_URL}/storage/v1/object/public/site-assets/downloads/autopilot.apk`;
+// APK publicado automáticamente por GitHub Actions (deploy-android.yml) en la release "android-latest".
+export const APK_URL = "https://github.com/N1C0SM/Autopilot/releases/download/android-latest/autopilot.apk";
 
 const androidSteps = [
   "Pulsa «Descargar APK» desde tu móvil Android.",
@@ -20,14 +20,10 @@ const iosSteps = [
 ];
 
 export default function AppDownload() {
-  const [available, setAvailable] = useState<boolean | null>(null);
   const isIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
 
   useEffect(() => {
     document.title = "Descargar la app · Autopilot";
-    fetch(APK_URL, { method: "HEAD" })
-      .then((r) => setAvailable(r.ok))
-      .catch(() => setAvailable(false));
   }, []);
 
   const Steps = ({ items }: { items: string[] }) => (
@@ -47,15 +43,9 @@ export default function AppDownload() {
     <section className="rounded-3xl border border-border bg-card/60 p-6 backdrop-blur">
       <h2 className="text-lg font-semibold text-foreground">Android</h2>
       <p className="mt-1 text-sm text-muted-foreground">Instalación directa, sin Google Play.</p>
-      {available ? (
-        <Button asChild size="lg" className="mt-5 w-full rounded-2xl">
-          <a href={APK_URL} download="autopilot.apk">Descargar APK</a>
-        </Button>
-      ) : (
-        <Button size="lg" disabled className="mt-5 w-full rounded-2xl">
-          {available === null ? "Comprobando…" : "Disponible muy pronto"}
-        </Button>
-      )}
+      <Button asChild size="lg" className="mt-5 w-full rounded-2xl">
+        <a href={APK_URL} rel="noopener">Descargar APK</a>
+      </Button>
       <Steps items={androidSteps} />
     </section>
   );
