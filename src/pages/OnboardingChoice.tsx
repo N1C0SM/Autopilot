@@ -36,6 +36,7 @@ export default function OnboardingChoice() {
       <PageHead
         title="Elige cómo empezar"
         description="Análisis con IA o formulario tradicional"
+        path="/onboarding-choice"
       />
       
       <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">

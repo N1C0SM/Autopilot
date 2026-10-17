@@ -10,6 +10,7 @@ export type EventName =
   | "register"
   | "verify_email"
   | "onboarding_start"
+  | "onboarding_choice_selected"
   | "onboarding_step"
   | "onboarding_complete"
   | "plan_preview_view"
