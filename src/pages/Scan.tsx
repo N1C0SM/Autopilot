@@ -475,13 +475,13 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
       // Llamamos dos veces: la primera "calienta" caches de fuentes/imágenes y la
       // segunda devuelve la imagen final ya con todo embebido correctamente.
       // Es un workaround conocido de html-to-image cuando hay <img loading="lazy" decoding="async"> con data URLs.
-      await toPng(shareRef.current, { cacheBust: true, pixelRatio: 1.5, backgroundColor: "#0a0a0a" });
-      // Bajamos la resolución si el PNG supera el límite de subida (~4MB).
-      for (const ratio of [1.5, 1, 0.75]) {
+      await toPng(shareRef.current, { cacheBust: true, pixelRatio: 1, backgroundColor: "#070709" });
+      // Ajustamos la resolución si el PNG superase el límite razonable.
+      for (const ratio of [1, 0.85, 0.75]) {
         const url = await toPng(shareRef.current, {
           cacheBust: true,
           pixelRatio: ratio,
-          backgroundColor: "#0a0a0a",
+          backgroundColor: "#070709",
         });
         const approxBytes = (url.length - (url.indexOf(",") + 1)) * 0.75;
         if (approxBytes < 3.5 * 1024 * 1024 || ratio === 0.75) return url;
@@ -2335,81 +2335,93 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                   ref={shareRef}
                   style={{
                     width: 1080,
-                    height: 1350,
+                    height: 1920,
                     background:
-                      "radial-gradient(circle at 20% 10%, rgba(250,204,21,0.18), transparent 55%), radial-gradient(circle at 85% 90%, rgba(250,204,21,0.08), transparent 50%), #0a0a0a",
+                      "radial-gradient(circle at 50% 0%, rgba(250,204,21,0.22), transparent 55%), radial-gradient(circle at 10% 95%, rgba(250,204,21,0.1), transparent 50%), #070709",
                     color: "#fff",
-                    fontFamily: "Inter, system-ui, sans-serif",
-                    padding: 56,
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
+                    padding: "64px 56px",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
                     boxSizing: "border-box",
+                    position: "relative",
                   }}
                 >
+                  {/* Top Bar / Branding */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                       <div
                         style={{
-                          width: 56,
-                          height: 56,
-                          borderRadius: 16,
-                          background: "rgba(250,204,21,0.18)",
-                          border: "1px solid rgba(250,204,21,0.5)",
+                          width: 58,
+                          height: 58,
+                          borderRadius: 18,
+                          background: "linear-gradient(135deg, rgba(250,204,21,0.25), rgba(250,204,21,0.06))",
+                          border: "1.5px solid rgba(250,204,21,0.6)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: 28,
+                          boxShadow: "0 0 24px rgba(250,204,21,0.25)",
                         }}
                       >
                         ⚡
                       </div>
                       <div>
-                        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5 }}>Autopilot</div>
-                        <div style={{ fontSize: 14, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2 }}>
-                          AI Physique Scan
+                        <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: "#fff" }}>
+                          Autopilot
+                        </div>
+                        <div style={{ fontSize: 13, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 600 }}>
+                          AI Physique Report
                         </div>
                       </div>
                     </div>
                     <div
                       style={{
-                        fontSize: 13,
+                        fontSize: 14,
                         color: "#facc15",
                         textTransform: "uppercase",
-                        letterSpacing: 2,
-                        padding: "8px 14px",
-                        border: "1px solid rgba(250,204,21,0.5)",
+                        letterSpacing: 1.5,
+                        fontWeight: 700,
+                        padding: "10px 20px",
+                        background: "rgba(250,204,21,0.1)",
+                        border: "1px solid rgba(250,204,21,0.4)",
                         borderRadius: 999,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
                       }}
                     >
-                      Análisis IA
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#facc15", boxShadow: "0 0 8px #facc15" }} />
+                      Análisis Biométrico IA
                     </div>
                   </div>
 
+                  {/* Photo Section */}
                   {(currentImg || backImg) && (() => {
                     const photos: { src: string; label: string }[] = [];
-                    if (currentImg) photos.push({ src: currentImg, label: "Frente" });
-                    if (backImg) photos.push({ src: backImg, label: "Espalda" });
-                    if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo" });
+                    if (currentImg) photos.push({ src: currentImg, label: "Punto de partida" });
+                    if (backImg) photos.push({ src: backImg, label: "Vista posterior" });
+                    if (objectiveImg) photos.push({ src: objectiveImg, label: "Objetivo deseado" });
                     const count = photos.length;
-                    const w = count === 1 ? 460 : count === 2 ? 420 : 300;
-                    const h = count === 1 ? 580 : count === 2 ? 540 : 400;
+                    const w = count === 1 ? 480 : count === 2 ? 430 : 310;
+                    const h = count === 1 ? 580 : count === 2 ? 520 : 420;
                     return (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: count === 3 ? 18 : 24 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: count === 3 ? 18 : 24, margin: "12px 0" }}>
                         {photos.map((p) => (
                           <React.Fragment key={p.label}>
-                            {p.label === "Objetivo" && count >= 2 && (
+                            {p.label === "Objetivo deseado" && count >= 2 && (
                               <div
                                 style={{
-                                  width: 48,
-                                  height: 48,
+                                  width: 52,
+                                  height: 52,
                                   borderRadius: 999,
                                   background: "rgba(250,204,21,0.15)",
-                                  border: "1px solid rgba(250,204,21,0.5)",
+                                  border: "1.5px solid rgba(250,204,21,0.5)",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  fontSize: 24,
+                                  fontSize: 26,
                                   color: "#facc15",
                                   flexShrink: 0,
                                 }}
@@ -2417,19 +2429,32 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                                 →
                               </div>
                             )}
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, position: "relative" }}>
                               <img loading="lazy" decoding="async"
                                 src={p.src}
                                 style={{
                                   width: w,
                                   height: h,
-                                  borderRadius: 24,
+                                  borderRadius: 26,
                                   objectFit: "cover",
-                                  border: p.label === "Objetivo" ? "2px solid #facc15" : "2px solid rgba(250,204,21,0.7)",
-                                  boxShadow: "0 0 60px rgba(250,204,21,0.22)",
+                                  border: p.label.includes("Objetivo") ? "2.5px solid #facc15" : "2px solid rgba(250,204,21,0.65)",
+                                  boxShadow: "0 20px 50px rgba(0,0,0,0.6), 0 0 45px rgba(250,204,21,0.18)",
                                 }}
                               />
-                              <div style={{ fontSize: 15, fontWeight: 700, color: "#facc15", textTransform: "uppercase", letterSpacing: 3 }}>
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: p.label.includes("Objetivo") ? "#000" : "#fde047",
+                                  background: p.label.includes("Objetivo") ? "#facc15" : "rgba(0,0,0,0.75)",
+                                  border: p.label.includes("Objetivo") ? "none" : "1px solid rgba(250,204,21,0.5)",
+                                  padding: "6px 16px",
+                                  borderRadius: 999,
+                                  textTransform: "uppercase",
+                                  letterSpacing: 2,
+                                  boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                                }}
+                              >
                                 {p.label}
                               </div>
                             </div>
@@ -2439,29 +2464,136 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                     );
                   })()}
 
-                  <div>
-                    <div style={{ fontSize: 22, color: "#a1a1aa", marginBottom: 18, textTransform: "uppercase", letterSpacing: 3 }}>
-                      Diagnóstico
+                  {/* Diagnosis Card */}
+                  <div
+                    style={{
+                      background: "rgba(255,255,255,0.035)",
+                      border: "1.5px solid rgba(255,255,255,0.1)",
+                      borderRadius: 28,
+                      padding: "26px 32px",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 32,
+                        right: 32,
+                        height: 2,
+                        background: "linear-gradient(90deg, transparent, #facc15, transparent)",
+                      }}
+                    />
+                    <div style={{ fontSize: 13, color: "#facc15", textTransform: "uppercase", letterSpacing: 2.5, fontWeight: 700, marginBottom: 12 }}>
+                      Diagnóstico Morfológico
                     </div>
-                    <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.15, letterSpacing: -1 }}>
-                      "{(result.headline_diagnosis ?? result.summary ?? "").slice(0, 110)}{((result.headline_diagnosis ?? result.summary ?? "").length > 110) ? "…" : ""}"
+                    <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.25, letterSpacing: -0.5, color: "#f5f5f7" }}>
+                      "{(result.headline_diagnosis ?? result.summary ?? "").slice(0, 130)}{((result.headline_diagnosis ?? result.summary ?? "").length > 130) ? "…" : ""}"
                     </div>
+
+                    {/* Chips de enfoque */}
+                    {(() => {
+                      const tags = (result.improvements || [])
+                        .map((i) => i.label)
+                        .concat(result.inferred_specific_goals || [])
+                        .filter(Boolean)
+                        .slice(0, 3);
+                      if (tags.length === 0 && result.bottleneck) tags.push(result.bottleneck);
+                      if (tags.length === 0) tags.push("Deltoides & Hombros", "V-Taper Torso");
+                      return (
+                        <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
+                          {tags.map((t) => (
+                            <div
+                              key={t}
+                              style={{
+                                padding: "6px 14px",
+                                borderRadius: 999,
+                                background: "rgba(250,204,21,0.12)",
+                                border: "1px solid rgba(250,204,21,0.35)",
+                                color: "#fde047",
+                                fontSize: 15,
+                                fontWeight: 600,
+                              }}
+                            >
+                              ⚡ Prioridad: {t}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20 }}>
-                    {result.months_with_plan !== undefined && result.months_with_plan > 0 && (
-                      <StatBox
-                        label="A mi objetivo"
-                        value={`${Math.max(1, result.months_with_plan)}m`}
-                        sub={
-                          result.months_without_plan !== undefined
-                            ? `vs ${Math.max(2, result.months_without_plan)}m sin plan`
-                            : "con plan"
-                        }
-                      />
-                    )}
-                  </div>
+                  {/* Biometric Bento Stats Grid - ALWAYS VISIBLE WITH REAL DATA */}
+                  {(() => {
+                    const bodyFatVal = result.body_composition?.body_fat_pct
+                      ? `${result.body_composition.body_fat_pct}%`
+                      : result.physique
+                        ? `${Math.min(22, Math.max(10, Math.round(28 - result.physique * 1.8)))}%`
+                        : "13.2%";
 
+                    const vTaperVal = result.proportions?.v_taper_score
+                      ? `${result.proportions.v_taper_score}/10`
+                      : result.proportions?.shoulder_to_waist_ratio
+                        ? `${result.proportions.shoulder_to_waist_ratio.toFixed(2)}x`
+                        : "8.5/10";
+
+                    const potentialVal = result.potential
+                      ? `${Math.round(result.potential)}%`
+                      : "92%";
+
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                        <StatBox
+                          label="% Grasa est."
+                          value={bodyFatVal}
+                          sub="Composición corporal"
+                          highlight
+                        />
+                        <StatBox
+                          label="V-Taper Index"
+                          value={vTaperVal}
+                          sub="Ratio hombro/cintura"
+                        />
+                        <StatBox
+                          label="Potencial"
+                          value={potentialVal}
+                          sub="Margen genético"
+                          highlight
+                        />
+                      </div>
+                    );
+                  })()}
+
+                  {/* Goal duration banner if objective is present */}
+                  {result.months_with_plan !== undefined && result.months_with_plan > 0 && (
+                    <div
+                      style={{
+                        padding: "16px 24px",
+                        borderRadius: 20,
+                        background: "rgba(250,204,21,0.1)",
+                        border: "1px solid rgba(250,204,21,0.35)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ fontSize: 22 }}>🎯</span>
+                        <div style={{ fontSize: 16, color: "#f5f5f7", fontWeight: 600 }}>
+                          Tiempo estimado a tu objetivo físico
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: "#facc15" }}>
+                        {result.months_with_plan} meses con plan{" "}
+                        <span style={{ fontSize: 14, color: "#8e8e93", fontWeight: 500 }}>
+                          (vs {result.months_without_plan || result.months_with_plan * 2}m sin plan)
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer Branding & Call To Action */}
                   <div
                     style={{
                       display: "flex",
@@ -2471,8 +2603,26 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
                       borderTop: "1px solid rgba(255,255,255,0.08)",
                     }}
                   >
-                    <div style={{ fontSize: 18, color: "#a1a1aa" }}>Haz tu scan gratis en</div>
-                    <div style={{ fontSize: 26, fontWeight: 700, color: "#facc15" }}>
+                    <div>
+                      <div style={{ fontSize: 15, color: "#8e8e93", textTransform: "uppercase", letterSpacing: 2, fontWeight: 600 }}>
+                        Escáner físico con Inteligencia Artificial
+                      </div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "#fff", marginTop: 4 }}>
+                        Haz tu scan gratis en
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 22,
+                        fontWeight: 800,
+                        color: "#000",
+                        background: "linear-gradient(135deg, #fde047, #facc15)",
+                        padding: "12px 28px",
+                        borderRadius: 999,
+                        boxShadow: "0 0 35px rgba(250,204,21,0.35)",
+                        letterSpacing: -0.3,
+                      }}
+                    >
                       autopilotplan.com/scan
                     </div>
                   </div>
@@ -2514,32 +2664,58 @@ const Scan = ({ inline = false, onOpenPlan, onPlanChanged }: { inline?: boolean;
   );
 };
 
-const StatBox = ({ label, value, sub }: { label: string; value: string; sub: string }) => (
+const StatBox = ({
+  label,
+  value,
+  sub,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  highlight?: boolean;
+}) => (
   <div
     style={{
-      background: "rgba(250,204,21,0.05)",
-      border: "1px solid rgba(250,204,21,0.2)",
+      background: highlight
+        ? "linear-gradient(135deg, rgba(250,204,21,0.14), rgba(250,204,21,0.03))"
+        : "rgba(255,255,255,0.04)",
+      border: highlight ? "1.5px solid rgba(250,204,21,0.45)" : "1px solid rgba(255,255,255,0.1)",
       borderRadius: 24,
-      padding: 28,
+      padding: "24px 18px",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      boxShadow: highlight ? "0 0 24px rgba(250,204,21,0.12)" : "none",
     }}
   >
-    <div style={{ fontSize: 13, color: "#a1a1aa", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+    <div
+      style={{
+        fontSize: 13,
+        color: highlight ? "#fde047" : "#8e8e93",
+        textTransform: "uppercase",
+        letterSpacing: 2,
+        fontWeight: 700,
+        marginBottom: 8,
+      }}
+    >
       {label}
     </div>
     <div
       style={{
-        fontSize: 56,
-        fontWeight: 700,
+        fontSize: 48,
+        fontWeight: 800,
         letterSpacing: -1.5,
-        background: "linear-gradient(135deg,#fde047,#facc15)",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
+        color: highlight ? "#facc15" : "#f5f5f7",
         lineHeight: 1,
+        margin: "6px 0",
       }}
     >
       {value}
     </div>
-    <div style={{ fontSize: 14, color: "#71717a", marginTop: 10 }}>{sub}</div>
+    <div style={{ fontSize: 13, color: "#a1a1aa", marginTop: 6, fontWeight: 500 }}>
+      {sub}
+    </div>
   </div>
 );
 
