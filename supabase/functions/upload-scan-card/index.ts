@@ -87,7 +87,8 @@ Deno.serve(async (req) => {
     ? authHeader.slice(7).trim()
     : ''
   let userId: string | null = null
-  if (bearer && bearer !== anonKey) {
+  if (!bearer || bearer === anonKey) return json({ error: 'Inicia sesión para guardar tu tarjeta.' }, 401)
+  {
     const { data, error } = await createClient(supabaseUrl, anonKey || serviceRoleKey)
       .auth
       .getUser(bearer)
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
       // Sin SUPABASE_ANON_KEY en el entorno no podemos distinguir una petición
       // anónima legítima: degradamos a anónimo (con su límite) en vez de romper
       // el escaneo sin registro.
-      if (anonKey) return json({ error: 'Invalid session' }, 401)
+      return json({ error: 'Invalid session' }, 401)
     } else {
       userId = data.user.id
     }
