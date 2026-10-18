@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import NavBar from "@/components/native/NavBar";
 import { toast } from "sonner";
-import type { DayPlan } from "@/types/training";
+import type { DayPlan, ExerciseTrackingMode } from "@/types/training";
 import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
@@ -153,7 +153,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     exercise_type?: string | null;
     image_url?: string | null;
     video_url?: string | null;
-    tracking_mode?: string | null;
+    tracking_mode?: ExerciseTrackingMode | null;
     series: number;
     reps: number;
     rest: string;
@@ -198,11 +198,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   };
 
   useEffect(() => {
-    if (!started && !workoutCompleted && selectedDate !== currentDate) {
+    if (!resumeDraft && !started && !workoutCompleted && selectedDate !== currentDate) {
       setLogsReady(false);
       setSelectedDate(currentDate);
     }
-  }, [currentDate, selectedDate, started, workoutCompleted]);
+  }, [currentDate, selectedDate, started, workoutCompleted, resumeDraft]);
 
   // Start with a clean overview; the first exercise opens when the user starts.
   useEffect(() => {
