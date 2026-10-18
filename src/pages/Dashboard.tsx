@@ -338,6 +338,8 @@ const Dashboard = () => {
         setMeals(data.meals_json as unknown as Meal[]);
       }
     };
+    const onNutritionUpdated = () => { void refreshNutritionPlan(); };
+    window.addEventListener("autopilot:nutrition-plan-updated", onNutritionUpdated);
 
     const channel = supabase
       .channel(`dashboard-${user.id}`)
