@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import NavBar from "@/components/native/NavBar";
 import { toast } from "sonner";
-import type { DayPlan, ExerciseTrackingMode } from "@/types/training";
+import type { DayPlan, ExerciseTrackingMode, GymExerciseEntry } from "@/types/training";
+import ExercisePicker from "./ExercisePicker";
 import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
@@ -175,14 +176,30 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   // Se mantiene estable durante la sesión, incluso si pasa la medianoche.
   const currentDate = formatLocalDate(new Date());
   const [selectedDate, setSelectedDate] = useState(resumeDraft?.date ?? currentDate);
-  const currentPlan = resumeDraft?.plan.day === selectedDay ? resumeDraft.plan : dayPlans.find((p) => p.day === selectedDay);
+  const basePlan = resumeDraft?.plan.day === selectedDay ? resumeDraft.plan : dayPlans.find((p) => p.day === selectedDay);
+  // Ejercicios añadidos durante la sesión: viven solo en esta sesión, nunca en la rutina guardada.
+  const [sessionExtras, setSessionExtras] = useState<GymExerciseEntry[]>([]);
+  const [extraPickerOpen, setExtraPickerOpen] = useState(false);
+  const currentPlan = basePlan && sessionExtras.length > 0
+    ? { ...basePlan, exercises: [...(basePlan.exercises ?? []), ...sessionExtras] }
+    : basePlan;
   // En modo libre usamos un plan virtual con los ejercicios añadidos manualmente
   const freePlan = selectedDay === FREE_DAY && freeExercises.length > 0
     ? { day: FREE_DAY, type: "gimnasio" as const, exercises: freeExercises, routine_name: "Sesión libre", muscle_focus: null, sport: null, intensity: null, duration: null }
     : undefined;
   const activePlan = freePlan ?? currentPlan;
   const trainingTitle = formatTrainingTitle(activePlan?.routine_name, activePlan?.muscle_focus);
-  const currentPlanSignature = JSON.stringify(activePlan || null);
+  // La firma ignora los extras: añadir un ejercicio no debe recargar ni borrar las series ya hechas.
+  const currentPlanSignature = JSON.stringify((freePlan ?? basePlan) || null);
+  useEffect(() => { setSessionExtras([]); }, [selectedDay]);
+  const addSessionExercises = (entries: GymExerciseEntry[]) => {
+    const existing = new Set((activePlan?.exercises ?? []).map((e) => e.name));
+    const fresh = entries.filter((e) => !existing.has(e.name));
+    if (fresh.length === 0) return;
+    setSessionExtras((prev) => [...prev, ...fresh]);
+    setExerciseLogs((logs) => ({ ...createWorkoutSetLogs(fresh, previousLogs), ...logs }));
+    void hapticTap();
+  };
   const planExercises = activePlan?.exercises;
   const exerciseNames = useMemo(() => (planExercises ?? []).map((exercise) => exercise.name), [planExercises]);
   const startWorkout = (exerciseIndex = 0) => {
@@ -427,7 +444,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     const saved = saveActiveWorkout({ version: 1, userId, date: selectedDate, plan: activePlan,
       logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, startedAt: sessionStartedAt ?? undefined });
     if (!saved) setSaveError(true);
-  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt]);
+  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, sessionExtras, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt]);
 
   useEffect(() => {
     if (started && expandedExercise !== null) {
@@ -567,10 +584,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     toast.success("Propuesta aplicada a las series pendientes. Puedes ajustarla antes de empezar.");
   };
 
-  const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number) => {
-    const set = exerciseLogs[exerciseName]?.[setIndex];
-    const wasDone = set?.done;
-    if (!set) return;
+  const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number, suggestedWeight?: string) => {
+    const rawSet = exerciseLogs[exerciseName]?.[setIndex];
+    const wasDone = rawSet?.done;
+    if (!rawSet) return;
+    // Un toque: si el peso está vacío, se usa el que se ve sugerido en gris.
+    const ghost = !wasDone && !rawSet.weight.trim() && suggestedWeight && parsePositiveWeight(suggestedWeight) !== null;
+    const set = ghost ? { ...rawSet, weight: suggestedWeight! } : rawSet;
     if (!wasDone) {
       const inputError = getWorkoutSetInputError(set) ?? getWorkoutSetDropsInputError(set);
       if (inputError) {
@@ -579,6 +599,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         return;
       }
     }
+    if (ghost) updateSet(exerciseName, setIndex, "weight", suggestedWeight!);
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
     const exerciseIndex = activePlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
@@ -1681,7 +1702,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => toggleSetDone(ex.name, si, restSec)}
+                                onClick={() => toggleSetDone(ex.name, si, restSec, trackingConfig.fixedBodyweight ? undefined : String(progression?.weight || prevSets?.[si]?.weight || ex.weight || ""))}
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
                                 className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60"
                               >
@@ -1807,6 +1828,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             );
           })}
           </div>
+          {started && !workoutCompleted && (
+            <>
+              <Button type="button" variant="plain" className="mt-3 min-h-11 w-full" onClick={() => { void hapticTap(); setExtraPickerOpen(true); }}>
+                <Plus className="h-4 w-4" aria-hidden="true" />Añadir ejercicio a esta sesión
+              </Button>
+              <ExercisePicker
+                open={extraPickerOpen}
+                onOpenChange={setExtraPickerOpen}
+                existing={exerciseNames}
+                onPick={(entries) => { addSessionExercises(entries); setExtraPickerOpen(false); }}
+              />
+            </>
+          )}
           </section>
           )}
 
