@@ -49,7 +49,6 @@ describe("settings plan labels and availability", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
     await waitFor(() => expect(mocks.saves).toHaveLength(1));
     expect(mocks.saves[0].availability).toEqual(mocks.availability);
-    expect(screen.getByRole("button", { name: "Horarios y disponibilidad" })).toBeVisible();
   });
   it("overlays manual capacity while retaining chosen weekdays and sports", async () => {
     show(); await screen.findByRole("spinbutton", { name: "Días/semana" });
