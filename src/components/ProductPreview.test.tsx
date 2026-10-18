@@ -74,12 +74,11 @@ describe("public product preview", () => {
     expect(screen.queryByText("Cintura")).not.toBeInTheDocument();
   });
 
-  it("marks paid-only chat and nutrition features in the demo", async () => {
+  it("marks nutrition as paid-only and has no chat tab in v1.0", async () => {
     render(<ProductPreview onPlans={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
     await waitFor(() => expect(screen.getByText(/Función de pago/)).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
-    await waitFor(() => expect(screen.getByText(/No incluido en Gratis/)).toBeVisible());
+    expect(screen.queryByRole("button", { name: "Chat" })).not.toBeInTheDocument();
   });
 
   it("opens nutrition from the summary row on the home screen", async () => {
