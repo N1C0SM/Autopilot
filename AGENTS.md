@@ -15,3 +15,4 @@
 - Admin roadmap persists versions and tasks in admin-only RLS tables; "Hecho" comes only from `src/lib/roadmap/evidence.ts` (reconciled on every load, files checked by tests, mirrored in roadmap-ai/capabilities.ts) or a written admin proof labeled as such — the roadmap can never claim unproven work.
 - The uploaded roadmap is a one-time seed catalog with stable task IDs; initialization never overwrites saved edits or resurrects deleted tasks, while the current version is switched atomically through an admin-only RPC.
 - Roadmap implementation assistance prepares a copyable Lovable request, never executes code changes from the runtime app, preserving review and release boundaries.
+- Test accounts excluded from admin metrics live in the admin-only table metrics_excluded_users (src/lib/testAccounts.ts), toggled from Admin → Usuarios → Acceso; they stay visible in user management.
