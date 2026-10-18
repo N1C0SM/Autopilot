@@ -1,6 +1,7 @@
 # Roadmap
 - [x] Simplificar estados a Idea/Pendiente/Hecho y mostrar ayuda de IA sin prometer cambios automáticos
 - [x] Aclarar el alcance de «hazmelo» con IA: propone trabajo; no modifica ni publica la aplicación desde el Roadmap
+- [x] Roadmap siempre fiel: Hecho solo con prueba de código comprobada por tests o confirmación escrita
 - [x] Avisos de ideas repetidas y consulta de todas las versiones o una concreta
 - [x] Roadmap interactivo en Admin con las 40 versiones del documento
 - [x] Lluvia de ideas guardada, evidencia y guardián del foco
