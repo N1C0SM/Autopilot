@@ -45,14 +45,14 @@ jobs:
           CAP_DEV: "0"
 
       - name: Build installable APK
-        run: chmod +x gradlew && ./gradlew assembleDebug
+        run: chmod +x gradlew && ./gradlew assembleRelease
         working-directory: android
 
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
           name: autopilot-android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
       - name: Publish APK to "android-latest" release
@@ -60,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk autopilot.apk
+          cp android/app/build/outputs/apk/release/app-release.apk autopilot.apk
           git tag -f android-latest && git push -f origin android-latest
           gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --title "Autopilot Android (última versión)" --notes "APK instalable generado automáticamente." --latest=false
           gh release upload android-latest autopilot.apk --clobber

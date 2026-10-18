@@ -34,10 +34,11 @@ android {
     }
     buildTypes {
         release {
-            if (keystorePropertiesFile.exists()) {
-                signingConfig signingConfigs.release
-            }
-            minifyEnabled false
+            // Without a release keystore the sideload APK is signed with the debug key so it stays installable.
+            signingConfig keystorePropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+            // R8 strips unused code and resources: smaller APK download.
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
