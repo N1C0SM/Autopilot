@@ -44,3 +44,15 @@ describe("admin client metrics", () => {
     expect(countCompletedWorkSets(null)).toBe(0);
   });
 });
+
+import { clientProfiles as _cp } from "@/lib/adminMetrics";
+import { describe as _d, it as _it, expect as _e } from "vitest";
+_d("test accounts", () => {
+  _it("excluye nicolassanmarcos4@gmail.com de métricas aunque no sea staff", () => {
+    const res = _cp([
+      { user_id: "a", email: "Nicolassanmarcos4@gmail.com" },
+      { user_id: "b", email: "gonzalo@x.com" },
+    ] as never[], new Set());
+    _e(res.map((p: { user_id: string }) => p.user_id)).toEqual(["b"]);
+  });
+});
