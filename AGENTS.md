@@ -16,3 +16,4 @@
 - The uploaded roadmap is a one-time seed catalog with stable task IDs; initialization never overwrites saved edits or resurrects deleted tasks, while the current version is switched atomically through an admin-only RPC.
 - Roadmap implementation assistance prepares a copyable Lovable request, never executes code changes from the runtime app, preserving review and release boundaries.
 - Test accounts excluded from admin metrics live in the admin-only table metrics_excluded_users (src/lib/testAccounts.ts), toggled from Admin → Usuarios → Acceso; they stay visible in user management.
+- Consumer dashboard chat navigation, redirects and rendering share the release gate in `src/lib/releaseScope.ts`, independently of billing entitlements, so unreleased chat never appears as an actionable tab.
