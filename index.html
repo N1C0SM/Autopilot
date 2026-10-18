@@ -28,10 +28,6 @@
       } catch (_) {}
     </script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
 
     <link rel="preconnect" href="https://enebrcdrdnfkyduzyrzm.supabase.co" crossorigin />
     <link rel="dns-prefetch" href="https://js.stripe.com" />
@@ -70,6 +66,6 @@
       <!--prerender:content-->
     </div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>if ("serviceWorker" in navigator && !window.Capacitor?.isNativePlatform()) window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));</script>
+    <script>(function(){if(!("serviceWorker" in navigator)||window.Capacitor?.isNativePlatform?.())return;var h=location.hostname,off=window.self!==window.top||/^(id-preview--|preview--)/.test(h)||/(^|\.)lovableproject(-dev)?\.com$/.test(h)||/(^|\.)beta\.lovable\.dev$/.test(h)||h==="localhost"||new URLSearchParams(location.search).has("sw");if(off){navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(x){x.unregister()})});return}window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js")})})();</script>
   </body>
 </html>
