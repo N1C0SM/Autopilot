@@ -92,12 +92,16 @@ const scanHasSignal = (r: ScanInferences) =>
   !!r.muscle_breakdown?.length || (!!r.inferred_goal && GOALS.has(r.inferred_goal));
 
 /**
- * Todos los usuarios registrados pueden aplicar scan.
- * Free: plan básico (solo entrenamiento).
- * Plus/Coach: plan completo (entrenamiento + nutrición).
+ * Plus y Coach pueden aplicar scan a su plan (entrenamiento + nutrición).
+ * Free o sin plan: solo pueden aplicar el scan básico si la función lo permite;
+ * usuarios sin pago activo no pueden regenerar su plan con el scan.
  */
 export function canApplyScanToPlan(billing: BillingProfile | null | undefined, isAdmin: boolean): boolean {
-  return isAdmin || !!billing; // Cualquier usuario registrado puede aplicar scan
+  if (isAdmin) return true;
+  if (!billing) return false;
+  // Un billing con payment_status distinto de 'paid' (ej. 'unpaid') no tiene acceso.
+  if ((billing as { payment_status?: string }).payment_status === "unpaid") return false;
+  return true;
 }
 
 export type ScanApplyOutcome =

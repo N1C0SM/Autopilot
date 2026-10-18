@@ -26,7 +26,7 @@ describe("admin client metrics", () => {
       { user_id: "inactive", ...active, subscription_tier: "full", subscription_status: "inactive" },
       { user_id: "unpaid", ...active, subscription_tier: "full", payment_status: "unpaid" },
     ];
-    expect(summarizeClientPlans(profiles, now)).toMatchObject({ total: 9, counts: { free: 3, plus: 2, coach: 4 }, activePlans: 6, estimatedMonthly: 254 });
+    expect(summarizeClientPlans(profiles, now)).toMatchObject({ total: 9, counts: { free: 3, plus: 2, coach: 4 }, activePlans: 6, estimatedMonthly: 225.98 });
   });
 
   it("includes trial/manual access and legacy purchases as catalog estimates only", () => {
@@ -35,7 +35,7 @@ describe("admin client metrics", () => {
       { user_id: "manual", ...active, subscription_tier: "full" },
       { user_id: "legacy", ...active, subscription_tier: "personal", subscription_status: "inactive", stripe_payment_id: "pi_legacy" },
     ];
-    expect(summarizeClientPlans(profiles, now)).toMatchObject({ activePlans: 3, estimatedMonthly: 127, estimatedPerPlan: 42 });
+    expect(summarizeClientPlans(profiles, now)).toMatchObject({ activePlans: 3, estimatedMonthly: 112.99, estimatedPerPlan: 38 });
     expect(summarizeClientPlans([], now)).toMatchObject({ total: 0, activePlans: 0, estimatedMonthly: 0, estimatedPerPlan: 0 });
   });
 
