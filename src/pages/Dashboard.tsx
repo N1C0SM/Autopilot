@@ -338,6 +338,8 @@ const Dashboard = () => {
         setMeals(data.meals_json as unknown as Meal[]);
       }
     };
+    const onNutritionUpdated = () => { void refreshNutritionPlan(); };
+    window.addEventListener("autopilot:nutrition-plan-updated", onNutritionUpdated);
 
     const channel = supabase
       .channel(`dashboard-${user.id}`)
@@ -354,6 +356,7 @@ const Dashboard = () => {
     return () => {
       void supabase.removeChannel(channel);
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("autopilot:nutrition-plan-updated", onNutritionUpdated);
     };
   }, [user, fetchData]);
 

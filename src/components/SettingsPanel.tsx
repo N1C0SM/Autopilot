@@ -311,7 +311,12 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       nutrition_preferences: onboarding.nutrition_preferences,
       allergies: onboarding.allergies,
     }, { onConflict: "user_id" });
-    if (!error) { toast.success("Datos actualizados"); void hapticNotify("success"); window.dispatchEvent(new Event("autopilot:onboarding-updated")); }
+    if (!error) {
+      toast.success("Datos actualizados"); void hapticNotify("success");
+      window.dispatchEvent(new Event("autopilot:onboarding-updated"));
+      const { data: sync } = await supabase.functions.invoke("sync-nutrition-macros");
+      if (sync?.updated) window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
+    }
     else { console.error("saveOnboarding", error); toast.error(`No se pudo guardar: ${error.message}`); void hapticNotify("error"); }
     setSaving(false);
   };
