@@ -1673,7 +1673,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   value={set.weight}
                                   onChange={(e) => updateSet(ex.name, si, "weight", e.target.value)}
                                   placeholder={String(progression?.weight || prevSets?.[si]?.weight || ex.weight || trackingConfig.weightPlaceholder || "kg")}
-                                  onFocus={(e) => e.currentTarget.select()}
+                                  onFocus={focusSetField}
                                   aria-label={`Peso de la serie ${si + 1} de ${ex.name}`}
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
@@ -1694,7 +1694,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                     const val = parseInt(e.target.value);
                                     if (!isNaN(val)) updateSet(ex.name, si, "reps", val);
                                   }}
-                                  onFocus={(e) => e.currentTarget.select()}
+                                  onFocus={focusSetField}
                                   aria-label={`Repeticiones de la serie ${si + 1} de ${ex.name}`}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || repsMissing || (!set.done && prevSets?.[si]?.done && set.reps === prevSets[si].reps) ? "text-muted-foreground" : ""}`}
                                 />
@@ -1738,7 +1738,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                     value={drop.weight}
                                     onChange={(e) => updateDrop(ex.name, si, di, { weight: e.target.value })}
                                     placeholder="kg"
-                                    onFocus={(e) => e.currentTarget.select()}
+                                    onFocus={focusSetField}
                                     aria-label={`Peso de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     aria-invalid={Boolean(dropError && drop.weight.trim() && Number.isInteger(drop.reps) && drop.reps > 0)}
                                     className={`${NUMBER_FIELD} ${dim}`}
@@ -1754,7 +1754,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                       const val = parseInt(e.target.value);
                                       if (!isNaN(val)) updateDrop(ex.name, si, di, { reps: val });
                                     }}
-                                    onFocus={(e) => e.currentTarget.select()}
+                                    onFocus={focusSetField}
                                     aria-label={`Repeticiones de la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
                                     className={`${NUMBER_FIELD} ${dim}`}
                                   />
