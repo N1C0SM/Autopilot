@@ -1065,6 +1065,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             }
             trailing={
               <>
+                <button
+                  type="button"
+                  onClick={() => { void hapticTap(); setDiscardOpen(true); }}
+                  disabled={saving}
+                  className="inline-flex h-11 items-center px-2 type-body text-destructive transition-opacity active:opacity-60 disabled:opacity-40"
+                >
+                  Descartar
+                </button>
                 {saveStatus === "error" && (
                   <span role="status" className="flex h-11 w-11 items-center justify-center text-destructive">
                     <CloudOff className="h-5 w-5" aria-hidden="true" />
