@@ -84,7 +84,7 @@ export default function PublicInfo({ page }: { page: Page }) {
           </li>; })}
         </ol>
         <ExplainerVideo />
-        <div id="demo" className="scroll-mt-20"><ProductPreview onPlans={() => navigate("/planes")} onFree={() => navigate("/onboarding")} /></div>
+        <div id="demo" className="scroll-mt-20"><Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}><ProductPreview onPlans={() => navigate("/planes")} onFree={() => navigate("/onboarding")} /></Suspense></div>
         <p className="mx-auto max-w-6xl px-5 pb-8 type-subhead text-muted-foreground sm:px-8">También puedes <Link to="/scan" className="text-primary">hacer el análisis inicial con IA</Link>.</p>
       </>}
       {page === "team" && <><TrainersSection /><TeamTestimonials /></>}
