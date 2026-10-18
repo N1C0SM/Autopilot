@@ -1,7 +1,4 @@
 import { Suspense, lazy, useEffect } from "react";
-import ForTrainers, { AcceptInvitation } from "@/pages/ForTrainers";
-import AppDownload from "@/pages/AppDownload";
-import PlanShieldDialog from "@/components/dashboard/PlanShieldDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+const ForTrainers = lazy(() => import("@/pages/ForTrainers"));
+const AcceptInvitation = lazy(() => import("@/pages/ForTrainers").then((m) => ({ default: m.AcceptInvitation })));
+const AppDownload = lazy(() => import("@/pages/AppDownload"));
+const PlanShieldDialog = lazy(() => import("@/components/dashboard/PlanShieldDialog"));
 const Index = lazy(() => import("./pages/Index"));
 const PublicInfo = lazy(() => import("./pages/PublicInfo"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -105,7 +106,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <PlanShieldDialog />
+        <Suspense fallback={null}><PlanShieldDialog /></Suspense>
         <BrowserRouter>
           <NativeDeepLinks />
           <ImpersonationBanner />
