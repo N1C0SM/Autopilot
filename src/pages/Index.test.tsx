@@ -5,6 +5,12 @@ import { HelmetProvider } from "react-helmet-async";
 import Index from "./Index";
 
 vi.mock("@/lib/analytics", () => ({ track: vi.fn() }));
+vi.mock("@/lib/freeCampaign", () => ({ useFreeCampaign: () => false }));
+vi.mock("@/lib/planCatalog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/planCatalog")>();
+  const plans = actual.fallbackCatalog();
+  return { ...actual, usePlanCatalog: () => plans, usePlanAvailability: () => actual.availabilityFrom(plans) };
+});
 function Destination() {
   const location = useLocation();
   return <p data-testid="destination">{location.pathname}{location.search}{location.hash}</p>;
@@ -32,7 +38,7 @@ describe("short public home", () => {
     const main = screen.getByRole("main");
     expect(within(main).getByRole("link", { name: "Probar la demo" })).toHaveAttribute("href", "#demo");
     expect(main.querySelector("#demo")).not.toBeNull();
-    expect(await within(main).findByText("29 €")).toBeInTheDocument();
+    expect(await within(main).findByText("14,99 €")).toBeInTheDocument();
     expect(within(main).getByText("49 €")).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
     expect(within(main).getAllByRole("button", { name: /\?$/ }).length).toBeGreaterThanOrEqual(4);

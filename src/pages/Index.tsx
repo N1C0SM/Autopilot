@@ -110,7 +110,7 @@ export default function Index() {
     {/* 3 · Precios */}
     <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-6xl">
-        <h2 id="precios-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza gratis. Paga solo si te aporta.</h2>
+        <h2 id="precios-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">{plans.campaign ? "Empieza gratis, sin tarjeta." : "Empieza gratis. Paga solo si te aporta."}</h2>
         <p className="mt-3 max-w-2xl type-body text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
         <div className="mt-8">
           <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
@@ -129,7 +129,7 @@ export default function Index() {
           {[
             [SlidersHorizontal, "Personaliza", "Objetivo, nivel, días, lesiones y material: gimnasio, casa o calistenia."],
             [Dumbbell, "Entrena", "Sigue tu sesión y apunta kg y repeticiones de cada serie."],
-            [LineChart, "Progresa", "Consulta récords, volumen y peso. En Plus, la carga siguiente se calcula con tus registros."],
+            [LineChart, "Progresa", plans.campaign ? "Consulta récords, volumen y peso. La siguiente carga se calcula con tus registros." : `Consulta récords, volumen y peso.${plans.plus ? ` En ${plans.plusName}, la carga siguiente se calcula con tus registros.` : ""}`],
           ].map(([Icon, title, text]) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="flex items-start gap-4">
             <span className="flex w-10 shrink-0 justify-center pt-0.5"><I className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" /></span>
             <div className="min-w-0">

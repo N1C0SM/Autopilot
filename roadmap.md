@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Campaña Free: control admin, ofertas y pagos ocultos, acceso entrenamiento/nutrición sin alterar suscripciones, pruebas
+- [x] Campaña Free: control admin persistente, ofertas y pagos de planes ocultos, nutrición básica y progresión; comprobado en cuenta Free y pagos bloqueados (403)
 - [x] Simplificar estados a Idea/Pendiente/Hecho y mostrar ayuda de IA sin prometer cambios automáticos
 - [x] Aclarar el alcance de «hazmelo» con IA: propone trabajo; no modifica ni publica la aplicación desde el Roadmap
 - [x] Roadmap siempre fiel: Hecho solo con prueba de código comprobada por tests o confirmación escrita
