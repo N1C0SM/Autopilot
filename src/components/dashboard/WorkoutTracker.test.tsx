@@ -50,7 +50,7 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Añadir serie" })[0]);
     expect(readActiveWorkout("user")?.logs.Sentadilla).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: /Sentadilla 1 series/ }));
-    expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).not.toBeInTheDocument());
   });
   it("restores a virtual free plan and unsynced edits after remount", async () => {
     const free = plan("Lunes", "Remo libre");
@@ -67,10 +67,10 @@ describe("routine week navigation and saved session dates", () => {
     const day = { ...plan("Lunes", "Sentadilla"), exercises: [...(plan("Lunes", "Sentadilla").exercises ?? []), ...(plan("Lunes", "Remo").exercises ?? [])] };
     render(<WorkoutTracker userId="user" dayPlans={[day]} initialDay="Lunes" />);
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
-    expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).toBeVisible());
     expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Remo" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "2. Remo" }));
-    expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo" })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo" })).toBeVisible());
   });
   it("opens any routine from a rest Sunday without writing previewed sets", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} />);
