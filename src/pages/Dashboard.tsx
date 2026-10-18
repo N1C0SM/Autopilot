@@ -27,7 +27,6 @@ import type { UserSection } from "@/components/UserSidebar";
 import SettingsPanel from "@/components/SettingsPanel";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import ReferralShare from "@/components/ReferralShare";
-import { exportPlanPDF } from "@/lib/exportPlanPDF";
 import MobileAppShell from "@/components/mobile/MobileAppShell";
 import type { MobileTab } from "@/components/mobile/MobileTabBar";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -378,8 +377,10 @@ const Dashboard = () => {
     }
   };
 
-  const handleExportPDF = () => {
+  // The PDF library is heavy; load it only when the user asks for the PDF.
+  const handleExportPDF = async () => {
     try {
+      const { exportPlanPDF } = await import("@/lib/exportPlanPDF");
       exportPlanPDF({ userName: profileName, dayPlans, macros, meals });
       toast.success("PDF descargado");
     } catch (e) {
