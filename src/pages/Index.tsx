@@ -165,7 +165,7 @@ export default function Index() {
       <div className="mx-auto mt-16 max-w-md text-center sm:mt-24">
         <h2 className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza a entrenar con Autopilot</h2>
         <p className="mt-2 type-body text-muted-foreground">Gratis y sin tarjeta.</p>
-        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding-choice" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
+        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
       </div>
     </section>
   </PublicLayout>;
