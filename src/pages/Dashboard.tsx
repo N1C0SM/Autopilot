@@ -420,8 +420,8 @@ const Dashboard = () => {
   }
 
   const hasPlan = planStatus === "plan_ready";
-  // Chat solo para planes de pago: Coach está oculto en el catálogo, Plus mantiene chat.
-  const hideChat = true;
+  // Chat disponible en Plus y Coach. Free no lo ve.
+  const hideChat = consumerPlan !== "plus" && consumerPlan !== "coach";
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
