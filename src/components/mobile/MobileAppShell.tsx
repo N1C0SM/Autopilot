@@ -52,7 +52,7 @@ const MobileAppShell = ({
   const [contentTitleMissing, setContentTitleMissing] = useState(false);
 
   // Antes que useNavBarState (mismo commit): su primera medida ya ve el titular visible.
-  // Depende de `children` porque el titular aparece o cambia con el contenido.
+  // No incluimos `children` en las dependencias para evitar re-renders al cambiar de pestaña.
   useEffect(() => {
     const heading = followContentTitle
       ? Array.from(scrollRef.current?.querySelectorAll<HTMLElement>("[data-nav-title]") ?? []).find(
@@ -61,7 +61,7 @@ const MobileAppShell = ({
       : null;
     contentTitleRef.current = heading;
     setContentTitleMissing(followContentTitle && !heading);
-  }, [followContentTitle, children]);
+  }, [followContentTitle]);
 
   const { scrolled, collapsed } = useNavBarState(
     scrollRef,
