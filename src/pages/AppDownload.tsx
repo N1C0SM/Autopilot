@@ -64,11 +64,14 @@ export default function AppDownload() {
       <div className="mt-5 rounded-2xl border border-border bg-background/60 p-4">
         <p className="text-sm font-medium text-foreground">¿Usas AltStore?</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Añade nuestra fuente e instala la app nativa. Necesitas AltStore ya instalado; se renueva cada 7 días.
+          Este botón solo funciona si AltStore ya está instalado en tu iPhone (se instala desde un ordenador con AltServer). La app se renueva cada 7 días.
         </p>
         <Button asChild variant="secondary" className="mt-3 w-full rounded-2xl">
           <a href={ALTSTORE_URL}>Abrir en AltStore</a>
         </Button>
+        <a href="https://altstore.io" target="_blank" rel="noopener noreferrer" className="mt-2 block text-center text-xs text-primary">
+          ¿No tienes AltStore? Cómo instalarlo
+        </a>
       </div>
     </section>
   );
