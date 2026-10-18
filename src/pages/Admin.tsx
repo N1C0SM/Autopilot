@@ -15,6 +15,7 @@ import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 import { clientProfiles } from "@/lib/adminMetrics";
+import { listTestAccountIds } from "@/lib/testAccounts";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -95,11 +96,11 @@ const Admin = () => {
     const [profilesResult, rolesResult, testResult] = await Promise.all([
       supabase.from("profiles").select("user_id, email, name, avatar_url, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier, subscription_status, subscription_end, stripe_payment_id"),
       supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
-      supabase.from("metrics_excluded_users").select("user_id"),
+      listTestAccountIds(),
     ]);
     if (profilesResult.error) throw profilesResult.error;
     if (rolesResult.error) throw rolesResult.error;
-    const tests = new Set((testResult.data || []).map((row) => row.user_id));
+    const tests = testResult;
     setAllUsers(profilesResult.data || []);
     setAdminIds(new Set((rolesResult.data || []).filter((role) => role.role === "admin").map((role) => role.user_id)));
     setTrainerIds(new Set((rolesResult.data || []).filter((role) => role.role === "trainer").map((role) => role.user_id)));

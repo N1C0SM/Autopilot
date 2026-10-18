@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { isTestAccount as isTestAccountRemote, setTestAccount } from "@/lib/testAccounts";
 import { ArrowLeft, ShieldCheck, User2, Dumbbell, Trash2, AlertTriangle, Eye, Target, MoreHorizontal, UserRound, UserMinus, Crown, Check, ChevronRight, Info, FlaskConical } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -193,8 +194,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       setOnboarding(onb as OnboardingData | null);
       setIsUserAdmin(!!roleData);
       setIsUserTrainer(!!trainerRoleData);
-      void supabase.from("metrics_excluded_users").select("user_id").eq("user_id", profile.user_id).maybeSingle()
-        .then(({ data }) => { if (active) setIsTestAccount(!!data); });
+      void isTestAccountRemote(profile.user_id).then((v) => { if (active) setIsTestAccount(v); });
       
 
       if (tp?.workouts_json) {
@@ -315,9 +315,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
 
   const toggleTestAccount = async () => {
     setRoleLoading(true);
-    const { error } = isTestAccount
-      ? await supabase.from("metrics_excluded_users").delete().eq("user_id", profile.user_id)
-      : await supabase.from("metrics_excluded_users").insert({ user_id: profile.user_id });
+    const { error } = await setTestAccount(profile.user_id, !isTestAccount);
     if (error) toast.error("No se pudo cambiar");
     else {
       setIsTestAccount(!isTestAccount);
