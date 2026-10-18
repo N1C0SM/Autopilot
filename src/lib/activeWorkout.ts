@@ -13,6 +13,34 @@ export interface ActiveWorkout {
   expandedExercise: number | null;
   restEndsAt: number | null;
   restTarget: number;
+  /** Absolute session start (ms). Optional for drafts saved before the session clock existed. */
+  startedAt?: number;
+}
+
+export function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
+/** Short soft tone when rest ends; silent if audio is unavailable or blocked. */
+export function playRestBeep() {
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    [0, 0.25].forEach((offset) => {
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.type = "sine"; osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
+      gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + 0.18);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + offset); osc.stop(ctx.currentTime + offset + 0.2);
+    });
+    window.setTimeout(() => void ctx.close(), 800);
+  } catch { /* noop */ }
 }
 export const ACTIVE_WORKOUT_EVENT = "autopilot:active-workout-changed";
 const key = (userId: string) => `autopilot:active-session:${userId}`;

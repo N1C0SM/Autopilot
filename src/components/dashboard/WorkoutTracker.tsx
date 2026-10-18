@@ -18,7 +18,7 @@ import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
-import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds } from "@/lib/activeWorkout";
+import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
@@ -106,6 +106,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [saving, setSaving] = useState(false);
   const [restTimer, setRestTimerState] = useState<number | null>(null);
   const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
   const setRestTimer = (seconds: number | null) => {
     setRestEndsAt(seconds === null ? null : Date.now() + seconds * 1000);
     setRestTimerState(seconds);
@@ -392,6 +394,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       if (remaining === null) {
         setRestEndsAt(null);
         try { navigator.vibrate?.([200, 100, 200]); } catch { /* noop */ }
+        playRestBeep();
         void hapticNotify("success");
       }
     };
@@ -406,12 +409,25 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     };
   }, [restEndsAt]);
 
+  // Session clock: absolute start mark, restored from the draft so reloads don't reset it.
+  useEffect(() => {
+    if (!started || workoutCompleted) return;
+    if (sessionStartedAt === null) {
+      const draft = readActiveWorkout(userId);
+      setSessionStartedAt(draft?.date === selectedDate && typeof draft.startedAt === "number" ? draft.startedAt : Date.now());
+    }
+    const id = window.setInterval(() => setNowTick(Date.now()), 1000);
+    setNowTick(Date.now());
+    return () => window.clearInterval(id);
+  }, [started, workoutCompleted, sessionStartedAt, userId, selectedDate]);
+  useEffect(() => { if (!started) setSessionStartedAt(null); }, [started]);
+
   useEffect(() => {
     if (!started || !logsReady || workoutCompleted || activePlan?.type !== "gimnasio") return;
     const saved = saveActiveWorkout({ version: 1, userId, date: selectedDate, plan: activePlan,
-      logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget });
+      logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, startedAt: sessionStartedAt ?? undefined });
     if (!saved) setSaveError(true);
-  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget]);
+  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt]);
 
   useEffect(() => {
     if (started && expandedExercise !== null) {
@@ -1055,7 +1071,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div className="sticky top-0 z-30 -mt-2">
           <NavBar
             title={activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
-            subtitle={<span className="tabular-nums">{completedSets} de {totalSets} series</span>}
+            subtitle={<span className="tabular-nums">{sessionStartedAt !== null && <><span aria-label="Tiempo de sesión">{formatElapsed(nowTick - sessionStartedAt)}</span> · </>}{completedSets} de {totalSets} series</span>}
             leading={
               <button
                 type="button"
@@ -1609,7 +1625,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} className={`pl-3 ${expandedExercise === i && si === firstPendingIndex ? "rounded-lg ring-1 ring-inset ring-primary/50 bg-primary/5" : ""}`}>
+                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 ${si === firstPendingIndex ? "rounded-lg ring-1 ring-inset ring-primary/50 bg-primary/5" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
