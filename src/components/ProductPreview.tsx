@@ -343,6 +343,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                   <div>
                     <h1 className="type-large-title">{titles.nutrition}</h1>
                     <p className="mt-1 type-subhead text-muted-foreground">Hoy · {plans.campaign ? "nutrición básica" : `plan ${plans.plus ? plans.plusName : plans.coachName}`}</p>
+                    {plans.campaign ? <dl className="mt-6 grid grid-cols-2 gap-4"><div><dt className="type-subhead text-muted-foreground">Calorías</dt><dd className="mt-2 type-title1 tabular-nums">2.300 <span className="type-subhead">kcal</span></dd></div><div><dt className="type-subhead text-muted-foreground">Proteína</dt><dd className="mt-2 type-title1 tabular-nums">150 <span className="type-subhead">g</span></dd></div></dl> : <>
                     <div className="mt-5 flex items-center gap-5">
                       <ProgressRing value={62} size={116} stroke={12} label="Calorías del día">
                         <div className="text-center">
@@ -381,6 +382,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                         />
                       ))}
                     </ListGroup>
+                    </>}
                     <p className="mt-4 type-footnote text-muted-foreground">{plans.campaign ? "Ejemplo ilustrativo. Tus objetivos se calculan con tus datos." : "Comidas ilustrativas, sin recomendaciones para tu caso."}</p>
                   </div>
                 )}
@@ -525,7 +527,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
 
         <div className="mx-auto mt-12 flex max-w-sm flex-col items-stretch gap-1 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
           {onFree && <Button type="button" variant="tinted" size="lg" className="sm:px-10" onClick={() => { void hapticTap(); onFree(); }}>Crear mi propia rutina gratis</Button>}
-          <Button type="button" variant="plain" size="lg" onClick={() => { void hapticTap(); onPlans(); }}>Ver qué incluye cada plan</Button>
+          <Button type="button" variant="plain" size="lg" onClick={() => { void hapticTap(); onPlans(); }}>{plans.campaign ? "Ver qué incluye Free" : "Ver qué incluye cada plan"}</Button>
         </div>
       </div>
     </section>

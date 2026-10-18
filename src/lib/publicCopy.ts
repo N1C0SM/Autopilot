@@ -3,7 +3,7 @@
 // so hiding Coach in Admin → Planes removes it from the page, the FAQs and the structured data alike.
 import { euro, type PlanAvailability } from "./planCatalogCore";
 
-export type PlanFlags = Pick<PlanAvailability, "coach" | "plus" | "coachName" | "plusName" | "coachPrice" | "plusPrice" | "paidNames">;
+export type PlanFlags = Pick<PlanAvailability, "coach" | "plus" | "coachName" | "plusName" | "coachPrice" | "plusPrice" | "paidNames" | "campaign">;
 export type Faq = { q: string; a: string };
 
 export const SITE_URL = "https://autopilotplan.com";
@@ -23,7 +23,7 @@ export function landingFaqs(p: PlanFlags): Faq[] {
     {
       q: names.length > 1 ? `¿Qué diferencia hay entre ${listEs(names)}?` : "¿Qué incluye Autopilot?",
       a: [
-        "Free sirve para entrenar y registrar.",
+        p.campaign ? "Free incluye rutina, registro, progreso, sobrecarga progresiva y objetivos de nutrición básica sin tarjeta." : "Free sirve para entrenar y registrar.",
         p.plus && `${p.plusName} (${euro(p.plusPrice)}/mes) añade plan de nutrición con calorías y macros, progresión de cargas calculada con tus registros, análisis corporal por foto con IA y estadísticas avanzadas.`,
         p.coach && `${p.coachName} (${euro(p.coachPrice)}/mes) incluye todo ${p.plus ? p.plusName : "lo anterior"} y a Nicolás revisando tu plan y respondiéndote por chat.`,
       ].filter(Boolean).join(" "),
@@ -41,7 +41,7 @@ export function publicFaqs(p: PlanFlags): Faq[] {
     {
       q: names.length > 1 ? `¿Qué diferencia hay entre ${listEs(names)}?` : "¿Qué incluye Autopilot?",
       a: [
-        "Free incluye rutina inicial, registro de entrenamientos y progreso, sin tarjeta.",
+        p.campaign ? "Free incluye rutina inicial, registro, progreso, sobrecarga progresiva y objetivos de nutrición básica, sin tarjeta." : "Free incluye rutina inicial, registro de entrenamientos y progreso, sin tarjeta.",
         p.plus && `${p.plusName} (${euro(p.plusPrice)}/mes) añade plan de nutrición, progresión de cargas calculada con tus registros, análisis corporal por foto con IA y estadísticas avanzadas.`,
         p.coach && `${p.coachName} (${euro(p.coachPrice)}/mes) añade además a Nicolás, el fundador, que revisa tu plan y te responde por chat.`,
       ].filter(Boolean).join(" "),
@@ -63,7 +63,7 @@ export function publicFaqs(p: PlanFlags): Faq[] {
       q: "¿Quién prepara y ajusta mi plan?",
       a: `La rutina se genera con reglas de entrenamiento fijas a partir de tu objetivo, nivel, días y material.${p.plus ? ` En ${p.plusName}, la progresión de cargas se calcula con lo que registras.` : ""}${coachExtra(`En ${p.coachName}, además, Nicolás revisa tu caso, ajusta el plan y responde a tus mensajes.`)}`,
     },
-    { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Los planes mensuales se renuevan automáticamente hasta que cancelas desde Ajustes → Suscripción. Sin permanencia." },
+    (p.plus || p.coach) && { q: "¿Puedo cancelar cuando quiera?", a: "Sí. Los planes mensuales se renuevan automáticamente hasta que cancelas desde Ajustes → Suscripción. Sin permanencia." },
     { q: "¿Y si entreno en casa?", a: `Sin problema. Indicas tu material exacto y la rutina se construye sobre esa base: calistenia, mancuernas en casa o cero material.${coachExtra(`Con ${p.coachName}, Nicolás lo revisa contigo.`)}` },
     { q: "¿Y si nunca he entrenado?", a: `La rutina parte de tu nivel real y progresa paso a paso, sin saltar fases.${coachExtra(`Con ${p.coachName}, Nicolás la supervisa.`)}` },
     { q: "¿En qué se diferencia de ChatGPT o de una rutina de YouTube?", a: `ChatGPT te da un texto y YouTube una rutina genérica. Autopilot construye tu rutina con tus datos reales (nivel, material, días) y guarda cada serie para que veas tu progreso.${coachExtra(`Con ${p.coachName}, además, hay una persona real que revisa tu caso.`)}` },

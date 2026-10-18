@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     return reply({ proposals });
   } catch (error) {
     const detail = error instanceof Error ? error.message : '';
-    if (/no credits|insufficient_quota|credit_balance_exhausted|quota.*exceed/i.test(detail)) return reply({ error: 'El proveedor de IA configurado no tiene saldo. Recárgalo antes de volver a ordenar ideas; tus ideas siguen guardadas.' }, 402);
+    if (/no credits|insufficient_quota|credit_balance_exhausted|quota.*exceed/i.test(detail)) return reply({ error: 'No hay créditos de Lovable AI disponibles. Recárgalos antes de volver a ordenar ideas; tus ideas siguen guardadas.' }, 402);
     const code = typeof error === 'object' && error !== null && 'statusCode' in error ? Number(error.statusCode) : 500;
     const status = [400,401,402,403,404,429,503].includes(code) ? code : 500;
     const messages: Record<number,string> = { 400: 'La IA no pudo interpretar esta solicitud. Tus ideas siguen guardadas.', 401: 'La configuración de IA necesita revisión.', 402: 'No hay créditos de IA disponibles. Revisa los créditos de Lovable.', 403: 'La IA no tiene acceso autorizado. Revisa su configuración.', 404: 'El servicio de IA solicitado no está disponible.', 429: 'La IA está ocupada. Inténtalo más tarde.' };
