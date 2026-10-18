@@ -112,6 +112,13 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
             <div className="flex justify-center py-8">
               <Spinner label="Buscando alternativas" />
             </div>
+          ) : failed ? (
+            <EmptyState
+              icon={Dumbbell}
+              title="No se pudieron cargar"
+              description="Revisa la conexión y vuelve a abrir para reintentar."
+              className="py-6 [&>div:first-child]:bg-secondary"
+            />
           ) : options?.length === 0 ? (
             <EmptyState
               icon={Dumbbell}

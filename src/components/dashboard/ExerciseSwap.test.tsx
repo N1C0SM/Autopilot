@@ -11,11 +11,18 @@ const { builder } = vi.hoisted(() => {
   };
   const builder: Record<string, unknown> = {};
   for (const method of ["select", "neq", "limit", "eq"]) builder[method] = vi.fn(() => builder);
-  builder.then = (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve);
-  return { builder };
+  builder.maybeSingle = vi.fn(async () => ({ data: { equipment_type: "Mixto" }, error: null }));
+  builder.then = (resolve: (value: typeof result & { error: null }) => unknown) => Promise.resolve({ ...result, error: null }).then(resolve);
+  const getUser = vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null }));
+  return { builder, getUser };
 });
+const { getUser } = vi.hoisted(() => ({ getUser: vi.fn() }));
 
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: vi.fn(() => builder) } }));
+vi.mock("@/integrations/supabase/client", async () => {
+  const h = await vi.importMock<never>("./ExerciseSwap.test.tsx").catch(() => null);
+  void h;
+  return { supabase: { from: vi.fn(() => builder), auth: { getUser } } };
+});
 
 afterEach(cleanup);
 
