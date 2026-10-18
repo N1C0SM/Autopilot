@@ -629,12 +629,6 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       toast.error("Sube al menos una foto: de delante, de atrás o las dos");
       return;
     }
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      toast.error("Inicia sesión para usar el Scan.");
-      window.location.assign(`/login?redirect=${encodeURIComponent("/scan")}`);
-      return;
-    }
     setLoading(true);
     setScanProgress(0);
     const interval = setInterval(() => {

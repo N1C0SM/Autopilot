@@ -1,4 +1,3 @@
-import { getAuthedUser } from "../_shared/require-user.ts";
 import { errorMessage, jsonObject } from "../_shared/runtime-values.ts";
 import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
@@ -218,7 +217,8 @@ const extractJson = (text: string) => {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (!(await getAuthedUser(req))) return new Response(JSON.stringify({ error: "Inicia sesión para usar el Scan." }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  // El Scan es la puerta de entrada para visitantes sin cuenta: no exige sesión.
+  // El abuso se frena con el límite por IP de abajo.
 
   try {
     // Per-IP rate limit to prevent AI credit exhaustion.
