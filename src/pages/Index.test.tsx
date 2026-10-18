@@ -11,6 +11,12 @@ vi.mock("@/lib/planCatalog", async (importOriginal) => {
   const plans = actual.fallbackCatalog();
   return { ...actual, usePlanCatalog: () => plans, usePlanAvailability: () => actual.availabilityFrom(plans) };
 });
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    rpc: vi.fn().mockResolvedValue({ data: [{ show_app_download: false }], error: null }),
+  },
+}));
 function Destination() {
   const location = useLocation();
   return <p data-testid="destination">{location.pathname}{location.search}{location.hash}</p>;
