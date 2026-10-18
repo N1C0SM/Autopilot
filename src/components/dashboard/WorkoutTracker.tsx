@@ -30,6 +30,7 @@ import { hapticImpact, hapticNotify, hapticSelection, hapticTap } from "@/lib/na
 import {
   addWorkoutSetDrop,
   createWorkoutSetLogs,
+  resolveConfirmWeight,
   formatWorkoutSetSummary,
   getWorkoutSetDropInputError,
   getWorkoutSetDrops,
@@ -589,8 +590,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     const wasDone = rawSet?.done;
     if (!rawSet) return;
     // Un toque: si el peso está vacío, se usa el que se ve sugerido en gris.
-    const ghost = !wasDone && !rawSet.weight.trim() && suggestedWeight && parsePositiveWeight(suggestedWeight) !== null;
-    const set = ghost ? { ...rawSet, weight: suggestedWeight! } : rawSet;
+    const resolved = wasDone ? rawSet.weight : resolveConfirmWeight(rawSet.weight, suggestedWeight);
+    const ghost = resolved !== rawSet.weight;
+    const set = ghost ? { ...rawSet, weight: resolved } : rawSet;
     if (!wasDone) {
       const inputError = getWorkoutSetInputError(set) ?? getWorkoutSetDropsInputError(set);
       if (inputError) {
@@ -599,7 +601,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         return;
       }
     }
-    if (ghost) updateSet(exerciseName, setIndex, "weight", suggestedWeight!);
+    if (ghost) updateSet(exerciseName, setIndex, "weight", resolved);
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
     const exerciseIndex = activePlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;

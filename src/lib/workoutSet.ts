@@ -138,3 +138,10 @@ export function getWorkoutSetDropsInputError(set: { drops?: WorkoutSetDrop[] }):
 
   return null;
 }
+
+/** Peso con el que se confirma una serie: lo escrito manda; si está vacío se usa la sugerencia visible solo si es un peso válido. */
+export function resolveConfirmWeight(typed: string, suggested?: string | null): string {
+  if (typed.trim()) return typed;
+  const s = (suggested ?? "").trim().replace(",", ".");
+  return s && Number.isFinite(Number(s)) && Number(s) > 0 ? (suggested ?? "").trim() : typed;
+}
