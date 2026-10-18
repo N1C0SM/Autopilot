@@ -1,3 +1,4 @@
+import { generatePlanGuarded } from "@/lib/planShield";
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -186,8 +187,8 @@ const Configurator = () => {
       .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
       .eq("user_id", user.id).maybeSingle();
     if (!hasCoaching(profile)) {
-      const { data: g, error: ge } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
-      if (ge || !g?.success) toast.error("Tu configuración está guardada; la rutina se preparará en breve.");
+      const { data: g, error: ge } = await generatePlanGuarded(supabase, { user_id: user.id }, { userId: user.id });
+      if (ge || (!g?.success && !g?.protected)) toast.error("Tu configuración está guardada; la rutina se preparará en breve.");
     }
     track("onboarding_complete", { paid: hasCoaching(profile) });
     navigate("/dashboard");

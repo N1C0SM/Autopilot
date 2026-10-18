@@ -1,3 +1,5 @@
+import { Play, PencilLine } from "lucide-react";
+import { isManualPlan } from "@/lib/planShield";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/components/dashboard/PlanPaywall";
 import { parseMacroTargets } from "@/lib/nutrition";
@@ -35,6 +37,9 @@ import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { getFirstWeekJourney } from "@/lib/firstWeek";
 import { isIOSNative } from "@/lib/platform";
 
+import { useFreeCampaign } from "@/lib/freeCampaign";
+import BasicNutrition from "@/components/dashboard/BasicNutrition";
+
 const Chat = lazy(() => import("@/components/Chat"));
 const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
 const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"));
@@ -45,6 +50,8 @@ const WorkoutProgress = lazy(() => import("@/components/dashboard/WorkoutProgres
 const PRsList = lazy(() => import("@/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/pages/Recursos"));
 const Scan = lazy(() => import("@/pages/Scan"));
+const PlanEditor = lazy(() => import("@/components/dashboard/PlanEditor"));
+const FreeSessionBuilder = lazy(() => import("@/components/dashboard/FreeSessionBuilder"));
 
 const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
@@ -91,6 +98,7 @@ const Dashboard = () => {
   const [coaching, setCoaching] = useState(false);
   const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
   const plans = usePlanAvailability();
+  const campaign = useFreeCampaign();
   // El chat está siempre visible (aunque no tenga coach)
   const [coachAssigned, setCoachAssigned] = useState(true);
   const [nutrition, setNutrition] = useState(false);
@@ -133,6 +141,9 @@ const Dashboard = () => {
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [freeOpen, setFreeOpen] = useState(false);
+  const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
     if (fromParam === "plan" || fromParam === "tracker") return fromParam;
@@ -338,6 +349,7 @@ const Dashboard = () => {
 
   // Por defecto Plus: es el plan que queremos vender primero. Coach es una elección explícita.
   const handleCompletePayment = async (plan: "training" | "full" | "transform" = "training") => {
+    if (campaign) return;
     try {
       track("checkout_start", { plan, source: "dashboard" });
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
@@ -368,7 +380,7 @@ const Dashboard = () => {
   };
 
   // Wait for the profile: before it loads every user looks like "free".
-  useEffect(() => { if (!loading && consumerPlan !== "plus" && consumerPlan !== "coach" && section === "chat") setSectionState("home"); }, [loading, consumerPlan, section]);
+  useEffect(() => { if (section === "chat") setSectionState("home"); }, [section]);
 
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
@@ -409,7 +421,7 @@ const Dashboard = () => {
 
   const hasPlan = planStatus === "plan_ready";
   // Chat solo para planes de pago: Coach está oculto en el catálogo, Plus mantiene chat.
-  const hideChat = consumerPlan !== "plus" && consumerPlan !== "coach";
+  const hideChat = true;
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
@@ -494,13 +506,14 @@ const Dashboard = () => {
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
         </div>
       )}
-      {!coaching && section === "nutrition" && (
+      {!campaign && !coaching && section === "nutrition" && (
         // Plus preseleccionado siempre: es el plan que queremos vender primero.
         <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
       )}
 
-      {/* Chat IA disponible siempre - sin depender de Coach */}
-      {section === "chat" && (
+      {/* Chat IA disponible siempre - sin depender de Coach.
+          Coach lo excluye: su chat con el entrenador se renderiza más abajo (duplicaría la conversación). */}
+      {!hideChat && section === "chat" && consumerPlan !== "coach" && (
         <div className="w-full">
           {user && (
             <Suspense fallback={<SectionFallback />}>
@@ -530,7 +543,7 @@ const Dashboard = () => {
             userId={user?.id}
             meals={meals}
             coaching={coaching}
-            nutrition={nutrition}
+            nutrition={nutrition || campaign}
             planStatus={planStatus}
             dayPlans={dayPlans}
             onNavigate={(s) => {
@@ -548,7 +561,7 @@ const Dashboard = () => {
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
           />
-          {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
+          {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
               aparecería como estado activo (próxima iteración). */}
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
@@ -568,11 +581,11 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
-              <CoachingOffer
+              {!campaign && <CoachingOffer
                 onChoose={handleCompletePayment}
                 compact
                 defaultPlan={landingPlan ?? (wantsCoach ? "full" : "training")}
-              />
+              />}
             </div>
           )}
         </div>
@@ -598,6 +611,34 @@ const Dashboard = () => {
           {/* Un solo panel: lo que se ve depende también de si hay una sesión en marcha. */}
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
+              {!workoutMode && !autoStartWorkout && (
+                <div className="mx-auto mb-4 w-full max-w-md lg:max-w-2xl">
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                      {isManualPlan(dayPlans) ? "Rutina personalizada · protegida" : "Piloto automático"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "Entrenamiento libre", hint: "Elige y empieza", Icon: Play, on: () => setFreeOpen(true) },
+                      { label: "Editar mi rutina", hint: "Tu semana, a tu manera", Icon: PencilLine, on: () => setEditorOpen(true) },
+                    ].map(({ label, hint, Icon, on }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => { void hapticTap(); on(); }}
+                        className="group flex min-h-[64px] items-center gap-3 rounded-2xl border border-border/70 bg-card/60 px-3 py-3 text-left backdrop-blur-xl transition active:scale-[0.98] hover:border-primary/40"
+                      >
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary"><Icon className="h-4 w-4" aria-hidden /></span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{label}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{hint}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
                 <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
                   setTrainingDay(day);
@@ -605,15 +646,17 @@ const Dashboard = () => {
                 }} />
               ) : (
                 <WorkoutTracker
+                  key={freePlans ? "free" : "plan"}
                   userId={user.id}
-                  dayPlans={dayPlans}
+                  dayPlans={freePlans ?? dayPlans}
                   initialDay={trainingDay}
                   autoStart={autoStartWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
                   onSessionModeChange={setWorkoutMode}
-                  onCancel={() => setWorkoutMode(false)}
+                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); }}
                   onExit={() => {
                     setWorkoutMode(false);
+                    setFreePlans(null);
                     setSection("home");
                     void fetchData();
                   }}
@@ -624,7 +667,34 @@ const Dashboard = () => {
         </Tabs>
       )}
 
-      {hasPlan && section === "nutrition" && isTrainingOnly && (
+      {user && (
+        <Suspense fallback={null}>
+          <PlanEditor
+            open={editorOpen}
+            onOpenChange={setEditorOpen}
+            userId={user.id}
+            dayPlans={dayPlans}
+            onSaved={(p) => { setDayPlans(p); setTrainingView("plan"); }}
+          />
+          <FreeSessionBuilder
+            open={freeOpen}
+            onOpenChange={setFreeOpen}
+            onStart={(exercises) => {
+              const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
+              setFreePlans([
+                ...dayPlans.filter((p) => p.day !== today),
+                { day: today, type: "gimnasio", routine_name: "Entrenamiento libre", muscle_focus: "", exercises },
+              ]);
+              setTrainingDay(today);
+              setFreeOpen(false);
+              setTrainingView("tracker");
+              setAutoStartWorkout(true);
+            }}
+          />
+        </Suspense>
+      )}
+
+      {!campaign && hasPlan && section === "nutrition" && isTrainingOnly && (
         <div className="flex w-full flex-1 flex-col">
           <EmptyState
             className="flex-1"
@@ -638,6 +708,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {campaign && section === "nutrition" && user && !nutrition && <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} />}
       {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full">
           <Suspense fallback={<SectionFallback />}>
@@ -646,11 +717,8 @@ const Dashboard = () => {
         </div>
       )}
 
-      {coaching && consumerPlan === "plus" && section === "chat" && (
-        <PlanPaywall plan="coach" onChoose={() => handleCompletePayment("full")} />
-      )}
-      {consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
-      {consumerPlan === "coach" && coachAssigned && section === "chat" && (
+      {!hideChat && consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
+      {!hideChat && consumerPlan === "coach" && coachAssigned && section === "chat" && (
         <div className={chatFills ? "flex min-h-0 w-full flex-1 flex-col" : "w-full"}>
           {user && (
             <Suspense fallback={<SectionFallback />}>
@@ -760,7 +828,7 @@ const Dashboard = () => {
         profileName={profileName}
         profileAvatar={profileAvatar}
         userId={user?.id}
-        lockedTabs={!coaching ? ["nutrition"] : []}
+        lockedTabs={!campaign && !coaching ? ["nutrition"] : []}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         workoutMode={workoutMode}
@@ -787,7 +855,7 @@ const Dashboard = () => {
             onSignOut={handleSignOut}
             profileName={profileName}
             profileAvatar={profileAvatar}
-            lockedSections={!coaching ? ["nutrition"] : []}
+            lockedSections={!campaign && !coaching ? ["nutrition"] : []}
             hiddenSections={hideChat ? ["chat"] : []}
           />
         </div>

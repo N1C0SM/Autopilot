@@ -8,6 +8,8 @@ import { hapticSelection } from "@/lib/native";
 import { toast } from "sonner";
 import { Field, FieldRow } from "./AdminOpsParts";
 
+import { refreshFreeCampaign, useFreeCampaign } from "@/lib/freeCampaign";
+
 type PlanRow = {
   key: string; name: string; tagline: string; description: string; price: number; trial_days: number;
   features: string[]; not_included: string[]; cta: string; enabled: boolean; publicly_visible: boolean;
@@ -20,6 +22,17 @@ const lines = (v: string) => v.split("\n").map((s) => s.trim()).filter(Boolean);
 /** Editor of the public Free/Plus/Coach catalog. Payment links stay in Pagos. */
 export default function ConsumerPlansAdmin() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
+  const campaign = useFreeCampaign();
+  const [savingCampaign, setSavingCampaign] = useState(false);
+  const setCampaign = async (active: boolean) => {
+    setSavingCampaign(true);
+    const { data: settings, error: readError } = await supabase.from("settings").select("id").limit(1).single();
+    if (readError || !settings) { setSavingCampaign(false); toast.error("No se pudo cargar la configuración"); return; }
+    const { error } = await supabase.from("settings").update({ free_campaign: active }).eq("id", settings.id);
+    if (error) toast.error("No se pudo cambiar la campaña");
+    else { await refreshFreeCampaign(); toast.success(active ? "Campaña Free activada" : "Configuración normal restaurada"); }
+    setSavingCampaign(false);
+  };
 
   const load = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -40,6 +53,7 @@ export default function ConsumerPlansAdmin() {
 
   return (
     <section className="space-y-4">
+      <ListGroup><ListRow title="Campaña Free / Ocultar Plus" subtitle="Oculta ofertas y cobros de planes. Abre sobrecarga progresiva y nutrición básica, sin chat ni calendario. No cambia suscripciones existentes." trailing={<Switch aria-label="Campaña Free / Ocultar Plus" checked={campaign} disabled={savingCampaign} onCheckedChange={(v) => { void hapticSelection(); void setCampaign(v); }} />} /></ListGroup>
       <p className="type-subhead text-muted-foreground">Lo que cambies aquí se ve al momento en la portada y en /planes. Los enlaces de cobro siguen en Pagos.</p>
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         {plans.map((p) => {

@@ -210,7 +210,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
               {selectedPlan.exercises?.map((ex, i) => {
                 const metadata = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
                 const video = ex.video_url || metadata?.video_url;
-                const image = ex.image_url || metadata?.image_url;
+                const image = metadata?.image_url || ex.image_url;
                 const category = ex.muscle_group || metadata?.muscle_group;
                 const exerciseType = ex.exercise_type || metadata?.exercise_type;
                 const info = [ex.rest, category, exerciseType].filter(Boolean).join(" · ");

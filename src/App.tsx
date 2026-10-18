@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
 import ForTrainers, { AcceptInvitation } from "@/pages/ForTrainers";
+import AppDownload from "@/pages/AppDownload";
+import PlanShieldDialog from "@/components/dashboard/PlanShieldDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -103,6 +105,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PlanShieldDialog />
         <BrowserRouter>
           <NativeDeepLinks />
           <ImpersonationBanner />
@@ -145,6 +148,8 @@ const App = () => (
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="/connect" element={<Connect />} />
             <Route path="/recursos" element={<Recursos />} />
+            <Route path="/app" element={<AppDownload />} />
+            <Route path="/descargar" element={<AppDownload />} />
             <Route path="/recomendaciones" element={<Navigate to="/recursos" replace />} />
             <Route path="*" element={<NotFound />} />
             </Routes>

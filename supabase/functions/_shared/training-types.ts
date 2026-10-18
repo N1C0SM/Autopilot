@@ -26,4 +26,6 @@ export interface DayPlan {
   routine_name?: string;
   muscle_focus?: string;
   exercises?: GymExerciseEntry[];
+  /** Día creado o editado a mano: el piloto automático no lo sustituye sin permiso. */
+  custom?: boolean;
 }

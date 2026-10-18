@@ -64,6 +64,41 @@
       "when": 1792237691855,
       "tag": "0008_create_exercise_user_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792251024740,
+      "tag": "0009_show_app_download",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792262373445,
+      "tag": "0010_new_users_start_free",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792280615509,
+      "tag": "0011_admin_roadmap",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792281133963,
+      "tag": "0012_roadmap_seed_completion",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792308985684,
+      "tag": "0013_free_campaign_mode",
+      "breakpoints": true
     }
   ]
 }

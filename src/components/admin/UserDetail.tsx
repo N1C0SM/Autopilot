@@ -1,3 +1,4 @@
+import { generatePlanGuarded } from "@/lib/planShield";
 import { getSportSchedules, getCustomActivities } from "@/lib/availability";
 import { jsonObject, jsonString } from "@/lib/runtimeValues";
 import { useState, useEffect, type ReactNode } from "react";
@@ -106,10 +107,10 @@ const MACRO_TEMPLATES: Record<string, { label: string; calc: (weight: number) =>
   },
 };
 
-// Pestañas de la ficha: barra de chips con scroll horizontal (más de cinco vistas no caben en un segmentado).
-// En el móvil llega hasta los bordes de la pantalla y el primer chip queda alineado con el margen de 16 px.
+// Pestañas de la ficha: los chips se reparten todo el ancho (2 → mitades, 3 → tercios);
+// si son tantos que no caben a su tamaño natural, la barra pasa a scroll horizontal.
 const CHIP_BAR = "no-scrollbar -mx-4 flex h-auto w-auto snap-x scroll-px-4 justify-start gap-2 overflow-x-auto rounded-none bg-transparent px-4 py-0 md:mx-0 md:scroll-px-0 md:px-0";
-const CHIP = "h-11 flex-none snap-start rounded-full bg-secondary px-4 type-subhead font-medium text-foreground transition-[background-color,color,transform] duration-150 active:scale-[0.97] data-[state=active]:bg-primary/15 data-[state=active]:font-semibold data-[state=active]:text-primary data-[state=active]:shadow-none";
+const CHIP = "h-11 flex-1 basis-0 min-w-fit snap-start rounded-full bg-secondary px-4 type-subhead font-medium text-foreground transition-[background-color,color,transform] duration-150 active:scale-[0.97] data-[state=active]:bg-primary/15 data-[state=active]:font-semibold data-[state=active]:text-primary data-[state=active]:shadow-none";
 
 /** Nombre visible del cliente: nunca el email completo como título. */
 const clientDisplayName = (profile: Pick<Profile, "name" | "email">) =>
@@ -379,9 +380,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       return;
     }
     setGenerating(true);
-    const { data, error } = await supabase.functions.invoke("generate-plan", {
-      body: { user_id: profile.user_id },
-    });
+    const { data, error } = await generatePlanGuarded(supabase, { user_id: profile.user_id });
+    if (data?.protected) { setGenerating(false); toast.info("Se ha conservado la rutina personalizada del cliente."); return; }
     const failMsg = String(error?.message || data?.error || "");
     if (error || !data?.success) {
       toast.error(

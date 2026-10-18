@@ -26,7 +26,8 @@ serve(async (req) => {
   try {
     log("Started");
 
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "No autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) throw new Error(`Auth error: ${userError.message}`);
@@ -59,6 +60,7 @@ serve(async (req) => {
       .limit(1)
       .single();
 
+    if (settings?.free_campaign) return new Response(JSON.stringify({ code: "free_campaign", error: "Las compras de planes están desactivadas durante la campaña gratuita." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const paymentMode = (settings?.payment_mode || "test") as "test" | "live";
     const s: Record<string, unknown> = settings || {};
     const linkKey = `payment_link_${plan}_${paymentMode}`;

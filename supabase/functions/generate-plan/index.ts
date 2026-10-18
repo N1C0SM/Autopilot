@@ -1,8 +1,13 @@
 import type { DayPlan, GymExerciseEntry } from "../_shared/training-types.ts";
 import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
-import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
+import { getConsumerPlan, hasCoaching, resolveFeatures } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
+const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|barra t\b|trap bar|glute-ham|ghr|farmer/i;
+function isBodyweightOk(ex: { name?: string | null; exercise_type?: string | null }): boolean {
+  if (ex.exercise_type === "Gimnasio") return false;
+  return !GYM_EQUIPMENT_RE.test(ex.name || "");
+}
 import { applyWeightEstimation } from "../_shared/exercise-weight-estimation.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
@@ -190,7 +195,7 @@ function pickExercisesForSession(
     for (const ex of muscleExercises) {
       // Equipment type filtering: strict enforcement
       if (exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia") continue;
-      if (exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio") continue;
+      if (exerciseType === "Calistenia" && !isBodyweightOk(ex)) continue;
       // Mixto allows everything
       if ((ex.level ?? 1) > userLevel + 1) continue;
       allAvailable.push(ex);
@@ -389,7 +394,7 @@ function pickExercisesForSession(
     const fallback = Object.values(exerciseLib).flat()
       .filter(ex => {
         if (exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia") return false;
-        if (exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio") return false;
+        if (exerciseType === "Calistenia" && !isBodyweightOk(ex)) return false;
         return true;
       })
       .slice(0, MIN_EXERCISES);
@@ -497,7 +502,7 @@ function pickExercisesForSession(
     const candidates = (exerciseLib[muscle] || [])
       .filter((ex) => !usedIds.has(ex.id))
       .filter((ex) => !(exerciseType === "Gimnasio" && ex.exercise_type === "Calistenia"))
-      .filter((ex) => !(exerciseType === "Calistenia" && ex.exercise_type === "Gimnasio"))
+      .filter((ex) => !(exerciseType === "Calistenia" && !isBodyweightOk(ex)))
       .filter((ex) => (ex.level ?? 1) <= userLevel + 1)
       .filter((ex) => !(ex.movement_pattern === "Bisagra" && ex.load_level === "Alta" && heavyHingeCount >= rules.max_heavy_hinges))
       // Skill progressions are injected later; do not pick them twice.
@@ -761,27 +766,27 @@ interface RoutineDay { name: string; muscles: string[]; }
 function getGymSplit(daysAvailable: number, skillProfile: SkillProfile | null): RoutineDay[] {
   const baseSplit = (() => {
     if (daysAvailable >= 6) return [
-      { name: "Push A", muscles: ["Pecho", "Hombros", "Tríceps"] },
-      { name: "Pull A", muscles: ["Espalda", "Bíceps"] },
-      { name: "Legs A", muscles: ["Piernas", "Glúteos"] },
+      { name: "Push A", muscles: ["Pecho", "Hombros", "Tríceps", "Serrato"] },
+      { name: "Pull A", muscles: ["Espalda", "Bíceps", "Romboides", "Trapecios"] },
+      { name: "Legs A", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Gemelos"] },
       { name: "Push B", muscles: ["Pecho", "Hombros", "Tríceps"] },
-      { name: "Pull B", muscles: ["Espalda", "Bíceps"] },
-      { name: "Legs B", muscles: ["Piernas", "Glúteos", "Core"] },
+      { name: "Pull B", muscles: ["Espalda", "Bíceps", "Lumbares", "Antebrazos"] },
+      { name: "Legs B", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Aductores", "Abductores", "Core"] },
     ];
     if (daysAvailable >= 4) return [
-      { name: "Upper A", muscles: ["Pecho", "Espalda", "Hombros"] },
-      { name: "Lower A", muscles: ["Piernas", "Glúteos", "Core"] },
-      { name: "Upper B", muscles: ["Pecho", "Espalda", "Bíceps", "Tríceps"] },
-      { name: "Lower B", muscles: ["Piernas", "Glúteos", "Core"] },
+      { name: "Upper A", muscles: ["Pecho", "Espalda", "Hombros", "Romboides"] },
+      { name: "Lower A", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Gemelos", "Core"] },
+      { name: "Upper B", muscles: ["Pecho", "Espalda", "Bíceps", "Tríceps", "Trapecios"] },
+      { name: "Lower B", muscles: ["Piernas", "Glúteos", "Isquiotibiales", "Aductores", "Abductores", "Core"] },
     ];
     if (daysAvailable >= 3) return [
-      { name: "Full Body A", muscles: ["Pecho", "Espalda", "Piernas"] },
+      { name: "Full Body A", muscles: ["Pecho", "Espalda", "Piernas", "Gemelos"] },
       { name: "Full Body B", muscles: ["Hombros", "Piernas", "Core"] },
-      { name: "Full Body C", muscles: ["Espalda", "Pecho", "Glúteos"] },
+      { name: "Full Body C", muscles: ["Espalda", "Pecho", "Glúteos", "Isquiotibiales"] },
     ];
     return [
       { name: "Full Body A", muscles: ["Pecho", "Espalda", "Piernas", "Core"] },
-      { name: "Full Body B", muscles: ["Hombros", "Piernas", "Glúteos", "Core"] },
+      { name: "Full Body B", muscles: ["Hombros", "Piernas", "Glúteos", "Isquiotibiales", "Core"] },
     ];
   })();
 
@@ -907,8 +912,10 @@ serve(async (req) => {
     if (!user) throw new Error("Not authenticated");
 
     let targetUserId = user.id;
+    let force = false;
     try {
       const body = await req.json();
+      force = body?.force === true;
       if (body.user_id && body.user_id !== user.id) {
         const [{ data: isAdmin }, { data: isTrainer }] = await Promise.all([
           supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }),
@@ -927,10 +934,11 @@ serve(async (req) => {
       .eq("user_id", targetUserId).single();
     if (billingError) throw billingError;
     const paidCoaching = hasCoaching(billing);
-    const includeNutrition = hasNutrition(billing);
+    const { data: freeCampaign } = await supabase.rpc("get_free_campaign");
+    const includeNutrition = resolveFeatures(getConsumerPlan(billing), [], false, freeCampaign === true).has("nutritionPlan");
     // An admin regenerating their own plan skips the plan limits so every flow can be tested.
     const { data: callerIsAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
-    const adminSelf = !!callerIsAdmin && targetUserId === user.id;
+    const adminSelf = !!callerIsAdmin; // admins may regenerate any user (support fixes)
     // Only Coach has a human reviewer; Plus is self-service and regenerates its own plan.
     if (getConsumerPlan(billing) === "coach" && targetUserId === user.id && !callerIsAdmin) {
       return new Response(JSON.stringify({ error: "Tu entrenador prepara y revisa tu plan." }), {
@@ -946,6 +954,18 @@ serve(async (req) => {
         const { error: readyError } = await supabase.from("profiles").update({ plan_status: "plan_ready" }).eq("user_id", targetUserId);
         if (readyError) throw readyError;
         return new Response(JSON.stringify({ success: true, existing: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // Escudo: una rutina hecha a mano nunca se sustituye sin que el usuario lo confirme.
+    if (!force) {
+      const { data: current } = await supabase.from("training_plan").select("workouts_json")
+        .eq("user_id", targetUserId).maybeSingle();
+      const days = Array.isArray(current?.workouts_json) ? (current!.workouts_json as unknown as DayPlan[]) : [];
+      if (days.some((d) => d?.custom === true)) {
+        return new Response(JSON.stringify({ success: false, protected: true, current: days }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
@@ -1212,7 +1232,9 @@ serve(async (req) => {
         });
         
         // Apply estimation only to exercises without user adjustments
-        day.exercises = applyWeightEstimation(day.exercises, scanData, userWeightData);
+        day.exercises = equipmentType === "Calistenia"
+          ? day.exercises.map((e: any) => ({ ...e, weight: "" }))
+          : applyWeightEstimation(day.exercises, scanData, userWeightData);
       }
     }
 
@@ -1233,7 +1255,7 @@ serve(async (req) => {
       }));
 
       // Apply weight estimation to skill progressions (SCAN DATA PRIORITIZED)
-      progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
+      if (equipmentType !== "Calistenia") progressionExercises = applyWeightEstimation(progressionExercises, scanData, userWeightData);
 
       // Distribute progressions across gym days that train relevant muscles
       let progIdx = 0;
@@ -1262,7 +1284,7 @@ serve(async (req) => {
     let meals = getMeals(goal, diet, onb.allergies);
 
     // Try AI-personalized meals based on user's actual food preferences
-    if (macros && weight !== null) {
+    if (macros && weight !== null && !freeCampaign) {
       try {
       const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-generate-meals`, {
         method: "POST",

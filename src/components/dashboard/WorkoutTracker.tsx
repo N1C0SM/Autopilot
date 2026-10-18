@@ -380,7 +380,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       const ex = list[idx];
       if (!ex) continue;
       const meta = exerciseMetadata.byId[ex.exercise_id] || exerciseMetadata.byName[ex.name];
-      const url = ex.image_url || meta?.image_url;
+      const url = meta?.image_url || ex.image_url;
       if (url) {
         const pre = new Image();
         pre.decoding = "async";
@@ -571,16 +571,48 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       rpe: rpe ?? sessionRpe,
     }));
 
+    const pendingKey = `autopilot:series-pendientes:${userId}`;
     const write = saveQueueRef.current.then(async () => {
       if (rows.length === 0) return;
-      const { error } = await supabase.from("workout_logs").upsert(rows, {
-        onConflict: "user_id,day_label,logged_at,exercise_name",
-      });
-      if (error) throw error;
+      try {
+        const { error } = await supabase.from("workout_logs").upsert(rows, {
+          onConflict: "user_id,day_label,logged_at,exercise_name",
+        });
+        if (error) throw error;
+        localStorage.removeItem(pendingKey);
+      } catch (e) {
+        // Sin cobertura: guardamos en el móvil y se envía al volver la señal.
+        try { localStorage.setItem(pendingKey, JSON.stringify(rows)); } catch { /* lleno */ }
+        throw e;
+      }
     });
     saveQueueRef.current = write.catch(() => undefined);
     await write;
   };
+
+  // Al recuperar la señal, envía las series que quedaron guardadas en el móvil.
+  useEffect(() => {
+    const pendingKey = `autopilot:series-pendientes:${userId}`;
+    const flush = async () => {
+      const raw = localStorage.getItem(pendingKey);
+      if (!raw) return;
+      try {
+        const rows = JSON.parse(raw);
+        const { error } = await supabase.from("workout_logs").upsert(rows, {
+          onConflict: "user_id,day_label,logged_at,exercise_name",
+        });
+        if (!error) {
+          localStorage.removeItem(pendingKey);
+          setSaveError(false);
+          setSaveStatus("saved");
+          setSavedAt(new Date());
+        }
+      } catch { /* se reintenta en el próximo evento */ }
+    };
+    void flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [userId]);
 
   const cancelPendingAutosave = () => {
     saveAttemptRef.current += 1;
@@ -1142,7 +1174,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
             const active = currentPlan.exercises?.[expandedExercise];
             if (!active) return null;
             const meta = exerciseMetadata.byId[active.exercise_id] || exerciseMetadata.byName[active.name];
-            const img = active.image_url || meta?.image_url;
+            const img = meta?.image_url || active.image_url;
             const vid = active.video_url || meta?.video_url;
             return (
               <div className="space-y-2">
@@ -1195,7 +1227,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                         onClick={() => { setExpandedExercise(idx); void hapticTap(); }}
                         className={`shrink-0 rounded-[14px] p-0.5 transition-opacity duration-150 active:opacity-40 ${isActive ? "ring-2 ring-inset ring-primary" : "opacity-60"}`}
                       >
-                        <ExerciseThumb image={item.image_url || m?.image_url} video={item.video_url || m?.video_url} name={item.name} completed={done} />
+                        <ExerciseThumb image={m?.image_url || item.image_url} video={item.video_url || m?.video_url} name={item.name} completed={done} />
                       </button>
                     );
                   })}
@@ -1271,7 +1303,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                     : "flex w-full items-center gap-3 pl-4 text-left transition-colors duration-100 active:bg-accent has-[[role=button]:active]:bg-transparent"}
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
-                  {!focused && <ExerciseThumb image={ex.image_url || metadata?.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />}
+                  {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />}
                   <div className={focused ? "flex min-w-0 flex-1 items-start" : `flex min-h-[68px] min-w-0 flex-1 items-center py-2 pr-1 ${i > 0 ? "sep-t" : ""}`}>
                   <div className="min-w-0 flex-1 text-left">
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -1336,7 +1368,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                         void hapticTap();
                         setTechnique({
                           name: ex.name,
-                          image: ex.image_url || metadata?.image_url,
+                          image: metadata?.image_url || ex.image_url,
                           video: exerciseVideo,
                           series: ex.series != null ? String(ex.series) : undefined,
                           reps: ex.reps != null ? String(ex.reps) : undefined,
@@ -1351,7 +1383,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                           e.preventDefault();
                           setTechnique({
                             name: ex.name,
-                            image: ex.image_url || metadata?.image_url,
+                            image: metadata?.image_url || ex.image_url,
                             video: exerciseVideo,
                             series: ex.series != null ? String(ex.series) : undefined,
                             reps: ex.reps != null ? String(ex.reps) : undefined,

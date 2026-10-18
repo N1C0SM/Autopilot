@@ -1,3 +1,4 @@
+import { generatePlanGuarded } from "@/lib/planShield";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,7 @@ const TravelModeCard = ({ userId }: Props) => {
       return;
     }
     // Regenerate plan adapted to travel
-    supabase.functions.invoke("generate-plan", { body: { user_id: userId } });
+    void generatePlanGuarded(supabase, { user_id: userId }, { userId });
     toast.success("Modo viaje activado. Tu plan se está adaptando");
     void hapticNotify("success");
     setActive(true);
@@ -88,7 +89,7 @@ const TravelModeCard = ({ userId }: Props) => {
       setSaving(false);
       return;
     }
-    supabase.functions.invoke("generate-plan", { body: { user_id: userId } });
+    void generatePlanGuarded(supabase, { user_id: userId }, { userId });
     toast.success("Modo viaje desactivado. Volviendo a tu plan normal");
     void hapticNotify("success");
     setActive(false);

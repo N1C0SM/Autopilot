@@ -25,6 +25,18 @@ interface Props {
 
 type Option = { name: string; image: string | null };
 
+const GYM_GEAR_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|trap bar|glute-ham|farmer/i;
+const BAR_OK_RE = /en barra|barra fija|dominad|pull-?up|chin-?up|muscle/i;
+
+export function isAllowedForStyle(style: string, type: string | null, name: string): boolean {
+  if (style === "Calistenia") {
+    if (type === "Gimnasio") return false;
+    return !GYM_GEAR_RE.test(name) || (BAR_OK_RE.test(name) && !/lastr|polea|mancuerna/i.test(name));
+  }
+  if (style === "Gimnasio") return type !== "Calistenia" || !/planche|pino|handstand|frog|lever/i.test(name);
+  return true;
+}
+
 export function ExerciseSwap({ original, current, movementPattern, muscleGroup, onSelect }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,11 +45,22 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
   const load = async () => {
     if (options || loading) return;
     setLoading(true);
-    let query = supabase.from("exercises").select("name, image_url").neq("name", original).limit(4);
+    // Respect the user's discipline: calisthenics users never get gym gear, gym users get gym first.
+    const { data: auth } = await supabase.auth.getUser();
+    let style = "Mixto";
+    if (auth.user) {
+      const { data: ob } = await supabase.from("onboarding").select("equipment_type").eq("user_id", auth.user.id).maybeSingle();
+      if (ob?.equipment_type) style = ob.equipment_type;
+    }
+    let query = supabase.from("exercises").select("name, image_url, muscle_group, exercise_type").neq("name", original).limit(60);
     if (movementPattern) query = query.eq("movement_pattern", movementPattern);
     else if (muscleGroup) query = query.eq("muscle_group", muscleGroup);
     const { data } = await query;
-    setOptions((data || []).map((row) => ({ name: row.name, image: row.image_url })));
+    const rows = (data || []).filter((row) => isAllowedForStyle(style, row.exercise_type, row.name));
+    const score = (row: { muscle_group: string | null; exercise_type: string | null }) =>
+      (muscleGroup && row.muscle_group === muscleGroup ? 2 : 0) + (row.exercise_type === style ? 1 : 0);
+    rows.sort((a, b) => score(b) - score(a));
+    setOptions(rows.slice(0, 6).map((row) => ({ name: row.name, image: row.image_url })));
     setLoading(false);
   };
 

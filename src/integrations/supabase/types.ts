@@ -702,9 +702,11 @@ export type Database = {
           is_pack: boolean
           kind: string
           pack_items: string[]
+          pages: number | null
           parent_id: string | null
           price: string
           published: boolean
+          reading_minutes: number | null
           sort_order: number
           title: string
           updated_at: string
@@ -724,9 +726,11 @@ export type Database = {
           is_pack?: boolean
           kind?: string
           pack_items?: string[]
+          pages?: number | null
           parent_id?: string | null
           price?: string
           published?: boolean
+          reading_minutes?: number | null
           sort_order?: number
           title?: string
           updated_at?: string
@@ -746,9 +750,11 @@ export type Database = {
           is_pack?: boolean
           kind?: string
           pack_items?: string[]
+          pages?: number | null
           parent_id?: string | null
           price?: string
           published?: boolean
+          reading_minutes?: number | null
           sort_order?: number
           title?: string
           updated_at?: string
@@ -1193,6 +1199,98 @@ export type Database = {
         }
         Relationships: []
       }
+      roadmap_items: {
+        Row: {
+          ai_reason: string
+          created_at: string
+          description: string
+          effort: string
+          evidence: string
+          id: string
+          position: number
+          source: string
+          status: string
+          title: string
+          updated_at: string
+          version_id: string | null
+        }
+        Insert: {
+          ai_reason?: string
+          created_at?: string
+          description?: string
+          effort?: string
+          evidence?: string
+          id?: string
+          position?: number
+          source?: string
+          status?: string
+          title: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Update: {
+          ai_reason?: string
+          created_at?: string
+          description?: string
+          effort?: string
+          evidence?: string
+          id?: string
+          position?: number
+          source?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_items_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_versions: {
+        Row: {
+          id: string
+          is_current: boolean
+          objective: string
+          phase: number
+          position: number
+          release_notes: string
+          release_stage: string
+          seed_initialized: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          is_current?: boolean
+          objective?: string
+          phase?: number
+          position?: number
+          release_notes?: string
+          release_stage?: string
+          seed_initialized?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_current?: boolean
+          objective?: string
+          phase?: number
+          position?: number
+          release_notes?: string
+          release_stage?: string
+          seed_initialized?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       scan_card_uploads: {
         Row: {
           anon_session_id: string | null
@@ -1324,6 +1422,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           ebooks: Json
+          free_campaign: boolean
           guide_ebook_url: string | null
           hero_video_poster_url: string | null
           hero_video_url: string | null
@@ -1354,6 +1453,7 @@ export type Database = {
           price_id_yearly_test: string | null
           recommendations: Json
           referral_coupon_id: string | null
+          show_app_download: boolean
           show_blog: boolean
           show_ebooks: boolean
           show_plan_coach: boolean
@@ -1374,6 +1474,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           ebooks?: Json
+          free_campaign?: boolean
           guide_ebook_url?: string | null
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
@@ -1404,6 +1505,7 @@ export type Database = {
           price_id_yearly_test?: string | null
           recommendations?: Json
           referral_coupon_id?: string | null
+          show_app_download?: boolean
           show_blog?: boolean
           show_ebooks?: boolean
           show_plan_coach?: boolean
@@ -1424,6 +1526,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           ebooks?: Json
+          free_campaign?: boolean
           guide_ebook_url?: string | null
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
@@ -1454,6 +1557,7 @@ export type Database = {
           price_id_yearly_test?: string | null
           recommendations?: Json
           referral_coupon_id?: string | null
+          show_app_download?: boolean
           show_blog?: boolean
           show_ebooks?: boolean
           show_plan_coach?: boolean
@@ -2106,6 +2210,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_free_campaign: { Args: never; Returns: boolean }
       get_my_consumer_plan: {
         Args: never
         Returns: {
@@ -2146,6 +2251,7 @@ export type Database = {
           landing_recommendations_count: number
           play_store_url: string
           recommendations: Json
+          show_app_download: boolean
           show_blog: boolean
           show_ebooks: boolean
           show_recommendations: boolean
@@ -2232,6 +2338,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      roadmap_set_current: { Args: { target: string }; Returns: undefined }
       trainer_assign_user_by_email: {
         Args: { _email: string }
         Returns: string

@@ -1,6 +1,7 @@
 
 
 - Los vídeos de técnica con IA se generan vía la edge function `exercise-video` (AI Gateway, modelo de vídeo por defecto) y se guardan en el bucket público `site-assets` en `exercise-videos/`; el estado del trabajo se guarda en `exercises.video_job_id`.
+- Campaign access reads the admin-only settings flag through get_free_campaign; shared resolveFeatures opens only software nutrition/progression, checkout endpoints enforce the pause, and billing records remain unchanged.
 - Consumer plan (free/plus/coach) and role (user/trainer/admin) are separate; capabilities resolve only through `supabase/functions/_shared/entitlements.ts` (`resolveFeatures`) — avoids scattered plan checks.
 - Stored tier "training" = Plus, "full"/"transform"/"personal" = Coach; Stripe sync mirrors into `entitlements` (source column) so other payment sources can be added later.
 - B2B trainer product lives in `product_configs` (key trainer_plan), off by default; flags are enforced server-side in SQL functions/RLS, never only in UI.
@@ -10,3 +11,7 @@
 - Username login goes through the `login-identifier` edge function, which signs in server-side and never returns the email behind a username — avoids email enumeration.
 - Any copy that mentions Coach or Plus reads `usePlanAvailability()` (`src/lib/planCatalog.ts`), so hiding a plan in Admin → Planes removes it from pricing, FAQs, demo, scan, upsells and the dashboard chat tab at once; shared public copy lives in `src/lib/publicCopy.ts` (pure, also used at build time).
 - SEO: `seo/prerender.ts` (Vite plugin) writes `dist/<ruta>/index.html` with per-route head, JSON-LD and real text, plus sitemap.xml, robots.txt, llms.txt and llms-full.txt, using the live plan catalog and blog posts fetched at build time. Republish after changing plans or posts so crawlers see the new state; the files in `public/` are only fallbacks.
+- Manual routines carry `custom: true` per day in `training_plan.workouts_json`; generate-plan refuses to overwrite them unless `force: true`, and clients call it via `generatePlanGuarded` (`src/lib/planShield.ts`) — the autopilot never silently replaces user work.
+- Admin roadmap persists versions and tasks in admin-only RLS tables; "Hecho" comes only from `src/lib/roadmap/evidence.ts` (reconciled on every load, files checked by tests, mirrored in roadmap-ai/capabilities.ts) or a written admin proof labeled as such — the roadmap can never claim unproven work.
+- The uploaded roadmap is a one-time seed catalog with stable task IDs; initialization never overwrites saved edits or resurrects deleted tasks, while the current version is switched atomically through an admin-only RPC.
+- Roadmap implementation assistance prepares a copyable Lovable request, never executes code changes from the runtime app, preserving review and release boundaries.

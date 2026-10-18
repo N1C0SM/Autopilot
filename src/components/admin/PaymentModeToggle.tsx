@@ -34,7 +34,7 @@ const FIELDS: Array<keyof Omit<SettingsData, "id" | "payment_mode">> = [
 ];
 
 const PLANS = [
-  { key: "training", label: "Entrenamiento", price: "29€/mes" },
+  { key: "training", label: "Entrenamiento", price: "14,99€/mes" },
   { key: "full", label: "Completo", price: "49€/mes" },
   { key: "transform", label: "Transformación 12 semanas", price: "299€ pago único" },
 ] as const;

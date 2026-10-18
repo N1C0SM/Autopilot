@@ -906,6 +906,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         await supabase.auth.signOut({ scope: "local" });
         navigate("/login");
         break;
+      case "custom_kept":
+        setPlanApplyState("idle");
+        toast.info("Hemos conservado tu rutina personalizada. El scan queda guardado.");
+        break;
       case "kept":
         setPlanApplyState("idle");
         setCanApplyPlan(false);
