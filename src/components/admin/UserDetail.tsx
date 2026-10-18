@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, ShieldCheck, User2, Dumbbell, Trash2, AlertTriangle, Eye, Target, MoreHorizontal, UserRound, UserMinus, Crown, Check, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, ShieldCheck, User2, Dumbbell, Trash2, AlertTriangle, Eye, Target, MoreHorizontal, UserRound, UserMinus, Crown, Check, ChevronRight, Info, FlaskConical } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -161,6 +161,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [isUserTrainer, setIsUserTrainer] = useState(false);
+  const [isTestAccount, setIsTestAccount] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
