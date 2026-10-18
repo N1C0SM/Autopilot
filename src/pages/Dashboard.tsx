@@ -1,5 +1,6 @@
 import { Play, PencilLine } from "lucide-react";
 import { isManualPlan } from "@/lib/planShield";
+import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/components/dashboard/PlanPaywall";
 import { parseMacroTargets } from "@/lib/nutrition";
@@ -98,7 +99,7 @@ const Dashboard = () => {
   const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
   const plans = usePlanAvailability();
   const campaign = useFreeCampaign();
-  // El chat está siempre visible (aunque no tenga coach)
+  // La asignación de entrenador se conserva aunque el chat no forme parte del lanzamiento.
   const [coachAssigned, setCoachAssigned] = useState(true);
   const [nutrition, setNutrition] = useState(false);
   const [preparingRoutine, setPreparingRoutine] = useState(false);
@@ -388,8 +389,11 @@ const Dashboard = () => {
     }
   };
 
-  // Wait for the profile: before it loads every user looks like "free".
-  useEffect(() => { if (section === "chat") setSectionState("home"); }, [section]);
+  // La navegación y los enlaces antiguos respetan el mismo alcance del lanzamiento.
+  const hideChat = !DASHBOARD_CHAT_ENABLED || (consumerPlan !== "plus" && consumerPlan !== "coach");
+  useEffect(() => {
+    if (!loading && hideChat && section === "chat") setSection("home");
+  }, [loading, hideChat, section, setSection]);
 
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
@@ -429,8 +433,6 @@ const Dashboard = () => {
   }
 
   const hasPlan = planStatus === "plan_ready";
-  // Chat disponible en Plus y Coach. Free no lo ve.
-  const hideChat = consumerPlan !== "plus" && consumerPlan !== "coach";
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
@@ -520,8 +522,7 @@ const Dashboard = () => {
         <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
       )}
 
-      {/* Chat IA disponible siempre - sin depender de Coach.
-          Coach lo excluye: su chat con el entrenador se renderiza más abajo (duplicaría la conversación). */}
+      {/* Chat reservado para una versión futura; el alcance también controla su navegación. */}
       {!hideChat && section === "chat" && consumerPlan !== "coach" && (
         <div className="w-full">
           {user && (
