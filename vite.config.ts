@@ -39,6 +39,8 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    // Lazy chunks load their own deps on demand; injecting preload links at runtime made Safari warn about unused preloads.
+    modulePreload: { resolveDependencies: (_file: string, deps: string[], ctx: { hostType: string }) => (ctx.hostType === "html" ? deps : []) },
     rollupOptions: {
       output: {
         manualChunks(id: string) {
