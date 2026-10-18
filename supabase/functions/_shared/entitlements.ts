@@ -49,8 +49,9 @@ const TRAINER: Feature[] = ["trainerDashboard", "trainerClientManagement"];
 export const PLAN_FEATURES: Record<ConsumerPlan, Feature[]> = { free: FREE, plus: PLUS, coach: COACH };
 
 /** Single source of capabilities: consumer plan + roles (+ B2B entitlement for invitations). */
-export function resolveFeatures(plan: ConsumerPlan, roles: UserRole[] = [], hasTrainerSubscription = false): Set<Feature> {
+export function resolveFeatures(plan: ConsumerPlan, roles: UserRole[] = [], hasTrainerSubscription = false, freeCampaign = false): Set<Feature> {
   const set = new Set<Feature>(PLAN_FEATURES[plan]);
+  if (freeCampaign) { set.add("advancedTracking"); set.add("nutritionPlan"); }
   if (roles.includes("trainer") || roles.includes("admin")) TRAINER.forEach((f) => set.add(f));
   if (hasTrainerSubscription) set.add("trainerInvitations");
   return set;
