@@ -14,9 +14,6 @@ import { useConfirm } from "@/components/admin/content/useConfirm";
 import { toast } from "sonner";
 import scanPreviewAsset from "@/assets/scan-preview.jpg.asset.json";
 import scanUserAsset from "@/assets/scan-example-user.jpg.asset.json";
-import prettier from "prettier/standalone";
-import prettierPluginHtml from "prettier/plugins/html";
-import prettierPluginPostcss from "prettier/plugins/postcss";
 import { extractInlineStyles, reinlineStyles } from "./email-style-utils";
 
 const SCAN_PREVIEW_URL = `${window.location.origin}${scanPreviewAsset.url}`;
@@ -128,6 +125,7 @@ export default function EmailTemplatesEditor() {
   const formatHtmlSrc = async (src: string): Promise<string> => {
     if (!src.trim()) return src;
     try {
+      const [{ default: prettier }, { default: prettierPluginHtml }, { default: prettierPluginPostcss }] = await Promise.all([import("prettier/standalone"), import("prettier/plugins/html"), import("prettier/plugins/postcss")]);
       return await prettier.format(src, {
         parser: "html",
         plugins: [prettierPluginHtml],
@@ -145,6 +143,7 @@ export default function EmailTemplatesEditor() {
   const formatCssSrc = async (src: string): Promise<string> => {
     if (!src.trim()) return src;
     try {
+      const [{ default: prettier }, { default: prettierPluginHtml }, { default: prettierPluginPostcss }] = await Promise.all([import("prettier/standalone"), import("prettier/plugins/html"), import("prettier/plugins/postcss")]);
       return await prettier.format(src, {
         parser: "css",
         plugins: [prettierPluginPostcss],
