@@ -16,6 +16,13 @@ describe("active workout recovery", () => {
     saveActiveWorkout(draft);
     expect(readActiveWorkout("other")).toBeNull();
   });
+  it("recovers legacy repetition ranges alongside completed numeric sets", () => {
+    saveActiveWorkout(draft);
+    const key = "autopilot:active-session:athlete";
+    localStorage.setItem(key, JSON.stringify({ ...draft, logs: { Remo: [draft.logs.Remo[0], { reps: "6-12", weight: "20", done: false }] } }));
+    expect(readActiveWorkout("athlete")?.logs.Remo).toHaveLength(2);
+    expect(readActiveWorkout("athlete")?.logs.Remo[1].reps).toBe("6-12");
+  });
   it("removes completed drafts", () => {
     saveActiveWorkout(draft);
     clearActiveWorkout("athlete");
