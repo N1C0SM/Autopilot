@@ -313,6 +313,19 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
     setRoleLoading(false);
   };
 
+  const toggleTestAccount = async () => {
+    setRoleLoading(true);
+    const { error } = isTestAccount
+      ? await supabase.from("metrics_excluded_users").delete().eq("user_id", profile.user_id)
+      : await supabase.from("metrics_excluded_users").insert({ user_id: profile.user_id });
+    if (error) toast.error("No se pudo cambiar");
+    else {
+      setIsTestAccount(!isTestAccount);
+      toast.success(isTestAccount ? "Vuelve a contar en métricas" : "Cuenta de prueba: fuera de métricas");
+    }
+    setRoleLoading(false);
+  };
+
   const handleDeleteUser = async () => {
     setDeleting(true);
     const { data, error } = await supabase.functions.invoke("admin-delete-user", {
