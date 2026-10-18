@@ -14,16 +14,11 @@ import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import master from '@/lib/roadmap/master.json';
 import { needsFocusWarning, statusLabels, roadmapStatusMeaning, findExistingIdea, filterRoadmapIdeas } from '@/lib/roadmap/rules';
+import { reconcile, findEvidence, evidenceLabel, isCodeVerified, needsRealWorldProof } from '@/lib/roadmap/evidence';
 
 type Item = Tables<'roadmap_items'>;
 type Version = Tables<'roadmap_versions'>;
 type Proposal = { id: string; version_id: string | null; reason: string; effort: 'small' | 'medium' | 'large'; status: string; evidence: string };
-const seedEvidence: Record<string, string> = {
-  'Rutinas personalizadas': 'PlanEditor · creación y edición semanal por grupos musculares.',
-  'Seguimiento en sala': 'WorkoutTracker · registro de series, repeticiones, carga y RPE.',
-  'Scan Corporal (V1)': 'Scan · fotografía opcional y estimación orientativa.',
-  'Sustitución inteligente': 'ExerciseSwap · alternativas por músculo y disciplina.',
-};
 const phaseNames = ['Lanzamiento y día a día', 'Inteligencia y adaptación', 'Análisis físico y visión', 'Ecosistema y comunidad'];
 const effortLabels = { small: 'Rápido', medium: 'Medio', large: 'Grande' };
 
@@ -62,7 +57,7 @@ export default function RoadmapAdmin() {
       // Missing IDs are inserted, never replacing saved edits or completion states.
       const savedIds = new Set((i.data ?? []).map(row => row.id));
       const needsSeed = !v.data?.some(row => row.seed_initialized);
-      const missing = needsSeed ? master.items.filter(row => !savedIds.has(row.id)).map(row => ({ ...row, status: seedEvidence[row.title] ? 'done' : 'idea', evidence: seedEvidence[row.title] ?? '' })) : [];
+      const missing = needsSeed ? master.items.filter(row => !savedIds.has(row.id)).map(row => ({ ...row, status: 'idea', evidence: '' })) : [];
       if (missing.length) {
         const seeded = await supabase.from('roadmap_items').upsert(missing, { onConflict: 'id', ignoreDuplicates: true });
         if (seeded.error) throw seeded.error;
@@ -71,11 +66,19 @@ export default function RoadmapAdmin() {
         const marked = await supabase.from('roadmap_versions').update({ seed_initialized: true }).in('id', master.versions.map(row => row.id));
         if (marked.error) throw marked.error;
       }
+      let finalV = v.data ?? [], finalI = i.data ?? [];
       if (!v.data?.length || needsSeed) {
         const [freshV, freshI] = await Promise.all([supabase.from('roadmap_versions').select('*').order('position'), supabase.from('roadmap_items').select('*').order('position').order('created_at')]);
         if (freshV.error || freshI.error) throw freshV.error ?? freshI.error;
-        setVersions(freshV.data ?? []); setItems(freshI.data ?? []);
-      } else { setVersions(v.data); setItems(i.data ?? []); }
+        finalV = freshV.data ?? []; finalI = freshI.data ?? [];
+      }
+      // Cada carga alinea el Roadmap con lo que el código demuestra.
+      for (const p of reconcile(finalI)) {
+        const r = await supabase.from('roadmap_items').update({ status: p.status, evidence: p.evidence, updated_at: new Date().toISOString() }).eq('id', p.id);
+        if (r.error) throw r.error;
+        finalI = finalI.map(row => row.id === p.id ? { ...row, ...p } : row);
+      }
+      setVersions(finalV); setItems(finalI);
     } catch { setError(true); } finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
