@@ -30,9 +30,9 @@ beforeEach(() => { vi.stubGlobal("IntersectionObserver", class { observe() {} un
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("short public home", () => {
-  it("takes the clear primary action to the routine configurator", () => {
+  it("takes the clear primary action to the routine configurator", async () => {
     open();
-    const main = screen.getByRole("main");
+    const main = await screen.findByRole("main");
     expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Tu entrenamiento.");
     expect(within(main).getByRole("img", { name: "Pantalla de Autopilot con el entrenamiento del día" })).toBeInTheDocument();
     fireEvent.click(within(main).getAllByRole("link", { name: /Crear mi rutina gratis/ })[0]);
@@ -41,7 +41,7 @@ describe("short public home", () => {
 
   it("shows demo, real prices and the four key questions on the home", async () => {
     open();
-    const main = screen.getByRole("main");
+    const main = await screen.findByRole("main");
     expect(within(main).getByRole("link", { name: "Probar la demo" })).toHaveAttribute("href", "#demo");
     expect(main.querySelector("#demo")).not.toBeNull();
     expect(await within(main).findByText("14,99 €")).toBeInTheDocument();
@@ -50,9 +50,9 @@ describe("short public home", () => {
     expect(within(main).getAllByRole("button", { name: /\?$/ }).length).toBeGreaterThanOrEqual(4);
   });
 
-  it("opens mobile navigation and reaches the questions page", () => {
+  it("opens mobile navigation and reaches the questions page", async () => {
     open();
-    fireEvent.click(screen.getByRole("button", { name: "Abrir menú" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Abrir menú" }));
     const menu = screen.getByRole("navigation", { name: "Menú móvil" });
     fireEvent.click(within(menu).getByRole("link", { name: "Dudas" }));
     expect(screen.getByTestId("destination")).toHaveTextContent("/preguntas-frecuentes");
