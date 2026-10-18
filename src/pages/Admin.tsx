@@ -89,21 +89,26 @@ const Admin = () => {
   const isMobile = useIsMobile();
   const contentRef = useRef<HTMLElement>(null);
 
+  const [testIds, setTestIds] = useState<Set<string>>(new Set());
+
   const refreshUsers = useCallback(async () => {
-    const [profilesResult, rolesResult] = await Promise.all([
+    const [profilesResult, rolesResult, testResult] = await Promise.all([
       supabase.from("profiles").select("user_id, email, name, avatar_url, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier, subscription_status, subscription_end, stripe_payment_id"),
       supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
+      supabase.from("metrics_excluded_users").select("user_id"),
     ]);
     if (profilesResult.error) throw profilesResult.error;
     if (rolesResult.error) throw rolesResult.error;
+    const tests = new Set((testResult.data || []).map((row) => row.user_id));
     setAllUsers(profilesResult.data || []);
     setAdminIds(new Set((rolesResult.data || []).filter((role) => role.role === "admin").map((role) => role.user_id)));
     setTrainerIds(new Set((rolesResult.data || []).filter((role) => role.role === "trainer").map((role) => role.user_id)));
+    setTestIds(tests);
     setLoadError(false);
-    return clientProfiles(profilesResult.data || [], new Set((rolesResult.data || []).map((role) => role.user_id)));
+    return clientProfiles(profilesResult.data || [], new Set([...(rolesResult.data || []).map((role) => role.user_id), ...tests]));
   }, []);
 
-  const clients = useMemo(() => clientProfiles(allUsers, new Set([...adminIds, ...trainerIds])), [allUsers, adminIds, trainerIds]);
+  const clients = useMemo(() => clientProfiles(allUsers, new Set([...adminIds, ...trainerIds, ...testIds])), [allUsers, adminIds, trainerIds, testIds]);
 
   const loadAdmin = useCallback(async () => {
     if (!user) return;

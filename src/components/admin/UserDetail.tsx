@@ -192,6 +192,8 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       setOnboarding(onb as OnboardingData | null);
       setIsUserAdmin(!!roleData);
       setIsUserTrainer(!!trainerRoleData);
+      void supabase.from("metrics_excluded_users").select("user_id").eq("user_id", profile.user_id).maybeSingle()
+        .then(({ data }) => { if (active) setIsTestAccount(!!data); });
       
 
       if (tp?.workouts_json) {
