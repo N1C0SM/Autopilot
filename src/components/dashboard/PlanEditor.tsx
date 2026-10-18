@@ -201,11 +201,10 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
       open={open}
       onOpenChange={onOpenChange}
       title="Editar mi rutina"
-      description="Al guardar, tu rutina queda protegida frente al piloto automático."
       desktopClassName="sm:max-w-5xl"
       footer={
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div className="flex gap-2 md:mr-auto">
+        <div className="flex flex-col-reverse gap-1 md:flex-row md:items-center md:gap-2">
+          <div className="flex justify-center gap-1 md:mr-auto">
             {confirmReset ? (
               <>
                 <Button type="button" variant="destructive" className="min-h-11 flex-1" onClick={() => { setDraft([]); setConfirmReset(false); }}>Sí, vaciar semana</Button>
@@ -213,11 +212,11 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
               </>
             ) : (
               <>
-                <Button type="button" variant="ghost" className="min-h-11 flex-1 md:flex-none" onClick={() => setConfirmReset(true)}>
+                <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => setConfirmReset(true)}>
                   <RotateCcw className="h-4 w-4" /> Empezar de cero
                 </Button>
                 {backup && (
-                  <Button type="button" variant="ghost" className="min-h-11 flex-1 md:flex-none" onClick={() => {
+                  <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={() => {
                     setDraft(clone(backup.plans)); setDay(backup.plans[0]?.day ?? DAYS[0]); clearBackup(userId);
                     toast.success("Rutina anterior recuperada. Guarda para activarla.");
                   }}>
