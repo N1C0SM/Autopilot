@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+import { useApkDownloadEnabled } from "@/lib/apkDownload";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/autopilot-logo.png";
 
@@ -16,10 +17,14 @@ const androidSteps = [
 
 
 export default function AppDownload() {
+  const [enabled] = useApkDownloadEnabled();
 
   useEffect(() => {
     document.title = "Descargar la app · Autopilot";
   }, []);
+
+  if (enabled === false) return <Navigate to="/" replace />;
+  if (enabled === null) return <main className="min-h-screen bg-background" />;
 
   const Steps = ({ items }: { items: string[] }) => (
     <ol className="mt-4 space-y-3">
