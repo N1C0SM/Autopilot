@@ -45,13 +45,14 @@ describe("admin metrics loading", () => {
     render(<AdminMetrics users={[coach]} onRefresh={onRefresh} />);
     await waitFor(() => expect(screen.getByText("Estimación mensual").parentElement).toHaveTextContent("49 €"));
     fireEvent.click(screen.getByRole("button", { name: "Actualizar" }));
-    await waitFor(() => expect(screen.getByText("Estimación mensual").parentElement).toHaveTextContent("78 €"));
+    // Catalog value: Coach 49 € + Plus 14,99 € (src/config/tiers.ts). The old 78 € assumed Plus at 29 €.
+    await waitFor(() => expect(screen.getByText("Estimación mensual").parentElement).toHaveTextContent("63,99 €"));
     expect(onRefresh).toHaveBeenCalledOnce();
 
     from.mockImplementation(() => ({ select: () => ({ gte: async () => ({ data: null, error: { message: "Unavailable" } }) }) }));
     fireEvent.click(screen.getByRole("button", { name: "Actualizar" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("última carga correcta");
-    expect(screen.getByText("Estimación mensual").parentElement).toHaveTextContent("78 €");
+    expect(screen.getByText("Estimación mensual").parentElement).toHaveTextContent("63,99 €");
   });
 });
 

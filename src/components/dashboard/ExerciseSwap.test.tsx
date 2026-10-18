@@ -1,29 +1,30 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExerciseSwap } from "./ExerciseSwap";
 
-const { builder } = vi.hoisted(() => {
-  const result = {
-    data: [
-      { name: "Press inclinado con mancuernas", image_url: null },
-      { name: "Fondos en paralelas", image_url: "https://example.test/fondos.jpg" },
-    ],
+const { builder, getUser, state } = vi.hoisted(() => {
+  const state = {
+    exercises: {
+      data: [
+        { name: "Press inclinado con mancuernas", image_url: null, muscle_group: null, exercise_type: "Gimnasio" },
+        { name: "Fondos en paralelas", image_url: "https://example.test/fondos.jpg", muscle_group: null, exercise_type: "Calistenia" },
+      ],
+      error: null as { message: string } | null,
+    },
   };
   const builder: Record<string, unknown> = {};
   for (const method of ["select", "neq", "limit", "eq"]) builder[method] = vi.fn(() => builder);
   builder.maybeSingle = vi.fn(async () => ({ data: { equipment_type: "Mixto" }, error: null }));
-  builder.then = (resolve: (value: typeof result & { error: null }) => unknown) => Promise.resolve({ ...result, error: null }).then(resolve);
+  builder.then = (resolve: (value: unknown) => unknown) => Promise.resolve(state.exercises).then(resolve);
   const getUser = vi.fn(async () => ({ data: { user: { id: "user-1" } }, error: null }));
-  return { builder, getUser };
-});
-const { getUser } = vi.hoisted(() => ({ getUser: vi.fn() }));
-
-vi.mock("@/integrations/supabase/client", async () => {
-  const h = await vi.importMock<never>("./ExerciseSwap.test.tsx").catch(() => null);
-  void h;
-  return { supabase: { from: vi.fn(() => builder), auth: { getUser } } };
+  return { builder, getUser, state };
 });
 
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { from: vi.fn(() => builder), auth: { getUser } } }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn() }));
+
+const okData = state.exercises.data;
+beforeEach(() => { state.exercises = { data: okData, error: null }; });
 afterEach(cleanup);
 
 describe("exercise swap during a workout", () => {
@@ -58,5 +59,15 @@ describe("exercise swap during a workout", () => {
 
     expect(onSelect).toHaveBeenCalledWith(null);
     expect(onRow).not.toHaveBeenCalled();
+  });
+
+  it("shows an error instead of spinning forever when the library can't load", async () => {
+    state.exercises = { data: null as never, error: { message: "offline" } };
+    render(<ExerciseSwap original="Press banca" onSelect={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar ejercicio" }));
+
+    expect(await screen.findByText("No se pudieron cargar")).toBeInTheDocument();
+    expect(screen.queryByText("Buscando alternativas")).not.toBeInTheDocument();
   });
 });
