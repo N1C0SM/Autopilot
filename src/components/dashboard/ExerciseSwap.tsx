@@ -42,26 +42,39 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<Option[] | null>(null);
 
+  const [failed, setFailed] = useState(false);
+
   const load = async () => {
     if (options || loading) return;
     setLoading(true);
-    // Respect the user's discipline: calisthenics users never get gym gear, gym users get gym first.
-    const { data: auth } = await supabase.auth.getUser();
-    let style = "Mixto";
-    if (auth.user) {
-      const { data: ob } = await supabase.from("onboarding").select("equipment_type").eq("user_id", auth.user.id).maybeSingle();
-      if (ob?.equipment_type) style = ob.equipment_type;
+    setFailed(false);
+    try {
+      // Respect the user's discipline: calisthenics users never get gym gear, gym users get gym first.
+      // If the discipline can't be read we fail instead of guessing, so weights never leak into calisthenics.
+      const { data: auth, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      let style = "Mixto";
+      if (auth.user) {
+        const { data: ob, error: obError } = await supabase.from("onboarding").select("equipment_type").eq("user_id", auth.user.id).maybeSingle();
+        if (obError) throw obError;
+        if (ob?.equipment_type) style = ob.equipment_type;
+      }
+      let query = supabase.from("exercises").select("name, image_url, muscle_group, exercise_type").neq("name", original).limit(60);
+      if (movementPattern) query = query.eq("movement_pattern", movementPattern);
+      else if (muscleGroup) query = query.eq("muscle_group", muscleGroup);
+      const { data, error } = await query;
+      if (error) throw error;
+      const rows = (data || []).filter((row) => isAllowedForStyle(style, row.exercise_type, row.name));
+      const score = (row: { muscle_group: string | null; exercise_type: string | null }) =>
+        (muscleGroup && row.muscle_group === muscleGroup ? 2 : 0) + (row.exercise_type === style ? 1 : 0);
+      rows.sort((a, b) => score(b) - score(a));
+      setOptions(rows.slice(0, 6).map((row) => ({ name: row.name, image: row.image_url })));
+    } catch {
+      // Leave options empty so reopening the sheet retries; never spin forever.
+      setFailed(true);
+    } finally {
+      setLoading(false);
     }
-    let query = supabase.from("exercises").select("name, image_url, muscle_group, exercise_type").neq("name", original).limit(60);
-    if (movementPattern) query = query.eq("movement_pattern", movementPattern);
-    else if (muscleGroup) query = query.eq("muscle_group", muscleGroup);
-    const { data } = await query;
-    const rows = (data || []).filter((row) => isAllowedForStyle(style, row.exercise_type, row.name));
-    const score = (row: { muscle_group: string | null; exercise_type: string | null }) =>
-      (muscleGroup && row.muscle_group === muscleGroup ? 2 : 0) + (row.exercise_type === style ? 1 : 0);
-    rows.sort((a, b) => score(b) - score(a));
-    setOptions(rows.slice(0, 6).map((row) => ({ name: row.name, image: row.image_url })));
-    setLoading(false);
   };
 
   const choose = (name: string | null) => {
@@ -99,6 +112,13 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
             <div className="flex justify-center py-8">
               <Spinner label="Buscando alternativas" />
             </div>
+          ) : failed ? (
+            <EmptyState
+              icon={Dumbbell}
+              title="No se pudieron cargar"
+              description="Revisa la conexión y vuelve a abrir para reintentar."
+              className="py-6 [&>div:first-child]:bg-secondary"
+            />
           ) : options?.length === 0 ? (
             <EmptyState
               icon={Dumbbell}
