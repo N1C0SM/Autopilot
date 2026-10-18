@@ -584,10 +584,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     toast.success("Propuesta aplicada a las series pendientes. Puedes ajustarla antes de empezar.");
   };
 
-  const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number) => {
-    const set = exerciseLogs[exerciseName]?.[setIndex];
-    const wasDone = set?.done;
-    if (!set) return;
+  const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number, suggestedWeight?: string) => {
+    const rawSet = exerciseLogs[exerciseName]?.[setIndex];
+    const wasDone = rawSet?.done;
+    if (!rawSet) return;
+    // Un toque: si el peso está vacío, se usa el que se ve sugerido en gris.
+    const ghost = !wasDone && !rawSet.weight.trim() && suggestedWeight && parsePositiveWeight(suggestedWeight) !== null;
+    const set = ghost ? { ...rawSet, weight: suggestedWeight! } : rawSet;
     if (!wasDone) {
       const inputError = getWorkoutSetInputError(set) ?? getWorkoutSetDropsInputError(set);
       if (inputError) {
@@ -596,6 +599,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         return;
       }
     }
+    if (ghost) updateSet(exerciseName, setIndex, "weight", suggestedWeight!);
     updateSet(exerciseName, setIndex, "done", !wasDone);
 
     const exerciseIndex = activePlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
