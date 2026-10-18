@@ -1,6 +1,6 @@
 import type { DayPlan, GymExerciseEntry } from "../_shared/training-types.ts";
 import { jsonObject, errorMessage } from "../_shared/runtime-values.ts";
-import { getConsumerPlan, hasCoaching, hasNutrition } from "../_shared/entitlements.ts";
+import { getConsumerPlan, hasCoaching, resolveFeatures } from "../_shared/entitlements.ts";
 import { parseBodyWeight, nutritionMacroError } from "../_shared/nutrition.ts";
 import { parsePriorityMuscles } from "../_shared/scan-focus.ts";
 const GYM_EQUIPMENT_RE = /polea|cable|mancuerna|dumbbell|kettlebell|pesa rusa|goblet|barra ol[ií]mpica|press banca|m[aá]quina|prensa|smith|multipower|landmine|lastr|disco|barra t\b|trap bar|glute-ham|ghr|farmer/i;
@@ -934,7 +934,8 @@ serve(async (req) => {
       .eq("user_id", targetUserId).single();
     if (billingError) throw billingError;
     const paidCoaching = hasCoaching(billing);
-    const includeNutrition = hasNutrition(billing);
+    const { data: freeCampaign } = await supabase.rpc("get_free_campaign");
+    const includeNutrition = resolveFeatures(getConsumerPlan(billing), [], false, freeCampaign === true).has("nutritionPlan");
     // An admin regenerating their own plan skips the plan limits so every flow can be tested.
     const { data: callerIsAdmin } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
     const adminSelf = !!callerIsAdmin; // admins may regenerate any user (support fixes)
@@ -1283,7 +1284,7 @@ serve(async (req) => {
     let meals = getMeals(goal, diet, onb.allergies);
 
     // Try AI-personalized meals based on user's actual food preferences
-    if (macros && weight !== null) {
+    if (macros && weight !== null && !freeCampaign) {
       try {
       const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-generate-meals`, {
         method: "POST",

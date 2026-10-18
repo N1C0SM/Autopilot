@@ -45,6 +45,7 @@ export function parseCatalog(rows: unknown): CatalogPlan[] {
 }
 
 export type PlanAvailability = {
+  campaign?: boolean;
   plans: CatalogPlan[];
   /** Coach is shown in the public catalog. */
   coach: boolean;

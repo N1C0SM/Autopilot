@@ -34,6 +34,8 @@ import { isIOSNative } from "@/lib/platform";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import type { Json } from "@/integrations/supabase/types";
 
+import { useFreeCampaign } from "@/lib/freeCampaign";
+
 const GOALS = [
   { value: "lose_weight", label: "Perder peso" },
   { value: "gain_muscle", label: "Ganar músculo" },
@@ -73,6 +75,7 @@ const OptionRow = ({ label, selected, focusable, onSelect }: { label: string; se
 
 const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "training" | "full") => void; adminMode?: boolean } = {}) => {
   const plans = usePlanAvailability();
+  const campaign = useFreeCampaign();
   const hideForAdmin = adminMode ? " hidden" : "";
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -671,7 +674,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       </div>
 
       {/* Subscription */}
-      <div className={`order-5 space-y-3${hideForAdmin}`}>
+      {(!campaign || consumerPlan !== "free") && <div className={`order-5 space-y-3${hideForAdmin}`}>
         <ListGroup header="Suscripción" footer={subscriptionFooter}>
           <ListRow
             icon={<Crown className={hasPaidAccess ? undefined : "text-muted-foreground"} />}
@@ -702,7 +705,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             />
           ) : null}
         </ListGroup>
-        {!iosReader && !hasPaidAccess && onUpgrade && (
+        {!campaign && plans.plus && !iosReader && !hasPaidAccess && onUpgrade && (
           <div className="space-y-1">
             <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); onUpgrade("training"); }}>
               Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes
@@ -714,10 +717,10 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             )}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Calendar */}
-      <ListGroup
+      {ENABLE_CALENDAR && <ListGroup
         className={`order-6${hideForAdmin}`}
         header={
           <span className="inline-flex items-center gap-2">
@@ -761,7 +764,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             onClick={handleConnectGoogle}
           />
         )}
-      </ListGroup>
+      </ListGroup>}
 
       {/* Privacy & Data (RGPD) */}
       <div className={`order-7 flex flex-col gap-6${hideForAdmin}`}>

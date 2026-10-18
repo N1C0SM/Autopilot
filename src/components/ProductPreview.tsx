@@ -123,13 +123,13 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
   const plans = usePlanAvailability();
   // Chat mirrors the app: Coach talks to Nicolás; with Coach hidden, Plus shows the AI assistant.
   const aiChat = !plans.coach;
-  const shownViews = views.filter((v) => v.key !== "chat" || plans.coach || plans.plus);
+  const shownViews = views.filter((v) => v.key !== "chat");
   useEffect(() => { if (view === "chat" && !plans.coach && !plans.plus) setView("home"); }, [view, plans.coach, plans.plus]);
   const paidLabel = [plans.plus && plans.plusName, plans.coach && plans.coachName].filter(Boolean).join(" y ") || "planes de pago";
   const side: Record<View, { title: string; points: string[] }> = {
     ...baseSide,
-    home: { ...baseSide.home, points: [baseSide.home.points[0], baseSide.home.points[1], plans.coach ? `La nutrición y el chat con Nicolás dependen del plan elegido.` : baseSide.home.points[2]] },
-    nutrition: { ...baseSide.nutrition, title: `Tu plan de nutrición, incluido desde ${plans.plus ? plans.plusName : plans.coachName}.` },
+    home: { ...baseSide.home, points: [baseSide.home.points[0], baseSide.home.points[1], plans.campaign ? "Sobrecarga progresiva y objetivos nutricionales básicos, sin tarjeta." : baseSide.home.points[2]] },
+    nutrition: plans.campaign ? { title: "Tus objetivos de nutrición básica.", points: ["Estimación inicial de calorías según tus datos.", "Objetivo diario de proteína.", "Disponible sin tarjeta durante la campaña gratuita."] } : { ...baseSide.nutrition, title: `Tu plan de nutrición, incluido desde ${plans.plus ? plans.plusName : plans.coachName}.` },
     chat: aiChat
       ? { title: "Pregunta lo que quieras de tu plan.", points: ["Dudas de técnica, alternativas de ejercicios o comidas.", "Responde un asistente con IA que conoce tu rutina y tus macros.", `Incluido en ${plans.plusName}; no forma parte de Gratis.`] }
       : { ...baseSide.chat, points: [baseSide.chat.points[0], baseSide.chat.points[1], `El chat personal es exclusivo del plan ${plans.coachName}.`] },
@@ -224,7 +224,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 <li key={p} className="flex items-start gap-3 type-body text-muted-foreground"><Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />{p}</li>
               ))}
             </ul>
-            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{view === "nutrition" ? `El plan de nutrición está incluido desde ${plans.plus ? plans.plusName : plans.coachName} · ${euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" && aiChat ? `El asistente IA está incluido en ${plans.plusName} · ${euro(plans.plusPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" ? `El chat con Nicolás es exclusivo del plan ${plans.coachName} · ${euro(plans.coachPrice)}/mes tras la prueba. No está incluido en Free${plans.plus ? ` ni en ${plans.plusName}` : ""}.` : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
+            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{plans.campaign ? "Ejemplo con datos ficticios. Entrenamiento, progreso y objetivos de nutrición básica sin tarjeta." : view === "nutrition" ? `El plan de nutrición está incluido desde ${plans.plus ? plans.plusName : plans.coachName} · ${euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" && aiChat ? `El asistente IA está incluido en ${plans.plusName} · ${euro(plans.plusPrice)}/mes tras la prueba. No forma parte del plan Free.` : view === "chat" ? `El chat con Nicolás es exclusivo del plan ${plans.coachName} · ${euro(plans.coachPrice)}/mes tras la prueba. No está incluido en Free${plans.plus ? ` ni en ${plans.plusName}` : ""}.` : "La demo usa datos ficticios. Gratis incluye rutina inicial, registro y progreso; la nutrición llega con Plus y el entrenador real con Coach."}</p>
           </div>
 
           <div className="order-1 mx-auto w-full max-w-[22rem] md:order-2">
@@ -342,7 +342,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 {view === "nutrition" && (
                   <div>
                     <h1 className="type-large-title">{titles.nutrition}</h1>
-                    <p className="mt-1 type-subhead text-muted-foreground">Hoy · plan {plans.plus ? plans.plusName : plans.coachName}</p>
+                    <p className="mt-1 type-subhead text-muted-foreground">Hoy · {plans.campaign ? "nutrición básica" : `plan ${plans.plus ? plans.plusName : plans.coachName}`}</p>
                     <div className="mt-5 flex items-center gap-5">
                       <ProgressRing value={62} size={116} stroke={12} label="Calorías del día">
                         <div className="text-center">
@@ -355,13 +355,13 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                         <p className="mt-1 type-subhead text-muted-foreground">Marca cada comida al hacerla.</p>
                       </div>
                     </div>
-                    <div className="mt-6 flex gap-3">
+                    {!plans.campaign && <div className="mt-6 flex gap-3">
                       <Lock className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
                       <div className="min-w-0">
                         <p className="type-headline">{paidLabel}</p>
                         <p className="type-subhead text-muted-foreground">Función de pago</p>
                       </div>
-                    </div>
+                    </div>}
                     <div className="mt-6 grid grid-cols-3 gap-4">
                       {[["Proteína", 96, 150], ["Carbos", 150, 240], ["Grasas", 45, 75]].map(([l, v, t]) => (
                         <div key={l as string}>
@@ -381,7 +381,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                         />
                       ))}
                     </ListGroup>
-                    <p className="mt-4 type-footnote text-muted-foreground">Comidas ilustrativas, sin recomendaciones para tu caso. Nutrición disponible desde Plus.</p>
+                    <p className="mt-4 type-footnote text-muted-foreground">{plans.campaign ? "Ejemplo ilustrativo. Tus objetivos se calculan con tus datos." : "Comidas ilustrativas, sin recomendaciones para tu caso."}</p>
                   </div>
                 )}
 

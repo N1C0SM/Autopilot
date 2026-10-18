@@ -37,6 +37,9 @@ import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { getFirstWeekJourney } from "@/lib/firstWeek";
 import { isIOSNative } from "@/lib/platform";
 
+import { useFreeCampaign } from "@/lib/freeCampaign";
+import BasicNutrition from "@/components/dashboard/BasicNutrition";
+
 const Chat = lazy(() => import("@/components/Chat"));
 const MealsList = lazy(() => import("@/components/dashboard/MealsList"));
 const ProgressPhotos = lazy(() => import("@/components/dashboard/ProgressPhotos"));
@@ -95,6 +98,7 @@ const Dashboard = () => {
   const [coaching, setCoaching] = useState(false);
   const [consumerPlan, setConsumerPlan] = useState<ConsumerPlan>("free");
   const plans = usePlanAvailability();
+  const campaign = useFreeCampaign();
   // El chat está siempre visible (aunque no tenga coach)
   const [coachAssigned, setCoachAssigned] = useState(true);
   const [nutrition, setNutrition] = useState(false);
@@ -345,6 +349,7 @@ const Dashboard = () => {
 
   // Por defecto Plus: es el plan que queremos vender primero. Coach es una elección explícita.
   const handleCompletePayment = async (plan: "training" | "full" | "transform" = "training") => {
+    if (campaign) return;
     try {
       track("checkout_start", { plan, source: "dashboard" });
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
@@ -375,7 +380,7 @@ const Dashboard = () => {
   };
 
   // Wait for the profile: before it loads every user looks like "free".
-  useEffect(() => { if (!loading && consumerPlan !== "plus" && consumerPlan !== "coach" && section === "chat") setSectionState("home"); }, [loading, consumerPlan, section]);
+  useEffect(() => { if (section === "chat") setSectionState("home"); }, [section]);
 
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
@@ -416,7 +421,7 @@ const Dashboard = () => {
 
   const hasPlan = planStatus === "plan_ready";
   // Chat solo para planes de pago: Coach está oculto en el catálogo, Plus mantiene chat.
-  const hideChat = consumerPlan !== "plus" && consumerPlan !== "coach";
+  const hideChat = true;
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
@@ -501,14 +506,14 @@ const Dashboard = () => {
           }}>{preparingRoutine ? "Preparando…" : "Preparar mi rutina gratis"}</Button>
         </div>
       )}
-      {!coaching && section === "nutrition" && (
+      {!campaign && !coaching && section === "nutrition" && (
         // Plus preseleccionado siempre: es el plan que queremos vender primero.
         <PlanPaywall plan="plus" allowCoach defaultPlan="training" onChoose={(tier) => handleCompletePayment(tier)} />
       )}
 
       {/* Chat IA disponible siempre - sin depender de Coach.
           Coach lo excluye: su chat con el entrenador se renderiza más abajo (duplicaría la conversación). */}
-      {section === "chat" && consumerPlan !== "coach" && (
+      {!hideChat && section === "chat" && consumerPlan !== "coach" && (
         <div className="w-full">
           {user && (
             <Suspense fallback={<SectionFallback />}>
@@ -538,7 +543,7 @@ const Dashboard = () => {
             userId={user?.id}
             meals={meals}
             coaching={coaching}
-            nutrition={nutrition}
+            nutrition={nutrition || campaign}
             planStatus={planStatus}
             dayPlans={dayPlans}
             onNavigate={(s) => {
@@ -556,7 +561,7 @@ const Dashboard = () => {
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
           />
-          {coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
+          {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
               aparecería como estado activo (próxima iteración). */}
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
@@ -576,11 +581,11 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
-              <CoachingOffer
+              {!campaign && <CoachingOffer
                 onChoose={handleCompletePayment}
                 compact
                 defaultPlan={landingPlan ?? (wantsCoach ? "full" : "training")}
-              />
+              />}
             </div>
           )}
         </div>
@@ -689,7 +694,7 @@ const Dashboard = () => {
         </Suspense>
       )}
 
-      {hasPlan && section === "nutrition" && isTrainingOnly && (
+      {!campaign && hasPlan && section === "nutrition" && isTrainingOnly && (
         <div className="flex w-full flex-1 flex-col">
           <EmptyState
             className="flex-1"
@@ -703,6 +708,7 @@ const Dashboard = () => {
         </div>
       )}
 
+      {campaign && section === "nutrition" && user && !nutrition && <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} />}
       {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full">
           <Suspense fallback={<SectionFallback />}>
@@ -711,8 +717,8 @@ const Dashboard = () => {
         </div>
       )}
 
-      {consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
-      {consumerPlan === "coach" && coachAssigned && section === "chat" && (
+      {!hideChat && consumerPlan === "coach" && !coachAssigned && section === "chat" && <CoachPendingAssignment />}
+      {!hideChat && consumerPlan === "coach" && coachAssigned && section === "chat" && (
         <div className={chatFills ? "flex min-h-0 w-full flex-1 flex-col" : "w-full"}>
           {user && (
             <Suspense fallback={<SectionFallback />}>
@@ -822,7 +828,7 @@ const Dashboard = () => {
         profileName={profileName}
         profileAvatar={profileAvatar}
         userId={user?.id}
-        lockedTabs={!coaching ? ["nutrition"] : []}
+        lockedTabs={!campaign && !coaching ? ["nutrition"] : []}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         workoutMode={workoutMode}
@@ -849,7 +855,7 @@ const Dashboard = () => {
             onSignOut={handleSignOut}
             profileName={profileName}
             profileAvatar={profileAvatar}
-            lockedSections={!coaching ? ["nutrition"] : []}
+            lockedSections={!campaign && !coaching ? ["nutrition"] : []}
             hiddenSections={hideChat ? ["chat"] : []}
           />
         </div>

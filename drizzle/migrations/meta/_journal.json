@@ -92,6 +92,13 @@
       "when": 1792281133963,
       "tag": "0012_roadmap_seed_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792308985684,
+      "tag": "0013_free_campaign_mode",
+      "breakpoints": true
     }
   ]
 }

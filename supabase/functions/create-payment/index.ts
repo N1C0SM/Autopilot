@@ -18,7 +18,8 @@ serve(async (req) => {
   );
 
   try {
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "No autenticado" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
@@ -29,7 +30,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-    const { data: settings } = await supabaseAdmin.from("settings").select("payment_mode, price_id_test, price_id_live").limit(1).single();
+    const { data: settings } = await supabaseAdmin.from("settings").select("payment_mode, price_id_test, price_id_live, free_campaign").limit(1).single();
+    if (settings?.free_campaign) return new Response(JSON.stringify({ code: "free_campaign", error: "Las compras de planes están desactivadas durante la campaña gratuita." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     const paymentMode = settings?.payment_mode || "test";
 
     const stripeKey = paymentMode === "live"

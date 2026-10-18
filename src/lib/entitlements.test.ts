@@ -2,6 +2,20 @@ import { describe, expect, it } from "vitest";
 import { hasCoaching, hasNutrition, getConsumerPlan, resolveFeatures, requiredPlan, resolvePaidTier, subscriptionAllowsCoaching } from "../../supabase/functions/_shared/entitlements";
 const active = { payment_status: "paid", subscription_tier: "training", subscription_status: "active", subscription_end: "2030-01-01T00:00:00Z" };
 describe("free to paid entitlements", () => {
+  it("campaign opens progression and nutrition without granting purchase or human access", () => {
+    const features = resolveFeatures("free", [], false, true);
+    expect(features.has("advancedTracking")).toBe(true);
+    expect(features.has("nutritionPlan")).toBe(true);
+    expect(features.has("coachMessaging")).toBe(false);
+    expect(features.has("humanCoach")).toBe(false);
+    expect(features.has("trainerInvitations")).toBe(false);
+    expect(getConsumerPlan({ payment_status: "unpaid", subscription_tier: "free" })).toBe("free");
+  });
+  it("turning campaign off restores normal Free capabilities", () => {
+    const features = resolveFeatures("free", [], false, false);
+    expect(features.has("nutritionPlan")).toBe(false);
+    expect(features.has("advancedTracking")).toBe(false);
+  });
   it("never treats free metadata, a selected plan or a legacy paid flag as a purchase", () => {
     expect(hasCoaching({ payment_status: "unpaid", subscription_tier: "training" })).toBe(false);
     expect(hasCoaching({ payment_status: "paid", subscription_tier: "free", subscription_status: "active" })).toBe(false);
