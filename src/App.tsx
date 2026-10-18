@@ -1,3 +1,4 @@
+import Index from "./pages/Index";
 import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,7 +11,6 @@ const ForTrainers = lazy(() => import("@/pages/ForTrainers"));
 const AcceptInvitation = lazy(() => import("@/pages/ForTrainers").then((m) => ({ default: m.AcceptInvitation })));
 const AppDownload = lazy(() => import("@/pages/AppDownload"));
 const PlanShieldDialog = lazy(() => import("@/components/dashboard/PlanShieldDialog"));
-const Index = lazy(() => import("./pages/Index"));
 const PublicInfo = lazy(() => import("./pages/PublicInfo"));
 const Signup = lazy(() => import("./pages/Signup"));
 const Welcome = lazy(() => import("./pages/Welcome"));
