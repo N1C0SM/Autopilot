@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import type { DayPlan } from "@/types/training";
 import { hapticImpact, hapticNotify } from "@/lib/native";
 import WorkoutTracker from "./WorkoutTracker";
+import { readActiveWorkout } from "@/lib/activeWorkout";
+import { setWorkoutView } from "@/lib/workoutPreferences";
 
 const mocks = vi.hoisted(() => ({ writes: [] as { table: string; rows: unknown }[], completedDays: [] as string[], saveFails: false, toastError: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
@@ -31,6 +33,7 @@ vi.mock("./RPEDialog", () => ({ default: () => null }));
 const plan = (day: string, name: string): DayPlan => ({ day, type: "gimnasio", routine_name: name, exercises: [{ exercise_id: name, name, series: 1, reps: 8, weight: "20", rest: "60 s" }] });
 const week = "Elige el día de la semana";
 beforeEach(() => {
+  localStorage.clear();
   vi.clearAllMocks(); mocks.writes = []; mocks.completedDays = []; mocks.saveFails = false;
   vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-04T12:00:00"));
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -38,6 +41,37 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("routine week navigation and saved session dates", () => {
+  it("records another exercise directly in list view and can collapse its sets", async () => {
+    const day = { ...plan("Lunes", "Sentadilla"), exercises: [...(plan("Lunes", "Sentadilla").exercises ?? []), ...(plan("Lunes", "Remo").exercises ?? [])] };
+    render(<WorkoutTracker userId="user" dayPlans={[day]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo" }));
+    expect(readActiveWorkout("user")?.logs.Remo[0].done).toBe(true);
+    fireEvent.click(screen.getAllByRole("button", { name: "Añadir serie" })[0]);
+    expect(readActiveWorkout("user")?.logs.Sentadilla).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: /Sentadilla 1 series/ }));
+    await waitFor(() => expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).not.toBeInTheDocument());
+  });
+  it("restores a virtual free plan and unsynced edits after remount", async () => {
+    const free = plan("Lunes", "Remo libre");
+    const { unmount } = render(<WorkoutTracker userId="user" dayPlans={[free]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo libre" }), { target: { value: "37" } });
+    unmount();
+    render(<WorkoutTracker userId="user" dayPlans={[]} resume />);
+    expect(await screen.findByRole("textbox", { name: "Peso de la serie 1 de Remo libre" })).toHaveValue("37");
+    expect(readActiveWorkout("user")?.date).toBe("2026-10-04");
+  });
+  it("keeps the original exercise-at-a-time view available", async () => {
+    setWorkoutView("user", "focus");
+    const day = { ...plan("Lunes", "Sentadilla"), exercises: [...(plan("Lunes", "Sentadilla").exercises ?? []), ...(plan("Lunes", "Remo").exercises ?? [])] };
+    render(<WorkoutTracker userId="user" dayPlans={[day]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Sentadilla" })).toBeVisible());
+    expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Remo" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "2. Remo" }));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo" })).toBeVisible());
+  });
   it("opens any routine from a rest Sunday without writing previewed sets", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} />);
     await waitFor(() => expect(screen.getByText("Día de descanso")).toBeVisible());
@@ -82,6 +116,7 @@ describe("routine week navigation and saved session dates", () => {
     expect(hapticNotify).toHaveBeenCalledWith("success");
     await waitFor(() => expect(screen.getByRole("tablist", { name: week })).toBeVisible());
     expect(mocks.writes.find((write) => write.table === "day_completions")?.rows).toEqual({ user_id: "user", day_label: "Viernes", completed_at: "2026-10-04", rpe: null });
+    expect(readActiveWorkout("user")).toBeNull();
     expect(onSessionModeChange).toHaveBeenLastCalledWith(false);
   });
   it("allows opening another routine after one is already completed", async () => {

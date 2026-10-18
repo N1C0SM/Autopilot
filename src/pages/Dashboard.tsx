@@ -144,6 +144,7 @@ const Dashboard = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
+  const [resumeWorkout, setResumeWorkout] = useState(false);
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
     if (fromParam === "plan" || fromParam === "tracker") return fromParam;
@@ -570,6 +571,12 @@ const Dashboard = () => {
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
+            onResumeWorkout={() => {
+              setResumeWorkout(true);
+              setAutoStartWorkout(false);
+              setTrainingView("tracker");
+              setSection("training");
+            }}
           />
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
@@ -656,15 +663,17 @@ const Dashboard = () => {
                 }} />
               ) : (
                 <WorkoutTracker
-                  key={freePlans ? "free" : "plan"}
+                  key={resumeWorkout ? "resume" : freePlans ? "free" : "plan"}
+                  resume={resumeWorkout}
                   userId={user.id}
                   dayPlans={freePlans ?? dayPlans}
                   initialDay={trainingDay}
                   autoStart={autoStartWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
                   onSessionModeChange={setWorkoutMode}
-                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); }}
+                  onCancel={() => { setWorkoutMode(false); setResumeWorkout(false); setFreePlans(null); setSection("home"); }}
                   onExit={() => {
+                    setResumeWorkout(false);
                     setWorkoutMode(false);
                     setFreePlans(null);
                     setSection("home");
@@ -690,6 +699,7 @@ const Dashboard = () => {
             open={freeOpen}
             onOpenChange={setFreeOpen}
             onStart={(exercises) => {
+              setResumeWorkout(false);
               const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
               setFreePlans([
                 ...dayPlans.filter((p) => p.day !== today),

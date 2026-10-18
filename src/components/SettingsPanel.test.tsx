@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPanel from "./SettingsPanel";
+import { getWorkoutView } from "@/lib/workoutPreferences";
 const mocks = vi.hoisted(() => ({
   user: { id: "user", email: "test@example.com" },
   tier: "full", paid: "paid", status: "active", end: null as string | null, travelUntil: null as string | null,
@@ -26,6 +27,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   functions: { invoke: (name: string) => Promise.resolve({ data: name === "check-subscription" && mocks.plan ? { plan: mocks.plan } : {} }) },
 } }));
 beforeEach(() => {
+  localStorage.clear();
   mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.travelUntil = null; mocks.saves = []; mocks.updates = [];
   mocks.ios = false; mocks.plan = null; mocks.avatar = "";
   mocks.toast.error.mockClear(); mocks.toast.success.mockClear(); mocks.toast.info.mockClear();
@@ -60,6 +62,12 @@ describe("settings plan labels and availability", () => {
 });
 
 describe("settings goal and rest controls", () => {
+  it("saves the choice of the original workout view", async () => {
+    show();
+    const views = await screen.findByRole("tablist", { name: "Vista del entrenamiento" });
+    fireEvent.mouseDown(within(views).getByRole("tab", { name: "Ejercicio a ejercicio" }), { button: 0, ctrlKey: false });
+    expect(getWorkoutView("user")).toBe("focus");
+  });
   it("moves the goal with the arrow keys, keeps a single tab stop and saves the chosen goal", async () => {
     show();
     const radios = await screen.findAllByRole("radio");

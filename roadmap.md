@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Rediseño del entrenamiento: descanso por fecha límite, recuperación de sesiones y reanudar desde Hoy
+- [ ] Vista de entrenamiento elegible en Ajustes: lista vertical colapsable o vista actual con swipe
 - [x] Campaña Free: control admin persistente, ofertas y pagos de planes ocultos, nutrición básica y progresión; comprobado en cuenta Free y pagos bloqueados (403)
 - [x] Simplificar estados a Idea/Pendiente/Hecho y mostrar ayuda de IA sin prometer cambios automáticos
 - [x] Aclarar el alcance de «hazmelo» con IA: propone trabajo; no modifica ni publica la aplicación desde el Roadmap
