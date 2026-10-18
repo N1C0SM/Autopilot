@@ -311,7 +311,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       nutrition_preferences: onboarding.nutrition_preferences,
       allergies: onboarding.allergies,
     }, { onConflict: "user_id" });
-    if (!error) { toast.success("Datos actualizados"); void hapticNotify("success"); }
+    if (!error) { toast.success("Datos actualizados"); void hapticNotify("success"); window.dispatchEvent(new Event("autopilot:onboarding-updated")); }
     else { console.error("saveOnboarding", error); toast.error(`No se pudo guardar: ${error.message}`); void hapticNotify("error"); }
     setSaving(false);
   };
@@ -542,6 +542,9 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               <Input id="settings-weight" type="number" inputMode="decimal" enterKeyHint="done" value={onboarding.weight} onChange={(e) => setOnboarding((o) => ({ ...o, weight: e.target.value }))} className={rowInput} />
             </FieldRow>
           </ListGroup>
+          <Button onClick={() => void saveOnboarding()} disabled={saving} className="w-full">
+            {saving ? "Guardando…" : "Guardar cambios"}
+          </Button>
 
           <ListGroup header="Objetivo">
             <div role="radiogroup" aria-label="Objetivo" onKeyDown={handleGoalKeyDown}>
