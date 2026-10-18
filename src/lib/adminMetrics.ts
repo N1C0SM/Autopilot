@@ -3,13 +3,23 @@ import { getConsumerPlan, type BillingProfile, type ConsumerPlan } from "@/lib/e
 
 export interface MetricsProfile extends BillingProfile {
   user_id: string;
+  email?: string | null;
   created_at?: string | null;
   plan_status?: string | null;
 }
 
-/** Staff remain in account management, but never inflate consumer metrics. */
+/** Founder's own test accounts: they train to test the app, not as real clients. */
+export const TEST_ACCOUNT_EMAILS = [
+  "nikosanmarcos4@gmail.com",
+  "nicolassanmarcos4@gmail.com",
+  "nicolasmr2026@gmail.com",
+];
+
+/** Staff and test accounts remain in account management, but never inflate consumer metrics. */
 export function clientProfiles<T extends MetricsProfile>(profiles: T[], staffIds: ReadonlySet<string>): T[] {
-  return profiles.filter((profile) => !staffIds.has(profile.user_id));
+  const testEmails = new Set(TEST_ACCOUNT_EMAILS);
+  return profiles.filter((profile) => !staffIds.has(profile.user_id)
+    && !testEmails.has((profile.email ?? "").trim().toLowerCase()));
 }
 
 export function summarizeClientPlans(profiles: MetricsProfile[], now = Date.now()) {
@@ -39,4 +49,4 @@ export function countCompletedWorkSets(sets: unknown): number {
     && set.done === true && set.isWarmup !== true).length;
 }
 
-export const MONTHLY_ESTIMATE_NOTE = "Estimación por tarifas de los planes activos, incluidas pruebas y accesos manuales. No representa cobros ni ingresos confirmados de Stripe. Solo se cuentan clientes; se excluyen administradores y entrenadores.";
+export const MONTHLY_ESTIMATE_NOTE = "Estimación por tarifas de los planes activos, incluidas pruebas y accesos manuales. No representa cobros ni ingresos confirmados de Stripe. Solo se cuentan clientes; se excluyen administradores, entrenadores y tus cuentas de prueba.";
