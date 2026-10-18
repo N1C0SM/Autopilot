@@ -1702,7 +1702,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               <Button
                                 type="button"
                                 variant="ghost"
-                                onClick={() => toggleSetDone(ex.name, si, restSec)}
+                                onClick={() => toggleSetDone(ex.name, si, restSec, trackingConfig.fixedBodyweight ? undefined : String(progression?.weight || prevSets?.[si]?.weight || ex.weight || ""))}
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
                                 className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60"
                               >
@@ -1828,6 +1828,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             );
           })}
           </div>
+          {started && !workoutCompleted && (
+            <>
+              <Button type="button" variant="plain" className="mt-3 min-h-11 w-full" onClick={() => { void hapticTap(); setExtraPickerOpen(true); }}>
+                <Plus className="h-4 w-4" aria-hidden="true" />Añadir ejercicio a esta sesión
+              </Button>
+              <ExercisePicker
+                open={extraPickerOpen}
+                onOpenChange={setExtraPickerOpen}
+                existing={activePlan?.exercises ?? []}
+                onPick={(entries) => { addSessionExercises(entries); setExtraPickerOpen(false); }}
+              />
+            </>
+          )}
           </section>
           )}
 
