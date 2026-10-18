@@ -88,7 +88,7 @@ export const OverviewRow = ({
   description: ReactNode;
   onClick?: () => void;
 }) => {
-  const className = "flex min-h-[64px] w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors duration-100 ease-ios-standard active:bg-secondary focus-visible:bg-secondary focus-visible:outline-none";
+  const className = "flex min-h-[64px] w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors duration-150 ease-out active:bg-secondary focus-visible:bg-secondary focus-visible:outline-none";
   const inner = (
     <>
       <span aria-hidden="true" className="flex w-10 shrink-0 justify-center">{icon}</span>
@@ -339,7 +339,7 @@ const HomeOverview = ({
                   ))}
                 </span>
               )}
-              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-ios-standard group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
+              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
                 Empezar
               </span>
             </button>

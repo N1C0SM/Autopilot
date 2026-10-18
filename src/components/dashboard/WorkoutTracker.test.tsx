@@ -20,7 +20,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   },
 } }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: mocks.toastError } }));
-vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), hapticSelection: vi.fn(), hapticImpact: vi.fn(), hapticNotify: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), hapticSelection: vi.fn(), hapticImpact: vi.fn(), hapticNotify: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 vi.mock("@/hooks/useExerciseMetadata", () => ({ useExerciseMetadata: () => ({ byId: {}, byName: {} }) }));
 vi.mock("@/components/ExerciseMedia", () => ({ ExerciseThumb: () => null }));
 vi.mock("@/components/ExerciseFocus", () => ({ default: () => null }));

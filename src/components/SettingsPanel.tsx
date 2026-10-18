@@ -64,7 +64,7 @@ const OptionRow = ({ label, selected, focusable, onSelect }: { label: string; se
     aria-checked={selected}
     tabIndex={focusable ? 0 : -1}
     onClick={onSelect}
-    className="group/row flex min-h-[44px] w-full items-center px-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+    className="group/row flex min-h-[44px] w-full items-center px-4 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
   >
     <span className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 py-[11px] group-[:not(:last-child)]/row:sep-b">
       <span className="min-w-0 flex-1 truncate type-body">{label}</span>

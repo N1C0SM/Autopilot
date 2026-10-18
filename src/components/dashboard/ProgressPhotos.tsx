@@ -533,7 +533,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
             type="button"
             onClick={openCompare}
             aria-label="Abrir comparación"
-            className="mt-4 grid w-full grid-cols-2 lg:grid-cols-2 lg:max-w-xl gap-3 text-left transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="mt-4 grid w-full grid-cols-2 lg:grid-cols-2 lg:max-w-xl gap-3 text-left transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {heroPhoto(heroBefore, "Antes")}
             {heroPhoto(heroAfter, "Ahora")}
@@ -589,7 +589,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                     setViewingPhoto(photos.indexOf(photo));
                   }}
                   aria-label={`Progreso: ver foto del ${formatDate(photo.taken_at)}`}
-                  className="relative aspect-[3/4] overflow-hidden rounded-[10px] bg-secondary transition-opacity duration-100 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="relative aspect-[3/4] overflow-hidden rounded-[10px] bg-secondary transition-opacity duration-150 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {photoUrl && !broken.has(photo.photo_url) ? (
                     <img

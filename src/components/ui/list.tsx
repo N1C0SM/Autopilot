@@ -71,7 +71,7 @@ const ListRow = ({
   const interactive = !disabled && Boolean(onClick || to || href);
   const rowClass = cn(
     "group/row relative flex min-h-[44px] w-full items-center gap-3 px-4 text-left",
-    interactive && "transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+    interactive && "transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none",
     disabled && "opacity-40",
     className,
   );

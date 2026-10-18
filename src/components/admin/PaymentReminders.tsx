@@ -143,7 +143,7 @@ const PaymentReminders = ({ users }: Props) => {
               <div
                 key={u.user_id}
                 onClick={() => { void hapticSelection(); toggle(u.user_id); }}
-                className="group/row flex min-h-[56px] cursor-pointer items-center gap-3 px-4 transition-colors duration-100 active:bg-accent has-[:focus-visible]:bg-accent"
+                className="group/row flex min-h-[56px] cursor-pointer items-center gap-3 px-4 transition-colors duration-150 active:bg-accent has-[:focus-visible]:bg-accent"
               >
                 <Checkbox checked={selected.has(u.user_id)} onCheckedChange={() => { void hapticSelection(); toggle(u.user_id); }} onClick={e => e.stopPropagation()} aria-label={`Seleccionar ${u.email}`} />
                 <div className="flex min-h-[56px] min-w-0 flex-1 items-center gap-3 py-2 group-[:not(:last-child)]/row:sep-b">

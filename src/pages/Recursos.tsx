@@ -196,7 +196,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                   type="button"
                   key={e.id || i}
                   onClick={() => { void hapticTap(); setPreviewBook(e); }}
-                  className="group min-w-0 text-left transition-transform duration-100 active:scale-[0.97]"
+                  className="group min-w-0 text-left transition-transform duration-150 active:scale-[0.97]"
                 >
                   <BookCover title={e.title} src={e.cover_url} />
                   <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>

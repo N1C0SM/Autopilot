@@ -27,6 +27,7 @@ vi.mock("@/lib/native", () => ({
   hapticSelection: vi.fn(),
   hapticImpact: vi.fn(),
   hapticNotify: (...args: unknown[]) => hapticNotify(...args),
+  isNative: vi.fn().mockReturnValue(false),
 }));
 
 const renderLogin = () =>

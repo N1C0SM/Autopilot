@@ -618,7 +618,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                         toast.success(`Plan: ${opt.name}`);
                       }}
                       className={cn(
-                        "flex min-h-[88px] flex-col items-center justify-center rounded-2xl px-2 py-3 text-center transition-[background-color,opacity,transform] duration-150 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default",
+                        "flex min-h-[88px] flex-col items-center justify-center rounded-2xl px-2 py-3 text-center transition-[background-color,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default",
                         active ? "bg-primary/15 text-primary" : "bg-card active:scale-[0.97] active:bg-accent disabled:opacity-40",
                       )}
                     >
@@ -762,7 +762,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           )}
           {profile.payment_status === "paid" && (
             <details onToggle={(event) => setShowGoalDetails(event.currentTarget.open)}>
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-2xl bg-card px-4 transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-2xl bg-card px-4 transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none [&::-webkit-details-marker]:hidden">
                 <Target className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="flex-1 py-[11px] type-body">Físico objetivo</span>
                 <ChevronRight

@@ -96,7 +96,7 @@ function useContentTitleState(contentRef: RefObject<HTMLElement>, barRef: RefObj
 }
 
 const menuRow =
-  "flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left type-body transition-colors duration-100 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
+  "flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left type-body transition-colors duration-150 active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring";
 
 /** Barra de navegación del panel admin en pantallas estrechas, con el menú de secciones. */
 const AdminMobileHeader = ({ title, section, onNavigate, onSignOut, contentRef, layoutKey, onBack, backLabel = "Atrás" }: Props) => {

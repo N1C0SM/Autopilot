@@ -224,7 +224,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
             type="submit"
             disabled={saving}
             onClick={() => { void hapticTap(); }}
-            className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left type-body text-primary transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40"
+            className="flex min-h-[44px] w-full items-center gap-2 px-4 text-left type-body text-primary transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40"
           >
             {saving ? <Spinner size="sm" className="text-current" label="Guardando" /> : null}
             {saving ? "Guardando…" : "Guardar cambios"}
@@ -248,7 +248,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
               type="button"
               disabled={resigning || !canResign}
               onClick={() => { void hapticNotify("warning"); }}
-              className="flex min-h-[44px] w-full items-center gap-3 px-4 text-left type-body text-destructive transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40"
+              className="flex min-h-[44px] w-full items-center gap-3 px-4 text-left type-body text-destructive transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40"
             >
               <span className="min-w-0 flex-1 truncate">Renunciar al rol</span>
               {resigning ? <Spinner size="sm" /> : null}

@@ -80,7 +80,7 @@ const ToolRow = forwardRef<HTMLButtonElement, ToolRowProps>(({ icon, label, clas
     type="button"
     {...props}
     className={cn(
-      "group/row relative flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none",
+      "group/row relative flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none",
       className,
     )}
   >
@@ -187,7 +187,7 @@ const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
                 void hapticSelection();
                 setExpandedDay(isExpanded ? null : day);
               }}
-              className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-100 ease-ios-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 plan ? "active:opacity-60" : "cursor-default"
               } ${tone}`}
             >

@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MealsList from "./MealsList";
 
-const mocks = vi.hoisted(() => ({ hapticTap: vi.fn() }));
-vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap }));
+const mocks = vi.hoisted(() => ({ hapticTap: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
+vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap, isNative: mocks.isNative }));
 
 beforeEach(() => {
   cleanup();

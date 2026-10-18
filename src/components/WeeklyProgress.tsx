@@ -227,7 +227,7 @@ const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
               disabled={!canSelfReport}
               aria-pressed={isCompleted}
               aria-label={label}
-              className={`flex h-11 items-center justify-center rounded-full type-footnote font-semibold transition-[background-color,opacity] duration-150 ease-ios-standard ${
+              className={`flex h-11 items-center justify-center rounded-full type-footnote font-semibold transition-[background-color,opacity] duration-150 ease-out ${
                 compact ? "md:h-8" : "md:h-10"
               } ${
                 isCompleted

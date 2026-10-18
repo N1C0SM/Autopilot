@@ -82,7 +82,7 @@ export function ExerciseSwap({ original, current, movementPattern, muscleGroup, 
             tabIndex={0}
             aria-label="Cambiar ejercicio"
             onClick={() => { void hapticTap(); }}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-opacity duration-100 active:opacity-60"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-opacity duration-150 active:opacity-60"
           >
             <ArrowLeftRight className="h-5 w-5" strokeWidth={2} />
           </span>

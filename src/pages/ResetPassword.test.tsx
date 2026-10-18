@@ -13,6 +13,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("@/lib/native", () => ({
   hapticTap: vi.fn(),
   hapticNotify: (...args: unknown[]) => hapticNotify(...args),
+  isNative: vi.fn().mockReturnValue(false),
 }));
 
 const renderReset = () =>

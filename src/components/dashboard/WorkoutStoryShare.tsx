@@ -443,7 +443,7 @@ export function WorkoutStoryShare(props: Props) {
             key={v}
             type="button"
             onClick={() => { void hapticTap(); setActiveVariant(v); }}
-            className={`flex-1 rounded-xl py-2 type-footnote font-semibold transition-colors duration-100 ${
+            className={`flex-1 rounded-xl py-2 type-footnote font-semibold transition-colors duration-150 ${
               activeVariant === v
                 ? "bg-primary/15 text-primary"
                 : "bg-secondary text-muted-foreground"

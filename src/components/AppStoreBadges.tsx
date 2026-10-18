@@ -96,7 +96,7 @@ const StoreBadges = ({
   const bigText = isCompact ? "type-footnote" : "type-subhead";
 
   // Badge oficial: negro, filo gris claro, sin brillos ni sombras.
-  const badge = `inline-flex items-center gap-2.5 ${isCompact ? "h-11 px-3.5" : "h-12 px-4"} rounded-xl bg-black text-white ring-1 ring-white/25 transition-[opacity,transform] duration-150 ease-ios-standard active:scale-[0.97] active:opacity-80`;
+  const badge = `inline-flex items-center gap-2.5 ${isCompact ? "h-11 px-3.5" : "h-12 px-4"} rounded-xl bg-black text-white ring-1 ring-white/25 transition-[opacity,transform] duration-150 ease-out active:scale-[0.97] active:opacity-80`;
 
   const badges = (
     <div className={`flex flex-wrap gap-2.5 ${align === "center" ? "justify-center" : "justify-start"}`}>

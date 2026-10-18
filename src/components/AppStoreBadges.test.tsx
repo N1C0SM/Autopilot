@@ -13,7 +13,7 @@ vi.mock("@/lib/platform", () => ({
   isIOSNative: () => iosNative,
 }));
 
-vi.mock("@/lib/native", () => ({ hapticTap: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 
 beforeEach(() => {
   rpc.mockReset();

@@ -85,7 +85,7 @@ const RPEDialog = ({ open, onConfirm }: Props) => {
                 aria-label={`${value}, ${RPE_LABELS[value].toLowerCase()}`}
                 onClick={() => choose(value)}
                 className={cn(
-                  "flex h-[52px] w-[52px] items-center justify-center rounded-full font-rounded type-headline tabular-nums transition-[background-color,color,transform] duration-100 ease-ios-standard active:scale-95",
+                  "flex h-[52px] w-[52px] items-center justify-center rounded-full font-rounded type-headline tabular-nums transition-[background-color,color,transform] duration-150 ease-out active:scale-95",
                   selected
                     ? "bg-primary/15 text-primary ring-2 ring-inset ring-primary"
                     : "bg-secondary text-foreground active:bg-accent",

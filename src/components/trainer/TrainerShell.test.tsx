@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import TrainerShell from "./TrainerShell";
 
-vi.mock("@/lib/native", () => ({ hapticTap: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 
 afterEach(cleanup);
 

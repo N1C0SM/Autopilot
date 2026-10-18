@@ -593,7 +593,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
             <button
               key={key}
               type="button"
-              className="min-h-11 max-w-full rounded-full bg-secondary px-4 type-subhead transition-transform duration-100 active:scale-[0.97] active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="min-h-11 max-w-full rounded-full bg-secondary px-4 type-subhead transition-transform duration-150 active:scale-[0.97] active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => { void hapticTap(); loadTemplate(key); }}
             >
               {tpl.label}
@@ -602,7 +602,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
           {recommendedSkill && (
             <button
               type="button"
-              className="min-h-11 max-w-full rounded-full bg-primary/15 px-4 type-subhead font-semibold text-primary transition-transform duration-100 active:scale-[0.97] active:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              className="min-h-11 max-w-full rounded-full bg-primary/15 px-4 type-subhead font-semibold text-primary transition-transform duration-150 active:scale-[0.97] active:bg-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => { void hapticTap(); loadSkillTemplate(recommendedSkill); }}
             >
               {SKILL_TEMPLATES[recommendedSkill].label}
@@ -628,7 +628,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
               <div key={dayIdx} className={cn(dayIdx > 0 && "sep-t")}>
                 <button
                   type="button"
-                  className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                  className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                   onClick={() => { void hapticSelection(); toggleExpand(dayIdx); }}
                   aria-expanded={isExpanded}
                   aria-controls={`${formId}-day-${dayIdx}`}
@@ -731,7 +731,7 @@ const TrainingPlanForm = forwardRef<HTMLDivElement, Props>(({ dayPlans, onChange
                                       {Object.entries(groupedExercises).map(([group, exs]) => <optgroup key={group} label={group}>{exs.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}</optgroup>)}
                                     </select>
                                   </div>
-                                  <button type="button" onClick={() => { void hapticTap(); removeGymExercise(dayIdx, exIdx); }} aria-label={`Eliminar ejercicio ${exIdx + 1}${ex.name ? `: ${ex.name}` : ""}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive transition-[background-color,transform] duration-100 active:scale-[0.97] active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"><Trash2 className="h-5 w-5" aria-hidden="true" /></button>
+                                  <button type="button" onClick={() => { void hapticTap(); removeGymExercise(dayIdx, exIdx); }} aria-label={`Eliminar ejercicio ${exIdx + 1}${ex.name ? `: ${ex.name}` : ""}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-destructive transition-[background-color,transform] duration-150 active:scale-[0.97] active:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"><Trash2 className="h-5 w-5" aria-hidden="true" /></button>
                                 </div>
                                 {ex.name && <p className="break-words type-footnote text-muted-foreground">{ex.name}</p>}
                                 <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">

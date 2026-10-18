@@ -318,7 +318,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                                   <Input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min="0" placeholder={String(ex.reps)} value={currentSet?.reps ?? ""} onChange={(e) => updateSetValue(setKey, "reps", e.target.value)} aria-label={`Repeticiones de la serie ${setIndex + 1} de ${ex.name}`} className="px-1 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                                   <button type="button" aria-pressed={isDone} aria-label={`${isDone ? "Desmarcar" : "Marcar"} serie ${setIndex + 1} de ${ex.name}`}
                                     onClick={() => { const wasDone = isDone; void (wasDone ? hapticTap() : hapticImpact("medium")); toggleSet(ex.name, setIndex); if (!wasDone) setRest(90); }}
-                                    className="flex h-11 w-11 items-center justify-center transition-transform duration-100 active:scale-90">
+                                    className="flex h-11 w-11 items-center justify-center transition-transform duration-150 active:scale-90">
                                     <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors duration-150 ${isDone ? "bg-primary text-primary-foreground" : "border-2 border-muted-foreground/50"}`}>
                                       {isDone && <Check className="h-4 w-4" strokeWidth={3} />}
                                     </span>

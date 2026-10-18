@@ -2,8 +2,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeOverview from "./HomeOverview";
 
-const mocks = vi.hoisted(() => ({ hapticTap: vi.fn(), ios: false }));
-vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap }));
+const mocks = vi.hoisted(() => ({ hapticTap: vi.fn(), ios: false, isNative: vi.fn().mockReturnValue(false) }));
+vi.mock("@/lib/native", () => ({ hapticTap: mocks.hapticTap, isNative: mocks.isNative }));
 vi.mock("@/lib/platform", () => ({ isIOSNative: () => mocks.ios }));
 
 beforeEach(() => {

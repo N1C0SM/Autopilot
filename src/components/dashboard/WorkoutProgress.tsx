@@ -97,7 +97,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     >
       {exercises.length > 0 && (
         // Selector de ejercicio — más discreto
-        <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-secondary/50 px-3 transition-opacity duration-100 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[48px] lg:rounded-xl lg:px-4">
+        <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-secondary/50 px-3 transition-opacity duration-150 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[48px] lg:rounded-xl lg:px-4">
           <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground lg:h-5 lg:w-5" strokeWidth={1.75} aria-hidden="true" />
           <span className="min-w-0 flex-1 truncate type-subhead text-foreground lg:type-headline">{selectedExercise}</span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />

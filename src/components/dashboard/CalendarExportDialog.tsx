@@ -250,7 +250,7 @@ const CalendarExportDialog = ({ dayPlans, trigger }: Props) => {
                 <button
                   type="button"
                   onClick={() => void hapticSelection()}
-                  className="flex min-h-[44px] w-full items-center gap-3 px-4 py-[7px] text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                  className="flex min-h-[44px] w-full items-center gap-3 px-4 py-[7px] text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block type-body">Otras opciones</span>

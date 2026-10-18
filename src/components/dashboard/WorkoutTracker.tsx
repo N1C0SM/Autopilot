@@ -1300,7 +1300,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                   }}
                   className={focused
                     ? "flex w-full cursor-default items-start text-left"
-                    : "flex w-full items-center gap-3 pl-4 text-left transition-colors duration-100 active:bg-accent has-[[role=button]:active]:bg-transparent"}
+                    : "flex w-full items-center gap-3 pl-4 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
                   {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />}
@@ -1542,7 +1542,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                 type="button"
                                 onClick={() => toggleSetDone(ex.name, si, restSec)}
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
-                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full transition-opacity duration-100 active:opacity-60"
+                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full transition-opacity duration-150 active:opacity-60"
                               >
                                 <span className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-150 ${checkClass}`}>
                                   <Check className="h-[18px] w-[18px]" strokeWidth={3} aria-hidden="true" />
@@ -1598,7 +1598,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                                     type="button"
                                     onClick={() => removeDrop(ex.name, si, di)}
                                     aria-label={`Quitar la bajada ${di + 1} de la serie ${si + 1} de ${ex.name}`}
-                                    className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full text-muted-foreground transition-opacity duration-100 active:opacity-60"
+                                    className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full text-muted-foreground transition-opacity duration-150 active:opacity-60"
                                   >
                                     <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-secondary">
                                       <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />

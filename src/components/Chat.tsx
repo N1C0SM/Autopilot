@@ -237,7 +237,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               onClick={() => { void hapticSelection(); setActiveTab("chat"); }}
               aria-label={chatTitle}
               aria-pressed={activeTab === "chat"}
-              className={`relative flex h-full min-w-0 flex-1 items-center justify-center rounded-[7px] px-3 type-footnote transition-[background-color,box-shadow] duration-200 ease-ios-standard before:absolute before:inset-x-0 before:-inset-y-1.5 active:opacity-70 sm:flex-none ${
+              className={`relative flex h-full min-w-0 flex-1 items-center justify-center rounded-[7px] px-3 type-footnote transition-[background-color,box-shadow] duration-200 ease-out before:absolute before:inset-x-0 before:-inset-y-1.5 active:opacity-70 sm:flex-none ${
                 activeTab === "chat" ? SEGMENT_ACTIVE : "font-medium text-foreground"
               }`}
             >
@@ -248,7 +248,7 @@ const Chat = ({ conversationUserId, isAdmin = false, onRequestVideoCall, callLab
               type="button"
               onClick={() => { void hapticSelection(); setActiveTab("media"); }}
               aria-pressed={activeTab === "media"}
-              className={`relative flex h-full min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 type-footnote transition-[background-color,box-shadow] duration-200 ease-ios-standard before:absolute before:inset-x-0 before:-inset-y-1.5 active:opacity-70 sm:flex-none ${
+              className={`relative flex h-full min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[7px] px-3 type-footnote transition-[background-color,box-shadow] duration-200 ease-out before:absolute before:inset-x-0 before:-inset-y-1.5 active:opacity-70 sm:flex-none ${
                 activeTab === "media" ? SEGMENT_ACTIVE : "font-medium text-foreground"
               }`}
             >

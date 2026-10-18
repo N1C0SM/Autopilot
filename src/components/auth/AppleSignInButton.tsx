@@ -35,7 +35,7 @@ export const AppleSignInButton = forwardRef<HTMLButtonElement, AppleSignInButton
           "btn-lg inline-flex w-full items-center justify-center gap-2",
           "bg-white text-black",
           "font-semibold",
-          "transition-[background-color,transform] duration-150 ease-ios-standard active:scale-[0.97] active:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed",
+          "transition-[background-color,transform] duration-150 ease-out active:scale-[0.97] active:bg-white/90 disabled:opacity-60 disabled:cursor-not-allowed",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           className,
         )}

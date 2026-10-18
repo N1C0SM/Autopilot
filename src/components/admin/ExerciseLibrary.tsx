@@ -1141,7 +1141,7 @@ const ExerciseLibrary = () => {
               onClick={() => { void hapticSelection(); setMediaFilter(option.value); }}
               aria-pressed={selected}
               className={cn(
-                "relative h-9 rounded-full px-3.5 type-subhead font-medium transition-colors duration-100 before:absolute before:inset-x-0 before:-inset-y-1",
+                "relative h-9 rounded-full px-3.5 type-subhead font-medium transition-colors duration-150 before:absolute before:inset-x-0 before:-inset-y-1",
                 selected ? "bg-primary/15 text-primary active:bg-primary/25" : "bg-secondary text-muted-foreground active:bg-accent",
               )}
             >

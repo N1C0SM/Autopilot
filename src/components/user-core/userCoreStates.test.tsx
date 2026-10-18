@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   user: null as { id: string } | null,
 }));
 
-vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), hapticSelection: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), hapticSelection: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock("@/lib/planCatalog", () => ({ usePlanAvailability: () => ({ coach: false, coachName: "Coach" }) }));
 vi.mock("@/components/UserSidebar", () => ({ default: () => null }));

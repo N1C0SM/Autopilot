@@ -90,7 +90,7 @@ const UserSidebar = ({
                       onClick={() => onNavigate(item.section)}
                       className={cn(
                         // web: más alto y con más padding
-                        "h-11 rounded-xl px-3.5 gap-3.5 transition-all duration-100",
+                        "h-11 rounded-xl px-3.5 gap-3.5 transition-all duration-150",
                         "hover:bg-sidebar-accent/60",
                         "active:scale-[0.97] active:opacity-75",
                         isActive
@@ -175,7 +175,7 @@ const UserSidebar = ({
             <SidebarMenuButton
               onClick={onSignOut}
               className={cn(
-                "h-10 rounded-xl px-3.5 gap-3.5 transition-all duration-100",
+                "h-10 rounded-xl px-3.5 gap-3.5 transition-all duration-150",
                 "text-sidebar-foreground/35 hover:text-destructive hover:bg-destructive/10",
                 "active:opacity-70",
               )}

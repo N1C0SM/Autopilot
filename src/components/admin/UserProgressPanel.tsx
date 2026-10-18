@@ -323,7 +323,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
                         type="button"
                         aria-expanded={open}
                         onClick={() => { void hapticSelection(); setExpandedSession(open ? null : key); }}
-                        className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                        className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate type-body">{dayLabel} · {new Date(`${date}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>

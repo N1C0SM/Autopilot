@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import BeforeAfterCompare from "./BeforeAfterCompare";
 
-vi.mock("@/lib/native", () => ({ hapticSelection: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticSelection: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 
 const photo = (id: string, takenAt: string, note: string) => ({
   id,

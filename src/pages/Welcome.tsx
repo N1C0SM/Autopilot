@@ -108,7 +108,7 @@ const Welcome = () => {
         <button
           type="button"
           onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
-          className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground font-semibold text-[17px] tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-100 ease-out active:scale-[0.98]"
+          className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground font-semibold text-[17px] tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
         >
           Continuar
           <ArrowRight className="w-4 h-4" />

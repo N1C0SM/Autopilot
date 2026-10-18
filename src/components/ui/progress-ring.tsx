@@ -52,7 +52,7 @@ const ProgressRing = ({ value, size = 44, stroke = 6, className, children, label
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - shown / 100)}
-          className="transition-[stroke-dashoffset] duration-700 ease-ios motion-reduce:transition-none"
+          className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none"
           style={{ opacity: shown > 0 ? 1 : 0 }}
         />
       </svg>

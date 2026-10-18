@@ -324,6 +324,9 @@ body.keyboard-open main {
   .btn-sm   { height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: 15px; line-height: 20px; }
   .btn-lg   { height: 50px; padding-inline: 20px; border-radius: 14px; font-size: 17px; line-height: 22px; }
   .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
+  
+  /* iOS transition timing: 150ms ease for consistent feel */
+  * { transition-timing-function: ease-out; }
   .field {
     height: 44px;
     padding-inline: 12px;
@@ -405,6 +408,16 @@ body.keyboard-open main {
   /* Minimum hit target, 44 × 44 pt. */
   .min-touch { min-height: 44px; min-width: 44px; }
 
+  /* Horizontal scroll for tables and long content without visible scrollbar */
+  .overflow-x-scroll-auto {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .overflow-x-scroll-auto::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Pressed feedback for rows and cards: the fill dims while the finger is down. */
   .pressable { transition: opacity 0.12s ease-out, background-color 0.12s ease-out; }
   .pressable:active { opacity: 0.6; }
@@ -439,6 +452,26 @@ body.keyboard-open main {
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Smooth loading states */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth fade-in */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Sonner ignores `offset` under 600px and pins toasts 20px from the top, which puts

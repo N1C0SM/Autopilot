@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AdminMobileHeader from "./AdminMobileHeader";
 
-vi.mock("@/lib/native", () => ({ hapticTap: vi.fn() }));
+vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
 
 afterEach(cleanup);
 

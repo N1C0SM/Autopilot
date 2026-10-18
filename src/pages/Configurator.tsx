@@ -75,7 +75,7 @@ const Choices = ({ header, options, value, onChange }: {
         return (
           <button key={o.v} type="button" aria-pressed={on}
             onClick={() => { void hapticSelection(); onChange(o.v); }}
-            className="group/row flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 pl-4 sm:pl-5 text-left transition-colors duration-100 active:bg-accent">
+            className="group/row flex min-h-[56px] sm:min-h-[60px] w-full items-center gap-3 pl-4 sm:pl-5 text-left transition-colors duration-150 active:bg-accent">
             <span className="flex min-h-[56px] sm:min-h-[60px] min-w-0 flex-1 items-center gap-3 py-3 sm:py-3.5 pr-4 sm:pr-5 group-[:not(:last-child)]/row:sep-b">
               <span className="min-w-0 flex-1">
                 <span className="block type-headline sm:text-[18px]">{o.l}</span>

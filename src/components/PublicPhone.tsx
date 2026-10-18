@@ -51,7 +51,7 @@ export type PhoneTab = { key: string; label: string; icon: LucideIcon };
 export function PhoneTabBar({ tabs, active, onSelect, label = "Secciones de la demo" }: { tabs: readonly PhoneTab[]; active: string; onSelect: (key: string) => void; label?: string }) {
   const cols = tabs.length === 5 ? "grid-cols-5" : "grid-cols-4";
   const item = (isActive: boolean) => cn(
-    "relative flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full type-caption2 font-medium transition-[background-color,transform] duration-150 ease-ios-standard active:scale-[0.94]",
+    "relative flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full type-caption2 font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
     isActive ? "bg-secondary text-primary" : "text-muted-foreground",
   );
   return (
@@ -137,7 +137,7 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
               <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
                 {DEMO_SESSION.exercises} ejercicios · {DEMO_SESSION.series} series · unos {DEMO_SESSION.minutes} min
               </span>
-              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-ios-standard group-active:scale-[0.98] group-active:opacity-80">
+              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80">
                 Empezar
               </span>
             </>

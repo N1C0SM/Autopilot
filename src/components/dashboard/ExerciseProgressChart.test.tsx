@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ExerciseHistoryEntry } from "@/lib/workoutMetrics";
 import ExerciseProgressChart from "./ExerciseProgressChart";
 
-const mocks = vi.hoisted(() => ({ hapticSelection: vi.fn() }));
-vi.mock("@/lib/native", () => ({ hapticSelection: mocks.hapticSelection }));
+const mocks = vi.hoisted(() => ({ hapticSelection: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
+vi.mock("@/lib/native", () => ({ hapticSelection: mocks.hapticSelection, isNative: mocks.isNative }));
 
 type Metric = "volumeKg" | "reps" | "bestEstimated1RmKg";
 

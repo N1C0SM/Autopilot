@@ -1380,7 +1380,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                             setObjectiveImg(p.image_url);
                             setSelectedPresetId(p.id);
                           }}
-                          className={`relative aspect-[3/4] overflow-hidden rounded-xl bg-card transition-transform duration-100 active:scale-[0.97] ${
+                          className={`relative aspect-[3/4] overflow-hidden rounded-xl bg-card transition-transform duration-150 active:scale-[0.97] ${
                             isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                           }`}
                         >
@@ -1514,7 +1514,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                       type="button"
                       onClick={() => { void hapticSelection(); setGoal(g.id); }}
                       aria-pressed={active}
-                      className="group/row flex w-full items-center gap-3 px-4 text-left transition-colors duration-100 active:bg-accent"
+                      className="group/row flex w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent"
                     >
                       <Icon className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} />
                       <span className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 py-2.5 group-[:not(:last-child)]/row:sep-b">

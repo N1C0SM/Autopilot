@@ -241,12 +241,12 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
                 type="button"
                 onClick={() => toggle(meal.name)}
                 aria-pressed={isDone}
-                className="group/row flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                className="group/row flex min-h-[44px] w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none"
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-[background-color,transform] duration-150 ease-ios-standard group-active/row:scale-90",
+                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-[background-color,transform] duration-150 ease-out group-active/row:scale-90",
                     isDone ? "bg-primary" : "border-[1.5px] border-muted-foreground/50",
                   )}
                 >

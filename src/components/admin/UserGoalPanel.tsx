@@ -214,7 +214,7 @@ const UserGoalPanel = ({ userId, email }: Props) => {
           {goalUrl ? (
             <PhotoFrame src={goalSignedUrl} alt="Físico objetivo" pendingText="Preparando la foto objetivo…" />
           ) : (
-            <label className={cn("flex aspect-[3/4] w-full cursor-pointer flex-col items-center justify-center rounded-2xl bg-card p-4 text-center transition-colors duration-100 active:bg-accent", uploading && "pointer-events-none")}>
+            <label className={cn("flex aspect-[3/4] w-full cursor-pointer flex-col items-center justify-center rounded-2xl bg-card p-4 text-center transition-colors duration-150 active:bg-accent", uploading && "pointer-events-none")}>
               <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleUploadGoal(e.target.files[0])} />
               {uploading ? (
                 <Spinner size="lg" className="text-primary" label="Subiendo" />

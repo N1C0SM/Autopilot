@@ -82,7 +82,7 @@ const AlertDialogDescription = React.forwardRef<
 AlertDialogDescription.displayName = AlertDialogPrimitive.Description.displayName;
 
 const alertButton =
-  "inline-flex min-h-[44px] items-center justify-center px-2 py-2 text-center type-body text-primary transition-colors duration-100 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40";
+  "inline-flex min-h-[44px] items-center justify-center px-2 py-2 text-center type-body text-primary transition-colors duration-150 active:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40";
 
 interface AlertDialogActionProps extends React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Action> {
   /** Acción destructiva: texto en rojo. */
