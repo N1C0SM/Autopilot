@@ -912,6 +912,20 @@ const ExerciseLibrary = () => {
     return result;
   }, [exercises, search, filterGroup, filterType, mediaFilter]);
 
+  // Pintado progresivo: 30 filas al instante, el resto al acercarse al final.
+  const [visibleCount, setVisibleCount] = useState(30);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { setVisibleCount(30); }, [search, filterGroup, filterType, mediaFilter]);
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) setVisibleCount((c) => c + 40);
+    }, { rootMargin: "600px" });
+    io.observe(node);
+    return () => io.disconnect();
+  }, [visibleCount, filtered.length]);
+
   /** Pendientes visibles: lo que realmente procesará el botón"Generar pendientes". */
   /** Los ejercicios clave (video_priority) van primero, el resto conserva su orden. */
   const pendingQueue = useMemo(
@@ -1154,8 +1168,9 @@ const ExerciseLibrary = () => {
       {!fetched ? (
         <div className="flex justify-center py-12"><Spinner size="lg" /></div>
       ) : filtered.length > 0 ? (
+        <>
         <ListGroup>
-          {filtered.map((ex) => (
+          {filtered.slice(0, visibleCount).map((ex) => (
             <ListRow
               key={ex.id}
               leading={
@@ -1189,6 +1204,12 @@ const ExerciseLibrary = () => {
             />
           ))}
         </ListGroup>
+        {visibleCount < filtered.length && (
+          <div ref={sentinelRef} className="flex justify-center py-6 text-xs text-muted-foreground">
+            Cargando más…
+          </div>
+        )}
+        </>
       ) : (
         <EmptyState
           icon={exercises.length === 0 ? Dumbbell : Search}
