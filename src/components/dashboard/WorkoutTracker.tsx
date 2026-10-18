@@ -1054,7 +1054,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         // -mt-2 compensa el pt-2 del contenedor de sección: la barra nace pegada al borde superior.
         <div className="sticky top-0 z-30 -mt-2">
           <NavBar
-            title={trainingTitle || "Entrenamiento"}
+            title={activePlan?.routine_name?.trim() || trainingTitle || "Entrenamiento"}
             subtitle={<span className="tabular-nums">{completedSets} de {totalSets} series</span>}
             leading={
               <button
