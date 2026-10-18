@@ -17,3 +17,5 @@
 - Roadmap implementation assistance prepares a copyable Lovable request, never executes code changes from the runtime app, preserving review and release boundaries.
 - Test accounts excluded from admin metrics live in the admin-only table metrics_excluded_users (src/lib/testAccounts.ts), toggled from Admin → Usuarios → Acceso; they stay visible in user management.
 - Consumer dashboard chat navigation, redirects and rendering share the release gate in `src/lib/releaseScope.ts`, independently of billing entitlements, so unreleased chat never appears as an actionable tab.
+- Active workouts use a user-scoped local draft (`src/lib/activeWorkout.ts`) containing the virtual plan, sets and absolute rest deadline; recovery must not depend on the saved training plan or decrementing timers.
+- Workout display preferences are user-scoped in `workoutPreferences.ts`; both list and focus views use the same tracker state and persistence to avoid divergent logging behavior.

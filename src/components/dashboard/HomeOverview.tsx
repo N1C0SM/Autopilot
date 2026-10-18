@@ -11,6 +11,7 @@ import { hapticTap } from "@/lib/native";
 import { isIOSNative } from "@/lib/platform";
 import { nutritionMacroError } from "@/lib/nutritionValidation";
 import { cn } from "@/lib/utils";
+import { readActiveWorkout, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
 
 interface Macros {
   protein: number;
@@ -30,6 +31,7 @@ interface Props {
   userId?: string;
   onNavigate: (section: UserSection) => void;
   onStartWorkout?: () => void;
+  onResumeWorkout?: () => void;
   profileName?: string;
   macros?: Macros | null;
   completedThisWeek?: number;
@@ -120,6 +122,7 @@ const HomeOverview = ({
   userId,
   onNavigate,
   onStartWorkout,
+  onResumeWorkout,
   profileName,
   macros,
   completedThisWeek = 0,
@@ -128,6 +131,17 @@ const HomeOverview = ({
   nutrition = true,
   planStatus,
 }: Props) => {
+  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(() => userId ? readActiveWorkout(userId) : null);
+  useEffect(() => {
+    const refresh = () => setActiveWorkout(userId ? readActiveWorkout(userId) : null);
+    refresh();
+    window.addEventListener(ACTIVE_WORKOUT_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(ACTIVE_WORKOUT_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [userId]);
   const [chatMessages, setChatMessages] = useState<ChatPreviewMessage[]>([]);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [chatError, setChatError] = useState(false);
@@ -320,7 +334,20 @@ const HomeOverview = ({
 
         {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
         <div className="flex flex-1 flex-col justify-center py-8 md:py-10 lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16">
-          {canStart ? (
+          {activeWorkout ? (
+            <div className="w-full">
+              <p className="type-caption1 font-semibold text-primary">EN CURSO</p>
+              <h3 className="mt-1 type-title1">{planTitle(activeWorkout.plan)}</h3>
+              <p className="mt-2 type-subhead tabular-nums text-muted-foreground">
+                {Object.values(activeWorkout.logs).flat().filter((set) => set.done && !set.isWarmup).length} de {Object.values(activeWorkout.logs).flat().filter((set) => !set.isWarmup).length} series
+              </p>
+              <Button size="lg" className="mt-5 w-full" onClick={() => {
+                void hapticTap();
+                if (onResumeWorkout) onResumeWorkout();
+                else onNavigate("training");
+              }}>Reanudar entrenamiento</Button>
+            </div>
+          ) : canStart ? (
             <button
               type="button"
               onClick={() => {

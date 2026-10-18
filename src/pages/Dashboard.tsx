@@ -1,6 +1,7 @@
 import { Play, PencilLine } from "lucide-react";
 import { isManualPlan } from "@/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
+import { readActiveWorkout } from "@/lib/activeWorkout";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { PlanPaywall, CoachPendingAssignment } from "@/components/dashboard/PlanPaywall";
 import { parseMacroTargets } from "@/lib/nutrition";
@@ -140,6 +141,7 @@ const Dashboard = () => {
   const [completedToday, setCompletedToday] = useState(false);
   const [workoutMode, setWorkoutMode] = useState(false);
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
+  const [resumeWorkout, setResumeWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
@@ -562,8 +564,21 @@ const Dashboard = () => {
               setSection(s as MobileTab);
             }}
             onStartWorkout={() => {
+              setResumeWorkout(false);
+              setFreePlans(null);
               setTrainingView("tracker");
               setAutoStartWorkout(true);
+              setSection("training");
+            }}
+            onResumeWorkout={() => {
+              if (!user) return;
+              const draft = readActiveWorkout(user.id);
+              if (!draft) return;
+              setFreePlans([draft.plan]);
+              setTrainingDay(draft.plan.day);
+              setResumeWorkout(true);
+              setAutoStartWorkout(false);
+              setTrainingView("tracker");
               setSection("training");
             }}
             profileName={profileName}
@@ -656,17 +671,19 @@ const Dashboard = () => {
                 }} />
               ) : (
                 <WorkoutTracker
-                  key={freePlans ? "free" : "plan"}
+                  key={`${resumeWorkout ? "resume" : "new"}-${freePlans ? "free" : "plan"}`}
                   userId={user.id}
                   dayPlans={freePlans ?? dayPlans}
                   initialDay={trainingDay}
                   autoStart={autoStartWorkout}
+                  resume={resumeWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
                   onSessionModeChange={setWorkoutMode}
-                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); }}
+                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); setResumeWorkout(false); setSection("home"); }}
                   onExit={() => {
                     setWorkoutMode(false);
                     setFreePlans(null);
+                    setResumeWorkout(false);
                     setSection("home");
                     void fetchData();
                   }}
@@ -690,6 +707,7 @@ const Dashboard = () => {
             open={freeOpen}
             onOpenChange={setFreeOpen}
             onStart={(exercises) => {
+              setResumeWorkout(false);
               const today = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][(new Date().getDay() + 6) % 7];
               setFreePlans([
                 ...dayPlans.filter((p) => p.day !== today),
@@ -699,6 +717,7 @@ const Dashboard = () => {
               setFreeOpen(false);
               setTrainingView("tracker");
               setAutoStartWorkout(true);
+              setSection("training");
             }}
           />
         </Suspense>
