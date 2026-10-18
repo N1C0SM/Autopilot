@@ -24,7 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
-import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/lib/workoutPreferences";
+import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds, getWorkoutView, setWorkoutView, type WorkoutView } from "@/lib/workoutPreferences";
 import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
@@ -135,6 +135,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const [gcalLastSync, setGcalLastSync] = useState<string | null>(null);
   const [gcalLoading, setGcalLoading] = useState(false);
   const [restSeconds, setRestSeconds] = useState(60);
+  const [workoutView, setWorkoutViewState] = useState<WorkoutView>("list");
 
   useEffect(() => {
     if (!user) return;
@@ -168,6 +169,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         });
       }
       setRestSeconds(getWorkoutRestSeconds(user.id));
+      setWorkoutViewState(getWorkoutView(user.id));
       setLoading(false);
 
       // Fetch current plan (monthly/yearly) from check-subscription + yearly price
@@ -590,6 +592,19 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         header="Tu forma de entrenar"
         footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan."
       >
+        <div className="px-4 py-3 sep-b">
+          <p className="mb-2 type-body">Vista del entrenamiento</p>
+          <Tabs value={workoutView} onValueChange={(value) => {
+            if (!user || (value !== "list" && value !== "focus")) return;
+            void hapticSelection();
+            setWorkoutViewState(setWorkoutView(user.id, value));
+          }}>
+            <TabsList className="w-full" aria-label="Vista del entrenamiento">
+              <TabsTrigger value="list" className="flex-1" aria-controls={undefined}>Lista vertical</TabsTrigger>
+              <TabsTrigger value="focus" className="flex-1" aria-controls={undefined}>Ejercicio a ejercicio</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <div className="group/row px-4">
           <div className="py-3 group-[:not(:last-child)]/row:sep-b">
             <p className="mb-2 type-body">Descanso entre series</p>
