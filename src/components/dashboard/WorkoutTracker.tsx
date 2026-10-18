@@ -844,6 +844,41 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     }
   };
 
+  const [discardOpen, setDiscardOpen] = useState(false);
+
+  // Descartar: borra las series de hoy de este día y el borrador; no marca el día como hecho.
+  const discardWorkout = async () => {
+    setDiscardOpen(false);
+    setSaving(true);
+    cancelPendingAutosave();
+    try {
+      await saveQueueRef.current;
+      const { error } = await supabase
+        .from("workout_logs")
+        .delete()
+        .eq("user_id", userId)
+        .eq("day_label", selectedDay)
+        .eq("logged_at", selectedDate);
+      if (error) throw error;
+      try { localStorage.removeItem(`autopilot:series-pendientes:${userId}`); } catch { /* sin almacenamiento */ }
+      clearActiveWorkout(userId);
+      setExerciseLogs({});
+      setRestTimer(null);
+      setStarted(false);
+      setExpandedExercise(null);
+      setSaveStatus("idle");
+      onSessionModeChange?.(false);
+      void hapticNotify("warning");
+      toast.success("Entrenamiento descartado");
+      onCancel?.();
+    } catch {
+      void hapticNotify("error");
+      toast.error("No se pudo descartar. Comprueba la conexión e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleRPEConfirm = async (rpe: number | null) => {
     setRpeOpen(false);
     setSaving(true);
@@ -1030,6 +1065,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             }
             trailing={
               <>
+                <button
+                  type="button"
+                  onClick={() => { void hapticTap(); setDiscardOpen(true); }}
+                  disabled={saving}
+                  className="inline-flex h-11 items-center px-2 type-body text-destructive transition-opacity active:opacity-60 disabled:opacity-40"
+                >
+                  Descartar
+                </button>
                 {saveStatus === "error" && (
                   <span role="status" className="flex h-11 w-11 items-center justify-center text-destructive">
                     <CloudOff className="h-5 w-5" aria-hidden="true" />
@@ -1829,6 +1872,22 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle>¿Descartar entrenamiento?</DialogTitle>
+          <DialogDescription>
+            Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.
+          </DialogDescription>
+          <div className="mt-2 flex flex-col gap-2">
+            <Button variant="destructive" onClick={() => void discardWorkout()} disabled={saving}>
+              Descartar entrenamiento
+            </Button>
+            <Button variant="ghost" onClick={() => setDiscardOpen(false)}>
+              Seguir entrenando
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
