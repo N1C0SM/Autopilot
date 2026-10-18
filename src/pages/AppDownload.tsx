@@ -5,6 +5,8 @@ import logo from "@/assets/autopilot-logo.png";
 
 // APK publicado automáticamente por GitHub Actions (deploy-android.yml) en la release "android-latest".
 export const APK_URL = "https://github.com/N1C0SM/Autopilot/releases/download/android-latest/autopilot.apk";
+// Fuente AltStore (public/altstore.json); el .ipa lo publica deploy-ios.yml en "ios-latest".
+const ALTSTORE_URL = "altstore://source?url=https://autopilotplan.com/altstore.json";
 
 const androidSteps = [
   "Pulsa «Descargar APK» desde tu móvil Android.",
@@ -59,6 +61,15 @@ export default function AppDownload() {
       <h2 className="text-lg font-semibold text-foreground">iPhone</h2>
       <p className="mt-1 text-sm text-muted-foreground">Se instala desde Safari, a pantalla completa.</p>
       <Steps items={iosSteps} />
+      <div className="mt-5 rounded-2xl border border-border bg-background/60 p-4">
+        <p className="text-sm font-medium text-foreground">¿Usas AltStore?</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Añade nuestra fuente e instala la app nativa. Necesitas AltStore ya instalado; se renueva cada 7 días.
+        </p>
+        <Button asChild variant="secondary" className="mt-3 w-full rounded-2xl">
+          <a href={ALTSTORE_URL}>Abrir en AltStore</a>
+        </Button>
+      </div>
     </section>
   );
 
