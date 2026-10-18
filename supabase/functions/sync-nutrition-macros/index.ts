@@ -32,7 +32,9 @@ Deno.serve(async (req) => {
 
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
-  const { data: access } = await admin.rpc("has_active_nutrition_access", { _user_id: userId });
+  // The access check reads auth.uid(), so it must run with the user's own token.
+  const { data: access, error: accessError } = await userClient.rpc("has_active_nutrition_access", { _user_id: userId });
+  if (accessError) console.error("[sync-nutrition-macros] access check failed", accessError.message);
   if (!access) return json({ updated: false, reason: "no_access" });
 
   const { data: ob } = await admin.from("onboarding").select("weight, goal").eq("user_id", userId).maybeSingle();
