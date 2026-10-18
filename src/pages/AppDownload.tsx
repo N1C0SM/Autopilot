@@ -5,8 +5,6 @@ import logo from "@/assets/autopilot-logo.png";
 
 // APK publicado automáticamente por GitHub Actions (deploy-android.yml) en la release "android-latest".
 export const APK_URL = "https://github.com/N1C0SM/Autopilot/releases/download/android-latest/autopilot.apk";
-// Fuente AltStore (public/altstore.json); el .ipa lo publica deploy-ios.yml en "ios-latest".
-const ALTSTORE_URL = "altstore://source?url=https://autopilotplan.com/altstore.json";
 
 const androidSteps = [
   "Pulsa «Descargar APK» desde tu móvil Android.",
@@ -16,14 +14,8 @@ const androidSteps = [
   "Si aparece «Google Play Protect», pulsa «Más detalles» y luego «Instalar de todas formas». Si no sale esa opción, abre Play Store → tu foto → Play Protect → ⚙️ y desactiva «Analizar apps» mientras instalas.",
 ];
 
-const iosSteps = [
-  "Abre autopilotplan.com en Safari.",
-  "Pulsa el botón Compartir (cuadrado con flecha hacia arriba).",
-  "Elige «Añadir a la pantalla de inicio» y confirma.",
-];
 
 export default function AppDownload() {
-  const isIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
 
   useEffect(() => {
     document.title = "Descargar la app · Autopilot";
@@ -56,26 +48,6 @@ export default function AppDownload() {
     </section>
   );
 
-  const ios = (
-    <section className="rounded-3xl border border-border bg-card/60 p-6 backdrop-blur">
-      <h2 className="text-lg font-semibold text-foreground">iPhone</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Se instala desde Safari, a pantalla completa.</p>
-      <Steps items={iosSteps} />
-      <div className="mt-5 rounded-2xl border border-border bg-background/60 p-4">
-        <p className="text-sm font-medium text-foreground">¿Usas AltStore?</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Este botón solo funciona si AltStore ya está instalado en tu iPhone (se instala desde un ordenador con AltServer). La app se renueva cada 7 días.
-        </p>
-        <Button asChild variant="secondary" className="mt-3 w-full rounded-2xl">
-          <a href={ALTSTORE_URL}>Abrir en AltStore</a>
-        </Button>
-        <a href="https://altstore.io" target="_blank" rel="noopener noreferrer" className="mt-2 block text-center text-xs text-primary">
-          ¿No tienes AltStore? Cómo instalarlo
-        </a>
-      </div>
-    </section>
-  );
-
   return (
     <main className="min-h-screen bg-background px-5 py-10">
       <div className="mx-auto max-w-md">
@@ -86,7 +58,7 @@ export default function AppDownload() {
           <p className="mt-2 text-sm text-muted-foreground">Tu plan de entrenamiento y nutrición, en tu pantalla de inicio.</p>
         </div>
         <div className="mt-8 space-y-4">
-          {isIOS ? <>{ios}{android}</> : <>{android}{ios}</>}
+          {android}
         </div>
       </div>
     </main>
