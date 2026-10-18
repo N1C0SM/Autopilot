@@ -1041,6 +1041,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   };
 
   const focusMode = started && workoutView === "focus" && expandedExercise !== null;
+  // Si el usuario eligió «Ejercicio a ejercicio», nunca caemos a la lista vertical en plena sesión.
+  useEffect(() => {
+    if (started && workoutView === "focus" && expandedExercise === null && planExercises?.length) setExpandedExercise(0);
+  }, [started, workoutView, expandedExercise, planExercises?.length]);
 
   return (
     // En sesión ocupa la pantalla entera (el shell no pone barra ni pestañas): la barra
