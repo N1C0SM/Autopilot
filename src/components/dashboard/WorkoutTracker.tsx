@@ -18,7 +18,7 @@ import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestSeconds, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
-import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds } from "@/lib/activeWorkout";
+import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
