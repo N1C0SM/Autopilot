@@ -40,6 +40,8 @@ export default function RoadmapAdmin() {
   const [focusAction, setFocusAction] = useState<(() => Promise<void>) | null>(null);
   const [deleting, setDeleting] = useState<Item | null>(null);
   const [aiHelp, setAiHelp] = useState<Item | null>(null);
+  const [proofFor, setProofFor] = useState<Item | null>(null);
+  const [proofText, setProofText] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,8 +104,12 @@ export default function RoadmapAdmin() {
     if (result.error) throw result.error;
     setItems(prev => prev.map(i => i.id === id ? result.data : i));
   }
-  function changeStatus(item: Item, status: string) {
-    const action = () => updateItem(item.id, { status, evidence: status === 'done' ? item.evidence || 'Confirmado manualmente por administración.' : '' });
+  function changeStatus(item: Item, status: string, proof?: string) {
+    const code = findEvidence(item.title);
+    if (code && status !== 'done') { toast.info('El código demuestra que esta función ya existe; sigue como Hecho.'); return; }
+    if (status === 'done' && !code && !proof) { setProofFor(item); setProofText(''); return; }
+    const evidence = status === 'done' ? (code ? evidenceLabel(code) : `Confirmado por ti · ${proof}`) : '';
+    const action = () => updateItem(item.id, { status, evidence });
     if (needsFocusWarning(item.version_id, current?.id ?? '1.0', status)) { setFocusAction(() => action); } else { void run(action); }
   }
   async function saveTask() {
