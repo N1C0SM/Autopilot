@@ -36,6 +36,19 @@ const LibraryDrive = lazy(() => import("@/components/admin/LibraryDrive"));
 const SettingsPanel = lazy(() => import("@/components/SettingsPanel"));
 const RoadmapAdmin = lazy(() => import("@/components/admin/RoadmapAdmin"));
 
+// Precarga en segundo plano las secciones más usadas para que abran sin espera.
+if (typeof window !== "undefined") {
+  const preload = () => {
+    void import("@/components/admin/ExerciseLibrary");
+    void import("@/components/admin/TrainingRulesEditor");
+    void import("@/components/admin/GoalPhysiquesEditor");
+    void import("@/components/admin/UserList");
+    void import("@/components/admin/AdminMetrics");
+  };
+  const ric = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
+  if (ric) ric(preload); else setTimeout(preload, 1500);
+}
+
 export interface Profile {
   user_id: string;
   email: string;
