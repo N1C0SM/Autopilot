@@ -175,14 +175,30 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   // Se mantiene estable durante la sesión, incluso si pasa la medianoche.
   const currentDate = formatLocalDate(new Date());
   const [selectedDate, setSelectedDate] = useState(resumeDraft?.date ?? currentDate);
-  const currentPlan = resumeDraft?.plan.day === selectedDay ? resumeDraft.plan : dayPlans.find((p) => p.day === selectedDay);
+  const basePlan = resumeDraft?.plan.day === selectedDay ? resumeDraft.plan : dayPlans.find((p) => p.day === selectedDay);
+  // Ejercicios añadidos durante la sesión: viven solo en esta sesión, nunca en la rutina guardada.
+  const [sessionExtras, setSessionExtras] = useState<GymExerciseEntry[]>([]);
+  const [extraPickerOpen, setExtraPickerOpen] = useState(false);
+  const currentPlan = basePlan && sessionExtras.length > 0
+    ? { ...basePlan, exercises: [...(basePlan.exercises ?? []), ...sessionExtras] }
+    : basePlan;
   // En modo libre usamos un plan virtual con los ejercicios añadidos manualmente
   const freePlan = selectedDay === FREE_DAY && freeExercises.length > 0
     ? { day: FREE_DAY, type: "gimnasio" as const, exercises: freeExercises, routine_name: "Sesión libre", muscle_focus: null, sport: null, intensity: null, duration: null }
     : undefined;
   const activePlan = freePlan ?? currentPlan;
   const trainingTitle = formatTrainingTitle(activePlan?.routine_name, activePlan?.muscle_focus);
-  const currentPlanSignature = JSON.stringify(activePlan || null);
+  // La firma ignora los extras: añadir un ejercicio no debe recargar ni borrar las series ya hechas.
+  const currentPlanSignature = JSON.stringify((freePlan ?? basePlan) || null);
+  useEffect(() => { setSessionExtras([]); }, [selectedDay]);
+  const addSessionExercises = (entries: GymExerciseEntry[]) => {
+    const existing = new Set((activePlan?.exercises ?? []).map((e) => e.name));
+    const fresh = entries.filter((e) => !existing.has(e.name));
+    if (fresh.length === 0) return;
+    setSessionExtras((prev) => [...prev, ...fresh]);
+    setExerciseLogs((logs) => ({ ...createWorkoutSetLogs(fresh, previousLogs), ...logs }));
+    void hapticTap();
+  };
   const planExercises = activePlan?.exercises;
   const exerciseNames = useMemo(() => (planExercises ?? []).map((exercise) => exercise.name), [planExercises]);
   const startWorkout = (exerciseIndex = 0) => {
