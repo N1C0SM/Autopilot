@@ -14,16 +14,11 @@ import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import master from '@/lib/roadmap/master.json';
 import { needsFocusWarning, statusLabels, roadmapStatusMeaning, findExistingIdea, filterRoadmapIdeas } from '@/lib/roadmap/rules';
+import { reconcile, findEvidence, evidenceLabel, isCodeVerified, needsRealWorldProof } from '@/lib/roadmap/evidence';
 
 type Item = Tables<'roadmap_items'>;
 type Version = Tables<'roadmap_versions'>;
 type Proposal = { id: string; version_id: string | null; reason: string; effort: 'small' | 'medium' | 'large'; status: string; evidence: string };
-const seedEvidence: Record<string, string> = {
-  'Rutinas personalizadas': 'PlanEditor · creación y edición semanal por grupos musculares.',
-  'Seguimiento en sala': 'WorkoutTracker · registro de series, repeticiones, carga y RPE.',
-  'Scan Corporal (V1)': 'Scan · fotografía opcional y estimación orientativa.',
-  'Sustitución inteligente': 'ExerciseSwap · alternativas por músculo y disciplina.',
-};
 const phaseNames = ['Lanzamiento y día a día', 'Inteligencia y adaptación', 'Análisis físico y visión', 'Ecosistema y comunidad'];
 const effortLabels = { small: 'Rápido', medium: 'Medio', large: 'Grande' };
 
@@ -45,6 +40,8 @@ export default function RoadmapAdmin() {
   const [focusAction, setFocusAction] = useState<(() => Promise<void>) | null>(null);
   const [deleting, setDeleting] = useState<Item | null>(null);
   const [aiHelp, setAiHelp] = useState<Item | null>(null);
+  const [proofFor, setProofFor] = useState<Item | null>(null);
+  const [proofText, setProofText] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,7 +59,7 @@ export default function RoadmapAdmin() {
       // Missing IDs are inserted, never replacing saved edits or completion states.
       const savedIds = new Set((i.data ?? []).map(row => row.id));
       const needsSeed = !v.data?.some(row => row.seed_initialized);
-      const missing = needsSeed ? master.items.filter(row => !savedIds.has(row.id)).map(row => ({ ...row, status: seedEvidence[row.title] ? 'done' : 'idea', evidence: seedEvidence[row.title] ?? '' })) : [];
+      const missing = needsSeed ? master.items.filter(row => !savedIds.has(row.id)).map(row => ({ ...row, status: 'idea', evidence: '' })) : [];
       if (missing.length) {
         const seeded = await supabase.from('roadmap_items').upsert(missing, { onConflict: 'id', ignoreDuplicates: true });
         if (seeded.error) throw seeded.error;
@@ -71,11 +68,19 @@ export default function RoadmapAdmin() {
         const marked = await supabase.from('roadmap_versions').update({ seed_initialized: true }).in('id', master.versions.map(row => row.id));
         if (marked.error) throw marked.error;
       }
+      let finalV = v.data ?? [], finalI = i.data ?? [];
       if (!v.data?.length || needsSeed) {
         const [freshV, freshI] = await Promise.all([supabase.from('roadmap_versions').select('*').order('position'), supabase.from('roadmap_items').select('*').order('position').order('created_at')]);
         if (freshV.error || freshI.error) throw freshV.error ?? freshI.error;
-        setVersions(freshV.data ?? []); setItems(freshI.data ?? []);
-      } else { setVersions(v.data); setItems(i.data ?? []); }
+        finalV = freshV.data ?? []; finalI = freshI.data ?? [];
+      }
+      // Cada carga alinea el Roadmap con lo que el código demuestra.
+      for (const p of reconcile(finalI)) {
+        const r = await supabase.from('roadmap_items').update({ status: p.status, evidence: p.evidence, updated_at: new Date().toISOString() }).eq('id', p.id);
+        if (r.error) throw r.error;
+        finalI = finalI.map(row => row.id === p.id ? { ...row, ...p } : row);
+      }
+      setVersions(finalV); setItems(finalI);
     } catch { setError(true); } finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -99,8 +104,12 @@ export default function RoadmapAdmin() {
     if (result.error) throw result.error;
     setItems(prev => prev.map(i => i.id === id ? result.data : i));
   }
-  function changeStatus(item: Item, status: string) {
-    const action = () => updateItem(item.id, { status, evidence: status === 'done' ? item.evidence || 'Confirmado manualmente por administración.' : '' });
+  function changeStatus(item: Item, status: string, proof?: string) {
+    const code = findEvidence(item.title);
+    if (code && status !== 'done') { toast.info('El código demuestra que esta función ya existe; sigue como Hecho.'); return; }
+    if (status === 'done' && !code && !proof) { setProofFor(item); setProofText(''); return; }
+    const evidence = status === 'done' ? (code ? evidenceLabel(code) : `Confirmado por ti · ${proof}`) : '';
+    const action = () => updateItem(item.id, { status, evidence });
     if (needsFocusWarning(item.version_id, current?.id ?? '1.0', status)) { setFocusAction(() => action); } else { void run(action); }
   }
   async function saveTask() {
@@ -168,7 +177,8 @@ export default function RoadmapAdmin() {
         <div className="min-w-0 flex-1"><h3 className={`font-semibold break-words ${item.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{item.title}</h3><p className="text-sm text-muted-foreground mt-1 break-words">{item.description}</p></div>
         <Button variant="ghost" size="icon" aria-label={`Editar ${item.title}`} title="Editar tarea" onClick={() => setEditing(item)}><Pencil /></Button>
       </div>
-      {item.evidence && <p className="text-xs text-primary break-words flex gap-2"><Check className="size-3 shrink-0 mt-0.5" />{item.evidence}</p>}
+      {item.evidence && <p className={`text-xs break-words flex gap-2 ${isCodeVerified(item.evidence) ? 'text-primary' : 'text-muted-foreground'}`}><Check className="size-3 shrink-0 mt-0.5" />{item.evidence}</p>}
+      {item.status !== 'done' && needsRealWorldProof.includes(item.title) && <p className="text-xs text-muted-foreground">Necesita prueba real (tienda, cobro o dispositivo); el código solo no basta.</p>}
       {item.ai_reason && <p className="text-xs text-muted-foreground break-words">{item.ai_reason}</p>}
       <div className="flex flex-wrap items-center gap-2">
         <Select value={item.status} onValueChange={status => changeStatus(item, status)} disabled={busy}><SelectTrigger className="w-36 h-9" aria-label={`Estado de ${item.title}`} title={roadmapStatusMeaning(item.status as keyof typeof statusLabels)}><SelectValue /></SelectTrigger><SelectContent>{Object.entries(statusLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label} · {roadmapStatusMeaning(key as keyof typeof statusLabels)}</SelectItem>)}</SelectContent></Select>
@@ -224,7 +234,8 @@ export default function RoadmapAdmin() {
     <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditing(null); }}><DialogContent className="max-h-[85dvh] overflow-y-auto"><DialogHeader><DialogTitle>{editing?.id ? 'Editar tarea' : 'Nueva tarea'}</DialogTitle><DialogDescription>Alcance de la versión</DialogDescription></DialogHeader><label className="text-sm space-y-2">Título<Input value={editing?.title ?? ''} maxLength={250} onChange={e => setEditing(prev => ({ ...prev, title: e.target.value }))} /></label><label className="text-sm space-y-2">Detalles<Textarea value={editing?.description ?? ''} onChange={e => setEditing(prev => ({ ...prev, description: e.target.value }))} /></label><label className="text-sm">Versión<Select value={editing?.version_id ?? 'ice'} onValueChange={value => setEditing(prev => ({ ...prev, version_id: value === 'ice' ? null : value }))}><SelectTrigger aria-label="Versión de tarea"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ice">Hielo</SelectItem>{versions.map(v => <SelectItem key={v.id} value={v.id}>v{v.id} · {v.title}</SelectItem>)}</SelectContent></Select></label><label className="text-sm">Esfuerzo<Select value={editing?.effort ?? 'medium'} onValueChange={value => setEditing(prev => ({ ...prev, effort: value }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(effortLabels).map(([key,label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}</SelectContent></Select></label><Button disabled={busy || !editing?.title?.trim()} onClick={() => void saveTask()}>Guardar tarea</Button></DialogContent></Dialog>
     <Dialog open={!!versionEdit} onOpenChange={open => { if (!open) setVersionEdit(null); }}><DialogContent className="max-h-[85dvh] overflow-y-auto"><DialogHeader><DialogTitle>Versión {versionEdit?.id}</DialogTitle><DialogDescription>Objetivo y lanzamiento</DialogDescription></DialogHeader><label className="text-sm">Nombre<Input value={versionEdit?.title ?? ''} onChange={e => setVersionEdit(prev => prev ? { ...prev, title: e.target.value } : null)} /></label><label className="text-sm">Objetivo<Textarea value={versionEdit?.objective ?? ''} onChange={e => setVersionEdit(prev => prev ? { ...prev, objective: e.target.value } : null)} /></label><Select value={versionEdit?.release_stage ?? 'internal'} onValueChange={value => setVersionEdit(prev => prev ? { ...prev, release_stage: value } : null)}><SelectTrigger aria-label="Etapa de lanzamiento"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="internal">Desarrollo interno</SelectItem><SelectItem value="beta">Beta</SelectItem><SelectItem value="rc">Candidata de lanzamiento</SelectItem><SelectItem value="released">Publicada</SelectItem></SelectContent></Select><label className="text-sm">Notas de versión<Textarea value={versionEdit?.release_notes ?? ''} onChange={e => setVersionEdit(prev => prev ? { ...prev, release_notes: e.target.value } : null)} /></label><Button disabled={busy || !versionEdit?.title.trim()} onClick={() => void run(async () => { if (!versionEdit) return; const { error: saveError } = await supabase.from('roadmap_versions').update({ title: versionEdit.title, objective: versionEdit.objective, release_stage: versionEdit.release_stage, release_notes: versionEdit.release_notes, updated_at: new Date().toISOString() }).eq('id', versionEdit.id); if (saveError) throw saveError; setVersionEdit(null); await load(); toast.success('Versión guardada'); })}>Guardar versión</Button>{versionEdit && !versionEdit.is_current && <Button variant="secondary" disabled={busy} onClick={() => setFocusAction(() => async () => { const { error: switchError } = await supabase.rpc('roadmap_set_current', { target: versionEdit.id }); if (switchError) throw switchError; setVersionEdit(null); await load(); toast.success('Foco actualizado'); })}><Focus />Establecer como actual</Button>}</DialogContent></Dialog>
     <Dialog open={!!focusAction} onOpenChange={open => { if (!open) setFocusAction(null); }}><DialogContent><DialogHeader><DialogTitle>Mantén el foco</DialogTitle><DialogDescription>Ahora: v{current?.id} · {current?.title}. Aún quedan {currentTasks.length - done} tareas pendientes. ¿Quieres cambiar el foco o empezar esta tarea igualmente?</DialogDescription></DialogHeader><Button onClick={() => setFocusAction(null)}>Seguir con v{current?.id}</Button><Button variant="secondary" disabled={busy} onClick={() => { const action = focusAction; if (action) void run(async () => { await action(); setFocusAction(null); }); }}>Continuar igualmente</Button></DialogContent></Dialog>
-    <Dialog open={!!deleting} onOpenChange={open => { if (!open) setDeleting(null); }}><DialogContent><DialogHeader><DialogTitle>Eliminar tarea</DialogTitle><DialogDescription>¿Eliminar «{deleting?.title}»? No se puede deshacer.</DialogDescription></DialogHeader><Button variant="secondary" onClick={() => setDeleting(null)}>Cancelar</Button><Button variant="destructive" disabled={busy} onClick={() => void run(async () => { if (!deleting) return; const { error: deleteError } = await supabase.from('roadmap_items').delete().eq('id', deleting.id); if (deleteError) throw deleteError; setItems(prev => prev.filter(i => i.id !== deleting.id)); setDeleting(null); })}>Eliminar</Button></DialogContent></Dialog>
+    <Dialog open={!!proofFor} onOpenChange={open => { if (!open) setProofFor(null); }}><DialogContent><DialogHeader><DialogTitle>¿Cómo sabes que está hecho?</DialogTitle><DialogDescription>«{proofFor?.title}» no tiene prueba en el código. Escribe qué lo demuestra (p. ej. «compra real probada el 18/10»). Se mostrará como confirmado por ti, no como verificado.</DialogDescription></DialogHeader><Textarea aria-label="Prueba de finalización" value={proofText} maxLength={300} onChange={e => setProofText(e.target.value)} /><Button disabled={busy || proofText.trim().length < 10} onClick={() => { if (proofFor) changeStatus(proofFor, 'done', proofText.trim()); setProofFor(null); }}>Marcar como Hecho</Button></DialogContent></Dialog>
+    <Dialog open={!!deleting}  onOpenChange={open => { if (!open) setDeleting(null); }}><DialogContent><DialogHeader><DialogTitle>Eliminar tarea</DialogTitle><DialogDescription>¿Eliminar «{deleting?.title}»? No se puede deshacer.</DialogDescription></DialogHeader><Button variant="secondary" onClick={() => setDeleting(null)}>Cancelar</Button><Button variant="destructive" disabled={busy} onClick={() => void run(async () => { if (!deleting) return; const { error: deleteError } = await supabase.from('roadmap_items').delete().eq('id', deleting.id); if (deleteError) throw deleteError; setItems(prev => prev.filter(i => i.id !== deleting.id)); setDeleting(null); })}>Eliminar</Button></DialogContent></Dialog>
     <Dialog open={proposals.length > 0} onOpenChange={open => { if (!open) setProposals([]); }}><DialogContent className="max-w-2xl max-h-[85dvh] overflow-y-auto"><DialogHeader><DialogTitle>Propuesta de orden</DialogTitle><DialogDescription>La IA propone; tú decides qué se guarda.</DialogDescription></DialogHeader>{proposals.map((p, idx) => <div key={p.id} className="py-3 border-b border-border space-y-2"><p className="font-semibold">{items.find(i => i.id === p.id)?.title}</p><Select value={p.version_id ?? 'ice'} onValueChange={value => setProposals(prev => prev.map((row,n) => n === idx ? { ...row, version_id: value === 'ice' ? null : value } : row))}><SelectTrigger aria-label={`Destino de propuesta ${idx+1}`}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ice">Hielo</SelectItem>{versions.map(v => <SelectItem key={v.id} value={v.id}>v{v.id} · {v.title}</SelectItem>)}</SelectContent></Select><p className="text-sm text-muted-foreground">{p.reason}</p>{p.evidence && <p className="text-xs text-primary">Ya implementado · {p.evidence}</p>}<Button variant="ghost" size="sm" onClick={() => setProposals(prev => prev.filter(row => row.id !== p.id))}>Descartar propuesta</Button></div>)}<Button disabled={busy} onClick={() => void applyProposals()}><Check />Aplicar propuestas ({proposals.length})</Button></DialogContent></Dialog>
   </div>;
 }
