@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import NavBar from "@/components/native/NavBar";
 import { toast } from "sonner";
-import type { DayPlan } from "@/types/training";
+import type { DayPlan, ExerciseTrackingMode } from "@/types/training";
 import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
@@ -135,7 +135,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, resume = false, autoStar
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
   const [livePRs, setLivePRs] = useState<Record<string, string>>({});
-  // Superseries: solo en memoria durante la sesión (no se guardan ni se envían).
+  // Superseries: recuperables en el borrador local, sin modificar la rutina guardada.
   const [supersetLinks, setSupersetLinks] = useState<SupersetLinks>({});
   const restChainRef = useRef<number[] | null>(null);
 
@@ -149,7 +149,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, resume = false, autoStar
     exercise_type?: string | null;
     image_url?: string | null;
     video_url?: string | null;
-    tracking_mode?: string | null;
+    tracking_mode?: ExerciseTrackingMode | null;
     series: number;
     reps: number;
     rest: string;
@@ -1252,7 +1252,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, resume = false, autoStar
             );
           })()}
 
-          {/* Exercise list: lista agrupada en el resumen; en sesión, solo el ejercicio en foco */}
+          {/* Ambas vistas comparten series y acciones; solo cambia su presentación. */}
           {!workoutCompleted && completionReady && !loadError && (
           <section>
           {!focusMode && (currentPlan.exercises?.length ?? 0) > 0 && (
