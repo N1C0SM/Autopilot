@@ -1872,6 +1872,22 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
+      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle>¿Descartar entrenamiento?</DialogTitle>
+          <DialogDescription>
+            Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.
+          </DialogDescription>
+          <div className="mt-2 flex flex-col gap-2">
+            <Button variant="destructive" onClick={() => void discardWorkout()} disabled={saving}>
+              Descartar entrenamiento
+            </Button>
+            <Button variant="ghost" onClick={() => setDiscardOpen(false)}>
+              Seguir entrenando
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
