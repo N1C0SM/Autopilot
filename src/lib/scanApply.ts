@@ -92,11 +92,12 @@ const scanHasSignal = (r: ScanInferences) =>
   !!r.muscle_breakdown?.length || (!!r.inferred_goal && GOALS.has(r.inferred_goal));
 
 /**
- * Plus y Coach rehacen su plan con un scan; Free conserva su rutina inicial
- * (generate-plan no la regenera). Un admin siempre puede, para probarlo.
+ * Todos los usuarios registrados pueden aplicar scan.
+ * Free: plan básico (solo entrenamiento).
+ * Plus/Coach: plan completo (entrenamiento + nutrición).
  */
 export function canApplyScanToPlan(billing: BillingProfile | null | undefined, isAdmin: boolean): boolean {
-  return isAdmin || getConsumerPlan(billing) !== "free";
+  return isAdmin || !!billing; // Cualquier usuario registrado puede aplicar scan
 }
 
 export type ScanApplyOutcome =
