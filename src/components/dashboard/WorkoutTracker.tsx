@@ -844,6 +844,41 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     }
   };
 
+  const [discardOpen, setDiscardOpen] = useState(false);
+
+  // Descartar: borra las series de hoy de este día y el borrador; no marca el día como hecho.
+  const discardWorkout = async () => {
+    setDiscardOpen(false);
+    setSaving(true);
+    cancelPendingAutosave();
+    try {
+      await saveQueueRef.current;
+      const { error } = await supabase
+        .from("workout_logs")
+        .delete()
+        .eq("user_id", userId)
+        .eq("day_label", selectedDay)
+        .eq("logged_at", selectedDate);
+      if (error) throw error;
+      try { localStorage.removeItem(`autopilot:series-pendientes:${userId}`); } catch { /* sin almacenamiento */ }
+      clearActiveWorkout(userId);
+      setExerciseLogs({});
+      setRestTimer(null);
+      setStarted(false);
+      setExpandedExercise(null);
+      setSaveStatus("idle");
+      onSessionModeChange?.(false);
+      void hapticNotify("warning");
+      toast.success("Entrenamiento descartado");
+      onCancel?.();
+    } catch {
+      void hapticNotify("error");
+      toast.error("No se pudo descartar. Comprueba la conexión e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleRPEConfirm = async (rpe: number | null) => {
     setRpeOpen(false);
     setSaving(true);
