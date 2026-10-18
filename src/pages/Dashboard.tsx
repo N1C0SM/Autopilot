@@ -272,7 +272,10 @@ const Dashboard = () => {
         ]);
 
         const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
-        if (plans) setDayPlans(plans);
+        if (plans) {
+          setDayPlans(plans);
+          try { localStorage.setItem(`autopilot_cached_routine_${user.id}`, JSON.stringify(plans)); } catch { /* sin espacio */ }
+        }
         if (weeklyCompletions.error) {
           toast.error("No se pudo cargar el resumen de esta semana.");
         } else {
@@ -307,6 +310,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (!user) return;
+    // Sin cobertura en la sala: enseña la última rutina guardada mientras llega la red.
+    try {
+      const cached = localStorage.getItem(`autopilot_cached_routine_${user.id}`);
+      if (cached) setDayPlans(JSON.parse(cached) as DayPlan[]);
+    } catch { /* caché corrupta: se ignora */ }
     void fetchData({ syncSubscription: true, checkAdmin: true });
 
     const refreshTrainingPlan = async () => {
