@@ -11,11 +11,13 @@ export default function BasicNutrition({ userId, onEdit }: { userId: string; onE
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
-    supabase.from("onboarding").select("weight, sex, goal").eq("user_id", userId).maybeSingle().then(({ data, error }) => {
+    const load = () => supabase.from("onboarding").select("weight, sex, goal").eq("user_id", userId).maybeSingle().then(({ data, error }) => {
       if (!active) return;
-      if (error) setFailed(true); else setTargets(resolveNutritionPreview(data ?? {}));
+      if (error) setFailed(true); else { setFailed(false); setTargets(resolveNutritionPreview(data ?? {})); }
     });
-    return () => { active = false; };
+    void load();
+    window.addEventListener("autopilot:onboarding-updated", load);
+    return () => { active = false; window.removeEventListener("autopilot:onboarding-updated", load); };
   }, [userId]);
   if (failed) return <EmptyState icon={Apple} title="No se pudieron cargar tus objetivos" action={<Button onClick={onEdit}>Ver mis datos</Button>} />;
   if (!targets) return <Spinner label="Calculando objetivos" />;
