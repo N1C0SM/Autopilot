@@ -94,6 +94,8 @@ export default function RoadmapAdmin() {
   const inbox = items.filter(i => i.status === 'idea');
   const matches = (i: Item) => `${i.title} ${i.description}`.toLocaleLowerCase('es').includes(search.toLocaleLowerCase('es'));
   const selectedTasks = items.filter(i => (selected === 'ice' ? !i.version_id : i.version_id === selected) && matches(i));
+  const ideaGroups = versions.map(v => ({ version: v, groupIdeas: inbox.filter(i => i.version_id === v.id) })).filter(g => g.groupIdeas.length > 0);
+  const iceIdeas = inbox.filter(i => !i.version_id || !versions.some(v => v.id === i.version_id));
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -221,7 +223,27 @@ export default function RoadmapAdmin() {
         <Textarea aria-label="Lluvia de ideas" placeholder="Una idea por línea…" value={ideas} onChange={e => setIdeas(e.target.value)} className="min-h-40" />
         <div className="flex flex-wrap gap-2"><Button disabled={busy || !ideas.trim()} onClick={() => void captureIdeas()}><Plus />Guardar ideas</Button><Button variant="tinted" disabled={busy || !inbox.length} onClick={() => void classify(inbox)}>{busy ? <Spinner /> : <Wand2 />}Ordenar con IA{inbox.length > 25 ? ' (25)' : ''}</Button></div>
         {duplicates.length > 0 && <section role="status" className="space-y-2 border-l-2 border-primary pl-4"><h4 className="font-semibold">Ya están en el Roadmap</h4>{duplicates.map((row, index) => <p key={index} className="text-sm break-words">{row.title} · {row.existing.version_id ? `v${row.existing.version_id}` : 'Hielo'} · {statusLabels[row.existing.status as keyof typeof statusLabels]}{row.existing.status === 'done' ? ' · Ya implementado' : ''}</p>)}</section>}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{inbox.map(taskCard)}</div>
+        <div className="space-y-6">
+          {ideaGroups.map(({ version, groupIdeas }) => (
+            <section key={version.id} className="space-y-3">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h4 className="font-semibold">v{version.id} · {version.title}</h4>
+                {version.id === current?.id && <span className="text-xs text-primary">Versión actual</span>}
+                <span className="text-xs text-muted-foreground">{groupIdeas.length} idea{groupIdeas.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{groupIdeas.map(taskCard)}</div>
+            </section>
+          ))}
+          {iceIdeas.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h4 className="font-semibold">Hielo · sin versión asignada</h4>
+                <span className="text-xs text-muted-foreground">{iceIdeas.length} idea{iceIdeas.length === 1 ? '' : 's'}</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{iceIdeas.map(taskCard)}</div>
+            </section>
+          )}
+        </div>
         {!inbox.length && <p className="text-muted-foreground py-6">Sin ideas pendientes de ordenar.</p>}
         <section className="border-t border-border pt-6 space-y-4"><h3 className="type-title2">Consultar ideas y tareas</h3><div className="flex flex-wrap gap-3"><Select value={catalogVersion} onValueChange={setCatalogVersion}><SelectTrigger className="w-full sm:w-64" aria-label="Filtrar ideas por versión"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas las versiones</SelectItem>{versions.map(v => <SelectItem key={v.id} value={v.id}>v{v.id} · {v.title}</SelectItem>)}<SelectItem value="ice">Hielo</SelectItem></SelectContent></Select><Input aria-label="Buscar ideas en el Roadmap" placeholder="Buscar ideas y tareas" className="flex-1 min-w-40" value={catalogSearch} onChange={e => setCatalogSearch(e.target.value)} /></div><p className="text-sm text-muted-foreground">{filterRoadmapIdeas(items, catalogVersion, catalogSearch).length} ideas y tareas</p><div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">{filterRoadmapIdeas(items, catalogVersion, catalogSearch).map(taskCard)}</div></section>
       </TabsContent>
