@@ -89,6 +89,13 @@ const getMuscleIntensity = (sets: number) => sets >= 6
     ? MUSCLE_INTENSITY.medium
     : MUSCLE_INTENSITY.low;
 
+function focusSetField(e: { currentTarget: HTMLInputElement }) {
+  const el = e.currentTarget;
+  el.select();
+  // El teclado del móvil tarda en abrir: centra la serie para que no la tape.
+  window.setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+}
+
 const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resume = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
   const [resumeDraft] = useState(() => resume ? readActiveWorkout(userId) : null);
   const [workoutView, setWorkoutViewState] = useState(() => getWorkoutView(userId));
