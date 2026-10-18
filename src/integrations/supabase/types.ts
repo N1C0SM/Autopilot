@@ -1431,6 +1431,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          apk_download_enabled: boolean
           app_store_url: string
           booking_url: string
           contact_email: string | null
@@ -1483,6 +1484,7 @@ export type Database = {
           yearly_price_eur: number | null
         }
         Insert: {
+          apk_download_enabled?: boolean
           app_store_url?: string
           booking_url?: string
           contact_email?: string | null
@@ -1535,6 +1537,7 @@ export type Database = {
           yearly_price_eur?: number | null
         }
         Update: {
+          apk_download_enabled?: boolean
           app_store_url?: string
           booking_url?: string
           contact_email?: string | null
@@ -2199,6 +2202,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_apk_download_enabled: { Args: never; Returns: boolean }
       get_consumer_plans_public: {
         Args: never
         Returns: {
