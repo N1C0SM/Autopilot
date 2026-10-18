@@ -3,7 +3,7 @@ import { Output, streamText, type ModelMessage } from "npm:ai@6";
 import { z } from "npm:zod@4";
 // El Roadmap usa directamente Lovable AI: las claves propias (OpenAI sin saldo) no deben bloquearlo.
 
-const OutputSchema = z.object({ proposals: z.array(z.object({ id: z.string(), version_id: z.string().nullable(), reason: z.string(), effort: z.enum(['small', 'medium', 'large']) }).strict()) }).strict();
+const OutputSchema = z.object({ proposals: z.array(z.object({ id: z.string(), title: z.string(), version_id: z.string().nullable(), reason: z.string(), effort: z.enum(['small', 'medium', 'large']) }).strict()) }).strict();
 
 import {
   createLovableAiGatewayRunIdFetch,
