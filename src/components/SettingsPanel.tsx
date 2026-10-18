@@ -24,7 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MONTHLY_PRICE_EUR, DEFAULT_YEARLY_PRICE_EUR } from "@/config/pricing";
-import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds } from "@/lib/workoutPreferences";
+import { getWorkoutRestSeconds, REST_PRESETS, setWorkoutRestSeconds, useWorkoutView, setWorkoutView } from "@/lib/workoutPreferences";
 import { getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
 import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
@@ -135,6 +135,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const [gcalLastSync, setGcalLastSync] = useState<string | null>(null);
   const [gcalLoading, setGcalLoading] = useState(false);
   const [restSeconds, setRestSeconds] = useState(60);
+  const workoutView = useWorkoutView(user?.id ?? "");
 
   useEffect(() => {
     if (!user) return;
@@ -590,6 +591,19 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         header="Tu forma de entrenar"
         footer="Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno. Puedes cambiarlo cuando quieras. El descanso específico de cada ejercicio sigue apareciendo en tu plan."
       >
+        <div className="px-4 py-3">
+          <p className="mb-2 type-body">Vista del entrenamiento</p>
+          <Tabs value={workoutView} onValueChange={(view) => {
+            if (!user || (view !== "list" && view !== "focus")) return;
+            setWorkoutView(user.id, view);
+            void hapticSelection();
+          }}>
+            <TabsList className="w-full" aria-label="Vista del entrenamiento">
+              <TabsTrigger value="list" aria-controls={undefined}>Lista vertical</TabsTrigger>
+              <TabsTrigger value="focus" aria-controls={undefined}>Ejercicio a ejercicio</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <div className="group/row px-4">
           <div className="py-3 group-[:not(:last-child)]/row:sep-b">
             <p className="mb-2 type-body">Descanso entre series</p>
