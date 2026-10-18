@@ -356,6 +356,7 @@ const Dashboard = () => {
     return () => {
       void supabase.removeChannel(channel);
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("autopilot:nutrition-plan-updated", onNutritionUpdated);
     };
   }, [user, fetchData]);
 
