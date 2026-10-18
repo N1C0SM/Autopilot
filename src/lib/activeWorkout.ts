@@ -30,7 +30,7 @@ export function readActiveWorkout(userId: string): ActiveWorkout | null {
       || !value.plan || value.plan.type !== "gimnasio" || !Array.isArray(value.plan.exercises)
       || !value.logs || typeof value.logs !== "object" || Array.isArray(value.logs)
       || !Object.values(value.logs).every((sets) => Array.isArray(sets) && sets.every((set) =>
-        set && typeof set.weight === "string" && typeof set.reps === "number" && typeof set.done === "boolean"))) return null;
+        set && typeof set.weight === "string" && (typeof set.reps === "number" || typeof set.reps === "string") && typeof set.done === "boolean"))) return null;
     return value as ActiveWorkout;
   } catch { return null; }
 }
