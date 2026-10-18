@@ -43,7 +43,11 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 
   useEffect(() => { if (open) { setStep(-1); setAnswers({}); setError(""); } }, [open]);
   useEffect(() => {
-    void supabase.rpc("get_contact_phone_public").then(({ data }) => setPhone((data as string) || ""));
+    // Contract: RPC returns text (settings.contact_phone) or null. Anything else, or an error,
+    // means "no WhatsApp link" — never a broken render.
+    void Promise.resolve(supabase.rpc("get_contact_phone_public"))
+      .then((res) => setPhone(!res?.error && typeof res?.data === "string" ? res.data : ""))
+      .catch(() => setPhone(""));
   }, []);
   const waDigits = phone.replace(/\D/g, "");
   const waUrl = waDigits ? `https://wa.me/${waDigits}?text=${encodeURIComponent("Hola, acabo de enviar mi solicitud de Autopilot para entrenadores.")}` : "";
