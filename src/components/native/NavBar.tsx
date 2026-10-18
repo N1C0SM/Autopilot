@@ -43,7 +43,7 @@ const NavBar = forwardRef<HTMLElement, NavBarProps>(
             <Title
               aria-hidden={titleVisible ? undefined : true}
               className={cn(
-                "pointer-events-none absolute inset-x-0 mx-auto max-w-[60%] truncate text-center type-headline transition-opacity duration-200",
+                "pointer-events-none absolute inset-x-0 mx-auto max-w-[44%] truncate text-center type-headline transition-opacity duration-200",
                 titleVisible ? "opacity-100" : "opacity-0",
               )}
             >
