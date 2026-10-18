@@ -1,4 +1,7 @@
 # Roadmap
+- [ ] Rediseño de entrenamiento: descanso por marca temporal y recuperación de sesiones normales/libres
+- [ ] Lista vertical con ejercicios expandibles y elección en Ajustes entre lista y vista de foco actual
+- [ ] Reanudar desde Hoy y verificar registro, recuperación y temporizador
 - [x] Campaña Free: control admin persistente, ofertas y pagos de planes ocultos, nutrición básica y progresión; comprobado en cuenta Free y pagos bloqueados (403)
 - [x] Simplificar estados a Idea/Pendiente/Hecho y mostrar ayuda de IA sin prometer cambios automáticos
 - [x] Aclarar el alcance de «hazmelo» con IA: propone trabajo; no modifica ni publica la aplicación desde el Roadmap
