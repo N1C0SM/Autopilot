@@ -1836,7 +1836,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               <ExercisePicker
                 open={extraPickerOpen}
                 onOpenChange={setExtraPickerOpen}
-                existing={activePlan?.exercises ?? []}
+                existing={exerciseNames}
                 onPick={(entries) => { addSessionExercises(entries); setExtraPickerOpen(false); }}
               />
             </>
