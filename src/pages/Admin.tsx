@@ -15,6 +15,7 @@ import { PaymentDot, PlanStatusBadge } from "@/components/ui/status-badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import type { TestAccountKind } from "@/components/admin/CreateTestAccountDialog";
 import { clientProfiles } from "@/lib/adminMetrics";
+import { listTestAccountIds } from "@/lib/testAccounts";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -89,21 +90,26 @@ const Admin = () => {
   const isMobile = useIsMobile();
   const contentRef = useRef<HTMLElement>(null);
 
+  const [testIds, setTestIds] = useState<Set<string>>(new Set());
+
   const refreshUsers = useCallback(async () => {
-    const [profilesResult, rolesResult] = await Promise.all([
+    const [profilesResult, rolesResult, testResult] = await Promise.all([
       supabase.from("profiles").select("user_id, email, name, avatar_url, plan_status, payment_status, created_at, travel_mode_until, travel_equipment, subscription_tier, subscription_status, subscription_end, stripe_payment_id"),
       supabase.from("user_roles").select("user_id, role").in("role", ["admin", "trainer"]),
+      listTestAccountIds(),
     ]);
     if (profilesResult.error) throw profilesResult.error;
     if (rolesResult.error) throw rolesResult.error;
+    const tests = testResult;
     setAllUsers(profilesResult.data || []);
     setAdminIds(new Set((rolesResult.data || []).filter((role) => role.role === "admin").map((role) => role.user_id)));
     setTrainerIds(new Set((rolesResult.data || []).filter((role) => role.role === "trainer").map((role) => role.user_id)));
+    setTestIds(tests);
     setLoadError(false);
-    return clientProfiles(profilesResult.data || [], new Set((rolesResult.data || []).map((role) => role.user_id)));
+    return clientProfiles(profilesResult.data || [], new Set([...(rolesResult.data || []).map((role) => role.user_id), ...tests]));
   }, []);
 
-  const clients = useMemo(() => clientProfiles(allUsers, new Set([...adminIds, ...trainerIds])), [allUsers, adminIds, trainerIds]);
+  const clients = useMemo(() => clientProfiles(allUsers, new Set([...adminIds, ...trainerIds, ...testIds])), [allUsers, adminIds, trainerIds, testIds]);
 
   const loadAdmin = useCallback(async () => {
     if (!user) return;

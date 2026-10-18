@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ArrowLeft, ShieldCheck, User2, Dumbbell, Trash2, AlertTriangle, Eye, Target, MoreHorizontal, UserRound, UserMinus, Crown, Check, ChevronRight, Info } from "lucide-react";
+import { isTestAccount as isTestAccountRemote, setTestAccount } from "@/lib/testAccounts";
+import { ArrowLeft, ShieldCheck, User2, Dumbbell, Trash2, AlertTriangle, Eye, Target, MoreHorizontal, UserRound, UserMinus, Crown, Check, ChevronRight, Info, FlaskConical } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -161,6 +162,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [isUserTrainer, setIsUserTrainer] = useState(false);
+  const [isTestAccount, setIsTestAccount] = useState(false);
   const [roleLoading, setRoleLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -192,6 +194,7 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       setOnboarding(onb as OnboardingData | null);
       setIsUserAdmin(!!roleData);
       setIsUserTrainer(!!trainerRoleData);
+      void isTestAccountRemote(profile.user_id).then((v) => { if (active) setIsTestAccount(v); });
       
 
       if (tp?.workouts_json) {
@@ -306,6 +309,17 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
       const { error } = await supabase.from("user_roles").insert({ user_id: profile.user_id, role: "trainer" });
       if (!error) { setIsUserTrainer(true); toast.success("Rol de entrenador asignado"); }
       else toast.error("Error al cambiar rol de entrenador");
+    }
+    setRoleLoading(false);
+  };
+
+  const toggleTestAccount = async () => {
+    setRoleLoading(true);
+    const { error } = await setTestAccount(profile.user_id, !isTestAccount);
+    if (error) toast.error("No se pudo cambiar");
+    else {
+      setIsTestAccount(!isTestAccount);
+      toast.success(isTestAccount ? "Vuelve a contar en métricas" : "Cuenta de prueba: fuera de métricas");
     }
     setRoleLoading(false);
   };
@@ -534,10 +548,10 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           {!restricted && <TabsTrigger value="info" className={CHIP} onPointerDown={() => void hapticSelection()}>Plan</TabsTrigger>}
           <TabsTrigger value="perfil" className={CHIP} onPointerDown={() => void hapticSelection()}>Perfil</TabsTrigger>
           {!restricted && <TabsTrigger value="acceso" className={CHIP} onPointerDown={() => void hapticSelection()}>Acceso</TabsTrigger>}
+          <TabsTrigger value="progress" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
+          <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
-              <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
               {canViewNutrition && <TabsTrigger value="nutrition" className={CHIP} onPointerDown={() => void hapticSelection()}>Nutrición</TabsTrigger>}
               {canMessageClient && <TabsTrigger value="chat" className={CHIP} onPointerDown={() => void hapticSelection()}>Chat</TabsTrigger>}
             </>
@@ -797,6 +811,12 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 title="Entrenador"
                 subtitle="Puede entrar al panel de entrenador y gestionar clientes asignados."
                 trailing={<Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />}
+              />
+              <ListRow
+                icon={<FlaskConical className="text-muted-foreground" />}
+                title="Cuenta de prueba"
+                subtitle="No cuenta en métricas ni estadísticas."
+                trailing={<Switch checked={isTestAccount} onCheckedChange={toggleTestAccount} disabled={roleLoading} aria-label="Marcar como cuenta de prueba" />}
               />
             </ListGroup>
 
