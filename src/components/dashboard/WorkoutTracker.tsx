@@ -12,12 +12,13 @@ import { Progress } from "@/components/ui/progress";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import NavBar from "@/components/native/NavBar";
 import { toast } from "sonner";
-import type { DayPlan } from "@/types/training";
+import type { DayPlan, ExerciseTrackingMode } from "@/types/training";
 import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
-import { getWorkoutRestSeconds } from "@/lib/workoutPreferences";
+import { getWorkoutRestSeconds, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
+import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds } from "@/lib/activeWorkout";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
@@ -56,6 +57,7 @@ interface Props {
   dayPlans: DayPlan[];
   initialDay?: string;
   autoStart?: boolean;
+  resume?: boolean;
   onAutoStartConsumed?: () => void;
   onExit?: () => void;
   onCancel?: () => void;
@@ -85,16 +87,29 @@ const getMuscleIntensity = (sets: number) => sets >= 6
     ? MUSCLE_INTENSITY.medium
     : MUSCLE_INTENSITY.low;
 
-const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
+const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resume = false, onAutoStartConsumed, onExit, onCancel, onSessionModeChange }: Props) => {
+  const [resumeDraft] = useState(() => resume ? readActiveWorkout(userId) : null);
+  const [workoutView, setWorkoutViewState] = useState(() => getWorkoutView(userId));
+  const [openExercises, setOpenExercises] = useState<number[]>([]);
+  useEffect(() => {
+    const refresh = () => setWorkoutViewState(getWorkoutView(userId));
+    window.addEventListener(WORKOUT_VIEW_EVENT, refresh);
+    return () => window.removeEventListener(WORKOUT_VIEW_EVENT, refresh);
+  }, [userId]);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const today = DAYS_ORDER[todayIndex];
-  const [selectedDay, setSelectedDay] = useState<string>(() => initialDay && DAYS_ORDER.includes(initialDay) ? initialDay : today);
+  const [selectedDay, setSelectedDay] = useState<string>(() => resumeDraft?.plan.day ?? (initialDay && DAYS_ORDER.includes(initialDay) ? initialDay : today));
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseLogs, setExerciseLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousLogs, setPreviousLogs] = useState<Record<string, WorkoutSetLog[]>>({});
   const [previousSessionRpe, setPreviousSessionRpe] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-  const [restTimer, setRestTimer] = useState<number | null>(null);
+  const [restTimer, setRestTimerState] = useState<number | null>(null);
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
+  const setRestTimer = (seconds: number | null) => {
+    setRestEndsAt(seconds === null ? null : Date.now() + seconds * 1000);
+    setRestTimerState(seconds);
+  };
   const [restTarget, setRestTarget] = useState(0);
   const [rpeOpen, setRpeOpen] = useState(false);
   const [technique, setTechnique] = useState<{
@@ -138,7 +153,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     exercise_type?: string | null;
     image_url?: string | null;
     video_url?: string | null;
-    tracking_mode?: string | null;
+    tracking_mode?: ExerciseTrackingMode | null;
     series: number;
     reps: number;
     rest: string;
@@ -157,8 +172,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   // El día identifica la rutina; la fecha identifica cuándo se entrena de verdad.
   // Se mantiene estable durante la sesión, incluso si pasa la medianoche.
   const currentDate = formatLocalDate(new Date());
-  const [selectedDate, setSelectedDate] = useState(currentDate);
-  const currentPlan = dayPlans.find((p) => p.day === selectedDay);
+  const [selectedDate, setSelectedDate] = useState(resumeDraft?.date ?? currentDate);
+  const currentPlan = resumeDraft?.plan.day === selectedDay ? resumeDraft.plan : dayPlans.find((p) => p.day === selectedDay);
   // En modo libre usamos un plan virtual con los ejercicios añadidos manualmente
   const freePlan = selectedDay === FREE_DAY && freeExercises.length > 0
     ? { day: FREE_DAY, type: "gimnasio" as const, exercises: freeExercises, routine_name: "Sesión libre", muscle_focus: null, sport: null, intensity: null, duration: null }
@@ -178,20 +193,22 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     }
     setStarted(true);
     setExpandedExercise(exerciseIndex);
+    setOpenExercises([exerciseIndex]);
     onSessionModeChange?.(true);
   };
 
   useEffect(() => {
-    if (!started && !workoutCompleted && selectedDate !== currentDate) {
+    if (!resumeDraft && !started && !workoutCompleted && selectedDate !== currentDate) {
       setLogsReady(false);
       setSelectedDate(currentDate);
     }
-  }, [currentDate, selectedDate, started, workoutCompleted]);
+  }, [currentDate, selectedDate, started, workoutCompleted, resumeDraft]);
 
   // Start with a clean overview; the first exercise opens when the user starts.
   useEffect(() => {
     setStarted(false);
     setExpandedExercise(null);
+    setOpenExercises([]);
     setRestTimer(null);
     setTechnique(null);
     setSwaps({});
@@ -206,6 +223,23 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   // Load existing logs + previous session
   useEffect(() => {
     let active = true;
+    const restoreOfflineDraft = () => {
+      if (!resumeDraft || resumeDraft.date !== selectedDate || resumeDraft.plan.day !== selectedDay) return false;
+      setExerciseLogs(resumeDraft.logs);
+      setSwaps(resumeDraft.swaps ?? {});
+      setSupersetLinks(resumeDraft.supersetLinks ?? {});
+      setStarted(true);
+      setExpandedExercise(resumeDraft.expandedExercise ?? 0);
+      setOpenExercises([resumeDraft.expandedExercise ?? 0]);
+      setRestEndsAt(resumeDraft.restEndsAt);
+      setRestTimerState(remainingRestSeconds(resumeDraft.restEndsAt));
+      setRestTarget(resumeDraft.restTarget);
+      setLogsReady(true);
+      setCompletionReady(true);
+      setLoadError(false);
+      onSessionModeChange?.(true);
+      return true;
+    };
     const loadLogs = async () => {
       setLogsReady(false);
       setCompletionReady(false);
@@ -243,6 +277,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
 
       if (!active) return;
       if (currentResult.error || completionResult.error || previousResult.error) {
+        if (restoreOfflineDraft()) return;
         setLoadError(true);
         setCompletionReady(true);
         toast.error("No se pudo cargar tu sesión e historial. No se sobrescribirá ningún registro; comprueba la conexión e inténtalo de nuevo.");
@@ -286,11 +321,29 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       } else {
         setPreviousLogs({});
       }
+      const draft = readActiveWorkout(userId);
+      if (!completionResult.data && draft?.date === selectedDate && draft.plan.day === selectedDay) {
+        setExerciseLogs(draft.logs);
+        setSwaps(draft.swaps ?? {});
+        setSupersetLinks(draft.supersetLinks ?? {});
+        if (resumeDraft) {
+          setStarted(true);
+          setExpandedExercise(draft.expandedExercise ?? 0);
+          setOpenExercises([draft.expandedExercise ?? 0]);
+          setRestEndsAt(draft.restEndsAt);
+          setRestTimerState(remainingRestSeconds(draft.restEndsAt));
+          setRestTarget(draft.restTarget);
+          onSessionModeChange?.(true);
+        }
+      } else if (completionResult.data && draft?.date === selectedDate && draft.plan.day === selectedDay) {
+        clearActiveWorkout(userId);
+      }
       setLoadError(false);
       setLogsReady(true);
     };
     void loadLogs().catch(() => {
       if (!active) return;
+      if (restoreOfflineDraft()) return;
       setLoadError(true);
       setCompletionReady(true);
       toast.error("No se pudo cargar tu sesión e historial. No se sobrescribirá ningún registro; comprueba la conexión e inténtalo de nuevo.");
@@ -324,27 +377,47 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     if (currentPlan?.type === "gimnasio" && !workoutCompleted && !loadError) {
       setStarted(true);
       setExpandedExercise(0);
+      setOpenExercises([0]);
       onSessionModeChange?.(true);
     }
     onAutoStartConsumed?.();
   }, [autoStart, currentDate, currentPlan?.type, loadError, logsReady, onAutoStartConsumed, onSessionModeChange, selectedDate, selectedDay, started, today, workoutCompleted]);
 
-  // Rest timer countdown (sin avisos de texto: vibración al terminar)
+  // Absolute deadline: suspended timers cannot extend the athlete's rest.
   useEffect(() => {
-    if (restTimer === null || restTimer <= 0) return;
-    const interval = setInterval(() => {
-      setRestTimer((prev) => {
-        if (prev === null || prev <= 1) {
-          clearInterval(interval);
-          try { navigator.vibrate?.([200, 100, 200]); } catch { /* noop */ }
-          void hapticNotify("success");
-          return null;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [restTimer !== null]);
+    if (restEndsAt === null) return;
+    const sync = () => {
+      const remaining = remainingRestSeconds(restEndsAt);
+      setRestTimerState(remaining);
+      if (remaining === null) {
+        setRestEndsAt(null);
+        try { navigator.vibrate?.([200, 100, 200]); } catch { /* noop */ }
+        void hapticNotify("success");
+      }
+    };
+    sync();
+    const interval = window.setInterval(sync, 250);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("pageshow", sync);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("pageshow", sync);
+    };
+  }, [restEndsAt]);
+
+  useEffect(() => {
+    if (!started || !logsReady || workoutCompleted || activePlan?.type !== "gimnasio") return;
+    const saved = saveActiveWorkout({ version: 1, userId, date: selectedDate, plan: activePlan,
+      logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget });
+    if (!saved) setSaveError(true);
+  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget]);
+
+  useEffect(() => {
+    if (started && expandedExercise !== null) {
+      setOpenExercises((open) => open.includes(expandedExercise) ? open : [...open, expandedExercise]);
+    }
+  }, [started, expandedExercise]);
 
   // Copia siempre fresca de las series: el efecto de abajo la lee al acabar el
   // descanso sin depender de `exerciseLogs` en sus dependencias.
@@ -390,12 +463,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
   }, [started, workoutCompleted, expandedExercise, currentPlan, exerciseMetadata]);
 
   const adjustRest = (delta: number) => {
-    setRestTimer((prev) => {
-      if (prev === null) return prev;
-      const next = Math.max(5, prev + delta);
-      if (next > restTarget) setRestTarget(next);
-      return next;
-    });
+    const remaining = remainingRestSeconds(restEndsAt);
+    if (remaining === null) return;
+    const next = Math.max(5, remaining + delta);
+    setRestTimer(next);
+    if (next > restTarget) setRestTarget(next);
   };
 
   // Pantalla siempre encendida durante la sesión
@@ -736,6 +808,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       onSessionModeChange?.(false);
       onCancel?.();
       void hapticNotify("success");
+      clearActiveWorkout(userId);
       toast.success("Entrenamiento terminado. Tu progreso ya está guardado.");
     } catch {
       setSaveError(true);
@@ -789,6 +862,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
       });
       if (completionError) throw completionError;
       setSessionRpe(rpe);
+      clearActiveWorkout(userId);
       setWorkoutCompleted(true);
       setStarted(false);
       setExpandedExercise(null);
@@ -931,8 +1005,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
     );
   };
 
-  // En sesión solo se pinta el ejercicio en foco; fuera de ella, la lista completa.
-  const focusMode = started && expandedExercise !== null;
+  const focusMode = started && workoutView === "focus" && expandedExercise !== null;
 
   return (
     // En sesión ocupa la pantalla entera (el shell no pone barra ni pestañas): la barra
@@ -1170,7 +1243,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
           )}
 
           {/* Modo foco: visor del ejercicio activo + carrusel de toda la sesión */}
-          {started && !workoutCompleted && completionReady && !loadError && expandedExercise !== null && (() => {
+          {focusMode && !workoutCompleted && completionReady && !loadError && expandedExercise !== null && (() => {
             const active = currentPlan.exercises?.[expandedExercise];
             if (!active) return null;
             const meta = exerciseMetadata.byId[active.exercise_id] || exerciseMetadata.byName[active.name];
@@ -1242,11 +1315,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
           {!focusMode && (currentPlan.exercises?.length ?? 0) > 0 && (
             <h3 className="px-4 pb-1.5 type-group-header">Ejercicios</h3>
           )}
-          <div className={focusMode ? "" : "overflow-hidden rounded-2xl bg-card"}>
+          <div className={started && !focusMode ? "space-y-3" : focusMode ? "" : "overflow-hidden rounded-2xl bg-card"}>
           {(currentPlan.exercises || []).map((ex, i) => {
-            const isExpanded = expandedExercise === i;
-            if (started && expandedExercise !== null && !isExpanded) return null;
-            const focused = started && isExpanded;
+            const isExpanded = workoutView === "list" ? openExercises.includes(i) : expandedExercise === i;
+            if (focusMode && expandedExercise !== i) return null;
+            const focused = focusMode && isExpanded;
             const sets = exerciseLogs[ex.name] || [];
             const doneSets = sets.filter((s) => s.done).length;
             // Minimalismo: las acciones (bajada / calentamiento) solo se ofrecen
@@ -1287,20 +1360,24 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
               .join(" → ");
 
             return (
-              <div key={`${selectedDay}-${i}`}>
+              <div key={`${selectedDay}-${i}`} className={started && !focusMode ? "overflow-hidden rounded-lg border border-border bg-card" : ""}>
                 {/* Exercise header: fila de lista en el resumen, título del ejercicio en foco */}
-                <button
+                <Button
+                  variant="ghost"
+                  aria-expanded={started ? isExpanded : undefined}
                   onClick={() => {
                     if (!started) {
                       void hapticTap();
                       startWorkout(i);
+                    } else if (workoutView === "list") {
+                      setOpenExercises((open) => open.includes(i) ? open.filter((index) => index !== i) : [...open, i]);
                     } else {
                       setExpandedExercise(i);
                     }
                   }}
                   className={focused
-                    ? "flex w-full cursor-default items-start text-left"
-                    : "flex w-full items-center gap-3 pl-4 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
+                    ? "flex h-auto w-full cursor-default items-start whitespace-normal p-0 text-left"
+                    : "flex h-auto w-full items-center gap-3 whitespace-normal p-0 pl-3 text-left transition-colors duration-150 active:bg-accent has-[[role=button]:active]:bg-transparent"}
                 >
                   {/* Miniatura única de ejercicio (misma que en el resto de la app); en foco ya está el visor */}
                   {!focused && <ExerciseThumb image={metadata?.image_url || ex.image_url} video={exerciseVideo} name={ex.name} completed={allDone} />}
@@ -1399,7 +1476,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                     </span>
                   </div>
                   </div>
-                </button>
+                </Button>
 
                 {/* Expanded set tracking */}
                 <AnimatePresence initial={false}>
@@ -1411,7 +1488,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      <div className="pt-4">
+                      <div className="px-2 pb-3 pt-2">
                         {/* Sugerencia de sobrecarga progresiva y cálculo de la siguiente carga */}
                         {progression && !allDone && (
                           <div className="mb-3.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card px-3.5 py-2.5 shadow-sm">
@@ -1485,7 +1562,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} className="pl-3">
+                          <div key={si} className={`pl-3 ${expandedExercise === i && si === firstPendingIndex ? "rounded-lg ring-1 ring-inset ring-primary/50 bg-primary/5" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
@@ -1538,16 +1615,17 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                               </div>
 
                               {/* Done toggle: marca la serie entera (bajadas incluidas) y arranca el descanso */}
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
                                 onClick={() => toggleSetDone(ex.name, si, restSec)}
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
-                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full transition-opacity duration-150 active:opacity-60"
+                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60"
                               >
                                 <span className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-150 ${checkClass}`}>
                                   <Check className="h-[18px] w-[18px]" strokeWidth={3} aria-hidden="true" />
                                 </span>
-                              </button>
+                              </Button>
                             </div>
 
                             {livePR && (
@@ -1651,6 +1729,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, onAut
                           );
                         })}
                         </div>
+                        <Button type="button" variant="plain" className="mt-2 min-h-11 w-full" onClick={() => {
+                          const last = sets[sets.length - 1];
+                          setExerciseLogs((logs) => ({ ...logs, [ex.name]: [...(logs[ex.name] || []), {
+                            weight: last?.weight ?? ex.weight ?? "", reps: last?.reps ?? ex.reps, done: false,
+                          }] }));
+                          void hapticTap();
+                        }}><Plus className="h-4 w-4" aria-hidden="true" />Añadir serie</Button>
                       </div>
                     </motion.div>
                   )}

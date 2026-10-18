@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import type { DayPlan } from "@/types/training";
 import { hapticImpact, hapticNotify } from "@/lib/native";
 import WorkoutTracker from "./WorkoutTracker";
+import { readActiveWorkout } from "@/lib/activeWorkout";
+import { setWorkoutView } from "@/lib/workoutPreferences";
 
 const mocks = vi.hoisted(() => ({ writes: [] as { table: string; rows: unknown }[], completedDays: [] as string[], saveFails: false, toastError: vi.fn() }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
@@ -31,6 +33,7 @@ vi.mock("./RPEDialog", () => ({ default: () => null }));
 const plan = (day: string, name: string): DayPlan => ({ day, type: "gimnasio", routine_name: name, exercises: [{ exercise_id: name, name, series: 1, reps: 8, weight: "20", rest: "60 s" }] });
 const week = "Elige el día de la semana";
 beforeEach(() => {
+  localStorage.clear();
   vi.clearAllMocks(); mocks.writes = []; mocks.completedDays = []; mocks.saveFails = false;
   vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date("2026-10-04T12:00:00"));
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -38,6 +41,39 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("routine week navigation and saved session dates", () => {
+  it("recovers edited sets and the virtual free plan after unmounting", async () => {
+    const freePlan = plan("Lunes", "Remo libre");
+    const first = render(<WorkoutTracker userId="user" dayPlans={[freePlan]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo libre" }), { target: { value: "42" } });
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo libre" }));
+    expect(readActiveWorkout("user")?.logs["Remo libre"][0]).toMatchObject({ weight: "42", done: true });
+    first.unmount();
+    render(<WorkoutTracker userId="user" dayPlans={[]} resume />);
+    await waitFor(() => expect(screen.getByRole("textbox", { name: "Peso de la serie 1 de Remo libre" })).toHaveValue("42"));
+    expect(screen.getByRole("button", { name: "Desmarcar serie 1 de Remo libre" })).toBeVisible();
+  });
+  it("resynchronizes rest after 45 seconds without waiting for 45 interval ticks", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Remo")]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo" }));
+    vi.setSystemTime(new Date("2026-10-04T12:00:45"));
+    fireEvent(document, new Event("visibilitychange"));
+    expect(screen.getByRole("timer")).toHaveTextContent("0:15");
+    vi.setSystemTime(new Date("2026-10-04T12:01:00"));
+    fireEvent(document, new Event("visibilitychange"));
+    await waitFor(() => expect(screen.queryByRole("timer")).not.toBeInTheDocument());
+  });
+  it("keeps either view on the same set log and adds one working set", async () => {
+    render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Añadir serie" }));
+    expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
+    act(() => { setWorkoutView("user", "focus"); });
+    expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
+    act(() => { setWorkoutView("user", "list"); });
+    expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
+  });
   it("opens any routine from a rest Sunday without writing previewed sets", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} />);
     await waitFor(() => expect(screen.getByText("Día de descanso")).toBeVisible());
