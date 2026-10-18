@@ -44,7 +44,8 @@ describe("short public home", () => {
     const main = await screen.findByRole("main");
     expect(within(main).getByRole("link", { name: "Probar la demo" })).toHaveAttribute("href", "#demo");
     expect(main.querySelector("#demo")).not.toBeNull();
-    expect(await within(main).findByText("14,99 €")).toBeInTheDocument();
+    // Plus price appears in several pricing blocks on purpose; it must appear at least once.
+    expect((await within(main).findAllByText("14,99 €")).length).toBeGreaterThan(0);
     expect(within(main).getByText("49 €")).toBeInTheDocument();
     expect(within(main).getByRole("link", { name: "Ver la comparativa completa" })).toHaveAttribute("href", "/planes");
     expect(within(main).getAllByRole("button", { name: /\?$/ }).length).toBeGreaterThanOrEqual(4);
