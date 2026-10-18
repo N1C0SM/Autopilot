@@ -43,10 +43,9 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return undefined;
-          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return "react-vendor";
+          if (/[\\/]node_modules[\\/](react|react-dom|react-is|react-router|react-router-dom|scheduler|use-sync-external-store)[\\/]/.test(id)) return "react-vendor";
           if (id.includes("framer-motion")) return "motion";
           if (id.includes("@supabase")) return "supabase";
-          if (id.includes("recharts")) return "charts";
           return undefined;
         },
       },
