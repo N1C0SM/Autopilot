@@ -104,7 +104,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       setPrivacy((p) => ({ ...p, [key]: !value }));
       toast.error("No se pudo guardar la privacidad");
       void hapticNotify("error");
-    } else toast.success("Privacidad actualizada");
+    }
   };
 
   // Subscription
@@ -262,7 +262,6 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     const url = `${publicUrl.publicUrl}?t=${Date.now()}`;
     await supabase.from("profiles").update({ avatar_url: url }).eq("user_id", user.id);
     setAvatarUrl(url);
-    toast.success("Foto actualizada");
     setUploading(false);
   };
 
@@ -275,7 +274,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       if (emailErr) { toast.error("Error al cambiar email: " + emailErr.message); void hapticNotify("error"); setSaving(false); return; }
       toast.info("Se ha enviado un email de confirmación al nuevo correo");
     }
-    if (!error) { toast.success("Perfil guardado"); void hapticNotify("success"); }
+    if (!error) { void hapticNotify("success"); }
     else { toast.error("Error al guardar"); void hapticNotify("error"); }
     setSaving(false);
   };
@@ -312,7 +311,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       allergies: onboarding.allergies,
     }, { onConflict: "user_id" });
     if (!error) {
-      toast.success("Datos actualizados"); void hapticNotify("success");
+      void hapticNotify("success");
       window.dispatchEvent(new Event("autopilot:onboarding-updated"));
       const { data: sync } = await supabase.functions.invoke("sync-nutrition-macros");
       if (sync?.updated) window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
