@@ -18,7 +18,8 @@ vi.mock("react-helmet-async", () => ({ Helmet: () => null }));
 vi.mock("@/integrations/supabase/client", () => {
   const query = (table: string) => {
     const q: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "order", "limit"]) q[method] = () => q;
+    for (const method of ["select", "eq", "ilike", "order", "limit"]) q[method] = () => q;
+    q.maybeSingle = () => Promise.resolve({ data: null, error: null });
     q.then = (resolve: (value: unknown) => unknown) => Promise.resolve({ data: mocks.tables[table] ?? [], error: null }).then(resolve);
     return q;
   };
@@ -106,6 +107,8 @@ describe("resources screen", () => {
   });
 
   it("standalone keeps its title and a back button named by its visible text", async () => {
+    // Signed-in users get the app shell with «Atrás»; visitors get the public layout.
+    mocks.user = { id: "user" };
     render(<MemoryRouter><Recursos /></MemoryRouter>);
 
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
