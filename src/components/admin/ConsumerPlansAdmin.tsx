@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Field, FieldRow } from "./AdminOpsParts";
 
 import { refreshFreeCampaign, useFreeCampaign } from "@/lib/freeCampaign";
+import { useApkDownloadEnabled } from "@/lib/apkDownload";
 
 type PlanRow = {
   key: string; name: string; tagline: string; description: string; price: number; trial_days: number;
@@ -33,6 +34,15 @@ export default function ConsumerPlansAdmin() {
     else { await refreshFreeCampaign(); toast.success(active ? "Campaña Free activada" : "Configuración normal restaurada"); }
     setSavingCampaign(false);
   };
+  const [apkEnabled, setApkEnabled] = useApkDownloadEnabled();
+  const setApk = async (on: boolean) => {
+    const { data: settings } = await supabase.from("settings").select("id").limit(1).single();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = settings ? await (supabase.from("settings") as any).update({ apk_download_enabled: on }).eq("id", settings.id) : { error: true };
+    if (error) return toast.error("No se pudo cambiar");
+    setApkEnabled(on);
+    toast.success(on ? "Página de descarga activada" : "Página de descarga oculta");
+  };
 
   const load = async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,7 +63,8 @@ export default function ConsumerPlansAdmin() {
 
   return (
     <section className="space-y-4">
-      <ListGroup><ListRow title="Campaña Free / Ocultar Plus" subtitle="Oculta ofertas y cobros de planes. Abre sobrecarga progresiva y nutrición básica, sin chat ni calendario. No cambia suscripciones existentes." trailing={<Switch aria-label="Campaña Free / Ocultar Plus" checked={campaign} disabled={savingCampaign} onCheckedChange={(v) => { void hapticSelection(); void setCampaign(v); }} />} /></ListGroup>
+      <ListGroup><ListRow title="Campaña Free / Ocultar Plus" subtitle="Oculta ofertas y cobros de planes. Abre sobrecarga progresiva y nutrición básica, sin chat ni calendario. No cambia suscripciones existentes." trailing={<Switch aria-label="Campaña Free / Ocultar Plus" checked={campaign} disabled={savingCampaign} onCheckedChange={(v) => { void hapticSelection(); void setCampaign(v); }} />} />
+        <ListRow title="Página de descarga del APK (/app)" subtitle="Si la apagas, /app y /descargar llevan a la portada. Úsalo cuando estés en Google Play y App Store." trailing={<Switch aria-label="Página de descarga del APK" checked={apkEnabled !== false} disabled={apkEnabled === null} onCheckedChange={(v) => { void hapticSelection(); void setApk(v); }} />} /></ListGroup>
       <p className="type-subhead text-muted-foreground">Lo que cambies aquí se ve al momento en la portada y en /planes. Los enlaces de cobro siguen en Pagos.</p>
       <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
         {plans.map((p) => {
