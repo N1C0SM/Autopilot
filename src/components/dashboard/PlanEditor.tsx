@@ -201,11 +201,10 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
       open={open}
       onOpenChange={onOpenChange}
       title="Editar mi rutina"
-      description="Al guardar, tu rutina queda protegida frente al piloto automático."
       desktopClassName="sm:max-w-5xl"
       footer={
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div className="flex gap-2 md:mr-auto">
+        <div className="flex flex-col-reverse gap-1 md:flex-row md:items-center md:gap-2">
+          <div className="flex justify-center gap-1 md:mr-auto">
             {confirmReset ? (
               <>
                 <Button type="button" variant="destructive" className="min-h-11 flex-1" onClick={() => { setDraft([]); setConfirmReset(false); }}>Sí, vaciar semana</Button>
