@@ -62,7 +62,7 @@ describe("routine week navigation and saved session dates", () => {
     expect(screen.getByRole("timer")).toHaveTextContent("0:15");
     vi.setSystemTime(new Date("2026-10-04T12:01:00"));
     fireEvent(document, new Event("visibilitychange"));
-    expect(screen.queryByRole("timer")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("timer")).not.toBeInTheDocument());
   });
   it("keeps either view on the same set log and adds one working set", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[{ ...plan("Lunes", "Remo"), exercises: [...(plan("Lunes", "Remo").exercises || []), ...(plan("Lunes", "Press").exercises || [])] }]} initialDay="Lunes" />);

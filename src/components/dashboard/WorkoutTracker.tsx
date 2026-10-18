@@ -223,6 +223,23 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   // Load existing logs + previous session
   useEffect(() => {
     let active = true;
+    const restoreOfflineDraft = () => {
+      if (!resumeDraft || resumeDraft.date !== selectedDate || resumeDraft.plan.day !== selectedDay) return false;
+      setExerciseLogs(resumeDraft.logs);
+      setSwaps(resumeDraft.swaps ?? {});
+      setSupersetLinks(resumeDraft.supersetLinks ?? {});
+      setStarted(true);
+      setExpandedExercise(resumeDraft.expandedExercise ?? 0);
+      setOpenExercises([resumeDraft.expandedExercise ?? 0]);
+      setRestEndsAt(resumeDraft.restEndsAt);
+      setRestTimerState(remainingRestSeconds(resumeDraft.restEndsAt));
+      setRestTarget(resumeDraft.restTarget);
+      setLogsReady(true);
+      setCompletionReady(true);
+      setLoadError(false);
+      onSessionModeChange?.(true);
+      return true;
+    };
     const loadLogs = async () => {
       setLogsReady(false);
       setCompletionReady(false);
@@ -260,6 +277,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
       if (!active) return;
       if (currentResult.error || completionResult.error || previousResult.error) {
+        if (restoreOfflineDraft()) return;
         setLoadError(true);
         setCompletionReady(true);
         toast.error("No se pudo cargar tu sesión e historial. No se sobrescribirá ningún registro; comprueba la conexión e inténtalo de nuevo.");
@@ -325,6 +343,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     };
     void loadLogs().catch(() => {
       if (!active) return;
+      if (restoreOfflineDraft()) return;
       setLoadError(true);
       setCompletionReady(true);
       toast.error("No se pudo cargar tu sesión e historial. No se sobrescribirá ningún registro; comprueba la conexión e inténtalo de nuevo.");
