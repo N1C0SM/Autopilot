@@ -12,7 +12,8 @@ import { Progress } from "@/components/ui/progress";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import NavBar from "@/components/native/NavBar";
 import { toast } from "sonner";
-import type { DayPlan, ExerciseTrackingMode } from "@/types/training";
+import type { DayPlan, ExerciseTrackingMode, GymExerciseEntry } from "@/types/training";
+import ExercisePicker from "./ExercisePicker";
 import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
@@ -443,7 +444,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     const saved = saveActiveWorkout({ version: 1, userId, date: selectedDate, plan: activePlan,
       logs: exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, startedAt: sessionStartedAt ?? undefined });
     if (!saved) setSaveError(true);
-  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt]);
+  }, [started, logsReady, workoutCompleted, userId, selectedDate, currentPlanSignature, sessionExtras, exerciseLogs, swaps, supersetLinks, expandedExercise, restEndsAt, restTarget, sessionStartedAt]);
 
   useEffect(() => {
     if (started && expandedExercise !== null) {
