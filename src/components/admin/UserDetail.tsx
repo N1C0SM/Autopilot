@@ -554,8 +554,6 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger hidden value="progress-dup" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
-              <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
               {canViewNutrition && <TabsTrigger value="nutrition" className={CHIP} onPointerDown={() => void hapticSelection()}>Nutrición</TabsTrigger>}
               {canMessageClient && <TabsTrigger value="chat" className={CHIP} onPointerDown={() => void hapticSelection()}>Chat</TabsTrigger>}
             </>
