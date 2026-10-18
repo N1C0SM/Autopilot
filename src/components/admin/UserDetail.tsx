@@ -550,9 +550,11 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
           {!restricted && <TabsTrigger value="info" className={CHIP} onPointerDown={() => void hapticSelection()}>Plan</TabsTrigger>}
           <TabsTrigger value="perfil" className={CHIP} onPointerDown={() => void hapticSelection()}>Perfil</TabsTrigger>
           {!restricted && <TabsTrigger value="acceso" className={CHIP} onPointerDown={() => void hapticSelection()}>Acceso</TabsTrigger>}
+          <TabsTrigger value="progress" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
+          <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
           {profile.payment_status === "paid" && (
             <>
-              <TabsTrigger value="progress" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
+              <TabsTrigger hidden value="progress-dup" className={CHIP} onPointerDown={() => void hapticSelection()}>Progreso</TabsTrigger>
               <TabsTrigger value="training" className={CHIP} onPointerDown={() => void hapticSelection()}>Entreno</TabsTrigger>
               {canViewNutrition && <TabsTrigger value="nutrition" className={CHIP} onPointerDown={() => void hapticSelection()}>Nutrición</TabsTrigger>}
               {canMessageClient && <TabsTrigger value="chat" className={CHIP} onPointerDown={() => void hapticSelection()}>Chat</TabsTrigger>}
@@ -813,6 +815,12 @@ const UserDetail = ({ profile, onBack, onUpdate, onDelete, restricted = false, i
                 title="Entrenador"
                 subtitle="Puede entrar al panel de entrenador y gestionar clientes asignados."
                 trailing={<Switch checked={isUserTrainer} onCheckedChange={toggleTrainerRole} disabled={roleLoading} aria-label="Asignar rol de entrenador" />}
+              />
+              <ListRow
+                icon={<FlaskConical className="text-muted-foreground" />}
+                title="Cuenta de prueba"
+                subtitle="No cuenta en métricas ni estadísticas."
+                trailing={<Switch checked={isTestAccount} onCheckedChange={toggleTestAccount} disabled={roleLoading} aria-label="Marcar como cuenta de prueba" />}
               />
             </ListGroup>
 
