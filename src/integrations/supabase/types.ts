@@ -1422,6 +1422,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           ebooks: Json
+          free_campaign: boolean
           guide_ebook_url: string | null
           hero_video_poster_url: string | null
           hero_video_url: string | null
@@ -1473,6 +1474,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           ebooks?: Json
+          free_campaign?: boolean
           guide_ebook_url?: string | null
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
@@ -1524,6 +1526,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           ebooks?: Json
+          free_campaign?: boolean
           guide_ebook_url?: string | null
           hero_video_poster_url?: string | null
           hero_video_url?: string | null
@@ -2207,6 +2210,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_free_campaign: { Args: never; Returns: boolean }
       get_my_consumer_plan: {
         Args: never
         Returns: {
