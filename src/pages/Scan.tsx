@@ -1138,6 +1138,16 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         const { error: removeError } = await supabase.storage.from("progress-photos").remove(paths);
         if (removeError) console.warn("No se pudieron borrar todas las fotos del scan", removeError);
       }
+      // Las fotos de progreso que venían de estos scans ya no existen: quitar sus filas
+      // para que Progreso → Físico no muestre tarjetas rotas.
+      if (paths.length > 0) {
+        const { error: photosError } = await supabase
+          .from("progress_photos")
+          .delete()
+          .eq("user_id", user.id)
+          .in("photo_url", paths);
+        if (photosError) console.warn("No se pudieron limpiar las fotos de progreso", photosError);
+      }
       const { error } = await supabase
         .from("scan_history")
         .delete()
