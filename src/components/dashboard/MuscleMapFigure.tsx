@@ -118,8 +118,11 @@ export function MuscleMapFigure({ side, muscles, intensityFor }: Props) {
             key={muscle}
             d={(details ?? [d]).join(" ")}
             fill={intensityFor(muscle)}
-            fillOpacity="0.85"
-            filter={`url(#${softenId})`}
+            fillOpacity="0.92"
+            stroke={intensityFor(muscle)}
+            strokeWidth="2"
+            strokeLinejoin="round"
+            style={{ filter: `drop-shadow(0 0 6px ${intensityFor(muscle)})` }}
           />
         ))}
       </g>
