@@ -281,7 +281,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     if (!user) {
       // Si intenta acceder al espacio personal sin sesión, mándalo a login.
       if (routeUserId) {
-        navigate(`/login?next=${encodeURIComponent(location.pathname)}`, { replace: true });
+        navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`, { replace: true });
       }
       return;
     }
@@ -858,7 +858,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       if (outcome === "session_expired") {
         toast.error("Tu sesión ha caducado. Inicia sesión de nuevo.");
         await supabase.auth.signOut({ scope: "local" });
-        navigate("/login");
+        navigate(`/login?next=${encodeURIComponent(scanBasePath)}`);
       } else if (outcome === "kept") {
         setCanApplyPlan(false);
       } else if (outcome === "applied" || outcome === "nutrition_only") {
@@ -904,7 +904,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         setPlanApplyState("idle");
         toast.error("Tu sesión ha caducado. Inicia sesión de nuevo para aplicar el scan.");
         await supabase.auth.signOut({ scope: "local" });
-        navigate("/login");
+        navigate(`/login?next=${encodeURIComponent(scanBasePath)}`);
         break;
       case "custom_kept":
         setPlanApplyState("idle");
@@ -1166,8 +1166,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
 
   // Destino del CTA: si el scan ya recomendó un plan, lo llevamos hasta el registro
   // para no obligar al usuario a elegir otra vez.
+  const scanBasePath = location.pathname + location.search;
   const signupWithPlan = (() => {
-    if (user) return "/dashboard";
+    if (user) return location.pathname + location.search;
     if (result) {
       const { rec } = recommendFor({
         bottleneck: result.bottleneck,
@@ -1175,9 +1176,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         monthsWithPlan: result.months_with_plan,
         plans,
       });
-      if (rec.kind === "plan") return `${rec.to}&from=scan`;
+      if (rec.kind === "plan") return `${rec.to}&from=scan&next=${encodeURIComponent(scanBasePath)}`;
     }
-    return "/signup?from=scan";
+    return `/signup?from=scan&next=${encodeURIComponent(scanBasePath)}`;
   })();
 
   if (isUnauthorized || isAwaitingAuth) {
@@ -2287,7 +2288,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         monthsWithPlan: result.months_with_plan,
                         plans,
                       });
-                      const to = user ? "/dashboard" : rec.kind === "plan" ? `${rec.to}&from=scan` : rec.to;
+                      const scanPath = location.pathname + location.search;
+                      const to = user ? scanPath : rec.kind === "plan" ? `${rec.to}&from=scan&next=${encodeURIComponent(scanPath)}` : `/signup?from=scan&next=${encodeURIComponent(scanPath)}`;
                       return (
                         <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(to); }}>
                           {user ? "Volver a mi cuenta" : `Empezar con ${rec.name}`}

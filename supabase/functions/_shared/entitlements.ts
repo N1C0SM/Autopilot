@@ -28,8 +28,15 @@ export function getConsumerPlan(profile: BillingProfile | null | undefined, now 
   return COACH_TIERS.includes(profile?.subscription_tier || "") ? "coach" : "plus";
 }
 
-/** Plus includes the AI nutrition plan; Coach adds human follow-up. */
-export function hasNutrition(profile: BillingProfile | null | undefined, now = Date.now()): boolean {
+/**
+ * Plus includes the AI nutrition plan; Coach adds human follow-up.
+ *
+ * Takes the same `freeCampaign` flag as `resolveFeatures` so entitlement checks
+ * cannot diverge: the free campaign grants nutrition, and both the feature set
+ * and this helper must agree on that.
+ */
+export function hasNutrition(profile: BillingProfile | null | undefined, now = Date.now(), freeCampaign = false): boolean {
+  if (freeCampaign) return true;
   return getConsumerPlan(profile, now) !== "free";
 }
 

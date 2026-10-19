@@ -17,6 +17,7 @@ const Welcome = lazy(() => import("./pages/Welcome"));
 const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const BookDownload = lazy(() => import("./pages/BookDownload"));
 const SharedBook = lazy(() => import("./pages/SharedBook"));
@@ -126,6 +127,7 @@ const App = () => (
             <Route path="/scan/user/:userId" element={<ProtectedRoute><Scan /></ProtectedRoute>} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/descarga-libro" element={<BookDownload />} />
             <Route path="/d/:token" element={<SharedBook />} />

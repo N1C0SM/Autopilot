@@ -14,7 +14,7 @@ import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, Aut
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
 import { useAuth } from "@/contexts/AuthContext";
 import { track } from "@/lib/analytics";
-import { authRedirect } from "@/lib/authRedirect";
+import { verifyEmailRedirect } from "@/lib/authRedirect";
 import { signInWithApple } from "@/lib/nativeAuth";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { readAnonScanId } from "@/lib/scanAttribution";
@@ -47,6 +47,7 @@ const Signup = () => {
   const fromQuiz = searchParams.get("from") === "quiz";
   const fromScan = searchParams.get("from") === "scan";
   const planParam = (searchParams.get("plan") || "").toLowerCase();
+  const nextParam = searchParams.get("next");
   const plans = usePlanAvailability();
   // A Coach link from an old email or ad falls back to Plus while Coach is hidden in Admin.
   const selectedPlan: "training" | "full" | null =
@@ -132,6 +133,21 @@ const Signup = () => {
       }
 
       const anonScanId = readAnonScanId();
+      const safeNext = (raw: string | null, fallback: string): string => {
+        if (!raw) return fallback;
+        let v = raw;
+        try { v = decodeURIComponent(v); } catch {}
+        if (!v.startsWith("/") || v.startsWith("//")) return fallback;
+        return v;
+      };
+      let nextAfterVerify: string;
+      if (nextParam) {
+        nextAfterVerify = safeNext(nextParam, "/onboarding-choice");
+      } else if (fromScan) {
+        nextAfterVerify = safeNext("/scan?from=signup", "/onboarding-choice");
+      } else {
+        nextAfterVerify = "/onboarding-choice";
+      }
       const { error } = await signUp(email.trim(), password, {
         display_name: name.trim(),
         referral_code: referralCode,
@@ -140,7 +156,7 @@ const Signup = () => {
         // Atribuye a la cuenta las tarjetas de escaneo subidas sin sesión desde
         // esta pestaña, para poder borrarlas al eliminar la cuenta (RGPD art. 17).
         ...(anonScanId ? { anon_scan_id: anonScanId } : {}),
-      });
+      }, { next: nextAfterVerify });
       if (error) {
         fail(error.message);
         setLoading(false);
@@ -163,7 +179,18 @@ const Signup = () => {
     void hapticTap();
     setResending(true);
     try {
-      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: authRedirect("/onboarding-choice") } });
+      const safeNext = (raw: string | null, fallback: string): string => {
+        if (!raw) return fallback;
+        let v = raw;
+        try { v = decodeURIComponent(v); } catch {}
+        if (!v.startsWith("/") || v.startsWith("//")) return fallback;
+        return v;
+      };
+      let nextAfterVerify: string;
+      if (nextParam) nextAfterVerify = safeNext(nextParam, "/onboarding-choice");
+      else if (fromScan) nextAfterVerify = safeNext("/scan?from=signup", "/onboarding-choice");
+      else nextAfterVerify = "/onboarding-choice";
+      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: verifyEmailRedirect(nextAfterVerify) } });
       if (error) { void hapticNotify("error"); toast.error("No se ha podido reenviar. Espera un momento y vuelve a intentarlo."); }
       else { setResendCooldown(60); void hapticNotify("success"); toast.success("Enlace reenviado. Revisa tu correo."); }
     } catch { void hapticNotify("error"); toast.error("No se ha podido reenviar el correo."); }
@@ -179,9 +206,14 @@ const Signup = () => {
         contentClassName="py-6"
         footer={
           <div className="space-y-3 pb-2">
-            <Button asChild size="lg" className="w-full">
-              <Link to="/login" onClick={() => void hapticTap()}>Iniciar sesión</Link>
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button asChild size="lg" className="w-full">
+                <Link to="/login" onClick={() => void hapticTap()}>Iniciar sesión</Link>
+              </Button>
+              <p className="text-center text-muted-foreground type-footnote">
+                Si ya hiciste clic en el enlace del correo, vuelve a la app web o hazlo desde el mismo dispositivo.
+              </p>
+            </div>
             <Button
               type="button"
               variant="plain"

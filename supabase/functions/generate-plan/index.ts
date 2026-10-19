@@ -1283,8 +1283,10 @@ serve(async (req) => {
     const macros = includeNutrition && weight !== null ? calcMacros(weight, goal, diet) : null;
     let meals = getMeals(goal, diet, onb.allergies);
 
-    // Try AI-personalized meals based on user's actual food preferences
-    if (macros && weight !== null && !freeCampaign) {
+    // Try AI-personalized meals based on user's actual food preferences.
+    // Gated by the same entitlement that grants the nutrition plan itself, so the
+    // free campaign gets personalized meals too instead of the generic bank.
+    if (macros && weight !== null && includeNutrition) {
       try {
       const aiResp = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-generate-meals`, {
         method: "POST",

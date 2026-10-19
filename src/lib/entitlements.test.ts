@@ -16,6 +16,17 @@ describe("free to paid entitlements", () => {
     expect(features.has("nutritionPlan")).toBe(false);
     expect(features.has("advancedTracking")).toBe(false);
   });
+  it("hasNutrition agrees with resolveFeatures about the campaign", () => {
+    const free = { payment_status: "unpaid", subscription_tier: "free" };
+    // The helper gates ai-generate-meals; if it diverged from the feature set a
+    // campaign user would get a nutrition plan the AI then refuses to fill.
+    expect(hasNutrition(free, Date.now(), true)).toBe(true);
+    expect(hasNutrition(free, Date.now(), false)).toBe(false);
+    expect(hasNutrition(free, Date.now(), true)).toBe(resolveFeatures("free", [], false, true).has("nutritionPlan"));
+    expect(hasNutrition(free, Date.now(), false)).toBe(resolveFeatures("free", [], false, false).has("nutritionPlan"));
+    // Campaign on never implies paid access.
+    expect(hasCoaching(free)).toBe(false);
+  });
   it("never treats free metadata, a selected plan or a legacy paid flag as a purchase", () => {
     expect(hasCoaching({ payment_status: "unpaid", subscription_tier: "training" })).toBe(false);
     expect(hasCoaching({ payment_status: "paid", subscription_tier: "free", subscription_status: "active" })).toBe(false);

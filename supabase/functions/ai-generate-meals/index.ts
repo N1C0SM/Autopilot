@@ -26,7 +26,10 @@ Deno.serve(async (req) => {
           .eq("user_id", user.id).single();
         const { data: isAdmin } = await admin.rpc("has_role", { _user_id: user.id, _role: "admin" });
         const { data: isTrainer } = await admin.rpc("has_role", { _user_id: user.id, _role: "trainer" });
-        authorized = hasNutrition(profile) || !!isAdmin || !!isTrainer;
+        // Same campaign flag generate-plan uses, so a free-campaign user is not
+        // denied here after being granted nutrition there.
+        const { data: freeCampaign } = await admin.rpc("get_free_campaign");
+        authorized = hasNutrition(profile, Date.now(), freeCampaign === true) || !!isAdmin || !!isTrainer;
       }
     }
     if (!authorized) {

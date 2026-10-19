@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
-import { authRedirect } from "@/lib/authRedirect";
+import { authRedirect, verifyEmailRedirect } from "@/lib/authRedirect";
 import { clearAnonScanId } from "@/lib/scanAttribution";
 import { toast } from "sonner";
 
@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, metadata?: Record<string, string>) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, metadata?: Record<string, string>, options?: { next?: string }) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -53,12 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, metadata?: Record<string, string>) => {
+  const signUp = async (email: string, password: string, metadata?: Record<string, string>, options?: { next?: string }) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: authRedirect("/onboarding"),
+        emailRedirectTo: verifyEmailRedirect(options?.next || "/onboarding-choice"),
         data: metadata,
       },
     });

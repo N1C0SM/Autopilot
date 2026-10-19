@@ -75,7 +75,7 @@ const Login = () => {
     if (error) {
       void hapticNotify("error");
       if (error.message.includes("Email not confirmed")) {
-        setFormError("Debes verificar tu correo electrónico antes de iniciar sesión.");
+        setFormError("Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada (o spam). Puedes volver a registrarte con ese email para reenviar el enlace.");
       } else if (error.message === "rate_limited") {
         setFormError("Demasiados intentos. Espera un minuto.");
       } else {

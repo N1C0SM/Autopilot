@@ -25,3 +25,23 @@ export function authRedirect(path = "/dashboard"): string {
   }
   return `${window.location.origin}${safePath}`;
 }
+
+/**
+ * URL de retorno del email de verificación de correo.
+ *
+ * Diferente de `authRedirect`: el enlace de confirmación de Supabase trae un
+ * `?code=` que hay que canjear por una sesión antes de continuar. Ese canje lo
+ * hace la ruta `/auth/callback` en web (en nativo lo sigue haciendo
+ * `NativeDeepLinks` vía el deep link). Sin esta ruta, abrir el correo en el
+ * navegador dejaba al usuario con el código sin canjear y sin sesión, con lo
+ * que acababa en el login otra vez.
+ *
+ * `next` es la ruta final tras canjear el código (por defecto el onboarding).
+ */
+export function verifyEmailRedirect(next = "/onboarding"): string {
+  const safeNext = next.startsWith("/") ? next : `/${next}`;
+  if (Capacitor.isNativePlatform()) {
+    return `${NATIVE_AUTH_CALLBACK}?next=${encodeURIComponent(safeNext)}`;
+  }
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`;
+}
