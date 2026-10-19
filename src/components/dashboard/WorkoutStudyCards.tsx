@@ -54,7 +54,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
   // Inmersivo: contenido directamente sobre la hoja. En línea: una sola superficie por ficha.
   const cardClass = immersive
     ? "flex h-full w-full shrink-0 snap-center flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
-    : "flex h-full w-full shrink-0 snap-center flex-col overflow-y-auto overscroll-contain rounded-2xl bg-card p-4 text-left [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+    : "w-full flex-col rounded-2xl bg-card p-4 text-left";
   const titleClass = immersive ? "type-title2" : "type-title3";
   const listClass = immersive ? "mt-5 space-y-5" : "mt-4 space-y-4";
   // El estado ocupa lo que queda de la ficha y se centra en ese hueco.
@@ -62,7 +62,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
   const isLast = activeCard === total - 1;
 
   return (
-    <section aria-label="Análisis de la sesión" className={immersive ? "flex h-full min-w-0 flex-col" : "flex min-h-0 min-w-0 flex-1 flex-col"}>
+    <section aria-label="Análisis de la sesión" className={immersive ? "flex h-full min-w-0 flex-col" : "flex min-w-0 flex-col"}>
       {immersive && (
         <div role="group" className="flex gap-1.5 px-5 pb-3 pr-14" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
           {Array.from({ length: total }, (_, i) => (
@@ -84,14 +84,32 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           ))}
         </div>
       )}
+      {!immersive && (
+        <div role="tablist" aria-label="Análisis de la sesión" className="mb-3 grid shrink-0 gap-1 rounded-xl bg-secondary p-1" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}>
+          {(intro ? ["Resumen", "Músculos", "Comparar", "Siguiente"] : ["Músculos", "Comparar", "Siguiente"]).map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              aria-selected={activeCard === i}
+              onClick={() => { void hapticSelection(); setActiveCard(i); }}
+              className={cn("truncate rounded-lg px-1 py-2 type-footnote font-semibold transition-colors", activeCard === i ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <div
         ref={scrollerRef}
-        onScroll={handleScroll}
-        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "min-h-0 flex-1 gap-3"}`}
+        onScroll={immersive ? handleScroll : undefined}
+        className={immersive
+          ? "flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "w-full [&>article]:hidden [&>article[data-active=true]]:flex"}
       >
-        {intro && <article className={cardClass}>{intro}</article>}
+        {intro && <article data-active={activeCard === 0} className={cardClass}>{intro}</article>}
 
-        <article className={cardClass}>
+        <article data-active={activeCard === 0 + (intro ? 1 : 0)} className={cardClass}>
           <h3 className={titleClass}>Músculos de hoy</h3>
           {muscles.length ? (
             // Inmersivo: figura grande y leyenda debajo. En línea la ficha es baja: figura y leyenda en paralelo.
@@ -125,7 +143,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           )}
         </article>
 
-        <article className={cardClass}>
+        <article data-active={activeCard === 1 + (intro ? 1 : 0)} className={cardClass}>
           <h3 className={titleClass}>Frente a la última vez</h3>
           {reviewItems.length ? (
             <ul className={listClass}>
@@ -149,7 +167,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           )}
         </article>
 
-        <article className={cardClass}>
+        <article data-active={activeCard === 2 + (intro ? 1 : 0)} className={cardClass}>
           <h3 className={titleClass}>Próximo paso</h3>
           <div className={listClass}>
             <FeatureRow icon={Target} title={nextStep} description="Tu plan no se modifica sin revisión." />
@@ -174,16 +192,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
             {isLast ? "Finalizar sesión" : "Siguiente"}
           </Button>
         </div>
-      ) : (
-        <div className="mt-3 flex shrink-0 justify-center gap-2" aria-label={`Ficha ${activeCard + 1} de ${total}`}>
-          {Array.from({ length: total }, (_, i) => i).map((index) => (
-            <span
-              key={index}
-              className={cn("h-[7px] w-[7px] rounded-full transition-colors duration-200", activeCard === index ? "bg-primary" : "bg-foreground/30")}
-            />
-          ))}
-        </div>
-      )}
+      ) : null}
     </section>
   );
 }

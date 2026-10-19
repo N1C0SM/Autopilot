@@ -73,9 +73,9 @@ const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 
 // `--accent` es ahora el gris de fila pulsada: el nivel alto se deriva del tinte.
 const MUSCLE_INTENSITY = {
-  low: { label: "Bajo", range: "1–2 series", fill: "color-mix(in srgb, hsl(var(--primary)) 65%, hsl(var(--muted-foreground)))" },
-  medium: { label: "Medio", range: "3–5 series", fill: "hsl(var(--primary))" },
-  high: { label: "Alto", range: "6+ series", fill: "color-mix(in srgb, hsl(var(--primary)) 70%, white)" },
+  low: { label: "Bajo", range: "1–2 series", fill: "hsl(45 95% 62%)" },
+  medium: { label: "Medio", range: "3–5 series", fill: "hsl(28 96% 54%)" },
+  high: { label: "Alto", range: "6+ series", fill: "hsl(4 88% 56%)" },
 };
 
 // Misma rejilla para la cabecera, las series y sus bajadas: n.º, previa, carga, valor, check.
@@ -1313,7 +1313,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
-            <div className="flex h-[calc(100dvh-var(--nav-bar-height)-var(--safe-top,0px)-var(--mobile-nav-content-padding,6rem)-13.5rem)] min-h-[22rem] flex-col overflow-hidden [@media(max-height:700px)]:h-auto [@media(max-height:700px)]:overflow-visible md:h-auto md:min-h-0 md:overflow-visible">
+            <div className="flex flex-col pb-4">
               <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
                 <div className="mb-3 flex shrink-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
