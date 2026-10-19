@@ -120,7 +120,7 @@ const Field = ({ header, children }: { header: string; children: React.ReactNode
 );
 
 const Configurator = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [c, setC] = useState<Cfg>(initial);
@@ -154,7 +154,7 @@ const Configurator = () => {
    * es de sesión, se manda a iniciar sesión de nuevo en vez de dejar al usuario
    * en un callejón sin salida.
    */
-  const reportSaveError = (error: { message?: string; code?: string; details?: string; hint?: string }) => {
+  const reportSaveError = async (error: { message?: string; code?: string; details?: string; hint?: string }) => {
     console.error("[configurator] no se pudo guardar el onboarding", {
       code: error.code,
       message: error.message,
@@ -162,6 +162,28 @@ const Configurator = () => {
       hint: error.hint,
       user_id: user?.id ?? null,
     });
+
+    // 23503 en onboarding_user_id_fkey = el JWT es válido pero la cuenta ya no
+    // existe en auth.users (sesión fantasma: la cuenta se borró o se reseteó el
+    // proyecto mientras esta pestaña conservaba el token). Ni reintentar ni
+    // recargar lo arreglan: hay que volver a crear la cuenta.
+    const ghostSession =
+      error.code === "23503" && /user_id_fkey/i.test(`${error.details ?? ""} ${error.message ?? ""}`);
+    if (ghostSession) {
+      try {
+        // Conservamos las respuestas para que no se pierdan al rehacer el alta.
+        localStorage.setItem(KEY, JSON.stringify({ data: c, createdAt: Date.now() }));
+      } catch { /* sin storage: se pierde el borrador, pero se puede rehacer */ }
+      toast.error("Tu cuenta ya no existe en el servidor (sesión antigua). Crea la cuenta de nuevo; tus respuestas se conservan.", { duration: 12000 });
+      try {
+        await signOut();
+      } catch {
+        // Si el cierre de sesión remoto falla, la navegación al alta sigue igualmente.
+      }
+      navigate("/signup?from=quiz&next=/onboarding", { replace: true });
+      return;
+    }
+
     const authProblem =
       error.code === "PGRST301" ||
       /jwt|expired|not authenticated|sesión/i.test(error.message ?? "");
@@ -203,7 +225,7 @@ const Configurator = () => {
         training_mode: c.mode, partner_email: c.mode === "pareja" ? c.partner_email : null,
       },
     }, { onConflict: "user_id" });
-    if (error) { setSaving(false); reportSaveError(error); return; }
+    if (error) { setSaving(false); void reportSaveError(error); return; }
     try { localStorage.removeItem(KEY); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     try {
       await Promise.all([
