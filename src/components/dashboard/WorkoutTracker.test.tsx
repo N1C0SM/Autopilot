@@ -29,7 +29,14 @@ vi.mock("@/components/ExerciseFocus", () => ({ default: () => null }));
 vi.mock("./WorkoutStoryShare", () => ({ WorkoutStoryShare: () => null }));
 vi.mock("./WorkoutStudyCards", () => ({ WorkoutStudyCards: ({ intro, onFinish }: { intro: ReactNode; onFinish?: () => void }) => <>{intro}<p>Resumen guardado</p>{onFinish && <button onClick={onFinish}>Cerrar resumen</button>}</> }));
 vi.mock("./ExerciseSwap", () => ({ ExerciseSwap: () => null }));
-vi.mock("./RPEDialog", () => ({ default: () => null }));
+vi.mock("./RPEDialog", () => ({
+  default: ({ open, onConfirm }: { open: boolean; onConfirm: (rpe: number | null) => void }) => open ? (
+    <>
+      <button onClick={() => onConfirm(7)}>Guardar esfuerzo</button>
+      <button onClick={() => onConfirm(null)}>Completar sin valorar esfuerzo</button>
+    </>
+  ) : null,
+}));
 const plan = (day: string, name: string): DayPlan => ({ day, type: "gimnasio", routine_name: name, exercises: [{ exercise_id: name, name, series: 1, reps: 8, weight: "20", rest: "60 s" }] });
 const week = "Elige el día de la semana";
 beforeEach(() => {
@@ -114,6 +121,8 @@ describe("routine week navigation and saved session dates", () => {
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
     expect(hapticImpact).toHaveBeenCalledWith("medium");
     fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
+    // El cierre pasa por el RPE: se puede omitir con este botón.
+    fireEvent.click(await screen.findByRole("button", { name: "Completar sin valorar esfuerzo" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cerrar resumen" }));
     expect(hapticNotify).toHaveBeenCalledWith("success");
     await waitFor(() => expect(screen.getByRole("tablist", { name: week })).toBeVisible());
@@ -171,4 +180,26 @@ describe("routine week navigation and saved session dates", () => {
     expect(reps).toHaveAttribute("pattern", "[0-9]*");
     for (const field of [weight, reps]) expect(field.className).toMatch(/\btype-headline\b/);
   });
+  it("pide confirmación antes de terminar con series pendientes", async () => {
+    const twoSets: DayPlan = { ...plan("Viernes", "Press banca"), exercises: [{ exercise_id: "press", name: "Press banca", series: 2, reps: 8, weight: "20", rest: "60 s" }] };
+    render(<WorkoutTracker userId="user" dayPlans={[twoSets]} initialDay="Viernes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Press banca" }));
+    fireEvent.click(screen.getByRole("button", { name: "Terminar entrenamiento" }));
+
+    expect(await screen.findByText("¿Terminar con series pendientes?")).toBeVisible();
+    expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Seguir entrenando" }));
+    await waitFor(() => expect(screen.queryByText("¿Terminar con series pendientes?")).not.toBeInTheDocument());
+    expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);
+  });
+
+  it("permite marcar y desmarcar un día de actividad", async () => {
+    const actividad: DayPlan = { day: "Viernes", type: "actividad", sport: "Running", intensity: "Media", duration: "30 min" };
+    render(<WorkoutTracker userId="user" dayPlans={[actividad]} initialDay="Viernes" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Marcar actividad como hecha" }));
+    await waitFor(() => expect(mocks.writes.find((write) => write.table === "day_completions")?.rows).toMatchObject({ day_label: "Viernes", completed_at: "2026-10-04" }));
+    expect(await screen.findByRole("button", { name: "Desmarcar actividad" })).toBeVisible();
+  });
+
 });

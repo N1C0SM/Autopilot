@@ -18,7 +18,7 @@ import RPEDialog from "./RPEDialog";
 import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
-import { getWorkoutRestSeconds, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
+import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
 import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
@@ -356,15 +356,15 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         setExerciseLogs(draft.logs);
         setSwaps(draft.swaps ?? {});
         setSupersetLinks(draft.supersetLinks ?? {});
-        if (resumeDraft) {
-          setStarted(true);
-          setExpandedExercise(draft.expandedExercise ?? 0);
-          setOpenExercises([draft.expandedExercise ?? 0]);
-          setRestEndsAt(draft.restEndsAt);
-          setRestTimerState(remainingRestSeconds(draft.restEndsAt));
-          setRestTarget(draft.restTarget);
-          onSessionModeChange?.(true);
-        }
+        // Si hay borrador de hoy, la sesión está abierta: se restaura siempre
+        // (también al recargar en la pestaña Entrenamiento, no solo desde Hoy).
+        setStarted(true);
+        setExpandedExercise(draft.expandedExercise ?? 0);
+        setOpenExercises([draft.expandedExercise ?? 0]);
+        setRestEndsAt(draft.restEndsAt);
+        setRestTimerState(remainingRestSeconds(draft.restEndsAt));
+        setRestTarget(draft.restTarget);
+        onSessionModeChange?.(true);
       } else if (completionResult.data && draft?.date === selectedDate && draft.plan.day === selectedDay) {
         clearActiveWorkout(userId);
       }
@@ -630,8 +630,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     if (!wasDone) {
       void hapticImpact("medium");
       if (continuesSuperset === null) {
-        const configuredRest = getWorkoutRestSeconds(userId);
-        const effectiveRest = configuredRest || restSeconds || 60;
+        // Si el usuario eligió un descanso global, manda; si no, el prescrito
+        // por el plan (antes el fallback estaba muerto y siempre eran 60 s).
+        const configuredRest = getWorkoutRestPreference(userId);
+        const effectiveRest = configuredRest ?? restSeconds ?? 60;
         setRestTarget(effectiveRest);
         setRestTimer(effectiveRest);
       }
@@ -837,36 +839,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   };
 
   const finishWorkout = async () => {
-    // Con al menos una serie hecha, terminar siempre cierra la sesión y abre las tarjetas de resumen.
-    const anyDone = Object.values(exerciseLogs).flat().some((s) => s.done);
-    if (anyDone) {
-      await handleRPEConfirm(sessionRpe);
+    // Si faltan series, primero se pregunta: un toque no debe cerrar el día.
+    if (completedSets < totalSets) {
+      setFinishIncompleteOpen(true);
       return;
     }
+    // Con todas hechas, el RPE (con opción de omitirlo) forma parte del cierre.
+    setRpeOpen(true);
+  };
 
-    setSaving(true);
-    setSaveStatus("saving");
-    cancelPendingAutosave();
-    try {
-      await persistLogs();
-      setSaveError(false);
-      setSaveStatus("saved");
-      setRestTimer(null);
-      setStarted(false);
-      setExpandedExercise(null);
-      onSessionModeChange?.(false);
-      onCancel?.();
-      void hapticNotify("success");
-      clearActiveWorkout(userId);
-      toast.success("Entrenamiento terminado. Tu progreso ya está guardado.");
-    } catch {
-      setSaveError(true);
-      setSaveStatus("error");
-      void hapticNotify("error");
-      toast.error("No se pudo guardar el entrenamiento. Comprueba la conexión e inténtalo de nuevo.");
-    } finally {
-      setSaving(false);
-    }
+  /** Cierra la sesión aunque falten series, tras la confirmación del usuario. */
+  const finishWorkoutConfirmed = async () => {
+    setFinishIncompleteOpen(false);
+    setRpeOpen(true);
   };
 
   const saveAndExit = async () => {
@@ -894,6 +879,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   };
 
   const [discardOpen, setDiscardOpen] = useState(false);
+  // Confirmación cuando se termina sin completar todas las series (P0).
+  const [finishIncompleteOpen, setFinishIncompleteOpen] = useState(false);
+  // Última sesión completada: permite deshacer desde el toast o la ficha final.
+  const lastCompletionRef = useRef<{ day: string; date: string } | null>(null);
 
   // Descartar: borra las series de hoy de este día y el borrador; no marca el día como hecho.
   const discardWorkout = async () => {
@@ -952,7 +941,12 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       setExpandedExercise(null);
       onSessionModeChange?.(false);
       setShowCompletionSummary(true);
+      lastCompletionRef.current = { day: selectedDay, date: selectedDate };
       void hapticNotify("success");
+      toast.success("Entrenamiento completado", {
+        duration: 8000,
+        action: { label: "Deshacer", onClick: () => { void undoCompletion(); } },
+      });
       try {
         await detectAndSavePRs();
       } catch {
@@ -963,6 +957,91 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       setSaveStatus("error");
       void hapticNotify("error");
       toast.error("No se pudo guardar el entrenamiento. Comprueba tu conexión e inténtalo de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Deshace el "día completado" y reabre la sesión con las series ya registradas. */
+  const undoCompletion = async () => {
+    const completion = lastCompletionRef.current ?? { day: selectedDay, date: selectedDate };
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("day_completions")
+        .delete()
+        .eq("user_id", userId)
+        .eq("day_label", completion.day)
+        .eq("completed_at", completion.date);
+      if (error) throw error;
+      lastCompletionRef.current = null;
+      setWorkoutCompleted(false);
+      setShowCompletionSummary(false);
+      if (activePlan?.type === "gimnasio") {
+        setStarted(true);
+        setExpandedExercise(0);
+        setOpenExercises([0]);
+        saveActiveWorkout({
+          version: 1,
+          userId,
+          date: selectedDate,
+          plan: activePlan,
+          logs: exerciseLogs,
+          swaps,
+          supersetLinks,
+          expandedExercise: 0,
+          restEndsAt: null,
+          restTarget,
+          startedAt: sessionStartedAt ?? Date.now(),
+        });
+        onSessionModeChange?.(true);
+      }
+      void hapticNotify("success");
+      toast.success("Sesión de hoy reabierta");
+    } catch {
+      void hapticNotify("error");
+      toast.error("No se pudo reabrir la sesión. Comprueba la conexión.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Marca/desmarca un día de actividad como completado (running, cardio…). */
+  const setActivityDone = async (done: boolean) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      if (done) {
+        const { error } = await supabase.from("day_completions").upsert({
+          user_id: userId,
+          day_label: selectedDay,
+          completed_at: selectedDate,
+          rpe: null,
+        });
+        if (error) throw error;
+        lastCompletionRef.current = { day: selectedDay, date: selectedDate };
+        setWorkoutCompleted(true);
+        void hapticNotify("success");
+        toast.success("Actividad marcada como hecha", {
+          duration: 8000,
+          action: { label: "Deshacer", onClick: () => { void setActivityDone(false); } },
+        });
+      } else {
+        const { error } = await supabase
+          .from("day_completions")
+          .delete()
+          .eq("user_id", userId)
+          .eq("day_label", selectedDay)
+          .eq("completed_at", selectedDate);
+        if (error) throw error;
+        lastCompletionRef.current = null;
+        setWorkoutCompleted(false);
+        void hapticSelection();
+        toast.success("Actividad desmarcada");
+      }
+    } catch {
+      void hapticNotify("error");
+      toast.error("No se pudo guardar la actividad. Comprueba la conexión.");
     } finally {
       setSaving(false);
     }
@@ -1243,6 +1322,19 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             <ListRow icon={<Flame />} title="Intensidad" value={currentPlan.intensity} />
             <ListRow icon={<Clock />} title="Duración" value={currentPlan.duration} />
           </ListGroup>
+          <Button
+            size="lg"
+            className="mt-4 w-full"
+            disabled={saving || !completionReady || loadError}
+            onClick={() => { void hapticTap(); void setActivityDone(!workoutCompleted); }}
+          >
+            {workoutCompleted ? "Actividad completada" : "Marcar actividad como hecha"}
+          </Button>
+          {workoutCompleted && (
+            <Button variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void setActivityDone(false); }} disabled={saving}>
+              Desmarcar actividad
+            </Button>
+          )}
         </section>
       )}
 
@@ -1333,6 +1425,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 </div>
                 <Button type="button" size="lg" className="mt-3 w-full shrink-0" onClick={() => { void hapticTap(); onExit?.(); }}>
                   Volver al inicio
+                </Button>
+                <Button type="button" variant="plain" size="sm" className="mt-1 w-full shrink-0" onClick={() => { void hapticTap(); void undoCompletion(); }} disabled={saving}>
+                  Reabrir sesión de hoy
                 </Button>
               </div>
             </div>
@@ -1903,11 +1998,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       ? "Guardado automáticamente"
                       : "Se guarda automáticamente"}
             </p>
-            {completedSets === totalSets && totalSets > 0 && (
-              <Button type="button" variant="plain" className="mb-4 w-full [.keyboard-open_&]:hidden" onClick={() => { void hapticTap(); setRpeOpen(true); }} disabled={saving}>
-                Valorar el esfuerzo (opcional)
-              </Button>
-            )}
             <Button
               onClick={() => { void hapticTap(); void finishWorkout(); }}
               disabled={saving || completedSets === 0}
@@ -1938,6 +2028,22 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
+      <Dialog open={finishIncompleteOpen} onOpenChange={setFinishIncompleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogTitle>¿Terminar con series pendientes?</DialogTitle>
+          <DialogDescription>
+            Te quedan {(totalSets - completedSets)} de {totalSets} series. Puedes terminarlo igualmente o seguir entrenando.
+          </DialogDescription>
+          <div className="mt-2 flex flex-col gap-2">
+            <Button onClick={() => void finishWorkoutConfirmed()} disabled={saving}>
+              Terminar y guardar
+            </Button>
+            <Button variant="ghost" onClick={() => setFinishIncompleteOpen(false)}>
+              Seguir entrenando
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <DialogContent className="max-w-sm">
           <DialogTitle>¿Descartar entrenamiento?</DialogTitle>

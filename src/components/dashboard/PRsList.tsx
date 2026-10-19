@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Trophy } from "lucide-react";
+import { Trophy, WifiOff } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Skeleton } from "@/components/ui/skeleton";
+import { hapticTap } from "@/lib/native";
 
 interface PR {
   id: string;
@@ -21,31 +23,47 @@ interface Props {
 const PRsList = ({ userId }: Props) => {
   const [prs, setPrs] = useState<PR[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0);
+
+  const retry = useCallback(() => {
+    void hapticTap();
+    setReload((value) => value + 1);
+  }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
-      const { data } = await supabase
+      setLoading(true);
+      setLoadError(false);
+      const { data, error } = await supabase
         .from("personal_records")
         .select("*")
         .eq("user_id", userId)
         .order("estimated_1rm", { ascending: false, nullsFirst: false })
         .limit(50);
 
-      if (data) {
-        // Group by exercise, keep best 1RM
-        const best: Record<string, PR> = {};
-        for (const pr of data as PR[]) {
-          const key = pr.exercise_name;
-          if (!best[key] || (pr.estimated_1rm ?? 0) > (best[key].estimated_1rm ?? 0)) {
-            best[key] = pr;
-          }
-        }
-        setPrs(Object.values(best).sort((a, b) => (b.estimated_1rm ?? 0) - (a.estimated_1rm ?? 0)));
+      if (cancelled) return;
+      // Un fallo de red no puede parecer «Sin récords aún»: se muestra error y reintento.
+      if (error || !data) {
+        setLoadError(true);
+        setLoading(false);
+        return;
       }
+      // Group by exercise, keep best 1RM
+      const best: Record<string, PR> = {};
+      for (const pr of data as PR[]) {
+        const key = pr.exercise_name;
+        if (!best[key] || (pr.estimated_1rm ?? 0) > (best[key].estimated_1rm ?? 0)) {
+          best[key] = pr;
+        }
+      }
+      setPrs(Object.values(best).sort((a, b) => (b.estimated_1rm ?? 0) - (a.estimated_1rm ?? 0)));
       setLoading(false);
     };
-    load();
-  }, [userId]);
+    void load();
+    return () => { cancelled = true; };
+  }, [userId, reload]);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" });
@@ -66,6 +84,24 @@ const PRsList = ({ userId }: Props) => {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div role="alert">
+        <EmptyState
+          icon={WifiOff}
+          title="No se han podido cargar tus récords"
+          description="Tus marcas siguen guardadas. Comprueba la conexión y vuelve a intentarlo."
+          className="min-h-[55dvh]"
+          action={
+            <Button type="button" variant="plain" onClick={retry}>
+              Reintentar
+            </Button>
+          }
+        />
       </div>
     );
   }

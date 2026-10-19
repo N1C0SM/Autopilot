@@ -15,12 +15,18 @@ export function setWorkoutView(userId: string, view: WorkoutView) {
 
 const restKey = (userId: string) => `autopilot:workout-rest:${userId}`;
 
-export const getWorkoutRestSeconds = (userId: string): number => {
-  const stored = Number(localStorage.getItem(restKey(userId)));
-  return Number.isFinite(stored) && stored >= 15 && stored <= 600
-    ? Math.round(stored)
-    : DEFAULT_REST_SECONDS;
+/** Preferencia global de descanso, o null si el usuario no ha elegido ninguna. */
+export const getWorkoutRestPreference = (userId: string): number | null => {
+  try {
+    const stored = Number(localStorage.getItem(restKey(userId)));
+    return Number.isFinite(stored) && stored >= 15 && stored <= 600 ? Math.round(stored) : null;
+  } catch {
+    return null;
+  }
 };
+
+export const getWorkoutRestSeconds = (userId: string): number =>
+  getWorkoutRestPreference(userId) ?? DEFAULT_REST_SECONDS;
 
 export const setWorkoutRestSeconds = (userId: string, seconds: number) => {
   const safeSeconds = Math.min(600, Math.max(15, Math.round(seconds)));

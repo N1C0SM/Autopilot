@@ -2,32 +2,77 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPanel from "./SettingsPanel";
+
+type Meal = { name: string; description: string };
+const defaultMeals: Meal[] = [
+  { name: "Desayuno", description: "Avena con plátano" },
+  { name: "Almuerzo", description: "Pollo con arroz" },
+  { name: "Merienda", description: "Yogur con nueces" },
+  { name: "Cena", description: "Salmón con verduras" },
+];
+
 const mocks = vi.hoisted(() => ({
-  user: { id: "user", email: "test@example.com" },
+  user: { id: "user", email: "test@example.com", new_email: null as string | null },
   tier: "full", paid: "paid", status: "active", end: null as string | null, travelUntil: null as string | null,
   ios: false, plan: null as string | null, avatar: "" as string,
   availability: { days: "2", hours: "0.92", training_days: [1, 3], auto_calculated: true, sport_schedules: { running: "18:00" } } as Record<string, unknown>,
+  onboarding: {} as Record<string, unknown>,
   saves: [] as Record<string, unknown>[],
   updates: [] as { table: string; row: Record<string, unknown> }[],
   toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
+  // A-01: orden de llamadas (Auth antes que profiles) y respuesta configurable de Auth.
+  calls: [] as string[],
+  authError: null as { message: string } | null,
+  confirmedEmail: null as string | null,
+  syncResponse: { data: { updated: false, reason: "no_access" } as unknown, error: null as unknown },
+  mealsResponse: { data: { meals: [] as Meal[] } as unknown, error: null as unknown },
+  uploads: [] as { bucket: string; path: string; file: File }[],
+  uploadError: null as { message: string } | null,
+  invoked: [] as string[],
+  compressImage: vi.fn(async (file: File) => file),
 }));
 vi.mock("sonner", () => ({ toast: mocks.toast }));
 vi.mock("@/lib/platform", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/platform")>()), isIOSNative: () => mocks.ios }));
+vi.mock("@/lib/imageCompression", () => ({ compressImage: mocks.compressImage }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ user: mocks.user, signOut: vi.fn() }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
   from: (table: string) => {
     const query = { select: () => query, eq: () => query, maybeSingle: () => query,
-      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "profiles" ? { avatar_url: mocks.avatar, name: "Ana Ruiz", subscription_tier: mocks.tier, payment_status: mocks.paid, subscription_status: mocks.status, subscription_end: mocks.end, travel_mode_until: mocks.travelUntil, travel_equipment: "gomas" } : table === "onboarding" ? { availability: mocks.availability } : null, error: null }).then(resolve),
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: table === "profiles" ? { avatar_url: mocks.avatar, name: "Ana Ruiz", subscription_tier: mocks.tier, payment_status: mocks.paid, subscription_status: mocks.status, subscription_end: mocks.end, travel_mode_until: mocks.travelUntil, travel_equipment: "gomas" } : table === "onboarding" ? { availability: mocks.availability, ...mocks.onboarding } : null, error: null }).then(resolve),
       upsert: (row: Record<string, unknown>) => { mocks.saves.push(row); return Promise.resolve({ error: null }); },
-      update: (row: Record<string, unknown>) => { mocks.updates.push({ table, row }); return query; },
+      update: (row: Record<string, unknown>) => { mocks.updates.push({ table, row }); mocks.calls.push(`${table}.update`); return query; },
     }; return query;
   },
   rpc: () => Promise.resolve({ data: {} }),
-  functions: { invoke: (name: string) => Promise.resolve({ data: name === "check-subscription" && mocks.plan ? { plan: mocks.plan } : {} }) },
+  functions: { invoke: (name: string) => {
+    mocks.invoked.push(name);
+    if (name === "sync-nutrition-macros") return Promise.resolve(mocks.syncResponse);
+    if (name === "ai-generate-meals") return Promise.resolve(mocks.mealsResponse);
+    if (name === "check-subscription" && mocks.plan) return Promise.resolve({ data: { plan: mocks.plan }, error: null });
+    return Promise.resolve({ data: {}, error: null });
+  } },
+  auth: { updateUser: vi.fn(async (payload: { email?: string }) => {
+    mocks.calls.push("auth.updateUser");
+    if (mocks.authError) return { data: { user: null }, error: mocks.authError };
+    return { data: { user: { ...mocks.user, email: mocks.confirmedEmail ?? mocks.user.email } }, error: null };
+  }) },
+  storage: { from: (bucket: string) => ({
+    upload: (path: string, file: File) => {
+      mocks.uploads.push({ bucket, path, file });
+      return Promise.resolve({ error: mocks.uploadError });
+    },
+    getPublicUrl: (path: string) => ({ data: { publicUrl: `https://cdn.test/${bucket}/${path}` } }),
+  }) },
 } }));
 beforeEach(() => {
   mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.travelUntil = null; mocks.saves = []; mocks.updates = [];
   mocks.ios = false; mocks.plan = null; mocks.avatar = "";
+  mocks.user.email = "test@example.com"; mocks.user.new_email = null;
+  mocks.onboarding = {}; mocks.calls = []; mocks.invoked = [];
+  mocks.authError = null; mocks.confirmedEmail = null;
+  mocks.syncResponse = { data: { updated: false, reason: "no_access" }, error: null };
+  mocks.mealsResponse = { data: { meals: defaultMeals }, error: null };
+  mocks.uploads = []; mocks.uploadError = null; mocks.compressImage.mockClear();
   mocks.toast.error.mockClear(); mocks.toast.success.mockClear(); mocks.toast.info.mockClear();
 });
 afterEach(cleanup);
@@ -173,5 +218,159 @@ describe("settings profile avatar", () => {
     fireEvent.error(image);
     expect(button.querySelector("img")).toBeNull();
     expect(within(button).getByText("A")).toBeInTheDocument();
+  });
+});
+
+const fileInputOf = async (container: HTMLElement) => {
+  // La foto se pinta cuando termina la carga inicial del panel.
+  await screen.findByRole("button", { name: "Cambiar foto" });
+  const input = container.querySelector('input[type="file"]');
+  expect(input).toBeInstanceOf(HTMLInputElement);
+  return input as HTMLInputElement;
+};
+
+describe("settings profile save (A-01)", () => {
+  it("cambia el correo en Auth antes de tocar profiles y no lo guarda como confirmado si queda pendiente", async () => {
+    mocks.confirmedEmail = null; // Supabase mantiene el correo antiguo hasta la confirmación
+    show();
+    fireEvent.change(await screen.findByLabelText("Correo electrónico"), { target: { value: "nuevo@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar perfil" }));
+
+    await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Perfil guardado"));
+    expect(mocks.calls.indexOf("auth.updateUser")).toBeGreaterThanOrEqual(0);
+    expect(mocks.calls.indexOf("auth.updateUser")).toBeLessThan(mocks.calls.indexOf("profiles.update"));
+    // profiles solo recibe el nombre: el correo no está confirmado.
+    expect(mocks.updates.filter((u) => u.table === "profiles").map((u) => u.row)).toEqual([{ name: "Ana Ruiz" }]);
+    expect(mocks.toast.info).toHaveBeenCalledWith(expect.stringContaining("confirmación"));
+  });
+
+  it("guarda el correo en profiles cuando Auth lo acepta al momento", async () => {
+    mocks.confirmedEmail = "nuevo@example.com";
+    show();
+    fireEvent.change(await screen.findByLabelText("Correo electrónico"), { target: { value: "nuevo@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar perfil" }));
+
+    await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Perfil guardado"));
+    expect(mocks.updates.filter((u) => u.table === "profiles").map((u) => u.row)).toEqual([
+      { name: "Ana Ruiz", email: "nuevo@example.com" },
+    ]);
+    expect(mocks.toast.info).not.toHaveBeenCalled();
+  });
+
+  it("no escribe nada en profiles si Auth rechaza el cambio de correo", async () => {
+    mocks.authError = { message: "Email address is invalid" };
+    show();
+    fireEvent.change(await screen.findByLabelText("Correo electrónico"), { target: { value: "mal@correo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar perfil" }));
+
+    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith(expect.stringContaining("no parece válido")));
+    expect(mocks.updates).toHaveLength(0);
+    expect(mocks.toast.success).not.toHaveBeenCalled();
+  });
+
+  it("marca la fila como guardada y vuelve a permitir guardar al editar", async () => {
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: "Guardar perfil" }));
+    expect(await screen.findByText("Guardado")).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Nombre"), { target: { value: "Ana R." } });
+    expect(await screen.findByRole("button", { name: "Guardar perfil" })).toBeVisible();
+  });
+});
+
+describe("settings nutrition feedback (A-01 / N-01)", () => {
+  const saveNutritionChange = async () => {
+    mocks.onboarding = { weight: 80, goal: "lose_weight", nutrition_preferences: "keto" };
+    mocks.syncResponse = {
+      data: { updated: true, macros: { protein: 197, carbs: 41, fats: 148, calories: 2284 } },
+      error: null,
+    };
+    const view = show();
+    const weight = await screen.findByRole("spinbutton", { name: "Peso (kg)" });
+    expect(weight).toHaveValue(80);
+    fireEvent.change(weight, { target: { value: "82" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
+    await screen.findByRole("status");
+    return view;
+  };
+
+  it("informa de las macros actualizadas y avisa de que las comidas están desactualizadas", async () => {
+    await saveNutritionChange();
+    expect(mocks.toast.success).toHaveBeenCalledWith("Datos guardados");
+    expect(mocks.toast.success).toHaveBeenCalledWith("Macros actualizados");
+    expect(screen.getByRole("status")).toHaveTextContent(/plan de comidas está desactualizado/i);
+  });
+
+  it("regenera las comidas solo tras confirmarlo y las guarda en nutrition_plan", async () => {
+    const { container } = await saveNutritionChange();
+    expect(container).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText(/Recalcularemos el plan de comidas/)).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Regenerar comidas" }));
+
+    await waitFor(() => expect(mocks.invoked).toContain("ai-generate-meals"));
+    await waitFor(() =>
+      expect(mocks.updates.some((u) => u.table === "nutrition_plan" && Array.isArray(u.row.meals_json))).toBe(true),
+    );
+    await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Comidas actualizadas"));
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+  });
+
+  it("explica por qué no actualiza la nutrición cuando falta acceso", async () => {
+    mocks.onboarding = { weight: 80, goal: "lose_weight" };
+    show();
+    fireEvent.change(await screen.findByRole("spinbutton", { name: "Peso (kg)" }), { target: { value: "81" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
+
+    await waitFor(() => expect(mocks.toast.info).toHaveBeenCalledWith(expect.stringContaining("no la incluye")));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("no finge éxito si la sincronización de macros falla", async () => {
+    mocks.onboarding = { weight: 80, goal: "lose_weight" };
+    mocks.syncResponse = { data: null, error: { message: "network" } };
+    show();
+    fireEvent.change(await screen.findByRole("spinbutton", { name: "Peso (kg)" }), { target: { value: "81" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
+
+    await waitFor(() =>
+      expect(mocks.toast.error).toHaveBeenCalledWith("Tus datos se han guardado, pero no se pudo actualizar la nutrición. Inténtalo de nuevo."),
+    );
+  });
+});
+
+describe("settings avatar upload", () => {
+  it("rechaza archivos que no son imágenes sin comprimirlos", async () => {
+    const { container } = show();
+    fireEvent.change(await fileInputOf(container), { target: { files: [new File(["hola"], "nota.txt", { type: "text/plain" })] } });
+
+    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith("Ese archivo no es una imagen. Usa JPG, PNG o WebP."));
+    expect(mocks.compressImage).not.toHaveBeenCalled();
+    expect(mocks.uploads).toHaveLength(0);
+  });
+
+  it("rechaza una foto de más de 10 MB antes de comprimir", async () => {
+    const { container } = show();
+    const huge = new File([new Uint8Array(11 * 1024 * 1024)], "enorme.jpg", { type: "image/jpeg" });
+    fireEvent.change(await fileInputOf(container), { target: { files: [huge] } });
+
+    await waitFor(() => expect(mocks.toast.error).toHaveBeenCalledWith("La imagen es demasiado grande (máximo 10 MB)."));
+    expect(mocks.compressImage).not.toHaveBeenCalled();
+    expect(mocks.uploads).toHaveLength(0);
+  });
+
+  it("comprime la foto antes de subirla y confirma con un toast", async () => {
+    const { container } = show();
+    const original = new File(["foto-grande"], "foto.png", { type: "image/png" });
+    const compressed = new File(["foto-comprimida"], "foto.jpg", { type: "image/jpeg" });
+    mocks.compressImage.mockResolvedValueOnce(compressed);
+
+    fireEvent.change(await fileInputOf(container), { target: { files: [original] } });
+
+    await waitFor(() => expect(mocks.uploads).toHaveLength(1));
+    expect(mocks.compressImage).toHaveBeenCalledWith(original, expect.objectContaining({ maxDimension: 1024, mimeType: "image/jpeg" }));
+    expect(mocks.uploads[0]).toEqual({ bucket: "avatars", path: "user/avatar.jpg", file: compressed });
+    await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Foto actualizada"));
+    expect(mocks.updates.some((u) => u.table === "profiles" && typeof u.row.avatar_url === "string")).toBe(true);
   });
 });

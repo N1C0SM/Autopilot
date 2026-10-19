@@ -45,6 +45,23 @@ export function playRestBeep() {
 export const ACTIVE_WORKOUT_EVENT = "autopilot:active-workout-changed";
 const key = (userId: string) => `autopilot:active-session:${userId}`;
 
+/** Fecha local YYYY-MM-DD, la misma que se guarda en workout_logs.day_label/logged_at. */
+export function localDateKey(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/** True si el borrador corresponde al día de hoy. */
+export function isActiveWorkoutToday(workout: ActiveWorkout | null, now = new Date()): boolean {
+  return Boolean(workout) && workout!.date === localDateKey(now);
+}
+
+/** «lunes 13», para avisar de una sesión abierta de otro día. */
+export function formatDraftDate(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  if (!year || !month || !day) return dateKey;
+  return new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date(year, month - 1, day));
+}
+
 export function remainingRestSeconds(endsAt: number | null, now = Date.now()): number | null {
   if (endsAt === null) return null;
   const remaining = Math.ceil((endsAt - now) / 1000);

@@ -1,4 +1,5 @@
 import { forwardRef, useState } from "react";
+import { BookOpen } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import NavBar from "@/components/native/NavBar";
 import { hapticTap } from "@/lib/native";
@@ -9,6 +10,8 @@ interface Props {
   profileAvatar?: string;
   userId?: string;
   onSettings?: () => void;
+  /** Entrada a Recursos. Solo se pinta si el Dashboard pasa el handler. */
+  onResources?: () => void;
   /** El título pequeño se oculta mientras el título grande está a la vista. */
   titleVisible?: boolean;
   /** Material y línea inferior: solo con contenido bajo la barra. */
@@ -33,7 +36,7 @@ const HeaderAvatar = ({ name, src }: { name?: string; src?: string }) => {
 };
 
 const MobileHeader = forwardRef<HTMLElement, Props>(
-  ({ title, profileName, profileAvatar, userId, onSettings, titleVisible = true, solid = true, titleAsHeading = true }, ref) => {
+  ({ title, profileName, profileAvatar, userId, onSettings, onResources, titleVisible = true, solid = true, titleAsHeading = true }, ref) => {
     return (
       <NavBar
         ref={ref}
@@ -44,6 +47,19 @@ const MobileHeader = forwardRef<HTMLElement, Props>(
         solid={solid}
         trailing={
           <>
+            {onResources && (
+              <button
+                type="button"
+                onClick={() => {
+                  void hapticTap();
+                  onResources();
+                }}
+                aria-label="Recursos"
+                className="flex h-11 w-11 shrink-0 items-center justify-center text-foreground transition-opacity active:opacity-60"
+              >
+                <BookOpen className="h-5 w-5" strokeWidth={1.75} />
+              </button>
+            )}
             {userId && <NotificationsBell userId={userId} />}
             <button
               type="button"

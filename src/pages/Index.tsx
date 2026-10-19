@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import PublicLayout from "@/components/PublicLayout";
 import { track } from "@/lib/analytics";
-import { type PlanKey } from "@/config/tiers";
+import { COACH_CONTACT_CHANNEL, type PlanKey } from "@/config/tiers";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/lib/publicCopy";
 import PublicHeroPhone from "@/components/PublicHeroPhone";
@@ -142,7 +142,7 @@ export default function Index() {
             </div>
           </li>; })}
         </ol>
-        <p className="mt-8 max-w-2xl type-footnote text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: el análisis corporal por foto y el asistente de dudas.</p>
+        <p className="mt-8 max-w-2xl type-footnote text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: en el análisis corporal por foto.</p>
       </div>
     </section>
 
@@ -151,8 +151,8 @@ export default function Index() {
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div>
           <h2 id="fundador-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Quién está detrás</h2>
-          <p className="mt-4 type-body text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde por chat</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
-          <p className="mt-3 type-footnote text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas por chat no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
+          <p className="mt-4 type-body text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde {COACH_CONTACT_CHANNEL}</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
+          <p className="mt-3 type-footnote text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
         </div>
         <div>
           <h2 className="type-title2">Dudas frecuentes</h2>

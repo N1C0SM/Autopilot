@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from "react";
 import MobileHeader from "./MobileHeader";
 import MobileTabBar, { MobileTab } from "./MobileTabBar";
 import { useNavBarState, useStatusTapScrollTop } from "@/hooks/useNavBarState";
+import { registerBackButton } from "@/lib/native";
 
 interface Props {
   title: string;
@@ -13,6 +14,8 @@ interface Props {
   lockedTabs?: MobileTab[];
   hiddenTabs?: MobileTab[];
   onSettings?: () => void;
+  /** Entrada a Recursos (el Dashboard pasa el handler; en web también funciona). */
+  onResources?: () => void;
   workoutMode?: boolean;
   /**
    * Título grande de iOS: 34 pt al inicio del contenido, que se pliega en la barra
@@ -37,6 +40,7 @@ const MobileAppShell = ({
   lockedTabs,
   hiddenTabs,
   onSettings,
+  onResources,
   workoutMode = false,
   largeTitle = false,
   titleInContent = false,
@@ -69,6 +73,33 @@ const MobileAppShell = ({
     barRef,
   );
   useStatusTapScrollTop(scrollRef);
+
+  // Botón «atrás» de Android: vuelve a Hoy antes de salir de la app. En web
+  // `registerBackButton` es un no-op, así que no cambia el comportamiento del navegador.
+  const activeRef = useRef(active);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    // Promise.resolve: el wrapper es async hoy, pero el then no debe romper si algún
+    // test o plataforma lo sustituye por una función síncrona.
+    void Promise.resolve(registerBackButton(() => {
+      // false deja que Capacitor cierre la app (comportamiento nativo al estar en Hoy).
+      if (activeRef.current === "home") return false;
+      onChangeRef.current("home");
+      return true;
+    })).then((off) => {
+      if (cancelled) off();
+      else unsubscribe = off;
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
+
   const titleVisible = showLargeTitle || (followContentTitle && !contentTitleMissing) ? collapsed : true;
 
   return (
@@ -81,6 +112,7 @@ const MobileAppShell = ({
           profileAvatar={profileAvatar}
           userId={userId}
           onSettings={onSettings}
+          onResources={onResources}
           titleVisible={titleVisible}
           titleAsHeading={!showLargeTitle}
           solid={showLargeTitle ? collapsed : scrolled}

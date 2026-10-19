@@ -31,6 +31,7 @@ import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availabilit
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
 import { isIOSNative } from "@/lib/platform";
+import { compressImage } from "@/lib/imageCompression";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import type { Json } from "@/integrations/supabase/types";
 
@@ -41,6 +42,24 @@ const GOALS = [
   { value: "gain_muscle", label: "Ganar músculo" },
   { value: "improve_endurance", label: "Mejorar resistencia" },
 ];
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// La foto se comprime antes de subir: aceptamos el original de la cámara (hasta
+// 10 MB) y exigimos que el resultado comprimido quede por debajo de 2 MB.
+const AVATAR_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
+const AVATAR_MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+
+/** Los errores de Supabase Auth llegan en inglés; aquí se explican en español. */
+const emailChangeError = (message: string): string => {
+  const text = message.toLowerCase();
+  if (text.includes("rate limit") || text.includes("too many")) return "Has pedido demasiados cambios de correo. Espera unos minutos y vuelve a intentarlo.";
+  if (text.includes("already") || text.includes("registered") || text.includes("exists")) return "Ese correo ya está en uso en otra cuenta.";
+  if (text.includes("invalid") || text.includes("format")) return "Ese correo no parece válido. Revisa que tenga el formato nombre@dominio.com.";
+  return "No se pudo cambiar el correo. Inténtalo de nuevo o escríbenos por el chat.";
+};
+
+type RowSaveState = "idle" | "saving" | "saved";
+
 
 const rowInput = "h-11 min-w-0 flex-1 bg-transparent px-0 text-right";
 const blockTextarea = "rounded-none bg-transparent px-4";
@@ -82,7 +101,16 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  // Estado de guardado por fila: la de perfil y la de datos tienen el suyo para
+  // que "Guardado" no aparezca en la fila equivocada.
+  const [profileSaveState, setProfileSaveState] = useState<RowSaveState>("idle");
+  const [dataSaveState, setDataSaveState] = useState<RowSaveState>("idle");
+  // Correo nuevo a la espera de que Supabase mande la confirmación.
+  const [pendingEmail, setPendingEmail] = useState("");
+  // El plan de comidas deja de cuadrar cuando cambian peso, objetivo, dieta o alergias.
+  const [mealsOutdated, setMealsOutdated] = useState(false);
+  const [regeneratingMeals, setRegeneratingMeals] = useState(false);
+  const [confirmingMeals, setConfirmingMeals] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -127,6 +155,11 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     nutrition_preferences: "", allergies: "",
   });
   const [hasOnboarding, setHasOnboarding] = useState(false);
+  // Copia de lo guardado para saber si el cambio afecta a la nutrición (peso,
+  // objetivo, dieta o alergias) sin fiarse de re-renderizados.
+  const [savedNutrition, setSavedNutrition] = useState({
+    weight: "", goal: "lose_weight", nutrition_preferences: "", allergies: "",
+  });
   const [originalAvailability, setOriginalAvailability] = useState<Record<string, Json | undefined>>({});
   const [availabilityEdited, setAvailabilityEdited] = useState(false);
 
@@ -147,7 +180,11 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
       if (profile) {
         setName(profile.name || "");
-        setEmail(profile.email || "");
+        // Auth es la fuente de verdad del correo: profiles.email pudo quedar
+        // desfasado por el flujo antiguo que lo escribía antes de confirmarlo.
+        setEmail(user.email || profile.email || "");
+        // La sesión puede traer un cambio de correo aún sin confirmar.
+        if (user.new_email) setPendingEmail(user.new_email);
         setAvatarUrl(profile.avatar_url || "");
         setPrivacy({ name_public: !!profile.name_public, avatar_public: !!profile.avatar_public, progress_public: !!profile.progress_public });
         setSubscriptionStatus(profile.subscription_status || "inactive");
@@ -160,12 +197,19 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         const avail = onb.availability;
         setOriginalAvailability(avail !== null && typeof avail === "object" && !Array.isArray(avail) ? avail : {});
         setAvailabilityEdited(false);
+        const saved = {
+          weight: onb.weight?.toString() || "",
+          goal: onb.goal || "lose_weight",
+          nutrition_preferences: onb.nutrition_preferences || "",
+          allergies: onb.allergies || "",
+        };
+        setSavedNutrition(saved);
         setOnboarding({
           age: onb.age?.toString() || "", height: onb.height?.toString() || "",
-          weight: onb.weight?.toString() || "", goal: onb.goal || "lose_weight",
+          weight: saved.weight, goal: saved.goal,
           sports: onb.sports || "",
           availability: { days: getAvailabilityDayCount(avail)?.toString() ?? "", hours: getAvailabilityHours(avail)?.toString() ?? "" },
-          nutrition_preferences: onb.nutrition_preferences || "", allergies: onb.allergies || "",
+          nutrition_preferences: saved.nutrition_preferences, allergies: saved.allergies,
         });
       }
       setRestSeconds(getWorkoutRestSeconds(user.id));
@@ -251,32 +295,116 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // Permite volver a elegir la misma foto aunque la validación falle.
+    e.target.value = "";
     if (!file || !user) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("La imagen no puede superar 2MB"); void hapticNotify("error"); return; }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Ese archivo no es una imagen. Usa JPG, PNG o WebP.");
+      void hapticNotify("error");
+      return;
+    }
+    if (file.size > AVATAR_MAX_SOURCE_BYTES) {
+      toast.error("La imagen es demasiado grande (máximo 10 MB).");
+      void hapticNotify("error");
+      return;
+    }
+
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${user.id}/avatar.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (uploadError) { toast.error("Error al subir la imagen"); void hapticNotify("error"); setUploading(false); return; }
-    const { data: publicUrl } = supabase.storage.from("avatars").getPublicUrl(path);
-    const url = `${publicUrl.publicUrl}?t=${Date.now()}`;
-    await supabase.from("profiles").update({ avatar_url: url }).eq("user_id", user.id);
-    setAvatarUrl(url);
-    setUploading(false);
+    try {
+      // Comprimimos en el navegador antes de subir: una foto de cámara pesa
+      // 4-12 MB y la de perfil se muestra a 80 px, así que no hace falta.
+      const compressed = await compressImage(file, { maxDimension: 1024, quality: 0.82, mimeType: "image/jpeg" });
+      if (compressed.size > AVATAR_MAX_UPLOAD_BYTES) {
+        toast.error("La imagen sigue siendo demasiado grande después de comprimirla. Prueba con otra foto.");
+        void hapticNotify("error");
+        return;
+      }
+
+      const ext = /^image\/(png|webp|gif)$/.exec(compressed.type)?.[1] ?? "jpg";
+      const path = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, compressed, { upsert: true, contentType: compressed.type });
+      if (uploadError) {
+        toast.error("No se pudo subir la foto. Inténtalo de nuevo.");
+        void hapticNotify("error");
+        return;
+      }
+
+      const { data: publicUrl } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${publicUrl.publicUrl}?t=${Date.now()}`;
+      const { error: profileError } = await supabase.from("profiles").update({ avatar_url: url }).eq("user_id", user.id);
+      if (profileError) {
+        toast.error("La foto se subió pero no se pudo guardar en tu perfil. Inténtalo de nuevo.");
+        void hapticNotify("error");
+        return;
+      }
+      setAvatarUrl(url);
+      setFailedAvatarUrl("");
+      toast.success("Foto actualizada");
+      void hapticNotify("success");
+    } catch {
+      toast.error("No se pudo preparar la foto. Prueba con otra imagen.");
+      void hapticNotify("error");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const saveProfile = async () => {
     if (!user) return;
-    setSaving(true);
-    const { error } = await supabase.from("profiles").update({ name, email }).eq("user_id", user.id);
-    if (email !== user.email) {
-      const { error: emailErr } = await supabase.auth.updateUser({ email });
-      if (emailErr) { toast.error("Error al cambiar email: " + emailErr.message); void hapticNotify("error"); setSaving(false); return; }
-      toast.info("Se ha enviado un email de confirmación al nuevo correo");
+    const nextName = name.trim();
+    const nextEmail = email.trim().toLowerCase();
+    const currentEmail = (user.email || "").trim().toLowerCase();
+    const emailChanged = nextEmail !== currentEmail;
+    if (emailChanged && !EMAIL_PATTERN.test(nextEmail)) {
+      toast.error("Ese correo no parece válido. Revisa que tenga el formato nombre@dominio.com.");
+      void hapticNotify("error");
+      return;
     }
-    if (!error) { void hapticNotify("success"); }
-    else { toast.error("Error al guardar"); void hapticNotify("error"); }
-    setSaving(false);
+
+    setProfileSaveState("saving");
+    // 1) Auth manda. Si el cambio de correo falla, no escribimos nada en
+    // profiles: nunca mostrar como confirmado un correo que Supabase rechazó.
+    let pendingConfirmation = false;
+    if (emailChanged) {
+      const { data: authData, error: authError } = await supabase.auth.updateUser({ email: nextEmail });
+      if (authError) {
+        toast.error(emailChangeError(authError.message));
+        void hapticNotify("error");
+        setProfileSaveState("idle");
+        return;
+      }
+      // Con doble confirmación, user.email sigue siendo el antiguo y el nuevo
+      // queda en new_email hasta que la persona lo confirme.
+      pendingConfirmation = (authData.user?.email || "").trim().toLowerCase() !== nextEmail;
+    }
+
+    // 2) En profiles solo se escribe el correo cuando Auth ya lo aceptó como
+    // confirmado; si queda pendiente, solo se guarda el nombre.
+    const changes: import("@/integrations/supabase/types").TablesUpdate<"profiles"> = pendingConfirmation
+      ? { name: nextName }
+      : { name: nextName, ...(emailChanged ? { email: nextEmail } : {}) };
+    const { error } = await supabase.from("profiles").update(changes).eq("user_id", user.id);
+    if (error) {
+      toast.error(pendingConfirmation
+        ? "Te enviamos la confirmación del correo, pero no se pudo guardar el nombre. Inténtalo de nuevo."
+        : "No se pudo guardar el perfil. Revisa tu conexión e inténtalo de nuevo.");
+      void hapticNotify("error");
+      setProfileSaveState("idle");
+      return;
+    }
+
+    if (emailChanged) {
+      setEmail(nextEmail);
+      setPendingEmail(pendingConfirmation ? nextEmail : "");
+    }
+    toast.success("Perfil guardado");
+    if (pendingConfirmation) {
+      toast.info(`Te hemos enviado un correo de confirmación a ${nextEmail}. El cambio se aplicará cuando lo confirmes.`);
+    }
+    void hapticNotify("success");
+    setProfileSaveState("saved");
   };
 
   const changePassword = async () => {
@@ -299,7 +427,22 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
         return;
       }
     }
-    setSaving(true);
+
+    // Si cambia algo que entra en la fórmula (peso, objetivo, dieta o alergias)
+    // las comidas guardadas dejan de cuadrar con los macros nuevos.
+    const nextNutrition = {
+      weight: onboarding.weight.trim(),
+      goal: onboarding.goal,
+      nutrition_preferences: onboarding.nutrition_preferences.trim(),
+      allergies: onboarding.allergies.trim(),
+    };
+    const nutritionInputsChanged =
+      nextNutrition.weight !== savedNutrition.weight.trim() ||
+      nextNutrition.goal !== savedNutrition.goal ||
+      nextNutrition.nutrition_preferences !== savedNutrition.nutrition_preferences.trim() ||
+      nextNutrition.allergies !== savedNutrition.allergies.trim();
+
+    setDataSaveState("saving");
     const { error } = await supabase.from("onboarding").upsert({
       user_id: user.id,
       age: parseInt(onboarding.age) || null, height: parseFloat(onboarding.height) || null,
@@ -310,14 +453,84 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       nutrition_preferences: onboarding.nutrition_preferences,
       allergies: onboarding.allergies,
     }, { onConflict: "user_id" });
-    if (!error) {
-      void hapticNotify("success");
-      window.dispatchEvent(new Event("autopilot:onboarding-updated"));
-      const { data: sync } = await supabase.functions.invoke("sync-nutrition-macros");
-      if (sync?.updated) window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
+    if (error) {
+      console.error("saveOnboarding", error);
+      toast.error(`No se pudo guardar: ${error.message}`);
+      void hapticNotify("error");
+      setDataSaveState("idle");
+      return;
     }
-    else { console.error("saveOnboarding", error); toast.error(`No se pudo guardar: ${error.message}`); void hapticNotify("error"); }
-    setSaving(false);
+
+    setSavedNutrition(nextNutrition);
+    void hapticNotify("success");
+    toast.success("Datos guardados");
+    window.dispatchEvent(new Event("autopilot:onboarding-updated"));
+
+    // La sincronización de macros puede fallar o no aplicar: siempre se informa.
+    const { data: sync, error: syncError } = await supabase.functions.invoke("sync-nutrition-macros");
+    if (syncError) {
+      toast.error("Tus datos se han guardado, pero no se pudo actualizar la nutrición. Inténtalo de nuevo.");
+    } else if (sync?.updated) {
+      toast.success("Macros actualizados");
+      window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
+      if (nutritionInputsChanged) setMealsOutdated(true);
+    } else {
+      switch (sync?.reason) {
+        case "no_access":
+          toast.info("Tus datos se han guardado. La nutrición no se actualiza porque tu plan actual no la incluye.");
+          break;
+        case "no_weight":
+          toast.info("Tus datos se han guardado. Añade tu peso para que podamos calcular los macros.");
+          break;
+        case "invalid":
+          toast.error("Tus datos se han guardado, pero los macros calculados no son válidos. Revisa peso y objetivo.");
+          break;
+        default:
+          toast.error("Tus datos se han guardado, pero no se pudo actualizar la nutrición.");
+      }
+    }
+    setDataSaveState("saved");
+  };
+
+  // "Regenerar comidas": lo hace el servidor (sync-nutrition-macros con
+  // regenerate_meals). El cliente no puede escribir nutrition_plan por RLS y
+  // generate-plan también regeneraría el entrenamiento (y está bloqueado para
+  // Coach), así que esta es la vía que solo cambia las comidas.
+  const regenerateMeals = async () => {
+    if (!user || regeneratingMeals) return;
+    setRegeneratingMeals(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-nutrition-macros", {
+        body: { regenerate_meals: true },
+      });
+      if (error) {
+        toast.error("No se pudieron regenerar las comidas. Revisa tu conexión e inténtalo de nuevo.");
+        void hapticNotify("error");
+        return;
+      }
+      if (data?.updated && data?.meals_updated) {
+        setMealsOutdated(false);
+        window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
+        toast.success("Comidas actualizadas");
+        void hapticNotify("success");
+        return;
+      }
+      if (data?.updated === false) {
+        if (data.reason === "no_access") toast.info("Tu plan actual no incluye nutrición, así que no se pueden regenerar las comidas.");
+        else if (data.reason === "no_weight") toast.error("Añade tu peso antes de regenerar las comidas.");
+        else toast.error("No se pudieron regenerar las comidas. Revisa tu peso y objetivo e inténtalo de nuevo.");
+        void hapticNotify("error");
+        return;
+      }
+      // Macros sí, comidas no: el aviso de "desactualizado" se queda para reintentar.
+      toast.error("Los macros se actualizaron, pero no se pudieron generar las comidas. Inténtalo de nuevo en unos minutos.");
+      void hapticNotify("error");
+    } catch {
+      toast.error("No se pudieron regenerar las comidas. Revisa tu conexión e inténtalo de nuevo.");
+      void hapticNotify("error");
+    } finally {
+      setRegeneratingMeals(false);
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -407,13 +620,29 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
 
   const setAvailability = (field: "days" | "hours", value: string) => {
     setAvailabilityEdited(true);
+    setDataSaveState("idle");
     setOnboarding((o) => ({ ...o, availability: { ...o.availability, [field]: value } }));
+  };
+
+  const editOnboarding = (patch: Partial<typeof onboarding>) => {
+    setDataSaveState("idle");
+    setOnboarding((o) => ({ ...o, ...patch }));
   };
 
   const selectGoal = (value: string) => {
     void hapticSelection();
+    setDataSaveState("idle");
     setOnboarding((o) => ({ ...o, goal: value }));
   };
+
+  // Contenido de la fila de guardado: inactiva, guardando o confirmación visible.
+  const saveRowContent = (state: RowSaveState, idle: string) =>
+    state === "saving" ? "Guardando…" : state === "saved" ? (
+      <span className="inline-flex items-center gap-1.5">
+        <Check className="h-4 w-4" aria-hidden="true" strokeWidth={2.5} />
+        Guardado
+      </span>
+    ) : idle;
 
   // Arrow keys move the selection inside the goal radio group, as the Radix RadioGroup did.
   const handleGoalKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -464,17 +693,22 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           <p className="mt-3 max-w-full truncate type-title2">{name || "Tu perfil"}</p>
           {email ? <p className="max-w-full truncate type-body text-muted-foreground">{email}</p> : null}
-          <Button variant="plain" className="mt-1" onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}>
-            Cambiar foto
+          <Button variant="plain" className="mt-1" disabled={uploading} onClick={() => { void hapticTap(); fileInputRef.current?.click(); }}>
+            {uploading ? "Subiendo foto…" : "Cambiar foto"}
           </Button>
         </div>
 
-        <ListGroup header="Perfil">
+        <ListGroup
+          header="Perfil"
+          footer={pendingEmail
+            ? `Correo pendiente de confirmar: ${pendingEmail}. Revisa tu bandeja de entrada para aplicarlo.`
+            : undefined}
+        >
           <FieldRow label="Nombre" htmlFor="settings-name">
             <Input
               id="settings-name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value); setProfileSaveState("idle"); }}
               placeholder="Tu nombre"
               autoCapitalize="words"
               autoComplete="name"
@@ -494,14 +728,14 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
               enterKeyHint="done"
               aria-label="Correo electrónico"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setProfileSaveState("idle"); }}
               placeholder="email@ejemplo.com"
               className={rowInput}
             />
           </FieldRow>
           <ListRow
-            title={<span className="text-primary">{saving ? "Guardando…" : "Guardar perfil"}</span>}
-            disabled={saving}
+            title={<span className="inline-flex items-center gap-1.5 text-primary">{saveRowContent(profileSaveState, "Guardar perfil")}</span>}
+            disabled={profileSaveState === "saving"}
             onClick={() => void saveProfile()}
           />
         </ListGroup>
@@ -535,19 +769,36 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       {/* Onboarding data */}
       {hasOnboarding && (
         <div className={`order-2 flex flex-col gap-6${hideForAdmin}`}>
+          {mealsOutdated && (
+            <div className="rounded-2xl bg-card px-4 py-3" role="status">
+              <p className="type-body font-semibold">Tu plan de comidas está desactualizado</p>
+              <p className="mt-1 type-footnote text-muted-foreground">
+                Has cambiado datos que afectan a tus macros. Regenera las comidas para que cuadren con tu nueva dieta y objetivo.
+              </p>
+              <Button
+                variant="hero"
+                className="mt-3 w-full"
+                disabled={regeneratingMeals}
+                onClick={() => { void hapticTap(); setConfirmingMeals(true); }}
+              >
+                {regeneratingMeals ? "Regenerando comidas…" : "Regenerar comidas"}
+              </Button>
+            </div>
+          )}
+
           <ListGroup header="Tus datos">
             <FieldRow label="Edad" htmlFor="settings-age">
-              <Input id="settings-age" type="number" inputMode="numeric" enterKeyHint="next" value={onboarding.age} onChange={(e) => setOnboarding((o) => ({ ...o, age: e.target.value }))} className={rowInput} />
+              <Input id="settings-age" type="number" inputMode="numeric" enterKeyHint="next" value={onboarding.age} onChange={(e) => editOnboarding({ age: e.target.value })} className={rowInput} />
             </FieldRow>
             <FieldRow label="Altura (cm)" htmlFor="settings-height">
-              <Input id="settings-height" type="number" inputMode="decimal" enterKeyHint="next" value={onboarding.height} onChange={(e) => setOnboarding((o) => ({ ...o, height: e.target.value }))} className={rowInput} />
+              <Input id="settings-height" type="number" inputMode="decimal" enterKeyHint="next" value={onboarding.height} onChange={(e) => editOnboarding({ height: e.target.value })} className={rowInput} />
             </FieldRow>
             <FieldRow label="Peso (kg)" htmlFor="settings-weight">
-              <Input id="settings-weight" type="number" inputMode="decimal" enterKeyHint="done" value={onboarding.weight} onChange={(e) => setOnboarding((o) => ({ ...o, weight: e.target.value }))} className={rowInput} />
+              <Input id="settings-weight" type="number" inputMode="decimal" enterKeyHint="done" value={onboarding.weight} onChange={(e) => editOnboarding({ weight: e.target.value })} className={rowInput} />
             </FieldRow>
           </ListGroup>
-          <Button onClick={() => void saveOnboarding()} disabled={saving} className="w-full">
-            {saving ? "Guardando…" : "Guardar cambios"}
+          <Button onClick={() => void saveOnboarding()} disabled={dataSaveState === "saving"} className="w-full">
+            {dataSaveState === "saving" ? "Guardando…" : dataSaveState === "saved" ? "Guardado" : "Guardar cambios"}
           </Button>
 
           <ListGroup header="Objetivo">
@@ -574,22 +825,39 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           </ListGroup>
 
           <ListGroup header="Deportes">
-            <Textarea aria-label="Deportes" value={onboarding.sports} onChange={(e) => setOnboarding((o) => ({ ...o, sports: e.target.value }))} className={blockTextarea} rows={2} />
+            <Textarea aria-label="Deportes" value={onboarding.sports} onChange={(e) => editOnboarding({ sports: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
           <ListGroup header="Preferencias nutricionales">
-            <Textarea aria-label="Preferencias nutricionales" value={onboarding.nutrition_preferences} onChange={(e) => setOnboarding((o) => ({ ...o, nutrition_preferences: e.target.value }))} className={blockTextarea} rows={2} />
+            <Textarea aria-label="Preferencias nutricionales" value={onboarding.nutrition_preferences} onChange={(e) => editOnboarding({ nutrition_preferences: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
           <ListGroup header="Alergias">
-            <Textarea aria-label="Alergias" value={onboarding.allergies} onChange={(e) => setOnboarding((o) => ({ ...o, allergies: e.target.value }))} className={blockTextarea} rows={2} />
+            <Textarea aria-label="Alergias" value={onboarding.allergies} onChange={(e) => editOnboarding({ allergies: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
 
           <ListGroup>
             <ListRow
-              title={<span className="text-primary">{saving ? "Guardando…" : "Guardar datos"}</span>}
-              disabled={saving}
+              title={<span className="inline-flex items-center gap-1.5 text-primary">{saveRowContent(dataSaveState, "Guardar datos")}</span>}
+              disabled={dataSaveState === "saving"}
               onClick={() => void saveOnboarding()}
             />
           </ListGroup>
+
+          <AlertDialog open={confirmingMeals} onOpenChange={setConfirmingMeals}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Regenerar tus comidas?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Recalcularemos el plan de comidas con tus datos actuales y sustituirá a las comidas guardadas cuando termine. El plan de entrenamiento no cambia.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter stacked>
+                <AlertDialogCancel>Ahora no</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void regenerateMeals()}>
+                  Regenerar comidas
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
 

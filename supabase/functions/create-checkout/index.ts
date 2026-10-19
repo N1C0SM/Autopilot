@@ -12,6 +12,14 @@ const log = (step: string, details?: unknown) => {
   console.log(`[CREATE-CHECKOUT] ${step}`, details ? JSON.stringify(details) : "");
 };
 
+/**
+ * Debe coincidir con `DASHBOARD_CHAT_ENABLED` de `src/lib/releaseScope.ts`.
+ * El edge function no importa código del cliente, así que la constante se replica
+ * aquí: mientras el chat de cliente esté apagado no se vende un plan con entrenador
+ * que promete chat/videollamada.
+ */
+const CHAT_ENABLED = false;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,6 +60,14 @@ serve(async (req) => {
       }
     } catch { /* sin cuerpo: se usa el plan por defecto */ }
     log("Request params", { plan });
+
+    if (!CHAT_ENABLED && (plan === "full" || plan === "transform")) {
+      log("Coach plan blocked: chat disabled", { plan });
+      return new Response(
+        JSON.stringify({ code: "chat_not_available", error: "El plan con entrenador no está disponible todavía." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Read all settings from DB
     const { data: settings } = await supabaseClient

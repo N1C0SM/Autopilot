@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Apple, BookOpen, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -11,7 +11,8 @@ import { hapticTap } from "@/lib/native";
 import { isIOSNative } from "@/lib/platform";
 import { nutritionMacroError } from "@/lib/nutritionValidation";
 import { cn } from "@/lib/utils";
-import { readActiveWorkout, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
+import { readActiveWorkout, clearActiveWorkout, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
+import { toast } from "sonner";
 
 interface Macros {
   protein: number;
@@ -36,6 +37,8 @@ interface Props {
   macros?: Macros | null;
   completedThisWeek?: number;
   completedToday?: boolean;
+  /** Días (day_label) ya completados esta semana, para pintar ✓ en la tira. */
+  completedDays?: Set<string>;
   coaching?: boolean;
   nutrition?: boolean;
   planStatus?: string;
@@ -127,6 +130,7 @@ const HomeOverview = ({
   macros,
   completedThisWeek = 0,
   completedToday = false,
+  completedDays,
   coaching = true,
   nutrition = true,
   planStatus,
@@ -142,6 +146,31 @@ const HomeOverview = ({
       window.removeEventListener("storage", refresh);
     };
   }, [userId]);
+  const activeWorkoutIsToday = isActiveWorkoutToday(activeWorkout);
+  const activeWorkoutDate = activeWorkout ? formatDraftDate(activeWorkout.date) : "";
+
+  const discardActiveWorkout = async () => {
+    if (!userId || !activeWorkout) return;
+    const ok = window.confirm(
+      "¿Descartar la sesión sin terminar? Se borrarán las series de ese día y no contará como hecha.",
+    );
+    if (!ok) return;
+    try {
+      const { error } = await supabase
+        .from("workout_logs")
+        .delete()
+        .eq("user_id", userId)
+        .eq("day_label", activeWorkout.plan.day)
+        .eq("logged_at", activeWorkout.date);
+      if (error) throw error;
+      clearActiveWorkout(userId);
+      setActiveWorkout(null);
+      toast.success("Sesión descartada");
+    } catch {
+      toast.error("No se pudo descartar la sesión. Comprueba la conexión.");
+    }
+  };
+
   const [chatMessages, setChatMessages] = useState<ChatPreviewMessage[]>([]);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [chatError, setChatError] = useState(false);
@@ -206,16 +235,23 @@ const HomeOverview = ({
       ? macroError ? "Objetivos por revisar" : calorieLabel
       : calorieLabel && macroError ? "Objetivos por revisar" : null;
 
-  useEffect(() => {
+  const readMealsDone = useCallback(() => {
     const date = new Date();
     const key = `meals_done_${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
     try {
       const saved = localStorage.getItem(key);
-      if (saved) setCompletedMeals(new Set(JSON.parse(saved) as string[]));
+      setCompletedMeals(new Set(saved ? (JSON.parse(saved) as string[]) : []));
     } catch {
       setCompletedMeals(new Set());
     }
   }, []);
+
+  useEffect(() => {
+    readMealsDone();
+    // MealsList avisa al marcar/desmarcar una comida: Hoy debe reflejarlo.
+    window.addEventListener("autopilot:meals-updated", readMealsDone);
+    return () => window.removeEventListener("autopilot:meals-updated", readMealsDone);
+  }, [readMealsDone]);
 
   useEffect(() => {
     if (!userId || !coaching) return;
@@ -301,16 +337,16 @@ const HomeOverview = ({
             {DAYS_ORDER.map((day, index) => {
               const isToday = index === todayIndex;
               const trains = plannedDays.has(day);
-              const doneToday = isToday && completedToday;
+              const done = Boolean(completedDays?.has(day)) || (isToday && completedToday);
               return (
                 <li key={day} className="flex flex-col items-center gap-1">
                   <button
                     type="button"
-                    aria-label={`${day}${isToday ? ", hoy" : ""}: ${doneToday ? "completado" : trains ? "con sesión" : "descanso"} — ver entrenamiento`}
+                    aria-label={`${day}${isToday ? ", hoy" : ""}: ${done ? "completado" : trains ? "con sesión" : "descanso"} — ver entrenamiento`}
                     onClick={() => { void hapticTap(); onNavigate("training"); }}
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full type-subhead transition-opacity active:opacity-60",
-                      doneToday
+                      done
                         ? "bg-primary text-primary-foreground"
                         : isToday
                           ? "bg-primary/15 font-semibold text-primary"
@@ -319,11 +355,11 @@ const HomeOverview = ({
                             : "text-muted-foreground hover:bg-secondary/50",
                     )}
                   >
-                    {doneToday ? <Check className="h-[18px] w-[18px]" strokeWidth={2.5} /> : DAY_LETTERS[index]}
+                    {done ? <Check className="h-[18px] w-[18px]" strokeWidth={2.5} /> : DAY_LETTERS[index]}
                   </button>
                   <span
                     aria-hidden="true"
-                    className={cn("h-[5px] w-[5px] rounded-full", trains && !doneToday ? "bg-primary" : "bg-transparent")}
+                    className={cn("h-[5px] w-[5px] rounded-full", trains && !done ? "bg-primary" : "bg-transparent")}
                   />
                 </li>
               );
@@ -334,9 +370,9 @@ const HomeOverview = ({
 
         {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
         <div className="flex flex-1 flex-col justify-center py-8 md:py-10 lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16">
-          {activeWorkout ? (
+          {activeWorkout && activeWorkoutIsToday ? (
             <div className="w-full">
-              <p className="type-caption1 font-semibold text-primary">EN CURSO</p>
+              <p className="type-caption1 font-semibold text-primary">EN CURSO · HOY</p>
               <h3 className="mt-1 type-title1">{planTitle(activeWorkout.plan)}</h3>
               <p className="mt-2 type-subhead tabular-nums text-muted-foreground">
                 {Object.values(activeWorkout.logs).flat().filter((set) => set.done && !set.isWarmup).length} de {Object.values(activeWorkout.logs).flat().filter((set) => !set.isWarmup).length} series
@@ -346,6 +382,9 @@ const HomeOverview = ({
                 if (onResumeWorkout) onResumeWorkout();
                 else onNavigate("training");
               }}>Reanudar entrenamiento</Button>
+              <Button type="button" variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
+                Descartar sesión
+              </Button>
             </div>
           ) : canStart ? (
             <button
@@ -399,6 +438,23 @@ const HomeOverview = ({
               action={<Button type="button" variant="plain" onClick={openWeek}>Ver rutina semanal</Button>}
             />
           )}
+          {activeWorkout && !activeWorkoutIsToday && (
+            <div className="mt-4 rounded-2xl bg-card px-4 py-3 text-left">
+              <p className="type-footnote text-muted-foreground">
+                Tienes una sesión sin terminar del {activeWorkoutDate}.
+              </p>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" onClick={() => {
+                  void hapticTap();
+                  if (onResumeWorkout) onResumeWorkout();
+                  else onNavigate("training");
+                }}>Reanudar</Button>
+                <Button type="button" variant="plain" size="sm" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
+                  Descartar
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
       {/* Filas secundarias: Nutrición + Progreso */}
@@ -440,6 +496,12 @@ const HomeOverview = ({
               </>
             ) : "Sin sesiones esta semana"
           }
+        />
+        <OverviewRow
+          title="Recursos"
+          onClick={() => onNavigate("resources")}
+          icon={<BookOpen className="h-6 w-6 text-primary" strokeWidth={1.75} />}
+          description="Biblioteca, guías y recomendaciones"
         />
       </div>
       </div>

@@ -45,6 +45,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
   const [saving, setSaving] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const backup = useMemo(() => (open ? readBackup(userId) : null), [open, userId]);
 
   useEffect(() => {
@@ -53,12 +54,23 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
       setDay(dayPlans[0]?.day ?? DAYS[0]);
       setCopyOpen(false);
       setConfirmReset(false);
+      setConfirmDiscard(false);
     }
   }, [open, dayPlans]);
 
   const plan = draft.find((p) => p.day === day);
   const exercises = plan?.type === "gimnasio" ? plan.exercises ?? [] : [];
   const dirty = JSON.stringify(normalizePlan(draft)) !== JSON.stringify(normalizePlan(dayPlans));
+
+  // Cerrar con swipe, overlay o Escape no debe tirar el trabajo: si hay cambios sin
+  // guardar se pide confirmación (mismo patrón que «Empezar de cero»).
+  const requestClose = () => {
+    if (dirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    onOpenChange(false);
+  };
 
   const updateDay = (target: string, fn: (p: DayPlan) => DayPlan) =>
     setDraft((d) => {
@@ -199,12 +211,25 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
   return (
     <ResponsiveSheet
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(next) => { if (next) onOpenChange(true); else requestClose(); }}
       title="Editar mi rutina"
       desktopClassName="sm:max-w-5xl"
       footer={
-        <div className="flex flex-col-reverse gap-1 md:flex-row md:items-center md:gap-2">
-          <div className="flex justify-center gap-1 md:mr-auto">
+        confirmDiscard ? (
+          <div role="alert" aria-live="assertive">
+            <p className="mb-2 text-center type-footnote text-muted-foreground">Tienes cambios sin guardar en tu rutina.</p>
+            <div className="flex flex-col-reverse gap-1 md:flex-row md:items-center md:gap-2">
+              <Button type="button" variant="destructive" className="min-h-11 flex-1 md:flex-none" onClick={() => { setConfirmDiscard(false); onOpenChange(false); }}>
+                Descartar cambios
+              </Button>
+              <Button type="button" variant="ghost" className="min-h-11" onClick={() => setConfirmDiscard(false)}>
+                Seguir editando
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col-reverse gap-1 md:flex-row md:items-center md:gap-2">
+            <div className="flex justify-center gap-1 md:mr-auto">
             {confirmReset ? (
               <>
                 <Button type="button" variant="destructive" className="min-h-11 flex-1" onClick={() => { setDraft([]); setConfirmReset(false); }}>Sí, vaciar semana</Button>
@@ -226,10 +251,11 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
               </>
             )}
           </div>
-          <Button type="button" variant="hero" size="lg" className="min-h-12 w-full md:w-auto md:min-w-[200px]" disabled={saving || !dirty} onClick={save}>
-            {saving ? "Guardando…" : dirty ? "Guardar rutina" : "Sin cambios"}
-          </Button>
-        </div>
+            <Button type="button" variant="hero" size="lg" className="min-h-12 w-full md:w-auto md:min-w-[200px]" disabled={saving || !dirty} onClick={save}>
+              {saving ? "Guardando…" : dirty ? "Guardar rutina" : "Sin cambios"}
+            </Button>
+          </div>
+        )
       }
     >
       {/* Móvil: días en fila táctil. Web: semana completa a la izquierda, detalle a la derecha. */}

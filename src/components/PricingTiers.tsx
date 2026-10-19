@@ -1,4 +1,5 @@
-import { type PlanKey } from "@/config/tiers";
+import { COACH_CONTACT_CHANNEL, COACH_CONTACT_FEATURE, type PlanKey } from "@/config/tiers";
+import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
 import { Check, X, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { track } from "@/lib/analytics";
@@ -39,6 +40,11 @@ const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTier
           const key = t.key;
           const isRec = key === recommended;
           const price = t.price;
+          // El catálogo de Admin puede traer la ficha antigua con chat/videollamada:
+          // mientras el chat esté apagado se sustituye por el canal real (email).
+          const features = key === "full" && !DASHBOARD_CHAT_ENABLED
+            ? Array.from(new Set(t.features.map((f) => (/chat|videollamada/i.test(f) ? COACH_CONTACT_FEATURE : f))))
+            : t.features;
           return (
             <div key={key} className="flex h-full flex-col rounded-2xl bg-card p-6">
               <div className="flex items-baseline justify-between gap-3">
@@ -58,7 +64,7 @@ const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTier
               </p>
 
               <ul className="mb-6 flex-1 space-y-3">
-                {t.features.map((f) => (
+                {features.map((f) => (
                   <li key={f} className="flex items-start gap-3 type-subhead">
                     <Check className="h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
                     <span>{f}</span>
@@ -101,7 +107,7 @@ const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTier
         </p>
         {a.coach ? (
           <p className="text-foreground">
-            {a.plus && <>{a.plusName} funciona sin atención humana. </>}En {a.coachName} te atiende Nicolás, el fundador: responde por chat en horario normal, no 24/7.
+            {a.plus && <>{a.plusName} funciona sin atención humana. </>}En {a.coachName} te atiende Nicolás, el fundador: responde {COACH_CONTACT_CHANNEL} en horario normal, no 24/7.
           </p>
         ) : a.plus ? (
           <p className="text-foreground">

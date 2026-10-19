@@ -1,5 +1,5 @@
 import { Play, PencilLine } from "lucide-react";
-import { isManualPlan } from "@/lib/planShield";
+import { generatePlanGuarded, isManualPlan } from "@/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
 import { readActiveWorkout } from "@/lib/activeWorkout";
 import { hasCoaching, hasNutrition, getConsumerPlan, type ConsumerPlan } from "@/lib/entitlements";
@@ -7,7 +7,7 @@ import { PlanPaywall, CoachPendingAssignment } from "@/components/dashboard/Plan
 import { parseMacroTargets } from "@/lib/nutrition";
 import CoachingOffer from "@/components/dashboard/CoachingOffer";
 import { track } from "@/lib/analytics";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ import { getFirstWeekJourney } from "@/lib/firstWeek";
 import { isIOSNative } from "@/lib/platform";
 
 import { useFreeCampaign } from "@/lib/freeCampaign";
+import { describeCheckoutError } from "@/lib/checkoutErrors";
 import BasicNutrition from "@/components/dashboard/BasicNutrition";
 
 const Chat = lazy(() => import("@/components/Chat"));
@@ -109,6 +110,9 @@ const Dashboard = () => {
   const [macros, setMacros] = useState<Macros | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
+  const lastFetchRef = useRef(0);
   const [landingPlan] = useState<"training" | "full" | undefined>(readLandingPlan);
   /**
    * Lo que contestó en el onboarding: quien quiere entrenador ve el plan con
@@ -207,6 +211,13 @@ const Dashboard = () => {
       return;
     }
 
+    if (profileResult.error || !profileResult.data) {
+      // Sin perfil no se puede decidir el estado: nunca pintar "sin plan" ni
+      // mandar al onboarding por un fallo de red.
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
     const profile = profileResult.data;
     if (profile) {
       setPlanStatus(profile.plan_status);
@@ -229,11 +240,16 @@ const Dashboard = () => {
       }
 
       // Si faltan sus respuestas no se pueden calcular calorías ni macros: las pedimos antes de seguir.
-      const { data: onb } = await supabase
+      const { data: onb, error: onbError } = await supabase
         .from("onboarding")
         .select("id")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (onbError) {
+        setLoadError(true);
+        setLoading(false);
+        return;
+      }
       if (!onb) {
         navigate("/onboarding-choice");
         return;
@@ -282,11 +298,13 @@ const Dashboard = () => {
           toast.error("No se pudo cargar el resumen de esta semana.");
         } else {
           const scheduledDays = new Set((plans || []).map((plan) => plan.day));
-          setCompletedThisWeek(new Set(
+          const days = new Set(
             (weeklyCompletions.data || [])
               .map((row) => row.day_label)
               .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
-          ).size);
+          );
+          setCompletedDays(days);
+          setCompletedThisWeek(days.size);
         }
         if (np) {
           setMacros(parseMacroTargets(np.macros_json));
@@ -307,6 +325,8 @@ const Dashboard = () => {
         }
       }
     }
+    lastFetchRef.current = Date.now();
+    setLoadError(false);
     setLoading(false);
   }, [user, navigate]);
 
@@ -346,6 +366,8 @@ const Dashboard = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` }, () => { void fetchData(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "training_plan", filter: `user_id=eq.${user.id}` }, () => { void refreshTrainingPlan(); })
       .on("postgres_changes", { event: "*", schema: "public", table: "nutrition_plan", filter: `user_id=eq.${user.id}` }, () => { void refreshNutritionPlan(); })
+      // Completar una sesión (o marcarla/desmarcarla) debe refrescar Hoy.
+      .on("postgres_changes", { event: "*", schema: "public", table: "day_completions", filter: `user_id=eq.${user.id}` }, () => { void fetchData(); })
       .subscribe();
 
     const onFocus = () => {
@@ -360,6 +382,13 @@ const Dashboard = () => {
     };
   }, [user, fetchData]);
 
+  // Al volver a Hoy, refrescamos como mucho cada 30 s para no mostrar datos viejos.
+  useEffect(() => {
+    if (section !== "home") return;
+    if (Date.now() - lastFetchRef.current < 30_000) return;
+    void fetchData();
+  }, [section, fetchData]);
+
   // Por defecto Plus: es el plan que queremos vender primero. Coach es una elección explícita.
   const handleCompletePayment = async (plan: "training" | "full" | "transform" = "training") => {
     if (campaign) return;
@@ -369,12 +398,9 @@ const Dashboard = () => {
         body: { referral_code: "", plan },
       });
       if (checkoutError || !checkoutData?.url) {
-        // Si falta configurar el enlace de pago, el problema no es del usuario.
-        if (checkoutData?.code === "no_price") {
-          toast.error("El pago de este plan aún no está configurado. Avísanos por el chat y lo activamos.");
-        } else {
-          toast.error("Error al iniciar el pago. Inténtalo de nuevo.");
-        }
+        // Invoke devuelve el código del error en el cuerpo HTTP, no en data.
+        const issue = await describeCheckoutError(checkoutError, checkoutData);
+        toast.error(issue.message, { duration: issue.retryable ? 6000 : 9000 });
         return;
       }
       window.location.href = checkoutData.url;
@@ -413,11 +439,11 @@ const Dashboard = () => {
   const handleManageSubscription = async () => {
     const { data, error } = await supabase.functions.invoke("customer-portal");
     if (data?.no_customer) {
-      toast.info("Tu acceso lo gestiona tu entrenador manualmente. Escríbele por el chat para cambiar o cancelar tu plan.");
+      toast.info("Tu acceso lo gestiona el equipo manualmente. Escríbenos a hola@autopilotplan.com para cambiar o cancelar tu plan.");
       return;
     }
     if (error || !data?.url) {
-      toast.error("No se pudo abrir la gestión de tu suscripción. Escríbele a tu entrenador por el chat y lo resuelve.");
+      toast.error("No se pudo abrir la gestión de tu suscripción. Escríbenos a hola@autopilotplan.com y lo resolvemos.");
       return;
     }
     window.open(data.url, "_blank");
@@ -433,6 +459,25 @@ const Dashboard = () => {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background px-6">
+        <div className="w-full max-w-sm space-y-3 text-center">
+          <p className="type-title2">No pudimos cargar tu panel</p>
+          <p className="type-subhead text-muted-foreground">
+            No hemos cambiado nada. Comprueba la conexión y vuelve a intentarlo.
+          </p>
+          <Button className="w-full" onClick={() => { setLoadError(false); setLoading(true); void fetchData({ syncSubscription: true, checkAdmin: true }); }}>
+            Reintentar
+          </Button>
+          <Button variant="plain" className="w-full" onClick={() => void handleSignOut()}>
+            Cerrar sesión
+          </Button>
+        </div>
       </div>
     );
   }
@@ -514,8 +559,8 @@ const Dashboard = () => {
             void hapticTap();
             setPreparingRoutine(true);
             try {
-              const { data, error } = await supabase.functions.invoke("generate-plan", { body: { user_id: user?.id } });
-              if (error || !data?.success) throw new Error("generation_failed");
+              const { data, error } = await generatePlanGuarded(supabase, { user_id: user?.id }, { userId: user?.id });
+              if (error || (!data?.success && !data?.protected)) throw new Error("generation_failed");
               await fetchData();
             } catch { toast.error("No se ha podido preparar la rutina. Vuelve a intentarlo."); }
             finally { setPreparingRoutine(false); }
@@ -588,6 +633,7 @@ const Dashboard = () => {
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
+            completedDays={completedDays}
           />
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
@@ -680,7 +726,11 @@ const Dashboard = () => {
                   autoStart={autoStartWorkout}
                   resume={resumeWorkout}
                   onAutoStartConsumed={() => setAutoStartWorkout(false)}
-                  onSessionModeChange={setWorkoutMode}
+                  onSessionModeChange={(active) => {
+                    setWorkoutMode(active);
+                    // Al terminar/salir, Hoy debe reflejar el día completado.
+                    if (!active) void fetchData();
+                  }}
                   onCancel={() => { setWorkoutMode(false); setFreePlans(null); setResumeWorkout(false); setSection("home"); }}
                   onExit={() => {
                     setWorkoutMode(false);

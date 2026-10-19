@@ -3,7 +3,8 @@ import { Check, Lock, UserCheck } from "lucide-react";
 import { hapticSelection, hapticTap } from "@/lib/native";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
-import { TIERS } from "@/config/tiers";
+import { COACH_CONTACT_FEATURE, TIERS } from "@/config/tiers";
+import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { isIOSNative } from "@/lib/platform";
 import { IosFeatureLocked } from "@/components/platform/IosFeatureLocked";
@@ -19,8 +20,11 @@ const FEATURES: Record<TierKey, string[]> = {
   full: [
     "Todo lo incluido en Plus",
     "Seguimiento personal de Nicolás",
-    "Chat directo con fotos y vídeos de técnica",
-    "Videollamadas de revisión",
+    // Mientras el chat de cliente esté apagado no se promete chat ni videollamada:
+    // se ofrece el canal real que existe (email de contacto).
+    ...(DASHBOARD_CHAT_ENABLED
+      ? ["Chat directo con fotos y vídeos de técnica", "Videollamadas de revisión"]
+      : [COACH_CONTACT_FEATURE]),
   ],
 };
 
@@ -43,8 +47,11 @@ export const PlanPaywall = ({
   otherLabel?: string;
 }) => {
   const { coach } = usePlanAvailability();
-  // Coach is only offered while it is published in Admin → Planes.
-  const options: TierKey[] = allowCoach && coach ? ["training", "full"] : [plan === "plus" || !coach ? "training" : "full"];
+  // Coach is only offered while it is published in Admin → Planes AND the client chat
+  // is enabled: sin chat no se puede entregar el servicio que se estaba vendiendo.
+  const coachAvailable = coach && DASHBOARD_CHAT_ENABLED;
+  const options: TierKey[] = allowCoach && coachAvailable ? ["training", "full"] : [coachAvailable && plan === "coach" ? "full" : "training"];
+  const unavailableNote = plan === "coach" && !DASHBOARD_CHAT_ENABLED;
   const [selected, setSelected] = useState<TierKey>(defaultPlan && options.includes(defaultPlan) ? defaultPlan : options[0]);
   const t = TIERS[selected];
 
@@ -88,6 +95,12 @@ export const PlanPaywall = ({
           {t.price} €<span className="type-title3 text-muted-foreground">/mes</span>
         </h2>
       </div>
+
+      {unavailableNote && (
+        <p role="note" className="mt-4 rounded-xl bg-secondary px-4 py-3 text-center type-footnote text-muted-foreground">
+          El plan con entrenador no está disponible todavía. Te ofrecemos {TIERS.training.name} mientras tanto.
+        </p>
+      )}
 
       <ul className="mt-7 space-y-5 text-left">
         {FEATURES[selected].map((f) => (

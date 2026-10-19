@@ -2,6 +2,7 @@ import { errorMessage } from "../_shared/runtime-values.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { persistAutoMacroAdjustment } from "../_shared/auto-macro-adjustment.ts";
+import { calcNutritionMacros, detectDiet } from "../_shared/nutrition.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,22 +11,6 @@ const corsHeaders = {
 
 const log = (msg: string, details?: unknown) =>
   console.log(`[AUTO-TASKS] ${msg}${details ? ` - ${JSON.stringify(details)}` : ""}`);
-
-// ─── Macro calculation (duplicated from generate-plan for independence) ───
-function calcMacros(weight: number, goal: string) {
-  switch (goal) {
-    case "gain_muscle":
-      return { protein: Math.round(weight * 2.2), carbs: Math.round(weight * 4), fats: Math.round(weight * 1) };
-    case "lose_weight":
-      return { protein: Math.round(weight * 2.4), carbs: Math.round(weight * 2), fats: Math.round(weight * 0.8) };
-    case "recomp":
-      return { protein: Math.round(weight * 2.2), carbs: Math.round(weight * 3), fats: Math.round(weight * 0.9) };
-    case "improve_endurance":
-      return { protein: Math.round(weight * 1.8), carbs: Math.round(weight * 4.5), fats: Math.round(weight * 0.9) };
-    default:
-      return { protein: Math.round(weight * 1.8), carbs: Math.round(weight * 3.5), fats: Math.round(weight * 1) };
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -132,15 +117,21 @@ serve(async (req) => {
         .single();
 
       if (latestWeight) {
+        // La dieta también manda en los macros: sin esto, keto/paleo/vegana
+        // recibían el mismo reparto que una dieta estándar.
         const { data: onboarding } = await supabase
           .from("onboarding")
-          .select("weight, goal")
+          .select("weight, goal, nutrition_preferences, allergies")
           .eq("user_id", userId)
           .single();
 
         if (onboarding && Math.abs(Number(latestWeight.weight) - Number(onboarding.weight)) >= 1) {
           const currentWeight = Number(latestWeight.weight);
-          const newMacros = calcMacros(currentWeight, onboarding.goal || "general_health");
+          const newMacros = calcNutritionMacros(
+            currentWeight,
+            onboarding.goal || "general_health",
+            detectDiet(onboarding.nutrition_preferences, onboarding.allergies),
+          );
 
           // Get current macros
           const { data: currentPlan, error: currentPlanError } = await supabase
@@ -149,7 +140,9 @@ serve(async (req) => {
             .eq("user_id", userId)
             .single();
 
-          if (currentPlanError) {
+          if (!newMacros) {
+            log("Skipped macro adjustment: weight inválido", { userId, currentWeight });
+          } else if (currentPlanError) {
             log("Failed to load nutrition plan for macro adjustment", { userId, error: currentPlanError });
           } else if (currentPlan?.macros_json) {
             // Retry even when the targets already match: the previous run may

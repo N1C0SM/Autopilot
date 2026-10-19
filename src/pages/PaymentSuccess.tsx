@@ -1,4 +1,4 @@
-import { getConsumerPlan } from "@/lib/entitlements";
+import { tierToPlan, type BillingProfile } from "@/lib/entitlements";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,23 @@ import { track } from "@/lib/analytics";
 import { clearPendingBookPurchase, readPendingBookRef } from "@/lib/buyLink";
 
 import PageHead from "@/components/PageHead";
+
+/**
+ * Una compra solo se da por buena con evidencia de pago: `payment_status === "paid"`
+ * o una suscripción vigente (`active`/`trialing`), o cuando `check-subscription`
+ * acaba de confirmarla contra Stripe. Tener un plan no-Free no basta: en un upgrade
+ * o un reintento el perfil ya era de pago y el webhook de esta compra puede tardar.
+ */
+const hasConfirmedPayment = (
+  profile: BillingProfile | null | undefined,
+  stripeSubscribed = false,
+): boolean => {
+  if (stripeSubscribed) return true;
+  if (tierToPlan(profile?.subscription_tier) === "free") return false;
+  return profile?.payment_status === "paid"
+    || profile?.subscription_status === "active"
+    || profile?.subscription_status === "trialing";
+};
 
 export const BookSuccess = ({
   bookRef,
@@ -170,6 +187,8 @@ const PaymentSuccess = () => {
     const maxAttempts = 12;
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    // Solo cuenta como confirmación lo que venga de la función (consulta real a Stripe).
+    let stripeSubscribed = false;
     setChecking(true);
     setPaid(false);
 
@@ -178,7 +197,8 @@ const PaymentSuccess = () => {
       // Proactively sync with Stripe only every 3rd attempt to avoid rate limits
       if (attempts % 3 === 0) {
         try {
-          await supabase.functions.invoke("check-subscription");
+          const { data: subscription } = await supabase.functions.invoke("check-subscription");
+          if ((subscription as { subscribed?: boolean } | null)?.subscribed === true) stripeSubscribed = true;
         } catch {
           // ignore — webhook will eventually update DB
         }
@@ -191,7 +211,9 @@ const PaymentSuccess = () => {
         .maybeSingle();
 
       if (cancelled) return;
-      if (getConsumerPlan(profile) !== "free") {
+      // Ni «tener plan» ni un perfil cacheado valen como éxito: hace falta pago confirmado
+      // o suscripción vigente (o que check-subscription lo acabe de confirmar).
+      if (hasConfirmedPayment(profile as BillingProfile | null, stripeSubscribed)) {
         setPaid(true);
         setChecking(false);
         track("checkout_success", {});
@@ -215,11 +237,12 @@ const PaymentSuccess = () => {
     };
   }, [user, loading, isBook]);
 
-  // Auto-redirect to dashboard once paid (plan purchases only)
+  // Solo se redirige cuando el pago está confirmado; así el usuario puede leer el
+  // resultado antes de que le llevemos al panel.
   useEffect(() => {
     if (isBook) return;
     if (paid && user) {
-      const timer = setTimeout(() => navigate("/dashboard"), 2000);
+      const timer = setTimeout(() => navigate("/dashboard"), 2500);
       return () => clearTimeout(timer);
     }
   }, [paid, user, navigate, isBook]);
@@ -265,7 +288,7 @@ const PaymentSuccess = () => {
         <ResourcesStatus
           mark={<Spinner size="lg" className="text-primary" />}
           title="Pago en proceso"
-          description="Estamos confirmando tu pago con Stripe. Suele tardar unos segundos. Si en 1 minuto sigues viendo esto, refresca la página."
+          description="Todavía no nos consta tu pago confirmado. Si acabas de pagar, el banco puede tardar un minuto en confirmarlo; pulsa «Comprobar de nuevo» para volver a consultarlo."
         >
           <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); window.location.reload(); }}>
             Comprobar de nuevo

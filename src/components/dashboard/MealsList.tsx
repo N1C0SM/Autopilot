@@ -75,6 +75,8 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
     void hapticTap();
     setDone(next);
     try { localStorage.setItem(todayKey(), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+    // Hoy escucha este evento para refrescar su anillo de comidas sin remount.
+    window.dispatchEvent(new Event("autopilot:meals-updated"));
   };
 
   const ratio = meals.length ? meals.filter((m) => done.has(m.name)).length / meals.length : 0;
