@@ -22,3 +22,7 @@
 - [ ] Dashboard Hoy más minimalista (v1.1)
 - [ ] Gamificación v2.0: ranking de fuerza relativa, badges, retos, comparación anónima, compartir progreso
 - [ ] Recompensas v3.0: puntos por entrenar, marcas y partner stores, charlas con Nicolás
+
+- [x] Tarjetas de fin de entreno visibles sin deslizar (móvil y PC) con pestañas
+- [x] Mapa de calor muscular más claro
+- [ ] Plus: recomendación de comida post-entreno según el entreno realizado (pendiente de definir fórmula con el usuario)
