@@ -27,6 +27,9 @@ import { WorkoutStudyCards } from "./WorkoutStudyCards";
 import { ExerciseSwap } from "./ExerciseSwap";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticImpact, hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
+import SwipeSetEntry from "./SwipeSetEntry";
+import LogAllSetsButton from "./LogAllSetsButton";
+import NumericWeightPicker from "./NumericWeightPicker";
 import {
   addWorkoutSetDrop,
   createWorkoutSetLogs,
