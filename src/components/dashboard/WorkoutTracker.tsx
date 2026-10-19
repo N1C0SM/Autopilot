@@ -1313,7 +1313,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           </Dialog>
 
           {workoutCompleted && !showCompletionSummary && (
-            <div className="flex h-[calc(100dvh-var(--nav-bar-height)-var(--safe-top,0px)-var(--mobile-nav-content-padding,6rem)-13.5rem)] min-h-[22rem] flex-col overflow-hidden [@media(max-height:700px)]:h-auto [@media(max-height:700px)]:overflow-visible md:h-auto md:min-h-0 md:overflow-visible">
+            <div className="flex flex-col pb-4">
               <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
                 <div className="mb-3 flex shrink-0 items-center gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
