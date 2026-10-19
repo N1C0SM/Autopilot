@@ -47,9 +47,16 @@ Hay dos escenarios según cómo se envíen los emails de Auth:
 
 **A. Send Email Hook activo → edge function `auth-email-hook`**
 
-- La plantilla del repo ya pinta `payload.data.token` (el código).
-- Desplegar `supabase/functions/auth-email-hook` y confirmar que **Authentication → Hooks → Send Email** apunta a esa función.
-- El payload del hook incluye `token`; si el hook no está configurado, Supabase usa sus plantillas y el repo no interviene.
+- La plantilla del repo pinta `payload.data.token` cuando es un OTP numérico (6 dígitos) y mantiene el enlace.
+- **Publicar la web NO despliega las edge functions.** Hay que desplegar el hook aparte; si no, el correo sigue saliendo con la versión anterior (sin código) aunque la pantalla `/verify-email` ya esté publicada:
+  ```bash
+  cd ~/Developer/Autopilot-source
+  supabase login   # solo la primera vez
+  supabase functions deploy auth-email-hook --project-ref enebrcdrdnfkyduzyrzm
+  ```
+  (También se puede desplegar desde el flujo de publicación de Lovable, que incluye las edge functions pendientes.)
+- Confirmar que **Authentication → Hooks → Send Email** apunta a `auth-email-hook`.
+- El payload del hook incluye `token` (OTP); si el hook no está configurado, Supabase usa sus plantillas y el repo no interviene.
 
 **B. Plantillas de Supabase (sin hook)**
 
@@ -88,6 +95,7 @@ Para el enlace de respaldo y la recuperación de contraseña:
 4. Reenviar código → llega uno nuevo tras el cooldown.
 5. «Corregir mi correo» → vuelve a `/signup` con el email rellenado.
 6. Pulsar el enlace del correo después de haber verificado con el código → `/auth/callback` entra sin error.
+7. Si el correo todavía no incluye código (hook sin desplegar), la pantalla ofrece el fallback: abrir el correo y pulsar «Confirmar email».
 7. Login con la cuenta sin verificar → aparece «Introducir código de verificación» y funciona.
 8. App nativa iOS: el código se teclea en la WebView (sin depender del deep link).
 9. Android: la verificación ya no depende del deep link; la recuperación de contraseña sigue necesitando el manifest (ver auditoría C-05).

@@ -27,10 +27,14 @@ const codeStyle = {
   display: 'block' as const,
 }
 
-export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => (
+export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => {
+  // Supabase entrega el OTP de 6 dígitos en `token`; si algún día llegara un
+  // hash largo, no lo pintamos como si fuera un código.
+  const otp = typeof token === "string" && /^\d{4,10}$/.test(token.trim()) ? token.trim() : "";
+  return (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>{token ? 'Tu código de verificación de Autopilot' : 'Confirma tu email para activar tu cuenta en Autopilot'}</Preview>
+    <Preview>{otp ? 'Tu código de verificación de Autopilot' : 'Confirma tu email para activar tu cuenta en Autopilot'}</Preview>
     <Body style={s.main}>
       <Container style={s.container}>
         <Section style={s.header}>
@@ -44,12 +48,12 @@ export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => (
             de entrenamiento y nutrición personalizado.
           </Text>
 
-          {token ? (
+          {otp ? (
             <>
               <Text style={{ ...s.text, marginBottom: '10px' }}>
                 Introduce este código en la app:
               </Text>
-              <Text style={codeStyle}>{token}</Text>
+              <Text style={codeStyle}>{otp}</Text>
               <Text style={s.textMuted}>
                 Caduca a los pocos minutos. Si caduca, pide uno nuevo desde la
                 pantalla de verificación.
@@ -75,6 +79,7 @@ export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => (
       </Container>
     </Body>
   </Html>
-)
+  );
+};
 
 export default SignupEmail

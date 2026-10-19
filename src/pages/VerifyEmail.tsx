@@ -274,7 +274,12 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
           </Button>
         </div>
 
-        <p className="mt-4 flex items-center justify-center gap-1.5 text-center type-footnote text-muted-foreground">
+        <p className="mt-4 text-center type-footnote text-muted-foreground">
+          ¿No ves ningún código? Abre el correo y pulsa «Confirmar email»: el enlace también
+          activa tu cuenta.
+        </p>
+
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-center type-footnote text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           Tu cuenta no se activa hasta que verifiques el correo.
         </p>
