@@ -107,7 +107,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           ? "flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           : "w-full [&>article]:hidden [&>article[data-active=true]]:flex"}
       >
-        {intro && <article data-active={activeCard === 0} className={cardClass}>{intro}</article>
+        {intro && <article data-active={activeCard === 0} className={cardClass}>{intro}</article>}
 
         <article data-active={activeCard === 0 + (intro ? 1 : 0)} className={cardClass}>
           <h3 className={titleClass}>Músculos de hoy</h3>
