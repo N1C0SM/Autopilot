@@ -17,7 +17,7 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Tu código de verificación de Autopilot',
+  signup: 'Confirma tu cuenta de Autopilot',
   invite: 'Te han invitado a Autopilot',
   magiclink: 'Tu enlace de acceso a Autopilot',
   recovery: 'Restablece tu contraseña de Autopilot',

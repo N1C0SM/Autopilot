@@ -49,12 +49,16 @@ Hay dos escenarios según cómo se envíen los emails de Auth:
 
 - La plantilla del repo pinta `payload.data.token` cuando es un OTP numérico (6 dígitos) y mantiene el enlace.
 - **Publicar la web NO despliega las edge functions.** Hay que desplegar el hook aparte; si no, el correo sigue saliendo con la versión anterior (sin código) aunque la pantalla `/verify-email` ya esté publicada:
+  **Si el proyecto se gestiona con Lovable**, editar los archivos del repo no basta: hay que pedir a Lovable
+  **«Redeploy my email templates»** (o desplegar `auth-email-hook`) y comprobarlo en
+  **More → Cloud → Emails → Auth emails → Send test**. Es el motivo habitual de que el correo
+  siga saliendo con la versión antigua.
+  **Si se despliega por CLI**:
   ```bash
   cd ~/Developer/Autopilot-source
-  supabase login   # solo la primera vez
-  supabase functions deploy auth-email-hook --project-ref enebrcdrdnfkyduzyrzm
+  npx --no-install supabase login   # solo la primera vez
+  npx --no-install supabase functions deploy auth-email-hook --project-ref enebrcdrdnfkyduzyrzm
   ```
-  (También se puede desplegar desde el flujo de publicación de Lovable, que incluye las edge functions pendientes.)
 - Confirmar que **Authentication → Hooks → Send Email** apunta a `auth-email-hook`.
 - El payload del hook incluye `token` (OTP); si el hook no está configurado, Supabase usa sus plantillas y el repo no interviene.
 

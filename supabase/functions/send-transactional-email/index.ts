@@ -4,7 +4,7 @@ import { renderTemplate } from '../_shared/transactional-email-templates/render.
 
 // Configuration baked in at scaffold time — do NOT change these manually.
 // To update, re-run the email domain setup flow.
-const SITE_NAME = "Autopilot · Tu entrenamiento y nutrición personalizada"
+const SITE_NAME = "Autopilot"
 // SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
 // It MUST match the subdomain delegated to Lovable's nameservers — never the root domain.
 // The email API looks up this exact domain; a mismatch causes "No email domain record found".
