@@ -1321,7 +1321,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   </div>
                   <div className="min-w-0">
                     <p className="type-footnote text-muted-foreground">Hecho por hoy</p>
-                    <h2 className="truncate type-title3">{trainingTitle || selectedDay}</h2>
+                    <h2 className="line-clamp-2 type-title3">{trainingTitle || selectedDay}</h2>
                   </div>
                 </div>
                 {renderStudyCards(false)}

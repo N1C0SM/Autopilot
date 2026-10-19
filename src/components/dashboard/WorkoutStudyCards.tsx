@@ -47,14 +47,17 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
   };
   const goTo = (index: number) => {
     const target = Math.min(total - 1, Math.max(0, index));
-    scrollerRef.current?.scrollTo({ left: target * step(), behavior: "smooth" });
+    const scroller = scrollerRef.current;
+    const card = scroller?.children[target] as HTMLElement | undefined;
+    scroller?.scrollTo({ left: card ? card.offsetLeft - scroller.offsetLeft : target * step(), behavior: "smooth" });
     setActiveCard(target);
   };
 
   // Inmersivo: contenido directamente sobre la hoja. En línea: una sola superficie por ficha.
+  // Ancho fijo al 100 % para que ninguna ficha desplace a las siguientes.
   const cardClass = immersive
-    ? "flex h-full w-full shrink-0 snap-center flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
-    : "w-full flex-col rounded-2xl bg-card p-4 text-left";
+    ? "flex h-full w-full min-w-full max-w-full basis-full shrink-0 snap-start flex-col overflow-hidden px-5 pt-2 text-left [&_.study-panel]:flex-1"
+    : "w-full min-w-full max-w-full basis-full flex-col overflow-hidden rounded-2xl bg-card p-4 text-left break-words";
   const titleClass = immersive ? "type-title2" : "type-title3";
   const listClass = immersive ? "mt-5 space-y-5" : "mt-4 space-y-4";
   // El estado ocupa lo que queda de la ficha y se centra en ese hueco.
@@ -106,7 +109,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
         className={immersive
           ? "flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           // Móvil: deslizar con snap de página entera. PC: sin arrastre, se navega con las pestañas.
-          : "flex w-full items-start snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-x-hidden [&>article]:flex [&>article]:shrink-0 [&>article]:snap-center [&>article]:snap-always"}
+          : "relative flex w-full items-start snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-x-hidden [&>article]:flex [&>article]:shrink-0 [&>article]:snap-start [&>article]:snap-always"}
       >
         {intro && <article data-active={activeCard === 0} className={cardClass}>{intro}</article>}
 
