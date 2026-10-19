@@ -49,7 +49,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
     const target = Math.min(total - 1, Math.max(0, index));
     const scroller = scrollerRef.current;
     const card = scroller?.children[target] as HTMLElement | undefined;
-    scroller?.scrollTo({ left: card ? card.offsetLeft - scroller.offsetLeft : target * step(), behavior: "smooth" });
+    scroller?.scrollTo({ left: card ? card.offsetLeft : target * step(), behavior: "smooth" });
     setActiveCard(target);
   };
 
@@ -107,7 +107,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
         ref={scrollerRef}
         onScroll={handleScroll}
         className={immersive
-          ? "flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          ? "relative flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           // Móvil: deslizar con snap de página entera. PC: sin arrastre, se navega con las pestañas.
           : "relative flex w-full items-start snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-x-hidden [&>article]:flex [&>article]:shrink-0 [&>article]:snap-start [&>article]:snap-always"}
       >
