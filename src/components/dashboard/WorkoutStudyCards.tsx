@@ -39,7 +39,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
   const nextStep = review[0]?.proposal || "Mantén tu plan como referencia para la próxima sesión.";
 
   const total = intro ? 4 : 3;
-  const step = () => (scrollerRef.current?.clientWidth || 0) * (immersive ? 1 : 0.88);
+  const step = () => scrollerRef.current?.clientWidth || 0;
   const handleScroll = () => {
     const scroller = scrollerRef.current;
     if (!scroller || scroller.clientWidth === 0) return;
@@ -92,7 +92,7 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
               type="button"
               role="tab"
               aria-selected={activeCard === i}
-              onClick={() => { void hapticSelection(); setActiveCard(i); }}
+              onClick={() => { void hapticSelection(); goTo(i); }}
               className={cn("truncate rounded-lg px-1 py-2 type-footnote font-semibold transition-colors", activeCard === i ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}
             >
               {label}
@@ -102,10 +102,11 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
       )}
       <div
         ref={scrollerRef}
-        onScroll={immersive ? handleScroll : undefined}
+        onScroll={handleScroll}
         className={immersive
           ? "flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          : "w-full [&>article]:hidden [&>article[data-active=true]]:flex"}
+          // Móvil: deslizar con snap de página entera. PC: sin arrastre, se navega con las pestañas.
+          : "flex w-full items-start snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:overflow-x-hidden [&>article]:flex [&>article]:shrink-0 [&>article]:snap-center [&>article]:snap-always"}
       >
         {intro && <article data-active={activeCard === 0} className={cardClass}>{intro}</article>}
 
