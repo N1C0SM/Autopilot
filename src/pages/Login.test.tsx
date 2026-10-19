@@ -3,6 +3,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Login from "./Login";
+import { readSignupEmail, readVerifyContext } from "@/lib/signupVerification";
 
 const signIn = vi.fn();
 const hapticNotify = vi.fn();
@@ -86,4 +87,24 @@ describe("login", () => {
     fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "wrong-pass2" } });
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+  it("ofrece introducir el código cuando el correo no está verificado", async () => {
+    signIn.mockResolvedValue({ error: new Error("Email not confirmed") });
+    sessionStorage.clear();
+    renderLogin();
+
+    fireEvent.change(screen.getByLabelText("Usuario o correo"), { target: { value: "ana@example.test" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "secret123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar sesión" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("introduce el código de verificación");
+    fireEvent.click(screen.getByRole("button", { name: "Introducir código de verificación" }));
+
+    expect(readVerifyContext()).toMatchObject({
+      email: "ana@example.test",
+      next: "/onboarding-choice",
+      fromScan: false,
+    });
+    expect(readSignupEmail()).toBe("ana@example.test");
+  });
+
 });

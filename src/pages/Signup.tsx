@@ -1,4 +1,3 @@
-import AppStoreBadges from "@/components/AppStoreBadges";
 import { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
@@ -8,13 +7,13 @@ import Screen from "@/components/native/Screen";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Mail, Eye, EyeOff, Gift, Smartphone, Sparkles, Camera } from "lucide-react";
+import { Eye, EyeOff, Gift, Sparkles, Camera } from "lucide-react";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
-import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice, AuthSymbol } from "@/components/auth/AuthScreenParts";
+import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage, AuthNotice } from "@/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
 import { useAuth } from "@/contexts/AuthContext";
 import { track } from "@/lib/analytics";
-import { verifyEmailRedirect } from "@/lib/authRedirect";
+import { postVerificationPath, readSignupEmail, readVerifyContext, saveSignupEmail, saveVerifyContext } from "@/lib/signupVerification";
 import { signInWithApple } from "@/lib/nativeAuth";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { readAnonScanId } from "@/lib/scanAttribution";
@@ -30,18 +29,10 @@ const Signup = () => {
   const [loading, setLoading] = useState(false);
   const [emailTaken, setEmailTaken] = useState(false);
   const [checkingEmail, setCheckingEmail] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
   const [formError, setFormError] = useState<string | null>(null);
   const emailCheck = useRef(0);
   const navigate = useNavigate();
-  useEffect(() => {
-    if (resendCooldown <= 0) return;
-    const timer = window.setTimeout(() => setResendCooldown(value => value - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [resendCooldown]);
   const referralCode = searchParams.get("ref") || "";
   const isFree = searchParams.get("free") === "true";
   const fromQuiz = searchParams.get("from") === "quiz";
@@ -69,7 +60,17 @@ const Signup = () => {
       if (p?.leadName) setName((v) => v || p.leadName);
       if (p?.leadEmail) setEmail((v) => v || p.leadEmail);
     } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+    const savedEmail = readSignupEmail();
+    if (savedEmail) setEmail((value) => value || savedEmail);
   }, []);
+
+  // Si esta pestaña tiene una verificación pendiente (por ejemplo, el usuario
+  // recargó o volvió atrás desde el correo), el formulario no sirve: el email
+  // ya está "tomado" por su propia cuenta sin verificar. Le llevamos al código.
+  useEffect(() => {
+    const pending = readVerifyContext();
+    if (pending) navigate("/verify-email", { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     if (!fromScan) return;
@@ -133,21 +134,7 @@ const Signup = () => {
       }
 
       const anonScanId = readAnonScanId();
-      const safeNext = (raw: string | null, fallback: string): string => {
-        if (!raw) return fallback;
-        let v = raw;
-        try { v = decodeURIComponent(v); } catch {}
-        if (!v.startsWith("/") || v.startsWith("//")) return fallback;
-        return v;
-      };
-      let nextAfterVerify: string;
-      if (nextParam) {
-        nextAfterVerify = safeNext(nextParam, "/onboarding-choice");
-      } else if (fromScan) {
-        nextAfterVerify = safeNext("/scan?from=signup", "/onboarding-choice");
-      } else {
-        nextAfterVerify = "/onboarding-choice";
-      }
+      const nextAfterVerify = postVerificationPath(nextParam, fromScan);
       const { error } = await signUp(email.trim(), password, {
         display_name: name.trim(),
         referral_code: referralCode,
@@ -163,100 +150,20 @@ const Signup = () => {
         return;
       }
 
-      // Email verification required — show confirmation screen
+      // La verificación ya no exige salir de la app: el código de 6 dígitos se
+      // introduce en /verify-email y el contexto de esta pestaña se conserva
+      // (plan elegido, scan, quiz).
+      saveVerifyContext({ email: email.trim(), next: nextAfterVerify, fromScan, source: "signup" });
+      saveSignupEmail(email.trim());
       track("register", { from: fromQuiz ? "quiz" : fromScan ? "scan" : "direct", plan: isFree ? "free" : selectedPlan || undefined });
-      setResendCooldown(60);
       void hapticNotify("success");
-      setEmailSent(true);
+      navigate("/verify-email", { replace: true });
     } catch {
       fail("No hemos podido crear tu cuenta. Comprueba tu conexión y vuelve a intentarlo.");
     } finally {
       setLoading(false);
     }
   };
-
-  const resend = async () => {
-    void hapticTap();
-    setResending(true);
-    try {
-      const safeNext = (raw: string | null, fallback: string): string => {
-        if (!raw) return fallback;
-        let v = raw;
-        try { v = decodeURIComponent(v); } catch {}
-        if (!v.startsWith("/") || v.startsWith("//")) return fallback;
-        return v;
-      };
-      let nextAfterVerify: string;
-      if (nextParam) nextAfterVerify = safeNext(nextParam, "/onboarding-choice");
-      else if (fromScan) nextAfterVerify = safeNext("/scan?from=signup", "/onboarding-choice");
-      else nextAfterVerify = "/onboarding-choice";
-      const { error } = await supabase.auth.resend({ type: "signup", email: email.trim(), options: { emailRedirectTo: verifyEmailRedirect(nextAfterVerify) } });
-      if (error) { void hapticNotify("error"); toast.error("No se ha podido reenviar. Espera un momento y vuelve a intentarlo."); }
-      else { setResendCooldown(60); void hapticNotify("success"); toast.success("Enlace reenviado. Revisa tu correo."); }
-    } catch { void hapticNotify("error"); toast.error("No se ha podido reenviar el correo."); }
-    finally { setResending(false); }
-  };
-
-  if (emailSent) {
-    return (
-      <Screen
-        hideBack
-        centered
-        maxWidth="sm"
-        contentClassName="py-6"
-        footer={
-          <div className="space-y-3 pb-2">
-            <div className="flex flex-col gap-2">
-              <Button asChild size="lg" className="w-full">
-                <Link to="/login" onClick={() => void hapticTap()}>Iniciar sesión</Link>
-              </Button>
-              <p className="text-center text-muted-foreground type-footnote">
-                Si ya hiciste clic en el enlace del correo, vuelve a la app web o hazlo desde el mismo dispositivo.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="plain"
-              size="sm"
-              className={cn(authSecondaryActionClass, "tabular-nums")}
-              disabled={resending || resendCooldown > 0}
-              onClick={resend}
-            >
-              {resending ? "Reenviando…" : resendCooldown > 0 ? `Reenviar en ${resendCooldown} s` : "Reenviar enlace"}
-            </Button>
-          </div>
-        }
-      >
-        <AuthHero
-          mark={<AuthSymbol icon={Mail} />}
-          title="Verifica tu correo"
-          description={
-            <>
-              Te hemos enviado un enlace de verificación a <span className="break-all text-foreground">{email}</span>. Ábrelo para activar tu cuenta.
-            </>
-          }
-        >
-          <Button type="button" variant="plain" size="sm" className="mt-1 h-11 font-medium" onClick={() => { void hapticTap(); setEmailSent(false); }}>
-            Corregir mi correo
-          </Button>
-        </AuthHero>
-        <p className="mx-auto mt-4 max-w-[34ch] text-center type-footnote text-muted-foreground">
-          Revisa también la carpeta de spam. El enlace te llevará a preparar tu rutina.
-        </p>
-        <AppStoreBadges
-          size="compact"
-          align="start"
-          className="mt-10"
-          wrap={(badges) => (
-            <AuthNotice icon={<Smartphone strokeWidth={1.75} />} title="Llévate tu plan al gimnasio">
-              <p>Puedes usar Autopilot desde la web o descargar la app para registrar series y descansos desde el móvil.</p>
-              <div className="mt-3">{badges}</div>
-            </AuthNotice>
-          )}
-        />
-      </Screen>
-    );
-  }
 
   const fieldError = emailTaken ? "Este correo ya está registrado." : formError;
 

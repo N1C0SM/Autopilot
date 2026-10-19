@@ -8,24 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuthHero, AuthSymbol } from "@/components/auth/AuthScreenParts";
 import { authSecondaryActionClass } from "@/components/auth/authFormHelpers";
 import { hapticNotify, hapticTap } from "@/lib/native";
+import { track } from "@/lib/analytics";
+import { safeNextPath } from "@/lib/signupVerification";
 import { MailCheck, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-/**
- * Destino tras canjear el código del correo de verificación.
- *
- * Se respeta el `next` del enlace cuando es una ruta interna segura; el resto
- * de destinos (onboarding, dashboard) se resuelven aquí para no depender de la
- * configuración del allowlist de Supabase.
- */
-const safeNextPath = (raw: string | null, fallback: string): string => {
-  if (!raw) return fallback;
-  let value = raw;
-  try { value = decodeURIComponent(raw); } catch { /* ya decodificado por la URL */ }
-  // Solo rutas internas: evita redirigir a otro dominio desde el enlace del correo.
-  if (!value.startsWith("/") || value.startsWith("//")) return fallback;
-  return value;
-};
 
 /**
  * `/auth/callback`: convierte el enlace de verificación de correo en una sesión.
@@ -78,7 +64,7 @@ const AuthCallback = () => {
           type: type as "signup" | "recovery" | "magiclink" | "email",
         }));
       } else if (code) {
-        ({ error } = await supabase.auth.exchangeCodeForSession({ code }));
+        ({ error } = await supabase.auth.exchangeCodeForSession(code));
       }
 
       // Red de seguridad: si `detectSessionInUrl` ya montó la sesión al cargar
@@ -91,6 +77,13 @@ const AuthCallback = () => {
       }
 
       if (error) {
+        // El enlace puede haber quedado inutilizado porque la cuenta ya se
+        // verificó con el código de 6 dígitos. Si la sesión existe, entramos.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate(next, { replace: true });
+          return;
+        }
         void hapticNotify("error");
         setErrorMessage(
           providerError ||
@@ -103,6 +96,7 @@ const AuthCallback = () => {
       }
 
       void hapticNotify("success");
+      track("verify_email", { method: "link" });
       // Sustituye el callback por el destino para que «atrás» no vuelva al canje.
       navigate(next, { replace: true });
     };

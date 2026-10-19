@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Tu código de verificación de Autopilot',
+  invite: 'Te han invitado a Autopilot',
+  magiclink: 'Tu enlace de acceso a Autopilot',
+  recovery: 'Restablece tu contraseña de Autopilot',
+  email_change: 'Confirma tu nuevo correo en Autopilot',
+  reauthentication: 'Tu código de verificación',
 }
 
 type AuthEmailProps = { siteName: string; siteUrl: string; recipient: string; confirmationUrl: string; oldEmail: string; email: string; newEmail: string; token: string };
@@ -38,7 +38,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<AuthEmailProps>> = {
 }
 
 // Configuration
-const SITE_NAME = "autopilotv2"
+const SITE_NAME = "Autopilot"
 const SENDER_DOMAIN = "notify.autopilotplan.com"
 const ROOT_DOMAIN = "autopilotplan.com"
 const FROM_DOMAIN = "autopilotplan.com" // Domain shown in From address (may be root or sender subdomain)

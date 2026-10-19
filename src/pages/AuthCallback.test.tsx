@@ -78,7 +78,7 @@ describe("auth callback (web)", () => {
     goTo("/auth/callback?code=Codigo123&next=%2Fonboarding-choice");
     renderCallback();
 
-    await waitFor(() => expect(exchangeCodeForSession).toHaveBeenCalledWith({ code: "Codigo123" }));
+    await waitFor(() => expect(exchangeCodeForSession).toHaveBeenCalledWith("Codigo123"));
     expect(setSession).not.toHaveBeenCalled();
   });
 
@@ -114,4 +114,16 @@ describe("auth callback (web)", () => {
 
     expect(await screen.findByText(/ha caducado/)).toBeInTheDocument();
   });
+  it("si el enlace ya no vale pero la sesión existe, entra en vez de mostrar error", async () => {
+    goTo("/auth/callback?next=%2Fdashboard#access_token=AT&refresh_token=RT");
+    setSession.mockResolvedValue({ error: { message: "otp_expired" } });
+    getSession.mockResolvedValue({ data: { session: { access_token: "AT" } } });
+    renderCallback();
+
+    await waitFor(() => expect(getSession).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.queryByText("No hemos podido verificar")).not.toBeInTheDocument(),
+    );
+  });
+
 });

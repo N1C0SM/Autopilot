@@ -1,8 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Signup from "./Signup";
+import { saveVerifyContext } from "@/lib/signupVerification";
 
 const invoke = vi.fn();
 const signUp = vi.fn();
@@ -32,7 +33,10 @@ const renderSignup = (path = "/signup?free=true") =>
   render(
     <HelmetProvider>
       <MemoryRouter initialEntries={[path]}>
-        <Signup />
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/verify-email" element={<div data-testid="verify-screen">Verifica tu correo</div>} />
+        </Routes>
       </MemoryRouter>
     </HelmetProvider>,
   );
@@ -85,4 +89,30 @@ describe("signup", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Password is too weak");
     await waitFor(() => expect(hapticNotify).toHaveBeenCalledWith("error"));
   });
+  it("guarda el contexto de verificación y lleva a /verify-email", async () => {
+    invoke.mockResolvedValue({ data: { emailTaken: false } });
+    signUp.mockResolvedValue({ error: null });
+    renderSignup("/signup?plan=training&from=scan");
+
+    fireEvent.change(screen.getByLabelText("Tu nombre"), { target: { value: "Ana" } });
+    fireEvent.change(screen.getByLabelText("Correo electrónico"), { target: { value: "ana@example.test" } });
+    fireEvent.change(screen.getByLabelText("Contraseña"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Crear cuenta" }));
+
+    expect(await screen.findByTestId("verify-screen")).toBeInTheDocument();
+    const context = JSON.parse(sessionStorage.getItem("autopilot_verify") || "null");
+    expect(context).toMatchObject({
+      email: "ana@example.test",
+      next: "/scan?from=signup",
+      fromScan: true,
+    });
+    expect(sessionStorage.getItem("autopilot_signup_email")).toBe("ana@example.test");
+  });
+
+  it("si esta pestaña tiene una verificación pendiente lleva a /verify-email", async () => {
+    saveVerifyContext({ email: "ana@example.test", next: "/onboarding-choice", fromScan: false });
+    renderSignup();
+    expect(await screen.findByTestId("verify-screen")).toBeInTheDocument();
+  });
+
 });

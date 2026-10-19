@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { authRedirect, verifyEmailRedirect } from "@/lib/authRedirect";
 import { clearAnonScanId } from "@/lib/scanAttribution";
+import { clearPendingScanContext } from "@/lib/pendingScan";
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -75,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // escanea o se registra después en este mismo navegador, no debe heredar la
     // atribución de fotos ajenas.
     clearAnonScanId();
+    // El informe anónimo del scan es PII de salud: no debe sobrevivir a la
+    // sesión ni quedar visible para otra persona que use este navegador.
+    clearPendingScanContext();
     await supabase.auth.signOut();
   };
 

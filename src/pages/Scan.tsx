@@ -59,6 +59,7 @@ import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
+import { clearPendingScanContext, markPendingScanRestored, readPendingScanContext } from "@/lib/pendingScan";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
 
@@ -398,6 +399,28 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         if (txt) setSavedGoalText(txt);
       });
   }, [user]);
+
+  // Tras verificar la cuenta en la misma pestaña, el análisis que se hizo sin
+  // cuenta sigue en sessionStorage. Se restaura para no repetir la IA (y para
+  // poder aplicarlo al plan desde el espacio personal). Si la verificación se
+  // abrió en otro dispositivo no hay contexto: ese caso necesita una
+  // reclamación server-side por email verificado (pendiente).
+  const restoredPendingScan = useRef(false);
+  useEffect(() => {
+    if (restoredPendingScan.current || !user || inline || routeUserId) return;
+    restoredPendingScan.current = true;
+    const pending = readPendingScanContext();
+    // Solo restauramos el contexto de un scan anónimo que llegó al formulario
+    // de lead (los scans de una cuenta ya tienen su historial guardado).
+    if (!pending?.leadEmail) return;
+    setCurrentImg((prev) => prev ?? pending.currentImg ?? null);
+    setObjectiveImg((prev) => prev ?? pending.objectiveImg ?? null);
+    setResult(pending.result as Result);
+    if (!pending.restored) {
+      toast.info("Recuperamos el análisis que hiciste antes de crear tu cuenta.");
+      markPendingScanRestored();
+    }
+  }, [user, inline, routeUserId]);
 
   // Cargar físicos objetivo: los públicos del admin + los del propio usuario
   const loadGoalPresets = async () => {
@@ -1080,8 +1103,10 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     setPlanApplyState("idle");
     setPlanApplyCopy(null);
     // Un escaneo nuevo estrena id anónimo: el anterior ya no debe atribuirse a
-    // quien escanee después en esta misma pestaña.
+    // quien escanee después en esta misma pestaña. También olvidamos el
+    // informe anónimo que se hubiera restaurado.
     clearAnonScanId();
+    clearPendingScanContext();
     setResult(null);
     setCurrentImg(null);
     setBackImg(null);

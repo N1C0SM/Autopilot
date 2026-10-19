@@ -13,6 +13,7 @@ const AppDownload = lazy(() => import("@/pages/AppDownload"));
 const PlanShieldDialog = lazy(() => import("@/components/dashboard/PlanShieldDialog"));
 const PublicInfo = lazy(() => import("./pages/PublicInfo"));
 const Signup = lazy(() => import("./pages/Signup"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Welcome = lazy(() => import("./pages/Welcome"));
 const Login = lazy(() => import("./pages/Login"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -120,6 +121,7 @@ const App = () => (
             <Route path="/equipo" element={<PublicInfo page="team" />} />
             <Route path="/preguntas-frecuentes" element={<PublicInfo page="faq" />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/para-entrenadores" element={<ForTrainers />} />
             <Route path="/invitacion/:token" element={<AcceptInvitation />} />
             <Route path="/login" element={<Login />} />

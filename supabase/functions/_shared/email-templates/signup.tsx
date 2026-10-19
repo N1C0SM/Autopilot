@@ -9,12 +9,28 @@ interface SignupEmailProps {
   siteUrl: string
   recipient: string
   confirmationUrl: string
+  token?: string
 }
 
-export const SignupEmail = ({ confirmationUrl }: SignupEmailProps) => (
+const codeStyle = {
+  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Arial, sans-serif',
+  fontSize: '34px',
+  fontWeight: 700 as const,
+  letterSpacing: '0.28em',
+  color: '#FFAA3C',
+  backgroundColor: '#111216',
+  border: '1px solid #1f2024',
+  borderRadius: '16px',
+  padding: '18px 0',
+  textAlign: 'center' as const,
+  margin: '0 0 20px',
+  display: 'block' as const,
+}
+
+export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => (
   <Html lang="es" dir="ltr">
     <Head />
-    <Preview>Confirma tu email para activar tu cuenta en Autopilot</Preview>
+    <Preview>{token ? 'Tu código de verificación de Autopilot' : 'Confirma tu email para activar tu cuenta en Autopilot'}</Preview>
     <Body style={s.main}>
       <Container style={s.container}>
         <Section style={s.header}>
@@ -27,6 +43,20 @@ export const SignupEmail = ({ confirmationUrl }: SignupEmailProps) => (
             Confirma tu email para activar tu cuenta y empezar a recibir tu plan
             de entrenamiento y nutrición personalizado.
           </Text>
+
+          {token ? (
+            <>
+              <Text style={{ ...s.text, marginBottom: '10px' }}>
+                Introduce este código en la app:
+              </Text>
+              <Text style={codeStyle}>{token}</Text>
+              <Text style={s.textMuted}>
+                Caduca a los pocos minutos. Si caduca, pide uno nuevo desde la
+                pantalla de verificación.
+              </Text>
+            </>
+          ) : null}
+
           <Section style={s.buttonContainer}>
             <Button style={s.button} href={confirmationUrl}>
               Confirmar email

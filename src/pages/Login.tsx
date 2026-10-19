@@ -16,6 +16,7 @@ import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, Aut
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
 import { appleSignInEnabled } from "@/lib/platform";
 import { hapticNotify, hapticTap } from "@/lib/native";
+import { clearVerifyContext, saveSignupEmail, saveVerifyContext } from "@/lib/signupVerification";
 import { cn } from "@/lib/utils";
 
 const swap = { type: "spring", stiffness: 380, damping: 36 } as const;
@@ -27,6 +28,9 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Si las credenciales son correctas pero el correo no está verificado, se
+  // ofrece introducir el código de 6 dígitos sin salir de la app.
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -75,13 +79,16 @@ const Login = () => {
     if (error) {
       void hapticNotify("error");
       if (error.message.includes("Email not confirmed")) {
-        setFormError("Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada (o spam). Puedes volver a registrarte con ese email para reenviar el enlace.");
+        setFormError("Debes verificar tu correo electrónico antes de iniciar sesión. Revisa tu bandeja de entrada (o spam) o introduce el código de verificación.");
+        setUnconfirmedEmail(isEmail(cleaned) ? cleaned : null);
       } else if (error.message === "rate_limited") {
         setFormError("Demasiados intentos. Espera un minuto.");
       } else {
         setFormError("Usuario o contraseña incorrectos.");
       }
     } else {
+      // Si había una verificación pendiente de otra cuenta, ya no aplica.
+      clearVerifyContext();
       // Resolve destination based on role
       const { data: { user: authedUser } } = await supabase.auth.getUser();
       if (authedUser) {
@@ -100,6 +107,14 @@ const Login = () => {
         navigate("/dashboard");
       }
     }
+  };
+
+  const openVerification = () => {
+    if (!unconfirmedEmail) return;
+    void hapticTap();
+    saveSignupEmail(unconfirmedEmail);
+    saveVerifyContext({ email: unconfirmedEmail, next: nextPath || "/onboarding-choice", fromScan: false, source: "login" });
+    navigate("/verify-email");
   };
 
   const forget = () => {
@@ -189,7 +204,7 @@ const Login = () => {
               enterKeyHint="next"
               onKeyDown={focusNextOnEnter("password")}
               value={email}
-              onChange={(e) => { setEmail(e.target.value); setFormError(null); }}
+              onChange={(e) => { setEmail(e.target.value); setFormError(null); setUnconfirmedEmail(null); }}
               required
               aria-invalid={formError ? true : undefined}
               aria-describedby={formError ? "login-error" : undefined}
@@ -221,6 +236,14 @@ const Login = () => {
           <Link to="/forgot-password" onClick={() => void hapticTap()}>¿Olvidaste la contraseña?</Link>
         </Button>
       </div>
+
+      {unconfirmedEmail ? (
+        <div className="mt-1 text-center">
+          <Button type="button" variant="plain" size="sm" className="h-11 font-medium" onClick={openVerification}>
+            Introducir código de verificación
+          </Button>
+        </div>
+      ) : null}
     </Screen>
   );
 };
