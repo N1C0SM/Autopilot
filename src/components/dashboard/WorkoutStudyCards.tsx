@@ -84,12 +84,30 @@ export function WorkoutStudyCards({ muscles, muscleSetCounts, intensityFor, curr
           ))}
         </div>
       )}
+      {!immersive && (
+        <div role="tablist" aria-label="Análisis de la sesión" className="mb-3 grid shrink-0 gap-1 rounded-xl bg-secondary p-1" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}>
+          {(intro ? ["Resumen", "Músculos", "Comparar", "Siguiente"] : ["Músculos", "Comparar", "Siguiente"]).map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              role="tab"
+              aria-selected={activeCard === i}
+              onClick={() => { void hapticSelection(); setActiveCard(i); }}
+              className={cn("truncate rounded-lg px-1 py-2 type-footnote font-semibold transition-colors", activeCard === i ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       <div
         ref={scrollerRef}
-        onScroll={handleScroll}
-        className={`flex w-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${immersive ? "min-h-0 flex-1" : "min-h-0 flex-1 gap-3"}`}
+        onScroll={immersive ? handleScroll : undefined}
+        className={immersive
+          ? "flex min-h-0 w-full flex-1 snap-x snap-mandatory overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "w-full [&>article]:hidden [&>article[data-active=true]]:flex"}
       >
-        {intro && <article className={cardClass}>{intro}</article>}
+        {intro && <article data-active={activeCard === 0} className={cardClass}>{intro}</article>
 
         <article className={cardClass}>
           <h3 className={titleClass}>Músculos de hoy</h3>
