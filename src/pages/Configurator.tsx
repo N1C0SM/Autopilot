@@ -147,6 +147,36 @@ const Configurator = () => {
     accept,
   ];
 
+  /**
+   * El toast genérico ocultaba la causa real del fallo del upsert. Además de
+   * registrarla en consola, se muestra el código y el mensaje del servidor para
+   * poder diagnosticarlo sin abrir las herramientas del navegador. Si el fallo
+   * es de sesión, se manda a iniciar sesión de nuevo en vez de dejar al usuario
+   * en un callejón sin salida.
+   */
+  const reportSaveError = (error: { message?: string; code?: string; details?: string; hint?: string }) => {
+    console.error("[configurator] no se pudo guardar el onboarding", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      user_id: user?.id ?? null,
+    });
+    const authProblem =
+      error.code === "PGRST301" ||
+      /jwt|expired|not authenticated|sesión/i.test(error.message ?? "");
+    if (authProblem) {
+      toast.error("Tu sesión ha caducado. Vuelve a iniciar sesión y guarda el plan.", { duration: 10000 });
+      navigate(`/login?next=${encodeURIComponent("/onboarding")}`);
+      return;
+    }
+    const code = error.code ? ` (${error.code})` : "";
+    toast.error(`No se pudo guardar${code}. Inténtalo de nuevo.`, {
+      description: error.message,
+      duration: 10000,
+    });
+  };
+
   const save = async () => {
     if (!user) {
       try { localStorage.setItem(KEY, JSON.stringify({ data: c, createdAt: Date.now() })); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
@@ -173,7 +203,7 @@ const Configurator = () => {
         training_mode: c.mode, partner_email: c.mode === "pareja" ? c.partner_email : null,
       },
     }, { onConflict: "user_id" });
-    if (error) { setSaving(false); toast.error("No se pudo guardar. Inténtalo de nuevo."); return; }
+    if (error) { setSaving(false); reportSaveError(error); return; }
     try { localStorage.removeItem(KEY); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
     try {
       await Promise.all([
