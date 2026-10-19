@@ -18,3 +18,7 @@
 - [x] Escudo para rutina manual (Scan, viaje, horarios, regenerar)
 - [x] Editor de rutina y entrenamiento libre adaptados a web y móvil
 - [ ] Precio Stripe 14,99 €/mes (falta crearlo en Stripe)
+- [x] Plan móvil: botones «Modo libre» / «Editar rutina» sin textos cortados y ficha de completado sin scroll
+- [ ] Dashboard Hoy más minimalista (v1.1)
+- [ ] Gamificación v2.0: ranking de fuerza relativa, badges, retos, comparación anónima, compartir progreso
+- [ ] Recompensas v3.0: puntos por entrenar, marcas y partner stores, charlas con Nicolás
