@@ -1,4 +1,5 @@
 import { generatePlanGuarded } from "@/lib/planShield";
+import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } from "@/lib/configuratorDraft";
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -19,7 +20,6 @@ import Screen from "@/components/native/Screen";
 import PageHead from "@/components/PageHead";
 import PlanPreview from "@/components/PlanPreview";
 
-const KEY = "autopilot_config";
 const DOW = [
   { v: 1, s: "L", l: "Lunes" }, { v: 2, s: "M", l: "Martes" }, { v: 3, s: "X", l: "Miércoles" },
   { v: 4, s: "J", l: "Jueves" }, { v: 5, s: "V", l: "Viernes" }, { v: 6, s: "S", l: "Sábado" }, { v: 0, s: "D", l: "Domingo" },
@@ -61,6 +61,13 @@ const initial: Cfg = {
 };
 
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
+
+/** Paso al que reanudar un borrador sin saltarse datos obligatorios. */
+const draftResumeStep = (cfg: Cfg): number => {
+  if (!cfg.goal || !cfg.focus || (cfg.mode !== "individual" && !/\S+@\S+\.\S+/.test(cfg.partner_email))) return 0;
+  if (!Array.isArray(cfg.days) || cfg.days.length < 2) return 1;
+  return 4;
+};
 
 type Option = { v: string | number; l: string; d?: string };
 
@@ -126,18 +133,28 @@ const Configurator = () => {
   const [c, setC] = useState<Cfg>(initial);
   const [accept, setAccept] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(false);
   const set = <K extends keyof Cfg>(k: K, v: Cfg[K]) => setC((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (!raw) return;
-      const p = JSON.parse(raw);
-      if (Date.now() - (p.createdAt || 0) > 7 * 864e5) return localStorage.removeItem(KEY);
-      setC({ ...initial, ...p.data });
-      setStep(4);
-    } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+    const draft = readConfiguratorDraft<Partial<Cfg>>();
+    if (!draft) return;
+    const merged: Cfg = { ...initial, ...draft.data };
+    // Si el borrador no tiene lo imprescindible (versión antigua o incompleto),
+    // no saltamos al último paso: se empieza por el primero que falte.
+    setC(merged);
+    setStep(draftResumeStep(merged));
+    setRestoredDraft(true);
   }, []);
+
+  const restart = () => {
+    void hapticTap();
+    clearConfiguratorDraft();
+    setC(initial);
+    setAccept(false);
+    setStep(0);
+    setRestoredDraft(false);
+  };
 
   const valid = [
     !!c.goal && !!c.focus && (c.mode === "individual" || /\S+@\S+\.\S+/.test(c.partner_email)),
@@ -170,16 +187,14 @@ const Configurator = () => {
     const ghostSession =
       error.code === "23503" && /user_id_fkey/i.test(`${error.details ?? ""} ${error.message ?? ""}`);
     if (ghostSession) {
-      try {
-        // Conservamos las respuestas para que no se pierdan al rehacer el alta.
-        localStorage.setItem(KEY, JSON.stringify({ data: c, createdAt: Date.now() }));
-      } catch { /* sin storage: se pierde el borrador, pero se puede rehacer */ }
       toast.error("Tu cuenta ya no existe en el servidor (sesión antigua). Crea la cuenta de nuevo; tus respuestas se conservan.", { duration: 12000 });
       try {
         await signOut();
       } catch {
         // Si el cierre de sesión remoto falla, la navegación al alta sigue igualmente.
       }
+      // Después del signOut (que limpia borradores): conservamos las respuestas.
+      saveConfiguratorDraft(c);
       navigate("/signup?from=quiz&next=/onboarding", { replace: true });
       return;
     }
@@ -201,7 +216,7 @@ const Configurator = () => {
 
   const save = async () => {
     if (!user) {
-      try { localStorage.setItem(KEY, JSON.stringify({ data: c, createdAt: Date.now() })); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+      saveConfiguratorDraft(c);
       track("onboarding_complete", { paid: false, anonymous: true });
       navigate("/signup?from=quiz");
       return;
@@ -226,7 +241,7 @@ const Configurator = () => {
       },
     }, { onConflict: "user_id" });
     if (error) { setSaving(false); void reportSaveError(error); return; }
-    try { localStorage.removeItem(KEY); } catch { /* Best-effort browser feature; the primary flow remains available. */ }
+    clearConfiguratorDraft();
     try {
       await Promise.all([
         logConsent("terms", true, { source: "configurator" }),
@@ -279,6 +294,14 @@ const Configurator = () => {
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary" role="progressbar" aria-valuemin={1} aria-valuemax={titles.length} aria-valuenow={step + 1}>
         <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-ios" style={{ width: `${((step + 1) / titles.length) * 100}%` }} />
       </div>
+      {restoredDraft ? (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-2">
+          <p className="type-footnote text-muted-foreground">Hemos recuperado tus respuestas anteriores.</p>
+          <Button type="button" variant="plain" size="sm" className="h-9 shrink-0 px-3" onClick={restart}>
+            Empezar de nuevo
+          </Button>
+        </div>
+      ) : null}
       <h1 className="mt-6 sm:mt-8 type-title1 sm:text-[34px] sm:leading-[40px]">{titles[step]}</h1>
       <p className="mt-2 type-subhead sm:text-[17px] sm:leading-[24px] text-muted-foreground">{leads[step]}</p>
 

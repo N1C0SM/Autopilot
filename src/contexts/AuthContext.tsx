@@ -4,6 +4,7 @@ import type { User, Session } from "@supabase/supabase-js";
 import { authRedirect, verifyEmailRedirect } from "@/lib/authRedirect";
 import { clearAnonScanId } from "@/lib/scanAttribution";
 import { clearPendingScanContext } from "@/lib/pendingScan";
+import { clearConfiguratorDraft } from "@/lib/configuratorDraft";
 import { toast } from "sonner";
 
 interface AuthContextType {
@@ -79,6 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // El informe anónimo del scan es PII de salud: no debe sobrevivir a la
     // sesión ni quedar visible para otra persona que use este navegador.
     clearPendingScanContext();
+    // El borrador del configurador puede contener datos de salud y de la
+    // pareja del usuario anterior en un navegador compartido.
+    clearConfiguratorDraft();
     await supabase.auth.signOut();
   };
 
