@@ -69,7 +69,7 @@ export function publicFaqs(p: PlanFlags): Faq[] {
     { q: "¿Y si nunca he entrenado?", a: `La rutina parte de tu nivel real y progresa paso a paso, sin saltar fases.${coachExtra(`Con ${p.coachName}, Nicolás la supervisa.`)}` },
     { q: "¿En qué se diferencia de ChatGPT o de una rutina de YouTube?", a: `ChatGPT te da un texto y YouTube una rutina genérica. Autopilot construye tu rutina con tus datos reales (nivel, material, días) y guarda cada serie para que veas tu progreso.${coachExtra(`Con ${p.coachName}, además, hay una persona real que revisa tu caso.`)}` },
     { q: "¿Y si me voy de viaje o pierdo una semana?", a: `Retomas donde lo dejaste y puedes cambiar los días o el material desde la app.${coachExtra(`Con ${p.coachName}, lo avisas ${COACH_CONTACT_CHANNEL} y Nicolás reorganiza el plan.`)} Si hay una lesión, consulta con un profesional sanitario antes de continuar.` },
-    { q: "¿Y si veo que no es para mí?", a: `Empieza con el plan Free, sin tarjeta.${p.plus || p.coach ? " Los planes de pago tienen 7 días de prueba: se pide tarjeta y no se cobra hasta el día 8, así que puedes cancelar antes sin coste. Además, hay garantía de devolución de 30 días en planes mensuales." : ""}` },
+    { q: "¿Y si veo que no es para mí?", a: `Empieza con el plan Free, sin tarjeta.${p.plus || p.coach ? " Los planes de pago tienen 7 días de prueba: se pide tarjeta y no se cobra hasta el día 8, así que puedes cancelar antes sin coste." : ""}` },
   ];
   return faqs.filter(Boolean) as Faq[];
 }
@@ -80,7 +80,7 @@ export function publicPageMeta(p: PlanFlags) {
   return {
     plans: {
       title: "Planes y precios",
-      description: `Empieza gratis, sin tarjeta.${paid.length ? ` ${paid.join("; ")}.` : ""} 7 días de prueba y sin permanencia.`,
+      description: `Empieza gratis, sin tarjeta.${paid.length ? ` ${paid.join("; ")}. 7 días de prueba y sin permanencia.` : ""}`,
     },
     how: { title: "Así funciona Autopilot", description: "Tu objetivo, tu rutina y tu progreso. Mira cómo se usa la app antes de crear tu cuenta." },
     team: {
@@ -89,7 +89,7 @@ export function publicPageMeta(p: PlanFlags) {
         ? `Conoce a Nicolás San Marcos, fundador de Autopilot, que te atiende en el plan ${p.coachName}.`
         : "Conoce a Nicolás San Marcos, fundador y desarrollador de Autopilot.",
     },
-    faq: { title: "Preguntas frecuentes", description: "Resuelve tus dudas sobre los planes, el entrenamiento, la prueba de 7 días y tu cuenta." },
+    faq: { title: "Preguntas frecuentes", description: "Resuelve tus dudas sobre los planes, el entrenamiento, ${p.plus || p.coach ? "la prueba de 7 días" : "el plan gratis"} y tu cuenta." },
   } as const;
 }
 

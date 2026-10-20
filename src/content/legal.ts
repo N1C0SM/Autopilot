@@ -194,7 +194,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
       {
         heading: "7. Reembolsos",
         paragraphs: [
-          "Garantía de 30 días: si no estás satisfecho con el servicio recibido en los primeros 30 días desde el primer cobro, puedes solicitar un reembolso íntegro escribiendo a " + COMPANY.contactEmail + ". Tras ese plazo no se reembolsan periodos ya consumidos.",
+          "No se reembolsan periodos ya consumidos, salvo en los casos que exija la ley. Si tienes cualquier problema con un cobro, escríbenos a " + COMPANY.contactEmail + " y lo revisamos.",
         ],
       },
       {

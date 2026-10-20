@@ -141,7 +141,7 @@ const PlanDifferences = () => {
         </div>
 
         <p className="mt-8 text-center type-footnote text-muted-foreground">
-          Free no caduca. Los planes de pago tienen 7 días de prueba: no se cobra hasta el día 8 y puedes cancelar antes desde Ajustes → Suscripción.
+          Free no caduca.{(p.plus || p.coach) && " Los planes de pago tienen 7 días de prueba: no se cobra hasta el día 8 y puedes cancelar antes desde Ajustes → Suscripción."}
         </p>
       </div>
     </section>

@@ -55,7 +55,7 @@ import SocialProofStrip from "@/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/components/scan/BeforeAfterCompare";
 import { FindingRow, MeterRow, ScanImage, StatRow, type Stat } from "@/components/scan/ScanResultParts";
-import { TRIAL_DAYS, GUARANTEE_DAYS } from "@/config/pricing";
+import { TRIAL_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
@@ -2301,7 +2301,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   </p>
                   <p className="mt-6 flex flex-wrap items-baseline justify-center gap-x-2">
                     <span className="font-rounded type-title2 font-bold tabular-nums">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
-                    <span className="type-subhead text-muted-foreground">{TRIAL_DAYS} días de prueba</span>
+                    {(plans.plus || plans.coach) && <span className="type-subhead text-muted-foreground">{TRIAL_DAYS} días de prueba</span>}
                   </p>
                   <div className="mx-auto mt-6 max-w-sm space-y-2">
                     {(() => {
@@ -2323,7 +2323,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                       Hacer otro scan
                     </Button>
                   </div>
-                  {!user && (
+                  {!user && (plans.plus || plans.coach) && (
                     <p className="mt-3 type-footnote text-muted-foreground">
                       7 días de prueba en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
                     </p>
@@ -2336,10 +2336,6 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     <li className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                       Sin permanencia
-                    </li>
-                    <li className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Garantía {GUARANTEE_DAYS} días
                     </li>
                   </ul>
                 </section>
