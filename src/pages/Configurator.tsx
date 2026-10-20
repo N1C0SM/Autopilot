@@ -331,13 +331,13 @@ const Configurator = () => {
               </Field>
             )}
             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
-            <Choices header="¿Dónde entrenas?" options={FOCUS} value={c.focus} onChange={(v) => set("focus", String(v))} />
+            <Choices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", String(v))} />
           </>
         )}
 
         {step === 1 && (
           <>
-            <DayPicker header="¿Qué días vas a entrenar?" pressed isOn={(v) => c.days.includes(v)}
+            <DayPicker header={t("¿Qué días vas a entrenar?", "¿Qué días entrenáis juntos?")} pressed isOn={(v) => c.days.includes(v)}
               onToggle={(v) => set("days", c.days.includes(v) ? c.days.filter((x) => x !== v) : [...c.days, v])} />
             <Choices header="Tiempo por sesión" options={DURATION} value={c.minutes} onChange={(v) => set("minutes", Number(v))} />
             <Choices header="Estructura" options={STRUCTURE} value={c.structure} onChange={(v) => set("structure", String(v))} />
@@ -346,9 +346,9 @@ const Configurator = () => {
 
         {step === 2 && (
           <>
-            <Choices header="Comidas al día" options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
-            <Choices header="¿Te gusta cocinar?" options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
-            <Field header="¿Algo que no quieras ver? (opcional)">
+            <Choices header={t("Comidas al día", "Comidas al día que hacéis juntos")} options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
+            <Choices header={t("¿Te gusta cocinar?", "¿Os gusta cocinar?")} options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
+            <Field header={t("¿Algo que no quieras ver? (opcional)", "¿Algo que ninguno quiera ver? (opcional)")}>
               <Input autoComplete="off" enterKeyHint="next" aria-label="Alimentos que no quieres ver" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </Field>
             <Field header="Tu peso en kg (opcional)">
@@ -365,14 +365,14 @@ const Configurator = () => {
                 {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
-            <Choices header="¿Cómo quieres que te acompañemos?" options={STYLE} value={c.style} onChange={(v) => set("style", String(v))} />
+            <Choices header={t("¿Cómo quieres que te acompañemos?", "¿Cómo queréis que os acompañemos?")} options={STYLE} value={c.style} onChange={(v) => set("style", String(v))} />
           </>
         )}
 
         {step === 4 && (
           <>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
-            <ListGroup header="Tu semana">
+            <ListGroup header={t("Tu semana", "Vuestra semana")}>
               <ListRow title="Días" value={`${c.days.length} · ${dayNames}`} />
               <ListRow title="Sesión" value={label(DURATION, c.minutes)} />
               <ListRow title="Estructura" value={label(STRUCTURE, c.structure)} />
