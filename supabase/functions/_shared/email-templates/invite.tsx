@@ -1,8 +1,18 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
-import { Body, Button, Container, Head, Heading, Html, Link, Preview, Section, Text, Img } from 'npm:@react-email/components@0.0.22'
-import { email as s } from '../email-styles.ts'
+
+import {
+  Body,
+  Button,
+  Container,
+  Head,
+  Heading,
+  Html,
+  Link,
+  Preview,
+  Text,
+} from 'npm:@react-email/components@0.0.22'
 
 interface InviteEmailProps {
   siteName: string
@@ -10,37 +20,71 @@ interface InviteEmailProps {
   confirmationUrl: string
 }
 
-export const InviteEmail = ({ siteUrl, confirmationUrl }: InviteEmailProps) => (
-  <Html lang="es" dir="ltr">
-    <Head />
-    <Preview>Te han invitado a Autopilot</Preview>
-    <Body style={s.main}>
-      <Container style={s.container}>
-        <Section style={s.header}>
-          <Img src="https://autopilotplan.com/pwa-192.png" width="44" height="44" alt="Autopilot" style={s.logoImg} />
-          <Text style={s.logo}>Autopilot</Text>
-        </Section>
-        <Section style={s.body}>
-          <Heading style={s.h1}>Te han invitado a Autopilot</Heading>
-          <Text style={s.text}>
-            Has recibido una invitación para unirte a{' '}
-            <Link href={siteUrl} style={s.link}>autopilotplan.com</Link>.
-            Pulsa el botón para aceptarla y crear tu cuenta.
-          </Text>
-          <Section style={s.buttonContainer}>
-            <Button style={s.button} href={confirmationUrl}>
-              Aceptar invitación
-            </Button>
-          </Section>
-        </Section>
-        <Section style={s.footer}>
-          <Text style={s.footerText}>
-            Si no esperabas esta invitación, puedes ignorar este email.
-          </Text>
-        </Section>
+export const InviteEmail = ({
+  siteName,
+  siteUrl,
+  confirmationUrl,
+}: InviteEmailProps) => (
+  <Html lang="en" dir="ltr">
+    <Head>
+      <style>{darkModeCss}</style>
+    </Head>
+    <Preview>You've been invited to join {siteName}</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Heading style={h1}>You've been invited</Heading>
+        <Text style={text}>
+          You've been invited to join{' '}
+          <Link href={siteUrl} style={link}>
+            <strong>{siteName}</strong>
+          </Link>
+          . Click the button below to accept the invitation and create your
+          account.
+        </Text>
+        <Button className="dm-btn" style={button} href={confirmationUrl}>
+          Accept Invitation
+        </Button>
+        <Text style={footer}>
+          If you weren't expecting this invitation, you can safely ignore this
+          email.
+        </Text>
       </Container>
     </Body>
   </Html>
 )
 
 export default InviteEmail
+
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
+const h1 = {
+  fontSize: '22px',
+  fontWeight: 'bold' as const,
+  color: '#000000',
+  margin: '0 0 20px',
+}
+const text = {
+  fontSize: '14px',
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
+}
+const link = { color: 'inherit', textDecoration: 'underline' }
+const button = {
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  fontSize: '14px',
+  border: '1px solid #000000',
+  borderRadius: '8px',
+  padding: '12px 20px',
+  textDecoration: 'none',
+}
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+// Rendered as a text child, which React may HTML-escape: keep this CSS free of >, &, and quotes.
+const darkModeCss = `
+  @media (prefers-color-scheme: dark) {
+    .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  }
+  [data-ogsc] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+  [data-ogsb] .dm-btn { background-color: #ffffff !important; color: #000000 !important; }
+`
