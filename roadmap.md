@@ -27,4 +27,4 @@
 - [x] Mapa de calor muscular más claro
 - [ ] Plus: recomendación de comida post-entreno según el entreno realizado (pendiente de definir fórmula con el usuario)
 
-- [ ] Actualización de email: conservar plantillas, convertir envíos y eventos, comprobar y dejar sin publicar
+- [x] Actualización de email preparada sin publicar: plantillas conservadas, envíos y eventos convertidos; 34 pruebas y comprobación Deno correctas. Entrega real y eventos de producción pendientes de publicación.
