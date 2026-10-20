@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EMAIL_OUTCOMES, eventLogId } from './email-event-reaction'
+import { EMAIL_OUTCOMES, eventLogId } from '../../supabase/functions/_shared/email-event-reaction'
 
 describe('kept email event data contract', () => {
   it('stores bounce using the accepted reason and status', () => {
