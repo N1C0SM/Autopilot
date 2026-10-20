@@ -134,7 +134,9 @@ const Signup = () => {
       }
 
       const anonScanId = readAnonScanId();
-      const nextAfterVerify = postVerificationPath(nextParam, fromScan);
+      // Quien viene del quiz ya respondió el cuestionario: tras verificar vuelve
+      // al configurador, no a la pantalla de elección scan/formulario.
+      const nextAfterVerify = postVerificationPath(nextParam ?? (fromQuiz ? "/onboarding" : null), fromScan);
       const { error } = await signUp(email.trim(), password, {
         display_name: name.trim(),
         referral_code: referralCode,

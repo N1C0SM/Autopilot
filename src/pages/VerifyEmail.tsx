@@ -122,7 +122,9 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
       clearSignupEmail();
       track("verify_email", { method: "code", from: context.fromScan ? "scan" : "form" });
       void hapticNotify("success");
-      navigate(context.next, { replace: true });
+      // Si el cuestionario ya está respondido, no se vuelve a enseñar: el
+      // configurador lo guarda solo y entra directo al plan.
+      navigate(postVerifyDestination(context.next), { replace: true });
     } catch {
       setFormError("No hemos podido verificar el código. Comprueba la conexión e inténtalo de nuevo.");
       void hapticNotify("error");
