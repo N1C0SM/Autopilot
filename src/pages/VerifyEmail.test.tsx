@@ -2,7 +2,11 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import VerifyEmail from "./VerifyEmail";
+import VerifyEmail, { onlyCodeDigits } from "./VerifyEmail";
+
+if (!document.elementFromPoint) {
+  document.elementFromPoint = () => null;
+}
 import { readSignupEmail, readVerifyContext, saveVerifyContext } from "@/lib/signupVerification";
 
 const verifyOtp = vi.fn();
@@ -79,10 +83,23 @@ describe("verificación por código completo", () => {
     expect(screen.getByLabelText("Código de verificación")).toBeInTheDocument();
   });
 
+  it("deja solo los 8 dígitos al pegar con espacios o guiones", () => {
+    expect(onlyCodeDigits("4560 5536")).toBe("45605536");
+    expect(onlyCodeDigits("4560-5536")).toBe("45605536");
+    expect(onlyCodeDigits("Código: 45605536.")).toBe("45605536");
+  });
+
+  it("verifica sola al completar los 8 dígitos", async () => {
+    renderPage();
+    writeCode("12345678");
+    await waitFor(() => expect(verifyOtp).toHaveBeenCalledTimes(1));
+  });
+
   it.each(["123456", "12345678"])("verifica %s sin truncar, limpia el contexto y navega al destino", async (token) => {
     renderPage();
     writeCode(token);
-    fireEvent.click(screen.getByRole("button", { name: "Verificar cuenta" }));
+    const button = screen.queryByRole("button", { name: "Verificar cuenta" });
+    if (button) fireEvent.click(button);
 
     await waitFor(() =>
       expect(verifyOtp).toHaveBeenCalledWith({
