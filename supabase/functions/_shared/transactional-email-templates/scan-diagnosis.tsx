@@ -139,7 +139,7 @@ const logoText: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Arial, sans-serif',
   fontSize: '20px',
   fontWeight: 700,
-  color: '#C9A44A',
+  color: s.link.color,
   letterSpacing: '-0.02em',
   margin: '0 0 2px',
 }
@@ -205,7 +205,7 @@ const fallbackCard: React.CSSProperties = {
 
 const fallbackIcon: React.CSSProperties = {
   fontSize: '40px',
-  color: '#C9A44A',
+  color: s.link.color,
   margin: '0 0 16px',
   lineHeight: '1',
 }
@@ -230,7 +230,7 @@ const diagnosisSection: React.CSSProperties = {
 const diagnosisLabel: React.CSSProperties = {
   fontSize: '11px',
   fontWeight: 600,
-  color: '#C9A44A',
+  color: s.link.color,
   letterSpacing: '0.1em',
   margin: '0 0 12px',
 }
@@ -257,14 +257,14 @@ const ctaSection: React.CSSProperties = {
   backgroundColor: '#0A0A0A',
   margin: '0',
   padding: '32px 32px 36px',
-  borderTop: '1px solid #C9A44A33',
+  borderTop: s.card.border,
   borderBottom: '1px solid #38383A',
 }
 
 const ctaEyebrow: React.CSSProperties = {
   fontSize: '11px',
   fontWeight: 600,
-  color: '#C9A44A',
+  color: s.link.color,
   letterSpacing: '0.1em',
   margin: '0 0 10px',
 }
@@ -287,7 +287,7 @@ const ctaBody: React.CSSProperties = {
 }
 
 const ctaButton: React.CSSProperties = {
-  backgroundColor: '#C9A44A',
+  backgroundColor: s.link.color,
   color: '#000000',
   fontSize: '15px',
   fontWeight: 700,

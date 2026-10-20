@@ -2,7 +2,7 @@
  * Contexto compartido del alta con código de verificación.
  *
  * El usuario ya no tiene que abrir el enlace del correo para activar la cuenta:
- * introduce el código de 6 dígitos en la app. Eso mantiene la pestaña (y con
+ * introduce el código completo en la app. Eso mantiene la pestaña (y con
  * ella el `sessionStorage`: plan elegido, contexto del scan, quiz) y evita el
  * caso en el que el correo se abre en otro navegador/dispositivo.
  *

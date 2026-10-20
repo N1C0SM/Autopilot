@@ -27,7 +27,7 @@ const Email = ({ name, ctaUrl = 'https://autopilotplan.com/dashboard?section=set
           <Text style={s.text}>Si activas ahora tienes:</Text>
           <Section style={s.card}>
             <Text style={{ ...s.text, margin: 0 }}>
-              · 1ª semana <strong style={{ color: '#C9A44A' }}>completamente gratis</strong><br />
+              · 1ª semana <strong style={{ color: s.link.color }}>completamente gratis</strong><br />
               · Garantía de 30 días: si no avanzas, te devolvemos todo<br />
               · Sin permanencia, cancelas en 1 clic
             </Text>

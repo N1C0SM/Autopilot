@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Verificación: 8 dígitos sin truncar y compatibilidad de 6 (19 tests y navegador a 375 px); correos amarillos desplegados, 30 tests de correo. Entrega y canje de un correo nuevo aún no comprobados.
 - [x] Rediseño de entrenamiento: descanso por marca temporal y recuperación de sesiones normales/libres (tests)
 - [x] Lista vertical con ejercicios expandibles y elección en Ajustes entre lista y vista de foco actual (tests y navegador)
 - [x] Reanudar desde Hoy y verificar registro, recuperación y temporizador (recarga, serie recuperada y finalización en cuenta de prueba)
