@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/runtimeValues";
 import { hasCoaching } from "@/lib/entitlements";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -522,7 +522,7 @@ const Onboarding = () => {
         <div className="text-center mb-8">
           <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
           <h1 className="text-2xl font-bold font-display mt-6 mb-2">
-            {currentKey === "focus_goal" ? "Empecemos por lo que te importa" : "Tu plan, a tu manera"}
+            {currentKey === "focus_goal" ? "¿Qué quieres conseguir tú?" : "Tu plan, con tus respuestas"}
           </h1>
           <p className="text-xs font-medium text-primary">
             Paso {Math.min(step, activeSteps.length - 1) + 1} de {activeSteps.length} · {STEP_LABELS[currentKey]}
@@ -620,7 +620,7 @@ const Onboarding = () => {
           {currentKey === "focus_goal" && (
             <div className="space-y-5">
               <div>
-                <Label className="mb-2 block text-xs">¿En qué quieres centrarte?</Label>
+                <Label className="mb-2 block text-xs">¿Dónde quieres entrenar tú?</Label>
                 {scanPrefill?.primary_focus && (
                   <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
                     <Sparkles className="w-3 h-3" /> Detectado por IA
@@ -717,7 +717,7 @@ const Onboarding = () => {
           {/* Deportes + Horarios (combinados) */}
           {currentKey === "sports_schedule" && (
             <div>
-              <Label className="mb-1.5 block">Deportes y agenda</Label>
+              <Label className="mb-1.5 block">¿Qué más haces en tu semana?</Label>
               <p className="text-xs text-muted-foreground mb-4">
                 Marca los deportes que practicas y añade cosas fijas (trabajo, clases…). Encajaremos los entrenos en tus huecos libres.
               </p>
@@ -878,7 +878,7 @@ const Onboarding = () => {
           {/* Tu nivel — campos según enfoque */}
           {currentKey === "level" && (
             <div>
-              <Label className="mb-1.5 block">¿Cuál es tu nivel ahora?</Label>
+              <Label className="mb-1.5 block">¿Hasta dónde llegas hoy?</Label>
               <p className="text-xs text-muted-foreground mb-5">
                 Un toque por prueba. Si no lo sabes, sáltalo.
               </p>
@@ -911,7 +911,7 @@ const Onboarding = () => {
           {currentKey === "health" && (
             <div className="space-y-5">
               <div>
-                <Label className="mb-2 block">¿Lesiones o molestias?</Label>
+                <Label className="mb-2 block">¿Algo te molesta al entrenar?</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {["Ninguna", "Lumbar", "Hombro", "Rodilla", "Cuello", "Muñeca", "Tobillo"].map((chip) => {
                     const selected = chip === "Ninguna" ? data.injuries.trim() === "" : chipSelected("injuries", chip);
@@ -1037,7 +1037,7 @@ const Onboarding = () => {
             <div className="space-y-5">
               <div className="text-center mb-2">
                 <p className="text-[10px] font-semibold uppercase text-primary">Cuestionario completado</p>
-                <h2 className="mt-1 text-2xl font-bold font-display">Así empieza tu plan</h2>
+                <h2 className="mt-1 text-2xl font-bold font-display">Tu plan, hecho con tus respuestas</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {user
                     ? "Revisa la muestra y confirma para generar tu plan completo."
