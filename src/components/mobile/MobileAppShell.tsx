@@ -17,6 +17,8 @@ interface Props {
   /** Entrada a Recursos (el Dashboard pasa el handler; en web también funciona). */
   onResources?: () => void;
   workoutMode?: boolean;
+  /** Atajo fijo a «Hoy» para empezar a entrenar desde cualquier pestaña secundaria. */
+  onQuickTrain?: () => void;
   /**
    * Título grande de iOS: 34 pt al inicio del contenido, que se pliega en la barra
    * al hacer scroll. Sin él, el título vive siempre en la barra.
@@ -42,6 +44,7 @@ const MobileAppShell = ({
   onSettings,
   onResources,
   workoutMode = false,
+  onQuickTrain,
   largeTitle = false,
   titleInContent = false,
   children,
@@ -137,6 +140,16 @@ const MobileAppShell = ({
         {children}
       </main>
 
+      {!workoutMode && onQuickTrain && (
+        <button
+          type="button"
+          onClick={onQuickTrain}
+          className="fixed right-4 z-40 flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          style={{ bottom: "calc(var(--mobile-nav-height) + var(--mobile-nav-offset) + 0.75rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          Ir a entrenar
+        </button>
+      )}
       {!workoutMode && <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} hiddenTabs={hiddenTabs} />}
     </div>
   );

@@ -913,6 +913,10 @@ const Dashboard = () => {
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
         workoutMode={workoutMode}
+        onQuickTrain={section !== "home" && section !== "training" && section !== "settings" ? () => {
+          setAutoStartWorkout(false);
+          setSection("home");
+        } : undefined}
       >
         {pageContent}
       </MobileAppShell>
