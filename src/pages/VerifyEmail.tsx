@@ -40,7 +40,7 @@ const verifyErrorMessage = (message?: string): string => {
 };
 
 /**
- * Verificación de la cuenta con el código de 6 dígitos del correo.
+ * Verificación de la cuenta con el código de 8 dígitos del correo (6 por compatibilidad).
  *
  * Es el camino principal tras `/signup`: mantener al usuario en la app
  * conserva el contexto de la pestaña (plan elegido, scan, quiz) y evita que el
@@ -82,8 +82,8 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
     event?.preventDefault();
     if (!context || loading) return;
     const token = code.replace(/\D/g, "");
-    if (token.length !== 6) {
-      setFormError("Introduce los 6 dígitos del código.");
+    if (token.length !== 6 && token.length !== 8) {
+      setFormError("Introduce el código completo de 8 dígitos (o 6 si tu correo lo incluye).");
       return;
     }
     setFormError(null);
@@ -169,7 +169,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
         form="verify-form"
         size="lg"
         className={cn("w-full", loading && "disabled:opacity-100")}
-        disabled={loading || code.replace(/\D/g, "").length !== 6}
+        disabled={loading || ![6, 8].includes(code.replace(/\D/g, "").length)}
       >
         {loading ? (
           <><Spinner size="sm" className="text-primary-foreground" aria-hidden="true" /> Verificando…</>
@@ -209,7 +209,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
     >
       <PageHead
         title="Introduce el código · Autopilot"
-        description="Verifica tu cuenta con el código de 6 dígitos que te hemos enviado."
+        description="Verifica tu cuenta con el código completo que te hemos enviado."
         path="/verify-email"
         noindex
       />
@@ -219,7 +219,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
         title="Introduce el código"
         description={
           <>
-            Te hemos enviado un código de 6 dígitos a{" "}
+            Te hemos enviado un código de 8 dígitos a{" "}
             <span className="break-all text-foreground">{context.email}</span>. Escríbelo aquí
             para activar tu cuenta.
           </>
@@ -229,22 +229,32 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
       <form id="verify-form" onSubmit={submit} className="mt-8">
         <div className="flex items-center justify-center">
           <InputOTP
-            maxLength={6}
+            maxLength={8}
             pattern={REGEXP_ONLY_DIGITS}
             value={code}
             onChange={(value) => {
               setCode(value.replace(/\D/g, ""));
               setFormError(null);
             }}
-            aria-label="Código de verificación de 6 dígitos"
-            containerClassName="justify-center"
+            aria-label="Código de verificación"
+            containerClassName="justify-center gap-2"
           >
             <InputOTPGroup>
-              {[0, 1, 2, 3, 4, 5].map((index) => (
+              {[0, 1, 2, 3].map((index) => (
                 <InputOTPSlot
                   key={index}
                   index={index}
-                  className="h-14 w-12 text-lg first:rounded-l-xl last:rounded-r-xl"
+                  className="h-12 w-8 sm:h-14 sm:w-10 text-lg"
+                />
+              ))}
+            </InputOTPGroup>
+            <span aria-hidden="true" className="text-muted-foreground">·</span>
+            <InputOTPGroup>
+              {[4, 5, 6, 7].map((index) => (
+                <InputOTPSlot
+                  key={index}
+                  index={index}
+                  className="h-12 w-8 sm:h-14 sm:w-10 text-lg"
                 />
               ))}
             </InputOTPGroup>

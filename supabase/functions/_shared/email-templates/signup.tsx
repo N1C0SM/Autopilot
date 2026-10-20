@@ -14,7 +14,7 @@ interface SignupEmailProps {
 
 const codeBox = {
   backgroundColor: '#111216',
-  border: '1px solid #3a2d1c',
+  border: s.card.border,
   borderRadius: '20px',
   padding: '24px 16px 20px',
   margin: '4px 0 28px',
@@ -32,11 +32,12 @@ const codeLabel = {
 
 const codeDigits = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Arial, sans-serif',
-  fontSize: '40px',
+  fontSize: '28px',
   lineHeight: '1.1',
   fontWeight: 700 as const,
-  letterSpacing: '0.3em',
-  color: '#FFAA3C',
+  letterSpacing: '0',
+  color: s.code.color,
+  whiteSpace: 'nowrap' as const,
   margin: '0',
   display: 'block' as const,
 }
@@ -85,7 +86,7 @@ const fallbackUrl = {
 }
 
 export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => {
-  // Supabase entrega el OTP de 6 dígitos en `token`; si algún día llegara un
+  // El servicio entrega el OTP completo en `token`; si algún día llegara un
   // hash largo, no lo pintamos como si fuera un código.
   const otp = typeof token === 'string' && /^\d{4,10}$/.test(token.trim()) ? token.trim() : ''
   return (
@@ -112,7 +113,7 @@ export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => {
             {otp ? (
               <Section style={codeBox}>
                 <Text style={codeLabel}>Código de verificación</Text>
-                <Text style={codeDigits}>{otp}</Text>
+                <Text style={codeDigits}>{otp.length === 8 ? `${otp.slice(0, 4)} ${otp.slice(4)}` : otp}</Text>
                 <Text style={codeMeta}>Caduca a los pocos minutos · Un solo uso</Text>
               </Section>
             ) : null}

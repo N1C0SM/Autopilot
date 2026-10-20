@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Verificación: códigos completos de 8 dígitos y compatibilidad de 6, correos amarillos y despliegue comprobado
 - [x] Rediseño de entrenamiento: descanso por marca temporal y recuperación de sesiones normales/libres (tests)
 - [x] Lista vertical con ejercicios expandibles y elección en Ajustes entre lista y vista de foco actual (tests y navegador)
 - [x] Reanudar desde Hoy y verificar registro, recuperación y temporizador (recarga, serie recuperada y finalización en cuenta de prueba)

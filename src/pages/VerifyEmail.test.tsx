@@ -56,7 +56,7 @@ const renderPage = () =>
   );
 
 const writeCode = (value: string) => {
-  fireEvent.change(screen.getByLabelText("Código de verificación de 6 dígitos"), {
+  fireEvent.change(screen.getByLabelText("Código de verificación"), {
     target: { value },
   });
 };
@@ -72,22 +72,22 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("verificación por código de 6 dígitos", () => {
+describe("verificación por código completo", () => {
   it("muestra el email y el campo de código", () => {
     renderPage();
     expect(screen.getByText("ana@example.test")).toBeInTheDocument();
-    expect(screen.getByLabelText("Código de verificación de 6 dígitos")).toBeInTheDocument();
+    expect(screen.getByLabelText("Código de verificación")).toBeInTheDocument();
   });
 
-  it("verifica el código, limpia el contexto y navega al destino", async () => {
+  it.each(["123456", "12345678"])("verifica %s sin truncar, limpia el contexto y navega al destino", async (token) => {
     renderPage();
-    writeCode("123456");
+    writeCode(token);
     fireEvent.click(screen.getByRole("button", { name: "Verificar cuenta" }));
 
     await waitFor(() =>
       expect(verifyOtp).toHaveBeenCalledWith({
         email: "ana@example.test",
-        token: "123456",
+        token,
         type: "signup",
       }),
     );
@@ -108,6 +108,13 @@ describe("verificación por código de 6 dígitos", () => {
     );
     expect(hapticNotify).toHaveBeenCalledWith("error");
     expect(readVerifyContext()).not.toBeNull();
+  });
+
+  it.each(["12345", "1234567"])("no envía un código incompleto de %s", (token) => {
+    renderPage();
+    writeCode(token);
+    fireEvent.submit(document.getElementById("verify-form") as HTMLFormElement);
+    expect(verifyOtp).not.toHaveBeenCalled();
   });
 
   it("permite reenviar el código con el enlace de respaldo", async () => {

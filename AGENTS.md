@@ -21,3 +21,4 @@
 - Workout display preferences are user-scoped in `workoutPreferences.ts`; both list and focus views use the same tracker state and persistence to avoid divergent logging behavior.
 
 - App-email feature functions call the shared managed send helper; it preserves admin template overrides and legacy audit rows, while signed email events update retained tables for display only — delivery and send suppression remain platform-owned.
+- Authentication verification accepts complete eight-digit OTPs and legacy six-digit OTPs without truncation; auth email accents reuse shared email styles so rendering stays consistent.
