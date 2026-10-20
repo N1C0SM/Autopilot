@@ -26,3 +26,5 @@
 - [x] Tarjetas de fin de entreno visibles sin deslizar (móvil y PC) con pestañas
 - [x] Mapa de calor muscular más claro
 - [ ] Plus: recomendación de comida post-entreno según el entreno realizado (pendiente de definir fórmula con el usuario)
+
+- [ ] Actualización de email: conservar plantillas, convertir envíos y eventos, comprobar y dejar sin publicar

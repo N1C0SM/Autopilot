@@ -19,3 +19,5 @@
 - Consumer dashboard chat navigation, redirects and rendering share the release gate in `src/lib/releaseScope.ts`, independently of billing entitlements, so unreleased chat never appears as an actionable tab.
 - Active workouts use a user-scoped local draft (`src/lib/activeWorkout.ts`) containing the virtual plan, sets and absolute rest deadline; recovery must not depend on the saved training plan or decrementing timers.
 - Workout display preferences are user-scoped in `workoutPreferences.ts`; both list and focus views use the same tracker state and persistence to avoid divergent logging behavior.
+
+- App-email feature functions call the shared managed send helper; it preserves admin template overrides and legacy audit rows, while signed email events update retained tables for display only — delivery and send suppression remain platform-owned.
