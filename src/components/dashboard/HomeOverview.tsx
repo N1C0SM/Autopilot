@@ -436,10 +436,7 @@ const HomeOverview = ({
               title="Hoy toca descansar"
               description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
               action={(
-                <div className="flex w-full flex-col items-center gap-1">
-                  <Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>
-                  <Button type="button" variant="plain" size="sm" onClick={openWeek}>Ver rutina semanal</Button>
-                </div>
+                <Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>
               )}
             />
           )}
