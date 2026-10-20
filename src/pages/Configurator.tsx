@@ -268,13 +268,23 @@ const Configurator = () => {
   };
 
   const dayNames = DOW.filter((d) => c.days.includes(d.v)).map((d) => d.s).join(", ");
-  const titles = ["¿Qué quieres conseguir?", "Horarios y disponibilidad", "Tu nutrición", "Tu seguimiento", "Tu plan Autopilot"];
+  const duo = c.mode === "pareja";
+  const t = (solo: string, pair: string) => (duo ? pair : solo);
+  const titles = [
+    t("¿Qué quieres conseguir?", "¿Qué queréis conseguir?"),
+    t("Tu semana", "Vuestra semana juntos"),
+    t("Tu nutrición", "Vuestras comidas"),
+    t("Tu revisión semanal", "Vuestra revisión semanal"),
+    t("Tu plan Autopilot", "Vuestro plan conjunto"),
+  ];
   const leads = [
-    "Con quién entrenas, tu objetivo y dónde.",
-    "Elige al menos dos días. Ajustamos el plan a tu semana.",
-    "Para que las comidas encajen con tu día.",
-    "Una revisión a la semana para ajustar el plan.",
-    user ? "Una muestra con tus respuestas. Confirma para generar y guardar tu plan completo." : "Una muestra con tus respuestas. Crea tu cuenta para generar y guardar el plan completo.",
+    t("Cuéntanos tu objetivo y dónde entrenas.", "Un mismo calendario, con cargas adaptadas a cada uno."),
+    t("Elige al menos dos días. Ajustamos el plan a tu semana.", "Elegid al menos dos días que os vengan bien a los dos."),
+    t("Para que las comidas encajen con tu día.", "Recetas sencillas que os gusten a los dos."),
+    t("Un momento a la semana para ajustar tu plan.", "Un momento a la semana para ajustar el plan de ambos."),
+    user
+      ? t("Así queda con tus respuestas. Confirma para guardar tu plan completo.", "Así queda vuestro plan. Confirma para guardarlo.")
+      : t("Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.", "Así queda vuestro plan. Crea tu cuenta para guardarlo."),
   ];
   const last = titles.length - 1;
   const goBack = () => { if (saving) return; if (step === 0) navigate("/"); else setStep((s) => s - 1); };
