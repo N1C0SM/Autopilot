@@ -406,7 +406,7 @@ const HomeOverview = ({
                 </span>
               )}
               <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
-                {sessionCount === 0 ? "Empezar mi primer entreno" : "Empezar entreno"}
+                Empezar entreno
               </span>
             </button>
           ) : completedToday ? (
