@@ -102,7 +102,6 @@ export default function Index() {
 
     {/* 2 · Demo */}
     <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-14 sm:pt-20">
-      <p className="mx-auto max-w-6xl px-5 type-footnote text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
         <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
       </Suspense>
