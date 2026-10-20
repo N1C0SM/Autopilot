@@ -620,7 +620,7 @@ const Onboarding = () => {
           {currentKey === "focus_goal" && (
             <div className="space-y-5">
               <div>
-                <Label className="mb-2 block text-xs">¿Dónde quieres entrenar tú?</Label>
+                <Label className="mb-2 block text-xs">¿Qué te apetece entrenar?</Label>
                 {scanPrefill?.primary_focus && (
                   <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
                     <Sparkles className="w-3 h-3" /> Detectado por IA
