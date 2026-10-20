@@ -1476,6 +1476,7 @@ export type Database = {
           show_plan_free: boolean
           show_plan_plus: boolean
           show_recommendations: boolean
+          social_links: Json
           trainer_bio: string | null
           trainer_name: string | null
           trainer_photo_url: string | null
@@ -1529,6 +1530,7 @@ export type Database = {
           show_plan_free?: boolean
           show_plan_plus?: boolean
           show_recommendations?: boolean
+          social_links?: Json
           trainer_bio?: string | null
           trainer_name?: string | null
           trainer_photo_url?: string | null
@@ -1582,6 +1584,7 @@ export type Database = {
           show_plan_free?: boolean
           show_plan_plus?: boolean
           show_recommendations?: boolean
+          social_links?: Json
           trainer_bio?: string | null
           trainer_name?: string | null
           trainer_photo_url?: string | null
@@ -2279,6 +2282,7 @@ export type Database = {
           paid_count: number
         }[]
       }
+      get_social_links_public: { Args: never; Returns: Json }
       get_trainer_assigned_profiles: {
         Args: never
         Returns: {
