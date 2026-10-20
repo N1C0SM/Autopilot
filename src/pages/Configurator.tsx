@@ -1,7 +1,7 @@
 import { generatePlanGuarded } from "@/lib/planShield";
 import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } from "@/lib/configuratorDraft";
-import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -146,6 +146,18 @@ const Configurator = () => {
     setStep(draftResumeStep(merged));
     setRestoredDraft(true);
   }, []);
+
+  // Tras verificar el correo con el cuestionario ya completo (`?guardar=1`),
+  // no se reenseña el último paso: se guarda y se entra directo al plan.
+  const [searchParams] = useSearchParams();
+  const autoSave = searchParams.get("guardar") === "1";
+  const autoSaveTried = useRef(false);
+  useEffect(() => {
+    if (!autoSave || autoSaveTried.current || !restoredDraft || !user) return;
+    autoSaveTried.current = true;
+    if (draftResumeStep(c) === titles.length - 1) void save();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSave, restoredDraft, user]);
 
   const restart = () => {
     void hapticTap();

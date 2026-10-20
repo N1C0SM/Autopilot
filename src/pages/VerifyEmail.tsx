@@ -18,10 +18,12 @@ import { hapticNotify, hapticTap } from "@/lib/native";
 import {
   clearSignupEmail,
   clearVerifyContext,
+  postVerifyDestination,
   readVerifyContext,
   saveSignupEmail,
   type VerifyContext,
 } from "@/lib/signupVerification";
+import { readConfiguratorDraft } from "@/lib/configuratorDraft";
 import { cn } from "@/lib/utils";
 
 /** Deja solo los dígitos del código (máx. 8): tolera espacios, guiones o texto pegado. */
@@ -72,7 +74,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
   // Si ya hay sesión (por ejemplo, el usuario verificó por el enlace y volvió
   // atrás), no se le vuelve a pedir el código.
   useEffect(() => {
-    if (context && user) navigate(context.next, { replace: true });
+    if (context && user) navigate(postVerifyDestination(context.next, Boolean(readConfiguratorDraft())), { replace: true });
   }, [context, user, navigate]);
 
   useEffect(() => {
@@ -124,7 +126,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
       void hapticNotify("success");
       // Si el cuestionario ya está respondido, no se vuelve a enseñar: el
       // configurador lo guarda solo y entra directo al plan.
-      navigate(postVerifyDestination(context.next), { replace: true });
+      navigate(postVerifyDestination(context.next, Boolean(readConfiguratorDraft())), { replace: true });
     } catch {
       setFormError("No hemos podido verificar el código. Comprueba la conexión e inténtalo de nuevo.");
       void hapticNotify("error");
