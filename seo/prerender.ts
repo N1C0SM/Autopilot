@@ -147,6 +147,7 @@ const planList = (plans: CatalogPlan[]) =>
     t.price > 0 && t.trial_days > 0 ? p(`${t.trial_days} días de prueba. Después ${euro(t.price)}/mes con renovación automática; cancela desde Ajustes → Suscripción.`) : t.price === 0 ? p("Sin tarjeta ni caducidad.") : ""
   }</article>`).join("");
 
+let SAME_AS: string[] = [];
 const organizationLd = (av: PlanAvailability) => ({
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -159,7 +160,7 @@ const organizationLd = (av: PlanAvailability) => ({
     : "App de entrenamiento y nutrición que se adapta a tu progreso.",
   founder: { "@type": "Person", name: "Nicolás San Marcos", jobTitle: "Fundador y desarrollador" },
   areaServed: { "@type": "Country", name: "España" },
-  sameAs: ["https://twitter.com/autopilotplan"],
+  ...(SAME_AS.length ? { sameAs: SAME_AS } : {}),
 });
 
 const appLd = (av: PlanAvailability) => ({
@@ -517,6 +518,7 @@ export function seoPrerender(): Plugin {
       const catalog = rows?.length ? parseCatalog(rows) : fallbackCatalog();
       const av = availabilityFrom(catalog);
       const posts = (await fetchPosts(env)) || [];
+      SAME_AS = socialLinkList(await rest<unknown>(env, "rpc/get_social_links_public", { method: "POST", body: "{}" })).map((l) => l.url);
       const routes = buildRoutes(av, posts);
       for (const r of routes) {
         const file = r.path === "/" ? indexPath : path.join(dist, r.path.slice(1), "index.html");
