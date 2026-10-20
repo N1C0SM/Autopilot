@@ -513,7 +513,7 @@ const Dashboard = () => {
   };
 
   const SECTION_HINTS: Record<MobileTab, string> = {
-    home: "Resumen de hoy: tu entrenamiento, tus comidas y tu racha",
+    home: "Tu entreno de hoy y lo que toca comer",
     training: "Tu rutina de la semana. Marca las series al terminarlas",
     nutrition: "Tus macros y comidas del día",
     chat: "Habla con tu entrenador y envía fotos o vídeos",
@@ -641,7 +641,7 @@ const Dashboard = () => {
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
-            <div className="mx-auto w-full max-w-3xl space-y-6 empty:hidden">
+            <div className="mx-auto w-full space-y-6 empty:hidden lg:max-w-5xl">
               {firstWeek && (
                 <div className="flex items-start gap-4">
                   <span aria-hidden="true" className="flex w-10 shrink-0 justify-center pt-0.5">
