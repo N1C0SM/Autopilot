@@ -166,7 +166,11 @@ const Onboarding = () => {
       }
       if (parsed.data) {
         setData((d) => ({ ...d, ...parsed.data }));
-        setTimeout(() => setStep(99), 0);
+        const q = parsed.data || {};
+        const complete = Boolean(q.age && q.height && q.weight && q.sex && q.goal && q.primary_focus && q.accept_terms && q.accept_health);
+        // Solo saltamos al resumen si el borrador está completo; si no, empieza desde el principio con los datos conservados.
+        if (complete) setTimeout(() => setStep(99), 0);
+        sessionStorage.removeItem(QUIZ_STORAGE_KEY);
         if (user) {
           toast.success("Bienvenido, confirma tu plan para crearlo");
         }
