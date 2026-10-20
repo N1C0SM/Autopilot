@@ -114,9 +114,6 @@ const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTier
             {a.plusName} funciona de forma automática con tus registros, sin atención humana.
           </p>
         ) : null}
-        {(a.plus || a.coach) && <p className="flex items-center justify-center gap-1.5">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-success" aria-hidden="true" /> Garantía de devolución de 30 días en planes mensuales
-        </p>}
         <p><Link to="/legal/terminos" className="inline-flex min-h-11 items-center text-primary transition-opacity active:opacity-60">Ver condiciones de prueba, cancelación y devolución</Link></p>
       </div>
     </div>
