@@ -1,3 +1,4 @@
+import { sendFeatureEmail } from '../_shared/transactional-email-templates/send-email.ts'
 import { errorMessage } from "../_shared/runtime-values.ts";
 import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
 import { hasCoaching, resolvePaidTier, subscriptionAllowsCoaching } from "../_shared/entitlements.ts";
@@ -168,11 +169,12 @@ serve(async (req) => {
           await syncStripeEntitlement(supabaseAdmin, profile.user_id, tier, sub.status, periodEnd ? new Date(periodEnd * 1000).toISOString() : null, sub.id);
           // Preserve the existing welcome email, idempotent per verified checkout.
           try {
-            await supabaseAdmin.functions.invoke("send-transactional-email", { body: {
+            const { error: emailError } = await sendFeatureEmail({
               templateName: "welcome-paid", recipientEmail: profile.email,
               idempotencyKey: `welcome-paid-${session.id}`,
               templateData: { name: profile.name || "", dashboardUrl: "https://autopilotplan.com/dashboard" },
-            } });
+            });
+            if (emailError) console.error("Failed to send welcome-paid email", emailError.message);
           } catch (emailError) { console.error("Failed to send welcome-paid email", emailError); }
         }
       }

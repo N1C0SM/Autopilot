@@ -1,3 +1,4 @@
+import { sendFeatureEmail } from '../_shared/transactional-email-templates/send-email.ts'
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -57,8 +58,7 @@ serve(async (req) => {
         if (ageDays < b.days || ageDays >= b.days + 1.1) continue;
         if (already.includes(b.marker)) continue;
 
-        const { error: sendErr } = await supabase.functions.invoke("send-transactional-email", {
-          body: {
+        const { data: sendData, error: sendErr } = await sendFeatureEmail({
             templateName: b.template,
             recipientEmail: p.email,
             idempotencyKey: `${b.template}-${p.user_id}`,
@@ -66,10 +66,9 @@ serve(async (req) => {
               name: p.name || "",
               ctaUrl: "https://autopilotplan.com/dashboard?section=settings",
             },
-          },
-        });
+          });
 
-        if (!sendErr) {
+        if (!sendErr && sendData?.sent) {
           sent++;
           await supabase
             .from("profiles")
@@ -77,7 +76,7 @@ serve(async (req) => {
             .eq("user_id", p.user_id);
           already.push(b.marker);
         }
-        results.push({ email: p.email, marker: b.marker, ok: !sendErr, err: sendErr?.message });
+        results.push({ email: p.email, marker: b.marker, ok: Boolean(!sendErr && sendData?.sent), err: sendErr?.message });
       }
     }
 
