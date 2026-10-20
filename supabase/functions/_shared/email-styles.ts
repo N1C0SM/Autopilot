@@ -1,11 +1,11 @@
 /**
  * Estilos compartidos para todos los templates de email de Autopilot.
- * Dark theme coherente con la app: negro puro, dorado de marca, tipografía Inter/system.
+ * Dark theme coherente con la app: negro puro, amarillo de marca, tipografía Inter/system.
  *
  * Paleta:
  *   --background: #000000  (systemBackground dark)
  *   --card:       #111216  (secondarySystemGroupedBackground)
- *   --primary:    #FFAA3C  (dorado marca, hsl(43 61% 60%))
+ *   --primary:    #FACC15  (amarillo marca, amarillo limpio)
  *   --foreground: #FFFFFF
  *   --muted-fg:   #98989E  (secondaryLabel iOS)
  *   --border:     #1f2024  (opaque separator)
@@ -33,7 +33,7 @@ export const email = {
   header: {
     backgroundColor: '#08090b',
     padding: '36px 32px 0',
-    borderTop: '2px solid #FFAA3C',
+    borderTop: '2px solid #FACC15',
     borderBottom: '1px solid #1f2024',
   },
 
@@ -65,7 +65,7 @@ export const email = {
     fontSize: '28px',
     fontWeight: 700 as const,
     color: '#FFFFFF',
-    letterSpacing: '-0.02em',
+    letterSpacing: '0',
     lineHeight: '1.25',
     margin: '0 0 16px',
   },
@@ -75,7 +75,7 @@ export const email = {
     fontSize: '17px',
     fontWeight: 600 as const,
     color: '#FFFFFF',
-    letterSpacing: '-0.01em',
+    letterSpacing: '0',
     lineHeight: '1.4',
     margin: '0 0 12px',
   },
@@ -101,17 +101,17 @@ export const email = {
     margin: '0 0 16px',
   },
 
-  /** Botón CTA principal — dorado de marca */
+  /** Botón CTA principal — amarillo de marca */
   button: {
-    backgroundColor: '#FFAA3C',
-    color: '#08090b',
+    backgroundColor: '#FACC15',
+    color: '#000000',
     fontSize: '15px',
     fontWeight: 700 as const,
     borderRadius: '999px',
     padding: '14px 28px',
     textDecoration: 'none',
     display: 'inline-block' as const,
-    letterSpacing: '-0.01em',
+    letterSpacing: '0',
   },
 
   buttonContainer: {
@@ -144,10 +144,10 @@ export const email = {
     fontFamily: '"SF Mono", "Fira Code", "Courier New", Courier, monospace',
     fontSize: '32px',
     fontWeight: 700 as const,
-    color: '#FFAA3C',
-    letterSpacing: '6px',
+    color: '#FACC15',
+    letterSpacing: '0',
     backgroundColor: '#111216',
-    padding: '16px 24px',
+    padding: '16px 12px',
     borderRadius: '12px',
     display: 'inline-block' as const,
     border: '1px solid #1f2024',
@@ -155,7 +155,7 @@ export const email = {
   },
 
   link: {
-    color: '#FFAA3C',
+    color: '#FACC15',
     textDecoration: 'underline' as const,
     wordBreak: 'break-all' as const,
   },
