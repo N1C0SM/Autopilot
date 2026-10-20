@@ -76,9 +76,8 @@ const PaymentReminders = ({ users }: Props) => {
       const ds = daysSince(last);
       if (ds !== null && ds < 3) { skip++; continue; }
       try {
-        const { error } = await supabase.functions.invoke("send-transactional-email", {
+        const { data: sendData, error } = await supabase.functions.invoke("send-payment-reminder", {
           body: {
-            templateName: "payment-reminder",
             recipientEmail: u.email,
             idempotencyKey: `pay-reminder-${u.user_id}-${Date.now()}`,
             templateData: {
@@ -89,6 +88,7 @@ const PaymentReminders = ({ users }: Props) => {
           },
         });
         if (error) throw error;
+        if (!sendData?.sent) { skip++; continue; }
         await supabase.from("payment_reminders").insert({
           user_id: u.user_id,
           recipient_email: u.email,

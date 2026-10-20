@@ -783,9 +783,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         if (r) {
           const recipient = leadEmail.trim();
           const cardImageUrl = await uploadScanCard();
-          const { error: emailError } = await supabase.functions.invoke("send-transactional-email", {
+          const { error: emailError } = await supabase.functions.invoke("send-scan-diagnosis", {
             body: {
-              templateName: "scan-diagnosis",
               recipientEmail: recipient,
               idempotencyKey: `scan-diagnosis-${recipient}-${Date.now()}`,
               templateData: {
@@ -1054,9 +1053,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
 
       const firstName = (userName || user.email?.split("@")[0] || "atleta").split(" ")[0];
       const cardImageUrl = await uploadScanCard();
-      await supabase.functions.invoke("send-transactional-email", {
+      await supabase.functions.invoke("send-scan-diagnosis", {
         body: {
-          templateName: "scan-diagnosis",
           recipientEmail: userEmail,
           idempotencyKey: `scan-diagnosis-${user.id}-${Date.now()}`,
           templateData: {

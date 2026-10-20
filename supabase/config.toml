@@ -48,3 +48,12 @@ project_id = "enebrcdrdnfkyduzyrzm"
 
 [functions.login-identifier]
 verify_jwt = false
+
+[functions.send-scan-diagnosis]
+verify_jwt = false
+
+[functions.send-payment-reminder]
+verify_jwt = false
+
+[functions.handle-email-events]
+verify_jwt = false
