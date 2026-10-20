@@ -89,7 +89,7 @@ export function publicPageMeta(p: PlanFlags) {
         ? `Conoce a Nicolás San Marcos, fundador de Autopilot, que te atiende en el plan ${p.coachName}.`
         : "Conoce a Nicolás San Marcos, fundador y desarrollador de Autopilot.",
     },
-    faq: { title: "Preguntas frecuentes", description: "Resuelve tus dudas sobre los planes, el entrenamiento, ${p.plus || p.coach ? "la prueba de 7 días" : "el plan gratis"} y tu cuenta." },
+    faq: { title: "Preguntas frecuentes", description: `Resuelve tus dudas sobre los planes, el entrenamiento, ${p.plus || p.coach ? "la prueba de 7 días" : "el plan gratis"} y tu cuenta.` },
   } as const;
 }
 
