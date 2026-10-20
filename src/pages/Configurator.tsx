@@ -32,7 +32,7 @@ const FOCUS = [{ v: "gimnasio", l: "Gimnasio" }, { v: "calistenia", l: "Calisten
 const DURATION = [{ v: 40, l: "30–45 min" }, { v: 55, l: "45–60 min" }, { v: 75, l: "60–90 min" }];
 const STRUCTURE = [
   { v: "full_body", l: "Full Body" }, { v: "torso_pierna", l: "Torso / Pierna" },
-  { v: "ppl", l: "Empuje / Tirón / Pierna" }, { v: "coach", l: "Que elija mi entrenador" },
+  { v: "ppl", l: "Empuje / Tirón / Pierna" }, { v: "coach", l: "No lo sé, que Autopilot elija" },
 ];
 const COOKING = [
   { v: "quick", l: "Rápido, sin complicarme", d: "Recetas de menos de 15 min" },
@@ -221,6 +221,12 @@ const Configurator = () => {
       navigate("/signup?from=quiz");
       return;
     }
+    // Una sesión sin correo confirmado nunca entra al panel: primero se verifica.
+    if (!user.email_confirmed_at) {
+      saveConfiguratorDraft(c);
+      navigate("/verify-email");
+      return;
+    }
     setSaving(true);
     const nutrition = [`${c.meals} comidas al día`, `Cocina: ${label(COOKING, c.cooking)}`, c.avoid && `Evitar: ${c.avoid}`]
       .filter(Boolean).join(" · ");
@@ -262,13 +268,23 @@ const Configurator = () => {
   };
 
   const dayNames = DOW.filter((d) => c.days.includes(d.v)).map((d) => d.s).join(", ");
-  const titles = ["¿Qué quieres conseguir?", "Horarios y disponibilidad", "Tu nutrición", "Tu seguimiento", "Tu plan Autopilot"];
+  const duo = c.mode === "pareja";
+  const t = (solo: string, pair: string) => (duo ? pair : solo);
+  const titles = [
+    t("¿Qué quieres conseguir?", "¿Qué queréis conseguir?"),
+    t("Tu semana", "Vuestra semana juntos"),
+    t("Tu nutrición", "Vuestras comidas"),
+    t("Tu revisión semanal", "Vuestra revisión semanal"),
+    t("Tu plan Autopilot", "Vuestro plan conjunto"),
+  ];
   const leads = [
-    "Con quién entrenas, tu objetivo y dónde.",
-    "Elige al menos dos días. Ajustamos el plan a tu semana.",
-    "Para que las comidas encajen con tu día.",
-    "Una revisión a la semana para ajustar el plan.",
-    user ? "Una muestra con tus respuestas. Confirma para generar y guardar tu plan completo." : "Una muestra con tus respuestas. Crea tu cuenta para generar y guardar el plan completo.",
+    t("Cuéntanos tu objetivo y dónde entrenas.", "Un mismo calendario, con cargas adaptadas a cada uno."),
+    t("Elige al menos dos días. Ajustamos el plan a tu semana.", "Elegid al menos dos días que os vengan bien a los dos."),
+    t("Para que las comidas encajen con tu día.", "Recetas sencillas que os gusten a los dos."),
+    t("Un momento a la semana para ajustar tu plan.", "Un momento a la semana para ajustar el plan de ambos."),
+    user
+      ? t("Así queda con tus respuestas. Confirma para guardar tu plan completo.", "Así queda vuestro plan. Confirma para guardarlo.")
+      : t("Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.", "Así queda vuestro plan. Crea tu cuenta para guardarlo."),
   ];
   const last = titles.length - 1;
   const goBack = () => { if (saving) return; if (step === 0) navigate("/"); else setStep((s) => s - 1); };
@@ -315,13 +331,13 @@ const Configurator = () => {
               </Field>
             )}
             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
-            <Choices header="¿Dónde entrenas?" options={FOCUS} value={c.focus} onChange={(v) => set("focus", String(v))} />
+            <Choices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", String(v))} />
           </>
         )}
 
         {step === 1 && (
           <>
-            <DayPicker header="¿Qué días vas a entrenar?" pressed isOn={(v) => c.days.includes(v)}
+            <DayPicker header={t("¿Qué días vas a entrenar?", "¿Qué días entrenáis juntos?")} pressed isOn={(v) => c.days.includes(v)}
               onToggle={(v) => set("days", c.days.includes(v) ? c.days.filter((x) => x !== v) : [...c.days, v])} />
             <Choices header="Tiempo por sesión" options={DURATION} value={c.minutes} onChange={(v) => set("minutes", Number(v))} />
             <Choices header="Estructura" options={STRUCTURE} value={c.structure} onChange={(v) => set("structure", String(v))} />
@@ -330,9 +346,9 @@ const Configurator = () => {
 
         {step === 2 && (
           <>
-            <Choices header="Comidas al día" options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
-            <Choices header="¿Te gusta cocinar?" options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
-            <Field header="¿Algo que no quieras ver? (opcional)">
+            <Choices header={t("Comidas al día", "Comidas al día que hacéis juntos")} options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
+            <Choices header={t("¿Te gusta cocinar?", "¿Os gusta cocinar?")} options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
+            <Field header={t("¿Algo que no quieras ver? (opcional)", "¿Algo que ninguno quiera ver? (opcional)")}>
               <Input autoComplete="off" enterKeyHint="next" aria-label="Alimentos que no quieres ver" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </Field>
             <Field header="Tu peso en kg (opcional)">
@@ -349,14 +365,14 @@ const Configurator = () => {
                 {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </Field>
-            <Choices header="¿Cómo quieres que te acompañemos?" options={STYLE} value={c.style} onChange={(v) => set("style", String(v))} />
+            <Choices header={t("¿Cómo quieres que te acompañemos?", "¿Cómo queréis que os acompañemos?")} options={STYLE} value={c.style} onChange={(v) => set("style", String(v))} />
           </>
         )}
 
         {step === 4 && (
           <>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
-            <ListGroup header="Tu semana">
+            <ListGroup header={t("Tu semana", "Vuestra semana")}>
               <ListRow title="Días" value={`${c.days.length} · ${dayNames}`} />
               <ListRow title="Sesión" value={label(DURATION, c.minutes)} />
               <ListRow title="Estructura" value={label(STRUCTURE, c.structure)} />
