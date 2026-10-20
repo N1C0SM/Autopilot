@@ -381,7 +381,7 @@ const HomeOverview = ({
                 void hapticTap();
                 if (onResumeWorkout) onResumeWorkout();
                 else onNavigate("training");
-              }}>Reanudar entrenamiento</Button>
+              }}>Continuar entreno</Button>
               <Button type="button" variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
                 Descartar sesión
               </Button>
@@ -406,7 +406,7 @@ const HomeOverview = ({
                 </span>
               )}
               <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
-                Empezar
+                {sessionCount === 0 ? "Empezar mi primer entreno" : "Empezar entreno"}
               </span>
             </button>
           ) : completedToday ? (
@@ -433,9 +433,14 @@ const HomeOverview = ({
             <EmptyState
               className="py-0"
               icon={Moon}
-              title="Día de recuperación"
+              title="Hoy toca descansar"
               description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
-              action={<Button type="button" variant="plain" onClick={openWeek}>Ver rutina semanal</Button>}
+              action={(
+                <div className="flex w-full flex-col items-center gap-1">
+                  <Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>
+                  <Button type="button" variant="plain" size="sm" onClick={openWeek}>Ver rutina semanal</Button>
+                </div>
+              )}
             />
           )}
           {activeWorkout && !activeWorkoutIsToday && (
