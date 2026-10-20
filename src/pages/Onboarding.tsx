@@ -142,6 +142,7 @@ const Onboarding = () => {
   });
 
   const update = <K extends keyof typeof data>(field: K, value: (typeof data)[K]) => setData((d) => ({ ...d, [field]: value }));
+  const [autoFinish, setAutoFinish] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -170,9 +171,11 @@ const Onboarding = () => {
         const complete = Boolean(q.age && q.height && q.weight && q.sex && q.goal && q.primary_focus && q.accept_terms && q.accept_health);
         // Solo saltamos al resumen si el borrador está completo; si no, empieza desde el principio con los datos conservados.
         if (complete) setTimeout(() => setStep(99), 0);
-        sessionStorage.removeItem(QUIZ_STORAGE_KEY);
+        // Recién verificado y con todo respondido: no se repite el resumen,
+        // se guarda y se entra directo (rutina o «preparando» si tiene Coach).
         if (user) {
-          toast.success("Bienvenido, confirma tu plan para crearlo");
+          sessionStorage.removeItem(QUIZ_STORAGE_KEY);
+          if (complete) setAutoFinish(true);
         }
       }
     } catch { /* Best-effort browser feature; the primary flow remains available. */ }
