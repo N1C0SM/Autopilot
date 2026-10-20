@@ -28,7 +28,7 @@ export function interpolate(str: string, data: Record<string, unknown>): string 
 }
 
 /**
- * Single source of truth used by BOTH `send-transactional-email` and
+ * Single source of truth used by BOTH the managed send helper and
  * `render-email-template`. Guarantees the preview matches what is sent.
  *
  * Priority:
