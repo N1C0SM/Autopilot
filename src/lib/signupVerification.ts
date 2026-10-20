@@ -49,6 +49,15 @@ export function postVerificationPath(nextParam: string | null, fromScan: boolean
   return "/onboarding-choice";
 }
 
+/**
+ * Destino final tras canjear el código. Si la pestaña conserva un borrador del
+ * cuestionario, se vuelve al configurador con `guardar=1` para que lo guarde
+ * solo y entre directo al plan, sin reenseñar el último paso.
+ */
+export function postVerifyDestination(next: string, hasQuizDraft: boolean): string {
+  return hasQuizDraft ? "/onboarding?guardar=1" : next;
+}
+
 function storage(): Storage | null {
   try {
     return sessionStorage;

@@ -3,6 +3,7 @@ import {
   clearSignupEmail,
   clearVerifyContext,
   postVerificationPath,
+  postVerifyDestination,
   readSignupEmail,
   readVerifyContext,
   safeNextPath,
@@ -42,6 +43,17 @@ describe("postVerificationPath", () => {
 
   it("por defecto lleva a elegir onboarding", () => {
     expect(postVerificationPath(null, false)).toBe("/onboarding-choice");
+  });
+});
+
+describe("postVerifyDestination", () => {
+  it("con borrador del quiz vuelve al configurador con autoguardado", () => {
+    expect(postVerifyDestination("/onboarding", true)).toBe("/onboarding?guardar=1");
+  });
+
+  it("sin borrador respeta el destino previsto", () => {
+    expect(postVerifyDestination("/onboarding", false)).toBe("/onboarding");
+    expect(postVerifyDestination("/scan?from=signup", false)).toBe("/scan?from=signup");
   });
 });
 
