@@ -415,34 +415,56 @@ const Onboarding = () => {
         .maybeSingle();
 
       if (hasCoaching(profile)) {
-        toast.success("Tu entrenador ya puede preparar tu plan.");
+        toast.success("Preparando tu plan: Nicolás lo revisa con tus respuestas.");
         track("onboarding_complete", { paid: true });
         navigate("/dashboard");
       } else {
         const { data: generated, error: generationError } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
         if (generationError || !generated?.success) {
           toast.error("No se ha podido preparar tu rutina. Puedes volver a intentarlo.");
+          setAutoFinish(false);
           setLoading(false);
           return;
         }
-        toast.success("Tu rutina inicial está lista. Ya puedes entrenar gratis.");
+        toast.success("Tu rutina está lista. Ya puedes entrenar.");
         track("onboarding_complete", { paid: false, plan: "free" });
         track("plan_ready", { plan: "free" });
         navigate("/dashboard");
       }
     } else {
       toast.error("Algo salió mal. Por favor, inténtalo de nuevo.");
+      setAutoFinish(false);
     }
     setLoading(false);
   };
 
-  // Pasos dinámicos según datos
+  // Tras verificar con el cuestionario completo se finaliza solo, una vez.
+  const autoFinishStarted = useRef(false);
+  useEffect(() => {
+    if (!autoFinish || !user || autoFinishStarted.current) return;
+    autoFinishStarted.current = true;
+    void handleSubmit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFinish, user]);
+
+  // Pasos dinámicos según datos. El seguimiento humano no se pregunta aquí:
+  // se ofrece después como mejora, cuando ya conoces la app.
   const activeSteps: StepKey[] = (() => {
     const arr: StepKey[] = ["about", "focus_goal"];
     if (data.goal === "skill_based") arr.push("specific_goal");
-    arr.push("sports_schedule", "level", "health", "training_style", "summary");
+    arr.push("sports_schedule", "level", "health", "summary");
     return arr;
   })();
+
+  if (autoFinish) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <p className="font-display text-xl font-bold">Preparando tu plan…</p>
+        <p className="max-w-xs text-sm text-muted-foreground">Usamos tus respuestas. Tarda unos segundos.</p>
+      </div>
+    );
+  }
 
   // Si el step actual se sale del rango (p.ej. tras cambio dinámico), lo recortamos
   useEffect(() => {
