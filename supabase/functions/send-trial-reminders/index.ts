@@ -1,3 +1,4 @@
+import { sendFeatureEmail } from '../_shared/transactional-email-templates/send-email.ts'
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -55,8 +56,7 @@ serve(async (req) => {
 
       const idempotencyKey = `trial-ending-${p.user_id}-d${daysLeft}`;
 
-      const { error: sendErr } = await supabase.functions.invoke("send-transactional-email", {
-        body: {
+      const { data: sendData, error: sendErr } = await sendFeatureEmail({
           templateName: "trial-ending",
           recipientEmail: p.email,
           idempotencyKey,
@@ -65,11 +65,10 @@ serve(async (req) => {
             daysLeft,
             manageUrl: "https://autopilotplan.com/dashboard?section=settings",
           },
-        },
-      });
+        });
 
-      results.push({ email: p.email, daysLeft, ok: !sendErr, err: sendErr?.message });
-      if (!sendErr) sent++;
+      results.push({ email: p.email, daysLeft, ok: Boolean(!sendErr && sendData?.sent), err: sendErr?.message });
+      if (!sendErr && sendData?.sent) sent++;
     }
 
     return new Response(

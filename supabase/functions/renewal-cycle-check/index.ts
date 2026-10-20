@@ -1,3 +1,4 @@
+import { sendFeatureEmail } from '../_shared/transactional-email-templates/send-email.ts'
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
@@ -88,8 +89,7 @@ serve(async (req) => {
       const noAnswerFor3Days = shownAt !== null && now - shownAt >= 3 * DAY_MS;
       if (!noAnswerFor3Days || p.renewal_reminder_sent_at) continue;
 
-      const { error: sendErr } = await supabase.functions.invoke("send-transactional-email", {
-        body: {
+      const { data: sendData, error: sendErr } = await sendFeatureEmail({
           templateName: "renewal-no-answer",
           recipientEmail: p.email,
           idempotencyKey: `renewal-no-answer-${p.user_id}-${start}`,
@@ -102,17 +102,16 @@ serve(async (req) => {
             }),
             manageUrl: "https://autopilotplan.com/dashboard",
           },
-        },
-      });
+        });
 
-      if (!sendErr) {
+      if (!sendErr && sendData?.sent) {
         reminders++;
         await supabase
           .from("profiles")
           .update({ renewal_reminder_sent_at: new Date().toISOString() })
           .eq("user_id", p.user_id);
       }
-      results.push({ user_id: p.user_id, action: "reminder", ok: !sendErr, err: sendErr?.message });
+      results.push({ user_id: p.user_id, action: "reminder", ok: Boolean(!sendErr && sendData?.sent), err: sendErr?.message });
     }
 
     return new Response(

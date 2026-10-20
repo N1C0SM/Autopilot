@@ -1,3 +1,4 @@
+import { sendFeatureEmail } from '../_shared/transactional-email-templates/send-email.ts'
 import { errorMessage } from "../_shared/runtime-values.ts";
 import { loadPlanPrices } from "../_shared/stripe-plan-prices.ts";
 import { hasCoaching, resolvePaidTier, subscriptionAllowsCoaching } from "../_shared/entitlements.ts";

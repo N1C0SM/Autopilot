@@ -1,3 +1,4 @@
+import { sendFeatureEmail } from '../_shared/transactional-email-templates/send-email.ts'
 import { getAuthedUser } from '../_shared/require-user.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
@@ -78,14 +79,12 @@ Deno.serve(async (req) => {
     const leadId = leadInsert.data?.id ?? crypto.randomUUID()
     const content = buildContent(answers)
 
-    const sendRes = await supabase.functions.invoke('send-transactional-email', {
-      body: {
+    const sendRes = await sendFeatureEmail({
         templateName: 'mini-plan',
         recipientEmail: email,
         idempotencyKey: `mini-plan-${leadId}`,
         templateData: content,
-      },
-    })
+      })
 
     if (sendRes.error) {
       return new Response(JSON.stringify({ error: sendRes.error.message }), {
