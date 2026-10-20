@@ -1720,7 +1720,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           <span className="whitespace-nowrap">Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="truncate text-center">
-                            {trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel}
+                            {trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel === "Peso corporal" ? "Lastre" : trackingConfig.weightLabel}
                           </span>
                           <span className="truncate text-center">
                             {trackingConfig.valueLabel}
