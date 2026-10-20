@@ -32,7 +32,7 @@ const FOCUS = [{ v: "gimnasio", l: "Gimnasio" }, { v: "calistenia", l: "Calisten
 const DURATION = [{ v: 40, l: "30–45 min" }, { v: 55, l: "45–60 min" }, { v: 75, l: "60–90 min" }];
 const STRUCTURE = [
   { v: "full_body", l: "Full Body" }, { v: "torso_pierna", l: "Torso / Pierna" },
-  { v: "ppl", l: "Empuje / Tirón / Pierna" }, { v: "coach", l: "Que elija mi entrenador" },
+  { v: "ppl", l: "Empuje / Tirón / Pierna" }, { v: "coach", l: "No lo sé, que Autopilot elija" },
 ];
 const COOKING = [
   { v: "quick", l: "Rápido, sin complicarme", d: "Recetas de menos de 15 min" },
@@ -219,6 +219,12 @@ const Configurator = () => {
       saveConfiguratorDraft(c);
       track("onboarding_complete", { paid: false, anonymous: true });
       navigate("/signup?from=quiz");
+      return;
+    }
+    // Una sesión sin correo confirmado nunca entra al panel: primero se verifica.
+    if (!user.email_confirmed_at) {
+      saveConfiguratorDraft(c);
+      navigate("/verify-email");
       return;
     }
     setSaving(true);
