@@ -46,6 +46,17 @@ describe("postVerificationPath", () => {
   });
 });
 
+describe("postVerifyDestination", () => {
+  it("con borrador del quiz vuelve al configurador con autoguardado", () => {
+    expect(postVerifyDestination("/onboarding", true)).toBe("/onboarding?guardar=1");
+  });
+
+  it("sin borrador respeta el destino previsto", () => {
+    expect(postVerifyDestination("/onboarding", false)).toBe("/onboarding");
+    expect(postVerifyDestination("/scan?from=signup", false)).toBe("/scan?from=signup");
+  });
+});
+
 describe("contexto de verificación", () => {
   it("guarda y recupera el contexto de la pestaña", () => {
     saveVerifyContext({ email: "  ana@example.test  ", next: "/scan?from=signup", fromScan: true });
