@@ -66,7 +66,7 @@ const label = (arr: { v: string | number; l: string }[], v: string | number) => 
 const draftResumeStep = (cfg: Cfg): number => {
   if (!cfg.goal || !cfg.focus || (cfg.mode !== "individual" && !/\S+@\S+\.\S+/.test(cfg.partner_email))) return 0;
   if (!Array.isArray(cfg.days) || cfg.days.length < 2) return 1;
-  return 4;
+  return 3;
 };
 
 type Option = { v: string | number; l: string; d?: string };
@@ -159,7 +159,6 @@ const Configurator = () => {
   const valid = [
     !!c.goal && !!c.focus && (c.mode === "individual" || /\S+@\S+\.\S+/.test(c.partner_email)),
     c.days.length >= 2,
-    true,
     true,
     accept,
   ];
@@ -274,14 +273,12 @@ const Configurator = () => {
     t("¿Qué quieres conseguir?", "¿Qué queréis conseguir?"),
     t("Tu semana", "Vuestra semana juntos"),
     t("Tu nutrición", "Vuestras comidas"),
-    t("Tu revisión semanal", "Vuestra revisión semanal"),
     t("Tu plan Autopilot", "Vuestro plan conjunto"),
   ];
   const leads = [
     t("Cuéntanos tu objetivo y dónde entrenas.", "Un mismo calendario, con cargas adaptadas a cada uno."),
     t("Elige al menos dos días. Ajustamos el plan a tu semana.", "Elegid al menos dos días que os vengan bien a los dos."),
     t("Para que las comidas encajen con tu día.", "Recetas sencillas que os gusten a los dos."),
-    t("Un momento a la semana para ajustar tu plan.", "Un momento a la semana para ajustar el plan de ambos."),
     user
       ? t("Así queda con tus respuestas. Confirma para guardar tu plan completo.", "Así queda vuestro plan. Confirma para guardarlo.")
       : t("Así queda con tus respuestas. Crea tu cuenta para guardar tu plan completo.", "Así queda vuestro plan. Crea tu cuenta para guardarlo."),
@@ -359,25 +356,11 @@ const Configurator = () => {
 
         {step === 3 && (
           <>
-            <DayPicker header="Día de tu revisión semanal" pressed={false} isOn={(v) => c.checkin_dow === v} onToggle={(v) => set("checkin_dow", v)} />
-            <Field header="¿A qué hora?">
-              <select aria-label="Hora de la revisión" value={c.checkin_time} onChange={(e) => set("checkin_time", e.target.value)} className="field w-full">
-                {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </Field>
-            <Choices header={t("¿Cómo quieres que te acompañemos?", "¿Cómo queréis que os acompañemos?")} options={STYLE} value={c.style} onChange={(v) => set("style", String(v))} />
-          </>
-        )}
-
-        {step === 4 && (
-          <>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
             <ListGroup header={t("Tu semana", "Vuestra semana")}>
               <ListRow title="Días" value={`${c.days.length} · ${dayNames}`} />
               <ListRow title="Sesión" value={label(DURATION, c.minutes)} />
               <ListRow title="Estructura" value={label(STRUCTURE, c.structure)} />
-              <ListRow title="Revisión" value={`${DOW.find((d) => d.v === c.checkin_dow)?.l} a las ${c.checkin_time}`} />
-              <ListRow title="Estilo" value={label(STYLE, c.style)} />
             </ListGroup>
             <label className="flex min-h-[44px] items-start gap-3 px-4 type-footnote text-muted-foreground">
               <Checkbox checked={accept} onCheckedChange={(v) => { void hapticSelection(); setAccept(!!v); }} className="mt-0.5" />
