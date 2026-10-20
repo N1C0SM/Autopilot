@@ -17,6 +17,7 @@ import { loadEnv } from "vite";
 import { availabilityFrom, euro, fallbackCatalog, parseCatalog, type CatalogPlan, type PlanAvailability } from "../src/lib/planCatalogCore";
 import { LANDING_META, OG_IMAGE, SITE_NAME, SITE_URL, landingDescription, landingFaqs, publicFaqs, publicPageMeta, type Faq } from "../src/lib/publicCopy";
 import { LEGAL_DOCS, LEGAL_LAST_UPDATED } from "../src/content/legal";
+import { socialLinkList } from "../src/lib/socialLinks";
 
 type BlogPost = {
   slug: string;
