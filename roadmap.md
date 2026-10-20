@@ -1,36 +1,4 @@
 # Roadmap
-- [x] Verificación: 8 dígitos sin truncar y compatibilidad de 6 (19 tests y navegador a 375 px); correos amarillos desplegados, 30 tests de correo. Entrega y canje de un correo nuevo aún no comprobados.
-- [x] Rediseño de entrenamiento: descanso por marca temporal y recuperación de sesiones normales/libres (tests)
-- [x] Lista vertical con ejercicios expandibles y elección en Ajustes entre lista y vista de foco actual (tests y navegador)
-- [x] Reanudar desde Hoy y verificar registro, recuperación y temporizador (recarga, serie recuperada y finalización en cuenta de prueba)
-- [x] Descartar entrenamiento en curso con confirmación (borra series del día y borrador, no marca hecho)
-- [x] Campaña Free: control admin persistente, ofertas y pagos de planes ocultos, nutrición básica y progresión; comprobado en cuenta Free y pagos bloqueados (403)
-- [x] Simplificar estados a Idea/Pendiente/Hecho y mostrar ayuda de IA sin prometer cambios automáticos
-- [x] Aclarar el alcance de «hazmelo» con IA: propone trabajo; no modifica ni publica la aplicación desde el Roadmap
-- [x] Roadmap siempre fiel: Hecho solo con prueba de código comprobada por tests o confirmación escrita
-- [x] Avisos de ideas repetidas y consulta de todas las versiones o una concreta
-- [x] Roadmap interactivo en Admin con las 40 versiones del documento
-- [x] Lluvia de ideas guardada, evidencia y guardián del foco
-- [x] Verificar permisos, edición persistente, eliminación y aviso de foco
-- [ ] Verificar clasificación IA: bloqueada por saldo agotado del proveedor configurado
-- [x] Capturas App Store
-- [x] Imágenes faltantes Academia
-- [x] Publicar
-- [x] Escudo para rutina manual (Scan, viaje, horarios, regenerar)
-- [x] Editor de rutina y entrenamiento libre adaptados a web y móvil
-- [ ] Precio Stripe 14,99 €/mes (falta crearlo en Stripe)
-- [x] Plan móvil: botones «Modo libre» / «Editar rutina» sin textos cortados y ficha de completado sin scroll
-- [ ] Dashboard Hoy más minimalista (v1.1)
-- [ ] Gamificación v2.0: ranking de fuerza relativa, badges, retos, comparación anónima, compartir progreso
-- [ ] Recompensas v3.0: puntos por entrenar, marcas y partner stores, charlas con Nicolás
 
-- [x] Tarjetas de fin de entreno visibles sin deslizar (móvil y PC) con pestañas
-- [x] Mapa de calor muscular más claro
-- [ ] Plus: recomendación de comida post-entreno según el entreno realizado (pendiente de definir fórmula con el usuario)
-
-- [x] Actualización de email preparada sin publicar: plantillas conservadas, envíos y eventos convertidos; 34 pruebas y comprobación Deno correctas. Entrega real y eventos de producción pendientes de publicación.
-
-- [x] Alta rápida: código copiable de una vez, botón «Pegar código», autocompletado móvil, verificación automática al completar
-- [x] Tras verificar: directo a la rutina (o «Preparando tu plan» con Coach), sin repetir el resumen
-- [x] Cuestionario más personal y sin la pregunta de seguimiento
-- [ ] Auditoría de fricción de toda la app (pendiente: presentar análisis y plan al usuario antes de cambiar nada)
+- [x] Resumen final del cuestionario más visual (semana, objetivo, datos clave)
+- [ ] Revisión integral de fricción y diseño: elección inicial, landing, menús, tarjetas, móvil/Android (por bloques, pantalla a pantalla)

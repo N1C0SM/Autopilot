@@ -15,7 +15,6 @@ import { track } from "@/lib/analytics";
 import { hapticImpact, hapticSelection, hapticTap } from "@/lib/native";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
-import { ListGroup, ListRow } from "@/components/ui/list";
 import Screen from "@/components/native/Screen";
 import PageHead from "@/components/PageHead";
 import PlanPreview from "@/components/PlanPreview";
