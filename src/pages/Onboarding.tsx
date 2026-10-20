@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/runtimeValues";
 import { hasCoaching } from "@/lib/entitlements";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -142,6 +142,7 @@ const Onboarding = () => {
   });
 
   const update = <K extends keyof typeof data>(field: K, value: (typeof data)[K]) => setData((d) => ({ ...d, [field]: value }));
+  const [autoFinish, setAutoFinish] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -170,9 +171,11 @@ const Onboarding = () => {
         const complete = Boolean(q.age && q.height && q.weight && q.sex && q.goal && q.primary_focus && q.accept_terms && q.accept_health);
         // Solo saltamos al resumen si el borrador está completo; si no, empieza desde el principio con los datos conservados.
         if (complete) setTimeout(() => setStep(99), 0);
-        sessionStorage.removeItem(QUIZ_STORAGE_KEY);
+        // Recién verificado y con todo respondido: no se repite el resumen,
+        // se guarda y se entra directo (rutina o «preparando» si tiene Coach).
         if (user) {
-          toast.success("Bienvenido, confirma tu plan para crearlo");
+          sessionStorage.removeItem(QUIZ_STORAGE_KEY);
+          if (complete) setAutoFinish(true);
         }
       }
     } catch { /* Best-effort browser feature; the primary flow remains available. */ }
@@ -412,34 +415,56 @@ const Onboarding = () => {
         .maybeSingle();
 
       if (hasCoaching(profile)) {
-        toast.success("Tu entrenador ya puede preparar tu plan.");
+        toast.success("Preparando tu plan: Nicolás lo revisa con tus respuestas.");
         track("onboarding_complete", { paid: true });
         navigate("/dashboard");
       } else {
         const { data: generated, error: generationError } = await supabase.functions.invoke("generate-plan", { body: { user_id: user.id } });
         if (generationError || !generated?.success) {
           toast.error("No se ha podido preparar tu rutina. Puedes volver a intentarlo.");
+          setAutoFinish(false);
           setLoading(false);
           return;
         }
-        toast.success("Tu rutina inicial está lista. Ya puedes entrenar gratis.");
+        toast.success("Tu rutina está lista. Ya puedes entrenar.");
         track("onboarding_complete", { paid: false, plan: "free" });
         track("plan_ready", { plan: "free" });
         navigate("/dashboard");
       }
     } else {
       toast.error("Algo salió mal. Por favor, inténtalo de nuevo.");
+      setAutoFinish(false);
     }
     setLoading(false);
   };
 
-  // Pasos dinámicos según datos
+  // Tras verificar con el cuestionario completo se finaliza solo, una vez.
+  const autoFinishStarted = useRef(false);
+  useEffect(() => {
+    if (!autoFinish || !user || autoFinishStarted.current) return;
+    autoFinishStarted.current = true;
+    void handleSubmit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFinish, user]);
+
+  // Pasos dinámicos según datos. El seguimiento humano no se pregunta aquí:
+  // se ofrece después como mejora, cuando ya conoces la app.
   const activeSteps: StepKey[] = (() => {
     const arr: StepKey[] = ["about", "focus_goal"];
     if (data.goal === "skill_based") arr.push("specific_goal");
-    arr.push("sports_schedule", "level", "health", "training_style", "summary");
+    arr.push("sports_schedule", "level", "health", "summary");
     return arr;
   })();
+
+  if (autoFinish) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+        <p className="font-display text-xl font-bold">Preparando tu plan…</p>
+        <p className="max-w-xs text-sm text-muted-foreground">Usamos tus respuestas. Tarda unos segundos.</p>
+      </div>
+    );
+  }
 
   // Si el step actual se sale del rango (p.ej. tras cambio dinámico), lo recortamos
   useEffect(() => {
@@ -497,7 +522,7 @@ const Onboarding = () => {
         <div className="text-center mb-8">
           <span className="font-display text-2xl font-bold text-gradient">Autopilot</span>
           <h1 className="text-2xl font-bold font-display mt-6 mb-2">
-            {currentKey === "focus_goal" ? "Empecemos por lo que te importa" : "Tu plan, a tu manera"}
+            {currentKey === "focus_goal" ? "¿Qué quieres conseguir tú?" : "Tu plan, con tus respuestas"}
           </h1>
           <p className="text-xs font-medium text-primary">
             Paso {Math.min(step, activeSteps.length - 1) + 1} de {activeSteps.length} · {STEP_LABELS[currentKey]}
@@ -595,7 +620,7 @@ const Onboarding = () => {
           {currentKey === "focus_goal" && (
             <div className="space-y-5">
               <div>
-                <Label className="mb-2 block text-xs">¿En qué quieres centrarte?</Label>
+                <Label className="mb-2 block text-xs">¿Qué te apetece entrenar?</Label>
                 {scanPrefill?.primary_focus && (
                   <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-[10px] uppercase tracking-wider text-primary">
                     <Sparkles className="w-3 h-3" /> Detectado por IA
@@ -692,7 +717,7 @@ const Onboarding = () => {
           {/* Deportes + Horarios (combinados) */}
           {currentKey === "sports_schedule" && (
             <div>
-              <Label className="mb-1.5 block">Deportes y agenda</Label>
+              <Label className="mb-1.5 block">¿Qué más haces en tu semana?</Label>
               <p className="text-xs text-muted-foreground mb-4">
                 Marca los deportes que practicas y añade cosas fijas (trabajo, clases…). Encajaremos los entrenos en tus huecos libres.
               </p>
@@ -853,7 +878,7 @@ const Onboarding = () => {
           {/* Tu nivel — campos según enfoque */}
           {currentKey === "level" && (
             <div>
-              <Label className="mb-1.5 block">¿Cuál es tu nivel ahora?</Label>
+              <Label className="mb-1.5 block">¿Hasta dónde llegas hoy?</Label>
               <p className="text-xs text-muted-foreground mb-5">
                 Un toque por prueba. Si no lo sabes, sáltalo.
               </p>
@@ -886,7 +911,7 @@ const Onboarding = () => {
           {currentKey === "health" && (
             <div className="space-y-5">
               <div>
-                <Label className="mb-2 block">¿Lesiones o molestias?</Label>
+                <Label className="mb-2 block">¿Algo te molesta al entrenar?</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {["Ninguna", "Lumbar", "Hombro", "Rodilla", "Cuello", "Muñeca", "Tobillo"].map((chip) => {
                     const selected = chip === "Ninguna" ? data.injuries.trim() === "" : chipSelected("injuries", chip);
@@ -1012,7 +1037,7 @@ const Onboarding = () => {
             <div className="space-y-5">
               <div className="text-center mb-2">
                 <p className="text-[10px] font-semibold uppercase text-primary">Cuestionario completado</p>
-                <h2 className="mt-1 text-2xl font-bold font-display">Así empieza tu plan</h2>
+                <h2 className="mt-1 text-2xl font-bold font-display">Tu plan, hecho con tus respuestas</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {user
                     ? "Revisa la muestra y confirma para generar tu plan completo."

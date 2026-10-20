@@ -35,7 +35,9 @@ const codeDigits = {
   fontSize: '28px',
   lineHeight: '1.1',
   fontWeight: 700 as const,
-  letterSpacing: '0',
+  letterSpacing: '2px',
+  userSelect: 'all' as const,
+  WebkitUserSelect: 'all' as const,
   color: s.code.color,
   whiteSpace: 'nowrap' as const,
   margin: '0',
@@ -113,8 +115,8 @@ export const SignupEmail = ({ confirmationUrl, token }: SignupEmailProps) => {
             {otp ? (
               <Section style={codeBox}>
                 <Text style={codeLabel}>Código de verificación</Text>
-                <Text style={codeDigits}>{otp.length === 8 ? `${otp.slice(0, 4)} ${otp.slice(4)}` : otp}</Text>
-                <Text style={codeMeta}>Caduca a los pocos minutos · Un solo uso</Text>
+                <Text style={codeDigits}>{otp}</Text>
+                <Text style={codeMeta}>Mantén pulsado para copiar · Caduca a los pocos minutos</Text>
               </Section>
             ) : null}
 

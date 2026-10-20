@@ -24,6 +24,9 @@ import {
 } from "@/lib/signupVerification";
 import { cn } from "@/lib/utils";
 
+/** Deja solo los dígitos del código (máx. 8): tolera espacios, guiones o texto pegado. */
+export const onlyCodeDigits = (value: string): string => (value || "").replace(/\D/g, "").slice(0, 8);
+
 /** Mensaje en español para los errores de GoTrue al canjear el código. */
 const verifyErrorMessage = (message?: string): string => {
   const normalized = (message || "").toLowerCase();
@@ -78,10 +81,26 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
     return () => window.clearTimeout(timer);
   }, [cooldown]);
 
-  const submit = async (event?: FormEvent) => {
+  const pasteCode = async () => {
+    void hapticTap();
+    try {
+      const digits = onlyCodeDigits(await navigator.clipboard.readText());
+      if (digits.length !== 6 && digits.length !== 8) {
+        setFormError("No hay un código de 8 dígitos copiado. Copia el código del correo y vuelve a pulsar.");
+        return;
+      }
+      setCode(digits);
+      setFormError(null);
+      void submit(undefined, digits);
+    } catch {
+      setFormError("Tu navegador no deja pegar automáticamente. Mantén pulsada la primera casilla y elige «Pegar».");
+    }
+  };
+
+  const submit = async (event?: FormEvent, override?: string) => {
     event?.preventDefault();
     if (!context || loading) return;
-    const token = code.replace(/\D/g, "");
+    const token = onlyCodeDigits(override ?? code);
     if (token.length !== 6 && token.length !== 8) {
       setFormError("Introduce el código completo de 8 dígitos (o 6 si tu correo lo incluye).");
       return;
@@ -232,9 +251,19 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
             maxLength={8}
             pattern={REGEXP_ONLY_DIGITS}
             value={code}
+            autoFocus
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            name="one-time-code"
+            // Pegar «4560 5536», «4560-5536» o el texto del correo: solo números.
+            pasteTransformer={(pasted) => onlyCodeDigits(pasted)}
             onChange={(value) => {
-              setCode(value.replace(/\D/g, ""));
+              setCode(onlyCodeDigits(value));
               setFormError(null);
+            }}
+            onComplete={(value: string) => {
+              setCode(onlyCodeDigits(value));
+              void submit(undefined, onlyCodeDigits(value));
             }}
             aria-label="Código de verificación"
             containerClassName="justify-center gap-2"
@@ -259,6 +288,12 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
               ))}
             </InputOTPGroup>
           </InputOTP>
+        </div>
+
+        <div className="mt-4 text-center">
+          <Button type="button" variant="outline" size="sm" onClick={pasteCode} disabled={loading}>
+            Pegar código
+          </Button>
         </div>
 
         {formError ? (
