@@ -356,6 +356,10 @@ body.keyboard-open main {
 }
 
 @layer utilities {
+  /* Mobile browsers: follow the visible viewport so bottom buttons are never hidden behind browser bars. */
+  .min-h-screen { min-height: 100vh; min-height: 100dvh; }
+  .h-screen { height: 100vh; height: 100dvh; }
+
   /* Gradient text is not part of the system vocabulary: the tint is a flat colour. */
   .text-gradient {
     color: hsl(var(--primary));
