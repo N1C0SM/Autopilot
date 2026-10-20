@@ -368,12 +368,42 @@ const Configurator = () => {
 
         {step === 3 && (
           <>
+            <section className="relative overflow-hidden rounded-3xl bg-card p-5 sm:p-6 animate-fade-in">
+              <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
+              <p className="type-footnote uppercase tracking-wider text-primary">{t("Tu objetivo", "Vuestro objetivo")}</p>
+              <p className="mt-1 type-title2">{label(GOALS, c.goal)} · {label(FOCUS, c.focus)}</p>
+              <div className="mt-5 grid grid-cols-7 gap-1.5" aria-label={`Días de entreno: ${dayNames}`}>
+                {DOW.map((d) => {
+                  const on = c.days.includes(d.v);
+                  return (
+                    <div key={d.v} className="flex flex-col items-center gap-1.5">
+                      <span className={cn("flex aspect-square w-full max-w-[44px] items-center justify-center rounded-full type-headline",
+                        on ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>{d.s}</span>
+                      <span className={cn("h-1 w-1 rounded-full", on ? "bg-primary" : "bg-transparent")} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                {[
+                  { k: "Días", v: String(c.days.length) },
+                  { k: "Sesión", v: label(DURATION, c.minutes) },
+                  { k: "Comidas", v: String(c.meals) },
+                ].map((s) => (
+                  <div key={s.k} className="rounded-2xl bg-secondary px-3 py-3 text-center">
+                    <p className="type-headline">{s.v}</p>
+                    <p className="mt-0.5 type-caption1 text-muted-foreground">{s.k}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 type-subhead text-muted-foreground">
+                {c.structure === "coach"
+                  ? `Distribución: Autopilot elige la mejor para ${c.days.length} días.`
+                  : `Distribución: ${label(STRUCTURE, c.structure)}.`}
+                {duo ? " Mismo calendario, cargas adaptadas a cada uno." : ""}
+              </p>
+            </section>
             <PlanPreview focus={c.focus} goal={c.goal} weight={Number(c.weight) || undefined} days={c.days.length} registered={Boolean(user)} hideHeader />
-            <ListGroup header={t("Tu semana", "Vuestra semana")}>
-              <ListRow title="Días" value={`${c.days.length} · ${dayNames}`} />
-              <ListRow title="Sesión" value={label(DURATION, c.minutes)} />
-              <ListRow title="Estructura" value={label(STRUCTURE, c.structure)} />
-            </ListGroup>
             <label className="flex min-h-[44px] items-start gap-3 px-4 type-footnote text-muted-foreground">
               <Checkbox checked={accept} onCheckedChange={(v) => { void hapticSelection(); setAccept(!!v); }} className="mt-0.5" />
               <span>Acepto los <Link to="/legal/terminos" className="text-primary">términos</Link>, la <Link to="/legal/privacidad" className="text-primary">privacidad</Link> y el tratamiento de mis datos de salud para preparar mi plan.</span>
