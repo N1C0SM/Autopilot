@@ -36,7 +36,7 @@ const TrialEndingEmail = ({
             </Heading>
             <Text style={s.text}>
               A partir de ese día se activará tu suscripción de{' '}
-              <strong style={{ color: '#C9A44A' }}>29€/mes</strong>{' '}
+              <strong style={{ color: s.link.color }}>29€/mes</strong>{' '}
               y seguirás recibiendo tu plan adaptado cada semana.
               Si quieres seguir, no tienes que hacer nada.
             </Text>
