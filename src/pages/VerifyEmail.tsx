@@ -290,6 +290,12 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
           </InputOTP>
         </div>
 
+        <div className="mt-4 text-center">
+          <Button type="button" variant="outline" size="sm" onClick={pasteCode} disabled={loading}>
+            Pegar código
+          </Button>
+        </div>
+
         {formError ? (
           <p role="alert" className="mt-3 text-center type-footnote text-destructive">
             {formError}

@@ -29,3 +29,8 @@
 - [ ] Plus: recomendación de comida post-entreno según el entreno realizado (pendiente de definir fórmula con el usuario)
 
 - [x] Actualización de email preparada sin publicar: plantillas conservadas, envíos y eventos convertidos; 34 pruebas y comprobación Deno correctas. Entrega real y eventos de producción pendientes de publicación.
+
+- [x] Alta rápida: código copiable de una vez, botón «Pegar código», autocompletado móvil, verificación automática al completar
+- [x] Tras verificar: directo a la rutina (o «Preparando tu plan» con Coach), sin repetir el resumen
+- [x] Cuestionario más personal y sin la pregunta de seguimiento
+- [ ] Auditoría de fricción de toda la app (pendiente: presentar análisis y plan al usuario antes de cambiar nada)
