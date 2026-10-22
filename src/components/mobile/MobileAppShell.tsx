@@ -53,6 +53,19 @@ const MobileAppShell = ({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const contentTitleRef = useRef<HTMLElement | null>(null);
   const barRef = useRef<HTMLElement>(null);
+  const tabContentRef = useRef<HTMLDivElement>(null);
+  const firstTabRef = useRef(true);
+  // Fundido corto al cambiar de pestaña sin desmontar su contenido (no se pierde estado).
+  useEffect(() => {
+    if (firstTabRef.current) { firstTabRef.current = false; return; }
+    const el = tabContentRef.current;
+    if (!el || typeof el.animate !== "function") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    el.animate(
+      [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }],
+      { duration: 220, easing: "cubic-bezier(0.25, 0.1, 0.25, 1)" },
+    );
+  }, [active]);
   const showLargeTitle = largeTitle && !workoutMode;
   const followContentTitle = titleInContent && !showLargeTitle && !workoutMode;
   // Hasta medir se da por hecho que el titular existe: así el título de la barra no parpadea al entrar.
@@ -137,7 +150,10 @@ const MobileAppShell = ({
             {title}
           </h1>
         )}
-        {children}
+        {/* Cambio de pestaña con fundido corto, como UITabBarController; se respeta «reducir movimiento». */}
+        <div ref={tabContentRef} className="flex flex-1 flex-col">
+          {children}
+        </div>
       </main>
 
       {!workoutMode && onQuickTrain && (
@@ -150,7 +166,18 @@ const MobileAppShell = ({
           Ir a entrenar
         </button>
       )}
-      {!workoutMode && <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} hiddenTabs={hiddenTabs} />}
+      {!workoutMode && (
+        <MobileTabBar
+          active={active}
+          onChange={(tab) => {
+            // Tocar la pestaña ya activa vuelve al principio de la pantalla (comportamiento estándar de iOS).
+            if (tab === active) scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            else onChange(tab);
+          }}
+          lockedTabs={lockedTabs}
+          hiddenTabs={hiddenTabs}
+        />
+      )}
     </div>
   );
 };
