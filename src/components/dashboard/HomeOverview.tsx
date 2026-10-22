@@ -1,3 +1,4 @@
+import { readMealsDone as readMealsDoneFor } from "@/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Apple, BookOpen, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { hapticTap } from "@/lib/native";
 import { isIOSNative } from "@/lib/platform";
 import { nutritionMacroError } from "@/lib/nutritionValidation";
 import { cn } from "@/lib/utils";
-import { readActiveWorkout, clearActiveWorkout, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
+import { readActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
 import { toast } from "sonner";
 
 interface Macros {
@@ -163,6 +164,7 @@ const HomeOverview = ({
         .eq("day_label", activeWorkout.plan.day)
         .eq("logged_at", activeWorkout.date);
       if (error) throw error;
+      clearPendingOfflineSeries(userId);
       clearActiveWorkout(userId);
       setActiveWorkout(null);
       toast.success("Sesión descartada");
@@ -236,15 +238,8 @@ const HomeOverview = ({
       : calorieLabel && macroError ? "Objetivos por revisar" : null;
 
   const readMealsDone = useCallback(() => {
-    const date = new Date();
-    const key = `meals_done_${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-    try {
-      const saved = localStorage.getItem(key);
-      setCompletedMeals(new Set(saved ? (JSON.parse(saved) as string[]) : []));
-    } catch {
-      setCompletedMeals(new Set());
-    }
-  }, []);
+    setCompletedMeals(new Set(readMealsDoneFor(userId)));
+  }, [userId]);
 
   useEffect(() => {
     readMealsDone();
