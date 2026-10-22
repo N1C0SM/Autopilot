@@ -1081,7 +1081,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       const cardImageUrl = await uploadScanCard();
       await supabase.functions.invoke("send-scan-diagnosis", {
         body: {
-          recipientEmail: userEmail,
+          recipientEmail: recipient,
           idempotencyKey: `scan-diagnosis-${user.id}-${Date.now()}`,
           templateData: {
             name: firstName,
@@ -1105,7 +1105,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         },
       });
       setAutoSaved(true);
-      if (!opts.silent) toast.success(`Diagnóstico enviado a ${userEmail}`);
+      if (!opts.silent) toast.success(`Diagnóstico enviado a ${recipient}`);
     } catch (e) {
       console.warn("saveAndEmailScan failed", e);
       if (!opts.silent) toast.error("No se pudo enviar el email");
