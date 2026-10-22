@@ -1034,7 +1034,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   // For logged-in users: save scan to history + auto-email diagnosis to account email
   const saveAndEmailScan = async (r: Result, opts: { silent?: boolean } = {}) => {
     if (!user) return;
-    const userEmail = (typeof window !== "undefined" ? null : null) ?? (userEmailState || user.email || null);
+
     setAutoSaving(true);
     try {
       const [front, back, obj] = await Promise.all([
@@ -1075,6 +1075,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         if (phErr) console.warn("progress_photos insert", phErr);
       }
 
+      const recipient = userEmail || user.email;
+      if (!recipient) return;
       const firstName = (userName || user.email?.split("@")[0] || "atleta").split(" ")[0];
       const cardImageUrl = await uploadScanCard();
       await supabase.functions.invoke("send-scan-diagnosis", {
