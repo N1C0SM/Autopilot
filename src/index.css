@@ -295,11 +295,11 @@ body.keyboard-open main {
   .type-large-title { font-family: var(--font-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: normal; }
   .type-title1      { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: normal; }
   .type-title2      { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: normal; }
-  .type-title3      { font-family: var(--font-display); font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: normal; }
-  .type-headline    { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: normal; }
-  .type-body        { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: normal; }
-  .type-callout     { font-size: 16px; line-height: 21px; font-weight: 400; letter-spacing: normal; }
-  .type-subhead     { font-size: 15px; line-height: 20px; font-weight: 400; letter-spacing: normal; }
+  .type-title3      { font-family: var(--font-display); font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: -0.03em; }
+  .type-headline    { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.025em; }
+  .type-body        { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: -0.02em; }
+  .type-callout     { font-size: 16px; line-height: 21px; font-weight: 400; letter-spacing: -0.015em; }
+  .type-subhead     { font-size: 15px; line-height: 20px; font-weight: 400; letter-spacing: -0.01em; }
   .type-footnote    { font-size: 13px; line-height: 18px; font-weight: 400; letter-spacing: normal; }
   .type-caption1    { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: normal; }
   .type-caption2    { font-size: 11px; line-height: 13px; font-weight: 400; letter-spacing: normal; }
