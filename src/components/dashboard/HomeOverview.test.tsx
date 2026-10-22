@@ -34,7 +34,7 @@ describe("dashboard home overview", () => {
     // El saludo es corto: la sesión se nombra solo en su tarjeta.
     expect(screen.queryByText(/Hoy toca/)).not.toBeInTheDocument();
     const startButton = screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" });
-    expect(within(startButton).getByText("Pull B · Espalda y bíceps")).toBeVisible();
+    expect(within(startButton).getByText("Pull B")).toBeVisible();
     expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
     expect(within(startButton).getByText("Empezar entreno")).toBeVisible();
     fireEvent.click(startButton);
