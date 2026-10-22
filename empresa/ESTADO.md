@@ -14,7 +14,7 @@ No reconstruir web ni sustituir Stripe/entrega. Primero medir y quitar fricción
 | Atlas (dirección) | priorizar, verificar, informar | todas | ESTADO al día | activa |
 | Comercial-funnel | auditar landing→pago→entrega de libros | código, navegador | cada paso con evidencia | activa |
 | Datos | ventas netas verificadas | Stripe live (falta acceso) | cifra con fuente | bloqueada |
-| Captación | contenido orgánico (blog/SEO/redes) | `generate-blog-post`, `seo/`, Metricool (Instagram @autopilotoficial__, Facebook) | — | inactiva hasta cerrar funnel |
+| Captación (activa 2026-10-22) | contenido orgánico (blog/SEO/redes) | `generate-blog-post`, `seo/`, Metricool (Instagram @autopilotoficial__, Facebook) | — | inactiva hasta cerrar funnel |
 
 Motivo: un único agente basta; no hay trabajo paralelo que justifique subagentes.
 
@@ -47,6 +47,13 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 
 ## Principal obstáculo para la primera venta
 [HECHO] 0 ventas reales. [HIPÓTESIS] Dos causas: (1) entrega mal configurada en los links de libros (arriba); (2) falta de tráfico cualificado, sin medir. Primero se corrige (1) porque es barato y bloqueante.
+
+## Plan de captación V5 [PROPUESTA 2026-10-22]
+- Oferta ancla: **Pack completo 29,90 €** (3 guías que sueltas suman 99,70 €). Entrada barata: Guía en casa 9,99 €.
+- Canal 1 · Instagram @autopilotoficial__ vía Metricool: 3 publicaciones/semana (carrusel o reel) con un consejo real sacado de las guías + CTA al enlace de la bio. Coste 0 €. Métrica: clics a la web y ventas Stripe por semana.
+- Canal 2 · Blog/SEO (`generate-blog-post`): 1 artículo/semana por búsqueda con intención de compra (p. ej. «progresiones de dominadas», «rutina en casa sin material») enlazando al libro.
+- Limpieza Stripe [RECOMENDACIÓN]: archivar el producto duplicado «(Copy) PACK COMPLETO AUTOPILOT».
+- Revisión semanal: si tras 3 semanas no hay ventas, cambiar oferta antes que volumen.
 
 ## Aprobaciones pendientes
 - **A3 · Corregir redirecciones de los Payment Links de libros** a `https://autopilotplan.com/payment-success?session_id={CHECKOUT_SESSION_ID}` y revocar el acceso público de los PDF en Drive. Riesgo: un comprador en curso podría ver otra pantalla; bajo. Coste: 0 €. Si no: PDFs gratis para quien tenga el enlace y entregas no verificables.

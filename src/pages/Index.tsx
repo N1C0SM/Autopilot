@@ -145,6 +145,15 @@ export default function Index() {
       </div>
     </section>
 
+    {/* 4b · Guías en PDF: única oferta de pago directa, enlazada desde la portada */}
+    <section aria-labelledby="guias-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-6xl rounded-3xl bg-card p-6 sm:p-10">
+        <h2 id="guias-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Guías en PDF</h2>
+        <p className="mt-2 max-w-2xl type-body text-muted-foreground">Fuerza, progresiones de calistenia, nutrición y un plan de 12 semanas. Pago único y descarga inmediata. El pack reúne tres guías a precio reducido.</p>
+        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/recursos" onClick={() => { void hapticTap(); track("cta_click", { cta: "guides", source: "home" }); }}>Ver las guías</Link></Button>
+      </div>
+    </section>
+
     {/* 5 · Fundador + FAQ + CTA */}
     <section aria-labelledby="fundador-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">

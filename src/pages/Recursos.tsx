@@ -19,6 +19,9 @@ import UserSidebar from "@/components/UserSidebar";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
+// The pack is the best-value offer, so it leads the paid guides.
+const packFirst = <T extends { is_pack?: boolean }>(list: T[]) => [...list].sort((a, b) => Number(!!b.is_pack) - Number(!!a.is_pack));
+
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string; is_pack?: boolean; pages?: number | null; minutes?: number | null }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
 interface Post { slug: string; title: string; excerpt: string | null; cover_url: string | null }
@@ -109,7 +112,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
       if (s) {
         const dbRecos = parseRecommendations(s.recommendations);
-        setEbooks(fromLibrary);
+        setEbooks(packFirst(fromLibrary));
         setRecos(dbRecos);
         setFlags({
           blog: s.show_blog ?? true,
@@ -117,7 +120,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           recos: true,
         });
       } else if (fromLibrary.length > 0) {
-        setEbooks(fromLibrary);
+        setEbooks(packFirst(fromLibrary));
       }
 
       const { data: p } = await supabase
@@ -184,35 +187,11 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           />
         )}
 
-        {hasRecos && (
-          <section>
-            <h2 className="type-title2 mb-3">Lo que sí funciona</h2>
-            <ListGroup>
-              {recos.map((r, i) => (
-                <ListRow
-                  key={r.id || i}
-                  leading={<RowThumb src={r.image_url} alt={r.title} fallback={ShoppingBag} />}
-                  title={<span className="line-clamp-2">{r.title}</span>}
-                  subtitle={
-                    <>
-                      {r.badge && <span className="block truncate type-footnote text-muted-foreground">{sentenceCase(r.badge)}</span>}
-                      <span className="line-clamp-2">{previewIntro(r.description)}</span>
-                    </>
-                  }
-                  chevron
-                  onClick={() => setPreviewReco(r)}
-                />
-              ))}
-            </ListGroup>
-            <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
-          </section>
-        )}
-
         {hasEbooks && (
           <section>
             <h2 className="type-title2">Guías en PDF</h2>
             <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
-              Documentos para leer por tu cuenta. No incluyen plan personalizado ni seguimiento{plans.coach ? `: eso es el plan ${plans.coachName}` : ""}.
+              Descarga inmediata en PDF tras el pago. Guías para leer por tu cuenta, sin plan personalizado ni seguimiento{plans.coach ? ` (eso es el plan ${plans.coachName})` : ""}.
             </p>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
@@ -239,6 +218,30 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
               pack={ebooks.find((b) => b.is_pack && b.url) || null}
               onClose={closeBook}
             />
+          </section>
+        )}
+
+        {hasRecos && (
+          <section>
+            <h2 className="type-title2 mb-3">Lo que sí funciona</h2>
+            <ListGroup>
+              {recos.map((r, i) => (
+                <ListRow
+                  key={r.id || i}
+                  leading={<RowThumb src={r.image_url} alt={r.title} fallback={ShoppingBag} />}
+                  title={<span className="line-clamp-2">{r.title}</span>}
+                  subtitle={
+                    <>
+                      {r.badge && <span className="block truncate type-footnote text-muted-foreground">{sentenceCase(r.badge)}</span>}
+                      <span className="line-clamp-2">{previewIntro(r.description)}</span>
+                    </>
+                  }
+                  chevron
+                  onClick={() => setPreviewReco(r)}
+                />
+              ))}
+            </ListGroup>
+            <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
           </section>
         )}
 
