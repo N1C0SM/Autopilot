@@ -77,6 +77,94 @@ const PhotoPlaceholder = ({ label = "Cargando foto…" }: { label?: string }) =>
   </div>
 );
 
+type ScanData = NonNullable<Photo["scan"]>;
+
+const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+/** Ficha del análisis ya guardado; nunca vuelve a ejecutar el Scan. */
+const ScanSummaryCard = ({ scan, onClose }: { scan: ScanData; onClose: () => void }) => {
+  const r = scan.result ?? {};
+  const headline = str(r.headline_diagnosis);
+  const summary = str(r.summary);
+  const bottleneck = str(r.bottleneck);
+  const improvements = Array.isArray(r.improvements)
+    ? (r.improvements as Array<{ label?: unknown; priority?: unknown }>)
+        .map((i) => ({ label: str(i?.label), priority: str(i?.priority) }))
+        .filter((i) => i.label)
+        .slice(0, 4)
+    : [];
+  const bc = (r.body_composition ?? {}) as Record<string, unknown>;
+  const fat = typeof bc.body_fat_pct === "number" ? bc.body_fat_pct : null;
+  const scores = [
+    { label: "Físico", value: scan.physique },
+    { label: "Potencial", value: scan.potential },
+  ].filter((s) => typeof s.value === "number");
+
+  return (
+    <motion.div
+      role="region"
+      aria-label="Análisis de esta foto"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 24 }}
+      transition={{ type: "spring", stiffness: 380, damping: 34 }}
+      onClick={(e) => e.stopPropagation()}
+      className="absolute inset-x-4 bottom-[max(1rem,var(--safe-bottom))] z-20 mx-auto max-h-[60dvh] max-w-md overflow-y-auto rounded-[22px] border border-white/10 bg-black/75 p-5 text-white backdrop-blur-xl"
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <span className="flex items-center gap-1.5 type-caption1 font-medium uppercase tracking-wide text-primary">
+          <Sparkles className="h-3.5 w-3.5" /> Scan
+        </span>
+        <button
+          type="button"
+          aria-label="Cerrar análisis"
+          onClick={onClose}
+          className="flex h-11 w-11 -mr-2 items-center justify-center rounded-full text-white/70 active:bg-white/10"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {(scores.length > 0 || fat !== null) && (
+        <div className="mb-4 flex gap-6">
+          {scores.map((s) => (
+            <div key={s.label}>
+              <p className="text-2xl font-semibold tabular-nums">{s.value.toFixed(1)}</p>
+              <p className="type-caption1 text-white/60">{s.label}</p>
+            </div>
+          ))}
+          {fat !== null && (
+            <div>
+              <p className="text-2xl font-semibold tabular-nums">~{Math.round(fat)}%</p>
+              <p className="type-caption1 text-white/60">Grasa estimada</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {headline && <p className="mb-2 type-headline">{headline}</p>}
+      {summary && <p className="mb-3 type-subhead text-white/75">{summary}</p>}
+      {bottleneck && (
+        <p className="mb-3 type-subhead"><span className="text-white/60">Lo que más te frena: </span>{bottleneck}</p>
+      )}
+      {improvements.length > 0 && (
+        <ul className="space-y-2 border-t border-white/10 pt-3">
+          {improvements.map((i, idx) => (
+            <li key={idx} className="flex items-start justify-between gap-3 type-subhead">
+              <span>{i.label}</span>
+              {i.priority && <span className="shrink-0 type-caption2 text-white/50">{i.priority}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!headline && !summary && improvements.length === 0 && (
+        <p className="type-subhead text-white/70">Este análisis no tiene detalles guardados.</p>
+      )}
+      <p className="mt-4 type-caption2 text-white/40">Estimación orientativa a partir de la foto.</p>
+    </motion.div>
+  );
+};
+
 const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [signed, setSigned] = useState<Map<string, string>>(new Map());
@@ -85,6 +173,8 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<number | null>(null);
+  const [showScan, setShowScan] = useState(false);
+  useEffect(() => { setShowScan(false); }, [viewingPhoto]);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [comparing, setComparing] = useState(false);
   const [refreshAt, setRefreshAt] = useState(0);
@@ -633,13 +723,13 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                   variant="ghost"
                   size="icon"
                   aria-label="Ver análisis"
+                  aria-pressed={showScan}
                   onClick={(e) => {
                     e.stopPropagation();
                     void hapticTap();
-                    // Navigate to scan history with this scan
-                    window.location.href = `/dashboard?tab=scan&scan_id=${photos[viewingPhoto].scan?.id}`;
+                    setShowScan((v) => !v);
                   }}
-                  className="bg-white/15 text-white backdrop-blur-md active:bg-white/25"
+                  className={showScan ? "bg-primary text-primary-foreground backdrop-blur-md" : "bg-white/15 text-white backdrop-blur-md active:bg-white/25"}
                 >
                   <Sparkles className="h-5 w-5" />
                 </Button>
@@ -710,6 +800,15 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
                 {formatDate(photos[viewingPhoto].taken_at)}
               </p>
             </div>
+
+            <AnimatePresence>
+              {showScan && photos[viewingPhoto].scan && (
+                <ScanSummaryCard
+                  scan={photos[viewingPhoto].scan!}
+                  onClose={() => setShowScan(false)}
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
