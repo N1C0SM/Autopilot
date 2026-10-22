@@ -14,7 +14,7 @@ No reconstruir web ni sustituir Stripe/entrega. Primero medir y quitar fricción
 | Atlas (dirección) | priorizar, verificar, informar | todas | ESTADO al día | activa |
 | Comercial-funnel | auditar landing→pago→entrega de libros | código, navegador | cada paso con evidencia | activa |
 | Datos | ventas netas verificadas | Stripe live (falta acceso) | cifra con fuente | bloqueada |
-| Captación | contenido orgánico (blog/SEO/redes) | `generate-blog-post`, `seo/` | — | inactiva hasta cerrar funnel |
+| Captación | contenido orgánico (blog/SEO/redes) | `generate-blog-post`, `seo/`, Metricool (Instagram @autopilotoficial__, Facebook) | — | inactiva hasta cerrar funnel |
 
 Motivo: un único agente basta; no hay trabajo paralelo que justifique subagentes.
 
