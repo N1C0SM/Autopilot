@@ -33,6 +33,24 @@ export function applyProgressionToPendingSets(
 
 const incrementFor = (weight: number) => (weight >= 40 ? 2.5 : 1.25);
 
+const formatKg = (weight: number) => weight.toLocaleString("es-ES", { maximumFractionDigits: 2 });
+
+/**
+ * Resumen real de la sesión anterior para explicar la sugerencia («Última vez: 8 · 8 · 7 reps con 60 kg»).
+ * Solo usa series marcadas como hechas; devuelve null si no hay datos.
+ */
+export const summarizePreviousSets = (previous: LoggedSet[] | undefined): string | null => {
+  const done = previous?.filter((set) => set.done && Number.isFinite(set.reps) && set.reps > 0) || [];
+  if (done.length === 0) return null;
+  const reps = done.map((set) => set.reps).join(" · ");
+  const weights = done.map((set) => parsePositiveWeight(set.weight));
+  const loaded = weights.filter((weight): weight is number => weight !== null);
+  if (loaded.length === 0) return `Última vez: ${reps} reps`;
+  const same = loaded.length === done.length && loaded.every((weight) => weight === loaded[0]);
+  if (same) return `Última vez: ${reps} reps con ${formatKg(loaded[0])} kg`;
+  return `Última vez: ${reps} reps con ${formatKg(Math.min(...loaded))}–${formatKg(Math.max(...loaded))} kg`;
+};
+
 export const getProgressionSuggestion = (
   exercise: GymExerciseEntry,
   previous: LoggedSet[] | undefined,
