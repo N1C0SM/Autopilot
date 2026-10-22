@@ -1,4 +1,5 @@
 import type { DayPlan } from "@/types/training";
+import { toast } from "sonner";
 
 export type ShieldChoice = "keep" | "backup" | "replace";
 
@@ -10,8 +11,12 @@ export const markManual = (plans: DayPlan[]): DayPlan[] => plans.map((p) => ({ .
 
 const backupKey = (userId: string) => `autopilot:rutina-guardada:${userId}`;
 
-export function saveBackup(userId: string, plans: DayPlan[]) {
-  try { localStorage.setItem(backupKey(userId), JSON.stringify({ at: Date.now(), plans })); } catch { /* sin almacenamiento */ }
+/** Devuelve true solo si la copia quedó escrita y se puede releer. */
+export function saveBackup(userId: string, plans: DayPlan[]): boolean {
+  try {
+    localStorage.setItem(backupKey(userId), JSON.stringify({ at: Date.now(), plans }));
+    return readBackup(userId) !== null;
+  } catch { return false; }
 }
 
 export function readBackup(userId: string): { at: number; plans: DayPlan[] } | null {
@@ -41,14 +46,18 @@ export async function generatePlanGuarded(
   client: Invoker,
   body: Record<string, unknown>,
   opts: { userId?: string; currentPlans?: DayPlan[] } = {},
-): Promise<{ data: any; error: any; kept?: boolean }> {
+): Promise<{ data: any; error: any; kept?: boolean; backupFailed?: boolean }> {
   const first = await client.functions.invoke("generate-plan", { body });
   if (!first.data?.protected) return first;
   const choice = await askShield();
   if (choice === "keep") return { ...first, kept: true };
-  if (choice === "backup" && opts.userId) {
+  if (choice === "backup") {
     const plans = opts.currentPlans ?? (first.data.current as DayPlan[] | undefined) ?? [];
-    if (plans.length) saveBackup(opts.userId, plans);
+    // Sin copia verificada no se sustituye nada: la rutina del usuario se conserva.
+    if (!opts.userId || !plans.length || !saveBackup(opts.userId, plans)) {
+      toast.error("No se pudo guardar la copia en este dispositivo. Tu rutina se ha conservado.");
+      return { ...first, kept: true, backupFailed: true };
+    }
   }
   return client.functions.invoke("generate-plan", { body: { ...body, force: true } });
 }
