@@ -5,7 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { hapticSelection, hapticTap, isNative, shareFileOrImage } from "@/lib/native";
 import { toast } from "sonner";
 import autopilotLogo from "@/assets/autopilot-logo.png";
-import { bodyRegions, regionMuscles } from "./MuscleMapFigure";
+import { bodyRegions, regionMuscles, smoothPath } from "./MuscleMapFigure";
 
 interface Props {
   /** Imagen que se comparte. Si se indica, no se muestra el selector. */
@@ -35,19 +35,16 @@ function drawFigure(ctx: CanvasRenderingContext2D, side: "front" | "back", p: Pr
   const counts = p.muscleSetCounts || {};
   ctx.save();
   ctx.translate(x, y); ctx.scale(scale, scale);
-  for (const region of bodyRegions(side)) {
-    const muscle = owner.get(region.muscle);
-    const n = muscle ? counts[muscle] || 1 : 0;
-    ctx.fillStyle = !muscle ? "rgba(255,255,255,0.13)" : n >= 6 ? "#ff7a28" : n >= 3 ? "#f5a742" : "#f0c36a";
-    for (const points of region.svgPoints) {
-      const nums = points.trim().split(/\s+/).map(Number);
-      ctx.beginPath();
-      for (let i = 0; i + 1 < nums.length; i += 2) {
-        if (i === 0) ctx.moveTo(nums[i], nums[i + 1]); else ctx.lineTo(nums[i], nums[i + 1]);
-      }
-      ctx.closePath();
-      ctx.fill();
-    }
+  const regions = bodyRegions(side).flatMap((region) => region.svgPoints.map((points) => ({ muscle: owner.get(region.muscle), path: new Path2D(smoothPath(points)) })));
+  // Silueta continua bajo las zonas, como en la app.
+  ctx.fillStyle = "#2a2a2c"; ctx.strokeStyle = "#2a2a2c"; ctx.lineWidth = 3.2; ctx.lineJoin = "round";
+  for (const r of regions) { ctx.fill(r.path); ctx.stroke(r.path); }
+  for (const r of regions) {
+    const n = r.muscle ? counts[r.muscle] || 1 : 0;
+    ctx.shadowColor = r.muscle ? "rgba(255,150,50,0.8)" : "transparent";
+    ctx.shadowBlur = r.muscle ? 6 : 0;
+    ctx.fillStyle = !r.muscle ? "#3d3d40" : n >= 6 ? "#ff7a28" : n >= 3 ? "#f5a742" : "#f0c36a";
+    ctx.fill(r.path);
   }
   ctx.restore();
 }
