@@ -30,16 +30,24 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 | ID | Tarea | Criterio / verificación | Estado |
 |---|---|---|---|
 | V1 | Núcleo Atlas (este directorio) | `npm test` pasa `empresa.test.ts` | [VERIFICADO] |
-| V2 | Obtener ventas netas actuales | export Stripe live de cobros de libros, reembolsos y comisiones | bloqueada (A1) |
+| V2 | Obtener ventas netas actuales | conector Stripe (lectura) | [VERIFICADO] 0 € — nunca ha habido un cobro real |
 | V3 | Auditar funnel en producción | por cada libro publicado: Payment Link live, redirect con `session_id={CHECKOUT_SESSION_ID}`, PDF entregado | pendiente (A2) |
 | V4 | Auditar oferta (precio, copy, cubiertas, pack) | checklist + comparación de precios | pendiente tras V3 |
 | V5 | Plan de captación orgánica | 1 canal priorizado por coste/impacto | pendiente tras V3 |
 
+## Auditoría Payment Links live [HECHO 2026-10-22]
+- 3 links de pago único redirigen directamente a un PDF de Google Drive: quien tenga la URL lo descarga sin pagar y no pasa por la verificación.
+- 1 link redirige a `/payment-success` sin `session_id`: la entrega no puede verificar el pago.
+- 1 link de pago único termina en confirmación de Stripe sin redirección: el comprador no recibe el libro automáticamente.
+- 1 link redirige a `/d/<token>` fijo (compartible).
+- Falta mapear qué link corresponde a cada libro publicado.
+
 ## Principal obstáculo para la primera venta
-[HIPÓTESIS] No es técnico sino de **visibilidad y verificación**: el flujo de compra existe en código, pero no hay datos de tráfico ni ventas accesibles y los Payment Links son configuración manual externa al repo (un link test, sin redirect `session_id` o sin libro publicado rompe la venta o la entrega). Se confirma o descarta con V2+V3.
+[HECHO] 0 ventas reales. [HIPÓTESIS] Dos causas: (1) entrega mal configurada en los links de libros (arriba); (2) falta de tráfico cualificado, sin medir. Primero se corrige (1) porque es barato y bloqueante.
 
 ## Aprobaciones pendientes
-- **A1 · Acceso de lectura a Stripe live** (clave restringida solo-lectura o export CSV de pagos/reembolsos). Motivo: medir el objetivo. Riesgo: bajo si la clave es read-only. Coste: 0 €. Sin ello: el progreso hacia 100 € no es verificable.
+- **A3 · Corregir redirecciones de los Payment Links de libros** a `https://autopilotplan.com/payment-success?session_id={CHECKOUT_SESSION_ID}` y revocar el acceso público de los PDF en Drive. Riesgo: un comprador en curso podría ver otra pantalla; bajo. Coste: 0 €. Si no: PDFs gratis para quien tenga el enlace y entregas no verificables.
+- **Revocar** la clave `rk_live_…` pegada en el chat (sustituida por el conector Stripe).
 - **A2 · URL de producción + permiso para recorrer el funnel** (sin pagar) y lista de libros publicados con su Payment Link. Coste: 0 €. Sin ello: V3 no puede hacerse.
 
 ## Decisiones
@@ -47,4 +55,4 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 - 2026-10-22 · Sin subagentes permanentes: el trabajo actual es secuencial.
 
 ## Próxima acción
-Recibir A1/A2 → ejecutar V2 y V3.
+Aprobación A3 → corregir links (conector Stripe, escritura) → recorrer el funnel (A2).
