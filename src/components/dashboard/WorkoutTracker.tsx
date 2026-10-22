@@ -19,8 +19,8 @@ import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
-import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
-import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
+import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
+import { applyProgressionToPendingSets, getProgressionSuggestion, summarizePreviousSets } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
 import { WorkoutStudyCards } from "./WorkoutStudyCards";
@@ -54,6 +54,7 @@ import {
   type SupersetLinks,
 } from "@/lib/workoutSuperset";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { addExerciseLoad } from "@/lib/muscleMapping";
 import { FreeWorkoutPicker } from "./FreeWorkoutPicker";
 
@@ -898,7 +899,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         .eq("day_label", selectedDay)
         .eq("logged_at", selectedDate);
       if (error) throw error;
-      try { localStorage.removeItem(`autopilot:series-pendientes:${userId}`); } catch { /* sin almacenamiento */ }
+      clearPendingOfflineSeries(userId);
       clearActiveWorkout(userId);
       setExerciseLogs({});
       setRestTimer(null);
@@ -1343,7 +1344,20 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div className={`flex flex-col gap-4 ${started ? "mx-auto w-full max-w-2xl flex-1 px-4 pt-3" : ""}`}>
           {/* Today's workout summary */}
           <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
-            <h2 className="type-title1">{trainingTitle || selectedDay}</h2>
+            {(() => {
+              const [name, ...rest] = String(trainingTitle || selectedDay).split(" · ");
+              return (
+                <>
+                  <h2 className="truncate type-title1">{name}</h2>
+                  {rest.length > 0 && <p className="mt-0.5 truncate type-subhead text-muted-foreground">{rest.join(" · ")}</p>}
+                </>
+              );
+            })()}
+            {!!currentPlan?.exercises?.length && (
+              <p className="mt-1 type-footnote tabular-nums text-muted-foreground">
+                {currentPlan.exercises.length} ejercicios · {totalSets} series
+              </p>
+            )}
             {selectedDay !== today && <p className="mt-1 type-footnote text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
 
             <div className="mt-4 flex items-center gap-3">
@@ -1359,8 +1373,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   onClick={() => { void hapticTap(); startWorkout(0); }}
                   disabled={!logsReady || loadError}
                   size="lg"
-                  className="mt-4 w-full"
+                  className="mt-6 h-14 w-full gap-2 rounded-full text-[17px] font-semibold active:scale-[0.98]"
                 >
+                  <Play className="h-5 w-5 fill-current" aria-hidden />
                   Empezar entrenamiento
                 </Button>
               ) : (
@@ -1502,7 +1517,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
           {/* Exercise list: lista agrupada en el resumen; en sesión, solo el ejercicio en foco */}
           {!workoutCompleted && completionReady && !loadError && (
-          <section>
+          <section className={started ? "" : "pb-28 md:pb-0"}>
           {!focusMode && (currentPlan.exercises?.length ?? 0) > 0 && (
             <h3 className="px-4 pb-1.5 type-group-header">Ejercicios</h3>
           )}
@@ -1589,7 +1604,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       {ex.series} series · {ex.reps} reps · {ex.rest}
                     </div>
                   </div>
-                  <div className={`flex shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
+                  {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
+                  <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
                     {allDone && !focused && (
                       <span className="flex h-11 w-9 items-center justify-center text-primary">
                         <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
@@ -1681,46 +1697,56 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     >
                       <div className="px-2 pb-3 pt-2">
                         {/* Sugerencia de sobrecarga progresiva y cálculo de la siguiente carga */}
-                        {progression && !allDone && (
-                          <div className="mb-3.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card px-3.5 py-2.5 shadow-sm">
-                            <div className="flex min-w-0 items-center gap-2.5">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                                <TrendingUp className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                        {progression && !allDone && (() => {
+                          const kg = progression.weight ? `${Number(progression.weight).toLocaleString("es-ES", { maximumFractionDigits: 2 })} kg` : "";
+                          const headline = progression.label === "Subir"
+                            ? `Hoy: ${kg}`
+                            : progression.label === "Añadir rep"
+                              ? "Hoy: +1 rep por serie"
+                              : progression.label === "Mantener"
+                                ? (kg ? `Hoy: mantén ${kg}` : "Hoy: mantén la carga")
+                                : (kg ? `Hoy: repite ${kg}` : "Hoy: repite el objetivo");
+                          const lastTime = summarizePreviousSets(prevSets?.filter((set) => !isWorkoutSetWarmup(set)));
+                          const canApply = progression.label === "Subir" || progression.label === "Añadir rep";
+                          return (
+                            <section aria-label="Por qué esta carga" className="mb-3 rounded-[14px] bg-muted/40 px-3 py-2">
+                              {/* Una línea: lo que haces hoy + aplicar. El porqué, solo si lo pides. */}
+                              <div className="flex min-h-11 items-center gap-2">
+                                <p className="min-w-0 flex-1 truncate type-subhead font-semibold tabular-nums text-foreground">{headline}</p>
+                                {canApply && (
+                                  <button
+                                    type="button"
+                                    aria-label={progression.label === "Subir" ? `Usar ${kg} en las series` : "Aplicar +1 rep"}
+                                    onClick={() => {
+                                      void hapticImpact("medium");
+                                      applyProgression(ex.name, progression);
+                                    }}
+                                    className="min-h-11 shrink-0 rounded-full px-3 type-subhead font-semibold text-primary transition active:opacity-50"
+                                  >
+                                    Aplicar
+                                  </button>
+                                )}
                               </div>
-                              <div className="min-w-0">
-                                <p className="type-subhead font-bold leading-tight text-foreground">
-                                  {progression.label === "Subir"
-                                    ? `Siguiente carga: ${progression.weight} kg`
-                                    : progression.label === "Añadir rep"
-                                      ? "Siguiente objetivo: +1 rep"
-                                      : progression.label === "Mantener"
-                                        ? (progression.weight ? `Mantener ${progression.weight} kg` : "Mantener carga")
-                                        : (progression.weight ? `Repetir ${progression.weight} kg` : "Repetir objetivo")}
-                                </p>
-                                <p className="line-clamp-1 type-caption1 text-muted-foreground">{progression.reason}</p>
-                              </div>
-                            </div>
-                            {(progression.label === "Subir" || progression.label === "Añadir rep") && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  void hapticImpact("medium");
-                                  applyProgression(ex.name, progression);
-                                }}
-                                className="shrink-0 rounded-xl bg-primary px-3 py-1.5 type-caption1 font-bold text-primary-foreground shadow-sm transition-transform active:scale-95"
-                              >
-                                Aplicar
-                              </button>
-                            )}
-                          </div>
-                        )}
+                              <details className="group">
+                                <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 type-footnote text-muted-foreground">
+                                  <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Por qué
+                                </summary>
+                                <div className="pb-1">
+                                  {lastTime && <p className="type-footnote tabular-nums text-muted-foreground">{lastTime}</p>}
+                                  <p className="mt-0.5 type-footnote text-foreground/80">{progression.reason}</p>
+                                </div>
+                              </details>
+                            </section>
+                          );
+                        })()}
 
                         {/* Column headers */}
                         <div className={`${SET_GRID} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>
                           <span className="whitespace-nowrap">Serie</span>
                           <span className="text-center">Previa</span>
                           <span className="truncate text-center">
-                            {trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel}
+                            {trackingConfig.fixedBodyweight ? "PC" : trackingConfig.weightLabel === "Peso corporal" ? "Lastre" : trackingConfig.weightLabel}
                           </span>
                           <span className="truncate text-center">
                             {trackingConfig.valueLabel}
@@ -2028,38 +2054,42 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
-      <Dialog open={finishIncompleteOpen} onOpenChange={setFinishIncompleteOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle>¿Terminar con series pendientes?</DialogTitle>
-          <DialogDescription>
-            Te quedan {(totalSets - completedSets)} de {totalSets} series. Puedes terminarlo igualmente o seguir entrenando.
-          </DialogDescription>
-          <div className="mt-2 flex flex-col gap-2">
-            <Button onClick={() => void finishWorkoutConfirmed()} disabled={saving}>
+      <Drawer open={finishIncompleteOpen} onOpenChange={setFinishIncompleteOpen}>
+        <DrawerContent className="mx-auto max-w-md">
+          <DrawerHeader className="px-5 pt-4 text-center">
+            <DrawerTitle>¿Terminar con series pendientes?</DrawerTitle>
+            <DrawerDescription className="tabular-nums">
+              Te quedan {(totalSets - completedSets)} de {totalSets} series. Puedes terminarlo igualmente o seguir entrenando.
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="gap-2 px-5 pb-5">
+            <Button size="lg" className="min-h-11 w-full" onClick={() => { void hapticImpact("medium"); void finishWorkoutConfirmed(); }} disabled={saving}>
               Terminar y guardar
             </Button>
-            <Button variant="ghost" onClick={() => setFinishIncompleteOpen(false)}>
+            <Button size="lg" variant="ghost" className="min-h-11 w-full" onClick={() => { void hapticSelection(); setFinishIncompleteOpen(false); }}>
               Seguir entrenando
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle>¿Descartar entrenamiento?</DialogTitle>
-          <DialogDescription>
-            Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.
-          </DialogDescription>
-          <div className="mt-2 flex flex-col gap-2">
-            <Button variant="destructive" onClick={() => void discardWorkout()} disabled={saving}>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+      <Drawer open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DrawerContent className="mx-auto max-w-md">
+          <DrawerHeader className="px-5 pt-4 text-center">
+            <DrawerTitle>¿Descartar entrenamiento?</DrawerTitle>
+            <DrawerDescription>
+              Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="gap-2 px-5 pb-5">
+            <Button size="lg" variant="destructive" className="min-h-11 w-full font-semibold" onClick={() => void discardWorkout()} disabled={saving}>
               Descartar entrenamiento
             </Button>
-            <Button variant="ghost" onClick={() => setDiscardOpen(false)}>
+            <Button size="lg" variant="ghost" className="min-h-11 w-full font-semibold" onClick={() => { void hapticSelection(); setDiscardOpen(false); }}>
               Seguir entrenando
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

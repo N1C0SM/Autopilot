@@ -332,6 +332,29 @@ Deno.serve(async (req) => {
         .reduce((acc, x) => ({ ...acc, ...x }), {});
     }
     if (!raw || typeof raw !== "object") throw new Error("Sin resultado del análisis");
+    // Las notas a veces llegan anidadas ("scores": {...}) o faltan. Nunca rellenar
+    // con un 5 fijo: sacarlas del propio análisis para que la misma foto puntúe igual.
+    {
+      const r = raw as Record<string, unknown>;
+      const nested = jsonObject(r.scores ?? r.score ?? r.puntuaciones) ?? {};
+      for (const k of ["attractiveness", "potential", "physique", "style"]) {
+        if (toNum(r[k]) == null && toNum((nested as Record<string, unknown>)[k]) != null) {
+          r[k] = (nested as Record<string, unknown>)[k];
+        }
+      }
+      const mb = Array.isArray(r.muscle_breakdown)
+        ? (r.muscle_breakdown as unknown[]).map((m) => toNum(jsonObject(m)?.score)).filter((n): n is number => n != null)
+        : [];
+      const prop = jsonObject(r.proportions) ?? {};
+      const extra = [toNum(prop.v_taper_score), toNum(prop.symmetry_score)].filter((n): n is number => n != null);
+      const pool = [...mb, ...extra];
+      const avg = pool.length ? Math.round((pool.reduce((a, b) => a + b, 0) / pool.length) * 10) / 10 : undefined;
+      if (toNum(r.physique) == null && avg != null) r.physique = avg;
+      if (toNum(r.attractiveness) == null && avg != null) r.attractiveness = avg;
+      if (toNum(r.style) == null && avg != null) r.style = avg;
+      if (toNum(r.potential) == null && avg != null) r.potential = Math.min(10, Math.round((avg + 1) * 10) / 10);
+      if (toNum(r.physique) == null) throw new Error("El análisis llegó incompleto. Vuelve a intentarlo.");
+    }
     const parsed = AnalysisSchema.parse(raw);
 
     // Si el modelo no devuelve prioridades usables, derivamos una del diagnóstico.

@@ -102,7 +102,6 @@ export default function Index() {
 
     {/* 2 · Demo */}
     <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-14 sm:pt-20">
-      <p className="mx-auto max-w-6xl px-5 type-footnote text-muted-foreground sm:px-8">Demo con datos de ejemplo. No necesitas cuenta.</p>
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
         <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
       </Suspense>
@@ -143,6 +142,15 @@ export default function Index() {
           </li>; })}
         </ol>
         <p className="mt-8 max-w-2xl type-footnote text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: en el análisis corporal por foto.</p>
+      </div>
+    </section>
+
+    {/* 4b · Guías en PDF: única oferta de pago directa, enlazada desde la portada */}
+    <section aria-labelledby="guias-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-6xl rounded-3xl bg-card p-6 sm:p-10">
+        <h2 id="guias-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Guías en PDF</h2>
+        <p className="mt-2 max-w-2xl type-body text-muted-foreground">Fuerza, progresiones de calistenia, nutrición y un plan de 12 semanas. Pago único y descarga inmediata. El pack reúne tres guías a precio reducido.</p>
+        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/recursos" onClick={() => { void hapticTap(); track("cta_click", { cta: "guides", source: "home" }); }}>Ver las guías</Link></Button>
       </div>
     </section>
 

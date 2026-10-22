@@ -34,12 +34,28 @@ describe("dashboard home overview", () => {
     // El saludo es corto: la sesión se nombra solo en su tarjeta.
     expect(screen.queryByText(/Hoy toca/)).not.toBeInTheDocument();
     const startButton = screen.getByRole("button", { name: "Empezar Pull B · Espalda y bíceps" });
-    expect(within(startButton).getByText("Pull B · Espalda y bíceps")).toBeVisible();
+    expect(within(startButton).getByText("Pull B")).toBeVisible();
     expect(within(startButton).getByText("1 ejercicio")).toBeVisible();
-    expect(within(startButton).getByText("Empezar")).toBeVisible();
+    expect(within(startButton).getByText("Empezar entreno")).toBeVisible();
     fireEvent.click(startButton);
     expect(onNavigate).toHaveBeenCalledWith("training");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the weekly routine on the day tapped in the week strip", () => {
+    const onNavigate = vi.fn();
+    const tomorrow = DAYS[(DAYS.indexOf(today) + 1) % 7];
+    render(
+      <HomeOverview
+        dayPlans={[
+          { day: today, type: "gimnasio", exercises: [] },
+          { day: tomorrow, type: "gimnasio", routine_name: "Piernas", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] },
+        ]}
+        onNavigate={onNavigate}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: `${tomorrow}: con sesión — ver entrenamiento` }));
+    expect(onNavigate).toHaveBeenCalledWith("training", tomorrow);
   });
 
   it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
@@ -85,7 +101,7 @@ describe("dashboard home overview", () => {
     const onNavigate = vi.fn();
     const onStartWorkout = vi.fn();
     render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
-    fireEvent.click(screen.getByRole("button", { name: "Ver rutina semanal" }));
+    fireEvent.click(screen.getByRole("button", { name: "Entrenar igualmente" }));
     expect(onNavigate).toHaveBeenCalledWith("training");
     expect(onStartWorkout).not.toHaveBeenCalled();
   });
@@ -123,7 +139,7 @@ describe("dashboard home overview", () => {
     vi.setSystemTime(new Date("2026-10-07T12:00:00"));
     render(<HomeOverview dayPlans={[{ day: "Viernes", type: "gimnasio", routine_name: "Pull B", exercises: [] }]} onNavigate={vi.fn()} />);
 
-    expect(screen.getByText("Día de recuperación")).toBeVisible();
+    expect(screen.getByText("Hoy toca descansar")).toBeVisible();
     expect(screen.getByText("Tu próxima sesión es el viernes: Pull B.")).toBeVisible();
     expect(screen.queryByRole("button", { name: /^Empezar/ })).not.toBeInTheDocument();
   });

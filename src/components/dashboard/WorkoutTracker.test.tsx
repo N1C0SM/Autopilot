@@ -190,7 +190,11 @@ describe("routine week navigation and saved session dates", () => {
     expect(await screen.findByText("¿Terminar con series pendientes?")).toBeVisible();
     expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Seguir entrenando" }));
-    await waitFor(() => expect(screen.queryByText("¿Terminar con series pendientes?")).not.toBeInTheDocument());
+    // La hoja inferior puede quedar montada durante su animación de cierre; basta con que esté cerrada.
+    await waitFor(() => {
+      const sheet = screen.queryByRole("dialog", { name: "¿Terminar con series pendientes?" });
+      expect(sheet === null || sheet.getAttribute("data-state") === "closed").toBe(true);
+    });
     expect(mocks.writes.some((write) => write.table === "day_completions")).toBe(false);
   });
 

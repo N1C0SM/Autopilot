@@ -22,3 +22,4 @@
 
 - App-email feature functions call the shared managed send helper; it preserves admin template overrides and legacy audit rows, while signed email events update retained tables for display only — delivery and send suppression remain platform-owned.
 - Authentication verification accepts complete eight-digit OTPs and legacy six-digit OTPs without truncation; auth email accents reuse shared email styles so rendering stays consistent.
+- Public social links come only from `settings.social_links` (admin editor, read via `get_social_links_public`, normalized by `src/lib/socialLinks.ts`) for footer and SEO sameAs — never hardcode handles.

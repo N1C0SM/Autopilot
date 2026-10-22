@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Camera, FileText, Sparkles, Crown, ChevronLeft } from "lucide-react";
+import { Camera, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import PageHead from "@/components/PageHead";
 import { track } from "@/lib/analytics";
@@ -58,151 +57,90 @@ export default function OnboardingChoice() {
             </button>
           </div>
         </header>
-        <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-        <div className="w-full max-w-2xl">
-          {/* Header */}
+        <div className="flex flex-1 flex-col items-center justify-center px-5 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-6">
+        <div className="w-full max-w-md md:max-w-2xl">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-12 text-center"
+            transition={{ duration: 0.4 }}
+            className="mb-8"
           >
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <Sparkles className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="mb-3 text-4xl font-bold">¿Cómo quieres empezar?</h1>
-            <p className="text-lg text-muted-foreground">
-              Elige la forma que más te convenga para crear tu plan personalizado
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">Paso 1 · Empezar</p>
+            <h1 className="text-3xl font-bold leading-tight md:text-4xl">¿Cómo creamos tu plan?</h1>
+            <p className="mt-2 text-base text-muted-foreground">
+              Las dos opciones terminan en tu rutina. Elige la que te resulte más cómoda.
             </p>
           </motion.div>
 
-          {/* Opciones */}
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Opción 1: Scan con IA */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              onMouseEnter={() => setHoveredOption("scan")}
-              onMouseLeave={() => setHoveredOption(null)}
-              className="relative"
-            >
-              <button
-                onClick={handleScan}
-                className={`group relative w-full overflow-hidden rounded-2xl border-2 p-8 text-left transition-all duration-300 ${
-                  hoveredOption === "scan"
-                    ? "border-primary bg-primary/5 shadow-lg"
-                    : "border-border bg-card hover:border-primary/50"
-                }`}
-              >
-                {/* Badge Premium */}
-                <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-gradient-to-r from-yellow-500/20 to-orange-500/20 px-3 py-1 text-xs font-medium text-yellow-600 dark:text-yellow-400">
-                  <Crown className="h-3 w-3" />
-                  <span>Recomendado</span>
-                </div>
-
-                {/* Icono */}
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-300 group-hover:scale-110">
-                  <Camera className="h-7 w-7" />
-                </div>
-
-                {/* Contenido */}
-                <h2 className="mb-2 text-2xl font-bold">Análisis con IA</h2>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Toma fotos de tu físico y obtén un análisis completo con IA
-                </p>
-
-                {/* Beneficios */}
-                <ul className="mb-6 space-y-2">
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
-                    <span>Plan ultra-personalizado desde el día 1</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
-                    <span>Pesos estimados según tu masa muscular</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
-                    <span>Análisis de composición corporal y postura</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-primary/80" />
-                    <span>Insights premium desbloqueados</span>
-                  </li>
-                </ul>
-
-                <div className="text-sm font-medium text-primary">
-                  2-3 minutos →
-                </div>
-              </button>
-            </motion.div>
-
-            {/* Opción 2: Formulario tradicional */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              onMouseEnter={() => setHoveredOption("form")}
-              onMouseLeave={() => setHoveredOption(null)}
-            >
-              <button
-                onClick={handleForm}
-                className={`group w-full overflow-hidden rounded-2xl border-2 p-8 text-left transition-all duration-300 ${
-                  hoveredOption === "form"
-                    ? "border-primary bg-primary/5 shadow-lg"
-                    : "border-border bg-card hover:border-primary/50"
-                }`}
-              >
-                {/* Icono */}
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-secondary text-foreground transition-transform duration-300 group-hover:scale-110">
-                  <FileText className="h-7 w-7" />
-                </div>
-
-                {/* Contenido */}
-                <h2 className="mb-2 text-2xl font-bold">Formulario clásico</h2>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  Responde unas preguntas sobre tu nivel y objetivos
-                </p>
-
-                {/* Beneficios */}
-                <ul className="mb-6 space-y-2">
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
-                    <span>Plan personalizado básico</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
-                    <span>Sin necesidad de fotos</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
-                    <span>Más rápido de completar</span>
-                  </li>
-                  <li className="flex items-start gap-2 text-sm opacity-50">
-                    <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/80" />
-                    <span className="line-through">Pesos personalizados con scan</span>
-                  </li>
-                </ul>
-
-                <div className="text-sm font-medium text-muted-foreground">
-                  1 minuto →
-                </div>
-              </button>
-            </motion.div>
+          <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+            {([
+              {
+                key: "form" as const,
+                onClick: handleForm,
+                icon: FileText,
+                title: "Responder preguntas",
+                desc: "Objetivo, días disponibles y comidas.",
+                time: "≈ 1 min",
+                points: ["Sin fotos", "Lo más rápido"],
+                badge: "Recomendado",
+              },
+              {
+                key: "scan" as const,
+                onClick: handleScan,
+                icon: Camera,
+                title: "Escanear mi físico",
+                desc: "Sube fotos y la IA estima tu punto de partida.",
+                time: "≈ 3 min",
+                points: ["Estimación orientativa", "Necesita fotos"],
+                badge: null,
+              },
+            ]).map((o, i) => {
+              const Icon = o.icon;
+              const active = hoveredOption === o.key;
+              return (
+                <motion.button
+                  key={o.key}
+                  type="button"
+                  onClick={o.onClick}
+                  onMouseEnter={() => setHoveredOption(o.key)}
+                  onMouseLeave={() => setHoveredOption(null)}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.08 + i * 0.08 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`group relative flex w-full items-start gap-4 rounded-2xl border p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    active ? "border-primary bg-primary/5" : "border-border bg-card"
+                  }`}
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Icon className="h-6 w-6" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-semibold">{o.title}</h2>
+                      {o.badge && (
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                          {o.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">{o.desc}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <span className="rounded-full border border-primary/40 px-2.5 py-0.5 text-xs font-medium text-primary">{o.time}</span>
+                      {o.points.map((p) => (
+                        <span key={p} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">{p}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <ChevronRight className="mt-3 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </motion.button>
+              );
+            })}
           </div>
 
-          {/* Footer note */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8 text-center"
-          >
-            <p className="text-sm text-muted-foreground">
-              Podrás hacer el scan más adelante si eliges el formulario
-            </p>
-          </motion.div>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Puedes hacer el scan más adelante desde tu panel.
+          </p>
         </div>
       </div>
       </div>

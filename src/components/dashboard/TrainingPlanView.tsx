@@ -18,6 +18,8 @@ const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sába
 
 interface Props {
   dayPlans: DayPlan[];
+  /** Día que debe abrirse al entrar (pulsado en la tira de «Hoy»). */
+  initialDay?: string;
   onOpenWorkout?: (day: string) => void;
 }
 
@@ -92,10 +94,13 @@ const ToolRow = forwardRef<HTMLButtonElement, ToolRowProps>(({ icon, label, clas
 ));
 ToolRow.displayName = "ToolRow";
 
-const TrainingPlanView = ({ dayPlans, onOpenWorkout }: Props) => {
+const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
-  const [expandedDay, setExpandedDay] = useState<string | null>(todayName);
+  /** Si el día pedido no tiene sesión, se abre el de hoy: mejor que una hoja vacía. */
+  const trainsOn = (day?: string) =>
+    Boolean(day) && dayPlans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
+  const [expandedDay, setExpandedDay] = useState<string | null>(trainsOn(initialDay) ? initialDay! : todayName);
   const [copied, setCopied] = useState(false);
   const [detail, setDetail] = useState<{
     name: string;

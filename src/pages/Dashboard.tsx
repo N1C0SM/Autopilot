@@ -133,7 +133,8 @@ const Dashboard = () => {
       const saved = sessionStorage.getItem("autopilot_section");
       if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
-    return "home";
+    // Se abre directamente en Entrenar: la app va de entrenar, no de un panel.
+    return "training";
   });
   const setSection = useCallback((s: MobileTab) => {
     setSectionState(s);
@@ -150,6 +151,8 @@ const Dashboard = () => {
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [resumeWorkout, setResumeWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
+  /** Día pulsado en la tira de «Hoy»: abre la rutina semanal en ese día. */
+  const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
@@ -522,7 +525,7 @@ const Dashboard = () => {
   };
 
   const SECTION_HINTS: Record<MobileTab, string> = {
-    home: "Resumen de hoy: tu entrenamiento, tus comidas y tu racha",
+    home: "Tu entreno de hoy y lo que toca comer",
     training: "Tu rutina de la semana. Marca las series al terminarlas",
     nutrition: "Tus macros y comidas del día",
     chat: "Habla con tu entrenador y envía fotos o vídeos",
@@ -615,9 +618,12 @@ const Dashboard = () => {
             nutrition={nutrition || campaign}
             planStatus={planStatus}
             dayPlans={dayPlans}
-            onNavigate={(s) => {
+            onNavigate={(s, day) => {
               setAutoStartWorkout(false);
-              if (s === "training") setTrainingView("plan");
+              if (s === "training") {
+                setTrainingView("plan");
+                setPlanFocusDay(day);
+              }
               setSection(s as MobileTab);
             }}
             onStartWorkout={() => {
@@ -650,7 +656,7 @@ const Dashboard = () => {
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
-            <div className="mx-auto w-full max-w-3xl space-y-6 empty:hidden">
+            <div className="mx-auto w-full space-y-6 empty:hidden lg:max-w-5xl">
               {firstWeek && (
                 <div className="flex items-start gap-4">
                   <span aria-hidden="true" className="flex w-10 shrink-0 justify-center pt-0.5">
@@ -694,35 +700,33 @@ const Dashboard = () => {
           {/* Un solo panel: lo que se ve depende también de si hay una sesión en marcha. */}
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
-              {!workoutMode && !autoStartWorkout && (
-                <div className="mx-auto mb-3 w-full max-w-md lg:max-w-2xl">
-                  {!(completedToday && trainingView === "tracker") && (
-                    <div className="mb-2 flex items-center justify-between px-1">
-                      <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                        {isManualPlan(dayPlans) ? "Rutina personalizada · protegida" : "Piloto automático"}
-                      </span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-2">
+              {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
+              {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
+                <div className="mx-auto mb-3 flex w-full max-w-md items-center justify-between gap-2 px-1 lg:max-w-2xl">
+                  <span className="truncate type-footnote text-muted-foreground">
+                    {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
+                  </span>
+                  <div className="flex shrink-0 items-center">
                     {[
-                      { label: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
-                      { label: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
-                    ].map(({ label, Icon, on }) => (
+                      { label: "Libre", aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
+                      { label: "Editar", aria: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
+                    ].map(({ label, aria, Icon, on }) => (
                       <button
                         key={label}
                         type="button"
+                        aria-label={aria}
                         onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-11 items-center justify-center gap-2 rounded-full border border-border/70 bg-card/60 px-3 text-sm font-medium backdrop-blur-xl transition active:scale-[0.98] hover:border-primary/40"
+                        className="flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-primary transition active:opacity-50"
                       >
-                        <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                        <span className="whitespace-nowrap">{label}</span>
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        {label}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} onOpenWorkout={(day) => {
                   setTrainingDay(day);
                   setTrainingView("tracker");
                 }} />
@@ -802,7 +806,7 @@ const Dashboard = () => {
       {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full">
           <Suspense fallback={<SectionFallback />}>
-            <MealsList meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
+            <MealsList userId={user?.id} meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
           </Suspense>
         </div>
       )}
@@ -838,6 +842,29 @@ const Dashboard = () => {
             <TabsTrigger value="records">Récords</TabsTrigger>
             <TabsTrigger value="scan">Scan</TabsTrigger>
           </TabsList>
+          {/* Deslizar a los lados cambia de sección, como las páginas nativas. */}
+          <div
+            onTouchStart={(e) => {
+              const t = e.touches[0];
+              (e.currentTarget as HTMLDivElement).dataset.sx = String(t.clientX);
+              (e.currentTarget as HTMLDivElement).dataset.sy = String(t.clientY);
+            }}
+            onTouchEnd={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              const t = e.changedTouches[0];
+              const dx = t.clientX - Number(el.dataset.sx ?? t.clientX);
+              const dy = t.clientY - Number(el.dataset.sy ?? t.clientY);
+              if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+              if ((e.target as HTMLElement).closest("[data-no-swipe], .recharts-wrapper, input, [role=slider]")) return;
+              const order = ["evolution", "photos", "records", "scan"] as const;
+              const i = order.indexOf(progressTab as (typeof order)[number]);
+              const next = order[i + (dx < 0 ? 1 : -1)];
+              if (!next) return;
+              void hapticSelection();
+              setProgressTab(next as typeof progressTab);
+            }}
+            className="touch-pan-y"
+          >
           <Suspense fallback={<SectionFallback />}>
             <TabsContent
               value="evolution"
@@ -871,6 +898,7 @@ const Dashboard = () => {
               />
             </TabsContent>
           </Suspense>
+          </div>
         </Tabs>
       )}
 
@@ -924,6 +952,10 @@ const Dashboard = () => {
         pushedTabs={PUSHED_TABS}
         onRefresh={() => fetchData()}
         workoutMode={workoutMode}
+        onQuickTrain={section !== "home" && section !== "training" && section !== "settings" ? () => {
+          setAutoStartWorkout(false);
+          setSection("home");
+        } : undefined}
       >
         {pageContent}
       </MobileAppShell>

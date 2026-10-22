@@ -1,7 +1,7 @@
 import PublicLayout from "@/components/PublicLayout";
 import { parseRecommendations } from "@/lib/siteContent";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { ChevronLeft, Newspaper, ShoppingBag } from "lucide-react";
@@ -11,6 +11,7 @@ import { withBookRef } from "@/lib/buyLink";
 import { isIOSNative } from "@/lib/platform";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
+import { track } from "@/lib/analytics";
 import BookCover from "@/components/BookCover";
 import BookPreviewModal from "@/components/BookPreviewModal";
 import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/components/ItemPreviewModal";
@@ -18,6 +19,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import UserSidebar from "@/components/UserSidebar";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+
+// The pack is the best-value offer, so it leads the paid guides.
+const packFirst = <T extends { is_pack?: boolean }>(list: T[]) => [...list].sort((a, b) => Number(!!b.is_pack) - Number(!!a.is_pack));
 
 interface Ebook { id?: string; title: string; description: string; cover_url: string; url: string; price: string; is_pack?: boolean; pages?: number | null; minutes?: number | null }
 interface Reco { id?: string; title: string; description: string; image_url: string; url: string; badge: string }
@@ -49,6 +53,9 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [previewBook, setPreviewBook] = useState<Ebook | null>(null);
+  // ?guia=<id> abre la guía directamente: enlace directo para vídeos y bio.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const guiaParam = searchParams.get("guia");
   const [previewReco, setPreviewReco] = useState<PreviewItem | null>(null);
   const [recos, setRecos] = useState<Reco[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -115,7 +122,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
       if (s) {
         const dbRecos = parseRecommendations(s.recommendations);
-        setEbooks(visibleBooks);
+        setEbooks(packFirst(visibleBooks));
         setRecos(dbRecos);
         setFlags({
           blog: s.show_blog ?? true,
@@ -123,7 +130,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           recos: true,
         });
       } else if (visibleBooks.length > 0) {
-        setEbooks(visibleBooks);
+        setEbooks(packFirst(visibleBooks));
       }
 
       const { data: p } = await supabase
@@ -135,6 +142,27 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
       if (p) setPosts(p as Post[]);
     })().finally(() => setLoaded(true));
   }, []);
+
+  useEffect(() => {
+    if (!guiaParam || previewBook) return;
+    const match = ebooks.find((b) => b.id === guiaParam);
+    if (match) {
+      setPreviewBook(match);
+      track("book_preview_open", { book: match.title, source: "deep_link" });
+    }
+  }, [guiaParam, ebooks, previewBook]);
+
+  const openBook = (e: Ebook) => {
+    void hapticTap();
+    setPreviewBook(e);
+    track("book_preview_open", { book: e.title, source: "grid" });
+    if (e.id) setSearchParams((p) => { p.set("guia", e.id!); return p; }, { replace: true });
+  };
+
+  const closeBook = () => {
+    setPreviewBook(null);
+    if (guiaParam) setSearchParams((p) => { p.delete("guia"); return p; }, { replace: true });
+  };
 
   const hasRecos = flags.recos && recos.length > 0;
   const hasEbooks = flags.ebooks && ebooks.length > 0;
@@ -169,6 +197,40 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           />
         )}
 
+        {hasEbooks && (
+          <section>
+            <h2 className="type-title2">Guías en PDF</h2>
+            <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
+              Descarga inmediata en PDF tras el pago. Guías para leer por tu cuenta, sin plan personalizado ni seguimiento{plans.coach ? ` (eso es el plan ${plans.coachName})` : ""}.
+            </p>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
+              {ebooks.map((e, i) => (
+                <button
+                  type="button"
+                  key={e.id || i}
+                  onClick={() => openBook(e)}
+                  className="group min-w-0 text-left transition-transform duration-150 active:scale-[0.97]"
+                >
+                  <BookCover title={e.title} src={e.cover_url} />
+                  <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>
+                  <p className="mt-0.5 type-subhead font-semibold text-muted-foreground">{e.price || "Gratis"}</p>
+                  {(e.is_pack || e.pages || e.minutes) && (
+                    <p className="mt-0.5 type-caption1 text-muted-foreground">
+                      {[e.is_pack ? "Pack" : "PDF", e.pages ? `${e.pages} págs.` : null, e.minutes ? `${e.minutes} min de lectura` : null].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </button>
+              ))}
+            </div>
+            <BookPreviewModal
+              book={previewBook}
+              pack={ebooks.find((b) => b.is_pack && b.url) || null}
+              onClose={closeBook}
+            />
+          </section>
+        )}
+
         {hasRecos && (
           <section>
             <h2 className="type-title2 mb-3">Lo que sí funciona</h2>
@@ -190,40 +252,6 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
               ))}
             </ListGroup>
             <ItemPreviewModal item={previewReco} variant={RECOMMENDATION_VARIANT} onClose={() => setPreviewReco(null)} />
-          </section>
-        )}
-
-        {hasEbooks && (
-          <section>
-            <h2 className="type-title2">Guías en PDF</h2>
-            <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
-              Documentos para leer por tu cuenta. No incluyen plan personalizado ni seguimiento{plans.coach ? `: eso es el plan ${plans.coachName}` : ""}.
-            </p>
-
-            <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
-              {ebooks.map((e, i) => (
-                <button
-                  type="button"
-                  key={e.id || i}
-                  onClick={() => { void hapticTap(); setPreviewBook(e); }}
-                  className="group min-w-0 text-left transition-transform duration-150 active:scale-[0.97]"
-                >
-                  <BookCover title={e.title} src={e.cover_url} />
-                  <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>
-                  <p className="mt-0.5 type-subhead font-semibold text-muted-foreground">{e.price || "Gratis"}</p>
-                  {(e.is_pack || e.pages || e.minutes) && (
-                    <p className="mt-0.5 type-caption1 text-muted-foreground">
-                      {[e.is_pack ? "Pack" : "PDF", e.pages ? `${e.pages} págs.` : null, e.minutes ? `${e.minutes} min de lectura` : null].filter(Boolean).join(" · ")}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
-            <BookPreviewModal
-              book={previewBook}
-              pack={ebooks.find((b) => b.is_pack && b.url) || null}
-              onClose={() => setPreviewBook(null)}
-            />
           </section>
         )}
 

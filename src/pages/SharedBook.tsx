@@ -23,13 +23,9 @@ const SharedBook = () => {
       const m = await functionErrorMessage(error, "Este enlace ya se ha usado o ha caducado.");
       setMsg(m); setState("error"); return;
     }
-    if (data.pack && Array.isArray(data.files)) {
-      setFiles(data.files);
-      setMsg(`«${data.title}»: descarga ahora cada libro. Los botones funcionan durante 15 minutos y el enlace ya no volverá a funcionar.`);
-    } else {
-      window.location.href = data.url;
-      setMsg(`«${data.title}» se está descargando. Este enlace ya no volverá a funcionar.`);
-    }
+    // Always show explicit buttons: a scripted redirect after an async call can be blocked (Safari).
+    setFiles(Array.isArray(data.files) && data.files.length ? data.files : [{ title: data.title, url: data.url }]);
+    setMsg(`«${data.title}»: pulsa para descargar. Los botones funcionan durante 15 minutos y el enlace ya no volverá a funcionar.`);
     setState("done");
   };
 

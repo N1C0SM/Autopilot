@@ -13,11 +13,12 @@ interface Props {
 }
 
 const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
+  // Hoy primero y Entrenar segundo: la acción principal queda bajo el pulgar.
   { key: "home", label: "Hoy", icon: Home },
-  { key: "training", label: "Plan", icon: Dumbbell },
+  { key: "training", label: "Entrenar", icon: Dumbbell },
   { key: "nutrition", label: "Nutrición", icon: Apple },
-  { key: "chat", label: "Chat", icon: MessageCircle },
   { key: "progress", label: "Progreso", icon: Sparkles },
+  { key: "chat", label: "Chat", icon: MessageCircle },
 ];
 
 const MobileTabBar = ({ active, onChange, lockedTabs = [], hiddenTabs = [] }: Props) => {

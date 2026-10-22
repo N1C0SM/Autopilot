@@ -10,6 +10,7 @@ import { Field, FieldRow } from "./AdminOpsParts";
 
 import { refreshFreeCampaign, useFreeCampaign } from "@/lib/freeCampaign";
 import { useApkDownloadEnabled } from "@/lib/apkDownload";
+import SocialLinksAdmin from "./SocialLinksAdmin";
 
 type PlanRow = {
   key: string; name: string; tagline: string; description: string; price: number; trial_days: number;
@@ -119,6 +120,7 @@ export default function ConsumerPlansAdmin() {
           );
         })}
       </div>
+      <SocialLinksAdmin />
       <p className="px-4 type-footnote text-muted-foreground">Cambiar el precio aquí cambia lo que se muestra; el importe real lo cobra el enlace de Stripe configurado en Pagos, así que actualízalo también allí.</p>
     </section>
   );

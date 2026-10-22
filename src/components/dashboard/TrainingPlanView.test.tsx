@@ -49,6 +49,32 @@ describe("weekly plan access", () => {
     expect(screen.getByRole("button", { name: "Abrir sesión del lunes" })).toBeVisible();
   });
 
+  it("opens on the day asked for, not on today", () => {
+    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
+    render(
+      <TrainingPlanView
+        dayPlans={[{ day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] }]}
+        initialDay="Jueves"
+        onOpenWorkout={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("heading", { name: "Empuje" })).toBeVisible();
+    expect(screen.queryByText("Hoy es día de descanso")).not.toBeInTheDocument();
+  });
+
+  it("falls back to today when the asked day has no session", () => {
+    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
+    render(
+      <TrainingPlanView
+        dayPlans={[{ day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] }]}
+        initialDay="Sábado"
+        onOpenWorkout={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Hoy es día de descanso")).toBeVisible();
+  });
+
   it("switches sessions from the day selector and keeps rest days inert", () => {
     setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
     const onOpenWorkout = vi.fn();

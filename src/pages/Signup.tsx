@@ -252,13 +252,13 @@ const Signup = () => {
               <p>
                 Potencial <span className="tabular-nums text-foreground">{scanCtx.result.potential.toFixed(1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
               </p>
-              <p className="mt-1">7 días de prueba · no se cobra hasta el día 8 · cancelas cuando quieras</p>
+              {(plans.plus || plans.coach) && <p className="mt-1">7 días de prueba · no se cobra hasta el día 8 · cancelas cuando quieras</p>}
             </AuthNotice>
           )}
 
           {fromQuiz && (
             <AuthNotice icon={<Sparkles strokeWidth={1.75} />} title="Tu plan personalizado está reservado">
-              7 días de prueba · se pide tarjeta al contratar, no se cobra hasta el día 8
+              {plans.plus || plans.coach ? "7 días de prueba · se pide tarjeta al contratar, no se cobra hasta el día 8" : "Gratis y sin tarjeta"}
             </AuthNotice>
           )}
 

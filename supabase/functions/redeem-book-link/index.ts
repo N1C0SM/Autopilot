@@ -32,7 +32,15 @@ Deno.serve(async (req) => {
     }
     if (!files.length) return json({ error: "Todavía no hay PDF disponible. Inténtalo más tarde." }, 404);
 
-    // Atomic claim: only succeeds once.
+    const out: { title: string; url: string }[] = [];
+    for (const f of files) {
+      const { data: s } = await db.storage.from("library")
+        .createSignedUrl(f.file_path, 900, { download: `${f.title}.pdf` });
+      if (s?.signedUrl) out.push({ title: f.title, url: s.signedUrl });
+    }
+    if (!out.length) return json({ error: "No se pudo preparar la descarga." }, 500);
+
+    // Claim only once the download is ready, so a signing failure never burns the link.
     const { data: claimed } = await db
       .from("book_share_links")
       .update({ used_at: new Date().toISOString() })
@@ -40,13 +48,6 @@ Deno.serve(async (req) => {
       .select("book_id").maybeSingle();
     if (!claimed) return json({ error: "Este enlace ya se ha usado o ha caducado." }, 410);
 
-    const out: { title: string; url: string }[] = [];
-    for (const f of files) {
-      const { data: s } = await db.storage.from("library")
-        .createSignedUrl(f.file_path, isPack ? 900 : 60, { download: `${f.title}.pdf` });
-      if (s?.signedUrl) out.push({ title: f.title, url: s.signedUrl });
-    }
-    if (!out.length) return json({ error: "No se pudo preparar la descarga." }, 500);
     return json({ title: item.title, url: out[0].url, files: out, pack: isPack });
   } catch {
     return json({ error: "Error preparando la descarga." }, 500);

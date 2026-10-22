@@ -1,5 +1,6 @@
+import { readMealsDone as readMealsDoneFor } from "@/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Apple, BookOpen, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
+import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -11,7 +12,7 @@ import { hapticTap } from "@/lib/native";
 import { isIOSNative } from "@/lib/platform";
 import { nutritionMacroError } from "@/lib/nutritionValidation";
 import { cn } from "@/lib/utils";
-import { readActiveWorkout, clearActiveWorkout, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
+import { readActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
 import { toast } from "sonner";
 
 interface Macros {
@@ -30,7 +31,8 @@ interface Props {
   dayPlans: DayPlan[];
   meals?: Meal[];
   userId?: string;
-  onNavigate: (section: UserSection) => void;
+  /** Al ir a «training» puede pedirse un día concreto: la tira de la semana lo usa. */
+  onNavigate: (section: UserSection, day?: string) => void;
   onStartWorkout?: () => void;
   onResumeWorkout?: () => void;
   profileName?: string;
@@ -163,6 +165,7 @@ const HomeOverview = ({
         .eq("day_label", activeWorkout.plan.day)
         .eq("logged_at", activeWorkout.date);
       if (error) throw error;
+      clearPendingOfflineSeries(userId);
       clearActiveWorkout(userId);
       setActiveWorkout(null);
       toast.success("Sesión descartada");
@@ -236,15 +239,8 @@ const HomeOverview = ({
       : calorieLabel && macroError ? "Objetivos por revisar" : null;
 
   const readMealsDone = useCallback(() => {
-    const date = new Date();
-    const key = `meals_done_${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
-    try {
-      const saved = localStorage.getItem(key);
-      setCompletedMeals(new Set(saved ? (JSON.parse(saved) as string[]) : []));
-    } catch {
-      setCompletedMeals(new Set());
-    }
-  }, []);
+    setCompletedMeals(new Set(readMealsDoneFor(userId)));
+  }, [userId]);
 
   useEffect(() => {
     readMealsDone();
@@ -343,7 +339,7 @@ const HomeOverview = ({
                   <button
                     type="button"
                     aria-label={`${day}${isToday ? ", hoy" : ""}: ${done ? "completado" : trains ? "con sesión" : "descanso"} — ver entrenamiento`}
-                    onClick={() => { void hapticTap(); onNavigate("training"); }}
+                    onClick={() => { void hapticTap(); onNavigate("training", day); }}
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full type-subhead transition-opacity active:opacity-60",
                       done
@@ -381,7 +377,7 @@ const HomeOverview = ({
                 void hapticTap();
                 if (onResumeWorkout) onResumeWorkout();
                 else onNavigate("training");
-              }}>Reanudar entrenamiento</Button>
+              }}>Continuar entreno</Button>
               <Button type="button" variant="plain" size="sm" className="mt-1 w-full" onClick={() => { void hapticTap(); void discardActiveWorkout(); }}>
                 Descartar sesión
               </Button>
@@ -397,7 +393,10 @@ const HomeOverview = ({
               className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
               aria-label={`Empezar ${sessionTitle}`}
             >
-              <span className="line-clamp-3 type-title1">{sessionTitle}</span>
+              <span className="block truncate type-title1">{String(sessionTitle).split(" · ")[0]}</span>
+              {String(sessionTitle).includes(" · ") && (
+                <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{String(sessionTitle).split(" · ").slice(1).join(" · ")}</span>
+              )}
               {sessionDetail.length > 0 && (
                 <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
                   {sessionDetail.map((part, index) => (
@@ -406,7 +405,7 @@ const HomeOverview = ({
                 </span>
               )}
               <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
-                Empezar
+                Empezar entreno
               </span>
             </button>
           ) : completedToday ? (
@@ -433,9 +432,11 @@ const HomeOverview = ({
             <EmptyState
               className="py-0"
               icon={Moon}
-              title="Día de recuperación"
+              title="Hoy toca descansar"
               description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
-              action={<Button type="button" variant="plain" onClick={openWeek}>Ver rutina semanal</Button>}
+              action={(
+                <Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>
+              )}
             />
           )}
           {activeWorkout && !activeWorkoutIsToday && (
@@ -496,12 +497,6 @@ const HomeOverview = ({
               </>
             ) : "Sin sesiones esta semana"
           }
-        />
-        <OverviewRow
-          title="Recursos"
-          onClick={() => onNavigate("resources")}
-          icon={<BookOpen className="h-6 w-6 text-primary" strokeWidth={1.75} />}
-          description="Biblioteca, guías y recomendaciones"
         />
       </div>
       </div>

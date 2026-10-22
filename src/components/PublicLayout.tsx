@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from 
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
+import { socialLinkList } from "@/lib/socialLinks";
 
 const navigation = [
   ["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ["/equipo", "Equipo"],
@@ -17,6 +18,12 @@ export default function PublicLayout({ title, description, children }: { title: 
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname, hash } = useLocation();
   const [showApp, setShowApp] = useState(false);
+  const [socials, setSocials] = useState<ReturnType<typeof socialLinkList>>([]);
+  useEffect(() => {
+    let alive = true;
+    void supabase.rpc("get_social_links_public").then(({ data }) => { if (alive) setSocials(socialLinkList(data)); });
+    return () => { alive = false; };
+  }, []);
   useEffect(() => {
     let alive = true;
     void supabase.rpc("get_public_settings").then(({ data }) => {
@@ -101,6 +108,7 @@ export default function PublicLayout({ title, description, children }: { title: 
           <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Para entrenadores</Link>
           {showApp && <Link to="/app" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">App móvil</Link>}
           <Link to="/blog" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Blog</Link>
+          {socials.map((l) => <a key={l.key} href={l.url} target="_blank" rel="noopener noreferrer me" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">{l.label}</a>)}
           <details className="group">
             <summary className="flex min-h-11 list-none items-center gap-1 py-3 transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">Información legal<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary>
             <div className="flex flex-col">
