@@ -42,6 +42,22 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
+  it("opens the weekly routine on the day tapped in the week strip", () => {
+    const onNavigate = vi.fn();
+    const tomorrow = DAYS[(DAYS.indexOf(today) + 1) % 7];
+    render(
+      <HomeOverview
+        dayPlans={[
+          { day: today, type: "gimnasio", exercises: [] },
+          { day: tomorrow, type: "gimnasio", routine_name: "Piernas", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] },
+        ]}
+        onNavigate={onNavigate}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: `${tomorrow}: con sesión — ver entrenamiento` }));
+    expect(onNavigate).toHaveBeenCalledWith("training", tomorrow);
+  });
+
   it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
     const onNavigate = vi.fn();
     render(
