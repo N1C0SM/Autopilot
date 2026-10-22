@@ -39,4 +39,9 @@ Los departamentos son **funciones**, no agentes permanentes. Atlas los crea/cier
 Contexto mínimo, reutilizar `ESTADO.md` en vez de re-auditar, herramientas deterministas primero, nada de procesos permanentes. Costes: solo reales con fuente; las estimaciones se etiquetan.
 
 ## Inicio de sesión (Atlas)
-Leer `ESTADO.md` → ejecutar "Próxima acción" → actualizar `ESTADO.md` (y `METRICAS.md` solo con datos verificados).
+Leer `ESTADO.md` y los mensajes y aprobaciones del panel → ejecutar "Próxima acción" → actualizar `ESTADO.md` (y `METRICAS.md` solo con datos verificados).
+
+## Panel del fundador
+`empresa/panel.html`, publicado en https://claude.ai/artifact/Hwv9edui2m26LUKpib5K3a (privado). Su base de datos (`company`, `departments`, `tasks`, `approvals`, `messages`) es el canal con el fundador.
+- Al iniciar sesión, Atlas lee `messages` (read:false) y `approvals` con la herramienta ArtifactData, responde añadiendo mensajes con `from` = id del departamento o `atlas`, y marca `read:true`.
+- `ESTADO.md` sigue siendo la fuente de verdad; tras cada cambio Atlas sincroniza el panel.
