@@ -130,7 +130,8 @@ const Dashboard = () => {
       const saved = sessionStorage.getItem("autopilot_section");
       if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
-    return "home";
+    // Se abre directamente en Entrenar: la app va de entrenar, no de un panel.
+    return "training";
   });
   const setSection = useCallback((s: MobileTab) => {
     setSectionState(s);
@@ -686,27 +687,25 @@ const Dashboard = () => {
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
               {!workoutMode && !autoStartWorkout && (
-                <div className="mx-auto mb-3 w-full max-w-md lg:max-w-2xl">
-                  {!(completedToday && trainingView === "tracker") && (
-                    <div className="mb-2 flex items-center justify-between px-1">
-                      <span className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                        {isManualPlan(dayPlans) ? "Rutina personalizada · protegida" : "Piloto automático"}
-                      </span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-2">
+                // Una sola línea discreta, como una barra de herramientas: el protagonista es el entreno.
+                <div className="mx-auto mb-3 flex w-full max-w-md items-center justify-between gap-2 px-1 lg:max-w-2xl">
+                  <span className="truncate type-footnote text-muted-foreground">
+                    {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
+                  </span>
+                  <div className="flex shrink-0 items-center">
                     {[
-                      { label: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
-                      { label: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
-                    ].map(({ label, Icon, on }) => (
+                      { label: "Libre", aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
+                      { label: "Editar", aria: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
+                    ].map(({ label, aria, Icon, on }) => (
                       <button
                         key={label}
                         type="button"
+                        aria-label={aria}
                         onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-11 items-center justify-center gap-2 rounded-full border border-border/70 bg-card/60 px-3 text-sm font-medium backdrop-blur-xl transition active:scale-[0.98] hover:border-primary/40"
+                        className="flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-primary transition active:opacity-50"
                       >
-                        <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden />
-                        <span className="whitespace-nowrap">{label}</span>
+                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                        {label}
                       </button>
                     ))}
                   </div>

@@ -1344,6 +1344,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           {/* Today's workout summary */}
           <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
             <h2 className="type-title1">{trainingTitle || selectedDay}</h2>
+            {!!currentPlan?.exercises?.length && (
+              <p className="mt-1 type-subhead tabular-nums text-muted-foreground">
+                {currentPlan.exercises.length} ejercicios · {totalSets} series
+              </p>
+            )}
             {selectedDay !== today && <p className="mt-1 type-footnote text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
 
             <div className="mt-4 flex items-center gap-3">
@@ -1359,8 +1364,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   onClick={() => { void hapticTap(); startWorkout(0); }}
                   disabled={!logsReady || loadError}
                   size="lg"
-                  className="mt-4 w-full"
+                  className="mt-6 h-14 w-full gap-2 rounded-full text-[17px] font-semibold active:scale-[0.98]"
                 >
+                  <Play className="h-5 w-5 fill-current" aria-hidden />
                   Empezar entrenamiento
                 </Button>
               ) : (
