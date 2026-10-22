@@ -13,11 +13,12 @@ interface Props {
 }
 
 const TABS: { key: MobileTab; label: string; icon: typeof Home }[] = [
+  // Entrenar va primero: es la acción principal, como en las apps de fitness nativas.
+  { key: "training", label: "Entrenar", icon: Dumbbell },
   { key: "home", label: "Hoy", icon: Home },
-  { key: "training", label: "Plan", icon: Dumbbell },
+  { key: "progress", label: "Progreso", icon: Sparkles },
   { key: "nutrition", label: "Nutrición", icon: Apple },
   { key: "chat", label: "Chat", icon: MessageCircle },
-  { key: "progress", label: "Progreso", icon: Sparkles },
 ];
 
 const MobileTabBar = ({ active, onChange, lockedTabs = [], hiddenTabs = [] }: Props) => {

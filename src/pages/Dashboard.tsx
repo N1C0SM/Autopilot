@@ -130,7 +130,8 @@ const Dashboard = () => {
       const saved = sessionStorage.getItem("autopilot_section");
       if (saved && ["home", "training", "nutrition", "chat", "progress", "settings", "resources"].includes(saved)) return saved as MobileTab;
     } catch { /* storage no disponible */ }
-    return "home";
+    // Se abre directamente en Entrenar: la app va de entrenar, no de un panel.
+    return "training";
   });
   const setSection = useCallback((s: MobileTab) => {
     setSectionState(s);
