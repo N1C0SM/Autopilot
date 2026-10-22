@@ -42,7 +42,8 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 - 1 link redirige a `/d/<token>` fijo (compartible).
 - Mapa: …06 Blueprint 49,90 € (Drive) · …05 Atlas de progresiones 29,90 € (Drive) · …04 Base de fuerza 19,90 € (Drive) · …07 Pack completo 29,90 € · …08 Nutrición y recomposición 19,90 € (`/d/` fijo) · …03 Guía en casa 9,99 €.
 - [EJECUTADO 2026-10-22, A3] …07 y …03 redirigen ahora a `/payment-success?session_id={CHECKOUT_SESSION_ID}`.
-- Pendiente: los 3 de Drive y …08 solo se cambian tras confirmar en Supabase que cada libro tiene ese link en `buy_url_live` y PDF en `file_path` (si no, la entrega fallaría). Requiere conector Supabase o captura de Admin → Pagos.
+- [EJECUTADO 2026-10-22] …06, …05, …04 y …08 también redirigen a `/payment-success?session_id=…` (el fundador confirmó que la web usa esos links y que los PDF están en Drive › Libros). Los 6 libros quedan con entrega verificada.
+- Pendiente fundador: quitar acceso público a los PDF en Google Drive y revocar los enlaces `/d/` compartidos.
 
 ## Principal obstáculo para la primera venta
 [HECHO] 0 ventas reales. [HIPÓTESIS] Dos causas: (1) entrega mal configurada en los links de libros (arriba); (2) falta de tráfico cualificado, sin medir. Primero se corrige (1) porque es barato y bloqueante.
@@ -57,4 +58,4 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 - 2026-10-22 · Sin subagentes permanentes: el trabajo actual es secuencial.
 
 ## Próxima acción
-Conectar Supabase (o Drive) → verificar `library_books` → cambiar los 4 links restantes y cerrar Drive público.
+Compra real de prueba de 1 libro (≈10 €, reembolsable) para verificar la entrega de punta a punta → plan de captación (Metricool).
