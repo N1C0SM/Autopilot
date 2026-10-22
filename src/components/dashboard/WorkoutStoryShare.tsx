@@ -319,7 +319,7 @@ export function WorkoutStoryShare(props: Props) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       {/* Control segmentado de iOS: qué imagen se comparte. */}
-      {!props.variant && <div className="grid grid-cols-2 rounded-[9px] bg-secondary p-0.5" role="radiogroup" aria-label="Imagen para compartir">
+      {!props.variant && <div className="grid h-10 grid-cols-2 rounded-xl bg-card p-1" role="radiogroup" aria-label="Imagen para compartir">
         {(["resumen", "musculos"] as Variant[]).map((v) => (
           <button
             key={v}
@@ -327,9 +327,9 @@ export function WorkoutStoryShare(props: Props) {
             role="radio"
             aria-checked={activeVariant === v}
             onClick={() => { void hapticSelection(); setActiveVariant(v); }}
-            className={`h-8 rounded-[7px] type-footnote font-semibold transition-all duration-200 ${
+            className={`rounded-[9px] type-footnote font-semibold transition-all duration-200 ${
               activeVariant === v
-                ? "bg-muted text-foreground shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]"
+                ? "bg-accent text-foreground shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]"
                 : "text-muted-foreground"
             }`}
           >

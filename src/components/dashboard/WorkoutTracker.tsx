@@ -1188,7 +1188,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div
           role="tablist"
           aria-label="Elige el día de la semana"
-          className="no-scrollbar -mx-1 mb-4 flex gap-1 overflow-x-auto px-1"
+          className="no-scrollbar mb-4 flex gap-1 overflow-x-auto rounded-2xl bg-card p-1.5"
         >
           {DAYS_ORDER.map((day) => {
             const plan = dayPlans.find((p) => p.day === day);
@@ -1210,7 +1210,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   setCompletionReady(false);
                   setSelectedDay(day);
                 }}
-                className={`flex h-[52px] min-w-11 flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-xl type-footnote transition-colors duration-150 disabled:opacity-40 ${
+                className={`flex h-[50px] min-w-10 flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-xl type-footnote transition-colors duration-150 disabled:opacity-40 ${
                   active
                     ? "bg-primary font-semibold text-primary-foreground"
                     : isToday

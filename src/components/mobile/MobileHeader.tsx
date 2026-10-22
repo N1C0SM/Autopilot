@@ -57,7 +57,9 @@ const MobileHeader = forwardRef<HTMLElement, Props>(
                 aria-label="Recursos"
                 className="flex h-11 w-11 shrink-0 items-center justify-center text-foreground transition-opacity active:opacity-60"
               >
-                <BookOpen className="h-5 w-5" strokeWidth={1.75} />
+                <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary">
+                  <BookOpen className="h-[17px] w-[17px]" strokeWidth={2.25} />
+                </span>
               </button>
             )}
             {userId && <NotificationsBell userId={userId} />}

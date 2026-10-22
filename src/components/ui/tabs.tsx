@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
-// UISegmentedControl: a tinted-grey track with one raised segment.
+// UISegmentedControl con la superficie y el radio de las tarjetas: pista bg-card y un segmento elevado.
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
@@ -13,7 +13,7 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-9 items-center justify-center rounded-[9px] bg-[rgba(118,118,128,0.24)] p-0.5 text-foreground",
+      "inline-flex h-10 items-center justify-center rounded-xl bg-card p-1 text-foreground",
       className,
     )}
     {...props}
@@ -28,7 +28,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex h-full flex-1 items-center justify-center whitespace-nowrap rounded-[7px] px-3 text-[13px] font-medium text-foreground transition-[background-color,box-shadow] duration-200 ease-out data-[state=active]:bg-[#636366] data-[state=active]:font-semibold data-[state=active]:shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
+      "inline-flex h-full flex-1 items-center justify-center whitespace-nowrap rounded-[9px] px-3 text-[13px] font-medium text-muted-foreground transition-[background-color,box-shadow,color] duration-200 ease-out data-[state=active]:bg-accent data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
       className,
     )}
     {...props}

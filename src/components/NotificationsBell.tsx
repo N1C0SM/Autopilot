@@ -97,13 +97,16 @@ const NotificationsBell = ({ userId }: Props) => {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className="relative h-11 w-11 hover:bg-transparent"
           aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : "Notificaciones"}
           onClick={() => void hapticTap()}
         >
-          <Bell className="h-5 w-5" aria-hidden="true" />
+          {/* Mismo círculo que el avatar: todos los botones de la barra hablan igual. */}
+          <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary">
+            <Bell className="h-[17px] w-[17px]" strokeWidth={2.25} aria-hidden="true" />
+          </span>
           {unreadCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 type-caption2 font-bold tabular-nums text-primary-foreground">
+            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 type-caption2 font-bold tabular-nums text-primary-foreground">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
