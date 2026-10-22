@@ -898,7 +898,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         .eq("day_label", selectedDay)
         .eq("logged_at", selectedDate);
       if (error) throw error;
-      try { localStorage.removeItem(`autopilot:series-pendientes:${userId}`); } catch { /* sin almacenamiento */ }
+      clearPendingOfflineSeries(userId);
       clearActiveWorkout(userId);
       setExerciseLogs({});
       setRestTimer(null);

@@ -1,3 +1,4 @@
+import { mealsDoneKey, readMealsDone } from "@/lib/mealsDone";
 import { useEffect, useState, type ReactNode } from "react";
 import { Check, Clock, TriangleAlert, UserRound, type LucideIcon } from "lucide-react";
 import { hapticTap } from "@/lib/native";
