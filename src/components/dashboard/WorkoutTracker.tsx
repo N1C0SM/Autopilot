@@ -19,7 +19,7 @@ import { ExerciseThumb } from "@/components/ExerciseMedia";
 import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
-import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
+import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
 import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
@@ -898,7 +898,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         .eq("day_label", selectedDay)
         .eq("logged_at", selectedDate);
       if (error) throw error;
-      try { localStorage.removeItem(`autopilot:series-pendientes:${userId}`); } catch { /* sin almacenamiento */ }
+      clearPendingOfflineSeries(userId);
       clearActiveWorkout(userId);
       setExerciseLogs({});
       setRestTimer(null);

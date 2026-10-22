@@ -536,13 +536,15 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const handleManageSubscription = async () => {
     setLoadingPortal(true);
     const { data, error } = await supabase.functions.invoke("customer-portal");
+    const supportMail = "mailto:soporte@autopilotplan.com?subject=Gesti%C3%B3n%20de%20suscripci%C3%B3n%20Autopilot";
+    const supportAction = { label: "Escribir", onClick: () => { window.location.href = supportMail; } };
     if (data?.no_customer) {
-      toast.info("Tu acceso lo gestiona tu entrenador manualmente. Escríbele por el chat para cambiar o cancelar tu plan.");
+      toast.info("Tu acceso se gestiona manualmente. Escríbenos a soporte@autopilotplan.com para cambiar o cancelar tu plan.", { action: supportAction });
       setLoadingPortal(false);
       return;
     }
     if (error || !data?.url) {
-      toast.error("No se pudo abrir la gestión de tu suscripción. Escríbele a tu entrenador por el chat y lo resuelve.");
+      toast.error("No se pudo abrir la gestión de tu suscripción. Escríbenos a soporte@autopilotplan.com y lo resolvemos.", { action: supportAction });
       void hapticNotify("error");
       setLoadingPortal(false);
       return;

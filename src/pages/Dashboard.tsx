@@ -793,7 +793,7 @@ const Dashboard = () => {
       {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full">
           <Suspense fallback={<SectionFallback />}>
-            <MealsList meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
+            <MealsList userId={user?.id} meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
           </Suspense>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { mealsDoneKey, readMealsDone } from "@/lib/mealsDone";
 import { useEffect, useState, type ReactNode } from "react";
 import { Check, Clock, TriangleAlert, UserRound, type LucideIcon } from "lucide-react";
 import { hapticTap } from "@/lib/native";
@@ -18,12 +19,10 @@ interface Props {
   meals: Meal[];
   macros?: MacroTargets | null;
   onOpenProfile?: () => void;
+  userId?: string;
 }
 
-const todayKey = () => {
-  const d = new Date();
-  return `meals_done_${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-};
+const todayKey = (userId?: string) => mealsDoneKey(userId);
 
 const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
@@ -55,15 +54,12 @@ const Notice = ({
   </div>
 );
 
-const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
+const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
   const [done, setDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(todayKey());
-      if (raw) setDone(new Set(JSON.parse(raw)));
-    } catch { /* ignore */ }
-  }, []);
+    setDone(new Set(readMealsDone(userId)));
+  }, [userId]);
 
   const toggle = (name: string) => {
     const next = new Set(done);
@@ -74,7 +70,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
     }
     void hapticTap();
     setDone(next);
-    try { localStorage.setItem(todayKey(), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
+    try { localStorage.setItem(todayKey(userId), JSON.stringify(Array.from(next))); } catch { /* ignore */ }
     // Hoy escucha este evento para refrescar su anillo de comidas sin remount.
     window.dispatchEvent(new Event("autopilot:meals-updated"));
   };

@@ -92,3 +92,7 @@ export function clearActiveWorkout(userId: string) {
   try { localStorage.removeItem(key(userId)); } catch { /* storage unavailable */ }
   window.dispatchEvent(new Event(ACTIVE_WORKOUT_EVENT));
 }
+/** Borra la cola local de series sin sincronizar; ambos flujos de descarte deben llamarla. */
+export function clearPendingOfflineSeries(userId: string) {
+  try { localStorage.removeItem(`autopilot:series-pendientes:${userId}`); } catch { /* sin almacenamiento */ }
+}
