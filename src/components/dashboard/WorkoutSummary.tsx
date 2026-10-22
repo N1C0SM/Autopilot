@@ -170,7 +170,7 @@ export function WorkoutSummary({
           ) : (
             <p className="mt-4 type-subhead text-muted-foreground">Esta sesión será tu referencia para la próxima.</p>
           )}
-          <div className="mt-auto flex items-start gap-3 pt-4">
+          <div className={cn(tile, "mt-3 flex items-start gap-3")}>
             <Target className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
             <div className="min-w-0">
               <p className="type-footnote font-semibold text-primary">Próxima sesión</p>

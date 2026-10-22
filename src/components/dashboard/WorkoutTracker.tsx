@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, Moon,
-  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play,
+  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play, MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -1133,13 +1133,17 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             }
             trailing={
               <>
+                {/* Lo destructivo no va a la vista en la barra: «···» abre la hoja de acciones. */}
                 <button
                   type="button"
+                  aria-label="Más acciones"
                   onClick={() => { void hapticTap(); setDiscardOpen(true); }}
                   disabled={saving}
-                  className="inline-flex h-11 items-center px-2 type-body text-destructive transition-opacity active:opacity-60 disabled:opacity-40"
+                  className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40"
                 >
-                  Descartar
+                  <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-primary">
+                    <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
+                  </span>
                 </button>
                 {saveStatus === "error" && (
                   <span role="status" className="flex h-11 w-11 items-center justify-center text-destructive">
