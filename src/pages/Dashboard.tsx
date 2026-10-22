@@ -150,10 +150,6 @@ const Dashboard = () => {
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
   /** Día pulsado en la tira de «Hoy»: abre la rutina semanal en ese día. */
   const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
-  // El día elegido solo manda mientras se está en Entrenar; al salir se olvida.
-  useEffect(() => {
-    if (section !== "training") setPlanFocusDay(undefined);
-  }, [section]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
