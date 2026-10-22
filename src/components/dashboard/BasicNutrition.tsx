@@ -11,10 +11,19 @@ export default function BasicNutrition({ userId, onEdit }: { userId: string; onE
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let active = true;
-    const load = () => supabase.from("onboarding").select("weight, sex, goal").eq("user_id", userId).maybeSingle().then(({ data, error }) => {
+    // Misma fuente que el plan: onboarding + último peso registrado + macros guardados.
+    const load = async () => {
+      const [ob, log, plan] = await Promise.all([
+        supabase.from("onboarding").select("weight, sex, goal").eq("user_id", userId).maybeSingle(),
+        supabase.from("weight_logs").select("weight").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("nutrition_plan").select("macros_json").eq("user_id", userId).maybeSingle(),
+      ]);
       if (!active) return;
-      if (error) setFailed(true); else { setFailed(false); setTargets(resolveNutritionPreview(data ?? {})); }
-    });
+      if (ob.error) { setFailed(true); return; }
+      setFailed(false);
+      const weight = Number(ob.data?.weight) > 30 ? ob.data?.weight : log.data?.weight;
+      setTargets(resolveNutritionPreview({ ...(ob.data ?? {}), weight }, plan.data?.macros_json));
+    };
     void load();
     window.addEventListener("autopilot:onboarding-updated", load);
     return () => { active = false; window.removeEventListener("autopilot:onboarding-updated", load); };
