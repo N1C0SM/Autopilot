@@ -86,7 +86,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
   if (!meals.length && kcal <= 0) {
     return (
       <EmptyState
-        className="min-h-[60dvh]"
+        card
         icon={Clock}
         title="Aún no hay plan de comidas"
         description="En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día."

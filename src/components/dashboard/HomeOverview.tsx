@@ -96,14 +96,14 @@ export const OverviewRow = ({
   description: ReactNode;
   onClick?: () => void;
 }) => {
-  const className = "flex min-w-0 flex-col rounded-2xl bg-card p-3.5 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  const className = "flex min-h-[7.5rem] min-w-0 flex-col rounded-2xl bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const inner = (
     <>
       <span className="flex items-start justify-between">
         <span aria-hidden="true">{icon}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
       </span>
-      <span className="mt-3 block type-headline">{title}</span>
+      <span className="mt-auto block pt-4 type-headline">{title}</span>
       <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{description}</span>
     </>
   );
@@ -334,7 +334,7 @@ const HomeOverview = ({
 
         {scheduledDays.length > 0 && (
           // La semana de un vistazo — clickable: navega a Entrenamiento
-          <ol aria-label="Tu semana" className="mt-6 grid grid-cols-7 md:max-w-sm lg:max-w-xs">
+          <ol aria-label="Tu semana" className="mt-6 grid grid-cols-7 rounded-2xl bg-card px-2 py-3 md:max-w-sm lg:max-w-xs">
             {DAYS_ORDER.map((day, index) => {
               const isToday = index === todayIndex;
               const trains = plannedDays.has(day);
@@ -370,7 +370,7 @@ const HomeOverview = ({
         </div>
 
         {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
-        <div className={cn("flex flex-col lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16", completedToday && !activeWorkout ? "pb-2.5 pt-6" : "flex-1 justify-center py-8 md:py-10")}>
+        <div className={cn("flex flex-col lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16", completedToday && !activeWorkout ? "pt-3" : "flex-1 justify-center py-8 md:py-10")}>
           {activeWorkout && activeWorkoutIsToday ? (
             <div className="w-full">
               <p className="type-caption1 font-semibold text-primary">EN CURSO · HOY</p>
@@ -418,7 +418,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => { void hapticTap(); onNavigate("training"); }}
-              className="flex w-full items-center gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-150 active:scale-[0.98]"
+              className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-transform duration-150 active:scale-[0.98]"
               aria-label="Ver el resumen de la sesión de hoy"
             >
               <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
@@ -460,8 +460,9 @@ const HomeOverview = ({
           )}
         </div>
 
-      {/* Tarjetas secundarias: Nutrición + Progreso */}
-      <div className="grid grid-cols-2 gap-2.5 lg:mt-8 lg:gap-4">
+      {/* Tarjetas secundarias: Nutrición + Progreso, en su sección con título. */}
+      <h3 className="mb-3 mt-8 type-title3">Resumen</h3>
+      <div className="grid grid-cols-2 gap-3 lg:gap-4">
         <OverviewRow
           title="Nutrición"
           onClick={() => onNavigate("nutrition")}

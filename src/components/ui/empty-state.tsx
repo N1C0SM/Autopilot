@@ -10,14 +10,16 @@ interface EmptyStateProps {
   /** CTA opcional bajo el texto. */
   action?: React.ReactNode;
   className?: string;
+  /** Dentro de su propia tarjeta, como el resto de bloques de la pantalla. */
+  card?: boolean;
 }
 
 /**
  * Estado vacío único de la app: icono en su cuadrado tintado, título y una línea,
  * sin caja ni borde.
  */
-const EmptyState = ({ icon: Icon, title, description, action, className }: EmptyStateProps) => (
-  <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", className)}>
+const EmptyState = ({ icon: Icon, title, description, action, className, card }: EmptyStateProps) => (
+  <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", card && "rounded-2xl bg-card py-10", className)}>
     {Icon ? (
       <IconTile icon={Icon} size="lg" />
     ) : null}

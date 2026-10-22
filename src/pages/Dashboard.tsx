@@ -611,7 +611,7 @@ const Dashboard = () => {
 
       {hasPlan && section === "home" && (
         // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo.
-        <div className="flex w-full flex-1 flex-col gap-2.5">
+        <div className="flex w-full flex-1 flex-col gap-3">
           <HomeOverview
             userId={user?.id}
             meals={meals}
@@ -657,9 +657,9 @@ const Dashboard = () => {
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
-            <div className="mx-auto w-full space-y-2.5 empty:hidden lg:max-w-5xl">
+            <div className="mx-auto w-full space-y-8 empty:hidden lg:max-w-5xl">
               {firstWeek && (
-                <div className="rounded-2xl bg-card p-3.5">
+                <div className="rounded-2xl bg-card p-4">
                   <div className="flex items-center gap-3">
                     <IconTile icon={Flag} />
                     <div className="min-w-0 flex-1">
@@ -670,7 +670,7 @@ const Dashboard = () => {
                       {firstWeek.completed}<span className="text-[15px] font-semibold text-muted-foreground">/{firstWeek.target}</span>
                     </p>
                   </div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
                     <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.min(100, (firstWeek.completed / Math.max(1, firstWeek.target)) * 100)}%` }} />
                   </div>
                 </div>

@@ -1344,6 +1344,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   </div>
                 </div>
               ) : user && routeUserId && !savedObjectiveUrl && !editingObjective ? (
+                <div className="rounded-2xl bg-card p-4">
                 <FindingRow
                   icon={Target}
                   title="Tu objetivo"
@@ -1354,6 +1355,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     </Button>
                   }
                 />
+                </div>
               ) : user && !savedObjectiveUrl && !editingObjective && hasObjectiveChoice === "unset" ? (
                 <FindingRow
                   icon={Target}
@@ -1486,8 +1488,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
 
               {/* Guía para tomar las fotos */}
               <section>
-                <h2 className="type-title3 mb-5">Cómo tomar las fotos</h2>
-                <div className="space-y-6">
+                <h2 className="type-title3 mb-3">Cómo tomar las fotos</h2>
+                <div className="space-y-5 rounded-2xl bg-card p-4">
                   <FindingRow
                     icon={Ruler}
                     title="Distancia"

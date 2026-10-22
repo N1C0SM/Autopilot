@@ -637,7 +637,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
 
       {/* Aún no hay dos fotos del mismo ángulo: aviso con el patrón de la bienvenida */}
       {ready && photos.length > 0 && posePhotos.length < 2 && (
-        <section className="flex items-start gap-4">
+        <section className="flex items-start gap-3.5 rounded-2xl bg-card p-4">
           <IconTile icon={Columns2} />
           <div className="min-w-0 flex-1">
             <h2 className="type-headline">Compara tu evolución</h2>

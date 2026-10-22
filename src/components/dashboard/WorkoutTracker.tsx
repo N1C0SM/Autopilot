@@ -1228,7 +1228,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       {/* Rest day */}
       {!currentPlan && (
         <EmptyState
-          className="min-h-[50dvh] md:min-h-0"
+          card
+          className="mt-2"
           icon={Moon}
           title="Día de descanso"
           description="Recupera, o elige otra sesión de tu semana"
@@ -1241,7 +1242,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   setCompletionReady(false);
                   setSelectedDay(p.day);
                 }}
-                  className="min-h-11 rounded-full bg-secondary px-4 type-subhead font-medium transition-colors duration-150 active:bg-accent">
+                  className="min-h-11 rounded-full bg-foreground/10 px-4 type-subhead font-medium transition-colors duration-150 active:bg-accent">
                   {p.day}
                 </button>
               ))}

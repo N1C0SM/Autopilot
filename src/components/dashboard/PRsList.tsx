@@ -123,13 +123,16 @@ const PRsList = ({ userId }: Props) => {
 
   return (
     <div className="space-y-8 lg:grid lg:grid-cols-[280px_1fr] lg:gap-12 lg:space-y-0 lg:items-start">
-      <section aria-label="Tu mejor marca" className="pt-1 lg:sticky lg:top-4">
-        <IconTile icon={Trophy} size="md" />
-        <p className="mt-3 font-rounded text-[56px] font-bold leading-none tabular-nums">
+      <section aria-label="Tu mejor marca" className="rounded-2xl bg-card p-4 lg:sticky lg:top-4">
+        <div className="flex items-center gap-2.5">
+          <IconTile icon={Trophy} />
+          <p className="type-headline">Tu mejor marca</p>
+        </div>
+        <p className="mt-4 font-rounded text-[48px] font-bold leading-none tabular-nums text-primary">
           {topHasEstimate ? top.estimated_1rm : top.weight}
           <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>
         </p>
-        <p className="mt-2 type-body text-muted-foreground">
+        <p className="mt-2 type-subhead text-muted-foreground">
           {topHasEstimate
             ? `1RM estimado en ${top.exercise_name}`
             : `Tu mejor serie en ${top.exercise_name}, ${top.reps} reps`}
