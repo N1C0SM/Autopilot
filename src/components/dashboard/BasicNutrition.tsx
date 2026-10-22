@@ -15,7 +15,7 @@ export default function BasicNutrition({ userId, onEdit }: { userId: string; onE
     const load = async () => {
       const [ob, log, plan] = await Promise.all([
         supabase.from("onboarding").select("weight, sex, goal").eq("user_id", userId).maybeSingle(),
-        supabase.from("weight_logs").select("weight").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("weight_logs").select("weight").eq("user_id", userId).order("logged_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("nutrition_plan").select("macros_json").eq("user_id", userId).maybeSingle(),
       ]);
       if (!active) return;

@@ -39,3 +39,11 @@ describe("nutrition inputs", () => {
     });
   });
 });
+
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+d2("saved plan macros", () => {
+  i2("uses saved macros so Nutrición matches the plan", () => {
+    e2(resolveNutritionPreview({ weight: 70, goal: "gain_muscle" }, { protein: 140, carbs: 200, fats: 60 }))
+      .toEqual({ calories: 1900, protein: 140, hasWeight: true });
+  });
+});
