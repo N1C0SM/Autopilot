@@ -8,6 +8,7 @@ import { ChevronLeft, Newspaper, ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { withBookRef } from "@/lib/buyLink";
+import { isIOSNative } from "@/lib/platform";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
 import BookCover from "@/components/BookCover";
@@ -98,22 +99,31 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
           url: withBookRef((live ? b.buy_url_live : b.buy_url_test) || (contact ? `mailto:${contact}?subject=${encodeURIComponent(`Quiero la guía: ${b.title}`)}` : ""), b.id),
           price: b.price || "",
           is_pack: !!b.is_pack,
-          pages: (b as any).pages ?? null,
-          minutes: (b as any).reading_minutes ?? null,
+          pages: b.pages ?? null,
+          minutes: b.reading_minutes ?? null,
         });
       }
 
+      // App Store §3.1.1: los bienes digitales (guías en PDF) solo pueden
+      // venderse dentro de la app mediante compra in-app. En iOS ocultamos
+      // cualquier guía con precio o con enlace de pago; las gratuitas siguen.
+      const hasPriceOrCheckout = (b: Ebook) =>
+        !!(b.price || "").trim() || /^https?:/i.test(b.url || "");
+      const visibleBooks = isIOSNative()
+        ? fromLibrary.filter((b) => !hasPriceOrCheckout(b))
+        : fromLibrary;
+
       if (s) {
         const dbRecos = parseRecommendations(s.recommendations);
-        setEbooks(fromLibrary);
+        setEbooks(visibleBooks);
         setRecos(dbRecos);
         setFlags({
           blog: s.show_blog ?? true,
           ebooks: true,
           recos: true,
         });
-      } else if (fromLibrary.length > 0) {
-        setEbooks(fromLibrary);
+      } else if (visibleBooks.length > 0) {
+        setEbooks(visibleBooks);
       }
 
       const { data: p } = await supabase

@@ -48,21 +48,21 @@ describe("<HideOnIOS />", () => {
 });
 
 describe("<IosFeatureLocked />", () => {
-  it("mentions autopilotplan.com in plain text (no clickable link to checkout)", () => {
+  it("explains that the feature is part of a paid plan without steering to a website", () => {
     render(<IosFeatureLocked feature="El chat con tu entrenador" />);
     expect(
-      screen.getByText(/El chat con tu entrenador está disponible en los planes de pago\./i),
+      screen.getByText(/El chat con tu entrenador forma parte de los planes de pago\./i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/autopilotplan\.com/i)).toBeInTheDocument();
-    // Must NOT render an anchor to checkout. App Store §3.1.3(a) only allows
-    // informing about the existence of plans, not linking to the checkout.
+    // §3.1.1: no domain, no "visit", no link to checkout.
+    expect(screen.queryByText(/autopilotplan\.com/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/visita/i)).not.toBeInTheDocument();
     expect(document.querySelectorAll("a")).toHaveLength(0);
   });
 
   it("falls back to a generic feature label", () => {
     render(<IosFeatureLocked />);
     expect(
-      screen.getByText(/Esta función está disponible en los planes de pago\./i),
+      screen.getByText(/Esta función forma parte de los planes de pago\./i),
     ).toBeInTheDocument();
   });
 });

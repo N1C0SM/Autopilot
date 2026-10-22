@@ -25,7 +25,7 @@ export default function CoachingOffer({ onChoose, nutrition = false, compact = f
   // Sin chat de cliente no se puede entregar el plan con entrenador: no se ofrece comprarlo.
   const coachAvailable = plans.coach && DASHBOARD_CHAT_ENABLED;
   const coachPreferred = defaultPlan === "full" && coachAvailable;
-  // iOS v1 (reader app, App Store §3.1.3(a)): no upsell inside the native build.
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): no upsell inside the native build.
   if (isIOSNative()) return null;
   return (
     <section className="px-1 py-2">

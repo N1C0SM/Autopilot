@@ -11,7 +11,7 @@ export interface HideOnIOSProps {
 /**
  * Oculta `children` cuando la app corre como build iOS nativa.
  *
- * Pensado para envolver UI de upsell / pricing legacy en modo "reader app"
+ * Pensado para envolver UI de upsell / pricing legacy en modo sin venta in-app
  * (App Store §3.1.3(a)). Para componentes nuevos preferir un guard interno
  * (`if (isIOSNative()) return null;`) y así evitar olvidos en call-sites.
  */

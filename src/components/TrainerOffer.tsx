@@ -140,7 +140,7 @@ export function TrainerApplyModal({ plan, open, onClose }: { plan: Plan; open: b
 
 /** Oferta bajo los planes. Solo aparece si el admin activó y hizo visible el producto. */
 export default function TrainerOffer() {
-  // iOS v1 (reader app, App Store §3.1.3(a)): hide B2B upsell inside the native build.
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): hide B2B upsell inside the native build.
   if (isIOSNative()) return null;
   return <TrainerOfferContent />;
 }

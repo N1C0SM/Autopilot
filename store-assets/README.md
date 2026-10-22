@@ -8,11 +8,21 @@
 - `app-store/ipad-12.9/*.png`: imágenes para iPad 12.9" (2048×2732).
 - `STORE_LISTING_ES.md`: textos de la ficha en español.
 - `AUTH_AND_PRIVACY_CHECKLIST.md`: autenticación, privacidad y pasos humanos pendientes.
+- `app-store/README.md`: cómo capturar las pantallas reales de la app.
 
-Las imágenes promocionales usan una vista real incluida en el proyecto, adaptada a formatos de tienda. Antes del envío definitivo conviene reemplazar o complementar estas imágenes con capturas obtenidas en dispositivos autenticados para mostrar entrenamiento, nutrición, progreso y chat con datos de demostración.
+## Estado de las capturas
 
-Para regenerar las imágenes después de cambiar la interfaz:
+Las capturas se generaban recortando una vista de **escritorio** (1280×720), lo
+que mostraba la barra lateral, la opción "Chat" y texto cortado. Incumple
+§2.3.3 y se han retirado.
+
+El generador ahora exige una **captura móvil real** en
+`source/mobile-dashboard.png` y falla con un mensaje claro si no existe:
 
 ```bash
 node scripts/generate-store-assets.mjs
 ```
+
+Instrucciones completas en `app-store/README.md`.
+
+Para regenerar el icono y el feature graphic no hace falta esa captura.

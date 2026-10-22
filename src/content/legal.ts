@@ -65,7 +65,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
         heading: "3. Base jurídica del tratamiento",
         list: [
           "Ejecución de contrato (Art. 6.1.b RGPD): para crear y mantener tu cuenta, generar tus planes, procesar pagos y prestar soporte.",
-          "Consentimiento explícito (Art. 9.2.a RGPD): para el tratamiento de tus datos de salud con fines de personalización del plan. Este consentimiento se recoge de forma específica e independiente durante el onboarding y puedes retirarlo en cualquier momento.",
+          "Consentimiento explícito (Art. 9.2.a RGPD): para el tratamiento de tus datos de salud con fines de personalización del plan. Este consentimiento se recoge de forma específica e independiente durante el onboarding y puedes retirarlo en cualquier momento eliminando tu cuenta desde Ajustes o escribiendo a " + COMPANY.dpoEmail + ".",
           "Interés legítimo (Art. 6.1.f RGPD): para prevención de fraude, seguridad de la plataforma y mejora del servicio mediante análisis agregados y anonimizados.",
           "Obligación legal (Art. 6.1.c RGPD): para conservar facturación y atender requerimientos de autoridades competentes.",
         ],
@@ -73,7 +73,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
       {
         heading: "4. Decisiones automatizadas e inteligencia artificial",
         paragraphs: [
-          "Autopilot utiliza modelos de inteligencia artificial para asistir en la elaboración del diagnóstico inicial y del plan personalizado. Sin embargo, toda recomendación es revisada y validada por un entrenador humano titulado antes de ser entregada al usuario. No se toman decisiones puramente automatizadas con efectos jurídicos o significativos sobre ti en el sentido del Art. 22 RGPD.",
+          "Autopilot utiliza modelos de inteligencia artificial para asistir en la elaboración del diagnóstico inicial y del plan personalizado. En los planes Free y Plus el plan se genera y se adapta de forma automática; en el plan Coach, además, un entrenador humano titulado revisa y ajusta el plan. No se toman decisiones puramente automatizadas con efectos jurídicos o significativos sobre ti en el sentido del Art. 22 RGPD.",
           "Tienes derecho a solicitar intervención humana, expresar tu punto de vista e impugnar cualquier recomendación enviando un mensaje a tu entrenador desde el chat o escribiendo a " + COMPANY.dpoEmail + ".",
         ],
       },
@@ -94,7 +94,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
         ],
         list: [
           "Lovable Cloud (Supabase): alojamiento de base de datos, autenticación, almacenamiento de archivos y funciones serverless.",
-          "Lovable AI Gateway: acceso a modelos de IA (Google Gemini) para el diagnóstico y la generación inicial del plan. Los datos se envían anonimizados y sin identificadores directos siempre que es técnicamente posible.",
+          "Proveedores de inteligencia artificial: el diagnóstico y la generación del plan se apoyan en modelos de lenguaje de terceros (OpenAI, Anthropic, DeepSeek y la pasarela de Lovable AI), a los que se envían únicamente los datos necesarios para generar el plan. Cuando es posible, los datos se envían sin identificadores directos de la cuenta.",
           "Stripe Payments Europe, Ltd.: procesamiento de pagos y gestión de la suscripción.",
           "Proveedor de email transaccional (Mailgun / equivalente): envío de avisos automatizados, recuperación de contraseña y notificaciones.",
           "Google Calendar (opcional): si el usuario activa la sincronización, se genera un calendario ICS al que se conecta su cuenta de Google.",
@@ -155,7 +155,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
       {
         heading: "2. Descripción del servicio",
         paragraphs: [
-          "Autopilot es un servicio de coaching fitness online consistente en (i) un diagnóstico físico inicial asistido por IA, (ii) un plan personalizado de entrenamiento y, opcionalmente, de nutrición elaborado y supervisado por un entrenador humano titulado, y (iii) seguimiento por chat con dicho entrenador.",
+          "Autopilot es un servicio de coaching fitness online consistente en (i) un diagnóstico físico inicial asistido por IA, (ii) un plan personalizado de entrenamiento y, opcionalmente, de nutrición generado con asistencia de IA y, en el plan Coach, supervisado por un entrenador humano titulado, y (iii) en el plan Coach, seguimiento con dicho entrenador.",
           "El servicio NO sustituye al consejo médico, fisioterapéutico ni a la prescripción de profesionales sanitarios. Ver el Disclaimer médico para más detalle.",
         ],
       },
@@ -365,7 +365,7 @@ export const LEGAL_DOCS: Record<LegalSlug, LegalDoc> = {
       {
         heading: "4. Uso de IA y supervisión humana",
         paragraphs: [
-          "Parte del análisis y la generación del plan se apoya en modelos de inteligencia artificial. Cada plan es revisado por un entrenador humano titulado antes de ser entregado, y cualquier ajuste posterior se realiza también con su intervención.",
+          "Parte del análisis y la generación del plan se apoya en modelos de inteligencia artificial. En los planes Free y Plus el plan se genera y actualiza de forma automática. En el plan Coach, un entrenador humano titulado revisa el plan antes de entregarlo y participa en los ajustes posteriores.",
           "Aun así, ninguna recomendación generada por IA puede considerarse infalible. Aplica siempre tu propio criterio y, ante cualquier duda, consulta con un profesional sanitario.",
         ],
       },

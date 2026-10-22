@@ -99,7 +99,7 @@ describe("day summary", () => {
   it("does not draw a summary while the plan is still being prepared", () => {
     render(<MealsList meals={[]} macros={null} />);
 
-    expect(screen.getByText("Tu plan está en preparación")).toBeVisible();
+    expect(screen.getByText("Aún no hay plan de comidas")).toBeVisible();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("group")).not.toBeInTheDocument();
   });

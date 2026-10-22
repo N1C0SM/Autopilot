@@ -22,8 +22,11 @@ export const isNativeApp = (): boolean => {
 /**
  * True cuando la app corre como build nativa iOS empaquetada por Capacitor.
  *
- * Se usa como feature flag para esconder CTAs de compra y precios: la app
- * iOS v1 opera en modo "reader app" (App Store Review Guideline §3.1.3(a)).
+ * Se usa para no mostrar en iOS ningún punto de venta de bienes digitales:
+ * App Store §3.1.1 exige compra in-app para contenido digital y §3.1.3(a)
+ * (reader apps) solo cubre revistas, periódicos, libros, audio, música y
+ * vídeo — una app de fitness no entra en esa lista. Por eso en iOS se ocultan
+ * precios, CTAs de compra y comparativas de planes, sin redirigir a la web.
  *
  * Overrides de debug (en orden de prioridad):
  *   `?native=1&platform=ios`  → fuerza isIOSNative=true desde la web.

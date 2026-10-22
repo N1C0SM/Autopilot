@@ -56,7 +56,7 @@ const steps = [
 ];
 
 const LandingConversionBento = ({ trainer, testimonials, onStart }: Props) => {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no pricing / upsell bento in the native build.
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): no pricing / upsell bento in the native build.
   if (isIOSNative()) return null;
   const coachName = trainer.trainer_name?.trim() || "tu entrenador";
   const visibleTestimonials = testimonials.slice(0, 3);

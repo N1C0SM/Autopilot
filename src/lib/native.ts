@@ -26,6 +26,53 @@ export function initPlatformClasses() {
     "content",
     "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover",
   );
+  if (isIOSNative()) {
+    syncDynamicType();
+    // El tamaño de texto se cambia en Ajustes del sistema, así que la app vuelve
+    // del segundo plano con otro valor. Re-medimos al volver, sin coste en uso.
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) syncDynamicType();
+    });
+    window.addEventListener("focus", syncDynamicType);
+    window.addEventListener("pageshow", syncDynamicType);
+  }
+}
+
+/**
+ * Dynamic Type en la WebView.
+ *
+ * `-apple-system-body` es la fuente del sistema en el estilo `.body`: iOS la
+ * resuelve al tamaño que la persona haya elegido en Ajustes → Pantalla y brillo
+ * → Texto (17 pt en «Grande»). Medimos esa fuente y la convertimos en
+ * `--type-scale`, que multiplica la escala tipográfica de `index.css`.
+ *
+ * Solo se escala el texto, no la rejilla: así las tarjetas y la barra de
+ * pestañas mantienen sus métricas y nada se deforma. El máximo (1,35) cubre los
+ * tamaños XXXL; por encima, la interfaz necesitaría recolocarse como en UIKit,
+ * que es trabajo de la capa nativa (fase A).
+ */
+const BODY_TEXT_SIZE = 17; // UIFontTextStyleBody en «Grande»
+const MIN_TYPE_SCALE = 0.9;
+const MAX_TYPE_SCALE = 1.35;
+
+let typeProbe: HTMLElement | null = null;
+
+export function syncDynamicType() {
+  if (typeof document === "undefined" || !document.body || !isIOSNative()) return;
+  // Si el motor no entiende la fuente de sistema, no medimos: mejor no tocar nada
+  // que aplicar una escala inventada (p. ej. el navegador de escritorio en modo
+  // de depuración `?native=1&platform=ios`).
+  if (!window.CSS?.supports?.("font", "-apple-system-body")) return;
+  if (!typeProbe) {
+    typeProbe = document.createElement("span");
+    typeProbe.className = "dynamic-type-probe";
+    typeProbe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(typeProbe);
+  }
+  const size = Number.parseFloat(window.getComputedStyle(typeProbe).fontSize);
+  if (!Number.isFinite(size) || size < 10 || size > 60) return;
+  const scale = Math.min(MAX_TYPE_SCALE, Math.max(MIN_TYPE_SCALE, size / BODY_TEXT_SIZE));
+  document.documentElement.style.setProperty("--type-scale", scale.toFixed(3));
 }
 
 let splashHidden = false;

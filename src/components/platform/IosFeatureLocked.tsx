@@ -9,12 +9,13 @@ export interface IosFeatureLockedProps {
 }
 
 /**
- * Mensaje neutro para funciones de pago en iOS v1 (reader app).
+ * Mensaje para funciones que en iOS no están disponibles.
  *
- * App Store Review §3.1.3(a) permite informar al usuario de que existen
- * planes de pago, pero NO permite enlazar directamente a un checkout fuera
- * de la app. Este componente comunica la existencia del plan y menciona
- * `autopilotplan.com` como texto plano, sin link clicable.
+ * App Store §3.1.1 prohíbe dirigir al usuario a comprar fuera de la app, y
+ * §3.1.3(a) no cubre fitness. Por eso el texto es puramente informativo:
+ * explica que la función forma parte de un plan de pago, sin nombrar dominios,
+ * sin verbos de acción y sin ningún enlace. No es una "reader app": es una
+ * función no incluida en la versión gratuita.
  */
 export const IosFeatureLocked = ({
   feature = "Esta función",
@@ -23,13 +24,8 @@ export const IosFeatureLocked = ({
   <div className={`mx-auto w-full max-w-md ${className}`.trim()} data-ios-feature-locked>
     <EmptyState
       icon={Lock}
-      title={`${feature} está disponible en los planes de pago.`}
-      description={
-        <>
-          Visita <span className="font-medium text-foreground">autopilotplan.com</span>
-          {" "}desde tu navegador para conocer las opciones.
-        </>
-      }
+      title={`${feature} forma parte de los planes de pago.`}
+      description="Sigue disponible tu plan gratuito, tu registro de entrenamiento y tu progreso."
     />
   </div>
 );

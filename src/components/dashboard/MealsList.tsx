@@ -92,8 +92,8 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
       <EmptyState
         className="min-h-[60dvh]"
         icon={Clock}
-        title="Tu plan está en preparación"
-        description="En cuanto tu entrenador lo cierre verás aquí tus calorías, macros y comidas del día."
+        title="Aún no hay plan de comidas"
+        description="En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día."
       />
     );
   }
@@ -231,7 +231,7 @@ const MealsList = ({ meals, macros, onOpenProfile }: Props) => {
         <EmptyState
           icon={Clock}
           title="Sin comidas todavía"
-          description="Tu entrenador las añadirá en cuanto cierre el plan."
+          description="Guarda tus datos en Ajustes y podrás generarlas con tus macros."
         />
       ) : (
         <ListGroup header="Comidas de hoy">

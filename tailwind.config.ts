@@ -20,6 +20,24 @@ export default {
       },
     },
     extend: {
+      // Tailwind's `text-sm`, `text-base`… siguen Dynamic Type igual que las
+      // clases `type-*`: solo cambia el tamaño del texto, nunca la rejilla. Con
+      // `--type-scale: 1` los valores son idénticos a los de Tailwind.
+      fontSize: {
+        xs: [`calc(0.75rem * var(--type-scale))`, { lineHeight: "calc(1rem * var(--type-scale))" }],
+        sm: [`calc(0.875rem * var(--type-scale))`, { lineHeight: "calc(1.25rem * var(--type-scale))" }],
+        base: [`calc(1rem * var(--type-scale))`, { lineHeight: "calc(1.5rem * var(--type-scale))" }],
+        lg: [`calc(1.125rem * var(--type-scale))`, { lineHeight: "calc(1.75rem * var(--type-scale))" }],
+        xl: [`calc(1.25rem * var(--type-scale))`, { lineHeight: "calc(1.75rem * var(--type-scale))" }],
+        "2xl": [`calc(1.5rem * var(--type-scale))`, { lineHeight: "calc(2rem * var(--type-scale))" }],
+        "3xl": [`calc(1.875rem * var(--type-scale))`, { lineHeight: "calc(2.25rem * var(--type-scale))" }],
+        "4xl": [`calc(2.25rem * var(--type-scale))`, { lineHeight: "calc(2.5rem * var(--type-scale))" }],
+        "5xl": [`calc(3rem * var(--type-scale))`, { lineHeight: "1" }],
+        "6xl": [`calc(3.75rem * var(--type-scale))`, { lineHeight: "1" }],
+        "7xl": [`calc(4.5rem * var(--type-scale))`, { lineHeight: "1" }],
+        "8xl": [`calc(6rem * var(--type-scale))`, { lineHeight: "1" }],
+        "9xl": [`calc(8rem * var(--type-scale))`, { lineHeight: "1" }],
+      },
       // The platform's system font everywhere: San Francisco on Apple devices, with its
       // own optical sizing and tracking. The stacks live in index.css as CSS variables.
       fontFamily: {

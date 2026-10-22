@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => ({
   uploads: [] as { bucket: string; path: string; file: File }[],
   uploadError: null as { message: string } | null,
   invoked: [] as string[],
+  invokeArgs: [] as { name: string; body?: unknown }[],
   compressImage: vi.fn(async (file: File) => file),
 }));
 vi.mock("sonner", () => ({ toast: mocks.toast }));
@@ -44,8 +45,9 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: {
     }; return query;
   },
   rpc: () => Promise.resolve({ data: {} }),
-  functions: { invoke: (name: string) => {
+  functions: { invoke: (name: string, options?: { body?: unknown }) => {
     mocks.invoked.push(name);
+    mocks.invokeArgs.push({ name, body: options?.body });
     if (name === "sync-nutrition-macros") return Promise.resolve(mocks.syncResponse);
     if (name === "ai-generate-meals") return Promise.resolve(mocks.mealsResponse);
     if (name === "check-subscription" && mocks.plan) return Promise.resolve({ data: { plan: mocks.plan }, error: null });
@@ -68,7 +70,7 @@ beforeEach(() => {
   mocks.tier = "full"; mocks.paid = "paid"; mocks.status = "active"; mocks.end = null; mocks.travelUntil = null; mocks.saves = []; mocks.updates = [];
   mocks.ios = false; mocks.plan = null; mocks.avatar = "";
   mocks.user.email = "test@example.com"; mocks.user.new_email = null;
-  mocks.onboarding = {}; mocks.calls = []; mocks.invoked = [];
+  mocks.onboarding = {}; mocks.calls = []; mocks.invoked = []; mocks.invokeArgs = [];
   mocks.authError = null; mocks.confirmedEmail = null;
   mocks.syncResponse = { data: { updated: false, reason: "no_access" }, error: null };
   mocks.mealsResponse = { data: { meals: defaultMeals }, error: null };
@@ -186,12 +188,15 @@ describe("settings purchase surfaces", () => {
     expect(await screen.findByRole("button", { name: /^Mejorar a/ })).toBeVisible();
     expect(screen.getByText(/7 días de prueba/)).toBeVisible();
   });
-  it("keeps the plan name but no price, offer or billing entry on iOS for a paid account", async () => {
+  it("shows no price, offer or external billing on iOS, but lets you cancel in-app", async () => {
     mocks.ios = true; mocks.plan = "monthly";
     const { container } = showWithUpgrade();
     expect(await screen.findByText("Plan Coach")).toBeVisible();
     expect(await screen.findByText("Mensual")).toBeVisible();
+    // §3.1.1: cancelar es gestión de cuenta y se hace dentro de la app; el
+    // portal de Stripe (que permite contratar) no se abre en iOS.
     expect(screen.queryByText("Gestionar suscripción")).not.toBeInTheDocument();
+    expect(await screen.findByText("Cancelar suscripción")).toBeVisible();
     expect(screen.queryByText(/ahorra/)).not.toBeInTheDocument();
     expect(screen.queryByText(/portal de gestión/)).not.toBeInTheDocument();
     expect(container).not.toHaveTextContent("€");
@@ -300,17 +305,21 @@ describe("settings nutrition feedback (A-01 / N-01)", () => {
     expect(screen.getByRole("status")).toHaveTextContent(/plan de comidas está desactualizado/i);
   });
 
-  it("regenera las comidas solo tras confirmarlo y las guarda en nutrition_plan", async () => {
-    const { container } = await saveNutritionChange();
-    expect(container).toBeTruthy();
+  it("regenera las comidas solo tras confirmarlo y lo pide al servidor", async () => {
+    await saveNutritionChange();
+    // La regeneración la hace el servidor (sync-nutrition-macros), que sí puede
+    // escribir nutrition_plan; el cliente no tiene permiso de escritura.
+    mocks.syncResponse = { data: { updated: true, meals_updated: true }, error: null };
     fireEvent.click(screen.getByRole("button", { name: "Regenerar comidas" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText(/Recalcularemos el plan de comidas/)).toBeVisible();
     fireEvent.click(within(dialog).getByRole("button", { name: "Regenerar comidas" }));
 
-    await waitFor(() => expect(mocks.invoked).toContain("ai-generate-meals"));
     await waitFor(() =>
-      expect(mocks.updates.some((u) => u.table === "nutrition_plan" && Array.isArray(u.row.meals_json))).toBe(true),
+      expect(mocks.invokeArgs).toContainEqual({
+        name: "sync-nutrition-macros",
+        body: { regenerate_meals: true },
+      }),
     );
     await waitFor(() => expect(mocks.toast.success).toHaveBeenCalledWith("Comidas actualizadas"));
     await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());

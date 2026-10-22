@@ -55,7 +55,7 @@ export const PlanPaywall = ({
   const [selected, setSelected] = useState<TierKey>(defaultPlan && options.includes(defaultPlan) ? defaultPlan : options[0]);
   const t = TIERS[selected];
 
-  // iOS v1 (reader app, App Store §3.1.3(a)): replace the paywall with a neutral
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): replace the paywall with a neutral
   // "visit autopilotplan.com" card. No pricing, no checkout CTA.
   if (isIOSNative()) return <IosFeatureLocked />;
 

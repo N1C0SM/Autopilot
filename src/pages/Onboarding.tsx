@@ -456,6 +456,12 @@ const Onboarding = () => {
     return arr;
   })();
 
+  // Si el step actual se sale del rango (p.ej. tras cambio dinámico), lo recortamos.
+  // Va antes del return de autoFinish: los hooks no pueden quedar tras un return.
+  useEffect(() => {
+    if (step > activeSteps.length - 1) setStep(activeSteps.length - 1);
+  }, [activeSteps.length, step]);
+
   if (autoFinish) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
@@ -465,11 +471,6 @@ const Onboarding = () => {
       </div>
     );
   }
-
-  // Si el step actual se sale del rango (p.ej. tras cambio dinámico), lo recortamos
-  useEffect(() => {
-    if (step > activeSteps.length - 1) setStep(activeSteps.length - 1);
-  }, [activeSteps.length, step]);
 
   const currentKey = activeSteps[Math.min(step, activeSteps.length - 1)];
 
@@ -1175,9 +1176,10 @@ const Onboarding = () => {
                   />
                   <span className="text-xs text-muted-foreground leading-snug">
                     Consiento el tratamiento de mis <strong className="text-foreground">datos de salud</strong>{" "}
-                    (peso, lesiones, hábitos) con la única finalidad de generar y ajustar mi plan personalizado de
-                    entrenamiento y nutrición. Entiendo que puedo retirar este consentimiento en cualquier momento
-                    desde Ajustes. Más info en el{" "}
+                    (peso, lesiones, hábitos) y su envío a los proveedores de inteligencia artificial que generan
+                    mi plan, con la única finalidad de generar y ajustar mi plan personalizado de entrenamiento y
+                    nutrición. Entiendo que puedo retirar este consentimiento en cualquier momento eliminando mi
+                    cuenta desde Ajustes. Más info en el{" "}
                     <Link to="/legal/disclaimer-medico" target="_blank" className="underline text-foreground">aviso médico</Link>.
                   </span>
                 </label>

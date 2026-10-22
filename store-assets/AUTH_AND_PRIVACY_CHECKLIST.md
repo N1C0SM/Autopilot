@@ -36,7 +36,7 @@ Usos previsibles: funcionalidad de la app, personalización, soporte, gestión d
 
 - Facilitar una cuenta de demostración si la mayor parte de la app requiere acceso.
 - Explicar en las notas que Autopilot ofrece planificación fitness y contacto con entrenador.
-- Adjuntar instrucciones para llegar a entrenamiento, nutrición, progreso y chat.
+- Adjuntar instrucciones para llegar a entrenamiento, nutrición y progreso (el chat no está en esta versión).
 - Probar que la compra/suscripción cumple las reglas de cada tienda. Apple puede exigir compra dentro de la app si se venden servicios o contenido digital consumidos en iOS.
 - Verificar que la política de privacidad publicada coincide con la recogida real de datos.
 

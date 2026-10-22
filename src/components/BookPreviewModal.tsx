@@ -7,6 +7,7 @@ import { rememberBookPurchase } from "@/lib/buyLink";
 import { track } from "@/lib/analytics";
 import { hapticTap } from "@/lib/native";
 import { skipAutoFocusOnTouch } from "@/components/chrome-chat/skipAutoFocusOnTouch";
+import { isIOSNative } from "@/lib/platform";
 
 export interface PreviewBook {
   id?: string;
@@ -36,8 +37,11 @@ export default function BookPreviewModal({
   onClose: () => void;
 }) {
   if (!book) return null;
+  const ios = isIOSNative();
+  // En iOS no se muestra ningún bien digital de pago (§3.1.1).
+  const purchaseBlocked = ios && (!!(book.price || "").trim() || /^https?:/i.test(book.url || ""));
   const { intro, bullets } = parseDescription(book.description);
-  const showPack = pack && pack.url && pack.id !== book.id && !book.is_pack;
+  const showPack = !ios && pack && pack.url && pack.id !== book.id && !book.is_pack;
 
   const buy = (item: PreviewBook, source: string) => {
     void hapticTap();
@@ -79,7 +83,11 @@ export default function BookPreviewModal({
         </ListGroup>
 
         <div className="space-y-2">
-          {book.url ? (
+          {purchaseBlocked ? (
+            <p className="text-center type-subhead text-muted-foreground">
+              Esta guía no está disponible desde la app.
+            </p>
+          ) : book.url ? (
             <>
               <p className="text-center type-large-title font-rounded tabular-nums">{book.price || "Gratis"}</p>
               <Button asChild variant="hero" size="lg" className="w-full">
@@ -91,7 +99,9 @@ export default function BookPreviewModal({
           ) : (
             <p className="text-center type-subhead text-muted-foreground">Disponible próximamente</p>
           )}
-          <p className="text-center type-footnote text-muted-foreground">Pago seguro con Stripe. Material autodidacta, no incluye entrenador.</p>
+          {!purchaseBlocked && book.url && (
+            <p className="text-center type-footnote text-muted-foreground">Pago seguro con Stripe. Material autodidacta, no incluye entrenador.</p>
+          )}
         </div>
 
         {showPack && (

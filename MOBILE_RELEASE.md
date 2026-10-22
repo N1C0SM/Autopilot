@@ -110,16 +110,17 @@ En https://appstoreconnect.apple.com:
 
 1. Crea la ficha en App Store Connect: nombre, subtítulo, descripción,
    palabras clave, categoría **Salud y forma física**.
-2. Capturas 6.7" y 6.5" (y iPad si declaras compatibilidad).
+2. Capturas reales de las tres pantallas (ver `store-assets/app-store/README.md`).
 3. URL de privacidad y de soporte (arriba).
 4. **App Privacy**: declara los datos que recoges (correo, nombre, datos de
-   salud/actividad, fotos, contenido de chat, identificadores) y su uso.
-5. **Account deletion**: indica que se borra desde Ajustes → Eliminar cuenta.
-6. Cuenta de prueba para el revisor (correo + contraseña).
-7. **Compras**: si la suscripción se vende dentro de la app, hay que usar
-   compras dentro de la app de Apple (ver sección 9). Enviar la app con un
-   checkout web de suscripción para consumo dentro de la app es motivo de
-   rechazo (guideline 3.1.1).
+   salud/actividad, fotos, historial de compras, identificadores) y su uso.
+   Debe coincidir con `ios/App/App/PrivacyInfo.xcprivacy`.
+5. **Account deletion**: indica que se borra desde Ajustes → Eliminar cuenta
+   y que eso cancela la suscripción en Stripe.
+6. Cuenta de prueba para el revisor (correo + contraseña) en *App Review
+   Information*, con las notas de `store-assets/STORE_LISTING_ES.md`.
+7. **Compras**: esta versión no vende nada dentro de la app (ver sección 9).
+   No puede haber precios, CTAs de compra ni enlaces a checkout.
 8. **Submit for Review**.
 
 ---
@@ -132,35 +133,51 @@ En https://appstoreconnect.apple.com:
 | Backend → Auth → Sign In Methods → Apple | Activar Apple. Para publicar con tu propia marca hace falta *bring your own credentials*: **Team ID**, **Key ID**, **Services ID (Client ID)** y el **.p8** de Apple Developer. Yo no puedo generarlos. |
 | Apple Developer → Identifiers | Activar **Sign In with Apple** en el App ID y crear el **Services ID** con el dominio `autopilotplan.com` y la callback de Supabase `https://<ref>.supabase.co/auth/v1/callback`. |
 | App Store Connect | Ficha, capturas, App Privacy, cuenta de prueba. |
+| Xcode → Signing & Capabilities | El target declara `DEVELOPMENT_TEAM = 3245AGM98R` y el proyecto `M45M4ZHZR4`. Deja **un único team** (el tuyo) en ambos sitios o la subida falla. No hay `.entitlements`: créalo solo si añades capabilities. |
+| Bundle ID | `app.lovable.aa0029da00154c05a2b503e61df0f87c` es de Lovable. Regístralo en tu cuenta (o cámbialo en `capacitor.config.ts` + `Info.plist` + App Store Connect) antes de archivar. |
 | Google Calendar | La conexión de calendario vuelve a la web (`autopilotplan.com`). Si la quieres dentro de la app hay que añadir el retorno nativo al OAuth de Google. |
 
-## 9. Pagos en iOS v1 — ruta Reader App (sin IAP)
+## 9. Pagos en iOS v1 — sin venta de bienes digitales
 
-La v1 iOS **no integra StoreKit ni IAP**. Se envía como *reader app* bajo
-la App Store Review Guideline §3.1.3(a): la app da acceso a contenido ya
-contratado fuera y no muestra precios, botones de compra ni comparativas
-de planes dentro del binario iOS.
+La v1 iOS **no integra StoreKit ni IAP**, y **tampoco se acoge a §3.1.3(a)
+(reader apps)**. Esa guideline enumera solo revistas, periódicos, libros,
+audio, música y vídeo: una app de entrenamiento y nutrición no entra en la
+lista, y §3.1.3(b) exigiría además ofrecer lo mismo por IAP.
 
-- Planes vigentes (contratados en web): **Plus (Entrenamiento) 29 €/mes**
-  y **Coach (Completo) 49 €/mes**. El plan Coach queda oculto en los
-  canales públicos y se habilita a mano.
+El modelo real de la v1 es: **app gratuita sin ningún punto de venta digital**.
+
+- En iOS no se muestran precios, botones de compra, comparativas de planes ni
+  guías en PDF de pago (App Store §3.1.1). El filtro vive en
+  `src/pages/Recursos.tsx` y `src/components/BookPreviewModal.tsx`.
+- Los puntos donde la web muestra upsell se sustituyen por copy neutro, sin
+  dominio ni llamada a la acción: *"Esta función forma parte de los planes de
+  pago."* (`IosFeatureLocked.tsx`).
 - Los usuarios que ya pagaron en web conservan su acceso porque el
   `subscription_tier` vive en Supabase, no en la tienda.
-- Dentro de la app iOS, los puntos donde la web muestra upsell se
-  reemplazan por copy neutro: *"Esta función está disponible en los
-  planes de pago. Visita autopilotplan.com desde tu navegador."* — sin
-  link clicable a checkout.
 - La gestión de suscripción (`customer-portal`) se abre siempre con
-  `Browser.open` del plugin `@capacitor/browser` cuando `isIOSNative`,
-  nunca con `window.open` ni dentro del WebView.
+  `Browser.open` del plugin `@capacitor/browser` cuando hay app nativa, nunca
+  con `window.open` ni dentro del WebView. Se oculta el *precio* del plan, pero
+  no la posibilidad de cancelar: borrar la cuenta cancela la suscripción en
+  Stripe (`supabase/functions/delete-account`).
+- Precios reales: **Plus 14,99 €/mes** y **Coach 49 €/mes**
+  (`src/config/tiers.ts`). Cualquier texto con otra cifra está desactualizado.
 
-Cualquier retorno a IAP se evalúa después de validar retención y de que
-la cuenta Apple Developer esté activa. En ese escenario habría que:
+### Por qué no "reader app"
+
+| Requisito de §3.1.3(a) | Autopilot |
+|---|---|
+| Categoría: revistas, periódicos, libros, audio, música o vídeo | ❌ Fitness y nutrición |
+| §3.1.3(b): mismo contenido disponible por IAP | ❌ No hay IAP |
+| Sin enlaces de compra fuera de la app | ✅ (tras estos cambios) |
+
+Presentarse como reader app es un rechazo garantizado. Si en el futuro se
+quiere vender en iOS, el camino es StoreKit 2:
 
 1. Crear suscripciones auto-renovables en App Store Connect.
 2. Integrar un plugin IAP nativo y mostrar precios Apple **solo en iOS**.
 3. Añadir "Restaurar compras" en Ajustes (requisito Apple).
 4. Validar recibos vía función de backend y Server-to-Server Notifications.
+5. Mantener Stripe solo para la web y sincronizar `entitlements`.
 
 ---
 

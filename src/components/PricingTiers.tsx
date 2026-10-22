@@ -16,7 +16,7 @@ interface PricingTiersProps {
 
 
 const PricingTiers = (props: PricingTiersProps) => {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no pricing UI inside the native build.
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): no pricing UI inside the native build.
   if (isIOSNative()) return null;
   return <PricingTiersContent {...props} />;
 };

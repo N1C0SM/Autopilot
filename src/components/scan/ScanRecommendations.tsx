@@ -144,7 +144,7 @@ function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
 }
 
 export default function ScanRecommendations(props: Props) {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no plan recommendations in the native build.
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): no plan recommendations in the native build.
   if (isIOSNative()) return null;
   return <Recommendations {...props} />;
 }

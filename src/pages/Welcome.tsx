@@ -53,7 +53,7 @@ const Welcome = () => {
 
         {/* Welcome lockup — Apple HIG §15 size-specific tracking */}
         <div className="mt-7 text-center">
-          <h1 className="font-display font-bold text-[clamp(2rem,8vw,2.5rem)] leading-[1.05] tracking-[-0.035em]">
+          <h1 className="type-large-title leading-[1.05] tracking-[-0.035em]">
             Te damos la bienvenida a
             <span className="block mt-1 text-primary">Autopilot</span>
           </h1>
@@ -66,10 +66,10 @@ const Welcome = () => {
               <Dumbbell className="w-7 h-7 text-primary" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[17px] font-semibold leading-tight tracking-[-0.015em]">
+              <h2 className="type-headline leading-tight tracking-[-0.015em]">
                 Entrenamiento
               </h2>
-              <p className="mt-1 text-[15px] text-muted-foreground leading-snug">
+              <p className="mt-1 type-subhead text-muted-foreground leading-snug">
                 Tu rutina se adapta cada semana a lo que haces y a cómo progresas.
               </p>
             </div>
@@ -79,10 +79,10 @@ const Welcome = () => {
               <Apple className="w-7 h-7 text-primary" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[17px] font-semibold leading-tight tracking-[-0.015em]">
+              <h2 className="type-headline leading-tight tracking-[-0.015em]">
                 Nutrición
               </h2>
-              <p className="mt-1 text-[15px] text-muted-foreground leading-snug">
+              <p className="mt-1 type-subhead text-muted-foreground leading-snug">
                 Calorías, macros y comidas que encajan con tu objetivo y tu día.
               </p>
             </div>
@@ -92,10 +92,10 @@ const Welcome = () => {
               <Sparkles className="w-7 h-7 text-primary" strokeWidth={1.75} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className="text-[17px] font-semibold leading-tight tracking-[-0.015em]">
+              <h2 className="type-headline leading-tight tracking-[-0.015em]">
                 En automático
               </h2>
-              <p className="mt-1 text-[15px] text-muted-foreground leading-snug">
+              <p className="mt-1 type-subhead text-muted-foreground leading-snug">
                 Tu plan se mantiene al día solo. Tú apareces, él se encarga del resto.
               </p>
             </div>
@@ -108,7 +108,7 @@ const Welcome = () => {
         <button
           type="button"
           onClick={() => { void hapticTap(); navigate("/signup?free=true"); }}
-          className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground font-semibold text-[17px] tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
+          className="w-full h-[52px] rounded-2xl bg-primary text-primary-foreground type-body font-semibold tracking-[-0.015em] flex items-center justify-center gap-1.5 transition-transform duration-150 ease-out active:scale-[0.98]"
         >
           Continuar
           <ArrowRight className="w-4 h-4" />
@@ -116,11 +116,11 @@ const Welcome = () => {
         <button
           type="button"
           onClick={() => { void hapticTap(); navigate("/login"); }}
-          className="w-full h-11 rounded-2xl text-primary font-medium text-[15px] transition-colors active:bg-primary/10"
+          className="w-full h-11 rounded-2xl text-primary font-medium type-subhead transition-colors active:bg-primary/10"
         >
           Ya tengo cuenta
         </button>
-        <p className="text-[12px] text-muted-foreground text-center pt-1.5 leading-relaxed">
+        <p className="type-caption1 text-muted-foreground text-center pt-1.5 leading-relaxed">
           Al continuar aceptas los{" "}
           <Link to="/legal/terminos" className="underline underline-offset-2">
             términos

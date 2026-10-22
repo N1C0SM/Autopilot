@@ -78,6 +78,33 @@ input, textarea, select, [contenteditable="true"] {
   .material { background: hsl(var(--popover)) !important; }
 }
 
+/* Apple HIG — Increase Contrast: stronger separators and secondary labels, the
+   same way UIKit darkens systemFill and separator when the setting is on. */
+@media (prefers-contrast: more) {
+  :root {
+    --border: 240 2% 40%;
+    --input: 240 2% 40%;
+    --muted-foreground: 240 3% 80%;
+    --secondary: 240 2% 24%;
+    --accent: 240 2% 32%;
+  }
+}
+
+/* Dynamic Type probe (native only, invisible): `-apple-system-body` resolves to
+   the body text style at the size the user chose in iOS Settings. `syncDynamicType()`
+   measures it and writes `--type-scale`. */
+.dynamic-type-probe {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  font: -apple-system-body;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Zonas seguras reales del dispositivo (notch, Dynamic Island, home indicator) */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
@@ -103,6 +130,20 @@ body.keyboard-open .admin-mobile-nav {
 body.keyboard-open main {
   padding-bottom: 1rem !important;
 }
+
+/* Push/pop de las pantallas secundarias (Ajustes, Recursos), como un
+   UINavigationController: la nueva entra desde la derecha y, al volver, el
+   contenido llega desde la izquierda. Reduce Motion ya las deja en un fundido. */
+@keyframes ios-push-in {
+  from { opacity: 0; transform: translate3d(30px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes ios-pop-in {
+  from { opacity: 0; transform: translate3d(-22px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.mobile-screen-push { animation: ios-push-in 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+.mobile-screen-pop { animation: ios-pop-in 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
 
 /* FullCalendar dark theme tweaks */
 .fc-themed .fc {
@@ -199,6 +240,11 @@ body.keyboard-open main {
 
     --radius: 0.75rem;
 
+    /* Dynamic Type: 1 = tamaño Large del sistema (17 pt). `syncDynamicType()` lo
+       ajusta al tamaño de texto elegido en Ajustes → Pantalla y brillo → Texto.
+       Solo se escala la tipografía, no la rejilla: las tarjetas no se deforman. */
+    --type-scale: 1;
+
     --sidebar-background: 240 3% 11%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 43 61% 60%;
@@ -291,26 +337,27 @@ body.keyboard-open main {
 }
 
 @layer components {
-  /* iOS text styles at the default Dynamic Type size (points = CSS px).
-     Each sets size, leading and the style's own weight; colour and emphasis
-     come from utilities (`text-muted-foreground`, `font-semibold`), which win
-     because they sit in a later layer. */
-  .type-large-title { font-family: var(--font-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: normal; }
-  .type-title1      { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: normal; }
-  .type-title2      { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: normal; }
-  .type-title3      { font-family: var(--font-display); font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: normal; }
-  .type-headline    { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: normal; }
-  .type-body        { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: normal; }
-  .type-callout     { font-size: 16px; line-height: 21px; font-weight: 400; letter-spacing: normal; }
-  .type-subhead     { font-size: 15px; line-height: 20px; font-weight: 400; letter-spacing: normal; }
-  .type-footnote    { font-size: 13px; line-height: 18px; font-weight: 400; letter-spacing: normal; }
-  .type-caption1    { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: normal; }
-  .type-caption2    { font-size: 11px; line-height: 13px; font-weight: 400; letter-spacing: normal; }
+  /* iOS text styles. Sizes are the system's Large values (points = CSS px) multiplied
+     by `--type-scale`, so the app follows the text size chosen in iOS Settings like a
+     UIKit app. Each sets size, leading and the style's own weight; colour and emphasis
+     come from utilities (`text-muted-foreground`, `font-semibold`), which win because
+     they sit in a later layer. */
+  .type-large-title { font-family: var(--font-display); font-size: calc(34px * var(--type-scale)); line-height: calc(41px * var(--type-scale)); font-weight: 700; letter-spacing: normal; }
+  .type-title1      { font-family: var(--font-display); font-size: calc(28px * var(--type-scale)); line-height: calc(34px * var(--type-scale)); font-weight: 700; letter-spacing: normal; }
+  .type-title2      { font-family: var(--font-display); font-size: calc(22px * var(--type-scale)); line-height: calc(28px * var(--type-scale)); font-weight: 700; letter-spacing: normal; }
+  .type-title3      { font-family: var(--font-display); font-size: calc(20px * var(--type-scale)); line-height: calc(25px * var(--type-scale)); font-weight: 600; letter-spacing: normal; }
+  .type-headline    { font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); font-weight: 600; letter-spacing: normal; }
+  .type-body        { font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-callout     { font-size: calc(16px * var(--type-scale)); line-height: calc(21px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-subhead     { font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-footnote    { font-size: calc(13px * var(--type-scale)); line-height: calc(18px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-caption1    { font-size: calc(12px * var(--type-scale)); line-height: calc(16px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-caption2    { font-size: calc(11px * var(--type-scale)); line-height: calc(13px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
 
   /* Header above an inset grouped list (Settings): footnote, uppercase, secondary label. */
   .type-group-header {
-    font-size: 13px;
-    line-height: 18px;
+    font-size: calc(13px * var(--type-scale));
+    line-height: calc(18px * var(--type-scale));
     font-weight: 400;
     letter-spacing: normal;
     text-transform: uppercase;
@@ -319,10 +366,11 @@ body.keyboard-open main {
 
   /* Control metrics: UIKit sizes on the phone, compact from `md` up. They live in
      the components layer so a utility at the call site (h-8, text-xs, rounded-lg)
-     still wins on every breakpoint. */
-  .btn-md   { height: 44px; padding-inline: 16px; border-radius: 12px; font-size: 17px; line-height: 22px; }
-  .btn-sm   { height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: 15px; line-height: 20px; }
-  .btn-lg   { height: 50px; padding-inline: 20px; border-radius: 14px; font-size: 17px; line-height: 22px; }
+     still wins on every breakpoint. La etiqueta crece con Dynamic Type; la altura
+     se mantiene en los 44 pt táctiles de la HIG. */
+  .btn-md   { height: 44px; padding-inline: 16px; border-radius: 12px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
+  .btn-sm   { height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); }
+  .btn-lg   { height: 50px; padding-inline: 20px; border-radius: 14px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
   .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
   
   /* iOS transition timing: 150ms ease for consistent feel */

@@ -5,7 +5,7 @@
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>es</string>
 	<key>CFBundleDisplayName</key>
 	<string>Autopilot</string>
 	<key>CFBundleExecutable</key>
@@ -39,8 +39,12 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.healthcare-fitness</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Autopilot usa la cámara para escanear tu físico y añadir fotos de progreso o perfil.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Autopilot usa el micrófono durante las videollamadas con tu entrenador.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Autopilot guarda infografías y fotos de tu progreso en tu fototeca cuando decides descargarlas.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

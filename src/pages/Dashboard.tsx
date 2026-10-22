@@ -59,6 +59,9 @@ const SectionFallback = () => (
   <Skeleton className="min-h-40 w-full rounded-2xl bg-card" aria-hidden />
 );
 
+/** Pantallas que se abren empujando desde una pestaña, no son pestañas. */
+const PUSHED_TABS: MobileTab[] = ["settings", "resources"];
+
 /** Plan que el usuario eligió en la web antes de registrarse (si lo hay). */
 const readLandingPlan = (): "training" | "full" | undefined => {
   try {
@@ -224,7 +227,10 @@ const Dashboard = () => {
       setPaymentStatus(profile.payment_status);
       setSubscriptionTier(profile.subscription_tier || "free");
       setCoaching(hasCoaching(profile));
-      setNutrition(hasNutrition(profile));
+      // La campaña gratuita concede nutrición en el servidor (generate-plan usa
+      // resolveFeatures con freeCampaign). Sin pasarla aquí, el cliente creía que
+      // no había nutrición y pintaba solo macros, sin comidas.
+      setNutrition(hasNutrition(profile, Date.now(), campaign));
       const plan = getConsumerPlan(profile);
       setConsumerPlan(plan);
       if (plan === "coach") {
@@ -328,7 +334,7 @@ const Dashboard = () => {
     lastFetchRef.current = Date.now();
     setLoadError(false);
     setLoading(false);
-  }, [user, navigate]);
+  }, [user, navigate, campaign]);
 
   useEffect(() => {
     if (!user) return;
@@ -391,7 +397,9 @@ const Dashboard = () => {
 
   // Por defecto Plus: es el plan que queremos vender primero. Coach es una elección explícita.
   const handleCompletePayment = async (plan: "training" | "full" | "transform" = "training") => {
-    if (campaign) return;
+    // App Store §3.1.1: en iOS no se inicia ningún checkout, aunque algún
+    // componente futuro olvide su propio guard.
+    if (campaign || isIOSNative()) return;
     try {
       track("checkout_start", { plan, source: "dashboard" });
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke("create-checkout", {
@@ -428,6 +436,7 @@ const Dashboard = () => {
 
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
+    if (isIOSNative()) return;
     const { data, error } = await supabase.functions.invoke("customer-portal");
     if (!error && data?.url) {
       window.open(data.url, "_blank");
@@ -912,6 +921,8 @@ const Dashboard = () => {
         lockedTabs={!campaign && !coaching ? ["nutrition"] : []}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
+        pushedTabs={PUSHED_TABS}
+        onRefresh={() => fetchData()}
         workoutMode={workoutMode}
       >
         {pageContent}

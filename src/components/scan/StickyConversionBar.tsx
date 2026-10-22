@@ -53,7 +53,7 @@ function StickyBar({ onCta }: { onCta: () => void }) {
 }
 
 export default function StickyConversionBar({ onCta }: { onCta: () => void }) {
-  // iOS v1 (reader app, App Store §3.1.3(a)): no sticky upsell inside the native build.
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): no sticky upsell inside the native build.
   if (isIOSNative()) return null;
   return <StickyBar onCta={onCta} />;
 }

@@ -1673,7 +1673,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     className="-mt-0.5"
                   />
                   <label htmlFor="scan-lead-consent" className="select-none type-footnote text-muted-foreground">
-                    Acepto que Autopilot use mi foto solo para generar mi diagnóstico físico y acepto la{" "}
+                    Acepto que Autopilot use mi foto solo para generar mi diagnóstico físico, incluido su envío a los
+                    proveedores de inteligencia artificial que lo analizan, y acepto la{" "}
                     <Link to="/legal/privacidad" className="text-primary">
                       política de privacidad
                     </Link>

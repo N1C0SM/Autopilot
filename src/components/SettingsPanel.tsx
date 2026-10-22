@@ -30,7 +30,7 @@ import { TIERS } from "@/config/tiers";
 import { getAvailabilityDayCount, getAvailabilityHours } from "@/lib/availability";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import { hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
-import { isIOSNative } from "@/lib/platform";
+import { isIOSNative, isNativeApp } from "@/lib/platform";
 import { compressImage } from "@/lib/imageCompression";
 import TravelModeCard from "@/components/dashboard/TravelModeCard";
 import type { Json } from "@/integrations/supabase/types";
@@ -112,6 +112,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const [regeneratingMeals, setRegeneratingMeals] = useState(false);
   const [confirmingMeals, setConfirmingMeals] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
@@ -547,8 +549,33 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       setLoadingPortal(false);
       return;
     }
-    window.open(data.url, "_blank");
+    if (isNativeApp()) {
+      // Nunca `window.open` dentro de la WebView: abre una pestaña que no
+      // vuelve a la app. `Browser.open` usa SFSafariViewController.
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: data.url, presentationStyle: "popover" });
+    } else {
+      window.open(data.url, "_blank");
+    }
     setLoadingPortal(false);
+  };
+
+  const cancelSubscription = async () => {
+    setCancelling(true);
+    const { data, error } = await supabase.functions.invoke("cancel-subscription");
+    setCancelling(false);
+    setConfirmingCancel(false);
+    if (error || data?.error) {
+      toast.error("No se pudo cancelar la suscripción. Inténtalo de nuevo.");
+      void hapticNotify("error");
+      return;
+    }
+    if (data?.canceled) {
+      toast.success("Suscripción cancelada. Mantienes el acceso hasta el final del periodo.");
+      void hapticNotify("success");
+    } else {
+      toast.info("Tu acceso lo gestiona tu entrenador. Escríbenos y lo cancelamos.");
+    }
   };
 
   const deleteAccount = async () => {
@@ -598,7 +625,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     return <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>;
   }
 
-  const iosReader = isIOSNative();
+  const iosNoPurchases = isIOSNative();
   const initial = (name || email).trim().charAt(0).toLocaleUpperCase("es");
   const hasPaidAccess = consumerPlan !== "free";
   const isActive = hasPaidAccess && ["active", "trialing"].includes(subscriptionStatus);
@@ -607,8 +634,8 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
     new Date(value).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
   const planCycle = currentPlan === "monthly" ? "Mensual" : "Anual";
   const planCyclePrice = currentPlan === "monthly" ? `${MONTHLY_PRICE_EUR}€/mes` : `${yearlyPriceEur}€/año`;
-  // iOS es una app de lectura: ni precios, ni ofertas, ni portal de pago.
-  const subscriptionFooter = iosReader
+  // iOS: sin precios, ofertas ni compra in-app (App Store §3.1.1).
+  const subscriptionFooter = iosNoPurchases
     ? undefined
     : hasPaidAccess
       ? currentPlan === "monthly"
@@ -983,9 +1010,17 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             />
           ) : null}
           {hasPaidAccess && currentPlan ? (
-            <ListRow title="Plan actual" value={iosReader ? planCycle : `${planCycle} (${planCyclePrice})`} />
+            <ListRow title="Plan actual" value={iosNoPurchases ? planCycle : `${planCycle} (${planCyclePrice})`} />
           ) : null}
-          {hasPaidAccess && !iosReader ? (
+          {hasPaidAccess && iosNoPurchases && isActive ? (
+            // En iOS se cancela dentro de la app: abrir un portal externo para
+            // gestionar el pago es justo lo que §3.1.1 no permite.
+            <ListRow
+              destructive
+              title="Cancelar suscripción"
+              onClick={() => { void hapticNotify("warning"); setConfirmingCancel(true); }}
+            />
+          ) : hasPaidAccess && !iosNoPurchases ? (
             <ListRow
               icon={<ExternalLink className="text-muted-foreground" />}
               title="Gestionar suscripción"
@@ -995,7 +1030,24 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             />
           ) : null}
         </ListGroup>
-        {!campaign && plans.plus && !iosReader && !hasPaidAccess && onUpgrade && (
+
+        <AlertDialog open={confirmingCancel} onOpenChange={setConfirmingCancel}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Cancelar tu suscripción?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Mantienes el acceso hasta el final del periodo que ya has pagado y no se te volverá a cobrar.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter stacked>
+              <AlertDialogCancel>Volver</AlertDialogCancel>
+              <AlertDialogAction destructive onClick={() => { void cancelSubscription(); }} disabled={cancelling}>
+                {cancelling ? "Cancelando…" : "Sí, cancelar suscripción"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        {!campaign && plans.plus && !iosNoPurchases && !hasPaidAccess && onUpgrade && (
           <div className="space-y-1">
             <Button variant="hero" size="lg" className="w-full" onClick={() => { void hapticTap(); onUpgrade("training"); }}>
               Mejorar a {plans.plusName} · {euro(plans.plusPrice)}/mes

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -8,6 +9,55 @@ const corsHeaders = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (value: string): boolean => UUID_RE.test(value);
+
+/**
+ * Cancela en Stripe las suscripciones de la cuenta antes de borrarla.
+ *
+ * App Store §5.1.1 y la propia promesa de la app ("al eliminar la cuenta se
+ * cancela la suscripción") exigen que borrar la cuenta detenga los cobros.
+ * Si Stripe falla, se lanza: preferimos abortar el borrado y que el usuario
+ * reintente antes que dejar una suscripción viva sin cuenta a la que avisar.
+ */
+async function cancelStripeSubscriptions(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<void> {
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const customerId = profile?.stripe_customer_id;
+  if (!customerId) return; // cuenta sin suscripción gestionada por Stripe
+
+  const { data: settings } = await supabaseAdmin
+    .from("settings").select("payment_mode").limit(1).maybeSingle();
+  const preferred = settings?.payment_mode === "live" ? "live" : "test";
+  const modes: Array<"live" | "test"> = preferred === "live" ? ["live", "test"] : ["test", "live"];
+
+  let lastError: Error | null = null;
+  for (const mode of modes) {
+    const key = Deno.env.get(mode === "live" ? "STRIPE_LIVE_SECRET_KEY" : "STRIPE_TEST_SECRET_KEY");
+    if (!key) continue;
+    try {
+      const stripe = new Stripe(key, { apiVersion: "2025-08-27.basil" });
+      const subs = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 });
+      for (const sub of subs.data) {
+        if (sub.status === "canceled" || sub.status === "incomplete_expired") continue;
+        await stripe.subscriptions.cancel(sub.id);
+      }
+      return;
+    } catch (e) {
+      lastError = e as Error;
+      // Cliente de otro modo (test vs live): probamos con la otra clave.
+      if (lastError.message.includes("No such customer")) continue;
+      break;
+    }
+  }
+  throw new Error(
+    `No se pudo cancelar la suscripción: ${lastError?.message ?? "Stripe no está configurado"}. Inténtalo de nuevo o cancélala desde Ajustes.`,
+  );
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -33,6 +83,9 @@ serve(async (req) => {
 
     const userId = userData.user.id;
     console.log(`[DELETE-ACCOUNT] Deleting user ${userId}`);
+
+    // Primero se corta la facturación: después ya no hay a quién avisar.
+    await cancelStripeSubscriptions(supabaseAdmin, userId);
 
     // Delete all user data from all tables
     const userTables = [

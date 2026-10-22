@@ -92,7 +92,7 @@ const ReferralShare = () => {
     }
   };
 
-  // iOS v1 (reader app, App Store §3.1.3(a)): referral copy announces monthly credit in €;
+  // iOS v1 (App Store §3.1.1: sin venta de bienes digitales; §3.1.3(a) no cubre fitness): referral copy announces monthly credit in €;
   // hide to stay within the "no pricing UI" rule.
   if (isIOSNative() || !referralCode) return null;
 
