@@ -849,8 +849,7 @@ const Dashboard = () => {
               void hapticSelection();
               setProgressTab(next as typeof progressTab);
             }}
-            key={progressTab}
-            className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+            className="touch-pan-y"
           >
           <Suspense fallback={<SectionFallback />}>
             <TabsContent
