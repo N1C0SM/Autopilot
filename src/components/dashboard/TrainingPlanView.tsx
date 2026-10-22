@@ -267,7 +267,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
       {!selectedPlan && (
         expandedDay ? (
           <EmptyState
-            className="min-h-[50dvh]"
+            card
             icon={Moon}
             title={selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`}
             description="Toca otro día para ver su sesión."
@@ -287,7 +287,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
             }
           />
         ) : (
-          <EmptyState className="min-h-[50dvh]" icon={CalendarDays} title="Elige un día" description="Toca un día de la semana para ver su sesión." />
+          <EmptyState card icon={CalendarDays} title="Elige un día" description="Toca un día de la semana para ver su sesión." />
         )
       )}
 

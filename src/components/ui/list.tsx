@@ -80,7 +80,7 @@ const ListRow = ({
       {leading ? (
         <span className="flex shrink-0 items-center py-2">{leading}</span>
       ) : icon ? (
-        <span className="flex w-7 shrink-0 items-center justify-center text-primary [&_svg]:size-5">{icon}</span>
+        <span className="flex h-[29px] w-[29px] shrink-0 items-center justify-center rounded-[8px] bg-primary/15 text-primary [&_svg]:size-[17px] [&_svg]:stroke-[2.25]">{icon}</span>
       ) : null}
       {/* El separador nace donde empieza el texto, no en el borde de la tarjeta. */}
       <span className="flex min-h-[44px] min-w-0 flex-1 items-center gap-3 py-[11px] group-[:not(:last-child)]/row:sep-b">
