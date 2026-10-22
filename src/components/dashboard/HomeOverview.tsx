@@ -494,12 +494,6 @@ const HomeOverview = ({
             ) : "Sin sesiones esta semana"
           }
         />
-        <OverviewRow
-          title="Recursos"
-          onClick={() => onNavigate("resources")}
-          icon={<BookOpen className="h-6 w-6 text-primary" strokeWidth={1.75} />}
-          description="Biblioteca, guías y recomendaciones"
-        />
       </div>
       </div>
     </div>
