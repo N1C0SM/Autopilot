@@ -33,6 +33,23 @@ REELS={
    ("CTA","Base de fuerza","19,90 €")],
 }
 SL=2.6
+# Voz clonada ElevenLabs: exporta ELEVENLABS_API_KEY y ELEVENLABS_VOICE_ID; sin ellas, reel mudo.
+XI_KEY=os.environ.get("ELEVENLABS_API_KEY"); XI_VOICE=os.environ.get("ELEVENLABS_VOICE_ID")
+def narration(head,title,sub):
+    j=lambda x:(x or "").replace("\n"," ")
+    if head=="CTA":
+        p=j(sub).split("|"); return f"{j(title)}. {'. '.join(p[:-1])+'. ' if len(p)>1 else ''}Por {p[-1]}. Enlace en la bio."
+    num={"01":"Uno","02":"Dos","03":"Tres","12 SEM":"12 semanas"}.get(head)
+    return ". ".join(x for x in [num or j(head).capitalize(),j(title),j(sub)] if x)
+def tts(text,path):
+    import json,urllib.request
+    if os.path.exists(path): return
+    req=urllib.request.Request(f"https://api.elevenlabs.io/v1/text-to-speech/{XI_VOICE}?output_format=mp3_44100_128",
+        data=json.dumps({"text":text,"model_id":"eleven_multilingual_v2","voice_settings":{"stability":0.5,"similarity_boost":0.85}}).encode(),
+        headers={"xi-api-key":XI_KEY,"Content-Type":"application/json"})
+    with urllib.request.urlopen(req,timeout=120) as r: open(path,"wb").write(r.read())
+def dur(path): return float(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration","-of","csv=p=0",path]))
+STARTS=[]; DURS=[]
 def text_block(d,x,y,txt,font,col,alpha,dy,lh):
     for i,line in enumerate(txt.split("\n")):
         a=ease(alpha-i*0.12); 
@@ -40,13 +57,13 @@ def text_block(d,x,y,txt,font,col,alpha,dy,lh):
         d.text((x,y+i*lh+(1-a)*dy),line,font=font,fill=c)
     return y+len(txt.split("\n"))*lh
 def frame(slides,f):
-    t=f/FPS; n=len(slides); idx=min(int(t//SL),n-1); lt=t-idx*SL
+    t=f/FPS; n=len(slides); idx=max(i for i in range(n) if STARTS[i]<=t or i==0); lt=t-STARTS[idx]; SL=DURS[idx]; total=STARTS[-1]+DURS[-1]
     im=Image.new("RGB",(W,H),BG); d=ImageDraw.Draw(im)
     # subtle moving grid
     off=int((t*40)%120)
     for gx in range(-120,W+120,120): d.line([(gx+off,0),(gx+off-300,H)],fill=(20,20,22),width=2)
     # progress bar
-    d.rectangle([80,120,W-80,126],fill=(35,35,38)); d.rectangle([80,120,80+(W-160)*min(1,t/(n*SL)),126],fill=GOLD)
+    d.rectangle([80,120,W-80,126],fill=(35,35,38)); d.rectangle([80,120,80+(W-160)*min(1,t/total),126],fill=GOLD)
     d.text((80,150),"AUTOPILOT",font=F(B,34),fill=MUTED)
     head,title,sub=slides[idx]; a=lt/0.6; out=ease((lt-(SL-0.35))/0.35) if idx<n-1 else 0
     a=a*(1-out)
@@ -69,8 +86,21 @@ def frame(slides,f):
     if sub: text_block(d,x,y+50,sub,F(R,56),MUTED,a*1.3-0.5,60,72)
     return im
 name=sys.argv[1]; slides=REELS[name]; out=sys.argv[2]
-N=int(len(slides)*SL*FPS)+FPS
-p=subprocess.Popen(["ffmpeg","-y","-loglevel","error","-f","rawvideo","-pix_fmt","rgb24","-s",f"{W}x{H}","-r",str(FPS),"-i","-","-f","lavfi","-i","anullsrc=r=44100:cl=stereo","-shortest","-c:v","libx264","-pix_fmt","yuv420p","-preset","medium","-crf","20","-c:a","aac","-movflags","+faststart",out],stdin=subprocess.PIPE)
+audio=["-f","lavfi","-i","anullsrc=r=44100:cl=stereo"]
+if XI_KEY and XI_VOICE:
+    cache=os.path.join(os.path.dirname(os.path.abspath(out)),".voz"); os.makedirs(cache,exist_ok=True)
+    segs=[]
+    for i,sl in enumerate(slides):
+        clip=os.path.join(cache,f"{name}_{i}.mp3"); tts(narration(*sl),clip)
+        DURS.append(max(SL,dur(clip)+0.5)); seg=os.path.join(cache,f"{name}_{i}.wav")
+        subprocess.run(["ffmpeg","-y","-loglevel","error","-i",clip,"-af","apad","-t",f"{DURS[-1]:.3f}","-ar","44100","-ac","2",seg],check=True); segs.append(seg)
+    lst=os.path.join(cache,f"{name}.txt"); open(lst,"w").write("".join(f"file '{x}'\n" for x in segs))
+    full=os.path.join(cache,f"{name}.wav"); subprocess.run(["ffmpeg","-y","-loglevel","error","-f","concat","-safe","0","-i",lst,"-af","apad=pad_dur=1",full],check=True)
+    audio=["-i",full]
+else: DURS[:]=[SL]*len(slides)
+for i in range(len(slides)): STARTS.append(sum(DURS[:i]))
+N=int(sum(DURS)*FPS)+FPS
+p=subprocess.Popen(["ffmpeg","-y","-loglevel","error","-f","rawvideo","-pix_fmt","rgb24","-s",f"{W}x{H}","-r",str(FPS),"-i","-",*audio,"-shortest","-c:v","libx264","-pix_fmt","yuv420p","-preset","medium","-crf","20","-c:a","aac","-movflags","+faststart",out],stdin=subprocess.PIPE)
 for f in range(N): p.stdin.write(frame(slides,min(f,N-FPS-1)).tobytes())
 p.stdin.close(); p.wait()
-frame(slides,int(1.2*FPS)).save(out.replace(".mp4","_f1.png")); frame(slides,int((len(slides)-1)*SL*FPS+20)).save(out.replace(".mp4","_cta.png"))
+frame(slides,int(1.2*FPS)).save(out.replace(".mp4","_f1.png")); frame(slides,int(STARTS[-1]*FPS+20)).save(out.replace(".mp4","_cta.png"))
