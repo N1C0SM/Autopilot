@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyProgressionToPendingSets, getProgressionSuggestion } from "./workoutProgression";
+import { applyProgressionToPendingSets, getProgressionSuggestion, summarizePreviousSets } from "./workoutProgression";
 
 const exercise = { exercise_id: "1", name: "Press banca", series: 3, reps: 8, weight: "60", rest: "90 s" };
 
