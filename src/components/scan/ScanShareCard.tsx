@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import autopilotLogo from "@/assets/autopilot-logo.png?inline";
+import autopilotLogo from "@/assets/autopilot-logo.png";
 
 export interface ScanShareData {
   physique: number;
