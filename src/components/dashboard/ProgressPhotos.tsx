@@ -231,7 +231,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           try {
             const { data: scan } = await supabase
               .from("scan_history")
-              .select("id")
+              .select("id, result, attractiveness, potential, physique, style")
               .eq("id", photo.scan_history_id)
               .maybeSingle();
             return { ...photo, scan };
