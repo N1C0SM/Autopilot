@@ -247,7 +247,8 @@ const Configurator = () => {
       equipment_type: c.focus === "gimnasio" ? "Gimnasio" : c.focus === "calistenia" ? "Calistenia" : "Mixto",
       intensity_level: 7,
       nutrition_preferences: nutrition,
-      weight: Number(c.weight) > 30 ? Number(c.weight) : null,
+      // Acepta «72,5» y nunca borra un peso ya guardado si el campo se deja vacío.
+      ...(Number(String(c.weight).replace(",", ".")) > 30 ? { weight: Number(String(c.weight).replace(",", ".")) } : {}),
       availability: {
         days: String(c.days.length), hours: String(+(c.minutes / 60).toFixed(2)),
         training_days: c.days, session_minutes: c.minutes, structure: c.structure,
@@ -360,7 +361,7 @@ const Configurator = () => {
               <Input autoComplete="off" enterKeyHint="next" aria-label="Alimentos que no quieres ver" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </Field>
             <Field header="Tu peso en kg (opcional)">
-              <Input type="number" inputMode="decimal" enterKeyHint="done" min="30" max="350" aria-label="Tu peso en kg" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value)} />
+              <Input type="text" inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label="Tu peso en kg" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value.replace(/[^\d.,]/g, ""))} />
             </Field>
           </>
         )}
