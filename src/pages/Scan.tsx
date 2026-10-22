@@ -44,11 +44,11 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import poseFrontImg from "@/assets/pose-front.png";
 import poseBackImg from "@/assets/pose-back.png";
-import autopilotLogo from "@/assets/autopilot-logo.png";
 import ProjectionTimeline from "@/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/components/scan/LockedInsightsGrid";
 import StickyConversionBar from "@/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/components/scan/ScanCoverageCard";
+import ScanShareCard from "@/components/scan/ScanShareCard";
 import ScanRecommendations, { recommendFor } from "@/components/scan/ScanRecommendations";
 import { euro, usePlanAvailability } from "@/lib/planCatalog";
 import SocialProofStrip from "@/components/scan/SocialProofStrip";
@@ -2394,94 +2394,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 }}
                 aria-hidden
               >
-                <div
-                  ref={shareRef}
-                  style={{
-                    width: 1080,
-                    height: 1920,
-                    background: "radial-gradient(ellipse 900px 640px at 50% 0%, rgba(255,170,60,0.12) 0%, transparent 70%), #08090b",
-                    color: "#f5f5f7",
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
-                    padding: "88px 80px 80px",
-                    display: "flex",
-                    flexDirection: "column",
-                    boxSizing: "border-box",
-                    overflow: "hidden",
-                  }}
-                >
-                  {/* Firma Autopilot */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                      <img loading="eager" decoding="sync" src={autopilotLogo} alt="Autopilot"
-                        style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} />
-                      <span style={{ fontSize: 22, fontWeight: 600, letterSpacing: "0.32em" }}>AUTOPILOT</span>
-                    </div>
-                    <span style={{ fontSize: 22, color: "#8e8e93", fontWeight: 500 }}>
-                      {new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long" })}
-                    </span>
-                  </div>
-
-                  {/* Fotos */}
-                  {(() => {
-                    const photos = [currentImg, backImg].filter(Boolean) as string[];
-                    if (!photos.length) return <div style={{ flex: 1 }} />;
-                    return (
-                      <div style={{ marginTop: 64, display: "flex", gap: 16, height: 900 }}>
-                        {photos.map((src, i) => (
-                          <div key={i} style={{ flex: 1, borderRadius: 40, overflow: "hidden", background: "#111216", border: "1px solid rgba(255,255,255,0.08)" }}>
-                            <img loading="eager" decoding="sync" src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Métrica principal */}
-                  <div style={{ marginTop: 64, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ fontSize: 24, color: "#8e8e93", fontWeight: 500 }}>Físico</div>
-                      <div style={{ fontSize: 168, fontWeight: 700, letterSpacing: -6, lineHeight: 1, marginTop: 8 }}>
-                        {result.physique.toFixed(1)}<span style={{ fontSize: 56, color: "#8e8e93", fontWeight: 500, letterSpacing: -1 }}> /10</span>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 48, paddingBottom: 20 }}>
-                      <div>
-                        <div style={{ fontSize: 22, color: "#8e8e93", fontWeight: 500 }}>Potencial</div>
-                        <div style={{ fontSize: 56, fontWeight: 600, color: "#FFAA3C", letterSpacing: -1.5 }}>{result.potential.toFixed(1)}</div>
-                      </div>
-                      {result.body_composition?.body_fat_pct ? (
-                        <div>
-                          <div style={{ fontSize: 22, color: "#8e8e93", fontWeight: 500 }}>Grasa est.</div>
-                          <div style={{ fontSize: 56, fontWeight: 600, letterSpacing: -1.5 }}>{result.body_composition.body_fat_pct}%</div>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Diagnóstico y foco */}
-                  <div style={{ marginTop: 40, fontSize: 34, fontWeight: 500, lineHeight: 1.3, color: "#d1d1d6" }}>
-                    {(result.headline_diagnosis ?? result.summary ?? "").slice(0, 120)}
-                  </div>
-                  {(() => {
-                    const focus = (result.improvements ?? []).map((m) => m.label).filter(Boolean).slice(0, 2);
-                    if (!focus.length) return null;
-                    return (
-                      <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                        {focus.map((f) => (
-                          <span key={f} style={{ fontSize: 24, fontWeight: 500, padding: "12px 26px", borderRadius: 999, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                            {f}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Pie de firma */}
-                  <div style={{ marginTop: "auto", paddingTop: 40, display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                    <span style={{ fontSize: 22, color: "#8e8e93" }}>Lectura orientativa con IA</span>
-                    <span style={{ fontSize: 24, fontWeight: 600, color: "#FFAA3C" }}>autopilotplan.com/scan</span>
-                  </div>
-                </div>
+                <ScanShareCard ref={shareRef} result={result} photos={[currentImg, backImg].filter(Boolean) as string[]} />
               </div>
             </motion.div>
           )}

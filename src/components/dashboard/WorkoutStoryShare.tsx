@@ -29,22 +29,6 @@ const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
   img.src = src;
 });
 
-function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number, maxLines = 2) {
-  const words = text.split(" ");
-  let line = "";
-  let lines = 0;
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    if (ctx.measureText(test).width > max && line) {
-      ctx.fillText(line, x, y);
-      y += lh; line = w; lines++;
-      if (lines >= maxLines - 1) break;
-    } else line = test;
-  }
-  if (line) ctx.fillText(line, x, y);
-  return y + lh;
-}
-
 // Draws the same anatomy + regions as the in-app map, heat-colored by set load.
 function drawFigure(ctx: CanvasRenderingContext2D, img: HTMLImageElement, side: "front" | "back", p: Props, x: number, y: number, scale: number) {
   const regions = side === "front" ? FRONT_REGIONS : BACK_REGIONS;
@@ -74,24 +58,11 @@ type Variant = "resumen" | "musculos";
 const F = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif";
 const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
-function roundedPanel(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number, fill = "rgba(255,255,255,0.045)") {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, radius);
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.08)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-}
-
-// Firma común a todo lo que sale de Autopilot (stories, scan, emails).
+// Firma común a todo lo que sale de Autopilot (stories, scan, emails): discreta, abajo.
 function drawSignature(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = "#FFAA3C"; ctx.beginPath(); ctx.arc(W / 2 - 190, H - 96, 7, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#fafafa"; ctx.font = `700 28px ${F}`;
-  ctx.fillText("A U T O P I L O T", W / 2, H - 96);
-  ctx.fillStyle = "#71717a"; ctx.font = `500 22px ${F}`;
-  ctx.fillText("autopilotplan.com", W / 2, H - 56);
+  ctx.fillStyle = "#71717a"; ctx.font = `500 26px ${F}`;
+  ctx.fillText("autopilotplan.com", W / 2, H - 90);
 }
 
 function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
@@ -123,99 +94,42 @@ function drawBackdrop(ctx: CanvasRenderingContext2D, W: number, H: number) {
 // The most share-worthy fact of this session: PR > progress vs last time > nothing.
 function highlight(p: Props): { type: "pr" | "progress"; label: string } | null {
   if (p.records.length) {
-    return { type: "pr", label: `NUEVO RÉCORD · ${p.records[0]}`.toUpperCase() };
+    return { type: "pr", label: `Nuevo récord · ${p.records[0]}` };
   }
   const prev = p.previousVolumeKg || 0, diff = p.volumeKg - prev;
   if (prev > 0 && diff > 0) {
     return {
       type: "progress",
-      label: `+${fmt(diff)} KG VS ÚLTIMA SESIÓN (+${Math.round((diff / prev) * 100)} %)`,
+      label: `+${fmt(diff)} kg vs. la última sesión (+${Math.round((diff / prev) * 100)} %)`,
     };
   }
   return null;
 }
 
 function drawHeader(ctx: CanvasRenderingContext2D, W: number, p: Props, logo?: HTMLImageElement | null) {
-  // Official Autopilot Brand Header
-  if (logo) {
-    ctx.drawImage(logo, 76, 78, 54, 54);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fafafa";
-    ctx.font = `800 36px ${F}`;
-    ctx.fillText("AUTOPILOT", 76 + 54 + 18, 106);
-  } else {
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fafafa";
-    ctx.font = `800 42px ${F}`;
-    ctx.fillText("AUTOPILOT", 76, 106);
-  }
+  ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  let x = 76;
+  if (logo) { ctx.drawImage(logo, x, 82, 48, 48); x += 64; }
+  ctx.fillStyle = "#fafafa"; ctx.font = `700 30px ${F}`;
+  ctx.fillText("Autopilot", x, 106);
+  ctx.textAlign = "right"; ctx.fillStyle = "#a1a1aa"; ctx.font = `500 28px ${F}`;
+  ctx.fillText(p.date, W - 76, 106);
+}
 
-  // Date capsule badge in top right
-  const dateStr = p.date.toUpperCase();
-  ctx.font = `600 24px ${F}`;
-  const dateW = ctx.measureText(dateStr).width + 36;
-  const dateX = W - 76 - dateW;
-  ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-  ctx.beginPath();
-  ctx.roundRect(dateX, 80, dateW, 52, 26);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-  ctx.fillStyle = "#a1a1aa";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(dateStr, dateX + dateW / 2, 106);
-
-  // Highlight badge (PR or Progress)
+// Logro de la sesión como cápsula centrada (récord en dorado, progreso en verde).
+function drawHighlight(ctx: CanvasRenderingContext2D, p: Props, W: number, y: number) {
   const hi = highlight(p);
   if (!hi) return;
-
   const isPr = hi.type === "pr";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  let fs = 27;
-  ctx.font = `700 ${fs}px ${F}`;
-  while (ctx.measureText(hi.label).width + 90 > W - 152 && fs > 20) {
-    fs -= 1;
-    ctx.font = `700 ${fs}px ${F}`;
-  }
-  const tw = ctx.measureText(hi.label).width;
-  const bw = tw + 72;
-  const bh = 62;
-  const by = 168;
-
-  ctx.save();
-  ctx.shadowColor = isPr ? "rgba(255, 170, 60, 0.35)" : "rgba(16, 185, 129, 0.35)";
-  ctx.shadowBlur = 16;
-  const grad = ctx.createLinearGradient(76, by, 76 + bw, by);
-  if (isPr) {
-    grad.addColorStop(0, "rgba(255, 170, 60, 0.2)");
-    grad.addColorStop(1, "rgba(245, 158, 11, 0.08)");
-  } else {
-    grad.addColorStop(0, "rgba(16, 185, 129, 0.2)");
-    grad.addColorStop(1, "rgba(5, 150, 105, 0.08)");
-  }
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.roundRect(76, by, bw, bh, 31);
-  ctx.fill();
-  ctx.strokeStyle = isPr ? "rgba(255, 170, 60, 0.45)" : "rgba(16, 185, 129, 0.45)";
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  ctx.restore();
-
-  // Badge icon dot & label
-  ctx.fillStyle = isPr ? "#FFAA3C" : "#34d399";
-  ctx.beginPath();
-  ctx.arc(106, by + bh / 2, 6, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = isPr ? "#FFAA3C" : "#34d399";
-  ctx.font = `700 ${fs}px ${F}`;
-  ctx.fillText(hi.label, 124, by + bh / 2);
+  const color = isPr ? "#FFAA3C" : "#34d399";
+  let fs = 30;
+  ctx.font = `600 ${fs}px ${F}`;
+  while (ctx.measureText(hi.label).width + 72 > W - 152 && fs > 20) { fs -= 1; ctx.font = `600 ${fs}px ${F}`; }
+  const bw = ctx.measureText(hi.label).width + 72, bh = 68, bx = (W - bw) / 2;
+  ctx.fillStyle = isPr ? "rgba(255,170,60,0.14)" : "rgba(52,211,153,0.14)";
+  ctx.beginPath(); ctx.roundRect(bx, y, bw, bh, bh / 2); ctx.fill();
+  ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(hi.label, W / 2, y + bh / 2 + 1);
 }
 
 function drawBigKg(ctx: CanvasRenderingContext2D, value: string, cx: number, baseline: number, maxW: number, size: number) {
@@ -242,87 +156,59 @@ function muscleSubtitle(p: Props) {
 }
 
 function drawTitle(ctx: CanvasRenderingContext2D, p: Props, y: number, W: number) {
-  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#fafafa";
-  let s = 68; const t = p.title || "Sesión de hoy";
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#fafafa";
+  let s = 76; const t = p.title || "Sesión de hoy";
   ctx.font = `800 ${s}px ${F}`;
-  while (ctx.measureText(t).width > W - 152 && s > 42) { s -= 2; ctx.font = `800 ${s}px ${F}`; }
-  ctx.fillText(t, 76, y);
-  ctx.fillStyle = "#a1a1aa"; ctx.font = `500 32px ${F}`;
-  wrap(ctx, muscleSubtitle(p), 76, y + 54, W - 152, 40, 1);
+  while (ctx.measureText(t).width > W - 152 && s > 44) { s -= 2; ctx.font = `800 ${s}px ${F}`; }
+  ctx.fillText(t, W / 2, y);
+  ctx.fillStyle = "#a1a1aa"; ctx.font = `500 34px ${F}`;
+  ctx.fillText(muscleSubtitle(p), W / 2, y + 58);
+}
+
+// Fila de métricas sin cajas, separadas por líneas finas (como un resumen de Fitness).
+function drawStats(ctx: CanvasRenderingContext2D, stats: [string, string][], W: number, y: number) {
+  const cw = (W - 152) / stats.length;
+  stats.forEach(([value, label], i) => {
+    const cx = 76 + cw * i + cw / 2;
+    if (i) { ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(76 + cw * i, y - 70, 2, 130); }
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#fafafa"; ctx.font = `700 84px ${F}`; ctx.fillText(value, cx, y);
+    ctx.fillStyle = "#a1a1aa"; ctx.font = `500 28px ${F}`; ctx.fillText(label, cx, y + 50);
+  });
 }
 
 function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, logo?: HTMLImageElement | null) {
   drawBackdrop(ctx, W, H);
   drawHeader(ctx, W, p, logo);
-  drawTitle(ctx, p, highlight(p) ? 340 : 270, W);
+  drawTitle(ctx, p, 600, W);
 
-  const panelY = highlight(p) ? 475 : 405;
-  roundedPanel(ctx, 52, panelY, W - 104, 790, 56, "rgba(255,255,255,0.04)");
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#a1a1aa"; ctx.font = `600 28px ${F}`;
+  ctx.fillText(p.volumeKg > 0 ? "Volumen total" : "Series", W / 2, 830);
+  drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, 1050, W - 190, 240);
+  drawHighlight(ctx, p, W, 1120);
 
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = "#a1a1aa";
-  ctx.font = `600 26px ${F}`;
-  ctx.fillText("CARGA TOTAL ACUMULADA", 104, panelY + 86);
-  drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, panelY + 300, W - 190, 210);
-
-  // Autopilot glowing gold hairline under the hero
-  const gold = ctx.createLinearGradient(104, 0, W - 104, 0);
-  gold.addColorStop(0, "rgba(234,179,8,0)");
-  gold.addColorStop(0.5, "#FFAA3C");
-  gold.addColorStop(1, "rgba(234,179,8,0)");
-  ctx.fillStyle = gold;
-  ctx.fillRect(104, panelY + 360, W - 208, 3);
-
-  // Bento telemetry modules (athletic identity)
-  const stats: [string, string, number][] = [
-    [String(p.sets), "Series", Math.min(1, p.sets / 30)],
-    [String(p.exercises), "Ejercicios", Math.min(1, p.exercises / 10)],
-    [String(p.muscles.length), "Grupos", Math.min(1, p.muscles.length / 8)],
-  ];
-  const gap = 24, mw = (W - 104 - 96 - gap * 2) / 3, my = panelY + 420, mh = 300;
-  stats.forEach(([value, label, prog], i) => {
-    const x = 100 + i * (mw + gap);
-    roundedPanel(ctx, x, my, mw, mh, 36, "rgba(255,255,255,0.045)");
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#fafafa"; ctx.font = `800 90px ${F}`; ctx.fillText(value, x + 30, my + 150);
-    ctx.fillStyle = "#a1a1aa"; ctx.font = `600 24px ${F}`; ctx.fillText(label.toUpperCase(), x + 30, my + 200);
-    ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, mw - 60, 8, 4); ctx.fill();
-    const g = ctx.createLinearGradient(x + 30, 0, x + mw - 30, 0);
-    g.addColorStop(0, "#FFC56B"); g.addColorStop(1, "#FF7828");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x + 30, my + 240, Math.max(16, (mw - 60) * prog), 8, 4); ctx.fill();
-  });
-
-  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#71717a"; ctx.font = `600 26px ${F}`;
+  drawStats(ctx, [
+    [String(p.sets), "Series"],
+    [String(p.exercises), "Ejercicios"],
+    [String(p.muscles.length), "Músculos"],
+  ], W, 1460);
   drawSignature(ctx, W, H);
 }
 
 function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement, logo?: HTMLImageElement | null) {
   drawBackdrop(ctx, W, H);
   drawHeader(ctx, W, p, logo);
-  drawTitle(ctx, p, 500, W);
-  const scale = 0.98, fw = 399 * scale;
-  drawFigure(ctx, front, "front", p, W / 2 - fw - 6, 640, scale);
-  drawFigure(ctx, back, "back", p, W / 2 + 6, 640, scale);
-  // chips
-  const top = [...p.muscles].sort((a, b) => (p.muscleSetCounts?.[b] || 0) - (p.muscleSetCounts?.[a] || 0)).slice(0, 4);
-  ctx.font = `700 32px ${F}`;
-  const widths = top.map((m) => ctx.measureText(m).width + 64);
-  let x = (W - (widths.reduce((a, b) => a + b, 0) + 16 * Math.max(0, top.length - 1))) / 2;
-  const y = 640 + 698 * scale + 24;
-  top.forEach((m, i) => {
-    const hot = i < 2;
-    ctx.fillStyle = hot ? "rgba(255,140,40,0.14)" : "rgba(255,255,255,0.05)";
-    ctx.strokeStyle = hot ? "rgba(255,150,50,0.7)" : "rgba(255,255,255,0.18)"; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.roundRect(x, y, widths[i], 76, 38); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = hot ? "#FFAA3C" : "#fafafa"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(m, x + widths[i] / 2, y + 38);
-    x += widths[i] + 16;
-  });
-  const s = drawBigKg(ctx, fmt(p.volumeKg), W / 2, 1620, W - 240, 230);
-  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#a1a1aa"; ctx.font = `500 36px ${F}`;
-  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1620 + Math.min(96, s * 0.4));
-  ctx.font = `600 26px ${F}`; ctx.fillStyle = "#71717a";
+  drawTitle(ctx, p, 330, W);
+  drawHighlight(ctx, p, W, 420);
+  const scale = 0.95, fw = 399 * scale, fy = 560;
+  drawFigure(ctx, front, "front", p, W / 2 - fw - 8, fy, scale);
+  drawFigure(ctx, back, "back", p, W / 2 + 8, fy, scale);
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#a1a1aa"; ctx.font = `600 28px ${F}`;
+  ctx.fillText(p.volumeKg > 0 ? "Volumen total" : "Series", W / 2, 1330);
+  const s = drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, 1510, W - 240, 190);
+  ctx.textAlign = "center"; ctx.fillStyle = "#a1a1aa"; ctx.font = `500 34px ${F}`;
+  ctx.fillText(`${p.sets} series · ${p.exercises} ejercicios`, W / 2, 1510 + Math.min(90, s * 0.45));
   drawSignature(ctx, W, H);
 }
 
