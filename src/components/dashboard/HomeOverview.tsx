@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Apple, BookOpen, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
+import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProgressRing } from "@/components/ui/progress-ring";
@@ -493,12 +493,6 @@ const HomeOverview = ({
               </>
             ) : "Sin sesiones esta semana"
           }
-        />
-        <OverviewRow
-          title="Recursos"
-          onClick={() => onNavigate("resources")}
-          icon={<BookOpen className="h-6 w-6 text-primary" strokeWidth={1.75} />}
-          description="Biblioteca, guías y recomendaciones"
         />
       </div>
       </div>

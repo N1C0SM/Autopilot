@@ -208,14 +208,11 @@ body.keyboard-open main {
     --sidebar-border: 240 2% 22%;
     --sidebar-ring: 43 61% 60%;
 
-    /* Apple HIG — the platform's system font. On Apple devices this resolves to
-       San Francisco with its own optical sizing and tracking tables; elsewhere to
-       Inter, mirroring SF Pro's neutral geometry, aperture shapes and proportions.
-       `--font-rounded` is SF Pro Rounded on Apple, Inter on non-Apple. */
-    --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Inter", system-ui, -apple-system, sans-serif;
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Inter", system-ui, -apple-system, sans-serif;
-    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Inter", system-ui, -apple-system, sans-serif;
-    --font-rounded: ui-rounded, 'SF Pro Rounded', "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    /* Inter (self-hosted, variable) on every platform: one typeface, typography-led design. */
+    --font-display: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-body: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-rounded: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
     --gradient-hero: linear-gradient(135deg, hsl(44 78% 72%) 0%, hsl(38 66% 52%) 100%);
     --gradient-gold: linear-gradient(180deg, hsl(44 78% 74%) 0%, hsl(40 66% 52%) 100%);
@@ -295,14 +292,14 @@ body.keyboard-open main {
      Each sets size, leading and the style's own weight; colour and emphasis
      come from utilities (`text-muted-foreground`, `font-semibold`), which win
      because they sit in a later layer. */
-  .type-large-title { font-family: var(--font-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: normal; }
-  .type-title1      { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: normal; }
-  .type-title2      { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: normal; }
-  .type-title3      { font-family: var(--font-display); font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: normal; }
-  .type-headline    { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: normal; }
-  .type-body        { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: normal; }
-  .type-callout     { font-size: 16px; line-height: 21px; font-weight: 400; letter-spacing: normal; }
-  .type-subhead     { font-size: 15px; line-height: 20px; font-weight: 400; letter-spacing: normal; }
+  .type-large-title { font-family: var(--font-display); font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: -0.03em; }
+  .type-title1      { font-family: var(--font-display); font-size: 28px; line-height: 34px; font-weight: 700; letter-spacing: -0.025em; }
+  .type-title2      { font-family: var(--font-display); font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; }
+  .type-title3      { font-family: var(--font-display); font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: -0.015em; }
+  .type-headline    { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  .type-body        { font-size: 17px; line-height: 22px; font-weight: 400; letter-spacing: -0.011em; }
+  .type-callout     { font-size: 16px; line-height: 21px; font-weight: 400; letter-spacing: -0.009em; }
+  .type-subhead     { font-size: 15px; line-height: 20px; font-weight: 400; letter-spacing: -0.006em; }
   .type-footnote    { font-size: 13px; line-height: 18px; font-weight: 400; letter-spacing: normal; }
   .type-caption1    { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: normal; }
   .type-caption2    { font-size: 11px; line-height: 13px; font-weight: 400; letter-spacing: normal; }
