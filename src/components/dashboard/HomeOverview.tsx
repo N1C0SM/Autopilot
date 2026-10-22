@@ -31,7 +31,8 @@ interface Props {
   dayPlans: DayPlan[];
   meals?: Meal[];
   userId?: string;
-  onNavigate: (section: UserSection) => void;
+  /** Al ir a «training» puede pedirse un día concreto: la tira de la semana lo usa. */
+  onNavigate: (section: UserSection, day?: string) => void;
   onStartWorkout?: () => void;
   onResumeWorkout?: () => void;
   profileName?: string;
@@ -338,7 +339,7 @@ const HomeOverview = ({
                   <button
                     type="button"
                     aria-label={`${day}${isToday ? ", hoy" : ""}: ${done ? "completado" : trains ? "con sesión" : "descanso"} — ver entrenamiento`}
-                    onClick={() => { void hapticTap(); onNavigate("training"); }}
+                    onClick={() => { void hapticTap(); onNavigate("training", day); }}
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-full type-subhead transition-opacity active:opacity-60",
                       done

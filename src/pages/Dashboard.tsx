@@ -148,6 +148,12 @@ const Dashboard = () => {
   const [autoStartWorkout, setAutoStartWorkout] = useState(false);
   const [resumeWorkout, setResumeWorkout] = useState(false);
   const [trainingDay, setTrainingDay] = useState<string | undefined>();
+  /** Día pulsado en la tira de «Hoy»: abre la rutina semanal en ese día. */
+  const [planFocusDay, setPlanFocusDay] = useState<string | undefined>();
+  // El día elegido solo manda mientras se está en Entrenar; al salir se olvida.
+  useEffect(() => {
+    if (section !== "training") setPlanFocusDay(undefined);
+  }, [section]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [freeOpen, setFreeOpen] = useState(false);
   const [freePlans, setFreePlans] = useState<DayPlan[] | null>(null);
@@ -607,9 +613,12 @@ const Dashboard = () => {
             nutrition={nutrition || campaign}
             planStatus={planStatus}
             dayPlans={dayPlans}
-            onNavigate={(s) => {
+            onNavigate={(s, day) => {
               setAutoStartWorkout(false);
-              if (s === "training") setTrainingView("plan");
+              if (s === "training") {
+                setTrainingView("plan");
+                setPlanFocusDay(day);
+              }
               setSection(s as MobileTab);
             }}
             onStartWorkout={() => {
@@ -712,7 +721,7 @@ const Dashboard = () => {
                 </div>
               )}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout ? (
-                <TrainingPlanView dayPlans={dayPlans} onOpenWorkout={(day) => {
+                <TrainingPlanView dayPlans={dayPlans} initialDay={planFocusDay} onOpenWorkout={(day) => {
                   setTrainingDay(day);
                   setTrainingView("tracker");
                 }} />
