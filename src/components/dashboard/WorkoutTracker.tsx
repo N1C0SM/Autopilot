@@ -1700,29 +1700,34 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const lastTime = summarizePreviousSets(prevSets?.filter((set) => !isWorkoutSetWarmup(set)));
                           const canApply = progression.label === "Subir" || progression.label === "Añadir rep";
                           return (
-                            <section aria-label="Por qué esta carga" className="mb-3.5 rounded-[18px] border border-primary/25 bg-primary/[0.07] p-3.5">
-                              <div className="flex items-start gap-3">
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/15 text-primary">
-                                  <TrendingUp className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="font-rounded type-headline tabular-nums text-foreground">{headline}</p>
-                                  {lastTime && <p className="mt-0.5 type-footnote tabular-nums text-muted-foreground">{lastTime}</p>}
-                                  <p className="mt-1 type-footnote text-foreground/80">{progression.reason}</p>
-                                </div>
+                            <section aria-label="Por qué esta carga" className="mb-3 rounded-[14px] bg-muted/40 px-3 py-2">
+                              {/* Una línea: lo que haces hoy + aplicar. El porqué, solo si lo pides. */}
+                              <div className="flex min-h-11 items-center gap-2">
+                                <p className="min-w-0 flex-1 truncate type-subhead font-semibold tabular-nums text-foreground">{headline}</p>
+                                {canApply && (
+                                  <button
+                                    type="button"
+                                    aria-label={progression.label === "Subir" ? `Usar ${kg} en las series` : "Aplicar +1 rep"}
+                                    onClick={() => {
+                                      void hapticImpact("medium");
+                                      applyProgression(ex.name, progression);
+                                    }}
+                                    className="min-h-11 shrink-0 rounded-full px-3 type-subhead font-semibold text-primary transition active:opacity-50"
+                                  >
+                                    Aplicar
+                                  </button>
+                                )}
                               </div>
-                              {canApply && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    void hapticImpact("medium");
-                                    applyProgression(ex.name, progression);
-                                  }}
-                                  className="mt-3 min-h-11 w-full rounded-[12px] bg-primary px-4 type-subhead font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
-                                >
-                                  {progression.label === "Subir" ? `Usar ${kg} en las series` : "Aplicar +1 rep"}
-                                </button>
-                              )}
+                              <details className="group">
+                                <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 type-footnote text-muted-foreground">
+                                  <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                                  Por qué
+                                </summary>
+                                <div className="pb-1">
+                                  {lastTime && <p className="type-footnote tabular-nums text-muted-foreground">{lastTime}</p>}
+                                  <p className="mt-0.5 type-footnote text-foreground/80">{progression.reason}</p>
+                                </div>
+                              </details>
                             </section>
                           );
                         })()}
