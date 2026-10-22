@@ -63,6 +63,9 @@ Meta: primeras ventas y crecimiento de seguidores en Instagram. Sin garantías: 
 - [PROPUESTA, requiere aprobación] Descuento de lanzamiento 72 h en el Pack con código de Stripe; colaboración con 3 microcuentas de fitness (intercambio de guía por mención); anuncios Meta 5 €/día durante 7 días (35 €) sobre el carrusel con más guardados.
 - Revisión: días 7, 14 y 21 con datos de Stripe y Metricool.
 
+## Voz para reels
+- ElevenLabs voice ID del fundador: `POqQLDHlrtcu15h0tbcz`. Falta: dominio api.elevenlabs.io permitido en la red y `ELEVENLABS_API_KEY` en el entorno.
+
 ## Aprobaciones pendientes
 - **A3 · Corregir redirecciones de los Payment Links de libros** a `https://autopilotplan.com/payment-success?session_id={CHECKOUT_SESSION_ID}` y revocar el acceso público de los PDF en Drive. Riesgo: un comprador en curso podría ver otra pantalla; bajo. Coste: 0 €. Si no: PDFs gratis para quien tenga el enlace y entregas no verificables.
 - **Revocar** la clave `rk_live_…` pegada en el chat (sustituida por el conector Stripe).
