@@ -156,16 +156,7 @@ const MobileAppShell = ({
         </div>
       </main>
 
-      {!workoutMode && onQuickTrain && (
-        <button
-          type="button"
-          onClick={onQuickTrain}
-          className="fixed right-4 z-40 flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg active:scale-95 transition-transform"
-          style={{ bottom: "calc(var(--mobile-nav-height) + var(--mobile-nav-offset) + 0.75rem + env(safe-area-inset-bottom, 0px))" }}
-        >
-          Ir a entrenar
-        </button>
-      )}
+      {/* Sin botón flotante «Ir a entrenar»: Entrenar ya es la segunda pestaña. */}
       {!workoutMode && (
         <MobileTabBar
           active={active}

@@ -392,7 +392,10 @@ const HomeOverview = ({
               className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
               aria-label={`Empezar ${sessionTitle}`}
             >
-              <span className="line-clamp-3 type-title1">{sessionTitle}</span>
+              <span className="block truncate type-title1">{String(sessionTitle).split(" · ")[0]}</span>
+              {String(sessionTitle).includes(" · ") && (
+                <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{String(sessionTitle).split(" · ").slice(1).join(" · ")}</span>
+              )}
               {sessionDetail.length > 0 && (
                 <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
                   {sessionDetail.map((part, index) => (
