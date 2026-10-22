@@ -53,7 +53,7 @@ import {
   toggleSupersetLink,
   type SupersetLinks,
 } from "@/lib/workoutSuperset";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { addExerciseLoad } from "@/lib/muscleMapping";
 import { FreeWorkoutPicker } from "./FreeWorkoutPicker";
 
@@ -2034,38 +2034,42 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
 
       <RPEDialog open={rpeOpen} onConfirm={handleRPEConfirm} />
-      <Dialog open={finishIncompleteOpen} onOpenChange={setFinishIncompleteOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle>¿Terminar con series pendientes?</DialogTitle>
-          <DialogDescription>
-            Te quedan {(totalSets - completedSets)} de {totalSets} series. Puedes terminarlo igualmente o seguir entrenando.
-          </DialogDescription>
-          <div className="mt-2 flex flex-col gap-2">
-            <Button onClick={() => void finishWorkoutConfirmed()} disabled={saving}>
+      <Drawer open={finishIncompleteOpen} onOpenChange={setFinishIncompleteOpen}>
+        <DrawerContent className="mx-auto max-w-md">
+          <DrawerHeader className="px-5 pt-4 text-center">
+            <DrawerTitle>¿Terminar con series pendientes?</DrawerTitle>
+            <DrawerDescription className="tabular-nums">
+              Te quedan {(totalSets - completedSets)} de {totalSets} series. Puedes terminarlo igualmente o seguir entrenando.
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="gap-2 px-5 pb-5">
+            <Button size="lg" className="min-h-11 w-full" onClick={() => { void hapticImpact("medium"); void finishWorkoutConfirmed(); }} disabled={saving}>
               Terminar y guardar
             </Button>
-            <Button variant="ghost" onClick={() => setFinishIncompleteOpen(false)}>
+            <Button size="lg" variant="ghost" className="min-h-11 w-full" onClick={() => { void hapticSelection(); setFinishIncompleteOpen(false); }}>
               Seguir entrenando
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={discardOpen} onOpenChange={setDiscardOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogTitle>¿Descartar entrenamiento?</DialogTitle>
-          <DialogDescription>
-            Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.
-          </DialogDescription>
-          <div className="mt-2 flex flex-col gap-2">
-            <Button variant="destructive" onClick={() => void discardWorkout()} disabled={saving}>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+      <Drawer open={discardOpen} onOpenChange={setDiscardOpen}>
+        <DrawerContent className="mx-auto max-w-md">
+          <DrawerHeader className="px-5 pt-4 text-center">
+            <DrawerTitle>¿Descartar entrenamiento?</DrawerTitle>
+            <DrawerDescription>
+              Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.
+            </DrawerDescription>
+          </DrawerHeader>
+          <DrawerFooter className="gap-2 px-5 pb-5">
+            <Button size="lg" variant="destructive" className="min-h-11 w-full font-semibold" onClick={() => void discardWorkout()} disabled={saving}>
               Descartar entrenamiento
             </Button>
-            <Button variant="ghost" onClick={() => setDiscardOpen(false)}>
+            <Button size="lg" variant="ghost" className="min-h-11 w-full font-semibold" onClick={() => { void hapticSelection(); setDiscardOpen(false); }}>
               Seguir entrenando
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
