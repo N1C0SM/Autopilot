@@ -120,3 +120,24 @@ describe("getProgressionSuggestion", () => {
     expect(result).toMatchObject({ label: "Mantener", weight: "60" });
   });
 });
+
+describe("summarizePreviousSets", () => {
+  it("resume reps reales y carga única con coma decimal", () => {
+    expect(summarizePreviousSets([
+      { weight: "22,5", reps: 8, done: true },
+      { weight: "22.5", reps: 8, done: true },
+      { weight: "22.5", reps: 7, done: true },
+    ])).toBe("Última vez: 8 · 8 · 7 reps con 22,5 kg");
+  });
+  it("muestra rango si las cargas cambian e ignora series no hechas", () => {
+    expect(summarizePreviousSets([
+      { weight: "60", reps: 8, done: true },
+      { weight: "65", reps: 6, done: true },
+      { weight: "70", reps: 5, done: false },
+    ])).toBe("Última vez: 8 · 6 reps con 60–65 kg");
+  });
+  it("sin carga externa y sin datos", () => {
+    expect(summarizePreviousSets([{ weight: "", reps: 12, done: true }])).toBe("Última vez: 12 reps");
+    expect(summarizePreviousSets(undefined)).toBeNull();
+  });
+});

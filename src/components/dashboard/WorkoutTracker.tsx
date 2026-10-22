@@ -20,7 +20,7 @@ import ExerciseFocus from "@/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/hooks/useExerciseMetadata";
 import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/lib/workoutPreferences";
 import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
-import { applyProgressionToPendingSets, getProgressionSuggestion } from "@/lib/workoutProgression";
+import { applyProgressionToPendingSets, getProgressionSuggestion, summarizePreviousSets } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
 import { WorkoutStudyCards } from "./WorkoutStudyCards";
@@ -1688,39 +1688,44 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                     >
                       <div className="px-2 pb-3 pt-2">
                         {/* Sugerencia de sobrecarga progresiva y cálculo de la siguiente carga */}
-                        {progression && !allDone && (
-                          <div className="mb-3.5 flex items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-gradient-to-r from-primary/10 via-card to-card px-3.5 py-2.5 shadow-sm">
-                            <div className="flex min-w-0 items-center gap-2.5">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                                <TrendingUp className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                        {progression && !allDone && (() => {
+                          const kg = progression.weight ? `${Number(progression.weight).toLocaleString("es-ES", { maximumFractionDigits: 2 })} kg` : "";
+                          const headline = progression.label === "Subir"
+                            ? `Hoy: ${kg}`
+                            : progression.label === "Añadir rep"
+                              ? "Hoy: +1 rep por serie"
+                              : progression.label === "Mantener"
+                                ? (kg ? `Hoy: mantén ${kg}` : "Hoy: mantén la carga")
+                                : (kg ? `Hoy: repite ${kg}` : "Hoy: repite el objetivo");
+                          const lastTime = summarizePreviousSets(prevSets?.filter((set) => !isWorkoutSetWarmup(set)));
+                          const canApply = progression.label === "Subir" || progression.label === "Añadir rep";
+                          return (
+                            <section aria-label="Por qué esta carga" className="mb-3.5 rounded-[18px] border border-primary/25 bg-primary/[0.07] p-3.5">
+                              <div className="flex items-start gap-3">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary/15 text-primary">
+                                  <TrendingUp className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-rounded type-headline tabular-nums text-foreground">{headline}</p>
+                                  {lastTime && <p className="mt-0.5 type-footnote tabular-nums text-muted-foreground">{lastTime}</p>}
+                                  <p className="mt-1 type-footnote text-foreground/80">{progression.reason}</p>
+                                </div>
                               </div>
-                              <div className="min-w-0">
-                                <p className="type-subhead font-bold leading-tight text-foreground">
-                                  {progression.label === "Subir"
-                                    ? `Siguiente carga: ${progression.weight} kg`
-                                    : progression.label === "Añadir rep"
-                                      ? "Siguiente objetivo: +1 rep"
-                                      : progression.label === "Mantener"
-                                        ? (progression.weight ? `Mantener ${progression.weight} kg` : "Mantener carga")
-                                        : (progression.weight ? `Repetir ${progression.weight} kg` : "Repetir objetivo")}
-                                </p>
-                                <p className="line-clamp-1 type-caption1 text-muted-foreground">{progression.reason}</p>
-                              </div>
-                            </div>
-                            {(progression.label === "Subir" || progression.label === "Añadir rep") && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  void hapticImpact("medium");
-                                  applyProgression(ex.name, progression);
-                                }}
-                                className="shrink-0 rounded-xl bg-primary px-3 py-1.5 type-caption1 font-bold text-primary-foreground shadow-sm transition-transform active:scale-95"
-                              >
-                                Aplicar
-                              </button>
-                            )}
-                          </div>
-                        )}
+                              {canApply && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    void hapticImpact("medium");
+                                    applyProgression(ex.name, progression);
+                                  }}
+                                  className="mt-3 min-h-11 w-full rounded-[12px] bg-primary px-4 type-subhead font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
+                                >
+                                  {progression.label === "Subir" ? `Usar ${kg} en las series` : "Aplicar +1 rep"}
+                                </button>
+                              )}
+                            </section>
+                          );
+                        })()}
 
                         {/* Column headers */}
                         <div className={`${SET_GRID} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>
