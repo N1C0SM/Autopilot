@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { Sparkles } from "lucide-react";
 import { hapticTap } from "@/lib/native";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ export default function CoachingOffer({ onChoose, nutrition = false, compact = f
   if (isIOSNative()) return null;
   return (
     <section className="px-1 py-2">
-      <Sparkles className="h-7 w-7 text-primary" strokeWidth={1.75} />
+      <IconTile icon={Sparkles} />
       <p className="mt-3 type-subhead text-muted-foreground">Autopilot {plans.plusName} · {euro(plans.plusPrice)}/mes</p>
       <h2 className="mt-1 type-title2">Autopilot se adapta a ti.</h2>
       <p className="mt-1.5 max-w-xl type-subhead text-muted-foreground">{nutrition

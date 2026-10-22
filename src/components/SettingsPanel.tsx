@@ -848,8 +848,9 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
             <FieldRow label="Días/semana" htmlFor="availability-days">
               <Input id="availability-days" type="number" inputMode="numeric" enterKeyHint="next" min={1} max={7} value={onboarding.availability.days} onChange={(e) => setAvailability("days", e.target.value)} className={rowInput} />
             </FieldRow>
-            <FieldRow label="Horas/sesión" htmlFor="availability-hours">
-              <Input id="availability-hours" type="number" inputMode="decimal" enterKeyHint="done" min={0.25} max={24} step="0.01" value={onboarding.availability.hours} onChange={(e) => setAvailability("hours", e.target.value)} className={rowInput} />
+            {/* Se guarda en horas; en pantalla, minutos (nadie piensa en «0,92 h»). */}
+            <FieldRow label="Minutos/sesión" htmlFor="availability-hours">
+              <Input id="availability-hours" type="number" inputMode="numeric" enterKeyHint="done" min={15} max={240} step="5" value={onboarding.availability.hours === "" || onboarding.availability.hours == null ? "" : Math.round(Number(onboarding.availability.hours) * 60)} onChange={(e) => setAvailability("hours", e.target.value === "" ? "" : String(Number(e.target.value) / 60))} className={rowInput} />
             </FieldRow>
           </ListGroup>
 

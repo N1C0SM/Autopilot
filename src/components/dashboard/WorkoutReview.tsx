@@ -1,4 +1,5 @@
 import { Sparkles } from "lucide-react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { buildWorkoutReview, type ReviewExercise } from "@/lib/workoutReview";
 
 interface Props {
@@ -15,7 +16,7 @@ export function WorkoutReview({ current, previous, rpe, coach = false }: Props) 
     <section role="region" aria-label="Revisión AutoPilot" className="w-full text-left">
       {/* Patrón de la bienvenida: icono en el tinte, título y una explicación, sin caja. */}
       <div className="flex items-start gap-4">
-        <Sparkles className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+        <IconTile icon={Sparkles} />
         <div className="min-w-0 flex-1">
           <h3 className="type-headline">Lo que nos deja esta sesión</h3>
           <p className="mt-1 type-subhead text-muted-foreground">

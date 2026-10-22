@@ -1,4 +1,5 @@
 import { getSportSchedules, getCustomActivities } from "@/lib/availability";
+import { IconTile } from "@/components/ui/icon-tile";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -858,7 +859,7 @@ const CalendarView = ({ dayPlans, targetUserId, isAdminMode, targetUserEmail, on
                 if (existingNote) {
                   return (
                     <div className="flex items-start gap-3">
-                      <StickyNote className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                      <IconTile icon={StickyNote} />
                       <div className="min-w-0">
                         <p className="type-headline">Nota de tu coach</p>
                         <p className="mt-0.5 break-words type-subhead text-muted-foreground">{existingNote}</p>

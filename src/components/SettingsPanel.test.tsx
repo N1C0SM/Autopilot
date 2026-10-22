@@ -92,7 +92,7 @@ describe("settings plan labels and availability", () => {
   it("reads current capacity and preserves schedule metadata when saving other profile data", async () => {
     show();
     expect(await screen.findByRole("spinbutton", { name: "Días/semana" })).toHaveValue(2);
-    expect(screen.getByRole("spinbutton", { name: "Horas/sesión" })).toHaveValue(0.92);
+    expect(screen.getByRole("spinbutton", { name: "Minutos/sesión" })).toHaveValue(55);
     fireEvent.click(screen.getByRole("button", { name: "Guardar datos" }));
     await waitFor(() => expect(mocks.saves).toHaveLength(1));
     expect(mocks.saves[0].availability).toEqual(mocks.availability);

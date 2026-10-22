@@ -1,4 +1,5 @@
 import { Play, PencilLine } from "lucide-react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { generatePlanGuarded, isManualPlan } from "@/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
 import { readActiveWorkout } from "@/lib/activeWorkout";
@@ -610,7 +611,7 @@ const Dashboard = () => {
 
       {hasPlan && section === "home" && (
         // Hoy llena la pantalla: HomeOverview reparte el alto y lo demás va debajo.
-        <div className="flex w-full flex-1 flex-col gap-8">
+        <div className="flex w-full flex-1 flex-col gap-2.5">
           <HomeOverview
             userId={user?.id}
             meals={meals}
@@ -656,17 +657,21 @@ const Dashboard = () => {
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
-            <div className="mx-auto w-full space-y-6 empty:hidden lg:max-w-5xl">
+            <div className="mx-auto w-full space-y-2.5 empty:hidden lg:max-w-5xl">
               {firstWeek && (
-                <div className="flex items-start gap-4">
-                  <span aria-hidden="true" className="flex w-10 shrink-0 justify-center pt-0.5">
-                    <Flag className="h-7 w-7 text-primary" strokeWidth={1.75} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="type-headline">Tu primera semana</p>
-                    <p className="mt-0.5 type-subhead tabular-nums text-muted-foreground">
-                      Día {firstWeek.dayNumber} de 7 · {firstWeek.completed} de {firstWeek.target} entrenos
+                <div className="rounded-2xl bg-card p-3.5">
+                  <div className="flex items-center gap-3">
+                    <IconTile icon={Flag} />
+                    <div className="min-w-0 flex-1">
+                      <p className="type-headline">Tu primera semana</p>
+                      <p className="type-footnote tabular-nums text-muted-foreground">Día {firstWeek.dayNumber} de 7</p>
+                    </div>
+                    <p className="shrink-0 font-rounded text-[22px] font-bold tabular-nums">
+                      {firstWeek.completed}<span className="text-[15px] font-semibold text-muted-foreground">/{firstWeek.target}</span>
                     </p>
+                  </div>
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
+                    <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.min(100, (firstWeek.completed / Math.max(1, firstWeek.target)) * 100)}%` }} />
                   </div>
                 </div>
               )}

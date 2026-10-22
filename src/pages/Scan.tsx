@@ -1,4 +1,5 @@
 import { errorMessage, errorStatus } from "@/lib/runtimeValues";
+import { IconTile } from "@/components/ui/icon-tile";
 import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -108,6 +109,9 @@ const GOALS = [
   { id: "posture", label: "Mejorar postura", icon: Activity, desc: "Espalda, hombros y core" },
   { id: "from_zero", label: "Empezar desde cero", icon: Sprout, desc: "Llevo tiempo parado o nunca entrené" },
 ] as const;
+
+// El objetivo se guarda por id ("gain_muscle"): en pantalla siempre su nombre.
+const goalLabel = (value: string | null) => GOALS.find((goal) => goal.id === value)?.label ?? value;
 
 const LOADING_MESSAGES = [
   "Analizando postura…",
@@ -1310,7 +1314,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   />
                   <div className="flex-1 min-w-0">
                     <h2 className="type-headline truncate">
-                      {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || savedGoalText || "Tu objetivo actual"}
+                      {goalPresets.find((p) => p.storage_path === savedObjectivePath || p.image_url === savedObjectiveUrl)?.name || goalLabel(savedGoalText) || "Tu objetivo actual"}
                     </h2>
                     <p className="type-subhead text-muted-foreground mt-0.5">
                       La IA lo usará para estimar cuántos meses te faltan.
@@ -1343,7 +1347,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 <FindingRow
                   icon={Target}
                   title="Tu objetivo"
-                  description={<span className="block truncate">{savedGoalText || "Sin objetivo definido"}</span>}
+                  description={<span className="block truncate">{goalLabel(savedGoalText) || "Sin objetivo definido"}</span>}
                   action={
                     <Button variant="plain" size="sm" onClick={() => { void hapticTap(); setEditingObjective(true); }}>
                       Cambiar objetivo
@@ -1554,7 +1558,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                       aria-pressed={active}
                       className="group/row flex w-full items-center gap-3 px-4 text-left transition-colors duration-150 active:bg-accent"
                     >
-                      <Icon className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} />
+                      <IconTile icon={Icon} />
                       <span className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 py-2.5 group-[:not(:last-child)]/row:sep-b">
                         <span className="min-w-0 flex-1">
                           <span className="block type-body">{g.label}</span>

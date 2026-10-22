@@ -148,7 +148,7 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
         })()}
       </div>
 
-      <div className="-mx-3 flex flex-col">
+      <div className="grid grid-cols-2 gap-2.5">
         <OverviewRow
           title="Nutrición"
           onClick={onNutrition}

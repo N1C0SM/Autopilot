@@ -144,14 +144,14 @@ describe("dashboard home overview", () => {
     expect(screen.queryByRole("button", { name: /^Empezar/ })).not.toBeInTheDocument();
   });
 
-  it("marks today as done and opens progress once the session is logged", () => {
+  it("marks today as done and opens the session summary once it is logged", () => {
     const onNavigate = vi.fn();
     render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} completedToday />);
 
-    expect(screen.getByText("Entrenamiento completado")).toBeVisible();
+    expect(screen.getByText("Hecho hoy")).toBeVisible();
     expect(screen.getByRole("button", { name: new RegExp(`${today}, hoy: completado`) })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Ver progreso de la sesión" }));
-    expect(onNavigate).toHaveBeenCalledWith("progress");
+    fireEvent.click(screen.getByRole("button", { name: "Ver el resumen de la sesión de hoy" }));
+    expect(onNavigate).toHaveBeenCalledWith("training");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 

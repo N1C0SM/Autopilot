@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Trash2, X, ChevronLeft, ChevronRight, Columns2, ImageOff, WifiOff, Sparkles } from "lucide-react";
@@ -637,7 +638,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
       {/* Aún no hay dos fotos del mismo ángulo: aviso con el patrón de la bienvenida */}
       {ready && photos.length > 0 && posePhotos.length < 2 && (
         <section className="flex items-start gap-4">
-          <Columns2 className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+          <IconTile icon={Columns2} />
           <div className="min-w-0 flex-1">
             <h2 className="type-headline">Compara tu evolución</h2>
             <p className="mt-1 type-subhead text-muted-foreground">

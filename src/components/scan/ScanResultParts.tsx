@@ -1,4 +1,5 @@
 import { useState, type ComponentType, type CSSProperties, type ReactNode } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,8 +94,13 @@ export function FindingRow({
 }) {
   return (
     <div className="flex items-start gap-4">
-      <div className="flex min-h-7 w-10 shrink-0 items-center justify-center pt-0.5">
-        {leading ?? (Icon ? <Icon className={cn("h-7 w-7", iconClassName)} strokeWidth={1.75} /> : null)}
+      <div className="flex min-h-8 w-8 shrink-0 items-center justify-center">
+        {leading ?? (Icon ? (
+          <IconTile
+            icon={Icon}
+            tone={iconClassName.includes("destructive") ? "destructive" : iconClassName.includes("success") ? "success" : iconClassName.includes("muted") ? "muted" : "primary"}
+          />
+        ) : null)}
       </div>
       <div className="min-w-0 flex-1">
         <div className="type-headline">{title}</div>

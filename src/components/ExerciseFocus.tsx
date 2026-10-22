@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { CalendarDays, Dumbbell, TrendingUp } from "lucide-react";
 import ExerciseMedia from "@/components/ExerciseMedia";
 import ExerciseTechnique from "@/components/ExerciseTechnique";
@@ -159,7 +160,7 @@ export const ExerciseFocus = ({
           <ul className="mt-7 space-y-5">
             {suggestion && (
               <li className="flex items-start gap-4">
-                <TrendingUp className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                <IconTile icon={TrendingUp} />
                 <div className="min-w-0">
                   <p className="type-headline">{suggestionTitle}</p>
                   <p className="mt-0.5 type-subhead text-muted-foreground">{suggestion.reason}</p>
@@ -168,7 +169,7 @@ export const ExerciseFocus = ({
             )}
             {best1Rm > 0 && (
               <li className="flex items-start gap-4">
-                <Dumbbell className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                <IconTile icon={Dumbbell} />
                 <div className="min-w-0">
                   <p className="type-headline tabular-nums">{best1Rm.toFixed(1)} kg</p>
                   <p className="mt-0.5 type-subhead text-muted-foreground">Tu mejor 1RM estimado en este ejercicio</p>
@@ -185,7 +186,7 @@ export const ExerciseFocus = ({
             </div>
           ) : history.length === 0 ? (
             <div className="flex items-start gap-4">
-              <CalendarDays className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+              <IconTile icon={CalendarDays} />
               <div className="min-w-0">
                 <p className="type-headline">Tus últimas sesiones</p>
                 <p className="mt-0.5 type-subhead text-muted-foreground">

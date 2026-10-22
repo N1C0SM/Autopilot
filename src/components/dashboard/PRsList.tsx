@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, WifiOff } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -123,7 +124,7 @@ const PRsList = ({ userId }: Props) => {
   return (
     <div className="space-y-8 lg:grid lg:grid-cols-[280px_1fr] lg:gap-12 lg:space-y-0 lg:items-start">
       <section aria-label="Tu mejor marca" className="pt-1 lg:sticky lg:top-4">
-        <Trophy className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" />
+        <IconTile icon={Trophy} size="md" />
         <p className="mt-3 font-rounded text-[56px] font-bold leading-none tabular-nums">
           {topHasEstimate ? top.estimated_1rm : top.weight}
           <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>

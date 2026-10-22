@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { IconTile } from "@/components/ui/icon-tile";
 import { BookOpen, Dumbbell } from "lucide-react";
 import { euro, usePlanAvailability, type PlanAvailability } from "@/lib/planCatalog";
 import { isIOSNative } from "@/lib/platform";
@@ -113,9 +114,9 @@ function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
       >
         <div className="flex w-10 shrink-0 items-center justify-center pt-0.5">
           {rec.kind === "guia" ? (
-            <BookOpen className="w-7 h-7 text-primary" strokeWidth={1.75} />
+            <IconTile icon={BookOpen} />
           ) : (
-            <Dumbbell className="w-7 h-7 text-primary" strokeWidth={1.75} />
+            <IconTile icon={Dumbbell} />
           )}
         </div>
         <div className="flex-1 min-w-0">

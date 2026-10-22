@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy } from "lucide-react";
 import { toast } from "sonner";
@@ -243,7 +244,7 @@ const WeeklyProgress = ({ userId, dayPlans, compact = false }: Props) => {
 
       {!compact && completedCount === totalDays && totalDays > 0 && (
         <div className="mt-4 flex items-center gap-3 pt-4 sep-t">
-          <Trophy className="h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+          <IconTile icon={Trophy} />
           <div className="min-w-0">
             <p className="type-headline">Semana completada</p>
             <p className="type-footnote text-muted-foreground">Increíble trabajo, sigue así.</p>

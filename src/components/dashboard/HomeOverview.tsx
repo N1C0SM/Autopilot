@@ -81,8 +81,8 @@ interface ChatPreviewMessage {
 }
 
 /**
- * Fila de la lista de la bienvenida: icono a la izquierda, título, una línea gris y chevron. Sin caja.
- * Exportada para que los teléfonos de la web pública pinten exactamente la misma fila.
+ * Tarjeta compacta de Hoy (como las de Fitness): anillo arriba, título y una línea gris.
+ * Exportada para que los teléfonos de la web pública pinten exactamente la misma tarjeta.
  * Sin onClick se pinta como imagen estática (no enfocable).
  */
 export const OverviewRow = ({
@@ -96,15 +96,15 @@ export const OverviewRow = ({
   description: ReactNode;
   onClick?: () => void;
 }) => {
-  const className = "flex min-h-[64px] w-full items-center gap-4 rounded-2xl px-3 py-3 text-left transition-colors duration-150 ease-out active:bg-secondary focus-visible:bg-secondary focus-visible:outline-none";
+  const className = "flex min-w-0 flex-col rounded-2xl bg-card p-3.5 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
   const inner = (
     <>
-      <span aria-hidden="true" className="flex w-10 shrink-0 justify-center">{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block type-headline">{title}</span>
-        <span className="mt-0.5 block type-subhead tabular-nums text-muted-foreground">{description}</span>
+      <span className="flex items-start justify-between">
+        <span aria-hidden="true">{icon}</span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
       </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
+      <span className="mt-3 block type-headline">{title}</span>
+      <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{description}</span>
     </>
   );
   if (!onClick) return <div className={className}>{inner}</div>;
@@ -313,7 +313,8 @@ const HomeOverview = ({
   };
 
   return (
-    <div className="mx-auto flex w-full flex-1 flex-col lg:max-w-5xl">
+    // Con la sesión hecha no hay acción que centrar: el contenido se apila sin huecos.
+    <div className={cn("mx-auto flex w-full flex-col lg:max-w-5xl", !(completedToday && !activeWorkout) && "flex-1")}>
       {/* En web: dos columnas — saludo + semana a la izquierda, acción a la derecha */}
       <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[1fr_320px] lg:gap-x-12 lg:items-start">
         <div>
@@ -369,7 +370,7 @@ const HomeOverview = ({
         </div>
 
         {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
-        <div className="flex flex-1 flex-col justify-center py-8 md:py-10 lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16">
+        <div className={cn("flex flex-col lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16", completedToday && !activeWorkout ? "pb-2.5 pt-6" : "flex-1 justify-center py-8 md:py-10")}>
           {activeWorkout && activeWorkoutIsToday ? (
             <div className="w-full">
               <p className="type-caption1 font-semibold text-primary">EN CURSO · HOY</p>
@@ -413,25 +414,22 @@ const HomeOverview = ({
               </span>
             </button>
           ) : completedToday ? (
-            <EmptyState
-              className="py-0"
-              icon={Check}
-              title="Entrenamiento completado"
-              description="Tu registro ya está guardado."
-              action={(
-                <Button
-                  type="button"
-                  variant="plain"
-                  aria-label="Ver progreso de la sesión"
-                  onClick={() => {
-                    void hapticTap();
-                    onNavigate("progress");
-                  }}
-                >
-                  Ver progreso
-                </Button>
-              )}
-            />
+            // Hecho: una tarjeta compacta con la sesión, no un estado vacío.
+            <button
+              type="button"
+              onClick={() => { void hapticTap(); onNavigate("training"); }}
+              className="flex w-full items-center gap-3 rounded-2xl bg-card p-3.5 text-left transition-transform duration-150 active:scale-[0.98]"
+              aria-label="Ver el resumen de la sesión de hoy"
+            >
+              <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                <Check className="h-5 w-5" strokeWidth={3} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block type-footnote font-semibold text-success">Hecho hoy</span>
+                <span className="block truncate type-headline">{todayPlan ? String(planTitle(todayPlan)).split(" · ")[0] : "Sesión completada"}</span>
+              </span>
+              <span className="shrink-0 type-subhead text-primary">Resumen</span>
+            </button>
           ) : (
             <EmptyState
               className="py-0"
@@ -462,8 +460,8 @@ const HomeOverview = ({
           )}
         </div>
 
-      {/* Filas secundarias: Nutrición + Progreso */}
-      <div className="-mx-3 flex flex-col md:grid md:grid-cols-2 md:gap-2 lg:mt-8 lg:mx-0 lg:gap-4">
+      {/* Tarjetas secundarias: Nutrición + Progreso */}
+      <div className="grid grid-cols-2 gap-2.5 lg:mt-8 lg:gap-4">
         <OverviewRow
           title="Nutrición"
           onClick={() => onNavigate("nutrition")}

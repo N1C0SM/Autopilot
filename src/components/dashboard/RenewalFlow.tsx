@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -111,7 +112,7 @@ const RenewalFlow = ({ userId, subscriptionTier }: Props) => {
       </Dialog>
 
       <div className="flex items-start gap-4 px-1">
-        <CalendarClock className="mt-0.5 h-7 w-7 shrink-0 text-primary" strokeWidth={1.75} />
+        <IconTile icon={CalendarClock} />
         <div className="min-w-0">
           <div className="type-headline">Tu ciclo Transformación</div>
           <p className="mt-0.5 type-subhead text-muted-foreground">
