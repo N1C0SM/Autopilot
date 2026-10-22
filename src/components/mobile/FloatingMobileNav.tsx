@@ -54,13 +54,13 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
               aria-current={isActive ? "page" : undefined}
               aria-label={itemLabel}
               className={`relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full px-0.5 transition-transform duration-150 ease-out active:scale-[0.94] ${
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             >
               {isActive && (
                 <motion.span
                   layoutId={`${layoutId}-active`}
-                  className="absolute inset-0 rounded-full bg-secondary"
+                  className="absolute inset-0 rounded-full bg-primary/90 shadow-[0_6px_18px_-8px_hsl(var(--primary)/0.6)]"
                   transition={{ type: "spring", stiffness: 380, damping: 36 }}
                 />
               )}
