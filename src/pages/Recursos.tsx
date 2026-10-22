@@ -1,7 +1,7 @@
 import PublicLayout from "@/components/PublicLayout";
 import { parseRecommendations } from "@/lib/siteContent";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Helmet } from "react-helmet-async";
 import { ChevronLeft, Newspaper, ShoppingBag } from "lucide-react";
@@ -10,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { withBookRef } from "@/lib/buyLink";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
+import { track } from "@/lib/analytics";
 import BookCover from "@/components/BookCover";
 import BookPreviewModal from "@/components/BookPreviewModal";
 import ItemPreviewModal, { RECOMMENDATION_VARIANT, previewIntro, type PreviewItem } from "@/components/ItemPreviewModal";
@@ -48,6 +49,9 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const navigate = useNavigate();
   const [ebooks, setEbooks] = useState<Ebook[]>([]);
   const [previewBook, setPreviewBook] = useState<Ebook | null>(null);
+  // ?guia=<id> abre la guía directamente: enlace directo para vídeos y bio.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const guiaParam = searchParams.get("guia");
   const [previewReco, setPreviewReco] = useState<PreviewItem | null>(null);
   const [recos, setRecos] = useState<Reco[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -126,6 +130,27 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
     })().finally(() => setLoaded(true));
   }, []);
 
+  useEffect(() => {
+    if (!guiaParam || previewBook) return;
+    const match = ebooks.find((b) => b.id === guiaParam);
+    if (match) {
+      setPreviewBook(match);
+      track("book_preview_open", { book: match.title, source: "deep_link" });
+    }
+  }, [guiaParam, ebooks, previewBook]);
+
+  const openBook = (e: Ebook) => {
+    void hapticTap();
+    setPreviewBook(e);
+    track("book_preview_open", { book: e.title, source: "grid" });
+    if (e.id) setSearchParams((p) => { p.set("guia", e.id!); return p; }, { replace: true });
+  };
+
+  const closeBook = () => {
+    setPreviewBook(null);
+    if (guiaParam) setSearchParams((p) => { p.delete("guia"); return p; }, { replace: true });
+  };
+
   const hasRecos = flags.recos && recos.length > 0;
   const hasEbooks = flags.ebooks && ebooks.length > 0;
   const hasPosts = flags.blog && posts.length > 0;
@@ -195,7 +220,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                 <button
                   type="button"
                   key={e.id || i}
-                  onClick={() => { void hapticTap(); setPreviewBook(e); }}
+                  onClick={() => openBook(e)}
                   className="group min-w-0 text-left transition-transform duration-150 active:scale-[0.97]"
                 >
                   <BookCover title={e.title} src={e.cover_url} />
@@ -212,7 +237,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
             <BookPreviewModal
               book={previewBook}
               pack={ebooks.find((b) => b.is_pack && b.url) || null}
-              onClose={() => setPreviewBook(null)}
+              onClose={closeBook}
             />
           </section>
         )}

@@ -1,4 +1,5 @@
-import { Check, ChevronRight, Package } from "lucide-react";
+import { Check, ChevronRight, Package, Share } from "lucide-react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -43,6 +44,23 @@ export default function BookPreviewModal({
     void hapticTap();
     rememberBookPurchase(item.id);
     track("book_buy_click", { book: item.title, source });
+  };
+
+  // Enlace directo a esta guía (abre /recursos con la ficha ya desplegada).
+  const share = async () => {
+    void hapticTap();
+    if (!book.id) return;
+    const url = `https://autopilotplan.com/recursos?guia=${encodeURIComponent(book.id)}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: book.title, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success("Enlace copiado");
+    } catch {
+      // cancelado por el usuario
+    }
   };
 
   return (
@@ -92,6 +110,12 @@ export default function BookPreviewModal({
             <p className="text-center type-subhead text-muted-foreground">Disponible próximamente</p>
           )}
           <p className="text-center type-footnote text-muted-foreground">Pago seguro con Stripe. Material autodidacta, no incluye entrenador.</p>
+          {book.id && (
+            <Button type="button" variant="ghost" className="w-full" onClick={() => void share()}>
+              <Share className="mr-2 h-4 w-4" aria-hidden="true" />
+              Compartir guía
+            </Button>
+          )}
         </div>
 
         {showPack && (
