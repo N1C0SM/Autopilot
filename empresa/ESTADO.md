@@ -55,6 +55,14 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 - Limpieza Stripe [RECOMENDACIÓN]: archivar el producto duplicado «(Copy) PACK COMPLETO AUTOPILOT».
 - Revisión semanal: si tras 3 semanas no hay ventas, cambiar oferta antes que volumen.
 
+## Objetivo 21 días (22/10 → 12/11/2026) [ACTIVO]
+Meta: primeras ventas y crecimiento de seguidores en Instagram. Sin garantías: se mide a diario.
+- Automático (Atlas): 1 carrusel/día 20:00 + 1 historia/día 13:00 (tarea diaria 9:43); vigilancia de ventas cada hora; informe semanal de seguidores, alcance y ventas.
+- Fundador, cada día (15 min): responder comentarios/DM, comentar en 10 cuentas de fitness hispanas, compartir el post en historias.
+- Fundador, una vez: bio → autopilotplan.com/recursos; Publish en Lovable; enviar el Pack por WhatsApp a contactos que entrenan.
+- [PROPUESTA, requiere aprobación] Descuento de lanzamiento 72 h en el Pack con código de Stripe; colaboración con 3 microcuentas de fitness (intercambio de guía por mención); anuncios Meta 5 €/día durante 7 días (35 €) sobre el carrusel con más guardados.
+- Revisión: días 7, 14 y 21 con datos de Stripe y Metricool.
+
 ## Aprobaciones pendientes
 - **A3 · Corregir redirecciones de los Payment Links de libros** a `https://autopilotplan.com/payment-success?session_id={CHECKOUT_SESSION_ID}` y revocar el acceso público de los PDF en Drive. Riesgo: un comprador en curso podría ver otra pantalla; bajo. Coste: 0 €. Si no: PDFs gratis para quien tenga el enlace y entregas no verificables.
 - **Revocar** la clave `rk_live_…` pegada en el chat (sustituida por el conector Stripe).
