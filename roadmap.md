@@ -10,5 +10,5 @@
 
 - [x] Fase A Apple: confirmaciones del entreno como hojas inferiores deslizables
 - [x] Fase B Apple: explicar por qué se sube o mantiene el peso en cada ejercicio
-- [ ] Fase C Apple: icono, capturas, vídeo y texto para la candidatura (App Store Connect → Nominations)
+- [x] Fase C Apple: icono, capturas y texto (vídeo pendiente: grabar en iPhone real) para la candidatura (App Store Connect → Nominations)
 - [ ] Probar con usuarios reales en distintos iPhone (bloqueado: requiere dispositivos y usuarios)
