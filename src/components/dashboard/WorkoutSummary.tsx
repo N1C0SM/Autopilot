@@ -1,6 +1,6 @@
 import { useRef, useState, type ElementType, type ReactNode } from "react";
 import { buildWorkoutReview, type ReviewExercise } from "@/lib/workoutReview";
-import { Target, TrendingDown, TrendingUp, Trophy } from "lucide-react";
+import { Target, Trophy } from "lucide-react";
 import { hapticSelection, hapticTap } from "@/lib/native";
 import { cn } from "@/lib/utils";
 import { MuscleMapFigure } from "./MuscleMapFigure";
@@ -33,7 +33,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
 /**
  * Resumen final en páginas que se deslizan enteras (resumen, músculos, comparación y
- * próximo paso), con puntos de página y una única acción principal: Compartir.
+ * próxima sesión), con puntos de página y una única acción principal: Compartir.
  */
 export function WorkoutSummary({
   sheet = false,
@@ -60,8 +60,6 @@ export function WorkoutSummary({
   const [titleName, ...titleRest] = sessionTitle.split(" · ");
   const titleDetail = titleRest.join(" · ");
   const review = buildWorkoutReview(current, previous, rpe);
-  const progress = review.filter((item) => item.observation.startsWith("+"));
-  const comparisons = (progress.length ? progress : review).slice(0, 4);
   const nextStep = review[0]?.proposal || "Mantén tu plan como referencia para la próxima sesión.";
   const diff = totalVolume - previousVolume;
   const pct = previousVolume > 0 && totalVolume > 0 ? Math.round((diff / previousVolume) * 100) : null;
@@ -144,45 +142,41 @@ export function WorkoutSummary({
           ),
         }]
       : []),
-    ...(comparisons.length
-      ? [{
-          key: "compare",
-          label: "Comparar",
-          body: (
-            <>
-              <h3 className={pageTitle}>Frente a la última vez</h3>
-              <ul className="mt-4 space-y-2.5">
-                {comparisons.map((item) => {
-                  const down = item.observation.startsWith("−") || item.observation.startsWith("-");
-                  const Icon = down ? TrendingDown : TrendingUp;
-                  return (
-                    <li key={item.name} className={cn(tile, "flex items-start gap-3")}>
-                      <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", down ? "text-muted-foreground" : "text-success")} aria-hidden="true" />
-                      <div className="min-w-0">
-                        <p className="truncate type-headline">{item.name}</p>
-                        <p className="line-clamp-2 type-footnote text-muted-foreground">{item.observation}</p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          ),
-        }]
-      : []),
     {
-      key: "next",
-      label: "Siguiente",
+      // Comparación y próximo paso en una sola página: cada ejercicio con su cambio en una etiqueta.
+      key: "compare",
+      label: "Comparar",
       body: (
         <>
-          <h3 className={pageTitle}>Próximo paso</h3>
-          <div className={cn(tile, "mt-4 flex items-start gap-3")}>
+          <h3 className={pageTitle}>Frente a la última vez</h3>
+          {review.length ? (
+            <ul className={cn(tile, "mt-4 px-0 py-0")}>
+              {review.slice(0, 6).map((item) => (
+                <li key={item.name} className="flex min-h-[44px] items-center gap-3 px-3.5 py-2.5 [&:not(:last-child)]:sep-b">
+                  <span className="min-w-0 flex-1 truncate type-subhead">{item.name}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 type-footnote font-semibold tabular-nums",
+                      item.trend === "up" && "bg-success/15 text-success",
+                      item.trend === "down" && "bg-destructive/15 text-destructive",
+                      (item.trend === "same" || item.trend === "new") && "bg-foreground/10 text-muted-foreground",
+                    )}
+                  >
+                    {item.change}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 type-subhead text-muted-foreground">Esta sesión será tu referencia para la próxima.</p>
+          )}
+          <div className="mt-auto flex items-start gap-3 pt-4">
             <Target className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />
-            <p className="type-body">{nextStep}</p>
+            <div className="min-w-0">
+              <p className="type-footnote font-semibold text-primary">Próxima sesión</p>
+              <p className="type-subhead">{nextStep}</p>
+            </div>
           </div>
-          <p className="mt-2 px-1 type-footnote text-muted-foreground">
-            {rpe != null ? `Esfuerzo registrado: ${rpe}/10. ` : ""}Tu plan no se modifica sin revisión.
-          </p>
         </>
       ),
     },
