@@ -1344,9 +1344,17 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <div className={`flex flex-col gap-4 ${started ? "mx-auto w-full max-w-2xl flex-1 px-4 pt-3" : ""}`}>
           {/* Today's workout summary */}
           <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
-            <h2 className="type-title1">{trainingTitle || selectedDay}</h2>
+            {(() => {
+              const [name, ...rest] = String(trainingTitle || selectedDay).split(" · ");
+              return (
+                <>
+                  <h2 className="truncate type-title1">{name}</h2>
+                  {rest.length > 0 && <p className="mt-0.5 truncate type-subhead text-muted-foreground">{rest.join(" · ")}</p>}
+                </>
+              );
+            })()}
             {!!currentPlan?.exercises?.length && (
-              <p className="mt-1 type-subhead tabular-nums text-muted-foreground">
+              <p className="mt-1 type-footnote tabular-nums text-muted-foreground">
                 {currentPlan.exercises.length} ejercicios · {totalSets} series
               </p>
             )}
@@ -1509,7 +1517,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
           {/* Exercise list: lista agrupada en el resumen; en sesión, solo el ejercicio en foco */}
           {!workoutCompleted && completionReady && !loadError && (
-          <section>
+          <section className={started ? "" : "pb-28 md:pb-0"}>
           {!focusMode && (currentPlan.exercises?.length ?? 0) > 0 && (
             <h3 className="px-4 pb-1.5 type-group-header">Ejercicios</h3>
           )}
@@ -1596,7 +1604,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       {ex.series} series · {ex.reps} reps · {ex.rest}
                     </div>
                   </div>
-                  <div className={`flex shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
+                  {/* Antes de empezar, la lista solo informa: cambiar y ficha viven dentro de la sesión. */}
+                  <div className={`${started ? "flex" : "hidden"} shrink-0 items-center ${focused ? "-mr-2.5 -mt-2" : ""}`}>
                     {allDone && !focused && (
                       <span className="flex h-11 w-9 items-center justify-center text-primary">
                         <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
