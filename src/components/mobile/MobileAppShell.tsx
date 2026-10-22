@@ -137,7 +137,10 @@ const MobileAppShell = ({
             {title}
           </h1>
         )}
-        {children}
+        {/* Cambio de pestaña con fundido corto, como UITabBarController; se respeta «reducir movimiento». */}
+        <div key={active} className="ios-tab-enter flex flex-1 flex-col">
+          {children}
+        </div>
       </main>
 
       {!workoutMode && onQuickTrain && (
@@ -150,7 +153,18 @@ const MobileAppShell = ({
           Ir a entrenar
         </button>
       )}
-      {!workoutMode && <MobileTabBar active={active} onChange={onChange} lockedTabs={lockedTabs} hiddenTabs={hiddenTabs} />}
+      {!workoutMode && (
+        <MobileTabBar
+          active={active}
+          onChange={(tab) => {
+            // Tocar la pestaña ya activa vuelve al principio de la pantalla (comportamiento estándar de iOS).
+            if (tab === active) scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+            else onChange(tab);
+          }}
+          lockedTabs={lockedTabs}
+          hiddenTabs={hiddenTabs}
+        />
+      )}
     </div>
   );
 };

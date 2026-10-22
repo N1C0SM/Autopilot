@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { Lock } from "lucide-react";
-import { hapticTap } from "@/lib/native";
+import { hapticSelection, hapticTap } from "@/lib/native";
 
 export interface FloatingMobileNavItem {
   key: string;
@@ -47,7 +47,8 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
             <button
               type="button"
               onClick={() => {
-                void hapticTap();
+                // iOS: cambio de pestaña = pulso de selección; volver a tocar la activa sube arriba del todo.
+                void (isActive ? hapticTap() : hapticSelection());
                 onChange(key);
               }}
               aria-current={isActive ? "page" : undefined}
