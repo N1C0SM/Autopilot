@@ -828,6 +828,29 @@ const Dashboard = () => {
             <TabsTrigger value="records">Récords</TabsTrigger>
             <TabsTrigger value="scan">Scan</TabsTrigger>
           </TabsList>
+          {/* Deslizar a los lados cambia de sección, como las páginas nativas. */}
+          <div
+            onTouchStart={(e) => {
+              const t = e.touches[0];
+              (e.currentTarget as HTMLDivElement).dataset.sx = String(t.clientX);
+              (e.currentTarget as HTMLDivElement).dataset.sy = String(t.clientY);
+            }}
+            onTouchEnd={(e) => {
+              const el = e.currentTarget as HTMLDivElement;
+              const t = e.changedTouches[0];
+              const dx = t.clientX - Number(el.dataset.sx ?? t.clientX);
+              const dy = t.clientY - Number(el.dataset.sy ?? t.clientY);
+              if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return;
+              if ((e.target as HTMLElement).closest("[data-no-swipe], .recharts-wrapper, input, [role=slider]")) return;
+              const order = ["evolution", "photos", "records", "scan"] as const;
+              const i = order.indexOf(progressTab as (typeof order)[number]);
+              const next = order[i + (dx < 0 ? 1 : -1)];
+              if (!next) return;
+              void hapticSelection();
+              setProgressTab(next as typeof progressTab);
+            }}
+            className="touch-pan-y"
+          >
           <Suspense fallback={<SectionFallback />}>
             <TabsContent
               value="evolution"
@@ -861,6 +884,7 @@ const Dashboard = () => {
               />
             </TabsContent>
           </Suspense>
+          </div>
         </Tabs>
       )}
 
