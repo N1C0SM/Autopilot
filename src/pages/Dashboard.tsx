@@ -687,7 +687,8 @@ const Dashboard = () => {
           <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
             <Suspense fallback={<SectionFallback />}>
               {!workoutMode && !autoStartWorkout && (
-                // Una sola línea discreta, como una barra de herramientas: el protagonista es el entreno.
+              {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
+              {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
                 <div className="mx-auto mb-3 flex w-full max-w-md items-center justify-between gap-2 px-1 lg:max-w-2xl">
                   <span className="truncate type-footnote text-muted-foreground">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
