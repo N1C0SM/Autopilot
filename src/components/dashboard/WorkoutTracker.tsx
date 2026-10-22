@@ -53,6 +53,7 @@ import {
   toggleSupersetLink,
   type SupersetLinks,
 } from "@/lib/workoutSuperset";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { addExerciseLoad } from "@/lib/muscleMapping";
 import { FreeWorkoutPicker } from "./FreeWorkoutPicker";
