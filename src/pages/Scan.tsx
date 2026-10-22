@@ -178,13 +178,36 @@ type GoalPhysique = {
   storage_path?: string;
 };
 
-const fileToDataUrl = (file: File): Promise<string> =>
+const readRaw = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result as string);
     r.onerror = reject;
     r.readAsDataURL(file);
   });
+
+// Reduce la foto (máx. 1280 px, JPEG): sube y se analiza mucho más rápido sin perder detalle útil.
+const fileToDataUrl = async (file: File): Promise<string> => {
+  const raw = await readRaw(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = raw;
+    });
+    const scale = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return raw;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } catch {
+    return raw;
+  }
+};
 
 const Dropzone = ({
   label,
@@ -1010,7 +1033,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
 
   // For logged-in users: save scan to history + auto-email diagnosis to account email
   const saveAndEmailScan = async (r: Result, opts: { silent?: boolean } = {}) => {
-    if (!user || !userEmail) return;
+    if (!user) return;
+    const userEmail = (typeof window !== "undefined" ? null : null) ?? (userEmailState || user.email || null);
     setAutoSaving(true);
     try {
       const [front, back, obj] = await Promise.all([
