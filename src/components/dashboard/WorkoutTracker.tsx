@@ -1102,54 +1102,51 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
         rpe={sessionRpe}
         intro={
-          <div className="flex h-full flex-col gap-[clamp(0.5rem,2dvh,1.25rem)]">
-            <header className="flex items-center gap-3 pt-1 text-left">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                <Trophy className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div className="w-full min-w-0">
-                <Title className="type-headline">Entrenamiento completado</Title>
-                <Desc className="truncate type-footnote text-muted-foreground">
-                  {completedDateLabel} · {trainingTitle || sessionMessage}
-                </Desc>
-              </div>
+          // Estilo Fitness: jerarquía por tamaño (título grande, una cifra protagonista), sin cajas.
+          <div className="flex h-full flex-col gap-[clamp(0.75rem,2.5dvh,1.5rem)]">
+            <header className="text-left">
+              <Desc className="truncate type-subhead text-muted-foreground">
+                {completedDateLabel} · {trainingTitle || sessionMessage}
+              </Desc>
+              <Title className={inDialog ? "mt-1 type-large-title" : "mt-0.5 type-title2"}>Entrenamiento completado</Title>
             </header>
-            {personalRecords.length > 0 && (
-              <p className="flex items-center gap-1.5 type-footnote font-medium text-primary">
-                <Trophy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
+            <div>
+              <p className={`font-rounded font-bold tabular-nums tracking-tight text-primary ${inDialog ? "text-[64px] leading-[1]" : "text-[40px] leading-[1]"}`}>
+                {totalVolume > 0 ? Math.round(totalVolume).toLocaleString("es-ES") : completedSets}
+                <span className={`ml-1 font-semibold text-muted-foreground ${inDialog ? "text-[22px]" : "text-[17px]"}`}>{totalVolume > 0 ? "kg" : "series"}</span>
               </p>
-            )}
-            {(() => {
-              const eq = null as null;
-              const diff = totalVolume - previousVolume;
-              const pct = previousVolume > 0 ? Math.round((diff / previousVolume) * 100) : null;
-              if (!eq && pct === null) return null;
-              return (
-                <div className="empty:hidden">
-                  {pct !== null && totalVolume > 0 && (
-                    <p className={`truncate type-footnote font-medium tabular-nums ${diff >= 0 ? "text-success" : "text-muted-foreground"}`}>
-                      {diff >= 0 ? "+" : "−"}{Math.abs(Math.round(diff)).toLocaleString("es-ES")} kg ({pct > 0 ? "+" : ""}{pct} %) frente a tu sesión anterior
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
-            <div className="sep-t sep-b grid grid-cols-4 py-[clamp(0.5rem,1.6dvh,1rem)]">
+              <p className="mt-1 type-subhead text-muted-foreground">{totalVolume > 0 ? "Volumen total" : "Series completadas"}</p>
+              {(() => {
+                const diff = totalVolume - previousVolume;
+                const pct = previousVolume > 0 ? Math.round((diff / previousVolume) * 100) : null;
+                if (pct === null || totalVolume <= 0) return null;
+                return (
+                  <p className={`mt-1 truncate type-footnote font-medium tabular-nums ${diff >= 0 ? "text-success" : "text-muted-foreground"}`}>
+                    {diff >= 0 ? "+" : "−"}{Math.abs(Math.round(diff)).toLocaleString("es-ES")} kg ({pct > 0 ? "+" : ""}{pct} %) frente a tu sesión anterior
+                  </p>
+                );
+              })()}
+            </div>
+            <dl className="grid grid-cols-3 gap-4">
               {[
                 { label: "Ejercicios", value: `${completedExercises}/${currentPlan?.exercises?.length || 0}` },
                 { label: "Series", value: String(completedSets) },
-                { label: "Volumen", value: totalVolume > 0 ? `${Math.round(totalVolume)}` : "—", unit: totalVolume > 0 ? "kg" : "" },
                 { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}` : "—", unit: sessionRpe !== null ? "/10" : "" },
-              ].map((item, index) => (
-                <div key={item.label} className={`px-1 text-center ${index > 0 ? "sep-l" : ""}`}>
-                  <p className="truncate font-rounded text-[20px] font-bold leading-[25px] tabular-nums">
-                    {item.value}{item.unit && <span className="ml-0.5 type-caption2 text-muted-foreground">{item.unit}</span>}
-                  </p>
-                  <p className="mt-0.5 type-caption2 text-muted-foreground">{item.label}</p>
+              ].map((item) => (
+                <div key={item.label} className="min-w-0 text-left">
+                  <dt className="type-footnote text-muted-foreground">{item.label}</dt>
+                  <dd className={`truncate font-rounded font-bold tabular-nums ${inDialog ? "text-[28px] leading-[34px]" : "text-[22px] leading-[28px]"}`}>
+                    {item.value}{item.unit && <span className="ml-0.5 type-footnote text-muted-foreground">{item.unit}</span>}
+                  </dd>
                 </div>
               ))}
-            </div>
+            </dl>
+            {personalRecords.length > 0 && (
+              <p className="flex items-center gap-1.5 type-subhead font-medium text-primary">
+                <Trophy className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
+              </p>
+            )}
             <div className="mt-auto">
               <WorkoutStoryShare
                 title={trainingTitle || "Sesión de hoy"}
@@ -1360,7 +1357,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
             )}
             {selectedDay !== today && <p className="mt-1 type-footnote text-muted-foreground">Se registra hoy · {completedDateLabel}</p>}
 
-            <div className="mt-4 flex items-center gap-3">
+            {/* Antes de empezar, la única protagonista es la acción principal. */}
+            <div className={completedSets > 0 ? "mt-4 flex items-center gap-3" : "sr-only"}>
               <Progress value={progressPercent} aria-valuenow={Math.round(progressPercent)} aria-label="Progreso de la sesión" className="flex-1" />
               <p role="status" className="shrink-0 type-footnote tabular-nums text-muted-foreground">
                 {completedSets} de {totalSets} series
@@ -1410,7 +1408,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="flex h-[min(84dvh,40rem)] flex-col sm:h-[min(80dvh,38rem)] sm:max-w-md">
+              // Resumen a pantalla completa en el móvil (como Fitness/Hevy); diálogo centrado desde `sm`.
+              <DialogContent
+                dismissible={false}
+                className="top-0 flex h-[100dvh] max-h-none flex-col rounded-none bg-background pt-[calc(var(--safe-top)+0.75rem)] shadow-none [&>button:last-child]:top-[calc(var(--safe-top)+0.5rem)] sm:h-[min(80dvh,38rem)] sm:max-w-md sm:rounded-2xl sm:bg-card sm:pt-6 sm:shadow-2xl sm:[&>button:last-child]:top-3"
+              >
                 {/* Las fichas traen su propio margen lateral: se sacan del de la hoja. */}
                 <div className="-mx-4 flex min-h-0 flex-1 flex-col sm:-mx-6 [&_*]:min-w-0">
                   {renderStudyCards(true)}
@@ -2013,7 +2015,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               )}
             </AnimatePresence>
             {started && !loadError && <>
-            <p role="status" aria-live="polite" className={`mb-2 text-center type-footnote [.keyboard-open_&]:hidden ${restTimer !== null && !saveError ? "sr-only" : ""} ${saveError ? "text-destructive" : "text-muted-foreground"}`}>
+            <p role="status" aria-live="polite" className={`mb-2 text-center type-footnote [.keyboard-open_&]:hidden ${saveError ? "text-destructive" : "sr-only"}`}>
               {saveStatus === "error"
                 ? "Error al guardar. Comprueba tu conexión."
                 : saveStatus === "pending"
