@@ -1108,7 +1108,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               <Desc className="truncate type-subhead text-muted-foreground">
                 {completedDateLabel} · {trainingTitle || sessionMessage}
               </Desc>
-              <Title className={inDialog ? "mt-1 type-large-title" : "mt-0.5 type-title2"}>Entrenamiento completado</Title>
+              <Title className={inDialog ? "mt-1 type-title1" : "mt-0.5 type-title2"}>Entrenamiento completado</Title>
             </header>
             <div>
               <p className={`font-rounded font-bold tabular-nums tracking-tight text-primary ${inDialog ? "text-[64px] leading-[1]" : "text-[40px] leading-[1]"}`}>
@@ -1408,11 +1408,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              // Resumen a pantalla completa en el móvil (como Fitness/Hevy); diálogo centrado desde `sm`.
-              <DialogContent
-                dismissible={false}
-                className="top-0 flex h-[100dvh] max-h-none flex-col rounded-none bg-background pt-[calc(var(--safe-top)+0.75rem)] shadow-none [&>button:last-child]:top-[calc(var(--safe-top)+0.5rem)] sm:h-[min(80dvh,38rem)] sm:max-w-md sm:rounded-2xl sm:bg-card sm:pt-6 sm:shadow-2xl sm:[&>button:last-child]:top-3"
-              >
+              <DialogContent className="flex h-[min(84dvh,40rem)] flex-col sm:h-[min(80dvh,38rem)] sm:max-w-md">
                 {/* Las fichas traen su propio margen lateral: se sacan del de la hoja. */}
                 <div className="-mx-4 flex min-h-0 flex-1 flex-col sm:-mx-6 [&_*]:min-w-0">
                   {renderStudyCards(true)}
