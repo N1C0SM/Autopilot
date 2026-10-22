@@ -1347,7 +1347,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
               // Hoja grande con «Listo» propio: se oculta el aspa por defecto.
-              <DialogContent onOpenAutoFocus={(event) => event.preventDefault()} className="flex h-[min(92dvh,48rem)] flex-col gap-0 overflow-hidden pb-[max(0.75rem,var(--safe-bottom))] [&>button:last-child]:hidden sm:h-[min(85dvh,44rem)] sm:max-w-md sm:pt-2">
+              <DialogContent onOpenAutoFocus={(event) => event.preventDefault()} className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden pb-[max(0.75rem,var(--safe-bottom))] [&>button:last-child]:hidden sm:max-h-[85dvh] sm:max-w-md sm:pt-2">
                 {/* El resumen trae su propio margen lateral: se saca del de la hoja. */}
                 <div className="-mx-4 flex min-h-0 flex-1 flex-col sm:-mx-6 [&_*]:min-w-0">
                   {renderSummary(true)}

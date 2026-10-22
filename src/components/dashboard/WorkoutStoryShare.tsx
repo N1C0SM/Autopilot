@@ -4,12 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { hapticSelection, hapticTap, isNative, shareFileOrImage } from "@/lib/native";
 import { toast } from "sonner";
-import frontAnatomy from "@/assets/muscle-map-front.png";
-import backAnatomy from "@/assets/muscle-map-back.png";
 import autopilotLogo from "@/assets/autopilot-logo.png";
-import { FRONT_REGIONS, BACK_REGIONS, FRONT_SILHOUETTE, BACK_SILHOUETTE } from "./MuscleMapFigure";
+import { bodyRegions, regionMuscles } from "./MuscleMapFigure";
 
 interface Props {
+  /** Imagen que se comparte. Si se indica, no se muestra el selector. */
+  variant?: Variant;
   title: string;
   date: string;
   volumeKg: number;
@@ -29,26 +29,25 @@ const loadImage = (src: string) => new Promise<HTMLImageElement>((res, rej) => {
   img.src = src;
 });
 
-// Draws the same anatomy + regions as the in-app map, heat-colored by set load.
-function drawFigure(ctx: CanvasRenderingContext2D, img: HTMLImageElement, side: "front" | "back", p: Props, x: number, y: number, scale: number) {
-  const regions = side === "front" ? FRONT_REGIONS : BACK_REGIONS;
-  const sil = new Path2D(side === "front" ? FRONT_SILHOUETTE : BACK_SILHOUETTE);
+// Dibuja el mismo cuerpo vectorial que el mapa de la app, coloreado por series.
+function drawFigure(ctx: CanvasRenderingContext2D, side: "front" | "back", p: Props, x: number, y: number, scale: number) {
+  const owner = regionMuscles(p.muscles);
+  const counts = p.muscleSetCounts || {};
   ctx.save();
   ctx.translate(x, y); ctx.scale(scale, scale);
-  ctx.globalAlpha = 0.55;
-  ctx.drawImage(img, 0, 0, 399, 698);
-  ctx.globalAlpha = 1;
-  ctx.clip(sil);
-  const counts = p.muscleSetCounts || {};
-  for (const r of regions) {
-    if (!p.muscles.includes(r.muscle)) continue;
-    if (r.muscle === "Piernas" && side === "back" && p.muscles.includes("Isquiotibiales")) continue;
-    const n = counts[r.muscle] || 1;
-    const alpha = n >= 6 ? 0.95 : n >= 3 ? 0.75 : 0.45;
-    const path = new Path2D((r.details ?? [r.d]).join(" "));
-    ctx.shadowColor = "rgba(255,170,60,0.9)"; ctx.shadowBlur = n >= 3 ? 18 : 8;
-    ctx.fillStyle = n >= 6 ? `rgba(255,120,40,${alpha})` : `rgba(240,190,90,${alpha})`;
-    ctx.fill(path);
+  for (const region of bodyRegions(side)) {
+    const muscle = owner.get(region.muscle);
+    const n = muscle ? counts[muscle] || 1 : 0;
+    ctx.fillStyle = !muscle ? "rgba(255,255,255,0.13)" : n >= 6 ? "#ff7a28" : n >= 3 ? "#f5a742" : "#f0c36a";
+    for (const points of region.svgPoints) {
+      const nums = points.trim().split(/\s+/).map(Number);
+      ctx.beginPath();
+      for (let i = 0; i + 1 < nums.length; i += 2) {
+        if (i === 0) ctx.moveTo(nums[i], nums[i + 1]); else ctx.lineTo(nums[i], nums[i + 1]);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
   }
   ctx.restore();
 }
@@ -196,14 +195,14 @@ function drawResumen(ctx: CanvasRenderingContext2D, p: Props, W: number, H: numb
   drawSignature(ctx, W, H);
 }
 
-function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, front: HTMLImageElement, back: HTMLImageElement, logo?: HTMLImageElement | null) {
+function drawMusculos(ctx: CanvasRenderingContext2D, p: Props, W: number, H: number, logo?: HTMLImageElement | null) {
   drawBackdrop(ctx, W, H);
   drawHeader(ctx, W, p, logo);
   drawTitle(ctx, p, 330, W);
   drawHighlight(ctx, p, W, 420);
-  const scale = 0.95, fw = 399 * scale, fy = 560;
-  drawFigure(ctx, front, "front", p, W / 2 - fw - 8, fy, scale);
-  drawFigure(ctx, back, "back", p, W / 2 + 8, fy, scale);
+  const scale = 3.3, fw = 100 * scale, fy = 570;
+  drawFigure(ctx, "front", p, W / 2 - fw - 30, fy, scale);
+  drawFigure(ctx, "back", p, W / 2 + 30, fy, scale);
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillStyle = "#a1a1aa"; ctx.font = `600 28px ${F}`;
   ctx.fillText(p.volumeKg > 0 ? "Volumen total" : "Series", W / 2, 1330);
   const s = drawBigKg(ctx, p.volumeKg > 0 ? fmt(p.volumeKg) : String(p.sets), W / 2, 1510, W - 240, 190);
@@ -222,8 +221,7 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
   if (variant === "resumen") {
     drawResumen(ctx, p, W, H, logo);
   } else {
-    const [front, back] = await Promise.all([loadImage(frontAnatomy), loadImage(backAnatomy)]);
-    drawMusculos(ctx, p, W, H, front, back, logo);
+    drawMusculos(ctx, p, W, H, logo);
   }
   const blob = await new Promise<Blob | null>((res) => {
     try { c.toBlob((b) => res(b), "image/png"); } catch { res(null); }
@@ -236,7 +234,8 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
 
 export function WorkoutStoryShare(props: Props) {
   const [busy, setBusy] = useState(false);
-  const [activeVariant, setActiveVariant] = useState<Variant>("resumen");
+  const [chosenVariant, setActiveVariant] = useState<Variant>("resumen");
+  const activeVariant = props.variant ?? chosenVariant;
 
   const download = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -323,7 +322,7 @@ export function WorkoutStoryShare(props: Props) {
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
       {/* Control segmentado de iOS: qué imagen se comparte. */}
-      <div className="grid grid-cols-2 rounded-[9px] bg-secondary p-0.5" role="radiogroup" aria-label="Imagen para compartir">
+      {!props.variant && <div className="grid grid-cols-2 rounded-[9px] bg-secondary p-0.5" role="radiogroup" aria-label="Imagen para compartir">
         {(["resumen", "musculos"] as Variant[]).map((v) => (
           <button
             key={v}
@@ -340,7 +339,7 @@ export function WorkoutStoryShare(props: Props) {
             {v === "resumen" ? "Resumen" : "Músculos"}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* Una sola acción principal. En la app, la hoja de compartir ya incluye «Guardar imagen». */}
       <div className="flex w-full min-w-0 gap-2">
