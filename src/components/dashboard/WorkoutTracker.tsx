@@ -22,8 +22,7 @@ import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/
 import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/lib/activeWorkout";
 import { applyProgressionToPendingSets, getProgressionSuggestion, summarizePreviousSets } from "@/lib/workoutProgression";
 import { parsePositiveWeight } from "@/lib/weight";
-import { WorkoutStoryShare } from "./WorkoutStoryShare";
-import { WorkoutStudyCards } from "./WorkoutStudyCards";
+import { WorkoutSummary } from "./WorkoutSummary";
 import { ExerciseSwap } from "./ExerciseSwap";
 import { formatTrainingTitle } from "@/lib/trainingDisplay";
 import { hapticImpact, hapticNotify, hapticSelection, hapticTap } from "@/lib/native";
@@ -1081,90 +1080,29 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     const sets = exerciseLogs[exercise.name] || [];
     return sets.length > 0 && sets.every((set) => set.done);
   }).length || 0;
-  const sessionMessage = personalRecords.length > 0
-    ? "Hoy has superado tu mejor marca. Esto sí es progreso."
-    : totalVolume > 0
-    ? "Trabajo hecho. La próxima sesión tendrás una referencia clara para progresar."
-    : "Trabajo hecho. La próxima sesión quedará registrada para que puedas progresar.";
-
   const completedDateLabel = new Date(`${selectedDate}T12:00:00`).toLocaleDateString("es-ES", { day: "numeric", month: "long" });
-  const renderStudyCards = (inDialog: boolean) => {
-    const Title = inDialog ? DialogTitle : "h3";
-    const Desc = inDialog ? DialogDescription : "p";
-    return (
-      <WorkoutStudyCards
-        immersive={inDialog}
-        onFinish={inDialog ? () => setShowCompletionSummary(false) : undefined}
-        muscles={musclesWorked}
-        muscleSetCounts={muscleSetCounts}
-        intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
-        current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
-        previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
-        rpe={sessionRpe}
-        intro={
-          // Estilo Fitness: jerarquía por tamaño (título grande, una cifra protagonista), sin cajas.
-          <div className="flex h-full flex-col gap-[clamp(0.75rem,2.5dvh,1.5rem)]">
-            <header className="text-left">
-              <Desc className="truncate type-subhead text-muted-foreground">
-                {completedDateLabel} · {trainingTitle || sessionMessage}
-              </Desc>
-              <Title className={inDialog ? "mt-1 type-title1" : "mt-0.5 type-title2"}>Entrenamiento completado</Title>
-            </header>
-            <div>
-              <p className={`font-rounded font-bold tabular-nums tracking-tight text-primary ${inDialog ? "text-[64px] leading-[1]" : "text-[40px] leading-[1]"}`}>
-                {totalVolume > 0 ? Math.round(totalVolume).toLocaleString("es-ES") : completedSets}
-                <span className={`ml-1 font-semibold text-muted-foreground ${inDialog ? "text-[22px]" : "text-[17px]"}`}>{totalVolume > 0 ? "kg" : "series"}</span>
-              </p>
-              <p className="mt-1 type-subhead text-muted-foreground">{totalVolume > 0 ? "Volumen total" : "Series completadas"}</p>
-              {(() => {
-                const diff = totalVolume - previousVolume;
-                const pct = previousVolume > 0 ? Math.round((diff / previousVolume) * 100) : null;
-                if (pct === null || totalVolume <= 0) return null;
-                return (
-                  <p className={`mt-1 truncate type-footnote font-medium tabular-nums ${diff >= 0 ? "text-success" : "text-muted-foreground"}`}>
-                    {diff >= 0 ? "+" : "−"}{Math.abs(Math.round(diff)).toLocaleString("es-ES")} kg ({pct > 0 ? "+" : ""}{pct} %) frente a tu sesión anterior
-                  </p>
-                );
-              })()}
-            </div>
-            <dl className="grid grid-cols-3 gap-4">
-              {[
-                { label: "Ejercicios", value: `${completedExercises}/${currentPlan?.exercises?.length || 0}` },
-                { label: "Series", value: String(completedSets) },
-                { label: "Esfuerzo", value: sessionRpe !== null ? `${sessionRpe}` : "—", unit: sessionRpe !== null ? "/10" : "" },
-              ].map((item) => (
-                <div key={item.label} className="min-w-0 text-left">
-                  <dt className="type-footnote text-muted-foreground">{item.label}</dt>
-                  <dd className={`truncate font-rounded font-bold tabular-nums ${inDialog ? "text-[28px] leading-[34px]" : "text-[22px] leading-[28px]"}`}>
-                    {item.value}{item.unit && <span className="ml-0.5 type-footnote text-muted-foreground">{item.unit}</span>}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            {personalRecords.length > 0 && (
-              <p className="flex items-center gap-1.5 type-subhead font-medium text-primary">
-                <Trophy className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="truncate">Récord · {personalRecords.join(" · ")}</span>
-              </p>
-            )}
-            <div className="mt-auto">
-              <WorkoutStoryShare
-                title={trainingTitle || "Sesión de hoy"}
-                date={completedDateLabel}
-                volumeKg={totalVolume}
-                sets={completedSets}
-                exercises={completedExercises}
-                records={personalRecords}
-                muscles={musclesWorked}
-                muscleSetCounts={muscleSetCounts}
-                previousVolumeKg={previousVolume}
-              />
-            </div>
-          </div>
-        }
-      />
-    );
-  };
+  const renderSummary = (inDialog: boolean) => (
+    <WorkoutSummary
+      sheet={inDialog}
+      onDone={inDialog ? () => setShowCompletionSummary(false) : undefined}
+      Title={inDialog ? DialogTitle : "h2"}
+      Desc={inDialog ? DialogDescription : "p"}
+      dateLabel={completedDateLabel}
+      sessionTitle={trainingTitle || "Sesión de hoy"}
+      totalVolume={totalVolume}
+      previousVolume={previousVolume}
+      completedSets={completedSets}
+      completedExercises={completedExercises}
+      plannedExercises={currentPlan?.exercises?.length || 0}
+      rpe={sessionRpe}
+      records={personalRecords}
+      muscles={musclesWorked}
+      muscleSetCounts={muscleSetCounts}
+      intensityFor={(muscle) => getMuscleIntensity(muscleSetCounts[muscle]).fill}
+      current={Object.entries(exerciseLogs).map(([name, sets]) => ({ name, sets }))}
+      previous={Object.entries(previousLogs).map(([name, sets]) => ({ name, sets }))}
+    />
+  );
 
   const focusMode = started && workoutView === "focus" && expandedExercise !== null;
   // Si el usuario eligió «Ejercicio a ejercicio», nunca caemos a la lista vertical en plena sesión.
@@ -1408,10 +1346,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
           <Dialog open={workoutCompleted && showCompletionSummary} onOpenChange={setShowCompletionSummary}>
             {workoutCompleted && showCompletionSummary && (
-              <DialogContent className="flex h-[min(84dvh,40rem)] flex-col sm:h-[min(80dvh,38rem)] sm:max-w-md">
-                {/* Las fichas traen su propio margen lateral: se sacan del de la hoja. */}
+              // Hoja grande con «Listo» propio: se oculta el aspa por defecto.
+              <DialogContent onOpenAutoFocus={(event) => event.preventDefault()} className="flex h-[min(92dvh,48rem)] flex-col gap-0 overflow-hidden pb-[max(0.75rem,var(--safe-bottom))] [&>button:last-child]:hidden sm:h-[min(85dvh,44rem)] sm:max-w-md sm:pt-2">
+                {/* El resumen trae su propio margen lateral: se saca del de la hoja. */}
                 <div className="-mx-4 flex min-h-0 flex-1 flex-col sm:-mx-6 [&_*]:min-w-0">
-                  {renderStudyCards(true)}
+                  {renderSummary(true)}
                 </div>
               </DialogContent>
             )}
@@ -1420,23 +1359,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           {workoutCompleted && !showCompletionSummary && (
             <div className="flex flex-col pb-24 sm:pb-8">
               <div className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col">
-                <div className="mb-3 flex shrink-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-                    <Check className="h-5 w-5" strokeWidth={2.5} aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="type-footnote text-muted-foreground">Hecho por hoy</p>
-                    <h2 className="line-clamp-2 type-title3">{trainingTitle || selectedDay}</h2>
-                  </div>
-                </div>
-                {renderStudyCards(false)}
-                <div className="flex shrink-0 items-start gap-2.5 pt-3 text-left">
-                  <Flame className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  <p className="type-footnote text-muted-foreground">
-                    Toca recuperar: hidrátate, come bien y mañana vuelves más fuerte.
-                  </p>
-                </div>
-                <Button type="button" size="lg" className="mt-3 w-full shrink-0" onClick={() => { void hapticTap(); onExit?.(); }}>
+                {renderSummary(false)}
+                <p className="pt-4 text-center type-footnote text-muted-foreground">
+                  Toca recuperar: hidrátate, come bien y mañana vuelves más fuerte.
+                </p>
+                <Button type="button" variant="plain" className="mt-1 w-full shrink-0" onClick={() => { void hapticTap(); onExit?.(); }}>
                   Volver al inicio
                 </Button>
                 <Button type="button" variant="plain" size="sm" className="mt-1 w-full shrink-0" onClick={() => { void hapticTap(); void undoCompletion(); }} disabled={saving}>

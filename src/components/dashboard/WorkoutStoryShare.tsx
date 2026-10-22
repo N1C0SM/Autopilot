@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Share, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { hapticTap, shareFileOrImage } from "@/lib/native";
+import { hapticSelection, hapticTap, isNative, shareFileOrImage } from "@/lib/native";
 import { toast } from "sonner";
 import frontAnatomy from "@/assets/muscle-map-front.png";
 import backAnatomy from "@/assets/muscle-map-back.png";
@@ -322,17 +322,19 @@ export function WorkoutStoryShare(props: Props) {
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-3">
-      {/* Selector de variante */}
-      <div className="flex gap-2" role="group" aria-label="Tipo de imagen">
+      {/* Control segmentado de iOS: qué imagen se comparte. */}
+      <div className="grid grid-cols-2 rounded-[9px] bg-secondary p-0.5" role="radiogroup" aria-label="Imagen para compartir">
         {(["resumen", "musculos"] as Variant[]).map((v) => (
           <button
             key={v}
             type="button"
-            onClick={() => { void hapticTap(); setActiveVariant(v); }}
-            className={`flex-1 rounded-xl py-2 type-footnote font-semibold transition-colors duration-150 ${
+            role="radio"
+            aria-checked={activeVariant === v}
+            onClick={() => { void hapticSelection(); setActiveVariant(v); }}
+            className={`h-8 rounded-[7px] type-footnote font-semibold transition-all duration-200 ${
               activeVariant === v
-                ? "bg-primary/15 text-primary"
-                : "bg-secondary text-muted-foreground"
+                ? "bg-muted text-foreground shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]"
+                : "text-muted-foreground"
             }`}
           >
             {v === "resumen" ? "Resumen" : "Músculos"}
@@ -340,32 +342,33 @@ export function WorkoutStoryShare(props: Props) {
         ))}
       </div>
 
-      {/* Botones de acción */}
+      {/* Una sola acción principal. En la app, la hoja de compartir ya incluye «Guardar imagen». */}
       <div className="flex w-full min-w-0 gap-2">
         <Button
           type="button"
-          variant="hero"
           size="lg"
           disabled={busy}
           onClick={() => { void hapticTap(); void run("share"); }}
-          className="min-w-0 flex-1 px-4 shadow-sm"
+          className="min-w-0 flex-1 px-4"
         >
           {busy
             ? <Spinner size="sm" label="Creando imagen" className="text-primary-foreground [&>svg]:!size-full" />
             : <Share aria-hidden="true" />}
           <span className="truncate">Compartir</span>
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          disabled={busy}
-          onClick={() => { void hapticTap(); void run("download"); }}
-          className="w-[50px] shrink-0 px-0"
-          aria-label="Descargar imagen"
-        >
-          <Download aria-hidden="true" />
-        </Button>
+        {!isNative() && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            disabled={busy}
+            onClick={() => { void hapticTap(); void run("download"); }}
+            className="w-[50px] shrink-0 px-0"
+            aria-label="Descargar imagen"
+          >
+            <Download aria-hidden="true" />
+          </Button>
+        )}
       </div>
     </div>
   );

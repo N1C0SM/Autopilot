@@ -1,6 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
 import type { DayPlan } from "@/types/training";
 import { hapticImpact, hapticNotify } from "@/lib/native";
 import WorkoutTracker from "./WorkoutTracker";
@@ -26,8 +25,7 @@ vi.mock("@/lib/native", () => ({ hapticTap: vi.fn(), hapticSelection: vi.fn(), h
 vi.mock("@/hooks/useExerciseMetadata", () => ({ useExerciseMetadata: () => ({ byId: {}, byName: {} }) }));
 vi.mock("@/components/ExerciseMedia", () => ({ ExerciseThumb: () => null }));
 vi.mock("@/components/ExerciseFocus", () => ({ default: () => null }));
-vi.mock("./WorkoutStoryShare", () => ({ WorkoutStoryShare: () => null }));
-vi.mock("./WorkoutStudyCards", () => ({ WorkoutStudyCards: ({ intro, onFinish }: { intro: ReactNode; onFinish?: () => void }) => <>{intro}<p>Resumen guardado</p>{onFinish && <button onClick={onFinish}>Cerrar resumen</button>}</> }));
+vi.mock("./WorkoutSummary", () => ({ WorkoutSummary: ({ onDone }: { onDone?: () => void }) => <><p>Resumen guardado</p>{onDone && <button onClick={onDone}>Cerrar resumen</button>}</> }));
 vi.mock("./ExerciseSwap", () => ({ ExerciseSwap: () => null }));
 vi.mock("./RPEDialog", () => ({
   default: ({ open, onConfirm }: { open: boolean; onConfirm: (rpe: number | null) => void }) => open ? (
