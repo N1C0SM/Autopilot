@@ -58,4 +58,4 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 - 2026-10-22 · Sin subagentes permanentes: el trabajo actual es secuencial.
 
 ## Próxima acción
-Compra real de prueba de 1 libro (≈10 €, reembolsable) para verificar la entrega de punta a punta → plan de captación (Metricool).
+[VERIFICADO 2026-10-22, modo test] tras pagar aparece la página «Tu contenido de Autopilot» con Descargar (captura del fundador). Falta: compra real de prueba de 1 libro (≈10 €, reembolsable) para verificar la entrega de punta a punta → plan de captación (Metricool).
