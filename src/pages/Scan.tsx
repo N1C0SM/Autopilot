@@ -59,6 +59,7 @@ import { TRIAL_DAYS } from "@/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/lib/scanAttribution";
+import { useConfirm } from "@/components/admin/content/useConfirm";
 import { clearPendingScanContext, markPendingScanRestored, readPendingScanContext } from "@/lib/pendingScan";
 
 type Phase = "upload" | "goal" | "analyzing" | "lead";
@@ -1120,11 +1121,14 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   };
 
   const [resettingProgress, setResettingProgress] = useState(false);
+  const { ask: confirmReset, dialog: resetDialog } = useConfirm();
   const resetProgress = async () => {
     if (!user || !routeUserId) return;
-    const ok = window.confirm(
-      "¿Seguro que quieres resetear tu progreso? Se borrarán todos tus scans anteriores y empezarás de cero. Esta acción no se puede deshacer."
-    );
+    const ok = await confirmReset({
+      title: "¿Resetear tu progreso?",
+      description: "Se borrarán todos tus scans anteriores y empezarás de cero. Esta acción no se puede deshacer.",
+      confirmLabel: "Resetear",
+    });
     if (!ok) return;
     setResettingProgress(true);
     try {
@@ -2404,7 +2408,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     </>
   );
 
-  if (inline) return <div className="relative w-full">{scanBody}</div>;
+  if (inline) return <div className="relative w-full"><>{scanBody}{resetDialog}</></div>;
 
   if (embedded) {
     return (
@@ -2416,7 +2420,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         onChange={(t) => { try { sessionStorage.setItem("autopilot_section", t); } catch { /* sin storage */ } navigate("/dashboard"); }}
         onSettings={() => { try { sessionStorage.setItem("autopilot_section", "settings"); } catch { /* sin storage */ } navigate("/dashboard"); }}
       >
-        <div className="relative w-full">{scanBody}</div>
+        <div className="relative w-full"><>{scanBody}{resetDialog}</></div>
       </MobileAppShell>
     );
   }
@@ -2426,7 +2430,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     <div className="min-h-screen bg-background relative overflow-hidden flex w-full">
       {user && <UserSidebar section="progress" onNavigate={(s) => navigate(s === "progress" ? `/scan/user/${user.id}` : "/dashboard")} onSignOut={() => { void supabase.auth.signOut(); navigate("/"); }} />}
       <div className="flex-1 min-w-0 relative">
-      {scanBody}
+      <>{scanBody}{resetDialog}</>
       </div>
     </div>
     </SidebarProvider>

@@ -14,6 +14,7 @@ import { nutritionMacroError } from "@/lib/nutritionValidation";
 import { cn } from "@/lib/utils";
 import { readActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/lib/activeWorkout";
 import { toast } from "sonner";
+import { useConfirm } from "@/components/admin/content/useConfirm";
 
 interface Macros {
   protein: number;
@@ -151,11 +152,14 @@ const HomeOverview = ({
   const activeWorkoutIsToday = isActiveWorkoutToday(activeWorkout);
   const activeWorkoutDate = activeWorkout ? formatDraftDate(activeWorkout.date) : "";
 
+  const { ask: confirmDiscard, dialog: discardDialog } = useConfirm();
   const discardActiveWorkout = async () => {
     if (!userId || !activeWorkout) return;
-    const ok = window.confirm(
-      "¿Descartar la sesión sin terminar? Se borrarán las series de ese día y no contará como hecha.",
-    );
+    const ok = await confirmDiscard({
+      title: "¿Descartar la sesión?",
+      description: "Se borrarán las series de ese día y no contará como hecha.",
+      confirmLabel: "Descartar",
+    });
     if (!ok) return;
     try {
       const { error } = await supabase
@@ -500,6 +504,7 @@ const HomeOverview = ({
         />
       </div>
       </div>
+      {discardDialog}
     </div>
   );
 };
