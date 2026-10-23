@@ -1,3 +1,4 @@
+- Design language (web, iPhone, Android and Mac are one product): read `docs/design/README.md` before creating or changing any screen and pass `docs/design/checklist.md` before release — black + restrained gold, borderless 22/28 px cards, pill buttons/fields, big rounded figures, real photos, shared components only.
 
 
 - Los vídeos de técnica con IA se generan vía la edge function `exercise-video` (AI Gateway, modelo de vídeo por defecto) y se guardan en el bucket público `site-assets` en `exercise-videos/`; el estado del trabajo se guarda en `exercises.video_job_id`.
