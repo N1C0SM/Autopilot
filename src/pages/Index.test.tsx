@@ -33,7 +33,7 @@ describe("short public home", () => {
   it("takes the clear primary action to the routine configurator", async () => {
     open();
     const main = await screen.findByRole("main");
-    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Tu entrenamiento.");
+    expect(within(main).getByRole("heading", { level: 1 })).toHaveTextContent("Entrena con plan.");
     expect(within(main).getByRole("img", { name: "Pantalla de Autopilot con el entrenamiento del día" })).toBeInTheDocument();
     fireEvent.click(within(main).getAllByRole("link", { name: /Crear mi rutina gratis/ })[0]);
     expect(screen.getByTestId("destination")).toHaveTextContent("/onboarding");

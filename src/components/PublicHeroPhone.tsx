@@ -3,7 +3,7 @@ import { PhoneAppBar, PhoneFrame, PhoneHome } from "@/components/PublicPhone";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { supabase } from "@/integrations/supabase/client";
 
-const FADE = "linear-gradient(to bottom, #000 80%, transparent 100%)";
+const FADE = "linear-gradient(to bottom, #000 55%, transparent 100%)";
 
 /** Founder photo, or their initial when it is missing or fails to load. */
 function OwnerAvatar({ photo, initial }: { photo: string | null; initial: string }) {

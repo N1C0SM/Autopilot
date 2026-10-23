@@ -88,8 +88,8 @@ export default function Index() {
     {/* 1 · Hero */}
     <section className="px-5 pt-10 sm:px-8 sm:pt-16">
       <div className="mx-auto max-w-3xl text-center">
-        <h1 className="type-large-title sm:text-[48px] sm:leading-[52px] md:text-[64px] md:leading-[68px]"><span className="block">Tu entrenamiento.</span> <span className="block">Tu nutrición.</span> <span className="block text-primary">Tu progreso.</span></h1>
-        <p className="mx-auto mt-5 max-w-md type-body text-muted-foreground md:max-w-xl md:text-[21px] md:leading-[28px]">Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.</p>
+        <h1 className="type-large-title sm:text-[48px] sm:leading-[52px] md:text-[64px] md:leading-[68px]"><span className="block">Entrena con plan.</span> <span className="block">Registra cada serie.</span> <span className="block text-primary">Mira cómo progresas.</span></h1>
+        <p className="mx-auto mt-5 max-w-md type-body text-muted-foreground md:max-w-xl md:text-[21px] md:leading-[28px]">Tu rutina según tu objetivo, tus días y tu material. En el gimnasio o en casa.</p>
         <div className="mx-auto mt-8 flex max-w-sm flex-col items-stretch gap-1 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
           <Button variant="hero" size="lg" asChild className="sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>
           <Button variant="plain" size="lg" asChild><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
