@@ -35,11 +35,14 @@ targets:
       - package: Supabase
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.autopilotplan.native
+        # Mismos identificadores que las apps que mostraban la web: la nativa las sustituye.
+        PRODUCT_BUNDLE_IDENTIFIER[sdk=iphoneos*]: app.lovable.aa0029da00154c05a2b503e61df0f87c
+        PRODUCT_BUNDLE_IDENTIFIER[sdk=iphonesimulator*]: app.lovable.aa0029da00154c05a2b503e61df0f87c
+        PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]: app.autopilotplan.mac
         PRODUCT_NAME: Autopilot
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
         ENABLE_APP_SANDBOX[sdk=macosx*]: YES
         ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]: YES
-        ENABLE_USER_SELECTED_FILES[sdk=macosx*]: readonly
+        ENABLE_USER_SELECTED_FILES[sdk=macosx*]: readwrite

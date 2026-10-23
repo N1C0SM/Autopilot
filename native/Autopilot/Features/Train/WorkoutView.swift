@@ -13,6 +13,8 @@ struct WorkoutView: View {
     @State private var discardOpen = false
     @State private var rpe = 7
     @State private var summaryOpen = false
+    /// Vista elegida en Ajustes: lista vertical o ejercicio a ejercicio (modo foco).
+    private let focusMode = UserDefaults.standard.string(forKey: "workout-view") == "focus"
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var progress: Double { workout.totalSets > 0 ? Double(workout.doneSets) / Double(workout.totalSets) : 0 }
@@ -21,8 +23,15 @@ struct WorkoutView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, ex in
+                    if focusMode, let i = Optional(min(workout.draft.currentExercise, max(workout.exercises.count - 1, 0))), let ex = workout.exercises[safe: i] {
+                        FocusViewer(workout: workout, index: i)
                         SessionExerciseCard(workout: workout, exercise: ex, index: i)
+                            .onAppear { workout.openExercises.insert(i) }
+                            .id(ex.id)
+                    } else {
+                        ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, ex in
+                            SessionExerciseCard(workout: workout, exercise: ex, index: i)
+                        }
                     }
                     if let error = workout.saveError {
                         Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
@@ -292,6 +301,60 @@ struct SessionExerciseCard: View {
         }
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .sheet(isPresented: $technique) { TechniqueSheet(exercise: exercise) }
+    }
+}
+
+/// Modo foco: visor grande del ejercicio activo (desliza para cambiar) y carrusel de toda la sesión.
+struct FocusViewer: View {
+    @ObservedObject var workout: ActiveWorkout
+    let index: Int
+
+    private func go(_ i: Int) {
+        guard workout.exercises.indices.contains(i) else { return }
+        workout.draft.currentExercise = i
+        workout.openExercises.insert(i)
+        workout.persist()
+        Haptics.tap()
+    }
+
+    var body: some View {
+        let ex = workout.exercises[index]
+        VStack(spacing: 8) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.card)
+                if let i = ex.image_url, let u = URL(string: i) {
+                    AsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                } else {
+                    Image(systemName: "dumbbell").font(.title).foregroundStyle(Palette.muted)
+                }
+            }
+            .frame(maxWidth: .infinity).frame(height: 240)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .gesture(DragGesture(minimumDistance: 30).onEnded { v in
+                if v.translation.width < -60 { go(index + 1) } else if v.translation.width > 60 { go(index - 1) }
+            })
+            .accessibilityLabel("\(ex.name). Desliza para cambiar de ejercicio")
+            .accessibilityAdjustableAction { dir in
+                switch dir { case .increment: go(index + 1); case .decrement: go(index - 1); default: break }
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { i, item in
+                        let sets = workout.draft.logs[item.name] ?? []
+                        let done = !sets.isEmpty && sets.allSatisfy(\.done)
+                        Button { go(i) } label: {
+                            ExerciseThumb(url: item.image_url, completed: done)
+                                .padding(2)
+                                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(i == index ? Palette.gold : .clear, lineWidth: 2))
+                                .opacity(i == index ? 1 : 0.6)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(i + 1). \(workout.swaps[item.name] ?? item.name)\(done ? " · hecho" : "")")
+                        .accessibilityAddTraits(i == index ? .isSelected : [])
+                    }
+                }
+            }
+        }
     }
 }
 

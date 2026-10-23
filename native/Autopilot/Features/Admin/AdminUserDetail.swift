@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 import Supabase
 
 /// Ficha de usuario, como `UserDetail.tsx`: pestañas Plan · Perfil · Acceso · Progreso · Entreno · Nutrición · Chat.
@@ -287,8 +288,10 @@ struct AdminUserFullDetail: View {
 /// Chat privado (como `Chat.tsx`): mensajes de la conversación en tiempo casi real y envío de texto.
 struct ChatView: View {
     let conversationUserId: String
-    struct Message: Codable, Identifiable, Hashable { let id: String; let sender_id: String; let content: String; let media_url: String?; let created_at: String }
+    struct Message: Codable, Identifiable, Hashable { let id: String; let sender_id: String; let content: String; let media_url: String?; let media_type: String?; let created_at: String }
     @State private var messages: [Message] = []
+    @State private var photo: PhotosPickerItem?
+    @State private var pending: Data?
     @State private var text = ""
     @State private var sending = false
     private var me: String? { Backend.client.auth.currentUser?.id.uuidString.lowercased() }
@@ -321,18 +324,31 @@ struct ChatView: View {
                 }
                 .onChange(of: messages.count) { _, _ in if let last = messages.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } } }
             }
+            if let pending, let img = PlatformImage(data: pending) {
+                HStack {
+                    Image(platformImage: img).resizable().scaledToFill().frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Button { self.pending = nil; photo = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Palette.muted) }.buttonStyle(.plain).accessibilityLabel("Quitar foto")
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+            }
             HStack(spacing: 8) {
+                PhotosPicker(selection: $photo, matching: .images) {
+                    Image(systemName: "photo").font(.system(size: 18)).frame(width: 44, height: 44).background(Palette.secondary, in: Circle())
+                }
+                .buttonStyle(.plain).foregroundStyle(Palette.gold).accessibilityLabel("Adjuntar foto")
                 TextField("Escribe un mensaje…", text: $text, axis: .vertical).textFieldStyle(.plain).lineLimit(1...5)
                     .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 Button { Task { await send() } } label: {
                     Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).foregroundStyle(.black)
                         .frame(width: 44, height: 44).background(Palette.gold, in: Circle())
                 }
-                .buttonStyle(.plain).disabled(text.trimmingCharacters(in: .whitespaces).isEmpty || sending)
+                .buttonStyle(.plain).disabled((text.trimmingCharacters(in: .whitespaces).isEmpty && pending == nil) || sending)
                 .accessibilityLabel("Enviar")
             }
             .padding(12)
         }
+        .onChange(of: photo) { _, p in Task { if let p, let d = try? await p.loadTransferable(type: Data.self) { pending = PlatformImage(data: d)?.jpegData(maxSide: 1600) } } }
         .task {
             while !Task.isCancelled {
                 await load()
@@ -342,7 +358,7 @@ struct ChatView: View {
     }
 
     private func load() async {
-        let rows: [Message] = (try? await Backend.client.from("chat_messages").select("id, sender_id, content, media_url, created_at")
+        let rows: [Message] = (try? await Backend.client.from("chat_messages").select("id, sender_id, content, media_url, media_type, created_at")
             .eq("conversation_user_id", value: conversationUserId).order("created_at").limit(300).execute().value) ?? []
         if rows != messages { messages = rows }
     }
@@ -350,10 +366,19 @@ struct ChatView: View {
     private func send() async {
         guard let me else { return }
         sending = true; defer { sending = false }
-        struct I: Encodable { let conversation_user_id: String; let sender_id: String; let content: String }
+        struct I: Encodable { let conversation_user_id: String; let sender_id: String; let content: String; let media_url: String?; let media_type: String? }
         do {
-            try await Backend.client.from("chat_messages").insert(I(conversation_user_id: conversationUserId, sender_id: me, content: text.trimmingCharacters(in: .whitespacesAndNewlines))).execute()
-            text = ""
+            var url: String?
+            if let data = pending {
+                // Mismo sitio que la web: el primer segmento es quien sube (RLS del almacén).
+                let path = "\(me)/chat/\(conversationUserId)/\(Int(Date().timeIntervalSince1970 * 1000)).jpg"
+                try await Backend.client.storage.from("progress-photos").upload(path, data: data, options: FileOptions(contentType: "image/jpeg"))
+                url = try Backend.client.storage.from("progress-photos").getPublicURL(path: path).absoluteString
+            }
+            let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            try await Backend.client.from("chat_messages").insert(I(conversation_user_id: conversationUserId, sender_id: me,
+                content: body.isEmpty ? "📷 Foto" : body, media_url: url, media_type: url == nil ? nil : "image")).execute()
+            text = ""; pending = nil; photo = nil
             Haptics.tap()
             await load()
         } catch { Haptics.error() }
