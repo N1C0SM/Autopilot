@@ -64,7 +64,7 @@ export default function WhoIsTraining() {
   };
 
   // Filas anchas, como la lista de usuarios: foto redonda a la izquierda, nombre y correo.
-  const row = "group flex w-full items-center gap-4 rounded-[22px] bg-card p-4 text-left ring-2 ring-transparent transition-[transform,box-shadow] duration-200 ease-out hover:ring-foreground/20 focus-visible:outline-none focus-visible:ring-primary active:scale-[0.98]";
+  const row = "group flex w-full items-center gap-4 rounded-full bg-card py-3 pl-3 pr-6 text-left ring-2 ring-transparent transition-[transform,box-shadow] duration-200 ease-out hover:ring-foreground/20 focus-visible:outline-none focus-visible:ring-primary active:scale-[0.98]";
   const circle = "relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full";
 
   return (
