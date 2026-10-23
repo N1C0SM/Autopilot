@@ -126,7 +126,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
             "flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-2xl border px-2 py-2 transition-colors",
             active ? "border-primary bg-primary/15 text-foreground" : "border-border/70 text-muted-foreground",
           )}>
-          <span className="text-xs font-semibold">{d.slice(0, 3)}</span>
+          <span className="type-footnote font-semibold">{d.slice(0, 3)}</span>
           <span className={cn("h-1.5 w-1.5 rounded-full", has ? "bg-primary" : "bg-border")} aria-hidden />
         </button>
       );
@@ -140,8 +140,8 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
         )}>
         <span className={cn("h-2 w-2 shrink-0 rounded-full", has ? "bg-primary" : "bg-border")} aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-foreground">{d}</span>
-          <span className="block truncate text-xs">{p?.routine_name ? `${p.routine_name} · ` : ""}{daySummary(p)}</span>
+          <span className="block type-subhead font-medium text-foreground">{d}</span>
+          <span className="block truncate type-footnote">{p?.routine_name ? `${p.routine_name} · ` : ""}{daySummary(p)}</span>
         </span>
       </button>
     );
@@ -150,8 +150,8 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
   const detail = (
     <div className="flex min-h-0 flex-1 flex-col">
       {plan?.type === "actividad" ? (
-        <div className="space-y-3 rounded-2xl border border-border p-4">
-          <p className="text-sm text-muted-foreground">{day}: {plan.sport || "Actividad"} {plan.duration ? `· ${plan.duration}` : ""}</p>
+        <div className="space-y-3 rounded-2xl bg-card p-4">
+          <p className="type-subhead text-muted-foreground">{day}: {plan.sport || "Actividad"} {plan.duration ? `· ${plan.duration}` : ""}</p>
           <Button type="button" variant="outline" onClick={() => update(() => ({ day, type: "gimnasio", routine_name: "", muscle_focus: "", exercises: [] }))}>
             Convertir en día de fuerza
           </Button>
@@ -175,7 +175,7 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
           {copyOpen && (
             <div className="mt-2 flex flex-wrap gap-1.5 rounded-2xl border border-border/70 p-2">
               {DAYS.filter((d) => d !== day).map((d) => (
-                <button key={d} type="button" onClick={() => copyTo(d)} className="rounded-full border border-border px-3 py-2 text-xs hover:border-primary/50">{d}</button>
+                <button key={d} type="button" onClick={() => copyTo(d)} className="rounded-full bg-secondary px-3 py-2 type-footnote hover:border-primary/50">{d}</button>
               ))}
             </div>
           )}
@@ -184,8 +184,8 @@ const PlanEditor = ({ open, onOpenChange, userId, dayPlans, onSaved }: Props) =>
               <button type="button" onClick={() => setPicker(true)}
                 className="flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-border text-muted-foreground hover:border-primary/50">
                 <Plus className="h-6 w-6 text-primary" />
-                <span className="text-sm font-medium text-foreground">Día de descanso</span>
-                <span className="text-xs">Añade ejercicios para entrenar el {day.toLowerCase()}</span>
+                <span className="type-subhead font-medium text-foreground">Día de descanso</span>
+                <span className="type-footnote">Añade ejercicios para entrenar el {day.toLowerCase()}</span>
               </button>
             ) : (
               <>

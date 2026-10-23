@@ -1,3 +1,4 @@
+import PublicLayout from "@/components/PublicLayout";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,10 +64,10 @@ const Blog = () => {
   const uncategorized = useMemo(() => posts.filter((p) => !p.category), [posts]);
 
   const chip = (active: boolean) =>
-    `shrink-0 h-9 px-4 rounded-full text-sm transition-colors ${active ? "bg-foreground text-background font-medium" : "bg-secondary text-muted-foreground hover:text-foreground"}`;
+    `shrink-0 h-9 px-4 rounded-full type-subhead transition-colors ${active ? "bg-foreground text-background font-medium" : "bg-secondary text-muted-foreground hover:text-foreground"}`;
 
   return (
-    <div className="min-h-screen bg-background">
+    <PublicLayout title="Academia de entrenamiento basada en evidencia" description="Academia gratuita: hipertrofia, fuerza, biomecánica, calistenia, nutrición y recuperación explicadas con evidencia científica y por niveles.">
       <Helmet>
         <title>Academia de entrenamiento basada en evidencia · Autopilot</title>
         <meta name="description" content="Academia gratuita: hipertrofia, fuerza, biomecánica, calistenia, nutrición y recuperación explicadas con evidencia científica y por niveles." />
@@ -77,14 +78,8 @@ const Blog = () => {
         <meta property="og:type" content="website" />
       </Helmet>
 
-      <nav className="app-chrome border-b sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
-          <Link to="/onboarding" className="text-sm text-primary font-medium hover:underline">Crear mi rutina gratis →</Link>
-        </div>
-      </nav>
 
-      <main className="container mx-auto max-w-5xl px-4 py-16 sm:py-24">
+      <div className="container mx-auto max-w-5xl px-5 py-16 sm:px-8 sm:py-24">
         <header className="mx-auto mb-16 max-w-3xl text-center animate-in fade-in duration-1000 motion-reduce:animate-none sm:mb-24">
           <p className="mb-2 type-subhead text-primary">Academia · Gratis</p>
           <h1 className="type-display mb-5">
@@ -106,19 +101,19 @@ const Blog = () => {
                 <button
                   key={c.slug}
                   onClick={() => openCat(c.slug)}
-                  className="group relative text-left overflow-hidden rounded-3xl border border-border bg-card p-6 min-h-[200px] flex flex-col justify-between transition-all hover:border-primary/60 hover:-translate-y-0.5"
+                  className="group relative text-left overflow-hidden rounded-3xl bg-card p-6 min-h-[200px] flex flex-col justify-between transition-all hover:bg-secondary hover:-translate-y-0.5"
                 >
                   <div aria-hidden className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-colors" />
                   <div className="relative flex items-start justify-between">
                     <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
                       <Icon className="w-6 h-6" />
                     </span>
-                    <span className="text-xs text-muted-foreground font-mono">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="type-footnote text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
                   </div>
                   <div className="relative mt-6">
-                    <h2 className="text-xl font-semibold font-display tracking-tight">{c.name}</h2>
-                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{c.summary}</p>
-                    <p className="text-xs text-primary font-medium mt-4 inline-flex items-center gap-1">
+                    <h2 className="font-rounded type-title2">{c.name}</h2>
+                    <p className="type-subhead text-muted-foreground mt-1.5 leading-relaxed line-clamp-2">{c.summary}</p>
+                    <p className="type-footnote text-primary font-medium mt-4 inline-flex items-center gap-1">
                       {n ? `${n} ${n === 1 ? "lección" : "lecciones"}` : "Próximamente"}
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </p>
@@ -129,14 +124,14 @@ const Blog = () => {
           </section>
           {uncategorized.length > 0 && (
             <section aria-label="Otros artículos" className="mt-14">
-              <h2 className="text-2xl font-bold font-display tracking-tight mb-4">Otros artículos</h2>
+              <h2 className="type-title1 mb-4">Otros artículos</h2>
               <ol className="space-y-3">
                 {uncategorized.map((p) => (
                   <li key={p.id}>
-                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5 hover:border-primary/60 transition-colors">
+                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl bg-card p-4 sm:p-5 hover:bg-secondary transition-colors">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold tracking-tight group-hover:text-primary transition-colors">{p.title}</h3>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                        <div className="flex flex-wrap items-center gap-2 type-footnote text-muted-foreground mt-1">
                           {p.level && <span>{LEVEL_LABEL[p.level as Level]}</span>}
                           {p.evidence_level && <span>· {EVIDENCE_LABEL[p.evidence_level as Evidence]?.label}</span>}
                           {p.reading_minutes ? <span className="inline-flex items-center gap-1">· <Clock className="w-3 h-3" /> {p.reading_minutes} min</span> : null}
@@ -152,7 +147,7 @@ const Blog = () => {
           </>
         ) : (
           <>
-            <button onClick={() => openCat("all")} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 h-11">
+            <button onClick={() => openCat("all")} className="inline-flex items-center gap-1.5 type-subhead text-muted-foreground hover:text-foreground mb-6 h-11">
               <ArrowLeft className="w-4 h-4" /> Todas las rutas
             </button>
             <div className="mb-6">
@@ -176,11 +171,11 @@ const Blog = () => {
               <ol className="space-y-3">
                 {filtered.map((p, i) => (
                   <li key={p.id}>
-                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl border border-border bg-card p-4 sm:p-5 hover:border-primary/60 transition-colors">
-                      <span className="shrink-0 h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-semibold">{i + 1}</span>
+                    <Link to={`/blog/${p.slug}`} className="group flex items-center gap-4 rounded-2xl bg-card p-4 sm:p-5 hover:bg-secondary transition-colors">
+                      <span className="shrink-0 h-10 w-10 rounded-full bg-secondary flex items-center justify-center type-subhead font-semibold">{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold tracking-tight group-hover:text-primary transition-colors">{p.title}</h3>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-1">
+                        <div className="flex flex-wrap items-center gap-2 type-footnote text-muted-foreground mt-1">
                           {p.level && <span>{LEVEL_LABEL[p.level as Level]}</span>}
                           {p.evidence_level && <span>· {EVIDENCE_LABEL[p.evidence_level as Evidence]?.label}</span>}
                           {p.reading_minutes ? <span className="inline-flex items-center gap-1">· <Clock className="w-3 h-3" /> {p.reading_minutes} min</span> : null}
@@ -195,12 +190,12 @@ const Blog = () => {
           </>
         )}
 
-        <p className="text-xs text-muted-foreground mt-12 max-w-2xl leading-relaxed">
+        <p className="type-footnote text-muted-foreground mt-12 max-w-2xl leading-relaxed">
           Contenido educativo. No sustituye el consejo de un profesional sanitario. Cada artículo se revisa antes de publicarse
           e indica el nivel de evidencia de sus conclusiones.
         </p>
-      </main>
-    </div>
+      </div>
+    </PublicLayout>
   );
 };
 

@@ -59,12 +59,12 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-primary" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <span className="type-footnote font-semibold uppercase tracking-widest text-muted-foreground">
             Tu historial de scans
           </span>
         </div>
         {rows.length > 1 && (
-          <div className={`flex items-center gap-1.5 text-sm font-medium ${trendColor}`}>
+          <div className={`flex items-center gap-1.5 type-subhead font-medium ${trendColor}`}>
             <TrendIcon className="w-4 h-4" />
             {delta > 0 ? "+" : ""}
             {delta.toFixed(1)} físico

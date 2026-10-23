@@ -1,3 +1,4 @@
+import PublicLayout from "@/components/PublicLayout";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,7 +76,7 @@ const BlogPost = () => {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
         <Helmet><title>Artículo no encontrado — Autopilot</title><meta name="robots" content="noindex" /></Helmet>
         <p className="text-muted-foreground mb-4">Este artículo no existe.</p>
-        <button onClick={() => navigate("/blog")} className="text-primary hover:underline text-sm">← Volver a la Academia</button>
+        <button onClick={() => navigate("/blog")} className="text-primary hover:underline type-subhead">← Volver a la Academia</button>
       </div>
     );
   }
@@ -91,7 +92,7 @@ const BlogPost = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <PublicLayout title={post.title} description={post.excerpt || post.title}>
       <Helmet>
         <title>{`${title} · Autopilot`}</title>
         <meta name="description" content={desc} />
@@ -129,28 +130,22 @@ const BlogPost = () => {
         })}</script>
       </Helmet>
 
-      <nav className="app-chrome border-b sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-16 px-4">
-          <Link to="/" className="font-display text-xl font-bold text-gradient">Autopilot</Link>
-          <Link to="/onboarding" className="text-sm text-primary font-medium hover:underline">Crear mi rutina gratis →</Link>
-        </div>
-      </nav>
 
       <div className="container mx-auto max-w-6xl px-4 py-12 sm:py-16 lg:grid lg:grid-cols-[1fr_220px] lg:gap-16">
         <article className="max-w-3xl min-w-0">
-          <nav aria-label="Migas de pan" className="text-xs text-muted-foreground mb-8 flex items-center gap-1.5 flex-wrap">
+          <nav aria-label="Migas de pan" className="type-footnote text-muted-foreground mb-8 flex items-center gap-1.5 flex-wrap">
             <Link to="/blog" className="inline-flex items-center gap-1 hover:text-foreground"><ArrowLeft className="w-3 h-3" /> Academia</Link>
             {cat && <><span>/</span><span>{cat.name}</span></>}
           </nav>
 
           <header className="mb-10">
             <div className="flex flex-wrap gap-2 mb-5">
-              {post.level && <span className="text-xs px-3 py-1 rounded-full bg-secondary text-foreground">{LEVEL_LABEL[post.level as Level]}</span>}
-              {ev && <span title={ev.hint} className="text-xs px-3 py-1 rounded-full border border-primary/40 text-primary">{ev.label}</span>}
+              {post.level && <span className="type-footnote px-3 py-1 rounded-full bg-secondary text-foreground">{LEVEL_LABEL[post.level as Level]}</span>}
+              {ev && <span title={ev.hint} className="type-footnote px-3 py-1 rounded-full bg-primary/15 text-primary">{ev.label}</span>}
             </div>
             <h1 className="type-display-sm mb-5">{post.title}</h1>
-            {post.excerpt && <p className="text-lg text-muted-foreground leading-relaxed mb-5">{post.excerpt}</p>}
-            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            {post.excerpt && <p className="type-body text-muted-foreground md:text-[19px] md:leading-[28px] mb-5">{post.excerpt}</p>}
+            <div className="flex flex-wrap items-center gap-4 type-footnote text-muted-foreground">
               {post.author_name && <span>Por {post.author_name}</span>}
               {post.published_at && (
                 <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" />
@@ -163,8 +158,8 @@ const BlogPost = () => {
 
           {toc.length > 1 && (
             <details className="lg:hidden mb-10 rounded-2xl bg-secondary/50 p-4">
-              <summary className="text-sm font-medium cursor-pointer">Contenido</summary>
-              <ol className="mt-3 space-y-2 text-sm">
+              <summary className="type-subhead font-medium cursor-pointer">Contenido</summary>
+              <ol className="mt-3 space-y-2 type-subhead">
                 {toc.map((t) => <li key={t.id} className={t.depth === 3 ? "pl-4" : ""}><a href={`#${t.id}`} className="text-muted-foreground hover:text-foreground">{t.text}</a></li>)}
               </ol>
             </details>
@@ -182,8 +177,8 @@ const BlogPost = () => {
 
           {refs.length > 0 && (
             <section id="referencias" className="mt-16 pt-8 border-t border-border">
-              <h2 className="text-xl font-semibold font-display mb-5">Referencias</h2>
-              <ol className="space-y-4 text-sm text-muted-foreground list-decimal pl-5">
+              <h2 className="type-title2 mb-5">Referencias</h2>
+              <ol className="space-y-4 type-subhead text-muted-foreground list-decimal pl-5">
                 {refs.map((r, i) => (
                   <li key={i} className="leading-relaxed">
                     {r.authors} ({r.year}). <span className="text-foreground">{r.title}</span>.{r.journal ? <em> {r.journal}.</em> : null}{" "}
@@ -199,13 +194,13 @@ const BlogPost = () => {
             <nav aria-label="Navegación entre artículos" className="mt-16 grid sm:grid-cols-2 gap-3">
               {prev ? (
                 <Link to={`/blog/${prev.slug}`} className="rounded-2xl bg-secondary/50 p-5 hover:bg-secondary transition-colors">
-                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Anterior</span>
+                  <span className="type-footnote text-muted-foreground inline-flex items-center gap-1"><ArrowLeft className="w-3 h-3" /> Anterior</span>
                   <p className="font-medium mt-1">{prev.title}</p>
                 </Link>
               ) : <span />}
               {next && (
                 <Link to={`/blog/${next.slug}`} className="rounded-2xl bg-secondary/50 p-5 hover:bg-secondary transition-colors sm:text-right">
-                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">Siguiente <ArrowRight className="w-3 h-3" /></span>
+                  <span className="type-footnote text-muted-foreground inline-flex items-center gap-1">Siguiente <ArrowRight className="w-3 h-3" /></span>
                   <p className="font-medium mt-1">{next.title}</p>
                 </Link>
               )}
@@ -214,13 +209,13 @@ const BlogPost = () => {
 
           {related.length > 0 && (
             <section className="mt-16">
-              <h2 className="text-xl font-semibold font-display mb-4">Más sobre {cat?.name.toLowerCase()}</h2>
+              <h2 className="type-title2 mb-4">Más sobre {cat?.name.toLowerCase()}</h2>
               <ul className="divide-y divide-border border-y border-border">
                 {related.map((r) => (
                   <li key={r.slug}>
                     <Link to={`/blog/${r.slug}`} className="flex items-center justify-between gap-3 py-4 hover:text-primary transition-colors">
                       <span>{r.title}</span>
-                      {r.level && <span className="text-xs text-muted-foreground shrink-0">{LEVEL_LABEL[r.level as Level]}</span>}
+                      {r.level && <span className="type-footnote text-muted-foreground shrink-0">{LEVEL_LABEL[r.level as Level]}</span>}
                     </Link>
                   </li>
                 ))}
@@ -229,9 +224,9 @@ const BlogPost = () => {
           )}
 
           <div className="mt-16 p-6 sm:p-8 bg-card border border-border rounded-3xl text-center">
-            <h3 className="text-xl sm:text-2xl font-bold font-display mb-3">Pon esto en práctica</h3>
-            <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">Crea tu rutina gratis y registra tus entrenamientos. Sin tarjeta.</p>
-            <Link to="/onboarding" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity">
+            <h3 className="type-title1 mb-3">Pon esto en práctica</h3>
+            <p className="type-subhead text-muted-foreground mb-5 max-w-md mx-auto">Crea tu rutina gratis y registra tus entrenamientos. Sin tarjeta.</p>
+            <Link to="/onboarding" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-semibold type-subhead hover:opacity-90 transition-opacity">
               Crear mi rutina gratis →
             </Link>
           </div>
@@ -240,8 +235,8 @@ const BlogPost = () => {
         {toc.length > 1 && (
           <aside className="hidden lg:block">
             <div className="sticky top-24">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Contenido</p>
-              <ol className="space-y-2 text-sm border-l border-border">
+              <p className="type-footnote uppercase tracking-widest text-muted-foreground mb-3">Contenido</p>
+              <ol className="space-y-2 type-subhead border-l border-border">
                 {toc.map((t) => (
                   <li key={t.id} className={t.depth === 3 ? "pl-7" : "pl-4"}>
                     <a href={`#${t.id}`} className="text-muted-foreground hover:text-foreground transition-colors">{t.text}</a>
@@ -253,7 +248,7 @@ const BlogPost = () => {
           </aside>
         )}
       </div>
-    </div>
+    </PublicLayout>
   );
 };
 

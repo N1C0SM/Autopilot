@@ -10,7 +10,7 @@ const RESTS = ["60 s", "90 s", "120 s", "180 s"];
 const Stepper = ({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void }) => (
   <div className="flex flex-col gap-1">
     <span className="type-caption2 uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
-    <div className="flex items-center rounded-xl border border-border/70 bg-background/40">
+    <div className="flex items-center rounded-full bg-secondary">
       <button type="button" aria-label={`Menos ${label}`} disabled={value <= min}
         onClick={() => { void hapticSelection(); onChange(Math.max(min, value - 1)); }}
         className="grid h-10 w-10 place-items-center text-muted-foreground disabled:opacity-30 active:scale-90 md:h-9 md:w-9">
@@ -52,8 +52,8 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
         className="flex w-full items-center gap-3 p-3 text-left">
         <ExerciseThumb image={ex.image_url ?? undefined} video={ex.video_url ?? undefined} name={ex.name} size="sm" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{ex.name}</span>
-          <span className="block truncate text-xs tabular-nums text-muted-foreground">
+          <span className="block truncate type-subhead font-medium">{ex.name}</span>
+          <span className="block truncate type-footnote tabular-nums text-muted-foreground">
             {ex.series} series · {reps} reps · {rest}
           </span>
         </span>
@@ -72,7 +72,7 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
                 <button key={r} type="button" aria-pressed={ex.rest === r}
                   onClick={() => { void hapticSelection(); onChange({ ...ex, rest: r }); }}
                   className={cn(
-                    "h-10 rounded-xl border text-xs font-medium tabular-nums transition-colors md:h-9",
+                    "h-10 rounded-xl border type-footnote font-medium tabular-nums transition-colors md:h-9",
                     ex.rest === r ? "border-primary bg-primary/15 text-foreground" : "border-border/70 text-muted-foreground",
                   )}>
                   {r.replace(" s", "″")}
@@ -83,7 +83,7 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
           <div className="flex items-center gap-1 border-t border-border/50 pt-2">
             <button type="button" aria-label="Subir" disabled={index === 0} onClick={() => onMove(-1)} className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground disabled:opacity-25"><ArrowUp className="h-4 w-4" /></button>
             <button type="button" aria-label="Bajar" disabled={index === total - 1} onClick={() => onMove(1)} className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground disabled:opacity-25"><ArrowDown className="h-4 w-4" /></button>
-            <button type="button" onClick={onRemove} className="ml-auto flex h-10 items-center gap-1.5 rounded-xl px-3 text-xs text-muted-foreground hover:text-destructive">
+            <button type="button" onClick={onRemove} className="ml-auto flex h-10 items-center gap-1.5 rounded-xl px-3 type-footnote text-muted-foreground hover:text-destructive">
               <Trash2 className="h-4 w-4" /> Quitar
             </button>
           </div>

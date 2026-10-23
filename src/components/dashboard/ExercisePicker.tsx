@@ -95,7 +95,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
 
   const chip = (active: boolean) =>
     cn(
-      "shrink-0 rounded-full border px-3.5 py-2 text-xs font-medium transition-colors md:py-1.5",
+      "shrink-0 rounded-full border px-3.5 py-2 type-footnote font-medium transition-colors md:py-1.5",
       active ? "border-primary bg-primary/15 text-foreground" : "border-border text-muted-foreground hover:text-foreground",
     );
 
@@ -145,13 +145,13 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
               >
                 <ExerciseThumb image={r.image_url ?? undefined} video={r.video_url ?? undefined} name={r.name} size="sm" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{r.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block truncate type-subhead font-medium">{r.name}</span>
+                  <span className="block truncate type-footnote text-muted-foreground">
                     {[r.muscle_group, r.exercise_type, inSession ? "Ya en la sesión" : null].filter(Boolean).join(" · ")}
                   </span>
                 </span>
                 <span className={cn(
-                  "grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums",
+                  "grid h-7 w-7 shrink-0 place-items-center rounded-full border type-footnote font-semibold tabular-nums",
                   sel >= 0 ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent",
                 )}>
                   {sel >= 0 ? sel + 1 : <Check className="h-3.5 w-3.5" aria-hidden />}
@@ -161,7 +161,7 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
           );
         })}
         {rows.length > 0 && list.length === 0 && (
-          <li className="col-span-full py-10 text-center text-sm text-muted-foreground">Sin resultados. Prueba otro nombre o quita filtros.</li>
+          <li className="col-span-full py-10 text-center type-subhead text-muted-foreground">Sin resultados. Prueba otro nombre o quita filtros.</li>
         )}
       </ul>
     </ResponsiveSheet>
