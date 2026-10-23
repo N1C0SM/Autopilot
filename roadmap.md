@@ -12,3 +12,8 @@
 - [x] Fase B Apple: explicar por qué se sube o mantiene el peso en cada ejercicio
 - [x] Fase C Apple: icono, capturas y texto (vídeo pendiente: grabar en iPhone real) para la candidatura (App Store Connect → Nominations)
 - [ ] Probar con usuarios reales en distintos iPhone (bloqueado: requiere dispositivos y usuarios)
+
+## Integración con el ecosistema Apple (pendiente)
+- [ ] HealthKit: guardar cada entrenamiento en Salud (duración, calorías) y leer el peso corporal
+- [ ] Widgets de pantalla de inicio y de bloqueo: sesión de hoy y racha semanal
+- [ ] App para Apple Watch: registrar series y ver el descanso desde la muñeca

@@ -1,5 +1,6 @@
+import RecordCelebration, { type RecordMoment } from "@/components/dashboard/RecordCelebration";
 import { useSessionCover } from "@/hooks/useSessionCover";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -153,6 +154,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [swaps, setSwaps] = useState<Record<string, string>>({});
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
   const [personalRecords, setPersonalRecords] = useState<string[]>([]);
+  const [recordMoment, setRecordMoment] = useState<RecordMoment | null>(null);
+  const closeRecordMoment = useCallback(() => setRecordMoment(null), []);
   const [livePRs, setLivePRs] = useState<Record<string, string>>({});
   // Superseries: solo en memoria durante la sesión (no se guardan ni se envían).
   const [supersetLinks, setSupersetLinks] = useState<SupersetLinks>({});
@@ -657,7 +660,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         setLivePRs((prev) => ({ ...prev, [`${exerciseName}#${setIndex}`]: `+${diff} kg` }));
         void hapticImpact("heavy");
         void hapticNotify("success");
-        toast.success(`¡Nuevo récord personal en ${exerciseName}! +${diff} kg`, { icon: "🏆" });
+        setRecordMoment({ exercise: exerciseName, diff: `+${diff.toLocaleString("es-ES")} kg`, key: Date.now() });
         try { navigator.vibrate?.([30, 60, 30]); } catch { /* noop */ }
       }
     } else {
@@ -1122,6 +1125,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     // En sesión ocupa la pantalla entera (el shell no pone barra ni pestañas): la barra
     // propia cubre la zona segura superior y el pie fijo, la del indicador de inicio.
     <div className={`w-full min-w-0 ${started ? "flex min-h-[calc(100dvh-0.5rem)] flex-col" : ""}`}>
+      <RecordCelebration moment={recordMoment} onDone={closeRecordMoment} />
       {started && !workoutCompleted && (
         // -mt-2 compensa el pt-2 del contenedor de sección: la barra nace pegada al borde superior.
         <div className="sticky top-0 z-30 -mt-2">
