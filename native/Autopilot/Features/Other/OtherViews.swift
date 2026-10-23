@@ -25,7 +25,7 @@ struct NutritionView: View {
                                    message: "Completa tu perfil para calcular calorías y macros.")
                 }
             }
-            .padding(16).frame(maxWidth: 900).frame(maxWidth: .infinity)
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .task {
@@ -72,7 +72,7 @@ struct ScanView: View {
                 }
                 .buttonStyle(.pill)
             }
-            .padding(16).frame(maxWidth: 900).frame(maxWidth: .infinity)
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .task {

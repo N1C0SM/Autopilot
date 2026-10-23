@@ -34,12 +34,15 @@ struct TrainView: View {
                 }
             }
             .padding(16)
-            .frame(maxWidth: 760)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .refreshable { await model.load(userId: session.userId) }
         .task { await model.load(userId: session.userId) }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await model.load(userId: session.userId) } }
+        .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
+            if active == nil, let day = model.days.first(where: { $0.day == DayNames.today }), day.isGym { Task { await start(day) } }
+        }
         #if os(iOS)
         .fullScreenCover(item: $active) { workout in workoutStack(workout) }
         #else

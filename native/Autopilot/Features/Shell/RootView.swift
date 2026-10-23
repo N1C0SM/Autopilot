@@ -141,6 +141,13 @@ struct MainShell: View {
             if let s = note.object as? AppSection { selection = s }
         }
         .onChange(of: session.role) { _, _ in selection = nil }
+        .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
+            if session.role == .user && selection != .train {
+                selection = .train
+                // La pantalla Entrenar recoge el aviso cuando ya está en pantalla.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { NotificationCenter.default.post(name: .startTodayWorkout, object: nil) }
+            }
+        }
     }
 
     private var split: some View {

@@ -15,9 +15,12 @@ struct WorkoutView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
                     header
-                    ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
-                        ExerciseCard(workout: workout, exercise: exercise, number: index + 1)
-                            .id(exercise.id)
+                    // En el Mac y el iPad los ejercicios se reparten en columnas.
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 420), spacing: 14, alignment: .top)], spacing: 14) {
+                        ForEach(Array(workout.exercises.enumerated()), id: \.element.id) { index, exercise in
+                            ExerciseCard(workout: workout, exercise: exercise, number: index + 1)
+                                .id(exercise.id)
+                        }
                     }
                     Button("Terminar entreno") { confirmFinish = true }
                         .buttonStyle(.pill)
@@ -28,8 +31,7 @@ struct WorkoutView: View {
                 }
                 .padding(16)
                 .padding(.bottom, workout.draft.restEndsAt == nil ? 16 : 120)
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .onAppear {
                 if let ex = workout.exercises[safe: workout.draft.currentExercise] { proxy.scrollTo(ex.id, anchor: .top) }
@@ -55,6 +57,10 @@ struct WorkoutView: View {
             }
         }
         .sheet(isPresented: $confirmFinish) { finishSheet }
+        .onReceive(NotificationCenter.default.publisher(for: .finishWorkout)) { _ in confirmFinish = true }
+        .onReceive(NotificationCenter.default.publisher(for: .skipRest)) { _ in workout.skipRest() }
+        .onReceive(NotificationCenter.default.publisher(for: .restPlus)) { _ in workout.adjustRest(by: 15) }
+        .onReceive(NotificationCenter.default.publisher(for: .restMinus)) { _ in workout.adjustRest(by: -15) }
     }
 
     private var header: some View {

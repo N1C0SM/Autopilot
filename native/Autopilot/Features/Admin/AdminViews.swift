@@ -60,7 +60,7 @@ struct AdminMetricsView: View {
                     }
                 }
             }
-            .padding(16).frame(maxWidth: 1100).frame(maxWidth: .infinity)
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .refreshable { await load() }

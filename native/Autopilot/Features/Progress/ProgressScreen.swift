@@ -18,58 +18,65 @@ struct ProgressScreen: View {
                     }
                 }
 
-                SectionTitle(title: "Entrenos por semana")
-                Card {
-                    if model.weekly.allSatisfy({ $0.count == 0 }) {
-                        EmptyStateView(symbol: "chart.bar", title: "Sin entrenos todavía")
-                    } else {
-                        Chart(model.weekly, id: \.label) { week in
-                            BarMark(x: .value("Semana", week.label), y: .value("Entrenos", week.count))
-                                .foregroundStyle(Palette.gold)
-                                .cornerRadius(6)
-                        }
-                        .frame(height: 180)
-                        .chartYAxis { AxisMarks(position: .leading) }
-                        .accessibilityLabel("Entrenos por semana")
-                    }
-                }
-
-                if model.weights.count > 1 {
-                    SectionTitle(title: "Peso corporal")
-                    Card {
-                        Chart(model.weights, id: \.date) { w in
-                            LineMark(x: .value("Fecha", w.date), y: .value("Kg", w.kg)).foregroundStyle(Palette.gold)
-                            PointMark(x: .value("Fecha", w.date), y: .value("Kg", w.kg)).foregroundStyle(Palette.gold)
-                        }
-                        .chartYScale(domain: .automatic(includesZero: false))
-                        .frame(height: 180)
-                    }
-                }
-
-                SectionTitle(title: "Récords personales")
-                Card {
-                    if model.records.isEmpty {
-                        EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Aparecen al superar tus mejores marcas.")
-                    } else {
-                        ForEach(model.records, id: \.name) { pr in
-                            HStack {
-                                Text(pr.name).font(.apBody)
-                                Spacer()
-                                Text("\(NumberText.decimal(pr.weight)) kg × \(pr.reps)").font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted)
+                // Una columna en iPhone; dos o tres en Mac y iPad.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 16, alignment: .top)], spacing: 16) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionTitle(title: "Entrenos por semana")
+                        Card {
+                            if model.weekly.allSatisfy({ $0.count == 0 }) {
+                                EmptyStateView(symbol: "chart.bar", title: "Sin entrenos todavía")
+                            } else {
+                                Chart(model.weekly, id: \.label) { week in
+                                    BarMark(x: .value("Semana", week.label), y: .value("Entrenos", week.count))
+                                        .foregroundStyle(Palette.gold)
+                                        .cornerRadius(6)
+                                }
+                                .frame(height: 220)
+                                .chartYAxis { AxisMarks(position: .leading) }
+                                .accessibilityLabel("Entrenos por semana")
                             }
-                            .frame(minHeight: 32)
-                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                    if model.weights.count > 1 {
+                        VStack(alignment: .leading, spacing: 12) {
+                            SectionTitle(title: "Peso corporal")
+                            Card {
+                                Chart(model.weights, id: \.date) { w in
+                                    LineMark(x: .value("Fecha", w.date), y: .value("Kg", w.kg)).foregroundStyle(Palette.gold)
+                                    PointMark(x: .value("Fecha", w.date), y: .value("Kg", w.kg)).foregroundStyle(Palette.gold)
+                                }
+                                .chartYScale(domain: .automatic(includesZero: false))
+                                .frame(height: 220)
+                            }
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionTitle(title: "Récords personales")
+                        Card {
+                            if model.records.isEmpty {
+                                EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Aparecen al superar tus mejores marcas.")
+                            } else {
+                                ForEach(model.records, id: \.name) { pr in
+                                    HStack {
+                                        Text(pr.name).font(.apBody)
+                                        Spacer()
+                                        Text("\(NumberText.decimal(pr.weight)) kg × \(pr.reps)").font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted)
+                                    }
+                                    .frame(minHeight: 32)
+                                    .accessibilityElement(children: .combine)
+                                }
+                            }
                         }
                     }
                 }
             }
             .padding(16)
-            .frame(maxWidth: 900)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .refreshable { await model.load(userId: session.userId) }
         .task { await model.load(userId: session.userId) }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await model.load(userId: session.userId) } }
     }
 }
 

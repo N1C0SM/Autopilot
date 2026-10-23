@@ -29,6 +29,9 @@ struct HomeView: View {
                                hint: today == nil ? "descanso" : (today!.isGym ? "ejercicios" : "actividad"))
                 }
 
+                // Una columna en iPhone; dos en Mac y iPad (hoy a la izquierda, la semana a la derecha).
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 16, alignment: .top)], spacing: 16) {
+                    VStack(alignment: .leading, spacing: 16) {
                 if let today {
                     NavigationLink { TrainView().navigationTitle("Entrenar") } label: {
                         Card(radius: Radius.hero) {
@@ -47,7 +50,9 @@ struct HomeView: View {
                     Card { Text("Hoy toca descanso").font(.apTitle3); Text("Recuperar también es entrenar.").font(.apSubhead).foregroundStyle(Palette.muted) }
                 }
 
-                SectionTitle(title: "Tu semana").padding(.top, 8)
+                    }
+                    VStack(alignment: .leading, spacing: 12) {
+                SectionTitle(title: "Tu semana")
                 Card {
                     ForEach(DayNames.all, id: \.self) { day in
                         let plan = model.days.first { $0.day == day }
@@ -62,14 +67,16 @@ struct HomeView: View {
                         .accessibilityElement(children: .combine)
                     }
                 }
+                    }
+                }
             }
             .padding(16)
-            .frame(maxWidth: 900)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .refreshable { await model.load(userId: session.userId) }
         .task { await model.load(userId: session.userId) }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await model.load(userId: session.userId) } }
     }
 
     private var greeting: String {
