@@ -175,7 +175,7 @@ export default function Index() {
         {(plans.plus || plans.coach) && <h3 className="mt-20 text-center type-title1">¿Quieres que la app haga más por ti?</h3>}
         <div className="mt-8">
           <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
-            <PricingTiers onSelect={selectPlan} />
+            <PricingTiers onSelect={selectPlan} hideFree />
           </Suspense>
         </div>
         <p className="mt-6 text-center"><Link to="/planes" className="inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver la comparativa completa</Link></p>

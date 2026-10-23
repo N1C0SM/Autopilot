@@ -12,6 +12,8 @@ import { hapticTap } from "@/lib/native";
 interface PricingTiersProps {
   onSelect: (plan: PlanKey) => void;
   recommended?: PlanKey;
+  /** Oculta la tarjeta Free cuando la página ya la presenta aparte (portada). */
+  hideFree?: boolean;
 }
 
 
@@ -21,9 +23,11 @@ const PricingTiers = (props: PricingTiersProps) => {
   return <PricingTiersContent {...props} />;
 };
 
-const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTiersProps) => {
-  const plans = usePlanCatalog();
-  const a = availabilityFrom(plans);
+const PricingTiersContent = ({ onSelect, recommended = "training", hideFree }: PricingTiersProps) => {
+  const catalog = usePlanCatalog();
+  const a = availabilityFrom(catalog);
+  const plans = hideFree ? catalog.filter((p) => p.key !== "free") : catalog;
+  if (plans.length === 0) return null;
   const upgradeNames = [a.plus && a.plusName, a.coach && a.coachName].filter(Boolean).join(" o ");
   return (
     <div className="mx-auto max-w-6xl">
