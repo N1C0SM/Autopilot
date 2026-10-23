@@ -3,20 +3,19 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BookCover from "@/components/BookCover";
 import ScrollWords from "@/components/ScrollWords";
-import { supabase } from "@/integrations/supabase/client";
+import { usePublicBooks, type PublicBook } from "@/hooks/usePublicBooks";
 import { useScrollProgress } from "@/hooks/useScrollProgress";
-import { isIOSNative } from "@/lib/platform";
 import { track } from "@/lib/analytics";
 import { hapticTap } from "@/lib/native";
 
-interface ShowBook { id: string; title: string; price: string; cover: string; is_pack: boolean; pages: number | null }
+type ShowBook = PublicBook;
 
 /**
  * Escaparate de las guías reales en la portada. Solo muestra y enlaza a
  * /recursos?guia=<id>, que abre la ficha y el pago de siempre: la compra no pasa por aquí.
  */
 export default function BookShowcase() {
-  const [books, setBooks] = useState<ShowBook[] | null>(null);
+  const books = usePublicBooks();
   const [ref, p, pin] = useScrollProgress<HTMLElement>(-1);
   const [wide, setWide] = useState(false);
   useEffect(() => {
@@ -25,29 +24,6 @@ export default function BookShowcase() {
     const on = () => setWide(mq.matches);
     on(); mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);
-  }, []);
-
-  useEffect(() => {
-    // App Store §3.1.1: en iOS no se anuncian bienes digitales de pago.
-    if (isIOSNative()) { setBooks([]); return; }
-    let alive = true;
-    (async () => {
-      // Mismo origen que /recursos: libros publicados dentro de la carpeta «Libros».
-      const { data: folder } = await supabase.from("library_books").select("id").eq("is_folder", true).ilike("title", "libros").limit(1).maybeSingle();
-      if (!folder) { if (alive) setBooks([]); return; }
-      const { data } = await supabase.from("library_books").select("id, title, price, cover_path, is_pack, pages")
-        .eq("published", true).eq("is_folder", false).eq("parent_id", folder.id).order("sort_order", { ascending: true });
-      const list: ShowBook[] = [];
-      for (const b of data || []) {
-        let cover = "";
-        if (b.cover_path?.startsWith("http")) cover = b.cover_path;
-        else if (b.cover_path) cover = (await supabase.storage.from("library").createSignedUrl(b.cover_path, 3600)).data?.signedUrl || "";
-        list.push({ id: b.id, title: b.title, price: b.price || "", cover, is_pack: !!b.is_pack, pages: b.pages ?? null });
-      }
-      list.sort((a, b) => Number(b.is_pack) - Number(a.is_pack));
-      if (alive) setBooks(list);
-    })().catch(() => { if (alive) setBooks([]); });
-    return () => { alive = false; };
   }, []);
 
   if (books && books.length === 0) return null;
