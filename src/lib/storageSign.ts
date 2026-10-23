@@ -21,6 +21,14 @@ export async function signedUrlFor(
     path = urlOrPath.substring(idx + marker.length).split("?")[0];
   }
   try {
+    // HEIC (cámara del iPhone) no se pinta en los navegadores: Supabase la sirve
+    // convertida con su transformación de imágenes. Si falla, se firma el original.
+    if (/\.hei[cf]$/i.test(path)) {
+      const converted = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(path, expiresInSec, { transform: { width: 1600, resize: "contain" } });
+      if (!converted.error && converted.data) return converted.data.signedUrl;
+    }
     const { data, error } = await supabase.storage
       .from(bucket)
       .createSignedUrl(path, expiresInSec);
