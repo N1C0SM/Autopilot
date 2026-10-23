@@ -115,26 +115,46 @@ struct AdminUsersView: View {
         return users.filter { ($0.name ?? "").localizedCaseInsensitiveContains(query) || ($0.email ?? "").localizedCaseInsensitiveContains(query) }
     }
 
+    @State private var loaded = false
+
     var body: some View {
-        List(filtered) { u in
-            HStack(spacing: 12) {
-                AvatarView(name: u.name ?? u.email ?? "?", url: nil, size: 36)
-                VStack(alignment: .leading) {
-                    Text(u.name ?? "Sin nombre").font(.apBody)
-                    Text(u.email ?? "").font(.apFootnote).foregroundStyle(Palette.muted)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                PillField(label: "Buscar por nombre o correo", text: $query)
+                if loaded && filtered.isEmpty {
+                    EmptyStateView(symbol: "person.2", title: "Sin usuarios")
                 }
-                Spacer()
-                Text(u.plan).font(.apSubhead).foregroundStyle(u.plan == "Free" ? Palette.muted : Palette.gold)
+                Card(padding: 0) {
+                    VStack(spacing: 0) {
+                        ForEach(filtered) { u in
+                            HStack(spacing: 12) {
+                                AvatarView(name: u.name ?? u.email ?? "?", url: nil, size: 36)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(u.name ?? "Sin nombre").font(.apBody)
+                                    Text(u.email ?? "").font(.apFootnote).foregroundStyle(Palette.muted)
+                                }
+                                Spacer()
+                                Text(u.plan).font(.apSubhead).foregroundStyle(u.plan == "Free" ? Palette.muted : Palette.gold)
+                            }
+                            .padding(.horizontal, 16).frame(minHeight: 56)
+                            .accessibilityElement(children: .combine)
+                            if u.id != filtered.last?.id { Divider().overlay(Palette.separator).padding(.leading, 64) }
+                        }
+                    }
+                }
             }
-            .frame(minHeight: 44)
-            .accessibilityElement(children: .combine)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .searchable(text: $query, prompt: "Buscar por nombre o correo")
-        .scrollContentBackground(.hidden)
         .screenBackground()
         .task {
-            users = (try? await Backend.client.from("profiles").select("user_id, name, email, created_at, plan_status, subscription_tier")
-                .order("created_at", ascending: false).execute().value) ?? []
+            do {
+                users = try await Backend.client.from("profiles").select("user_id, name, email, created_at, plan_status, subscription_tier")
+                    .order("created_at", ascending: false).execute().value
+            } catch {
+                print("users error", error)
+            }
+            loaded = true
         }
     }
 }

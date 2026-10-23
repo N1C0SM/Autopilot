@@ -53,12 +53,13 @@ struct Card<Content: View>: View {
 struct PillButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, destructive }
     var kind: Kind = .primary
+    var height: CGFloat = 52
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.apHeadline)
-            .frame(maxWidth: .infinity, minHeight: 52)
+            .frame(maxWidth: .infinity, minHeight: height)
             .padding(.horizontal, 20)
             .foregroundStyle(kind == .primary ? Color.black : (kind == .destructive ? Palette.destructive : Palette.foreground))
             .background(kind == .primary ? Palette.gold : Palette.secondary, in: Capsule())

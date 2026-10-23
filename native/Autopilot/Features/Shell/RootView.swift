@@ -13,7 +13,10 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    static let userSections: [AppSection] = [.home, .train, .progress, .nutrition, .scan, .settings]
+    /// Barra lateral de la web (UserSidebar): Inicio, Entrenamiento, Nutrición, Mi progreso, Ajustes.
+    static let userSections: [AppSection] = [.home, .train, .nutrition, .progress, .settings]
+    /// Pestañas del iPhone (MobileTabBar): Hoy, Entrenar, Nutrición, Progreso. Ajustes va en el avatar.
+    static let userTabs: [AppSection] = [.home, .train, .nutrition, .progress]
     static let trainerSections: [AppSection] = [.trainerClients, .trainerProfile, .settings]
 
     static let adminGroups: [(label: String, items: [AppSection])] = [
@@ -25,11 +28,21 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         ("Cuenta", [.account]),
     ]
 
+    /// Nombre en la pestaña del iPhone (como MobileTabBar).
+    var tabTitle: String {
+        switch self {
+        case .home: "Hoy"
+        case .train: "Entrenar"
+        case .progress: "Progreso"
+        default: title
+        }
+    }
+
     var title: String {
         switch self {
         case .home: "Inicio"
-        case .train: "Entrenar"
-        case .progress: "Progreso"
+        case .train: "Entrenamiento"
+        case .progress: "Mi progreso"
         case .nutrition: "Nutrición"
         case .scan: "Escáner"
         case .settings: "Ajustes"
@@ -124,10 +137,21 @@ struct MainShell: View {
             #if os(iOS)
             if sizeClass == .compact && session.role == .user {
                 TabView(selection: Binding(get: { selection ?? defaultSection }, set: { selection = $0 })) {
-                    ForEach(AppSection.userSections) { section in
-                        NavigationStack { SectionView(section: section) }
-                            .tabItem { Label(section.title, systemImage: section.symbol) }
-                            .tag(section)
+                    ForEach(AppSection.userTabs) { section in
+                        NavigationStack {
+                            SectionView(section: section)
+                                .navigationTitle(section.tabTitle)
+                                .toolbar {
+                                    ToolbarItem(placement: .topBarTrailing) {
+                                        NavigationLink { AccountView().navigationTitle("Ajustes") } label: {
+                                            Image(systemName: "person.crop.circle").font(.title3)
+                                        }
+                                        .accessibilityLabel("Perfil y ajustes")
+                                    }
+                                }
+                        }
+                        .tabItem { Label(section.tabTitle, systemImage: section.symbol) }
+                        .tag(section)
                     }
                 }
             } else {
@@ -150,26 +174,53 @@ struct MainShell: View {
         }
     }
 
+    private func sidebarRow(_ item: AppSection) -> some View {
+        let active = (selection ?? defaultSection) == item
+        return Button { selection = item; Haptics.selection() } label: {
+            Label {
+                Text(item.title).fontWeight(active ? .semibold : .regular)
+            } icon: {
+                Image(systemName: item.symbol)
+            }
+            .foregroundStyle(active ? Palette.gold : Palette.foreground)
+            .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(active ? Palette.gold.opacity(0.15) : Color.clear)
+                .padding(.horizontal, 6)
+        )
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
     private var split: some View {
         NavigationSplitView {
-            List(selection: $selection) {
+            // Selección como en la web (bg-primary/15, texto dorado), no el acento del sistema.
+            List {
                 if session.role == .admin {
                     ForEach(AppSection.adminGroups, id: \.label) { group in
                         Section(group.label) {
-                            ForEach(group.items) { item in Label(item.title, systemImage: item.symbol).tag(item) }
+                            ForEach(group.items) { item in sidebarRow(item) }
                         }
                     }
                 } else {
-                    ForEach(flatSections) { item in Label(item.title, systemImage: item.symbol).tag(item) }
+                    ForEach(flatSections) { item in sidebarRow(item) }
                 }
                 Section {
-                    Button { session.showPicker = true } label: { Label("Cambiar de cuenta", systemImage: "arrow.left.arrow.right") }
-                    Button(role: .destructive) { Task { await session.signOut() } } label: {
-                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right")
+                    Button { session.showPicker = true } label: {
+                        Label("Cambiar de cuenta", systemImage: "arrow.left.arrow.right").foregroundStyle(Palette.foreground)
                     }
-                    .foregroundStyle(Palette.destructive)
+                    .buttonStyle(.plain)
+                    Button { Task { await session.signOut() } } label: {
+                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right").foregroundStyle(Palette.destructive)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
+            .listStyle(.sidebar)
+            .tint(Palette.gold)
             .navigationTitle(session.role == .admin ? "Admin" : "Autopilot")
             #if os(macOS)
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)

@@ -19,6 +19,12 @@ final class ActiveWorkout: ObservableObject {
     @Published var draft: WorkoutDraft
     @Published var saving = false
     @Published var saveError: String?
+    /// Ejercicios abiertos en la vista de lista (como `openExercises` en la web).
+    @Published var openExercises: Set<Int> = [0]
+    /// Series de la sesión anterior (columna «Previa»).
+    var previous: [String: [SetLog]] = [:]
+    /// Duración objetivo del descanso actual, para la barra de progreso.
+    @Published var restTarget: Int = 60
 
     private static func key(_ userId: String) -> String { "active-workout.\(userId)" }
 
@@ -98,6 +104,7 @@ final class ActiveWorkout: ObservableObject {
     // MARK: Descanso
 
     func startRest(seconds: Int) {
+        restTarget = seconds
         let end = Date().addingTimeInterval(TimeInterval(seconds))
         draft.restEndsAt = end
         persist()
