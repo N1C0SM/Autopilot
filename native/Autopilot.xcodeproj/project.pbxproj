@@ -20,6 +20,7 @@
 		4E59183CC035EA035A02E697 /* ActiveWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */; };
 		509D6E210D8DC96844E661C5 /* Accounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DF82EEABE70C2CD7FA8478 /* Accounts.swift */; };
 		57465A2CCC8862B96537FE2C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1837043D6026822C99B027E /* Components.swift */; };
+		57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853847766E839A5A319D2EB4 /* AdminProducts.swift */; };
 		642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */; };
 		7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */; };
 		84D2950407D627971026844C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */; };
@@ -51,6 +52,7 @@
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
 		74B2604636425A7A76330A3C /* AutopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotApp.swift; sourceTree = "<group>"; };
 		80424D4030A49FC7F8638EEF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		853847766E839A5A319D2EB4 /* AdminProducts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminProducts.swift; sourceTree = "<group>"; };
 		853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressScreen.swift; sourceTree = "<group>"; };
 		8A8C9FF8A9F9707540345088 /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
 		922D1242F803ABF9EC7B42D3 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -86,6 +88,7 @@
 				66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */,
 				C3306B7A6F1F1C5159421755 /* AdminPayments.swift */,
 				C67655E7437E327953D3487E /* AdminPhysiques.swift */,
+				853847766E839A5A319D2EB4 /* AdminProducts.swift */,
 				D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */,
 				6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */,
 				215885F8A59B676130290EEB /* AdminViews.swift */,
@@ -316,6 +319,7 @@
 				0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */,
 				19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */,
 				37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */,
+				57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */,
 				B3C0E827FE1DBF6EAA3E3554 /* AdminRules.swift in Sources */,
 				C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */,
 				39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */,

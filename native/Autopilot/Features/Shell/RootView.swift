@@ -262,6 +262,7 @@ struct SectionView: View {
             case .adminTrainers: AdminTrainersView()
             case .adminRules: AdminRulesView()
             case .adminPhysiques: AdminPhysiquesView()
+            case .adminProducts: AdminProductsView()
             default: AdminWebSectionView(section: section)
             }
         }
