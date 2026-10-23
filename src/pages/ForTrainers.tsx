@@ -29,7 +29,7 @@ export default function ForTrainers() {
   if (plan === undefined) return <Shell><Spinner size="lg" className="mx-auto" /></Shell>;
   if (!plan) return <Shell>
     <Squircle><Briefcase className="h-8 w-8 text-primary" strokeWidth={1.75} /></Squircle>
-    <h1 className="mt-5 type-title2">Página no disponible</h1>
+    <h1 className="mt-5 type-display-sm">Página no disponible</h1>
     <Button asChild variant="plain" className="mt-4"><Link to="/">Volver al inicio</Link></Button>
   </Shell>;
   return (

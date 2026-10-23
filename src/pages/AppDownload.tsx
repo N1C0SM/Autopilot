@@ -59,7 +59,7 @@ export default function AppDownload() {
         <Link to="/" className="text-sm text-primary">‹ Inicio</Link>
         <div className="mt-8 flex flex-col items-center text-center">
           <img src={logo} alt="Autopilot" className="h-16 w-16 rounded-2xl" />
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight text-foreground">Instala Autopilot</h1>
+          <h1 className="mt-5 type-display-sm text-foreground">Instala Autopilot</h1>
           <p className="mt-2 text-sm text-muted-foreground">Tu plan de entrenamiento y nutrición, en tu pantalla de inicio.</p>
         </div>
         <div className="mt-8 space-y-4">

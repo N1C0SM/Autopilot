@@ -85,12 +85,12 @@ const Blog = () => {
       </nav>
 
       <main className="container mx-auto max-w-5xl px-4 py-16 sm:py-24">
-        <header className="mb-14 max-w-2xl">
-          <p className="text-[11px] uppercase tracking-widest text-primary font-semibold mb-3">Academia · Gratis</p>
-          <h1 className="text-4xl sm:text-6xl font-bold font-display tracking-tight leading-[1.05] mb-5">
+        <header className="mx-auto mb-16 max-w-3xl text-center animate-in fade-in duration-1000 motion-reduce:animate-none sm:mb-24">
+          <p className="mb-2 type-subhead text-primary">Academia · Gratis</p>
+          <h1 className="type-display mb-5">
             Aprende a entrenar con criterio.
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">
+          <p className="mx-auto max-w-2xl type-body text-muted-foreground md:text-[21px] md:leading-[28px]">
             Hipertrofia, fuerza, biomecánica, calistenia, nutrición y recuperación. Explicado con claridad, por niveles y
             diferenciando lo que está demostrado de lo que todavía no.
           </p>

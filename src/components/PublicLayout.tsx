@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { ChevronDown, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ListGroup, ListRow } from "@/components/ui/list";
@@ -99,23 +99,35 @@ export default function PublicLayout({ title, description, children }: { title: 
         </div>
       </div>
     </header>
-    <main id="contenido" className="min-w-0 scroll-mt-20">{children}</main>
-    <footer className="sep-t px-5 pb-[calc(2rem+var(--safe-bottom))] pt-8">
-      <div className="container mx-auto flex max-w-6xl flex-col gap-4 type-footnote text-muted-foreground sm:flex-row sm:items-start sm:justify-between">
-        <p className="py-3"><span className="font-semibold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
-        <div className="flex flex-wrap items-start gap-x-6">
-          <Link to="/preguntas-frecuentes" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Ayuda</Link>
-          <Link to="/para-entrenadores" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Para entrenadores</Link>
-          {showApp && <Link to="/app" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">App móvil</Link>}
-          <Link to="/blog" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">Blog</Link>
-          {socials.map((l) => <a key={l.key} href={l.url} target="_blank" rel="noopener noreferrer me" className="inline-flex min-h-11 items-center transition-opacity hover:text-foreground active:opacity-60">{l.label}</a>)}
-          <details className="group">
-            <summary className="flex min-h-11 list-none items-center gap-1 py-3 transition-opacity active:opacity-60 [&::-webkit-details-marker]:hidden">Información legal<ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 ease-ios group-open:rotate-180" aria-hidden="true" /></summary>
-            <div className="flex flex-col">
-              {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="min-h-11 py-3 transition-opacity active:opacity-60" to={`/legal/${slug}`}>{label}</Link>)}
-              <Link to="/connect" className="min-h-11 py-3 transition-opacity active:opacity-60">Conectar con IA</Link>
-            </div>
-          </details>
+    <main id="contenido" className="reveal-sections min-w-0 scroll-mt-20">{children}</main>
+    <footer className="sep-t px-5 pb-[calc(2rem+var(--safe-bottom))] pt-14 sm:px-8 sm:pt-20">
+      <div className="container mx-auto max-w-6xl">
+        <div className="grid gap-10 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
+            <Link to="/" className="font-rounded text-[28px] font-bold tracking-tight text-primary">Autopilot</Link>
+            <p className="mt-3 max-w-xs type-subhead text-muted-foreground">Entrena con plan. Registra cada serie. Mira cómo progresas.</p>
+            <Button variant="tinted" asChild className="mt-6"><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina gratis</Link></Button>
+          </div>
+          {[
+            ["Producto", [["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ...(showApp ? [["/app", "App móvil"]] : []), ["/para-entrenadores", "Para entrenadores"]]],
+            ["Recursos", [["/recursos", "Guías en PDF"], ["/blog", "Blog"], ["/preguntas-frecuentes", "Ayuda"], ["/equipo", "Equipo"]]],
+          ].map(([heading, links]) => <nav key={heading as string} aria-label={heading as string}>
+            <p className="type-footnote font-semibold text-foreground">{heading as string}</p>
+            <ul className="mt-2">{(links as string[][]).map(([to, label]) => <li key={to}><Link to={to} className="inline-flex min-h-11 items-center type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">{label}</Link></li>)}</ul>
+          </nav>)}
+          <div>
+            <p className="type-footnote font-semibold text-foreground">Síguenos</p>
+            <ul className="mt-2">
+              {socials.map((l) => <li key={l.key}><a href={l.url} target="_blank" rel="noopener noreferrer me" className="inline-flex min-h-11 items-center type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">{l.label}</a></li>)}
+              <li><Link to="/connect" className="inline-flex min-h-11 items-center type-subhead text-muted-foreground transition-colors hover:text-foreground active:opacity-60">Conectar con IA</Link></li>
+            </ul>
+          </div>
+        </div>
+        <div className="sep-t mt-12 flex flex-col gap-2 pt-6 type-footnote text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <p><span className="font-semibold text-foreground">Autopilot</span> · {new Date().getFullYear()}</p>
+          <nav aria-label="Información legal" className="flex flex-wrap gap-x-5">
+            {[["aviso-legal", "Aviso legal"], ["terminos", "Términos"], ["privacidad", "Privacidad"], ["cookies", "Cookies"], ["disclaimer-medico", "Información de salud"]].map(([slug, label]) => <Link key={slug} className="inline-flex min-h-11 items-center transition-colors hover:text-foreground active:opacity-60" to={`/legal/${slug}`}>{label}</Link>)}
+          </nav>
         </div>
       </div>
     </footer>

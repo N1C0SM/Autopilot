@@ -1,5 +1,3 @@
-import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
-import { IconTile } from "@/components/ui/icon-tile";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
@@ -11,8 +9,15 @@ import { COACH_CONTACT_CHANNEL, type PlanKey } from "@/config/tiers";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/lib/publicCopy";
 import PublicHeroPhone from "@/components/PublicHeroPhone";
-import HeroQuiz from "@/components/HeroQuiz";
-import ScrollReveal from "@/components/ScrollReveal";
+import FreePlanSection from "@/components/FreePlanSection";
+import ScrollWords from "@/components/ScrollWords";
+import BookShowcase from "@/components/BookShowcase";
+import StickySteps from "@/components/StickySteps";
+import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
+import PhoneStory from "@/components/PhoneStory";
+import FeatureGallery from "@/components/FeatureGallery";
+import Benefits from "@/components/Benefits";
+import HeroPhoneMotion from "@/components/HeroPhoneMotion";
 import { hapticTap } from "@/lib/native";
 
 const ProductPreview = lazy(() => import("@/components/ProductPreview"));
@@ -22,6 +27,11 @@ const legacySections: Record<string, string> = {
   "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/como-funciona#demo",
   "#como-funciona": "/como-funciona", "#equipo": "/equipo", "#faq": "/preguntas-frecuentes",
 };
+
+/** Panel de ejemplo para cada acto de «Cómo funciona»: imita la interfaz, no la sustituye. */
+function StepPanel({ children }: { children: React.ReactNode }) {
+  return <div aria-hidden="true" className="rounded-[28px] bg-card p-6 text-left shadow-[0_40px_80px_-40px_rgba(0,0,0,0.8)] ring-1 ring-white/5">{children}</div>;
+}
 
 export default function Index() {
   const { hash, search } = useLocation();
@@ -40,6 +50,15 @@ export default function Index() {
   }, [destination]);
   const heroCtaRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
+  const finalCtaRef = useRef<HTMLDivElement>(null);
+  const [finalVisible, setFinalVisible] = useState(false);
+  useEffect(() => {
+    const el = finalCtaRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setFinalVisible(e.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [destination]);
   useEffect(() => {
     const el = heroCtaRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -98,78 +117,71 @@ export default function Index() {
         })}</script>
     </Helmet>
     {/* 1 · Hero */}
-    <section className="px-5 pt-10 sm:px-8 sm:pt-16">
-      <div className="mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-6 duration-700 motion-reduce:animate-none">
-        <h1 className="type-large-title sm:text-[48px] sm:leading-[52px] md:text-[64px] md:leading-[68px]"><span className="block">Entrena con plan.</span> <span className="block">Registra cada serie.</span> <span className="block text-primary">Mira cómo progresas.</span></h1>
-        <p className="mx-auto mt-5 max-w-md type-body text-muted-foreground md:max-w-xl md:text-[21px] md:leading-[28px]">Tu rutina según tu objetivo, tus días y tu material. En el gimnasio o en casa.</p>
-        <div ref={heroCtaRef}><HeroQuiz /></div>
-        <Button variant="plain" size="lg" asChild className="mt-2"><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
-        <p className="mt-2 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
+    <section className="relative flex min-h-[calc(100svh-3.5rem)] items-center overflow-hidden px-5 pb-10 pt-10 sm:px-8 sm:pt-16 lg:pt-8">
+      {/* Halo dorado muy tenue detrás del teléfono: da profundidad sin competir con el producto. */}
+      <div aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[38%] h-[44rem] w-[44rem] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.16),transparent)] lg:left-[72%]" />
+      <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8">
+        <div className="text-center animate-in fade-in duration-700 motion-reduce:animate-none lg:text-left">
+          <h1 className="font-rounded text-[40px] font-bold leading-[1.02] tracking-[-0.04em] sm:text-[60px] lg:text-[64px] xl:text-[76px]"><span className="block">Entrena con plan.</span> <span className="block">Registra cada serie.</span> <span className="block text-primary">Mira cómo progresas.</span></h1>
+          <p className="mx-auto mt-6 max-w-md type-body text-muted-foreground md:text-[21px] md:leading-[29px] lg:mx-0">Tu rutina según tu objetivo, tus días y tu material. En el gimnasio o en casa.</p>
+          <div ref={heroCtaRef} className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
+            <Button variant="hero" size="lg" asChild className="w-full sm:w-auto sm:px-9"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>
+            <Button variant="plain" size="lg" asChild><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
+          </div>
+          <p className="mt-4 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
+        </div>
+        <HeroPhoneMotion><div className="origin-top sm:scale-110 lg:scale-[1.18]"><PublicHeroPhone /></div></HeroPhoneMotion>
       </div>
-      <div className="mt-12 sm:mt-14"><PublicHeroPhone /></div>
     </section>
 
-    {/* 2 · Demo */}
+    {/* 2 · El producto en escena: el teléfono cambia con el scroll */}
+    <PhoneStory />
+
+    {/* 3 · Ventajas reales, en bloques editoriales */}
+    <Benefits />
+
+    {/* 4 · Guías en PDF: de pila a abanico, con precios reales */}
+    <BookShowcase />
+
+    {/* 5 · Todo lo que incluye, en una galería horizontal */}
+    <FeatureGallery />
+
+    {/* 6 · Cómo funciona, en tres actos */}
+    <StickySteps eyebrow="Cómo funciona" steps={[
+      { icon: SlidersHorizontal, title: "Personaliza.", text: "Tu objetivo, nivel, días y material.", visual: <StepPanel>{[["Objetivo", "Ganar músculo"], ["Nivel", "Intermedio"], ["Días", "4 por semana"], ["Material", "Gimnasio"]].map(([k, v]) => <div key={k} className="flex items-center justify-between py-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border/50"><span className="type-subhead text-muted-foreground">{k}</span><span className="type-headline">{v}</span></div>)}</StepPanel> },
+      { icon: Dumbbell, title: "Entrena.", text: "Consulta tu rutina y registra las series de cada sesión.", visual: <StepPanel><p className="type-headline">Press banca</p>{[["1", "60", "10"], ["2", "60", "9"], ["3", "60", "8"]].map(([n, kg, r]) => <div key={n} className="mt-3 grid grid-cols-[1.5rem_1fr_1fr_1.25rem] items-center gap-3 tabular-nums"><span className="type-subhead text-muted-foreground">{n}</span><span className="rounded-lg bg-primary/15 py-2 text-center type-body">{kg} kg</span><span className="rounded-lg bg-primary/15 py-2 text-center type-body">{r}</span><span className="h-5 w-5 rounded-full bg-primary" /></div>)}</StepPanel> },
+      { icon: LineChart, title: "Progresa.", text: "Revisa tu historial, récords y volumen.", visual: <StepPanel><p className="type-subhead text-muted-foreground">Historial · Press banca</p><div className="mt-4 flex h-36 items-end gap-3">{[52, 55, 55, 57.5, 60].map((kg, i) => <div key={i} className={`flex-1 rounded-md ${i === 4 ? "bg-primary" : "bg-primary/30"}`} style={{ height: `${((kg - 45) / 15) * 100}%` }} />)}</div><p className="mt-3 type-footnote text-muted-foreground">Datos de ejemplo</p></StepPanel> },
+    ]} />
+
+    {/* 6b · Demo interactiva */}
     <section id="demo" aria-label="Demo interactiva" className="scroll-mt-20 pt-14 sm:pt-20">
       <Suspense fallback={<div className="h-[560px]" aria-hidden="true" />}>
         <ProductPreview onPlans={() => document.getElementById("precios")?.scrollIntoView({ behavior: "smooth" })} onFree={() => { track("cta_click", { cta: "free_signup", source: "demo" }); navigate("/onboarding"); }} />
       </Suspense>
     </section>
 
-    {/* 3 · Precios */}
+    {/* 7 · Plan gratuito y resto de planes */}
     <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
-      <ScrollReveal><div className="mx-auto max-w-6xl">
-        <h2 id="precios-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">{plans.campaign ? "Empieza gratis, sin tarjeta." : "Empieza gratis. Paga solo si te aporta."}</h2>
-        <p className="mt-3 max-w-2xl type-body text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
+      <div className="mx-auto max-w-6xl">
+        <h2 id="precios-titulo" className="mx-auto max-w-4xl text-center type-display"><ScrollWords text="Empieza gratis." accent="Sin tarjeta." /></h2>
+        <p className="mx-auto mt-5 max-w-2xl text-center type-body text-muted-foreground md:text-[21px] md:leading-[28px]">Crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
+        <div className="mt-12"><FreePlanSection /></div>
+        {(plans.plus || plans.coach) && <h3 className="mt-20 text-center type-title1">¿Quieres que la app haga más por ti?</h3>}
         <div className="mt-8">
           <Suspense fallback={<div className="h-[520px]" aria-hidden="true" />}>
             <PricingTiers onSelect={selectPlan} />
           </Suspense>
         </div>
         <p className="mt-6 text-center"><Link to="/planes" className="inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver la comparativa completa</Link></p>
-      </div></ScrollReveal>
+      </div>
     </section>
 
 
-    {/* 4 · Cómo funciona */}
-    <section aria-labelledby="como-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
-      <ScrollReveal><div className="mx-auto max-w-6xl">
-        <h2 id="como-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Cómo funciona</h2>
-        {/* Tres pasos en tarjetas, con el mismo lenguaje que la app. */}
-        <ol className="mt-8 grid gap-3 md:grid-cols-3 md:gap-4">
-          {[
-            [SlidersHorizontal, "Personaliza", "Objetivo, nivel, días, lesiones y material: gimnasio, casa o calistenia."],
-            [Dumbbell, "Entrena", "Sigue tu sesión y apunta kg y repeticiones de cada serie."],
-            [LineChart, "Progresa", plans.campaign ? "Consulta récords, volumen y peso. La siguiente carga se calcula con tus registros." : `Consulta récords, volumen y peso.${plans.plus ? ` En ${plans.plusName}, la carga siguiente se calcula con tus registros.` : ""}`],
-          ].map(([Icon, title, text], index) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="rounded-2xl bg-card p-5 transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] animate-in fade-in slide-in-from-bottom-4 fill-mode-both" style={{ animationDelay: `${index * 120}ms`, animationDuration: "600ms" }}>
-            <div className="flex items-center justify-between">
-              <IconTile icon={I} size="md" />
-              <span className="font-rounded type-title2 tabular-nums text-muted-foreground/40" aria-hidden="true">{index + 1}</span>
-            </div>
-            <div className="mt-4 min-w-0">
-              <h3 className="type-headline">{title as string}</h3>
-              <p className="mt-1 type-subhead text-muted-foreground">{text as string}</p>
-            </div>
-          </li>; })}
-        </ol>
-        <p className="mt-8 max-w-2xl type-footnote text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: en el análisis corporal por foto.</p>
-      </div></ScrollReveal>
-    </section>
-
-    {/* 4b · Guías en PDF: única oferta de pago directa, enlazada desde la portada */}
-    <section aria-labelledby="guias-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
-      <ScrollReveal><div className="mx-auto max-w-6xl rounded-3xl bg-card p-6 sm:p-10">
-        <h2 id="guias-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Guías en PDF</h2>
-        <p className="mt-2 max-w-2xl type-body text-muted-foreground">Fuerza, progresiones de calistenia, nutrición y un plan de 12 semanas. Pago único y descarga inmediata. El pack reúne tres guías a precio reducido.</p>
-        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/recursos" onClick={() => { void hapticTap(); track("cta_click", { cta: "guides", source: "home" }); }}>Ver las guías</Link></Button>
-      </div></ScrollReveal>
-    </section>
-
-    {/* 5 · Fundador + FAQ + CTA */}
+    {/* 8 · Confianza: fundador, dudas y CTA final */}
     <section aria-labelledby="fundador-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
-      <ScrollReveal><div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div>
-          <h2 id="fundador-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Quién está detrás</h2>
+          <h2 id="fundador-titulo" className="type-display-sm"><ScrollWords text="Quién está detrás" /></h2>
           <p className="mt-4 type-body text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde {COACH_CONTACT_CHANNEL}</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
           <p className="mt-3 type-footnote text-muted-foreground">Es un proyecto de una persona{plans.coach ? ". Por eso las respuestas no son inmediatas ni 24/7." : ": cada mejora sale de lo que me cuentan quienes entrenan con Autopilot."}</p>
         </div>
@@ -180,16 +192,16 @@ export default function Index() {
           </Accordion>
           <Link to="/preguntas-frecuentes" className="mt-2 inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver todas las dudas</Link>
         </div>
-      </div></ScrollReveal>
-      <ScrollReveal><div className="mx-auto mt-16 max-w-md text-center sm:mt-24">
-        <h2 className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza a entrenar con Autopilot</h2>
-        <p className="mt-2 type-body text-muted-foreground">Gratis y sin tarjeta.</p>
-        <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
-      </div></ScrollReveal>
+      </div>
+      <div ref={finalCtaRef} className="mx-auto mt-28 max-w-4xl text-center sm:mt-40">
+        <h2 className="type-display"><ScrollWords text="Empieza a entrenar con" accent="Autopilot" /></h2>
+        <p className="mt-4 type-body text-muted-foreground md:text-[21px]">Gratis y sin tarjeta.</p>
+        <Button variant="hero" size="lg" asChild className="mt-8 w-full sm:w-auto sm:px-12"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
+      </div>
     </section>
 
     {/* CTA fija en móvil cuando el quiz del hero ya no se ve */}
-    {showSticky && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">
+    {showSticky && !finalVisible && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">
       <Button variant="hero" size="lg" asChild className="w-full"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "sticky" }); }}>Crear mi rutina gratis</Link></Button>
     </div>}
   </PublicLayout>;

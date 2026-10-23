@@ -339,6 +339,12 @@ body.keyboard-open main {
      UIKit app. Each sets size, leading and the style's own weight; colour and emphasis
      come from utilities (`text-muted-foreground`, `font-semibold`), which win because
      they sit in a later layer. Tracking is in `em` so it scales with the text. */
+  /* Titulares de marketing (portada y páginas públicas): un único tamaño de display. */
+  .type-display     { font-family: var(--font-display); font-size: calc(40px * var(--type-scale)); line-height: 1.05; font-weight: 700; letter-spacing: -0.035em; }
+  @media (min-width: 640px) { .type-display { font-size: calc(56px * var(--type-scale)); } }
+  @media (min-width: 768px) { .type-display { font-size: calc(72px * var(--type-scale)); } }
+  .type-display-sm  { font-family: var(--font-display); font-size: calc(40px * var(--type-scale)); line-height: 1.05; font-weight: 700; letter-spacing: -0.03em; }
+  @media (min-width: 640px) { .type-display-sm { font-size: calc(56px * var(--type-scale)); } }
   .type-large-title { font-family: var(--font-display); font-size: calc(34px * var(--type-scale)); line-height: calc(41px * var(--type-scale)); font-weight: 700; letter-spacing: -0.03em; }
   .type-title1      { font-family: var(--font-display); font-size: calc(28px * var(--type-scale)); line-height: calc(34px * var(--type-scale)); font-weight: 700; letter-spacing: -0.025em; }
   .type-title2      { font-family: var(--font-display); font-size: calc(22px * var(--type-scale)); line-height: calc(28px * var(--type-scale)); font-weight: 700; letter-spacing: -0.02em; }
@@ -529,4 +535,17 @@ body.keyboard-open main {
   [data-sonner-toaster][data-y-position="top"] {
     top: calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 8px) !important;
   }
+}
+
+/* Identidad pública: cada sección aparece al entrar en pantalla (solo navegadores con scroll-driven animations). */
+@keyframes reveal-section { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal-sections > section:not([data-pinned]) { animation: reveal-section linear both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+  }
+}
+
+/* HIG · Reducir movimiento: las entradas de tailwindcss-animate quedan en fundidos, sin desplazamiento ni zoom. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in { --tw-enter-translate-x: 0 !important; --tw-enter-translate-y: 0 !important; --tw-enter-scale: 1 !important; }
 }

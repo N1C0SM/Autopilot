@@ -148,7 +148,7 @@ const BlogPost = () => {
               {post.level && <span className="text-xs px-3 py-1 rounded-full bg-secondary text-foreground">{LEVEL_LABEL[post.level as Level]}</span>}
               {ev && <span title={ev.hint} className="text-xs px-3 py-1 rounded-full border border-primary/40 text-primary">{ev.label}</span>}
             </div>
-            <h1 className="text-3xl sm:text-5xl font-bold font-display tracking-tight leading-[1.1] mb-5">{post.title}</h1>
+            <h1 className="type-display-sm mb-5">{post.title}</h1>
             {post.excerpt && <p className="text-lg text-muted-foreground leading-relaxed mb-5">{post.excerpt}</p>}
             <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
               {post.author_name && <span>Por {post.author_name}</span>}

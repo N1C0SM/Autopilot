@@ -1,3 +1,4 @@
+import ScrollWords from "@/components/ScrollWords";
 import PublicLayout from "@/components/PublicLayout";
 import { parseRecommendations } from "@/lib/siteContent";
 import { useEffect, useState } from "react";
@@ -169,15 +170,15 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
   const hasPosts = flags.blog && posts.length > 0;
 
   const body = (
-      <main className={embedded ? "w-full space-y-10 py-2" : "mx-auto w-full max-w-5xl space-y-10 px-4 pb-safe pt-6 md:py-10"}>
+      <main className={embedded ? "w-full space-y-10 py-2" : "mx-auto w-full max-w-5xl space-y-20 px-4 pb-safe pt-6 md:space-y-28 md:py-10"}>
         {/* Embebida, el título grande lo pinta la pantalla anfitriona: aquí solo va la descripción. */}
-        <header>
+        <header className={embedded ? undefined : "mx-auto max-w-3xl pb-4 pt-10 text-center animate-in fade-in duration-1000 motion-reduce:animate-none md:pt-14"}>
           {embedded ? null : (
-            <h1 className="type-large-title">
+            <h1 className="type-display">
               Todo lo que <span className="text-primary">complementa</span> tu plan
             </h1>
           )}
-          <p className={embedded ? "max-w-xl type-subhead text-muted-foreground" : "mt-2 max-w-xl type-body text-muted-foreground"}>
+          <p className={embedded ? "max-w-xl type-subhead text-muted-foreground" : "mx-auto mt-5 max-w-xl type-body text-muted-foreground md:text-[21px] md:leading-[28px]"}>
             Guías, material recomendado y los últimos artículos del equipo.
           </p>
         </header>
@@ -199,7 +200,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
         {hasEbooks && (
           <section>
-            <h2 className="type-title2">Guías en PDF</h2>
+            <h2 className={embedded ? "type-title2" : "type-display-sm"}><ScrollWords text="Guías en PDF" /></h2>
             <p className="mt-1 mb-5 max-w-xl type-subhead text-muted-foreground">
               Descarga inmediata en PDF tras el pago. Guías para leer por tu cuenta, sin plan personalizado ni seguimiento{plans.coach ? ` (eso es el plan ${plans.coachName})` : ""}.
             </p>
@@ -210,9 +211,9 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
                   type="button"
                   key={e.id || i}
                   onClick={() => openBook(e)}
-                  className="group min-w-0 text-left transition-transform duration-150 active:scale-[0.97]"
+                  className="group min-w-0 text-left active:scale-[0.97] transition-transform duration-150"
                 >
-                  <BookCover title={e.title} src={e.cover_url} />
+                  <div className="shadow-[0_24px_48px_-20px_rgba(0,0,0,0.6)] transition-transform duration-500 ease-out group-hover:-translate-y-1.5"><BookCover title={e.title} src={e.cover_url} /></div>
                   <h3 className="mt-3 line-clamp-2 type-headline">{e.title}</h3>
                   <p className="mt-0.5 type-subhead font-semibold text-muted-foreground">{e.price || "Gratis"}</p>
                   {(e.is_pack || e.pages || e.minutes) && (
@@ -233,7 +234,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
 
         {hasRecos && (
           <section>
-            <h2 className="type-title2 mb-3">Lo que sí funciona</h2>
+            <h2 className={embedded ? "type-title2 mb-3" : "type-display-sm mb-5"}><ScrollWords text="Lo que sí funciona" /></h2>
             <ListGroup>
               {recos.map((r, i) => (
                 <ListRow
@@ -258,7 +259,7 @@ const Recursos = ({ embedded = false }: { embedded?: boolean } = {}) => {
         {hasPosts && (
           <section>
             <div className="mb-3 flex items-baseline justify-between gap-4">
-              <h2 className="type-title2">Últimos artículos</h2>
+              <h2 className={embedded ? "type-title2" : "type-display-sm"}><ScrollWords text="Últimos artículos" /></h2>
               <Link to="/blog" onClick={() => void hapticTap()} className="flex min-h-[44px] items-center type-body text-primary transition-opacity active:opacity-60">
                 Ver todos
               </Link>

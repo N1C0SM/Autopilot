@@ -1,3 +1,4 @@
+import ScrollWords from "@/components/ScrollWords";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -210,7 +211,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
         <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div className="max-w-xl">
             <p className="type-subhead text-primary">Antes de decidir</p>
-            <h2 id="preview-heading" className="mt-1 type-title1 sm:text-[40px] sm:leading-[44px]">Prueba cómo sería tu día.</h2>
+            <h2 id="preview-heading" className="mt-1 type-title1 sm:text-[40px] sm:leading-[44px]"><ScrollWords text="Prueba cómo sería tu día." /></h2>
             <p className="mt-3 type-body text-muted-foreground">Explora una simulación del plan, el registro por series y la evolución con gráficos.{plans.plus ? ` La nutrición está incluida desde ${plans.plusName}.` : ""}{plans.coach ? ` El chat con Nicolás, en ${plans.coachName}.` : ""} Free incluye rutina inicial, registro y progreso. Sin cuenta ni tarjeta.</p>
           </div>
           <span className="type-footnote text-muted-foreground">Demo con datos ficticios · no es un plan personal</span>
