@@ -28,6 +28,7 @@
 		87E60DB75F6066D44856E541 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E7B8525054278D389D0B59 /* ScanView.swift */; };
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
+		B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F83F6BD939EF251A757930A /* AdminExercises.swift */; };
 		B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54840FD78B7470F1A4A687B3 /* RoadmapView.swift */; };
 		B3C0E827FE1DBF6EAA3E3554 /* AdminRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */; };
 		BC730C3B8CCAC5C94052F77F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */; };
@@ -49,6 +50,7 @@
 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
 		2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		2F83F6BD939EF251A757930A /* AdminExercises.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminExercises.swift; sourceTree = "<group>"; };
 		3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
 		54840FD78B7470F1A4A687B3 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
@@ -92,6 +94,7 @@
 				18F52B91A212936EB6B6D716 /* AdminBlog.swift */,
 				66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */,
 				13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */,
+				2F83F6BD939EF251A757930A /* AdminExercises.swift */,
 				C3306B7A6F1F1C5159421755 /* AdminPayments.swift */,
 				C67655E7437E327953D3487E /* AdminPhysiques.swift */,
 				853847766E839A5A319D2EB4 /* AdminProducts.swift */,
@@ -325,6 +328,7 @@
 				EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */,
 				0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */,
 				4CBC7F75637FA9EF8470AF7B /* AdminEmails.swift in Sources */,
+				B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */,
 				19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */,
 				37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */,
 				57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */,
