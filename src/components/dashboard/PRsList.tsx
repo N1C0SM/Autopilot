@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { IconTile } from "@/components/ui/icon-tile";
 import { supabase } from "@/integrations/supabase/client";
 import { Trophy, WifiOff } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ListGroup, ListRow } from "@/components/ui/list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hapticTap } from "@/lib/native";
+import { useExerciseImages } from "@/hooks/useExerciseImages";
 
 interface PR {
   id: string;
@@ -26,6 +26,7 @@ const PRsList = ({ userId }: Props) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reload, setReload] = useState(0);
+  const images = useExerciseImages(prs.slice(0, 20).map((pr) => pr.exercise_name));
 
   const retry = useCallback(() => {
     void hapticTap();
@@ -125,26 +126,32 @@ const PRsList = ({ userId }: Props) => {
 
   return (
     <div className="space-y-8 lg:grid lg:grid-cols-[280px_1fr] lg:gap-12 lg:space-y-0 lg:items-start">
-      <section aria-label="Tu mejor marca" className="rounded-2xl bg-card p-4 lg:sticky lg:top-4">
-        <div className="flex items-center gap-2.5">
-          <IconTile icon={Trophy} />
-          <p className="type-headline">Tu mejor marca</p>
+      <section aria-label="Tu mejor marca" className="relative overflow-hidden rounded-[28px] bg-card lg:sticky lg:top-4">
+        {/* Portada del récord con la foto real del ejercicio, como las sesiones y la landing. */}
+        {images[top.exercise_name] && <>
+          <img src={images[top.exercise_name]} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
+          <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/10" />
+        </>}
+        <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.2),transparent)]" />
+        <div className={`relative flex flex-col justify-end p-5 ${images[top.exercise_name] ? "min-h-[16rem]" : ""}`}>
+          <p className="flex items-center gap-1.5 type-subhead font-semibold text-primary"><Trophy className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />Tu mejor marca</p>
+          <p className="mt-2 font-rounded text-[64px] font-bold leading-none tracking-tight tabular-nums text-white">
+            {kg(topHasEstimate ? top.estimated_1rm! : top.weight)}
+            <span className="ml-1.5 type-title3 text-white/70">kg</span>
+          </p>
+          <p className="mt-2 type-subhead text-white/75">
+            {topHasEstimate
+              ? `1RM estimado en ${top.exercise_name}`
+              : `Tu mejor serie en ${top.exercise_name}, ${top.reps} reps`}
+          </p>
         </div>
-        <p className="mt-4 font-rounded text-[64px] font-bold leading-none tracking-tight tabular-nums text-primary">
-          {kg(topHasEstimate ? top.estimated_1rm! : top.weight)}
-          <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>
-        </p>
-        <p className="mt-2 type-subhead text-muted-foreground">
-          {topHasEstimate
-            ? `1RM estimado en ${top.exercise_name}`
-            : `Tu mejor serie en ${top.exercise_name}, ${top.reps} reps`}
-        </p>
       </section>
 
       <ListGroup header="Tus récords personales">
         {prs.slice(0, 20).map((pr) => (
           <ListRow
             key={pr.id}
+            leading={<span aria-hidden="true" className="block h-11 w-11 overflow-hidden rounded-xl bg-secondary">{images[pr.exercise_name] && <img src={images[pr.exercise_name]} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" />}</span>}
             title={pr.exercise_name}
             subtitle={formatDate(pr.achieved_at)}
             trailing={

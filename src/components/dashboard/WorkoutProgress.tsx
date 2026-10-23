@@ -1,3 +1,4 @@
+import { useExerciseImages } from "@/hooks/useExerciseImages";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronsUpDown, Dumbbell, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     }),
     [historyByExercise],
   );
+  const exerciseImages = useExerciseImages(exercises);
   const history = historyByExercise[selectedExercise] || [];
   const overview = useMemo(() => buildTrainingOverview(historyByExercise), [historyByExercise]);
   const latest = history[history.length - 1];
@@ -105,11 +107,19 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       )}
 
       {exercises.length > 0 && (
-        // Selector de ejercicio — más discreto
-        <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-card px-3 transition-opacity duration-150 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[48px] lg:rounded-xl lg:px-4">
-          <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground lg:h-5 lg:w-5" strokeWidth={1.75} aria-hidden="true" />
-          <span className="min-w-0 flex-1 truncate type-subhead text-foreground lg:type-headline">{selectedExercise}</span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} aria-hidden="true" />
+        // Ejercicio elegido como portada: su foto real y el nombre en grande, tocable para cambiar.
+        <div className="relative overflow-hidden rounded-[28px] bg-card transition-opacity duration-150 active:opacity-80 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+          {exerciseImages[selectedExercise] && <>
+            <img key={exerciseImages[selectedExercise]} src={exerciseImages[selectedExercise]} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
+            <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+          </>}
+          <div className={`relative flex items-end gap-2 p-5 ${exerciseImages[selectedExercise] ? "min-h-[11rem]" : ""}`}>
+            <span className="min-w-0 flex-1">
+              <span className="block type-footnote font-semibold text-primary">{historyByExercise[selectedExercise]?.length ?? 0} {(historyByExercise[selectedExercise]?.length ?? 0) === 1 ? "sesión" : "sesiones"}</span>
+              <span className="mt-0.5 block font-rounded text-[26px] font-bold leading-tight tracking-tight text-white">{selectedExercise}</span>
+            </span>
+            <ChevronsUpDown className="mb-1 h-5 w-5 shrink-0 text-white/70" strokeWidth={2} aria-hidden="true" />
+          </div>
           <select
             aria-label="Ejercicio"
             value={selectedExercise}

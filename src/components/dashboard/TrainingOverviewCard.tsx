@@ -8,8 +8,8 @@ const weekLabel = (weekStart: string) => {
 };
 
 /**
- * Panel de entrenamiento (como el de Hevy): tres cifras y el volumen de las últimas
- * semanas en barras, con la semana actual en el acento.
+ * Panel de entrenamiento con la identidad de la landing: una cifra protagonista,
+ * tres datos secundarios y el volumen de las últimas semanas en la misma tarjeta.
  */
 export function TrainingOverviewCard({ overview }: { overview: TrainingOverview }) {
   const data = overview.weeks.map((week, i) => ({
@@ -17,34 +17,23 @@ export function TrainingOverviewCard({ overview }: { overview: TrainingOverview 
     label: weekLabel(week.weekStart),
     current: i === overview.weeks.length - 1,
   }));
-  const stats = [
-    { label: "Entrenos", value: fmt(overview.totalSessions), unit: "" },
-    { label: "Racha", value: fmt(overview.streakWeeks), unit: "sem" },
-    { label: "Últ. 4 sem", value: fmt(overview.last4WeeksVolumeKg), unit: "kg" },
-  ];
+  const thisWeek = data[data.length - 1]?.volumeKg || 0;
 
   return (
-    <section aria-label="Resumen de tu entrenamiento" className="space-y-2.5">
-      <dl className="grid grid-cols-3 gap-2.5">
-        {stats.map((stat, i) => (
-          <div key={stat.label} className="min-w-0 rounded-2xl bg-card p-3">
-            <dt className="truncate type-footnote text-muted-foreground">{stat.label}</dt>
-            <dd className={`mt-0.5 truncate font-rounded text-[24px] font-bold leading-[30px] tabular-nums ${i === 0 ? "text-primary" : ""}`}>
-              {stat.value}
-              {stat.unit && <span className="ml-0.5 text-[14px] font-semibold text-muted-foreground">{stat.unit}</span>}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="rounded-2xl bg-card p-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="type-headline">Volumen por semana</p>
-          <p className="shrink-0 type-footnote tabular-nums text-muted-foreground">
-            Esta semana <span className="font-semibold text-foreground">{fmt(data[data.length - 1]?.volumeKg || 0)} kg</span>
-          </p>
-        </div>
-        <div className="mt-3 h-36" role="img" aria-label={`Volumen de las últimas ${data.length} semanas: ${data.map((w) => `${w.label} ${fmt(w.volumeKg)} kg`).join(", ")}`}>
+    <section aria-label="Resumen de tu entrenamiento" className="relative overflow-hidden rounded-[28px] bg-card p-5">
+      {/* Halo dorado como en la landing: la cifra es la protagonista. */}
+      <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.18),transparent)]" />
+      <p className="relative type-subhead font-semibold text-primary">Últimas 4 semanas</p>
+      <p className="relative mt-1 font-rounded text-[56px] font-bold leading-none tracking-tight tabular-nums">
+        {fmt(overview.last4WeeksVolumeKg)}<span className="ml-1.5 type-title3 text-muted-foreground">kg levantados</span>
+      </p>
+      <div className="relative mt-4 flex flex-wrap gap-x-6 gap-y-1">
+        <div className="flex items-baseline gap-1.5"><span className="font-rounded type-title3 tabular-nums">{fmt(overview.totalSessions)}</span><span className="type-subhead text-muted-foreground">{overview.totalSessions === 1 ? "entreno" : "entrenos"}</span></div>
+        <div className="flex items-baseline gap-1.5"><span className="font-rounded type-title3 tabular-nums">{fmt(overview.streakWeeks)}</span><span className="type-subhead text-muted-foreground">{overview.streakWeeks === 1 ? "semana de racha" : "semanas de racha"}</span></div>
+        <div className="flex items-baseline gap-1.5"><span className="font-rounded type-title3 tabular-nums">{fmt(thisWeek)}</span><span className="type-subhead text-muted-foreground">kg esta semana</span></div>
+      </div>
+      <div className="relative">
+        <div className="mt-5 h-40" role="img" aria-label={`Volumen de las últimas ${data.length} semanas: ${data.map((w) => `${w.label} ${fmt(w.volumeKg)} kg`).join(", ")}`}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
               <XAxis
