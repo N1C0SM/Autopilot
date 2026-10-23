@@ -20,6 +20,7 @@
 		642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */; };
 		7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */; };
 		84D2950407D627971026844C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */; };
+		87E60DB75F6066D44856E541 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E7B8525054278D389D0B59 /* ScanView.swift */; };
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
 		BC730C3B8CCAC5C94052F77F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */; };
@@ -52,6 +53,7 @@
 		D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhoIsTrainingView.swift; sourceTree = "<group>"; };
 		D9E053FD3BBE7DBA136AACF9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		EBDF230DE9FE12D555FC3505 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		F4E7B8525054278D389D0B59 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +101,7 @@
 				3FD248CE85B5D519C876E0A9 /* Home */,
 				CEB9CAA1C0564A5F6759E98A /* Other */,
 				190A819D784E2E4936A9083D /* Progress */,
+				910F3B4B3F7F732A9C4003B0 /* Scan */,
 				3FE327EF9EC6A814C0EFDB5D /* Shell */,
 				4802D7F652902DAC8FA9C294 /* Train */,
 			);
@@ -178,6 +181,14 @@
 				C60F84451BD2C06501A2E80E /* Training.swift */,
 			);
 			path = Core;
+			sourceTree = "<group>";
+		};
+		910F3B4B3F7F732A9C4003B0 /* Scan */ = {
+			isa = PBXGroup;
+			children = (
+				F4E7B8525054278D389D0B59 /* ScanView.swift */,
+			);
+			path = Scan;
 			sourceTree = "<group>";
 		};
 		9F0A18D0B08C6111210BD536 /* App */ = {
@@ -294,6 +305,7 @@
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
 				642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */,
 				EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */,
+				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,
 				3CD2ECE76B612C811CF540BA /* Session.swift in Sources */,
 				45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */,
 				98563A606D28BC5688F28819 /* TrainView.swift in Sources */,

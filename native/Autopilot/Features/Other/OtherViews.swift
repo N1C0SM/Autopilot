@@ -101,52 +101,6 @@ struct NutritionView: View {
     }
 }
 
-/// Escáner: historial de escaneos con sus puntuaciones.
-struct ScanView: View {
-    @EnvironmentObject private var session: SessionModel
-    @State private var scans: [Row] = []
-    @State private var loaded = false
-    struct Row: Decodable, Identifiable { let id: String; let created_at: String; let physique: Double?; let potential: Double? }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if let last = scans.first {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                        FigureTile(label: "Físico", value: NumberText.decimal(last.physique ?? 0), hint: "último escaneo", accent: true)
-                        FigureTile(label: "Potencial", value: NumberText.decimal(last.potential ?? 0), hint: "sobre 10")
-                    }
-                    SectionTitle(title: "Historial")
-                    Card {
-                        ForEach(scans) { s in
-                            HStack {
-                                Text(String(s.created_at.prefix(10))).font(.apBody.monospacedDigit())
-                                Spacer()
-                                Text(NumberText.decimal(s.physique ?? 0)).font(.apHeadline.monospacedDigit())
-                            }
-                            .frame(minHeight: 32).accessibilityElement(children: .combine)
-                        }
-                    }
-                } else if loaded {
-                    EmptyStateView(symbol: "figure.stand", title: "Sin escaneos", message: "Haz tu primer escaneo para ver tu físico y tu potencial.")
-                }
-                Link(destination: URL(string: "https://autopilotplan.app/scan")!) {
-                    Text("Hacer un escaneo").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.pill)
-            }
-            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .screenBackground()
-        .task {
-            guard let id = session.userId else { return }
-            scans = (try? await Backend.client.from("scan_history").select("id, created_at, physique, potential")
-                .eq("user_id", value: id).order("created_at", ascending: false).limit(30).execute().value) ?? []
-            loaded = true
-        }
-    }
-}
-
 /// Entrenador: lista de clientes.
 struct TrainerClientsView: View {
     @EnvironmentObject private var session: SessionModel
