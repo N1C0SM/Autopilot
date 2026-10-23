@@ -1,118 +1,326 @@
 import SwiftUI
 import Supabase
 
-/// Mi cuenta / Ajustes: perfil, contraseña, cuentas del dispositivo y sesión.
+/// Ajustes / Mi cuenta, calcado de `SettingsPanel.tsx`: cabecera con avatar, nombre y correo,
+/// y los grupos Perfil, Privacidad, Tus datos, Objetivo, Disponibilidad, Tu forma de entrenar,
+/// Cambiar contraseña, Cuentas en este dispositivo, Legal y Sesión.
 struct AccountView: View {
     @EnvironmentObject private var session: SessionModel
     @EnvironmentObject private var accounts: AccountStore
+
     @State private var name = ""
+    @State private var avatar: String?
+    @State private var namePublic = false
+    @State private var avatarPublic = false
+    @State private var progressPublic = false
+    @State private var age = ""
+    @State private var height = ""
+    @State private var weight = ""
+    @State private var goal = "gain_muscle"
+    @State private var days = ""
+    @State private var minutes = ""
     @State private var newPassword = ""
     @State private var confirmPassword = ""
-    @State private var message: String?
+    @State private var restSeconds = UserDefaults.standard.integer(forKey: "rest-seconds").nonZero ?? 90
+    @State private var toast: String?
     @State private var busy = false
 
+    private static let goals = [("lose_weight", "Perder peso"), ("gain_muscle", "Ganar músculo"), ("improve_endurance", "Mejorar resistencia")]
+    private static let rests = [(45, "45 s"), (60, "1 min"), (90, "1.5 min"), (120, "2 min"), (180, "3 min")]
+
     var body: some View {
-        Form {
-            Section("Perfil") {
-                LabeledContent("Nombre") {
-                    TextField("Nombre", text: $name).multilineTextAlignment(.trailing)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                header
+
+                group("Perfil") {
+                    row("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
+                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(1) }
+                    actionRow("Guardar perfil") { await saveProfile() }
                 }
-                LabeledContent("Correo", value: session.session?.user.email ?? "")
-                Button("Guardar perfil") { Task { await saveProfile() } }.disabled(busy)
-            }
 
-            Section("Cambiar contraseña") {
-                SecureField("Nueva (mínimo 6 caracteres)", text: $newPassword)
-                SecureField("Repite la contraseña", text: $confirmPassword)
-                Button("Cambiar contraseña") { Task { await changePassword() } }
-                    .disabled(busy || newPassword.count < 6 || newPassword != confirmPassword)
-            }
+                group("Privacidad", footer: "Tu entrenador siempre te ve. Esto decide qué pueden ver los demás.") {
+                    toggleRow("Nombre público", "Si está apagado, se muestran solo tus iniciales.", $namePublic)
+                    toggleRow("Foto de perfil pública", "Si está apagado, se muestra un icono genérico.", $avatarPublic)
+                    toggleRow("Progreso público", "Permite mostrar tu evolución (fotos, logros) fuera de tu cuenta.", $progressPublic)
+                }
+                .onChange(of: namePublic) { _, _ in Task { await savePrivacy() } }
+                .onChange(of: avatarPublic) { _, _ in Task { await savePrivacy() } }
+                .onChange(of: progressPublic) { _, _ in Task { await savePrivacy() } }
 
-            Section {
-                ForEach(accounts.accounts) { account in
-                    HStack(spacing: 12) {
-                        AvatarView(name: account.name, url: account.avatar, size: 36)
-                        VStack(alignment: .leading) {
-                            HStack(spacing: 4) {
-                                Text(account.name).font(.apBody)
-                                if account.requirePassword { Image(systemName: "lock.fill").font(.caption).foregroundStyle(Palette.muted).accessibilityLabel("pide contraseña") }
+                group("Tus datos") {
+                    row("Edad") { numberField($age) }
+                    row("Altura (cm)") { numberField($height) }
+                    row("Peso (kg)") { numberField($weight) }
+                }
+
+                group("Objetivo") {
+                    ForEach(Self.goals, id: \.0) { value, label in
+                        Button { goal = value; Haptics.selection() } label: {
+                            HStack {
+                                Text(label).font(.apBody)
+                                Spacer()
+                                if goal == value { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(Palette.gold) }
                             }
-                            Text(account.expired ? "Vuelve a entrar" : account.email).font(.apFootnote).foregroundStyle(Palette.muted)
+                            .contentShape(Rectangle())
                         }
-                        Spacer()
-                        if account.id == session.userIdString {
-                            Image(systemName: "checkmark").foregroundStyle(Palette.gold).accessibilityLabel("Cuenta actual")
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .swipeActions {
-                        if account.id != session.userIdString {
-                            Button("Quitar", role: .destructive) { accounts.forget(account.id) }
-                        }
-                    }
-                    .contextMenu {
-                        if account.id != session.userIdString {
-                            Button("Quitar de este dispositivo", role: .destructive) { accounts.forget(account.id) }
-                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(goal == value ? .isSelected : [])
                     }
                 }
-                Button { session.showPicker = true } label: { Label("Cambiar de cuenta", systemImage: "arrow.left.arrow.right") }
-                Button { session.addAnotherAccount() } label: { Label("Añadir otra cuenta", systemImage: "plus") }
-            } header: {
-                Text("Cuentas en este dispositivo")
-            } footer: {
-                Text("Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac.")
-            }
 
-            Section {
-                Button("Cerrar sesión", role: .destructive) { Task { await session.signOut() } }
-            } footer: {
-                Text("Cierra tu sesión en este dispositivo.")
-            }
+                group("Disponibilidad") {
+                    row("Días/semana") { numberField($days) }
+                    row("Minutos/sesión") { numberField($minutes) }
+                    actionRow("Guardar datos") { await saveData() }
+                }
 
-            if let message {
-                Section { Text(message).font(.apFootnote) }
+                group("Tu forma de entrenar", footer: "Elige cuánto quieres descansar al marcar una serie. El temporizador se inicia solo durante tu entreno.") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Descanso entre series").font(.apBody)
+                        FlowRow {
+                            ForEach(Self.rests, id: \.0) { secs, label in
+                                Button(label) { restSeconds = secs; UserDefaults.standard.set(secs, forKey: "rest-seconds"); Haptics.selection() }
+                                    .font(.apSubhead.weight(.medium))
+                                    .padding(.horizontal, 14).frame(minHeight: 36)
+                                    .foregroundStyle(restSeconds == secs ? Color.black : Palette.foreground)
+                                    .background(restSeconds == secs ? Palette.gold : Palette.secondary, in: Capsule())
+                                    .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                group("Cambiar contraseña") {
+                    row("Nueva") { SecureField("Mínimo 6 caracteres", text: $newPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
+                    row("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
+                    actionRow("Cambiar contraseña", disabled: newPassword.count < 6 || newPassword != confirmPassword) { await changePassword() }
+                }
+
+                group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac.") {
+                    ForEach(accounts.accounts) { a in
+                        HStack(spacing: 12) {
+                            AvatarView(name: a.name, url: a.avatar, size: 44)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(a.name).font(.apBody)
+                                Text(a.expired ? "Vuelve a entrar" : a.email).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                            }
+                            Spacer()
+                            if a.id == session.userIdString {
+                                Image(systemName: "checkmark").font(.body.weight(.bold)).foregroundStyle(Palette.gold).accessibilityLabel("Cuenta actual")
+                            } else {
+                                Button("Quitar") { accounts.forget(a.id) }.font(.apSubhead).foregroundStyle(Palette.muted).buttonStyle(.plain)
+                                    .frame(minHeight: 44).accessibilityLabel("Quitar \(a.name) de este dispositivo")
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { if a.id != session.userIdString { session.showPicker = true } }
+                    }
+                    Button { session.addAnotherAccount() } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "plus").font(.body.weight(.bold)).foregroundStyle(Palette.gold)
+                                .frame(width: 44, height: 44).background(Palette.gold.opacity(0.15), in: Circle())
+                            Text("Añadir otra cuenta").font(.apBody)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                group("Legal") {
+                    linkRow("Términos", "https://autopilotplan.app/legal/terminos")
+                    linkRow("Ver Política de Privacidad", "https://autopilotplan.app/legal/privacidad")
+                    linkRow("Cookies", "https://autopilotplan.app/legal/cookies")
+                    linkRow("Disclaimer médico", "https://autopilotplan.app/legal/disclaimer")
+                    linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
+                }
+
+                group("Sesión", footer: "Cierra tu sesión en este dispositivo.") {
+                    Button { Task { await session.signOut() } } label: {
+                        Text("Cerrar sesión").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 110)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .screenBackground()
+        .overlay(alignment: .top) {
+            if let toast {
+                Text(toast).font(.apSubhead.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule()).padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isStaticText)
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .screenBackground()
-        .task { await loadProfile() }
+        .animation(.easeOut(duration: 0.2), value: toast)
+        .task { await load() }
     }
 
-    private func loadProfile() async {
+    // MARK: Piezas (ListGroup / ListRow de la web)
+
+    private var header: some View {
+        VStack(spacing: 6) {
+            AvatarView(name: name.isEmpty ? "?" : name, url: avatar, size: 88)
+            Text(name.isEmpty ? "Tu perfil" : name).font(.apTitle2).padding(.top, 8)
+            Text(session.session?.user.email ?? "").font(.apBody).foregroundStyle(Palette.muted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    private func group<Content: View>(_ title: String, footer: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title.uppercased()).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
+            VStack(alignment: .leading, spacing: 0) {
+                _VariadicView.Tree(SeparatedLayout()) { content() }
+            }
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            if let footer { Text(footer).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16) }
+        }
+    }
+
+    private func row<V: View>(_ label: String, @ViewBuilder value: () -> V) -> some View {
+        HStack(spacing: 12) {
+            Text(label).font(.apBody)
+            Spacer(minLength: 12)
+            value().font(.apBody)
+        }
+        .frame(minHeight: 44)
+    }
+
+    private func toggleRow(_ title: String, _ subtitle: String, _ binding: Binding<Bool>) -> some View {
+        Toggle(isOn: binding) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.apBody)
+                Text(subtitle).font(.apFootnote).foregroundStyle(Palette.muted)
+            }
+        }
+        .tint(Palette.gold)
+        .padding(.vertical, 4)
+    }
+
+    private func actionRow(_ title: String, disabled: Bool = false, action: @escaping () async -> Void) -> some View {
+        Button { Task { await action() } } label: {
+            Text(title).font(.apBody).foregroundStyle(Palette.gold).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled || busy)
+        .opacity(disabled ? 0.4 : 1)
+    }
+
+    private func linkRow(_ title: String, _ url: String) -> some View {
+        Link(destination: URL(string: url)!) {
+            HStack {
+                Text(title).font(.apBody).foregroundStyle(Palette.foreground)
+                Spacer()
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+            }
+            .frame(minHeight: 44)
+        }
+    }
+
+    private func numberField(_ binding: Binding<String>) -> some View {
+        TextField("—", text: binding)
+            .multilineTextAlignment(.trailing).textFieldStyle(.plain)
+            #if os(iOS)
+            .keyboardType(.decimalPad)
+            #endif
+            .frame(maxWidth: 120)
+    }
+
+    private func show(_ text: String) {
+        toast = text
+        Task { try? await Task.sleep(for: .seconds(2)); toast = nil }
+    }
+
+    // MARK: Datos
+
+    private func load() async {
         guard let id = session.userId else { return }
-        struct Row: Decodable { let name: String? }
-        if let row: Row = try? await Backend.client.from("profiles").select("name").eq("user_id", value: id).single().execute().value {
-            name = row.name ?? ""
+        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let progress_public: Bool? }
+        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, progress_public")
+            .eq("user_id", value: id).single().execute().value {
+            name = p.name ?? ""; avatar = p.avatar_url
+            namePublic = p.name_public ?? false; avatarPublic = p.avatar_public ?? false; progressPublic = p.progress_public ?? false
+        }
+        struct Avail: Decodable { let days: AnyJSON?; let hours: AnyJSON? }
+        struct O: Decodable { let age: Double?; let height: Double?; let weight: Double?; let goal: String?; let availability: Avail? }
+        if let o: O = try? await Backend.client.from("onboarding").select("age, height, weight, goal, availability")
+            .eq("user_id", value: id).single().execute().value {
+            age = o.age.map { String(Int($0)) } ?? ""
+            height = o.height.map { NumberText.decimal($0, digits: 0) } ?? ""
+            weight = o.weight.map { NumberText.decimal($0, digits: $0.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1) } ?? ""
+            goal = o.goal ?? goal
+            if let d = o.availability?.days { days = Self.text(d) }
+            if let h = o.availability?.hours, let hours = Double(Self.text(h)) { minutes = String(Int((hours * 60).rounded())) }
+        }
+    }
+
+    private static func text(_ json: AnyJSON) -> String {
+        switch json {
+        case .string(let s): s
+        case .integer(let i): String(i)
+        case .double(let d): d.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(d)) : String(d)
+        default: ""
         }
     }
 
     private func saveProfile() async {
         guard let id = session.userId else { return }
-        busy = true
-        defer { busy = false }
+        busy = true; defer { busy = false }
         do {
             try await Backend.client.from("profiles").update(["name": name]).eq("user_id", value: id).execute()
-            message = "Perfil guardado."
-            Haptics.success()
-        } catch {
-            message = "No se pudo guardar el perfil."
-            Haptics.error()
-        }
+            Haptics.success(); show("Perfil guardado")
+        } catch { Haptics.error(); show("No se pudo guardar") }
+    }
+
+    private func savePrivacy() async {
+        guard let id = session.userId else { return }
+        try? await Backend.client.from("profiles")
+            .update(["name_public": namePublic, "avatar_public": avatarPublic, "progress_public": progressPublic])
+            .eq("user_id", value: id).execute()
+    }
+
+    private func saveData() async {
+        guard let id = session.userId else { return }
+        busy = true; defer { busy = false }
+        struct Avail: Encodable { let days: Int?; let hours: Double?; let auto_calculated: Bool }
+        struct U: Encodable { let user_id: UUID; let age: Int?; let height: Double?; let weight: Double?; let goal: String; let availability: Avail }
+        let num = { (s: String) in Double(s.replacingOccurrences(of: ",", with: ".")) }
+        let row = U(user_id: id, age: Int(age), height: num(height), weight: num(weight), goal: goal,
+                    availability: Avail(days: Int(days), hours: num(minutes).map { $0 / 60 }, auto_calculated: false))
+        do {
+            try await Backend.client.from("onboarding").upsert(row, onConflict: "user_id").execute()
+            Haptics.success(); show("Datos guardados")
+        } catch { Haptics.error(); show("No se pudo guardar") }
     }
 
     private func changePassword() async {
-        busy = true
-        defer { busy = false }
+        busy = true; defer { busy = false }
         do {
             try await Backend.client.auth.update(user: UserAttributes(password: newPassword))
             newPassword = ""; confirmPassword = ""
-            message = "Contraseña cambiada."
-            Haptics.success()
-        } catch {
-            message = "No se pudo cambiar la contraseña."
-            Haptics.error()
+            Haptics.success(); show("Contraseña cambiada")
+        } catch { Haptics.error(); show("No se pudo cambiar la contraseña") }
+    }
+}
+
+/// Filas separadas por una línea fina, como `ListGroup`.
+private struct SeparatedLayout: _VariadicView_MultiViewRoot {
+    func body(children: _VariadicView.Children) -> some View {
+        ForEach(Array(children.enumerated()), id: \.element.id) { i, child in
+            child
+                .padding(.horizontal, 16).padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
         }
     }
+}
+
+extension Int {
+    var nonZero: Int? { self == 0 ? nil : self }
 }
