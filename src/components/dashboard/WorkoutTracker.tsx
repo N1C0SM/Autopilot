@@ -1,3 +1,4 @@
+import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1235,10 +1236,11 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           card
           className="mt-2"
           icon={Moon}
+          photo={BRAND_PHOTOS.home}
           title="Día de descanso"
           description="Recupera, o elige otra sesión de tu semana"
           action={
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap justify-start gap-2">
               {dayPlans.filter((p) => (p.type === "actividad" || (p.exercises?.length ?? 0) > 0)).map((p) => (
                 <button key={p.day} type="button" onClick={() => {
                   void hapticSelection();

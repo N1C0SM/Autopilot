@@ -12,13 +12,26 @@ interface EmptyStateProps {
   className?: string;
   /** Dentro de su propia tarjeta, como el resto de bloques de la pantalla. */
   card?: boolean;
+  /** Foto de marca de fondo (src/lib/brandPhotos): tarjeta alta con el texto abajo, como la landing. */
+  photo?: string;
 }
 
 /**
  * Estado vacío único de la app: icono en su cuadrado tintado, título y una línea,
  * sin caja ni borde.
  */
-const EmptyState = ({ icon: Icon, title, description, action, className, card }: EmptyStateProps) => (
+const EmptyState = ({ icon: Icon, title, description, action, className, card, photo }: EmptyStateProps) => photo ? (
+  <div className={cn("relative overflow-hidden rounded-[28px] bg-card", className)}>
+    <img src={photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_25%] opacity-90" />
+    <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
+    <div className="relative flex min-h-[18rem] flex-col justify-end p-5 text-left">
+      {Icon ? <Icon aria-hidden="true" className="h-6 w-6 text-primary" strokeWidth={2.25} /> : null}
+      <p className="mt-2 font-rounded text-[28px] font-bold leading-tight tracking-tight">{title}</p>
+      {description ? <p className="mt-1 type-subhead text-muted-foreground">{description}</p> : null}
+      {action ? <div className="mt-5 [&>*]:w-full">{action}</div> : null}
+    </div>
+  </div>
+) : (
   <div className={cn("flex flex-col items-center justify-center px-6 py-12 text-center", card && "rounded-2xl bg-card py-10", className)}>
     {Icon ? (
       <IconTile icon={Icon} size="lg" />
