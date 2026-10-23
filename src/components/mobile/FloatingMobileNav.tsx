@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
+import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Lock } from "lucide-react";
 import { hapticSelection, hapticTap } from "@/lib/native";
@@ -7,7 +8,9 @@ import { hapticSelection, hapticTap } from "@/lib/native";
 export interface FloatingMobileNavItem {
   key: string;
   label: string;
-  icon: LucideIcon;
+  icon: LucideIcon | ComponentType<{ className?: string; strokeWidth?: number }>;
+  /** Variante rellena para la pestaña activa (como los SF Symbols «.fill» de iOS). */
+  activeIcon?: ComponentType<{ className?: string }>;
   locked?: boolean;
 }
 
@@ -40,7 +43,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
     aria-label={label}
   >
     <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 material rounded-full p-1">
-      {items.map(({ key, label: itemLabel, icon: Icon, locked }) => {
+      {items.map(({ key, label: itemLabel, icon: Icon, activeIcon: ActiveIcon, locked }) => {
         const isActive = active === key;
         return (
           <li key={key} className="min-w-0 flex-1">
@@ -65,7 +68,7 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
                 />
               )}
               <span className="relative z-10 flex h-7 items-center justify-center">
-                <Icon className="h-6 w-6" strokeWidth={isActive ? 2.25 : 2} />
+                {isActive && ActiveIcon ? <ActiveIcon className="h-6 w-6" /> : <Icon className="h-6 w-6" strokeWidth={isActive ? 2.25 : 2} />}
                 {locked && (
                   <Lock className="absolute -bottom-0.5 -right-2 h-3 w-3 rounded-full bg-card p-[1px] text-muted-foreground" />
                 )}
