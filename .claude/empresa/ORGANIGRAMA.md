@@ -1,6 +1,6 @@
 # Agentes de Autopilot
 
-Autopilot funciona como una empresa con IA. Esta carpeta define quién es quién y cómo se reparte el trabajo. Las reglas de autoridad y aprobaciones siguen siendo las de [`empresa/ATLAS.md`](../empresa/ATLAS.md); aquí está el organigrama y los agentes ejecutables.
+Autopilot funciona como una empresa con IA. Esta carpeta define quién es quién y cómo se reparte el trabajo. Las reglas de autoridad y aprobaciones siguen siendo las de [`ATLAS.md`](ATLAS.md); aquí está el organigrama y los agentes ejecutables.
 
 ## Organigrama
 
@@ -23,7 +23,7 @@ Empleados (IA) — construyen
 ## Flujo de un objetivo
 
 1. **CEO** escribe el objetivo (p. ej. «≥ 100 € netos en libros este mes»).
-2. **Co-CEO** lo descompone (ciclo de ATLAS), decide qué departamentos hacen falta y lo anota en `empresa/ESTADO.md › Organización`.
+2. **Co-CEO** lo descompone (ciclo de ATLAS), decide qué departamentos hacen falta y lo anota en `.claude/empresa/ESTADO.md › Organización`.
 3. Por cada departamento, el co-CEO invoca a su **director** con el encargo. El director devuelve un **plan de delegación**: tareas, empleado asignado, criterio de aceptación y orden/dependencias.
 4. El co-CEO lanza a los **empleados** con esas tareas (en paralelo cuando no dependen entre sí).
 5. Cada empleado entrega su resultado con evidencia (`[VERIFICADO]` + método). El director revisa contra su criterio y da el visto bueno o pide corrección.
@@ -42,16 +42,16 @@ Los departamentos son **funciones que se abren por objetivo**, no puestos fijos 
 | Crecimiento (marketing y ventas) | `director-crecimiento` | `copywriter`, `analista-datos` |
 | Calidad | `director-calidad` | `qa-tester` |
 
-Para crear un departamento o empleado nuevo, copia [`plantillas/director.md`](plantillas/director.md) o [`plantillas/empleado.md`](plantillas/empleado.md) a `definitions/` y añádelo a esta tabla.
+Para crear un departamento o empleado nuevo, copia [`plantillas/director.md`](plantillas/director.md) o [`plantillas/empleado.md`](plantillas/empleado.md) a `.claude/agents/` y añádelo a esta tabla.
 
 ## Dónde viven
 
-- `agents/definitions/*.md` — agentes ejecutables (formato de subagentes de Claude Code). `.claude/agents` apunta aquí, así que Claude Code los carga solos.
-- `agents/co-ceo.md` — el papel del co-CEO (lo cumple la sesión principal; no es un subagente).
-- `agents/plantillas/` — plantillas para crear directores y empleados.
+- `.claude/agents/*.md` — agentes ejecutables (subagentes de Claude Code, se cargan solos).
+- `.claude/empresa/co-ceo.md` — el papel del co-CEO (lo cumple la sesión principal; no es un subagente).
+- `.claude/empresa/plantillas/` — plantillas para crear directores y empleados.
 
 ## Reglas para todos
 
 - Nada de afirmar trabajo que no se ejecutó; etiquetas de ATLAS (`[HECHO]`, `[HIPÓTESIS]`, `[VERIFICADO]`…).
-- Toda pantalla respeta [`docs/design`](../docs/design/README.md) y pasa su checklist.
+- Toda pantalla respeta [`.claude/design`](../design/README.md) y pasa su checklist.
 - Lo que requiere aprobación del CEO (ATLAS) se pide; nunca se hace por cuenta propia.

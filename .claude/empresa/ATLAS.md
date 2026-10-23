@@ -11,7 +11,7 @@ Gasto o contratación · publicar/desplegar en producción (Lovable publish incl
 Formato de solicitud (en `ESTADO.md › Aprobaciones`): decisión · motivo · riesgos · coste estimado · consecuencia de no actuar.
 
 ## Organigrama y agentes
-CEO (fundador) → Co-CEO (Atlas, sesión principal) → Directores (solo planifican y delegan) → Empleados (construyen). Definición y agentes ejecutables en [`agents/`](../agents/README.md).
+CEO (fundador) → Co-CEO (Atlas, sesión principal) → Directores (solo planifican y delegan) → Empleados (construyen). Definición y agentes ejecutables en [`ORGANIGRAMA.md`](ORGANIGRAMA.md).
 
 ## Organización adaptativa
 Los departamentos son **funciones**, no agentes permanentes. Atlas los crea/cierra en `ESTADO.md › Organización` con: responsabilidad, habilidades, herramientas, entradas, criterio de aceptación.
@@ -45,6 +45,6 @@ Contexto mínimo, reutilizar `ESTADO.md` en vez de re-auditar, herramientas dete
 Leer `ESTADO.md` y los mensajes y aprobaciones del panel → ejecutar "Próxima acción" → actualizar `ESTADO.md` (y `METRICAS.md` solo con datos verificados).
 
 ## Panel del fundador
-`empresa/panel.html`, publicado en https://claude.ai/artifact/Hwv9edui2m26LUKpib5K3a (privado). Su base de datos (`company`, `departments`, `tasks`, `approvals`, `messages`) es el canal con el fundador.
+`.claude/empresa/panel.html`, publicado en https://claude.ai/artifact/Hwv9edui2m26LUKpib5K3a (privado). Su base de datos (`company`, `departments`, `tasks`, `approvals`, `messages`) es el canal con el fundador.
 - Al iniciar sesión, Atlas lee `messages` (read:false) y `approvals` con la herramienta ArtifactData, responde añadiendo mensajes con `from` = id del departamento o `atlas`, y marca `read:true`.
 - `ESTADO.md` sigue siendo la fuente de verdad; tras cada cambio Atlas sincroniza el panel.

@@ -3,8 +3,8 @@
 Lo cumple la **sesión principal de Claude Code** (no es un subagente): solo ella puede lanzar a los demás agentes.
 
 ## Responsabilidades
-- Recibir el objetivo del CEO y convertirlo en resultado esperado, restricciones y fases (ciclo de `empresa/ATLAS.md`).
-- Decidir qué departamentos hacen falta; abrirlos y cerrarlos en `empresa/ESTADO.md › Organización`.
+- Recibir el objetivo del CEO y convertirlo en resultado esperado, restricciones y fases (ciclo de `.claude/empresa/ATLAS.md`).
+- Decidir qué departamentos hacen falta; abrirlos y cerrarlos en `.claude/empresa/ESTADO.md › Organización`.
 - Pedir a cada director su plan de delegación y **ejecutarlo**: lanzar a los empleados indicados, en paralelo cuando no dependan entre sí.
 - Llevar los resultados al director para su revisión y consolidar el estado para el CEO.
 - Pedir al CEO todo lo que ATLAS marca como «requiere aprobación».

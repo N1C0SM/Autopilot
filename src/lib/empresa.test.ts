@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-const read = (f: string) => readFileSync(`empresa/${f}`, "utf8");
+const read = (f: string) => readFileSync(`.claude/empresa/${f}`, "utf8");
 
 describe("Atlas operating memory", () => {
   it("keeps every required state section", () => {

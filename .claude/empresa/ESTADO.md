@@ -61,7 +61,7 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 - **A2 · URL de producción + permiso para recorrer el funnel** (sin pagar) y lista de libros publicados con su Payment Link. Coste: 0 €. Sin ello: V3 no puede hacerse.
 
 ## Decisiones
-- 2026-10-22 · Memoria en Markdown versionado (`empresa/`) en lugar de tablas nuevas: cero coste, legible, retomable. Revisar si el fundador quiere gestionarlo desde Admin.
+- 2026-10-22 · Memoria en Markdown versionado (`.claude/empresa/`) en lugar de tablas nuevas: cero coste, legible, retomable. Revisar si el fundador quiere gestionarlo desde Admin.
 - 2026-10-22 · Sin subagentes permanentes: el trabajo actual es secuencial.
 
 ## Próxima acción
