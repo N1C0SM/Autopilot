@@ -275,7 +275,7 @@ const Dashboard = () => {
         const firstWeekCompletionsRequest = firstWeekWindow
           ? supabase
               .from("day_completions")
-              .select("completed_at")
+              .select("completed_at, day_label")
               .eq("user_id", user.id)
               .gte("completed_at", firstWeekWindow.startDate)
               .lte("completed_at", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
@@ -328,7 +328,8 @@ const Dashboard = () => {
           }
           setFirstWeek({
             ...journey,
-            completed: new Set((firstWeekCompletions.data || []).map((row) => row.completed_at)).size,
+            // Cuenta sesiones, no fechas: dos entrenos el mismo día son dos (como en Progreso).
+            completed: new Set((firstWeekCompletions.data || []).map((row) => `${row.completed_at}|${row.day_label ?? ""}`)).size,
           });
         } else {
           setFirstWeek(null);
