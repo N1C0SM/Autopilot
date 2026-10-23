@@ -100,6 +100,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // Tarjetas de toda la app y la web: más redondas, como las de la landing (28 px en portadas).
+        "2xl": "22px",
       },
       // UIKit's own curves: `ios` is the sheet / push / spring-settle curve,
       // `ios-standard` the default ease-in-out used for fades and small moves.
