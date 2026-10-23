@@ -79,7 +79,8 @@ const PricingTiersContent = ({ onSelect, recommended = "training" }: PricingTier
               </ul>
 
               <Button
-                variant={isRec ? "hero" : "tinted"}
+                // Con un solo plan visible, su botón es la acción principal: nunca atenuado.
+                variant={isRec || plans.length === 1 ? "hero" : "tinted"}
                 size="lg"
                 className="w-full"
                 disabled={!t.accepting}
