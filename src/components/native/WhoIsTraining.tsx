@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, X } from "lucide-react";
+import { Lock, Plus, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { OPEN_ACCOUNT_PICKER, forgetAccount, listAccounts, prepareAnotherAccount, switchToAccount, type SavedAccount } from "@/lib/accounts";
+import { OPEN_ACCOUNT_PICKER, forgetAccount, listAccounts, prepareAnotherAccount, signInSavedAccount, switchToAccount, type SavedAccount } from "@/lib/accounts";
 import { supportsMultipleAccounts } from "@/lib/platform";
 import { clearAnonScanId } from "@/lib/scanAttribution";
 import { clearPendingScanContext } from "@/lib/pendingScan";
@@ -24,14 +24,19 @@ export default function WhoIsTraining() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Cuenta protegida elegida: se pide su contraseña antes de entrar.
+  const [asking, setAsking] = useState<SavedAccount | null>(null);
+  const [password, setPassword] = useState("");
+  const [wrong, setWrong] = useState(false);
 
   useEffect(() => {
     if (loading || !supportsMultipleAccounts()) return;
     let shown = false;
     try { shown = sessionStorage.getItem(SHOWN) === "1"; sessionStorage.setItem(SHOWN, "1"); } catch { /* sin almacenamiento: se muestra */ }
     const list = listAccounts();
-    if (!shown && list.length >= 2) { setAccounts(list); setOpen(true); }
-  }, [loading]);
+    const currentLocked = list.some((a) => a.id === user?.id && a.requirePassword);
+    if (!shown && (list.length >= 2 || currentLocked)) { setAccounts(list); setOpen(true); }
+  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cambio rápido: mantener el avatar o, en el Mac, Cuenta → Cambiar de usuario.
   useEffect(() => {
@@ -54,6 +59,7 @@ export default function WhoIsTraining() {
       return;
     }
     void hapticSelection();
+    if (a.requirePassword && !a.expired) { setAsking(a); setPassword(""); setWrong(false); return; }
     if (a.id === user?.id) { setOpen(false); return; }
     setBusy(a.id);
     clearSharedDrafts();
@@ -64,6 +70,22 @@ export default function WhoIsTraining() {
     // La cuenta sigue en la lista: se vuelve a entrar con el correo ya escrito.
     await prepareAnotherAccount();
     window.location.assign(`/login?email=${encodeURIComponent(a.email)}`);
+  };
+
+  const unlock = async () => {
+    if (!asking || !password || busy) return;
+    setBusy(asking.id);
+    if (asking.id !== user?.id) clearSharedDrafts();
+    const result = await signInSavedAccount(asking.id, password);
+    if (result === "ok") {
+      if (asking.id === user?.id) { setBusy(null); setAsking(null); setOpen(false); return; }
+      window.location.assign("/dashboard");
+      return;
+    }
+    setBusy(null);
+    if (result === "offline") { toast.error("Sin conexión. Inténtalo de nuevo cuando vuelvas a tener internet."); return; }
+    setWrong(true);
+    void hapticTap();
   };
 
   const add = async () => {
@@ -86,6 +108,23 @@ export default function WhoIsTraining() {
       <h1 id="who-title" className="relative text-center font-rounded text-[34px] font-bold leading-tight tracking-tight sm:text-[44px]">
         {editing ? "Gestionar cuentas" : "¿Quién entrena?"}
       </h1>
+      {asking ? (
+        <form className="relative mt-8 flex w-full max-w-sm flex-col items-center" onSubmit={(e) => { e.preventDefault(); void unlock(); }}>
+          <span className={`${circle} h-24 w-24 bg-gradient-to-br from-primary to-primary/60`}>
+            {asking.avatar ? <img src={asking.avatar} alt="" className="h-full w-full object-cover" /> : <span className="font-rounded text-[40px] font-bold text-primary-foreground">{(asking.name || asking.email).charAt(0).toUpperCase()}</span>}
+          </span>
+          <p className="mt-4 type-title3">{asking.name}</p>
+          <label htmlFor="who-password" className="sr-only">Contraseña de {asking.name}</label>
+          <input id="who-password" type="password" autoFocus autoComplete="current-password" value={password}
+            onChange={(e) => { setPassword(e.target.value); setWrong(false); }} placeholder="Contraseña"
+            className={`mt-6 h-12 w-full rounded-full bg-card px-5 text-center type-body outline-none ring-2 transition-shadow ${wrong ? "ring-destructive" : "ring-transparent focus:ring-primary"}`} />
+          {wrong && <p role="alert" className="mt-2 type-footnote text-destructive">Contraseña incorrecta</p>}
+          <button type="submit" disabled={!password || !!busy} className="mt-5 h-12 w-full rounded-full bg-primary type-headline text-primary-foreground transition-opacity disabled:opacity-40 active:opacity-80">
+            {busy ? "Entrando…" : "Entrar"}
+          </button>
+          <button type="button" onClick={() => setAsking(null)} className="mt-3 min-h-11 type-subhead text-muted-foreground active:opacity-60">Elegir otra cuenta</button>
+        </form>
+      ) : <>
       <ul className="relative mt-8 flex w-full max-w-md flex-col gap-3">
         {accounts.map((a, i) => (
           <li key={a.id} style={{ animationDelay: `${i * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300">
@@ -101,6 +140,7 @@ export default function WhoIsTraining() {
                 <span className="block truncate type-headline">{a.name}</span>
                 <span className={`mt-0.5 block truncate type-subhead ${a.expired ? "text-primary" : "text-muted-foreground"}`}>{a.expired ? "Vuelve a entrar" : a.email}</span>
               </span>
+              {!editing && a.requirePassword && <Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Pide contraseña" />}
               {editing
                 ? <X className="h-5 w-5 shrink-0 text-destructive" strokeWidth={2.5} aria-hidden="true" />
                 : null}
@@ -119,11 +159,12 @@ export default function WhoIsTraining() {
           </li>
         )}
       </ul>
-      {!editing && user && <button type="button" onClick={() => setOpen(false)} className="relative mt-6 min-h-11 type-subhead text-muted-foreground active:opacity-60">Seguir como {accounts.find((a) => a.id === user.id)?.name ?? "ahora"}</button>}
+      {!editing && user && !accounts.find((a) => a.id === user.id)?.requirePassword && <button type="button" onClick={() => setOpen(false)} className="relative mt-6 min-h-11 type-subhead text-muted-foreground active:opacity-60">Seguir como {accounts.find((a) => a.id === user.id)?.name ?? "ahora"}</button>}
       <button type="button" onClick={() => { void hapticTap(); setEditing((v) => !v); }}
         className="relative mt-12 inline-flex min-h-11 items-center gap-2 rounded-full px-5 type-subhead text-muted-foreground ring-1 ring-border transition-colors hover:text-foreground active:opacity-60">
         {editing ? "Listo" : <><Pencil className="h-4 w-4" aria-hidden="true" />Gestionar cuentas</>}
       </button>
+      </>}
     </div>
   );
 }

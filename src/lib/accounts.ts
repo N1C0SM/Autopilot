@@ -15,6 +15,8 @@ export interface SavedAccount {
   refreshToken: string;
   /** La sesión dejó de valer (contraseña cambiada, sesión cerrada en otro sitio): hay que volver a entrar. */
   expired?: boolean;
+  /** Pedir la contraseña al entrar en esta cuenta desde «¿Quién entrena?». Por defecto, no. */
+  requirePassword?: boolean;
 }
 
 const KEY = "autopilot.accounts.v1";
@@ -48,7 +50,7 @@ export function rememberSession(session: Session) {
   const list = listAccounts();
   const i = list.findIndex((a) => a.id === account.id);
   // El nombre y la foto del perfil ganan a los del registro (que a menudo no los traen).
-  if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar, expired: false };
+  if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar, requirePassword: list[i].requirePassword, expired: false };
   else list.push(account);
   save(list);
   // Fuera del callback de auth: Supabase no admite consultas dentro de onAuthStateChange.
@@ -97,6 +99,26 @@ export async function switchToAccount(id: string): Promise<SwitchResult> {
       return "expired";
     }
     return "offline";
+  } catch {
+    return "offline";
+  }
+}
+
+export function setRequirePassword(id: string, value: boolean) {
+  save(listAccounts().map((a) => (a.id === id ? { ...a, requirePassword: value } : a)));
+}
+
+/** Entra en una cuenta protegida con su contraseña. */
+export async function signInSavedAccount(id: string, password: string): Promise<SwitchResult | "wrong"> {
+  const target = listAccounts().find((a) => a.id === id);
+  if (!target) return "expired";
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
+  const { data: current } = await supabase.auth.getSession();
+  if (current.session && current.session.user.id !== id) rememberSession(current.session);
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: target.email, password });
+    if (data.session && !error) { rememberSession(data.session); return "ok"; }
+    return "wrong";
   } catch {
     return "offline";
   }

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { setSession, getSession, signOut } = vi.hoisted(() => ({ setSession: vi.fn(), getSession: vi.fn(), signOut: vi.fn() }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { setSession, getSession, signOut }, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) } }));
+const { setSession, getSession, signOut, signInWithPassword } = vi.hoisted(() => ({ setSession: vi.fn(), getSession: vi.fn(), signOut: vi.fn(), signInWithPassword: vi.fn() }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { setSession, getSession, signOut, signInWithPassword }, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) } }));
 
-import { forgetAccount, listAccounts, prepareAnotherAccount, rememberSession, switchToAccount } from "./accounts";
+import { forgetAccount, listAccounts, prepareAnotherAccount, rememberSession, setRequirePassword, signInSavedAccount, switchToAccount } from "./accounts";
 
 const session = (id: string, email: string, token = "r1") => ({
   access_token: `a-${token}`, refresh_token: token,
@@ -51,5 +51,20 @@ describe("cuentas en el dispositivo", () => {
     expect(signOut).toHaveBeenCalledWith({ scope: "local" });
     forgetAccount("u1");
     expect(listAccounts()).toEqual([]);
+  });
+
+  it("la contraseña opcional se conserva al renovar la sesión y se comprueba al entrar", async () => {
+    rememberSession(session("u1", "a@x.com"));
+    setRequirePassword("u1", true);
+    rememberSession(session("u1", "a@x.com", "r7"));
+    expect(listAccounts()[0].requirePassword).toBe(true);
+
+    getSession.mockResolvedValue({ data: { session: null } });
+    signInWithPassword.mockResolvedValueOnce({ data: { session: null }, error: new Error("Invalid login") });
+    expect(await signInSavedAccount("u1", "mala")).toBe("wrong");
+    signInWithPassword.mockResolvedValueOnce({ data: { session: session("u1", "a@x.com", "r8") }, error: null });
+    expect(await signInSavedAccount("u1", "buena")).toBe("ok");
+    expect(signInWithPassword).toHaveBeenLastCalledWith({ email: "a@x.com", password: "buena" });
+    expect(listAccounts()[0].refreshToken).toBe("r8");
   });
 });
