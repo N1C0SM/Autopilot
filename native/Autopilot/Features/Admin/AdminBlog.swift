@@ -89,7 +89,7 @@ struct AdminBlogView: View {
                     ForEach(posts.filter { folder == "none" ? ($0.category ?? "").isEmpty : $0.category == folder }.sorted { ($0.order_index ?? .max) < ($1.order_index ?? .max) }) { p in
                         HStack(spacing: 12) {
                             if let c = p.cover_url, let u = URL(string: c), !c.isEmpty {
-                                AsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
                                     .frame(width: 64, height: 48).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                             } else {
                                 RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.secondary).frame(width: 64, height: 48)

@@ -46,7 +46,7 @@ final class ActiveWorkout: ObservableObject {
     convenience init(userId: String, day: DayPlan, previous: [String: [SetLog]]) {
         var logs: [String: [SetLog]] = [:]
         for ex in day.exercises ?? [] {
-            let last = previous[ex.name]?.filter { $0.isWarmup != true } ?? []
+            let last = previous[ex.name]?.filter { $0.isWarmup != true && $0.done } ?? []
             logs[ex.name] = (0..<max(ex.series, 1)).map { i in
                 let prev = i < last.count ? last[i] : last.last
                 return SetLog(reps: prev?.reps ?? ex.repsTarget, weight: prev?.weight ?? ex.weight, done: false, isWarmup: nil)

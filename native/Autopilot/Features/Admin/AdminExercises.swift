@@ -143,7 +143,7 @@ struct AdminExercisesView: View {
         .sheet(item: $preview) { ex in
             VStack(spacing: 12) {
                 if let v = ex.video_url, let u = URL(string: v) { VideoPlayer(player: AVPlayer(url: u)).frame(minHeight: 360) }
-                else if let i = ex.image_url, let u = URL(string: i) { AsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() } }
+                else if let i = ex.image_url, let u = URL(string: i) { CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() } }
                 Text(ex.name).font(.apTitle3)
                 Text([ex.muscle_group, ex.exercise_type].compactMap { $0 }.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
                 Button("Cerrar") { preview = nil }.buttonStyle(.pillSecondary)
@@ -238,7 +238,7 @@ struct ExerciseEditor: View {
                 }
                 Section("Imagen del ejercicio") {
                     if let i = exercise.image_url, let u = URL(string: i), !i.isEmpty {
-                        AsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }.frame(maxHeight: 220)
+                        CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }.frame(maxHeight: 220)
                     }
                     PhotosPicker(selection: $photo, matching: .images) { Text("Subir imagen").foregroundStyle(Palette.gold) }
                     if !exercise.id.isEmpty {

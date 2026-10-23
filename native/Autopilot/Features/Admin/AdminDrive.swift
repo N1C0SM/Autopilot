@@ -118,7 +118,7 @@ struct AdminDriveView: View {
                 HStack(spacing: 12) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
-                        if let t = thumb, let u = URL(string: t) { AsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear } }
+                        if let t = thumb, let u = URL(string: t) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear } }
                         else { Image(systemName: Self.kindSymbol[kind] ?? "doc").foregroundStyle(Palette.muted) }
                     }
                     .frame(width: 44, height: 60).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -191,7 +191,7 @@ struct DriveItemEditor: View {
                     HStack(alignment: .top, spacing: 16) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
-                            if let c = cover, let u = URL(string: c) { AsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { ProgressView() } }
+                            if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { ProgressView() } }
                             else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.title).foregroundStyle(Palette.muted) }
                         }
                         .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

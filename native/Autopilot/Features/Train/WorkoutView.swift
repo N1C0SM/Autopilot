@@ -83,21 +83,24 @@ struct WorkoutView: View {
             .accessibilityLabel("Progreso de la sesión")
             .accessibilityValue("\(Int(progress * 100)) por ciento")
         }
-        .confirmationDialog("¿Descartar entrenamiento?", isPresented: $discardOpen, titleVisibility: .visible) {
-            Button("Descartar entrenamiento", role: .destructive) {
+        // Hojas que suben desde abajo, como los Drawer de la web (y siempre con «Seguir entrenando»).
+        .sheet(isPresented: $discardOpen) {
+            ChoiceSheet(title: "¿Descartar entrenamiento?",
+                        message: "Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.",
+                        primary: "Descartar entrenamiento", destructive: true) {
+                discardOpen = false
                 ActiveWorkout.clear(userId: workout.draft.userId)
                 workout.skipRest()
                 onClose(false)
-            }
-            Button("Seguir entrenando", role: .cancel) {}
-        } message: {
-            Text("Se borrarán las series de esta sesión y no contará como hecha. Podrás empezarla de nuevo cuando quieras.")
+            } onCancel: { discardOpen = false }
         }
-        .confirmationDialog("¿Terminar con series pendientes?", isPresented: $finishIncompleteOpen, titleVisibility: .visible) {
-            Button("Terminar y guardar") { rpeOpen = true }
-            Button("Seguir entrenando", role: .cancel) {}
-        } message: {
-            Text("Te quedan \(workout.totalSets - workout.doneSets) de \(workout.totalSets) series. Puedes terminarlo igualmente o seguir entrenando.")
+        .sheet(isPresented: $finishIncompleteOpen) {
+            ChoiceSheet(title: "¿Terminar con series pendientes?",
+                        message: "Te quedan \(workout.totalSets - workout.doneSets) de \(workout.totalSets) series. Puedes terminarlo igualmente o seguir entrenando.",
+                        primary: "Terminar y guardar", destructive: false) {
+                finishIncompleteOpen = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { rpeOpen = true }
+            } onCancel: { finishIncompleteOpen = false }
         }
         .sheet(isPresented: $rpeOpen) { rpeSheet }
         .sheet(isPresented: $summaryOpen, onDismiss: { onClose(true) }) { summarySheet }
@@ -167,7 +170,7 @@ struct WorkoutView: View {
         .padding(28)
         .frame(minWidth: 380)
         .presentationDetents([.large])
-        .screenBackground()
+        .presentationBackground(Palette.card)
     }
 
     // MARK: Esfuerzo (RPEDialog)
@@ -190,7 +193,7 @@ struct WorkoutView: View {
         .padding(28)
         .frame(minWidth: 340)
         .presentationDetents([.medium])
-        .screenBackground()
+        .presentationBackground(Palette.card)
     }
 }
 
@@ -304,6 +307,33 @@ struct SessionExerciseCard: View {
     }
 }
 
+/// Hoja de confirmación (Drawer de la web): título, texto, acción principal y «Seguir entrenando».
+struct ChoiceSheet: View {
+    let title: String
+    let message: String
+    let primary: String
+    let destructive: Bool
+    var onPrimary: () -> Void
+    var onCancel: () -> Void
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text(title).font(.apTitle3).multilineTextAlignment(.center).accessibilityAddTraits(.isHeader)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+            Button(primary) { Haptics.tap(); onPrimary() }
+                .buttonStyle(destructive ? .pillDestructive : .pill)
+                .padding(.top, 8)
+            Button("Seguir entrenando") { Haptics.selection(); onCancel() }
+                .font(.apHeadline).foregroundStyle(Palette.foreground).frame(maxWidth: .infinity, minHeight: 50)
+                .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 24).padding(.top, 28).padding(.bottom, 12)
+        .presentationDetents([.height(320)])
+        .presentationDragIndicator(.visible)
+        .presentationBackground(Palette.card)
+    }
+}
+
 /// Modo foco: visor grande del ejercicio activo (desliza para cambiar) y carrusel de toda la sesión.
 struct FocusViewer: View {
     @ObservedObject var workout: ActiveWorkout
@@ -323,7 +353,7 @@ struct FocusViewer: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.card)
                 if let i = ex.image_url, let u = URL(string: i) {
-                    AsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
                 } else {
                     Image(systemName: "dumbbell").font(.title).foregroundStyle(Palette.muted)
                 }
@@ -397,7 +427,7 @@ struct TechniqueSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let i = exercise.image_url, let u = URL(string: i) {
-                    AsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { Palette.card.frame(height: 260) }
+                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { Palette.card.frame(height: 260) }
                         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
                         .accessibilityLabel(exercise.name)
                 }
@@ -413,8 +443,8 @@ struct TechniqueSheet: View {
             .padding(20)
         }
         .frame(minWidth: 420, minHeight: 520)
-        .screenBackground()
         .presentationDetents([.large])
+        .presentationBackground(Palette.card)
     }
 }
 
@@ -440,7 +470,7 @@ struct SetLine: View {
                 .foregroundStyle(isCurrent ? Palette.gold : Palette.muted)
                 .frame(width: 24)
                 .accessibilityHidden(true)
-            Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight)×\($0.reps)" : "—" } ?? "—")
+            Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
                 .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
                 .frame(width: 52)
                 .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
@@ -513,9 +543,7 @@ struct SetLine: View {
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
-        .contextMenu {
-            Button(role: .destructive) { workout.removeSet(exercise.name, at: index) } label: { Label("Quitar serie", systemImage: "trash") }
-        }
+        .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
     }
 }
 
@@ -552,6 +580,8 @@ struct RestTimerRow: View {
                 HStack(spacing: 0) {
                     Text(String(format: "%d:%02d", left / 60, left % 60))
                         .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                        .contentTransition(.numericText(countsDown: true))
+                        .transaction { $0.animation = nil }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .accessibilityLabel("Descanso, quedan \(left) segundos")
                     Button("−30") { Haptics.selection(); workout.adjustRest(by: -30) }

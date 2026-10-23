@@ -20,6 +20,8 @@ settings:
     INFOPLIST_KEY_CFBundleDisplayName: Autopilot
     INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.healthcare-fitness
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    # Pantalla de arranque con la marca (no un negro vacío).
+    INFOPLIST_KEY_UILaunchScreen: "{UIImageName = LaunchLogo; UIColorName = LaunchBackground; UIImageRespectsSafeAreaInsets = YES;}"
     INFOPLIST_KEY_UIUserInterfaceStyle: Dark
     INFOPLIST_KEY_NSCameraUsageDescription: "Para hacer las fotos de progreso y del escáner."
     INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Para elegir fotos de progreso y del escáner."

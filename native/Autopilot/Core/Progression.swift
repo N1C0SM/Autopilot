@@ -8,7 +8,7 @@ struct ProgressionSuggestion: Equatable {
     let reason: String
 
     var headline: String {
-        let kg = Double(weight).map { "\(NumberText.decimal($0, digits: $0.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 2)) kg" } ?? ""
+        let kg = Double(weight).map { "\(Progression.kgText($0)) kg" } ?? ""
         switch label {
         case .up: return "Hoy: \(kg)"
         case .addRep: return "Hoy: +1 rep por serie"
@@ -27,7 +27,9 @@ enum Progression {
     }
 
     private static func increment(_ w: Double) -> Double { w >= 40 ? 2.5 : 1.25 }
-    private static func kg(_ w: Double) -> String { NumberText.decimal(w, digits: w.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 2) }
+    private static func kg(_ w: Double) -> String { kgText(w) }
+    /// Hasta dos decimales y sin ceros de más: 42,5 · 41,25 · 40.
+    static func kgText(_ w: Double) -> String { w.formatted(.number.precision(.fractionLength(0...2)).locale(Locale(identifier: "es_ES"))) }
     private static func plain(_ w: Double) -> String { w.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(w)) : String(w) }
 
     /// «Última vez: 8 · 8 · 7 reps con 60 kg».

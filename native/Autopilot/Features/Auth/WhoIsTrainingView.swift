@@ -75,7 +75,7 @@ struct WhoIsTrainingView: View {
         .padding(28)
         .frame(minWidth: 320)
         .presentationDetents([.medium])
-        .screenBackground()
+        .presentationBackground(Palette.card)
     }
 
     private func choose(_ account: SavedAccount) async {
@@ -114,7 +114,7 @@ struct AvatarView: View {
     var body: some View {
         Group {
             if let url, let u = URL(string: url) {
-                AsyncImage(url: u) { image in image.resizable().scaledToFill() } placeholder: { initial }
+                CachedAsyncImage(url: u) { image in image.resizable().scaledToFill() } placeholder: { initial }
             } else {
                 initial
             }

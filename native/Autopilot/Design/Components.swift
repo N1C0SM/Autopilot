@@ -1,4 +1,5 @@
 import SwiftUI
+import ImageIO
 
 /// Tarjeta de descanso de la web (`EmptyState rest`): luna dorada con halo, estrellas, título y acción.
 struct RestCard<Action: View>: View {
@@ -72,6 +73,7 @@ struct FloatingTabBar: View {
                 Button { Haptics.selection(); selection = tab } label: {
                     VStack(spacing: 4) {
                         Image(systemName: tab.tabSymbol(active: active)).font(.system(size: 21, weight: active ? .semibold : .regular))
+                            .frame(height: 26)
                         Text(tab.tabTitle).font(.system(size: 12, weight: active ? .semibold : .regular))
                     }
                     .foregroundStyle(active ? Color.black : Palette.muted)
@@ -141,6 +143,62 @@ extension AppSection {
         case .nutrition: "fork.knife"
         case .progress: "chart.line.uptrend.xyaxis"
         default: symbol
+        }
+    }
+}
+
+/// Imagen remota con caché en memoria y disco: no se vuelve a descargar ni decodificar en cada
+/// redibujado (AsyncImage lo hace y frena los toques en listas con fotos).
+@MainActor
+final class ImageCache {
+    static let shared = ImageCache()
+    private let memory = NSCache<NSURL, PlatformImage>()
+    private let session: URLSession = {
+        let c = URLSessionConfiguration.default
+        c.urlCache = URLCache(memoryCapacity: 30_000_000, diskCapacity: 300_000_000)
+        c.requestCachePolicy = .returnCacheDataElseLoad
+        return URLSession(configuration: c)
+    }()
+
+    func cached(_ url: URL) -> PlatformImage? { memory.object(forKey: url as NSURL) }
+
+    func load(_ url: URL, maxSide: CGFloat = 900) async -> PlatformImage? {
+        if let hit = memory.object(forKey: url as NSURL) { return hit }
+        guard let (data, _) = try? await session.data(from: url) else { return nil }
+        // Se reduce fuera del hilo principal: las fotos originales son muy grandes.
+        let image = await Task.detached(priority: .userInitiated) { () -> PlatformImage? in
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+            let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxSide * 3, kCGImageSourceCreateThumbnailWithTransform: true]
+            guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, opts as CFDictionary) else { return nil }
+            #if os(iOS)
+            return UIImage(cgImage: cg)
+            #else
+            return NSImage(cgImage: cg, size: .zero)
+            #endif
+        }.value
+        if let image { memory.setObject(image, forKey: url as NSURL) }
+        return image
+    }
+}
+
+struct CachedAsyncImage<Content: View, Placeholder: View>: View {
+    let url: URL?
+    @ViewBuilder var content: (Image) -> Content
+    @ViewBuilder var placeholder: () -> Placeholder
+    @State private var image: PlatformImage?
+
+    init(url: URL?, @ViewBuilder content: @escaping (Image) -> Content, @ViewBuilder placeholder: @escaping () -> Placeholder) {
+        self.url = url; self.content = content; self.placeholder = placeholder
+        _image = State(initialValue: url.flatMap { u in MainActor.assumeIsolated { ImageCache.shared.cached(u) } })
+    }
+
+    var body: some View {
+        Group {
+            if let image { content(Image(platformImage: image)) } else { placeholder() }
+        }
+        .task(id: url) {
+            guard image == nil, let url else { return }
+            image = await ImageCache.shared.load(url)
         }
     }
 }

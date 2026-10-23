@@ -29,12 +29,6 @@ struct TrainView: View {
                     SegmentedPill(options: ["Entrenar", "Rutina semanal"], selection: $tab)
                     if tab == 1 { weeklyRoutine } else {
                     if !model.days.isEmpty { dayPicker }
-                    if let resumable = ActiveWorkout.restore(userId: session.userIdString ?? ""), resumable.day.day == selectedDay {
-                        Button { active = ActiveWorkout(draft: resumable) } label: {
-                            Label("Seguir entrenamiento", systemImage: "play.fill")
-                        }
-                        .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
-                    }
                     if let plan = currentPlan {
                         if plan.isGym { gymSummary(plan) } else { activityDay(plan) }
                     } else {
@@ -113,7 +107,7 @@ struct TrainView: View {
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
                 if let cover = exercises.first?.image_url, let url = URL(string: cover) {
-                    AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                    CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
                         .frame(maxWidth: .infinity).frame(height: 192)
                         .overlay(LinearGradient(colors: [.black.opacity(0.7), .clear], startPoint: .bottom, endPoint: .center))
                         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
@@ -139,8 +133,13 @@ struct TrainView: View {
                 } else if exercises.isEmpty {
                     Text("Este día no tiene ejercicios asignados todavía.").font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 16)
                 } else {
-                    Button { Task { await start(plan) } } label: {
-                        if starting { ProgressView().tint(.black) } else { Label("Empezar entrenamiento", systemImage: "play.fill") }
+                    // Una sola acción dorada: si hay un entreno a medias de este día, la misma cápsula lo reanuda.
+                    let resumable = ActiveWorkout.restore(userId: session.userIdString ?? "").flatMap { $0.day.day == plan.day ? $0 : nil }
+                    Button {
+                        if let r = resumable { Haptics.tap(); active = ActiveWorkout(draft: r) } else { Task { await start(plan) } }
+                    } label: {
+                        if starting { ProgressView().tint(.black) }
+                        else { Label(resumable == nil ? "Empezar entrenamiento" : "Seguir entrenamiento", systemImage: "play.fill") }
                     }
                     .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
                     .disabled(starting)
@@ -294,7 +293,7 @@ struct ExerciseThumb: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             if let url, let u = URL(string: url) {
-                AsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
             } else {
                 Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
             }

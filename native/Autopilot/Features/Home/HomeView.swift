@@ -16,11 +16,14 @@ struct HomeView: View {
         model.days.first { $0.day == DayNames.today && ($0.isGym ? !($0.exercises ?? []).isEmpty : $0.type == "actividad") }
     }
     private var scheduled: [DayPlan] { model.days.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty } }
-    private var completedToday: Bool { model.completedToday(DayNames.today) }
-    /// Días hechos esta semana (desde el lunes).
+    /// Hecho hoy si hay cualquier entreno registrado con la fecha de hoy (aunque sea de otro día del plan).
+    private var completedToday: Bool { model.completions.contains { $0.date == LocalDate.string() } }
+    /// Como la web: días del plan hechos esta semana (por su nombre) y hoy si ya se ha entrenado.
     private var doneDays: Set<String> {
         let monday = LocalDate.daysAgo(todayIndex)
-        return Set(model.completions.filter { $0.date >= monday }.map(\.day))
+        var out = Set(model.completions.filter { $0.date >= monday }.map(\.day))
+        if completedToday { out.insert(DayNames.today) }
+        return out
     }
 
     var body: some View {

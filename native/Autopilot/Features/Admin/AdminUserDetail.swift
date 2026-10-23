@@ -308,7 +308,7 @@ struct ChatView: View {
                                 if mine { Spacer(minLength: 40) }
                                 VStack(alignment: .leading, spacing: 4) {
                                     if let u = m.media_url, let url = URL(string: u) {
-                                        AsyncImage(url: url) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }.frame(maxWidth: 240)
+                                        CachedAsyncImage(url: url) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }.frame(maxWidth: 240)
                                     }
                                     Text(m.content).font(.apBody)
                                 }

@@ -103,7 +103,10 @@ struct RootView: View {
     var body: some View {
         Group {
             if !session.ready {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
+                // Arranque con la marca (no una pantalla negra).
+                Image("Logo").resizable().scaledToFit().frame(width: 96, height: 96).clipShape(Circle())
+                    .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
+                    .accessibilityLabel("Autopilot")
             } else if session.showPicker {
                 WhoIsTrainingView()
             } else if session.session == nil || session.addingAccount {
@@ -146,10 +149,24 @@ struct MainShell: View {
                 // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
                 NavigationStack {
                     SectionView(section: selection ?? .home, onNavigate: { selection = $0 })
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                HeaderButtons(initial: initial) { showSettings = true }
+                        .toolbar(.hidden, for: .navigationBar)
+                        // Cabecera de la web (MobileHeader): campana y avatar en círculos, «Hoy» centrado
+                        // y en el resto de pestañas el título grande a la izquierda.
+                        .safeAreaInset(edge: .top, spacing: 0) {
+                            let current = selection ?? .home
+                            VStack(alignment: .leading, spacing: 4) {
+                                ZStack {
+                                    if current == .home { Text("Hoy").font(.apHeadline).accessibilityAddTraits(.isHeader) }
+                                    HStack { Spacer(); HeaderButtons(initial: initial) { showSettings = true } }
+                                }
+                                .frame(height: 44)
+                                if current != .home {
+                                    Text(current.navTitle).font(.system(.largeTitle, design: .default).weight(.bold))
+                                        .accessibilityAddTraits(.isHeader)
+                                }
                             }
+                            .padding(.horizontal, 16).padding(.bottom, 6)
+                            .background(Palette.background)
                         }
                         .navigationDestination(isPresented: $showSettings) { AccountView().navigationTitle("Ajustes") }
                         .safeAreaInset(edge: .bottom, spacing: 0) {

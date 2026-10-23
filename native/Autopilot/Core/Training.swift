@@ -52,9 +52,22 @@ struct DayPlan: Codable, Hashable, Identifiable {
     var id: String { day }
 
     var isGym: Bool { type == "gimnasio" }
+    /// Igual que `formatTrainingTitle` de la web: «Full Body A · Pecho, espalda, piernas y core».
     var title: String {
-        if isGym { return routine_name ?? muscle_focus ?? "Entreno" }
-        return sport ?? "Actividad"
+        guard isGym else { return sport ?? "Actividad" }
+        let routine = routine_name?.trimmingCharacters(in: .whitespaces) ?? ""
+        let focus = muscle_focus?.trimmingCharacters(in: .whitespaces) ?? ""
+        if routine.isEmpty { return focus.isEmpty ? "Entreno" : DayPlan.formatFocus(focus) }
+        if focus.isEmpty || routine.lowercased().contains(focus.lowercased()) { return routine }
+        return "\(routine) · \(DayPlan.formatFocus(focus))"
+    }
+
+    static func formatFocus(_ focus: String) -> String {
+        let parts = focus.split(whereSeparator: { "·,;".contains($0) }).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }.filter { !$0.isEmpty }
+        guard parts.count >= 2 else { return focus }
+        let first = parts[0].prefix(1).uppercased() + parts[0].dropFirst()
+        let middle = parts.dropFirst().dropLast()
+        return first + (middle.isEmpty ? "" : ", " + middle.joined(separator: ", ")) + " y " + parts.last!
     }
 }
 
@@ -69,7 +82,7 @@ enum FlexibleValue {
     static func int<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) -> Int? {
         if let i = try? c.decode(Int.self, forKey: key) { return i }
         if let d = try? c.decode(Double.self, forKey: key) { return Int(d) }
-        if let s = try? c.decode(String.self, forKey: key) { return Int(s.filter(\.isNumber)) }
+        if let s = try? c.decode(String.self, forKey: key) { return s.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first }
         return nil
     }
 }
