@@ -202,3 +202,29 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
         }
     }
 }
+
+/// Icono sobre cuadrado redondeado tintado (`IconTile` de la web): sm 32 pt, md 40, lg 64.
+struct IconTile: View {
+    let symbol: String
+    var size: CGFloat = 32
+    var tint: Color = Palette.gold
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: size * 0.5, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: size, height: size)
+            .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// Pantalla completa en iPhone; hoja en Mac.
+    @ViewBuilder func fullScreenCoverCompat<Item: Identifiable, C: View>(item: Binding<Item?>, @ViewBuilder content: @escaping (Item) -> C) -> some View {
+        #if os(iOS)
+        fullScreenCover(item: item, content: content)
+        #else
+        sheet(item: item) { content($0).frame(minWidth: 600, minHeight: 700) }
+        #endif
+    }
+}
