@@ -6,7 +6,7 @@ export const authFieldInputClass = (withTrailing = false) =>
   cn(
     "min-w-0 flex-1 rounded-none bg-transparent px-0 md:focus-visible:ring-0",
     "[&:-webkit-autofill]:shadow-[inset_0_0_0_1000px_hsl(var(--card))] [&:-webkit-autofill]:[-webkit-text-fill-color:hsl(var(--foreground))]",
-    withTrailing ? "pr-0" : "pr-4",
+    withTrailing ? "pr-0" : "pr-5",
   );
 
 /** Acción secundaria en texto dorado, como "Ya tengo cuenta" en la bienvenida (`Button variant="plain" size="sm"`). */

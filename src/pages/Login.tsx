@@ -1,3 +1,4 @@
+import { listAccounts, openAccountPicker } from "@/lib/accounts";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
@@ -14,7 +15,7 @@ import { signInWithApple } from "@/lib/nativeAuth";
 import { AppleSignInButton } from "@/components/auth/AppleSignInButton";
 import { AuthAppMark, AuthFieldGroup, AuthFieldNote, AuthFieldRow, AuthHero, AuthImage } from "@/components/auth/AuthScreenParts";
 import { authFieldInputClass, authSecondaryActionClass, focusNextOnEnter, hideWithKeyboardClass } from "@/components/auth/authFormHelpers";
-import { appleSignInEnabled } from "@/lib/platform";
+import { appleSignInEnabled, supportsMultipleAccounts } from "@/lib/platform";
 import { hapticNotify, hapticTap } from "@/lib/native";
 import { clearVerifyContext, saveSignupEmail, saveVerifyContext } from "@/lib/signupVerification";
 import { cn } from "@/lib/utils";
@@ -133,7 +134,7 @@ const Login = () => {
         type="submit"
         form="login-form"
         size="lg"
-        className={cn("w-full", loading && "disabled:opacity-100")}
+        className={cn("w-full rounded-full", loading && "disabled:opacity-100")}
         disabled={loading}
       >
         {loading ? <><Spinner size="sm" className="text-primary-foreground" aria-hidden="true" /> Iniciando sesión…</> : "Iniciar sesión"}
@@ -193,7 +194,18 @@ const Login = () => {
         )}
       </AuthHero>
 
-      <form id="login-form" onSubmit={handleSubmit} className="mt-10">
+      {/* En las apps nativas, las cuentas ya guardadas entran sin contraseña. */}
+      {supportsMultipleAccounts() && listAccounts().length > 0 && (
+        <button type="button" onClick={() => { void hapticTap(); openAccountPicker(); }}
+          className="mx-auto mt-8 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-card px-5 type-headline transition-transform active:scale-[0.98]">
+          <span className="flex -space-x-2" aria-hidden="true">
+            {listAccounts().slice(0, 3).map((a) => <span key={a.id} className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-primary/60 ring-2 ring-card type-caption1 font-bold text-primary-foreground">{a.avatar ? <img src={a.avatar} alt="" className="h-full w-full object-cover" /> : (a.name || a.email).charAt(0).toUpperCase()}</span>)}
+          </span>
+          Elegir una cuenta guardada
+        </button>
+      )}
+
+      <form id="login-form" onSubmit={handleSubmit} className="mt-8">
         <AuthFieldGroup footer={formError ? <AuthFieldNote id="login-error" tone="error">{formError}</AuthFieldNote> : null}>
           <AuthFieldRow label="Usuario o correo" htmlFor="email">
             <Input

@@ -11,11 +11,11 @@ import { cn } from "@/lib/utils";
 export const AuthAppMark = ({ className }: { className?: string }) => (
   <div
     className={cn(
-      "mx-auto flex h-20 w-20 items-center justify-center rounded-[22%] border border-primary/20 bg-background shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]",
+      "mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60 shadow-[0_12px_40px_-12px_hsl(var(--primary)/0.6)]",
       className,
     )}
   >
-    <svg viewBox="0 0 100 100" aria-hidden="true" className="h-[62%] w-[62%] text-primary" fill="none">
+    <svg viewBox="0 0 100 100" aria-hidden="true" className="h-[52%] w-[52%] text-primary-foreground" fill="none">
       <path d="M14 86 L50 14 L86 86" stroke="currentColor" strokeWidth="11" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M56 46 L36 66 L48 66 L44 86 L62 60 L50 60 L55 46 Z" fill="currentColor" />
     </svg>
@@ -26,7 +26,7 @@ type IconComponent = ComponentType<{ className?: string; strokeWidth?: number | 
 
 /** Símbolo en squircle (recuperar, enviado, hecho): mismo tamaño que el icono de la app. */
 export const AuthSymbol = ({ icon: Icon }: { icon: IconComponent }) => (
-  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22%] bg-card">
+  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-card">
     <Icon className="h-9 w-9 text-primary" strokeWidth={1.75} />
   </div>
 );
@@ -60,9 +60,12 @@ export const AuthHero = ({
   description?: ReactNode;
   children?: ReactNode;
 }) => (
-  <div className="text-center">
+  <div className="relative text-center">
+    {/* Halo dorado, como «¿Quién entrena?» y la landing: el mismo ecosistema. */}
+    <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-10 -z-10 h-[26rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.14),transparent)]" />
+    <p className="mb-5 type-headline text-primary">Autopilot</p>
     {mark}
-    <h1 className="mt-7 type-title1">{title}</h1>
+    <h1 className="mt-6 font-rounded text-[32px] font-bold leading-tight tracking-tight">{title}</h1>
     {description ? (
       <p className="mx-auto mt-2 max-w-[34ch] type-subhead text-muted-foreground">{description}</p>
     ) : null}
@@ -81,7 +84,8 @@ export const AuthFieldGroup = ({
   className?: string;
 }) => (
   <div className={className}>
-    <div className="overflow-hidden rounded-2xl bg-card">{children}</div>
+    {/* Cada campo es una píldora, como en «¿Quién entrena?». */}
+    <div className="flex flex-col gap-3">{children}</div>
     {footer}
   </div>
 );
@@ -98,11 +102,11 @@ export const AuthFieldRow = ({
   trailing?: ReactNode;
   children: ReactNode;
 }) => (
-  <div className="group/field pl-4 transition-colors duration-150 md:focus-within:bg-secondary">
+  <div className="group/field rounded-full bg-card pl-5 ring-2 ring-transparent transition-shadow duration-150 focus-within:ring-primary">
     <label htmlFor={htmlFor} className="sr-only">
       {label}
     </label>
-    <div className="flex items-center group-[:not(:last-child)]/field:sep-b">
+    <div className="flex min-h-12 items-center">
       {children}
       {trailing}
     </div>
@@ -122,7 +126,7 @@ export const AuthFieldNote = ({
   <p
     id={id}
     role={tone === "error" ? "alert" : undefined}
-    className={cn("px-4 pt-2 type-footnote", tone === "error" ? "text-destructive" : "text-muted-foreground")}
+    className={cn("px-5 pt-2 type-footnote", tone === "error" ? "text-destructive" : "text-muted-foreground")}
   >
     {children}
   </p>

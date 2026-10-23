@@ -191,7 +191,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
         type="submit"
         form="verify-form"
         size="lg"
-        className={cn("w-full", loading && "disabled:opacity-100")}
+        className={cn("w-full rounded-full", loading && "disabled:opacity-100")}
         disabled={loading || ![6, 8].includes(code.replace(/\D/g, "").length)}
       >
         {loading ? (

@@ -175,7 +175,7 @@ const Signup = () => {
         type="submit"
         form="signup-form"
         size="lg"
-        className={cn("w-full", loading && "disabled:opacity-100")}
+        className={cn("w-full rounded-full", loading && "disabled:opacity-100")}
         disabled={loading || emailTaken}
       >
         {loading ? (

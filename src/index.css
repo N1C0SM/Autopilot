@@ -371,9 +371,9 @@ body.keyboard-open main {
      the components layer so a utility at the call site (h-8, text-xs, rounded-lg)
      still wins on every breakpoint. La etiqueta crece con Dynamic Type; la altura
      se mantiene en los 44 pt táctiles de la HIG. */
-  .btn-md   { height: 44px; padding-inline: 16px; border-radius: 12px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
+  .btn-md   { height: 44px; padding-inline: 18px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
   .btn-sm   { height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); }
-  .btn-lg   { height: 50px; padding-inline: 20px; border-radius: 14px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
+  .btn-lg   { height: 50px; padding-inline: 24px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
   .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
   
   /* iOS transition timing: 150ms ease for consistent feel */

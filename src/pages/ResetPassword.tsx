@@ -58,7 +58,7 @@ const ResetPassword = () => {
         contentClassName="py-6"
         footer={
           <div className="pb-2">
-            <Button asChild size="lg" className="w-full">
+            <Button asChild size="lg" className="w-full rounded-full">
               <Link to="/login" onClick={() => void hapticTap()}>Iniciar sesión</Link>
             </Button>
           </div>
@@ -93,7 +93,7 @@ const ResetPassword = () => {
             type="submit"
             form="reset-password-form"
             size="lg"
-            className={cn("w-full", loading && "disabled:opacity-100")}
+            className={cn("w-full rounded-full", loading && "disabled:opacity-100")}
             disabled={loading}
           >
             {loading ? <><Spinner size="sm" className="text-primary-foreground" aria-hidden="true" /> Actualizando…</> : "Actualizar contraseña"}
