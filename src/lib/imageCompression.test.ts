@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { compressImage } from "./imageCompression";
+import { toBrowserFriendlyImage } from "./imageCompression";
 
-describe("compressImage", () => {
-  it("skips compression for already small files", async () => {
-    const smallFile = new File(["tiny"], "photo.jpg", { type: "image/jpeg" });
-    const result = await compressImage(smallFile);
-    expect(result).toBe(smallFile);
+describe("toBrowserFriendlyImage", () => {
+  it("leaves JPEG and PNG photos untouched", async () => {
+    const jpeg = new File(["x"], "foto.jpg", { type: "image/jpeg" });
+    expect(await toBrowserFriendlyImage(jpeg)).toBe(jpeg);
   });
 
-  it("skips compression for non-image files", async () => {
-    const textFile = new File(["large text ".repeat(20000)], "document.pdf", { type: "application/pdf" });
-    const result = await compressImage(textFile);
-    expect(result).toBe(textFile);
+  it("keeps a HEIC photo when the browser cannot decode it", async () => {
+    const heic = new File(["x"], "IMG_0001.HEIC", { type: "image/heic" });
+    expect(await toBrowserFriendlyImage(heic, 2048, 50)).toBe(heic);
   });
 });
