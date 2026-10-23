@@ -1205,7 +1205,7 @@ const ExerciseLibrary = () => {
           ))}
         </ListGroup>
         {visibleCount < filtered.length && (
-          <div ref={sentinelRef} className="flex justify-center py-6 text-xs text-muted-foreground">
+          <div ref={sentinelRef} className="flex justify-center py-6 type-footnote text-muted-foreground">
             Cargando más…
           </div>
         )}

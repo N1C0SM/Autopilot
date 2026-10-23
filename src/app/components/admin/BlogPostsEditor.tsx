@@ -31,7 +31,7 @@ interface Post {
   review_status?: string | null;
 }
 
-const selectCls = "mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 text-base sm:text-sm";
+const selectCls = "mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 type-body sm:text-sm";
 
 const slugify = (s: string) =>
   s.toLowerCase()
@@ -189,7 +189,7 @@ const BlogPostsEditor = () => {
         <div className="flex items-center justify-between gap-3">
           <Button variant="ghost" onClick={() => setEditing(null)}>← Volver a la lista</Button>
           <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">Publicado</Label>
+            <Label className="type-footnote text-muted-foreground">Publicado</Label>
             <Switch checked={editing.published} onCheckedChange={(v) => setEditing({ ...editing, published: v })} />
             <Button variant="hero" onClick={save} disabled={saving}>
               <Save className="w-4 h-4 mr-1.5" /> {saving ? "Guardando..." : "Guardar"}
@@ -197,7 +197,7 @@ const BlogPostsEditor = () => {
           </div>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+        <div className="bg-card rounded-2xl p-6 space-y-4">
           <div>
             <Label>Título</Label>
             <Input
@@ -216,7 +216,7 @@ const BlogPostsEditor = () => {
                 onChange={(e) => setEditing({ ...editing, slug: slugify(e.target.value) })}
                 placeholder="ganar-musculo-30-anos"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">URL: /blog/{editing.slug || "..."}</p>
+              <p className="type-caption2 text-muted-foreground mt-1">URL: /blog/{editing.slug || "..."}</p>
             </div>
             <div>
               <Label>Autor</Label>
@@ -253,13 +253,13 @@ const BlogPostsEditor = () => {
                 <label>
                   <input type="file" accept="image/*" className="hidden" disabled={uploading}
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadCover(f); }} />
-                  <span className="inline-flex items-center gap-1.5 cursor-pointer text-xs px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
+                  <span className="inline-flex items-center gap-1.5 cursor-pointer type-footnote px-3 py-1.5 rounded-md border border-border hover:bg-secondary">
                     {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
                     {uploading ? "Subiendo..." : "Subir portada"}
                   </span>
                 </label>
                 {editing.cover_url && (
-                  <button type="button" onClick={() => setEditing({ ...editing, cover_url: "" })} className="text-[11px] text-muted-foreground hover:text-destructive text-left">
+                  <button type="button" onClick={() => setEditing({ ...editing, cover_url: "" })} className="type-caption2 text-muted-foreground hover:text-destructive text-left">
                     Quitar portada
                   </button>
                 )}
@@ -268,64 +268,64 @@ const BlogPostsEditor = () => {
           </div>
 
           <div className="border-t border-border pt-4">
-            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">Academia</p>
+            <p className="type-footnote font-semibold text-primary uppercase tracking-widest mb-3">Academia</p>
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-xs">Categoría</Label>
+                <Label className="type-footnote">Categoría</Label>
                 <select className={selectCls} value={editing.category || ""} onChange={(e) => setEditing({ ...editing, category: e.target.value || null })}>
                   <option value="">Sin categoría (blog normal)</option>
                   {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Nivel</Label>
+                <Label className="type-footnote">Nivel</Label>
                 <select className={selectCls} value={editing.level || ""} onChange={(e) => setEditing({ ...editing, level: e.target.value || null })}>
                   <option value="">—</option>
                   {Object.entries(LEVEL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Nivel de evidencia</Label>
+                <Label className="type-footnote">Nivel de evidencia</Label>
                 <select className={selectCls} value={editing.evidence_level || ""} onChange={(e) => setEditing({ ...editing, evidence_level: e.target.value || null })}>
                   <option value="">—</option>
                   {Object.entries(EVIDENCE_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Estado de revisión</Label>
+                <Label className="type-footnote">Estado de revisión</Label>
                 <select className={selectCls} value={editing.review_status || "draft"} onChange={(e) => setEditing({ ...editing, review_status: e.target.value })}>
                   {Object.entries(REVIEW_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Orden en el temario</Label>
+                <Label className="type-footnote">Orden en el temario</Label>
                 <Input className="mt-1.5" type="number" value={editing.order_index ?? ""} onChange={(e) => setEditing({ ...editing, order_index: e.target.value ? Number(e.target.value) : null })} />
               </div>
             </div>
             <div className="mt-4">
-              <Label className="text-xs">Referencias (lista JSON: authors, year, title, journal, doi)</Label>
-              <Textarea className="mt-1.5 font-mono text-xs" rows={6} value={refsText} onChange={(e) => setRefsText(e.target.value)} />
-              <p className="text-[10px] text-muted-foreground mt-1">Comprueba cada DOI en doi.org antes de marcar como Verificado. Sin verificar y sin referencias no se puede publicar.</p>
+              <Label className="type-footnote">Referencias (lista JSON: authors, year, title, journal, doi)</Label>
+              <Textarea className="mt-1.5 font-mono type-footnote" rows={6} value={refsText} onChange={(e) => setRefsText(e.target.value)} />
+              <p className="type-caption2 text-muted-foreground mt-1">Comprueba cada DOI en doi.org antes de marcar como Verificado. Sin verificar y sin referencias no se puede publicar.</p>
             </div>
           </div>
 
           <div>
             <Label>Contenido (Markdown)</Label>
             <Textarea
-              className="mt-1.5 font-mono text-sm"
+              className="mt-1.5 font-mono type-subhead"
               rows={20}
               value={editing.body_markdown}
               onChange={(e) => setEditing({ ...editing, body_markdown: e.target.value })}
               placeholder={"# Encabezado\n\nPárrafo con **negrita** y [enlaces](https://...).\n\n## Subtítulo\n\n- Lista\n- De\n- Items"}
             />
-            <p className="text-[10px] text-muted-foreground mt-1">Soporta Markdown completo (#, **, listas, enlaces, código, tablas).</p>
+            <p className="type-caption2 text-muted-foreground mt-1">Soporta Markdown completo (#, **, listas, enlaces, código, tablas).</p>
           </div>
 
           <div className="border-t border-border pt-4">
-            <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">SEO (opcional)</p>
+            <p className="type-footnote font-semibold text-primary uppercase tracking-widest mb-3">SEO (opcional)</p>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs">SEO title (sobrescribe el título)</Label>
+                <Label className="type-footnote">SEO title (sobrescribe el título)</Label>
                 <Input
                   className="mt-1"
                   value={editing.seo_title || ""}
@@ -335,7 +335,7 @@ const BlogPostsEditor = () => {
                 />
               </div>
               <div>
-                <Label className="text-xs">Meta description</Label>
+                <Label className="type-footnote">Meta description</Label>
                 <Textarea
                   className="mt-1"
                   rows={2}
@@ -356,25 +356,25 @@ const BlogPostsEditor = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold font-display">Blog</h2>
-          <p className="text-xs text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
+          <h2 className="type-headline font-bold font-display">Blog</h2>
+          <p className="type-footnote text-muted-foreground">Artículos públicos en /blog. SEO orgánico a largo plazo.</p>
         </div>
         <Button variant="hero" onClick={createNew}>
           <Plus className="w-4 h-4 mr-1.5" /> Nuevo artículo
         </Button>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
+      <div className="bg-card rounded-2xl p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
-          <p className="text-sm font-semibold">Escribir con IA</p>
+          <p className="type-subhead font-semibold">Escribir con IA</p>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="type-footnote text-muted-foreground">
           La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.
         </p>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <Label className="text-xs">¿De qué trata?</Label>
+            <Label className="type-footnote">¿De qué trata?</Label>
             <Input
               className="mt-1"
               value={aiTopic}
@@ -383,7 +383,7 @@ const BlogPostsEditor = () => {
             />
           </div>
           <div>
-            <Label className="text-xs">Para quién (opcional)</Label>
+            <Label className="type-footnote">Para quién (opcional)</Label>
             <Input
               className="mt-1"
               value={aiAudience}
@@ -399,8 +399,8 @@ const BlogPostsEditor = () => {
       </div>
 
       {posts.length === 0 ? (
-        <div className="text-center py-16 bg-card rounded-xl border border-dashed border-border">
-          <p className="text-sm text-muted-foreground mb-3">Aún no hay artículos.</p>
+        <div className="text-center py-16 bg-card rounded-2xl">
+          <p className="type-subhead text-muted-foreground mb-3">Aún no hay artículos.</p>
           <Button variant="outline" onClick={createNew}>
             <Plus className="w-4 h-4 mr-1.5" /> Crear el primero
           </Button>
@@ -414,15 +414,15 @@ const BlogPostsEditor = () => {
                 const pub = list.filter((p) => p.published).length;
                 return (
                   <button key={c.slug} type="button" onClick={() => setCatFilter(c.slug)}
-                    className="text-left rounded-2xl border border-border bg-card p-4 min-h-[110px] flex flex-col justify-between hover:border-primary/60 transition-colors">
+                    className="text-left rounded-2xl bg-card p-4 min-h-[110px] flex flex-col justify-between hover:border-primary/60 transition-colors">
                     <span className="font-semibold leading-tight">{c.name}</span>
-                    <span className="text-xs text-muted-foreground mt-3">{list.length} artículos · {pub} publicados</span>
+                    <span className="type-footnote text-muted-foreground mt-3">{list.length} artículos · {pub} publicados</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <button type="button" onClick={() => setCatFilter("all")} className="h-11 text-sm text-muted-foreground hover:text-foreground">
+            <button type="button" onClick={() => setCatFilter("all")} className="h-11 type-subhead text-muted-foreground hover:text-foreground">
               ← Todas las carpetas · <span className="text-foreground font-medium">{catFilter === "none" ? "Blog (sin categoría)" : CATEGORIES.find((c) => c.slug === catFilter)?.name}</span>
             </button>
           )}
@@ -430,7 +430,7 @@ const BlogPostsEditor = () => {
             .filter((p) => (catFilter === "none" ? !p.category : p.category === catFilter))
             .sort((a, b) => (a.order_index ?? 1e9) - (b.order_index ?? 1e9))
             .map((p) => (
-            <div key={p.id} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+            <div key={p.id} className="bg-card rounded-2xl p-4 flex items-center gap-3">
               {p.cover_url ? (
                 <img loading="lazy" decoding="async" src={p.cover_url} alt="" className="w-16 h-12 rounded-md object-cover shrink-0" />
               ) : (
@@ -438,12 +438,12 @@ const BlogPostsEditor = () => {
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm truncate">{p.title}</p>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.published ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                  <p className="font-medium type-subhead truncate">{p.title}</p>
+                  <span className={`type-caption2 font-bold px-1.5 py-0.5 rounded-full ${p.published ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
                     {p.published ? "Publicado" : "Borrador"}
                   </span>
                 </div>
-                <p className="text-[11px] text-muted-foreground truncate">
+                <p className="type-caption2 text-muted-foreground truncate">
                   {p.category ? `${categoryBySlug(p.category)?.name} · ${REVIEW_LABEL[(p.review_status || "draft") as keyof typeof REVIEW_LABEL]} · ` : ""}/blog/{p.slug}
                 </p>
               </div>

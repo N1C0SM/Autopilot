@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -90,7 +91,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
         <div className={`flex items-center gap-1.5 font-rounded font-bold tabular-nums type-title3 ${trendColor}`}>
           <TrendIcon className="w-5 h-5" aria-hidden="true" />
           {delta > 0 ? "+" : ""}
-          {delta.toFixed(1)} <span className="type-subhead font-normal text-muted-foreground">físico</span>
+          {formatDecimal(delta, 1)} <span className="type-subhead font-normal text-muted-foreground">físico</span>
         </div>
       </div>
 
@@ -120,7 +121,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
           <StatRow
             className="mb-6"
             stats={[
-              { label: "Mejor físico", value: bestPhysique.toFixed(1) },
+              { label: "Mejor físico", value: formatDecimal(bestPhysique, 1) },
               { label: "Desde el inicio", value: daysSinceFirst, unit: "d" },
               { label: "Racha al alza", value: maxStreak },
             ]}
@@ -142,7 +143,7 @@ export default function ScanProgressPanel({ userId, compact = false }: { userId:
               />
               <div className="type-footnote text-muted-foreground">{label}</div>
               <div className="font-rounded font-bold tabular-nums type-headline">
-                {Number(r.physique ?? 0).toFixed(1)}
+                {formatDecimal(r.physique ?? 0, 1)}
               </div>
             </div>
           );

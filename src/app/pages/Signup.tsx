@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -250,7 +251,7 @@ const Signup = () => {
               title="Tu AI Report está reservado"
             >
               <p>
-                Potencial <span className="tabular-nums text-foreground">{scanCtx.result.potential.toFixed(1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
+                Potencial <span className="tabular-nums text-foreground">{formatDecimal(scanCtx.result.potential, 1)}/10</span> · {scanCtx.result.improvements?.length || 0} mejoras detectadas
               </p>
               {(plans.plus || plans.coach) && <p className="mt-1">7 días de prueba · no se cobra hasta el día 8 · cancelas cuando quieras</p>}
             </AuthNotice>

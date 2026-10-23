@@ -18,7 +18,7 @@ const getGreeting = () => {
 const getContextualPhrase = (createdAt?: string, completedDays?: number) => {
   if (!createdAt) {
     const fallback = [
-      "¡Hoy es un gran día para entrenar! 💪",
+      "¡Hoy es un gran día para entrenar!",
       "Cada día cuenta. ¡Tú puedes!",
       "La constancia es la clave del éxito.",
       "Un paso más cerca de tu objetivo.",
@@ -32,16 +32,16 @@ const getContextualPhrase = (createdAt?: string, completedDays?: number) => {
   );
 
   if (weeksActive < 1) return "¡Bienvenido/a! Tu plan te espera. 🚀";
-  if (weeksActive === 1) return "Primera semana completada. ¡Sigue así! 🔥";
+  if (weeksActive === 1) return "Primera semana completada. ¡Sigue así!";
 
   if (completedDays && completedDays > 0) {
-    if (completedDays >= 20) return `${completedDays} días completados. ¡Eres imparable! 🏆`;
-    if (completedDays >= 10) return `${completedDays} días completados. La constancia se nota. 💪`;
-    return `${completedDays} días completados. ¡Cada uno cuenta! ✨`;
+    if (completedDays >= 20) return `${completedDays} días completados. ¡Eres imparable!`;
+    if (completedDays >= 10) return `${completedDays} días completados. La constancia se nota.`;
+    return `${completedDays} días completados. ¡Cada uno cuenta!`;
   }
 
   if (weeksActive >= 4) return `Llevas ${weeksActive} semanas con tu plan. ¿Alguna duda? Escríbeme por el chat. 💬`;
-  return `Semana ${weeksActive + 1} de tu plan. ¡Sigue con todo! 🔥`;
+  return `Semana ${weeksActive + 1} de tu plan. ¡Sigue con todo!`;
 };
 
 const Greeting = ({ name, createdAt, completedDays }: Props) => {

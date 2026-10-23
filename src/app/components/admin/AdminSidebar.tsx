@@ -27,25 +27,36 @@ interface Props {
 
 type NavItem = { title: string; section: AdminSection; icon: typeof LayoutDashboard };
 
-const NAV_ITEMS: NavItem[] = [
-  { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
-  { title: "Métricas", section: "metrics", icon: BarChart3 },
-  { title: "Roadmap", section: "roadmap", icon: Route },
-  { title: "Usuarios", section: "users", icon: Users },
-  { title: "Entrenadores", section: "trainers", icon: UserCog },
-  { title: "Recordatorios", section: "reminders", icon: Mail },
-  { title: "Ejercicios", section: "exercises", icon: Dumbbell },
-  { title: "Drive · Libros", section: "drive", icon: FolderOpen },
-  { title: "Reglas", section: "rules", icon: SlidersHorizontal },
-  { title: "Landing", section: "landing", icon: Globe },
-  { title: "Blog", section: "blog", icon: FileText },
-  { title: "Físicos", section: "physiques", icon: Target },
-  { title: "Emails", section: "emails", icon: MailOpen },
-  { title: "Planes y productos", section: "products", icon: Layers },
-  { title: "Pagos", section: "payments", icon: CreditCard },
-  { title: "Mi cuenta", section: "account", icon: UserCircle },
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  { label: "General", items: [
+    { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
+    { title: "Métricas", section: "metrics", icon: BarChart3 },
+    { title: "Roadmap", section: "roadmap", icon: Route },
+  ] },
+  { label: "Personas", items: [
+    { title: "Usuarios", section: "users", icon: Users },
+    { title: "Entrenadores", section: "trainers", icon: UserCog },
+    { title: "Recordatorios", section: "reminders", icon: Mail },
+  ] },
+  { label: "Entrenamiento", items: [
+    { title: "Ejercicios", section: "exercises", icon: Dumbbell },
+    { title: "Reglas", section: "rules", icon: SlidersHorizontal },
+    { title: "Físicos", section: "physiques", icon: Target },
+    { title: "Drive · Libros", section: "drive", icon: FolderOpen },
+  ] },
+  { label: "Contenido", items: [
+    { title: "Landing", section: "landing", icon: Globe },
+    { title: "Blog", section: "blog", icon: FileText },
+    { title: "Emails", section: "emails", icon: MailOpen },
+  ] },
+  { label: "Negocio", items: [
+    { title: "Planes y productos", section: "products", icon: Layers },
+    { title: "Pagos", section: "payments", icon: CreditCard },
+  ] },
+  { label: "Cuenta", items: [
+    { title: "Mi cuenta", section: "account", icon: UserCircle },
+  ] },
 ];
-
 const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -86,12 +97,14 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navegación</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>{NAV_ITEMS.map(navButton)}</SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {NAV_GROUPS.map((group) => (
+          <SidebarGroup key={group.label} className="py-1">
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>{group.items.map(navButton)}</SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter>

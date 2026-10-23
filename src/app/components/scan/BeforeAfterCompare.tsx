@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { signedUrlFor } from "@/shared/lib/storageSign";
@@ -72,7 +73,7 @@ export default function BeforeAfterCompare({
         <p className={`flex items-center gap-1 type-subhead font-semibold tabular-nums ${trendColor}`}>
           <TrendIcon className="h-5 w-5" aria-hidden="true" />
           {delta > 0 ? "+" : ""}
-          {delta.toFixed(1)} físico
+          {formatDecimal(delta, 1)} físico
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -80,14 +81,14 @@ export default function BeforeAfterCompare({
           <ScanImage src={photoUrl} alt="Scan anterior" className="aspect-[3/4] w-full rounded-2xl" />
           <figcaption className="mt-2">
             <span className="block type-subhead text-muted-foreground">Antes · {dateLabel}</span>
-            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{pPhys.toFixed(1)}</span>
+            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{formatDecimal(pPhys, 1)}</span>
           </figcaption>
         </figure>
         <figure className="min-w-0">
           <ScanImage src={currentPhoto} alt="Scan actual" className="aspect-[3/4] w-full rounded-2xl" />
           <figcaption className="mt-2">
             <span className="block type-subhead font-semibold text-primary">Ahora</span>
-            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{currentScores.physique.toFixed(1)}</span>
+            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{formatDecimal(currentScores.physique, 1)}</span>
           </figcaption>
         </figure>
       </div>

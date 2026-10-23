@@ -1,4 +1,5 @@
 import { WorkoutReview } from "@/app/components/dashboard/WorkoutReview";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Plane, ChevronDown, AlertTriangle, TrendingUp } from "lucide-react";
@@ -151,7 +152,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
     );
   }
 
-  const avgRPE = rpeData.length ? (rpeData.reduce((s, p) => s + p.rpe, 0) / rpeData.length).toFixed(1) : "—";
+  const avgRPE = rpeData.length ? formatDecimal(rpeData.reduce((s, p) => s + p.rpe, 0) / rpeData.length, 1) : "—";
   const isTraveling = travelModeUntil && new Date(travelModeUntil) >= new Date();
   const sessions = Object.entries(
     workoutLogs.reduce<Record<string, WorkoutLog[]>>((acc, log) => {
@@ -364,7 +365,7 @@ const UserProgressPanel = ({ userId, travelModeUntil, travelEquipment }: Props) 
                     trailing={
                       <span className="text-right">
                         <span className="block font-rounded type-headline tabular-nums">
-                          {pr.estimated_1rm ? `${Number(pr.estimated_1rm).toFixed(1)} kg` : "—"}
+                          {pr.estimated_1rm ? `${formatDecimal(pr.estimated_1rm, 1)} kg` : "—"}
                         </span>
                         <span className="block type-caption2 text-muted-foreground">1RM est.</span>
                       </span>

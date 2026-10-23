@@ -346,7 +346,7 @@ const PhotoFrame = ({ src, alt, pendingText, cover }: { src?: string; alt: strin
   const [failed, setFailed] = useState(false);
   useEffect(() => { setFailed(false); }, [src]);
   return (
-    <div className={cn("flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-card", cover ? "rounded-xl" : "rounded-2xl")}>
+    <div className={cn("flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-card", cover ? "rounded-2xl" : "rounded-2xl")}>
       {src && !failed ? (
         <img
           loading="lazy"

@@ -1,4 +1,5 @@
 import { forwardRef } from "react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import autopilotLogo from "@/shared/assets/autopilot-logo.png";
 
 export interface ScanShareData {
@@ -17,7 +18,7 @@ const GOLD = "#FFAA3C";
 const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos: string[] }>(({ result, photos }, ref) => {
   const focus = (result.improvements ?? []).map((m) => m.label).filter((l): l is string => !!l).slice(0, 2);
   const fat = result.body_composition?.body_fat_pct;
-  const stats: [string, string, string?][] = [["Potencial", result.potential.toFixed(1), GOLD]];
+  const stats: [string, string, string?][] = [["Potencial", formatDecimal(result.potential, 1), GOLD]];
   if (fat) stats.push(["Grasa est.", `${fat}%`]);
   return (
     <div
@@ -59,7 +60,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 28, color: MUTED, fontWeight: 600 }}>Físico</div>
           <div style={{ fontSize: 200, fontWeight: 800, letterSpacing: -6, lineHeight: 1, marginTop: 8 }}>
-            {result.physique.toFixed(1)}
+            {formatDecimal(result.physique, 1)}
             <span style={{ fontSize: 60, color: MUTED, fontWeight: 600, letterSpacing: 0 }}> /10</span>
           </div>
           <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>

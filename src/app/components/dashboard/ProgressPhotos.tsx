@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { IconTile } from "@/shared/components/ui/icon-tile";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -130,7 +131,7 @@ const ScanSummaryCard = ({ scan, onClose }: { scan: ScanData; onClose: () => voi
         <div className="mb-4 flex gap-6">
           {scores.map((s) => (
             <div key={s.label}>
-              <p className="text-2xl font-semibold tabular-nums">{s.value.toFixed(1)}</p>
+              <p className="text-2xl font-semibold tabular-nums">{formatDecimal(s.value, 1)}</p>
               <p className="type-caption1 text-white/60">{s.label}</p>
             </div>
           ))}

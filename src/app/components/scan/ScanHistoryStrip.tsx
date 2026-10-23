@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { motion } from "framer-motion";
 import { History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { supabase } from "@/shared/integrations/supabase/client";
@@ -67,7 +68,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
           <div className={`flex items-center gap-1.5 type-subhead font-medium ${trendColor}`}>
             <TrendIcon className="w-4 h-4" />
             {delta > 0 ? "+" : ""}
-            {delta.toFixed(1)} físico
+            {formatDecimal(delta, 1)} físico
           </div>
         )}
       </div>
@@ -93,7 +94,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
               )}
               <div className="type-caption2 uppercase tracking-wider text-muted-foreground">{label}</div>
               <div className="text-base font-bold font-display text-gradient">
-                {Number(r.physique ?? 0).toFixed(1)}
+                {formatDecimal(r.physique ?? 0, 1)}
               </div>
             </div>
           );

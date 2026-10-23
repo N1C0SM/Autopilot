@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { hapticTap } from "@/shared/lib/native";
 
 type Props = {
@@ -49,7 +50,7 @@ export default function ProjectionTimeline({
             <TrendingDown className="w-7 h-7 text-muted-foreground shrink-0" strokeWidth={1.75} />
             <div className="min-w-0 flex-1">
               <div className="type-headline">Sin plan · {mNo} meses</div>
-              <div className="type-subhead text-muted-foreground tabular-nums">Puntuación {without.toFixed(1)}</div>
+              <div className="type-subhead text-muted-foreground tabular-nums">Puntuación {formatDecimal(without, 1)}</div>
             </div>
           </div>
           <div className="h-1 rounded-full bg-secondary overflow-hidden mt-4 mb-5">

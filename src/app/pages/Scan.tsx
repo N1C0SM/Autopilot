@@ -1,4 +1,5 @@
 import { errorMessage, errorStatus } from "@/shared/lib/runtimeValues";
+import { formatDecimal } from "@/shared/lib/numberFormat";
 import { toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import { IconTile } from "@/shared/components/ui/icon-tile";
 import React, { useState, useRef, useEffect } from "react";
@@ -1753,7 +1754,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   <ProgressRing value={result.physique * 10} size={200} stroke={14} label="Puntuación de físico">
                     <div className="flex flex-col items-center">
                       <span className="font-rounded text-[56px] font-bold leading-none tabular-nums min-[390px]:text-[64px]">
-                        {result.physique.toFixed(1)}
+                        {formatDecimal(result.physique, 1)}
                       </span>
                       <span className="mt-1.5 type-footnote text-muted-foreground">Físico · de 10</span>
                     </div>
@@ -1769,9 +1770,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   const hasObjective = !!objectiveImg || !!savedObjectiveUrl;
                   const showMonths = hasObjective && result.months_with_plan !== undefined;
                   const stats: Stat[] = [
-                    { label: "Atractivo", value: result.attractiveness.toFixed(1), unit: "/10" },
-                    { label: "Potencial", value: result.potential.toFixed(1), unit: "/10", tone: "text-primary" },
-                    { label: "Estilo", value: result.style.toFixed(1), unit: "/10" },
+                    { label: "Atractivo", value: formatDecimal(result.attractiveness, 1), unit: "/10" },
+                    { label: "Potencial", value: formatDecimal(result.potential, 1), unit: "/10", tone: "text-primary" },
+                    { label: "Estilo", value: formatDecimal(result.style, 1), unit: "/10" },
                   ];
                   if (showMonths) {
                     stats.push({ label: "A tu objetivo", value: Math.max(1, result.months_with_plan!), unit: "meses" });
@@ -2108,7 +2109,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                         {result.proportions.shoulder_to_waist_ratio !== undefined && (
                           <MeterRow
                             label="Ratio hombro/cintura"
-                            value={result.proportions.shoulder_to_waist_ratio.toFixed(2)}
+                            value={formatDecimal(result.proportions.shoulder_to_waist_ratio, 2)}
                             hint="Ideal ~1.60"
                             pct={(result.proportions.shoulder_to_waist_ratio / 1.8) * 100}
                           />
@@ -2157,7 +2158,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                             label={m.group}
                             value={
                               <span className={m.score >= 7 ? "text-primary" : m.score >= 5 ? "text-foreground" : "text-muted-foreground"}>
-                                {m.score.toFixed(1)}
+                                {formatDecimal(m.score, 1)}
                                 <span className="type-footnote font-normal text-muted-foreground">/10</span>
                               </span>
                             }
