@@ -13,6 +13,8 @@ export interface SavedAccount {
   avatar: string | null;
   accessToken: string;
   refreshToken: string;
+  /** La sesión dejó de valer (contraseña cambiada, sesión cerrada en otro sitio): hay que volver a entrar. */
+  expired?: boolean;
 }
 
 const KEY = "autopilot.accounts.v1";
@@ -46,7 +48,7 @@ export function rememberSession(session: Session) {
   const list = listAccounts();
   const i = list.findIndex((a) => a.id === account.id);
   // El nombre y la foto del perfil ganan a los del registro (que a menudo no los traen).
-  if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar };
+  if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar, expired: false };
   else list.push(account);
   save(list);
   // Fuera del callback de auth: Supabase no admite consultas dentro de onAuthStateChange.
@@ -70,19 +72,38 @@ export function forgetAccount(id: string) {
   save(listAccounts().filter((a) => a.id !== id));
 }
 
-/** Entra en otra cuenta guardada. Devuelve false si su sesión ya no vale (hay que volver a entrar). */
-export async function switchToAccount(id: string): Promise<boolean> {
+export type SwitchResult = "ok" | "offline" | "expired";
+
+/**
+ * Entra en otra cuenta guardada. Las cuentas no caducan solas: sin conexión no se
+ * toca nada, y si la sesión ya no vale la cuenta se queda en la lista para volver a entrar.
+ */
+export async function switchToAccount(id: string): Promise<SwitchResult> {
   const target = listAccounts().find((a) => a.id === id);
-  if (!target) return false;
+  if (!target) return "expired";
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
   const { data: current } = await supabase.auth.getSession();
   if (current.session) rememberSession(current.session);
-  const { data, error } = await supabase.auth.setSession({ access_token: target.accessToken, refresh_token: target.refreshToken });
-  if (error || !data.session) {
-    forgetAccount(id);
-    return false;
+  try {
+    const { data, error } = await supabase.auth.setSession({ access_token: target.accessToken, refresh_token: target.refreshToken });
+    if (data.session && !error) {
+      rememberSession(data.session);
+      return "ok";
+    }
+    // Solo un rechazo del servidor (4xx) significa que la sesión ya no vale; lo demás es la red.
+    const status = (error as { status?: number } | null)?.status ?? 0;
+    if (status >= 400 && status < 500) {
+      markExpired(id);
+      return "expired";
+    }
+    return "offline";
+  } catch {
+    return "offline";
   }
-  rememberSession(data.session);
-  return true;
+}
+
+function markExpired(id: string) {
+  save(listAccounts().map((a) => (a.id === id ? { ...a, expired: true } : a)));
 }
 
 /** Deja la cuenta activa guardada y sale solo en este dispositivo, sin revocar su sesión. */
@@ -90,4 +111,10 @@ export async function prepareAnotherAccount() {
   const { data } = await supabase.auth.getSession();
   if (data.session) rememberSession(data.session);
   await supabase.auth.signOut({ scope: "local" });
+}
+
+/** Abre «¿Quién entrena?» desde cualquier sitio (avatar mantenido, menú del Mac). */
+export const OPEN_ACCOUNT_PICKER = "autopilot:open-account-picker";
+export function openAccountPicker() {
+  window.dispatchEvent(new Event(OPEN_ACCOUNT_PICKER));
 }

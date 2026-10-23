@@ -1,8 +1,10 @@
-import { forwardRef, useState } from "react";
+import { forwardRef, useRef, useState } from "react";
+import { listAccounts, openAccountPicker } from "@/lib/accounts";
+import { supportsMultipleAccounts } from "@/lib/platform";
 import { BookOpen } from "lucide-react";
 import NotificationsBell from "@/components/NotificationsBell";
 import NavBar from "@/components/native/NavBar";
-import { hapticTap } from "@/lib/native";
+import { hapticImpact, hapticTap } from "@/lib/native";
 
 interface Props {
   title: string;
@@ -37,6 +39,24 @@ const HeaderAvatar = ({ name, src }: { name?: string; src?: string }) => {
 
 const MobileHeader = forwardRef<HTMLElement, Props>(
   ({ title, profileName, profileAvatar, userId, onSettings, onResources, titleVisible = true, solid = true, titleAsHeading = true }, ref) => {
+    // Mantener pulsado el avatar abre «¿Quién entrena?» (solo apps nativas con varias cuentas).
+    const longPressed = useRef(false);
+    const timer = useRef<number>();
+    const cancel = () => window.clearTimeout(timer.current);
+    const accountLongPress = supportsMultipleAccounts() ? {
+      onPointerDown: () => {
+        longPressed.current = false;
+        timer.current = window.setTimeout(() => {
+          if (listAccounts().length < 1) return;
+          longPressed.current = true;
+          void hapticImpact("medium");
+          openAccountPicker();
+        }, 450);
+      },
+      onPointerUp: cancel,
+      onPointerLeave: cancel,
+      onContextMenu: (e: React.MouseEvent) => { e.preventDefault(); },
+    } : {};
     return (
       <NavBar
         ref={ref}
@@ -66,10 +86,12 @@ const MobileHeader = forwardRef<HTMLElement, Props>(
             <button
               type="button"
               onClick={() => {
+                if (longPressed.current) { longPressed.current = false; return; }
                 void hapticTap();
                 onSettings?.();
               }}
-              aria-label="Perfil y ajustes"
+              {...accountLongPress}
+              aria-label={supportsMultipleAccounts() ? "Perfil y ajustes. Mantén pulsado para cambiar de cuenta" : "Perfil y ajustes"}
               className="flex h-11 w-11 shrink-0 items-center justify-center transition-opacity active:opacity-60"
             >
               <HeaderAvatar key={profileAvatar} name={profileName} src={profileAvatar} />

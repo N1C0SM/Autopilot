@@ -41,6 +41,8 @@ final class Browser: ObservableObject {
 
     func open(_ section: Section) { webView.load(URLRequest(url: section.url)) }
     func reload() { webView.reload() }
+    /// Abre «¿Quién entrena?» en la web (evento que escucha WhoIsTraining.tsx).
+    func switchUser() { webView.evaluateJavaScript("window.dispatchEvent(new Event('autopilot:open-account-picker'))") }
     func back() { if webView.canGoBack { webView.goBack() } }
     func forward() { if webView.canGoForward { webView.goForward() } }
 }
@@ -146,6 +148,10 @@ struct AutopilotApp: App {
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(replacing: .newItem) {}
+            CommandMenu("Cuenta") {
+                Button("Cambiar de usuario…") { browser.switchUser() }
+                    .keyboardShortcut("u", modifiers: [.command, .shift])
+            }
             CommandMenu("Ir") {
                 ForEach(Array(Section.allCases.enumerated()), id: \.element) { index, section in
                     Button(section.title) { browser.open(section) }

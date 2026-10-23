@@ -23,6 +23,9 @@ const swap = { type: "spring", stiffness: 380, damping: 36 } as const;
 
 const Login = () => {
   const [email, setEmail] = useState(() => {
+    // Volver a entrar en una cuenta guardada: el correo llega ya escrito.
+    const fromLink = new URLSearchParams(window.location.search).get("email");
+    if (fromLink) return fromLink;
     try { return JSON.parse(localStorage.getItem("autopilot:last-login") || "null")?.id || ""; } catch { return ""; }
   });
   const [password, setPassword] = useState("");

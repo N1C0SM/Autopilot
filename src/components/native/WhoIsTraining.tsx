@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { forgetAccount, listAccounts, prepareAnotherAccount, switchToAccount, type SavedAccount } from "@/lib/accounts";
+import { OPEN_ACCOUNT_PICKER, forgetAccount, listAccounts, prepareAnotherAccount, switchToAccount, type SavedAccount } from "@/lib/accounts";
 import { supportsMultipleAccounts } from "@/lib/platform";
 import { clearAnonScanId } from "@/lib/scanAttribution";
 import { clearPendingScanContext } from "@/lib/pendingScan";
@@ -33,6 +33,14 @@ export default function WhoIsTraining() {
     if (!shown && list.length >= 2) { setAccounts(list); setOpen(true); }
   }, [loading]);
 
+  // Cambio rápido: mantener el avatar o, en el Mac, Cuenta → Cambiar de usuario.
+  useEffect(() => {
+    if (!supportsMultipleAccounts()) return;
+    const show = () => { setAccounts(listAccounts()); setEditing(false); setOpen(true); };
+    window.addEventListener(OPEN_ACCOUNT_PICKER, show);
+    return () => window.removeEventListener(OPEN_ACCOUNT_PICKER, show);
+  }, []);
+
   if (!open) return null;
 
   const choose = async (a: SavedAccount) => {
@@ -49,10 +57,13 @@ export default function WhoIsTraining() {
     if (a.id === user?.id) { setOpen(false); return; }
     setBusy(a.id);
     clearSharedDrafts();
-    if (await switchToAccount(a.id)) { window.location.assign("/dashboard"); return; }
+    const result = a.expired ? "expired" : await switchToAccount(a.id);
+    if (result === "ok") { window.location.assign("/dashboard"); return; }
     setBusy(null);
-    setAccounts(listAccounts());
-    toast.error(`La sesión de ${a.name} ha caducado. Añádela de nuevo.`);
+    if (result === "offline") { toast.error("Sin conexión. Inténtalo de nuevo cuando vuelvas a tener internet."); return; }
+    // La cuenta sigue en la lista: se vuelve a entrar con el correo ya escrito.
+    await prepareAnotherAccount();
+    window.location.assign(`/login?email=${encodeURIComponent(a.email)}`);
   };
 
   const add = async () => {
@@ -88,11 +99,11 @@ export default function WhoIsTraining() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate type-headline">{a.name}</span>
-                <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{a.email}</span>
+                <span className={`mt-0.5 block truncate type-subhead ${a.expired ? "text-primary" : "text-muted-foreground"}`}>{a.expired ? "Vuelve a entrar" : a.email}</span>
               </span>
               {editing
                 ? <X className="h-5 w-5 shrink-0 text-destructive" strokeWidth={2.5} aria-hidden="true" />
-                : a.id === user?.id && <span className="shrink-0 rounded-full bg-primary/15 px-2.5 py-1 type-caption1 font-semibold text-primary">Abierta</span>}
+                : null}
             </button>
           </li>
         ))}
@@ -108,6 +119,7 @@ export default function WhoIsTraining() {
           </li>
         )}
       </ul>
+      {!editing && user && <button type="button" onClick={() => setOpen(false)} className="relative mt-6 min-h-11 type-subhead text-muted-foreground active:opacity-60">Seguir como {accounts.find((a) => a.id === user.id)?.name ?? "ahora"}</button>}
       <button type="button" onClick={() => { void hapticTap(); setEditing((v) => !v); }}
         className="relative mt-12 inline-flex min-h-11 items-center gap-2 rounded-full px-5 type-subhead text-muted-foreground ring-1 ring-border transition-colors hover:text-foreground active:opacity-60">
         {editing ? "Listo" : <><Pencil className="h-4 w-4" aria-hidden="true" />Gestionar cuentas</>}

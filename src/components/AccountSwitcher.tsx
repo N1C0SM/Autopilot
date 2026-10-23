@@ -32,13 +32,12 @@ export default function AccountSwitcher({ currentId }: { currentId: string }) {
     void hapticSelection();
     setBusy(true);
     clearSharedDrafts();
-    if (await switchToAccount(account.id)) {
-      window.location.assign("/dashboard");
-      return;
-    }
+    const result = account.expired ? "expired" : await switchToAccount(account.id);
+    if (result === "ok") { window.location.assign("/dashboard"); return; }
     setBusy(false);
-    setAccounts(listAccounts());
-    toast.error(`La sesión de ${account.name} ha caducado. Vuelve a añadir la cuenta.`);
+    if (result === "offline") { toast.error("Sin conexión. Inténtalo de nuevo cuando vuelvas a tener internet."); return; }
+    await prepareAnotherAccount();
+    window.location.assign(`/login?email=${encodeURIComponent(account.email)}`);
   };
 
   const addAccount = async () => {
@@ -56,7 +55,7 @@ export default function AccountSwitcher({ currentId }: { currentId: string }) {
           key={a.id}
           leading={<Avatar account={a} />}
           title={a.name}
-          subtitle={a.email}
+          subtitle={a.expired ? "Vuelve a entrar" : a.email}
           disabled={busy}
           onClick={a.id === currentId ? undefined : () => void switchTo(a)}
           trailing={a.id === currentId
