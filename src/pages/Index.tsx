@@ -1,7 +1,7 @@
 import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
 import { IconTile } from "@/components/ui/icon-tile";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -11,6 +11,8 @@ import { COACH_CONTACT_CHANNEL, type PlanKey } from "@/config/tiers";
 import { usePlanAvailability } from "@/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/lib/publicCopy";
 import PublicHeroPhone from "@/components/PublicHeroPhone";
+import HeroQuiz from "@/components/HeroQuiz";
+import ScrollReveal from "@/components/ScrollReveal";
 import { hapticTap } from "@/lib/native";
 
 const ProductPreview = lazy(() => import("@/components/ProductPreview"));
@@ -33,6 +35,15 @@ export default function Index() {
     const el = pricingRef.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
     const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { track("pricing_view", { source: "landing" }); io.disconnect(); } }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [destination]);
+  const heroCtaRef = useRef<HTMLDivElement>(null);
+  const [showSticky, setShowSticky] = useState(false);
+  useEffect(() => {
+    const el = heroCtaRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([e]) => setShowSticky(!e.isIntersecting && e.boundingClientRect.top < 0));
     io.observe(el);
     return () => io.disconnect();
   }, [destination]);
@@ -88,14 +99,12 @@ export default function Index() {
     </Helmet>
     {/* 1 · Hero */}
     <section className="px-5 pt-10 sm:px-8 sm:pt-16">
-      <div className="mx-auto max-w-3xl text-center">
+      <div className="mx-auto max-w-3xl text-center animate-in fade-in slide-in-from-bottom-6 duration-700 motion-reduce:animate-none">
         <h1 className="type-large-title sm:text-[48px] sm:leading-[52px] md:text-[64px] md:leading-[68px]"><span className="block">Entrena con plan.</span> <span className="block">Registra cada serie.</span> <span className="block text-primary">Mira cómo progresas.</span></h1>
         <p className="mx-auto mt-5 max-w-md type-body text-muted-foreground md:max-w-xl md:text-[21px] md:leading-[28px]">Tu rutina según tu objetivo, tus días y tu material. En el gimnasio o en casa.</p>
-        <div className="mx-auto mt-8 flex max-w-sm flex-col items-stretch gap-1 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-3">
-          <Button variant="hero" size="lg" asChild className="sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "hero" }); }}>Crear mi rutina gratis</Link></Button>
-          <Button variant="plain" size="lg" asChild><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
-        </div>
-        <p className="mt-4 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
+        <div ref={heroCtaRef}><HeroQuiz /></div>
+        <Button variant="plain" size="lg" asChild className="mt-2"><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
+        <p className="mt-2 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
       </div>
       <div className="mt-12 sm:mt-14"><PublicHeroPhone /></div>
     </section>
@@ -109,7 +118,7 @@ export default function Index() {
 
     {/* 3 · Precios */}
     <section id="precios" ref={pricingRef} aria-labelledby="precios-titulo" className="scroll-mt-20 px-5 py-14 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-6xl">
+      <ScrollReveal><div className="mx-auto max-w-6xl">
         <h2 id="precios-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">{plans.campaign ? "Empieza gratis, sin tarjeta." : "Empieza gratis. Paga solo si te aporta."}</h2>
         <p className="mt-3 max-w-2xl type-body text-muted-foreground">Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. {plans.plus && <>{plans.plusName} te dice qué comer y cuánto peso subir. </>}{plans.coach && <>{plans.coachName} añade a Nicolás revisando tu plan.</>}</p>
         <div className="mt-8">
@@ -118,13 +127,13 @@ export default function Index() {
           </Suspense>
         </div>
         <p className="mt-6 text-center"><Link to="/planes" className="inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver la comparativa completa</Link></p>
-      </div>
+      </div></ScrollReveal>
     </section>
 
 
     {/* 4 · Cómo funciona */}
     <section aria-labelledby="como-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-6xl">
+      <ScrollReveal><div className="mx-auto max-w-6xl">
         <h2 id="como-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Cómo funciona</h2>
         {/* Tres pasos en tarjetas, con el mismo lenguaje que la app. */}
         <ol className="mt-8 grid gap-3 md:grid-cols-3 md:gap-4">
@@ -132,7 +141,7 @@ export default function Index() {
             [SlidersHorizontal, "Personaliza", "Objetivo, nivel, días, lesiones y material: gimnasio, casa o calistenia."],
             [Dumbbell, "Entrena", "Sigue tu sesión y apunta kg y repeticiones de cada serie."],
             [LineChart, "Progresa", plans.campaign ? "Consulta récords, volumen y peso. La siguiente carga se calcula con tus registros." : `Consulta récords, volumen y peso.${plans.plus ? ` En ${plans.plusName}, la carga siguiente se calcula con tus registros.` : ""}`],
-          ].map(([Icon, title, text], index) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="rounded-2xl bg-card p-5">
+          ].map(([Icon, title, text], index) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="rounded-2xl bg-card p-5 transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] animate-in fade-in slide-in-from-bottom-4 fill-mode-both" style={{ animationDelay: `${index * 120}ms`, animationDuration: "600ms" }}>
             <div className="flex items-center justify-between">
               <IconTile icon={I} size="md" />
               <span className="font-rounded type-title2 tabular-nums text-muted-foreground/40" aria-hidden="true">{index + 1}</span>
@@ -144,21 +153,21 @@ export default function Index() {
           </li>; })}
         </ol>
         <p className="mt-8 max-w-2xl type-footnote text-muted-foreground">La rutina y la progresión usan reglas de entrenamiento fijas y comprobables. La IA se usa donde aporta: en el análisis corporal por foto.</p>
-      </div>
+      </div></ScrollReveal>
     </section>
 
     {/* 4b · Guías en PDF: única oferta de pago directa, enlazada desde la portada */}
     <section aria-labelledby="guias-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
-      <div className="mx-auto max-w-6xl rounded-3xl bg-card p-6 sm:p-10">
+      <ScrollReveal><div className="mx-auto max-w-6xl rounded-3xl bg-card p-6 sm:p-10">
         <h2 id="guias-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Guías en PDF</h2>
         <p className="mt-2 max-w-2xl type-body text-muted-foreground">Fuerza, progresiones de calistenia, nutrición y un plan de 12 semanas. Pago único y descarga inmediata. El pack reúne tres guías a precio reducido.</p>
         <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/recursos" onClick={() => { void hapticTap(); track("cta_click", { cta: "guides", source: "home" }); }}>Ver las guías</Link></Button>
-      </div>
+      </div></ScrollReveal>
     </section>
 
     {/* 5 · Fundador + FAQ + CTA */}
     <section aria-labelledby="fundador-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
-      <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <ScrollReveal><div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
         <div>
           <h2 id="fundador-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Quién está detrás</h2>
           <p className="mt-4 type-body text-muted-foreground">Soy Nicolás San Marcos, fundador y desarrollador de Autopilot. Lo construyo yo{plans.coach ? <>, y en el plan {plans.coachName} también soy yo quien revisa tu plan y te responde {COACH_CONTACT_CHANNEL}</> : null}. Quería una app que te diga qué hacer hoy sin complicarte.</p>
@@ -171,12 +180,17 @@ export default function Index() {
           </Accordion>
           <Link to="/preguntas-frecuentes" className="mt-2 inline-flex min-h-11 items-center type-body text-primary transition-opacity active:opacity-60">Ver todas las dudas</Link>
         </div>
-      </div>
-      <div className="mx-auto mt-16 max-w-md text-center sm:mt-24">
+      </div></ScrollReveal>
+      <ScrollReveal><div className="mx-auto mt-16 max-w-md text-center sm:mt-24">
         <h2 className="type-title1 sm:text-[40px] sm:leading-[44px]">Empieza a entrenar con Autopilot</h2>
         <p className="mt-2 type-body text-muted-foreground">Gratis y sin tarjeta.</p>
         <Button variant="hero" size="lg" asChild className="mt-6 w-full sm:w-auto sm:px-10"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
-      </div>
+      </div></ScrollReveal>
     </section>
+
+    {/* CTA fija en móvil cuando el quiz del hero ya no se ve */}
+    {showSticky && <div className="fixed inset-x-0 bottom-0 z-40 bg-background/90 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:hidden animate-in slide-in-from-bottom-full duration-300">
+      <Button variant="hero" size="lg" asChild className="w-full"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "sticky" }); }}>Crear mi rutina gratis</Link></Button>
+    </div>}
   </PublicLayout>;
 }

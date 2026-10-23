@@ -3,6 +3,7 @@
 // and logs to console in dev. Easy to wire to Plausible/PostHog later.
 
 export type EventName =
+  | "hero_quiz_answer"
   | "book_preview_open"
   | "reco_preview_open"
   | "reco_buy_click"
