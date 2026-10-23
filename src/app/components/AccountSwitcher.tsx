@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
-import { forgetAccount, listAccounts, prepareAnotherAccount, setRequirePassword, switchToAccount, type SavedAccount } from "@/shared/lib/accounts";
-import { Switch } from "@/shared/components/ui/switch";
+import { forgetAccount, listAccounts, prepareAnotherAccount, switchToAccount, type SavedAccount } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { clearAnonScanId } from "@/shared/lib/scanAttribution";
 import { clearPendingScanContext } from "@/shared/lib/pendingScan";
@@ -66,16 +65,6 @@ export default function AccountSwitcher({ currentId }: { currentId: string }) {
                 aria-label={`Quitar ${a.name} de este dispositivo`}>Quitar</button>}
         />
       ))}
-      {accounts.some((a) => a.id === currentId) && (
-        <ListRow
-          title="Pedir contraseña para entrar en esta cuenta"
-          subtitle="Al elegirla en «¿Quién entrena?»"
-          trailing={<Switch
-            checked={!!accounts.find((a) => a.id === currentId)?.requirePassword}
-            onCheckedChange={(v) => { void hapticSelection(); setRequirePassword(currentId, v); setAccounts(listAccounts()); }}
-            aria-label="Pedir contraseña para entrar en esta cuenta" />}
-        />
-      )}
       <ListRow
         leading={<span aria-hidden="true" className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary"><Plus className="h-5 w-5" strokeWidth={2.5} /></span>}
         title="Añadir otra cuenta"
