@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    mcpPlugin(),
+    // La entrada del MCP vive en src/shared/lib/mcp tras reorganizar src.
+    mcpPlugin({ mcpEntry: "src/shared/lib/mcp/index.ts" }),
     // The inline-styled splash covers the page until React mounts, so the main stylesheet
     // can load without blocking first paint (improves FCP on slow mobile networks).
     {

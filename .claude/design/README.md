@@ -27,12 +27,12 @@ Documentos:
 | Necesito… | Uso |
 |---|---|
 | Un estado vacío o de descanso | `EmptyState` (con `photo` para foto de marca, `rest` para la noche con luna) |
-| Una foto de entrenamiento genérica | `BRAND_PHOTOS` de `src/lib/brandPhotos.ts` |
+| Una foto de entrenamiento genérica | `BRAND_PHOTOS` de `src/shared/lib/brandPhotos.ts` |
 | La foto de un ejercicio concreto | `useExerciseImages(nombres)` |
 | Portada de sesión o foto de comida | `useSessionCover` / `useMealPhoto` (IA, con respaldo) |
 | Cabecera de página pública | `PageHero` dentro de `PublicLayout` |
 | Lista de ajustes | `ListGroup` + `ListRow` |
 | Título de sección en la app | `SectionHeader` |
-| Pantallas de acceso | piezas de `src/components/auth/AuthScreenParts.tsx` |
+| Pantallas de acceso | piezas de `src/app/components/auth/AuthScreenParts.tsx` |
 
 Si algo de esta tabla no sirve, se amplía el componente común. No se copia y se modifica en una pantalla.

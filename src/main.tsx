@@ -3,7 +3,7 @@ import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "@fontsource-variable/inter/opsz.css";
 import "./index.css";
-import { initNative, initPlatformClasses } from "./lib/native";
+import { initNative, initPlatformClasses } from "@/shared/lib/native";
 
 // The build prerenders head tags per route (seo/prerender.ts). Helmet takes over from here,
 // so drop them to avoid duplicated titles, canonicals or JSON-LD once the app is running.

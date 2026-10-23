@@ -2,7 +2,7 @@
 
 Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el componente común y documéntalo en este archivo.
 
-## Base (`src/components/ui`)
+## Base (`src/shared/components/ui`)
 
 - **`Button`** — `variant="hero"` / por defecto = acción principal dorada; `tinted` = secundaria dorada suave; `secondary` = gris; `plain` = solo texto dorado. `size="lg"` y `md` son píldora. Una sola acción dorada por pantalla.
 - **`Surface`** — tarjeta plana `rounded-2xl bg-card`.
@@ -17,7 +17,7 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 
 ## Marca y contenido
 
-- **`BRAND_PHOTOS`** (`src/lib/brandPhotos.ts`) — fotos reales compartidas por landing y app (gimnasio, mancuernas, casa, barra).
+- **`BRAND_PHOTOS`** (`src/shared/lib/brandPhotos.ts`) — fotos reales compartidas por landing y app (gimnasio, mancuernas, casa, barra).
 - **`useExerciseImages(nombres)`** — foto de cada ejercicio por nombre (Progreso, Récords).
 - **`useSessionCover(ids, respaldo)` / `useMealPhoto(plato)`** — imágenes generadas con IA (edge function `session-cover`), guardadas una vez por combinación de músculos o plato. Siempre con respaldo: si la IA falla, foto del primer ejercicio o hueco gris, nunca una pantalla rota.
 - **`PhoneFrame`, `PhoneHome`, `PublicPhone`** — el teléfono de la landing pinta la interfaz real; si cambia la app, cambia el teléfono.
@@ -35,6 +35,6 @@ Antes de escribir una pieza nueva, busca aquí. Si no encaja, amplía el compone
 - **`RecordCelebration`** — celebración de récord a pantalla completa (destello dorado, cifra, háptica).
 - **`AccountSwitcher`** (Ajustes) y **`WhoIsTraining`** («¿Quién entrena?») — cuentas del dispositivo en filas píldora con avatar circular; solo apps nativas (`supportsMultipleAccounts()`).
 
-## Acceso (`src/components/auth/AuthScreenParts.tsx`)
+## Acceso (`src/app/components/auth/AuthScreenParts.tsx`)
 
 `AuthHero` (marca «Autopilot» + halo + icono circular dorado + titular redondeado), `AuthFieldGroup` / `AuthFieldRow` (cada campo es una píldora con anillo dorado al enfocar), `AuthFieldNote`, `AuthSymbol`, `AuthNotice`. Login, registro, recuperar y nueva contraseña los comparten: se cambian aquí, no en cada página.

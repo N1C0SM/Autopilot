@@ -13,7 +13,7 @@ const log = (step: string, details?: unknown) => {
 };
 
 /**
- * Debe coincidir con `DASHBOARD_CHAT_ENABLED` de `src/lib/releaseScope.ts`.
+ * Debe coincidir con `DASHBOARD_CHAT_ENABLED` de `src/shared/lib/releaseScope.ts`.
  * El edge function no importa código del cliente, así que la constante se replica
  * aquí: mientras el chat de cliente esté apagado no se vende un plan con entrenador
  * que promete chat/videollamada.

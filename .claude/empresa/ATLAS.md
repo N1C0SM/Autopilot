@@ -25,7 +25,7 @@ Los departamentos son **funciones**, no agentes permanentes. Atlas los crea/cier
 | verificar | `npm run lint`, `npm test`, `npm run build` proporcional al cambio | Bash |
 | auditar-funnel | landing → BookPreviewModal → Payment Link → `/payment-success` → `verify-book-purchase` | código + navegador |
 | medir-ventas | Stripe Dashboard/API en modo **live**: bruto − comisiones − reembolsos, excluir test | requiere acceso Stripe (ver limitaciones) |
-| redactar-copy | `src/lib/publicCopy.ts`, respetar `usePlanAvailability()` | código |
+| redactar-copy | `src/shared/lib/publicCopy.ts`, respetar `usePlanAvailability()` | código |
 | pedir-a-Lovable | preparar petición copiable (ver `docs/lovable-publish-prompt.md`) | texto |
 
 ## Ciclo por objetivo

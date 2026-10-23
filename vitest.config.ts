@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: ["./src/test/setup.ts"],
+    setupFiles: ["./src/shared/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}"],
     // 5 s se queda corto con los 23 ficheros corriendo en paralelo en jsdom:
     // algún render pesado superaba el límite por carga, no por lógica. Limitamos

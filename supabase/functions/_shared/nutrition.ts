@@ -65,7 +65,7 @@ export function parseMacroTargets(value: unknown): MacroTargets | null {
 // ─── Fórmula de macros objetivo (peso × objetivo × dieta) ───
 //
 // Fuente única para las edge functions (sync-nutrition-macros y auto-tasks) y,
-// vía re-export, para el frontend (src/lib/nutritionMacros.ts). Los coeficientes
+// vía re-export, para el frontend (src/shared/lib/nutritionMacros.ts). Los coeficientes
 // son los que usa generate-plan al crear el plan; si cambias uno, cámbialo allí
 // también para que los tres caminos den el mismo resultado. Mantener este fichero
 // sin APIs de Deno para que el frontend pueda importarlo.

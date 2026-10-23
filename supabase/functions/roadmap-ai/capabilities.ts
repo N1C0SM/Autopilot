@@ -1,4 +1,4 @@
-// Debe coincidir con src/lib/roadmap/evidence.ts (lo comprueba evidence.test.ts).
+// Debe coincidir con src/shared/lib/roadmap/evidence.ts (lo comprueba evidence.test.ts).
 // El código no prueba publicación en tiendas ni cobros reales.
 export const capabilities = [
   { title: 'Rutinas personalizadas', evidence: 'Verificado en código · Editor semanal por grupos musculares' },

@@ -3,7 +3,7 @@
  * priority. The app stores them in onboarding.specific_goal as
  * «… · Prioridad: hombros, pecho» once the user approves the scan, and
  * generate-plan reads them back on every regeneration. Shared by the client
- * (src/lib/scanApply.ts) and generate-plan, so both use the same mapping.
+ * (src/shared/lib/scanApply.ts) and generate-plan, so both use the same mapping.
  */
 
 /** analyze-physique groups («Deltoides», «Dorsales», «Cadena posterior (glúteo+isquio)»…) → exercise library groups. First match wins. */

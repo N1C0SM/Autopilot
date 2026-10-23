@@ -14,10 +14,10 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 import { loadEnv } from "vite";
-import { availabilityFrom, euro, fallbackCatalog, parseCatalog, type CatalogPlan, type PlanAvailability } from "../src/lib/planCatalogCore";
-import { LANDING_META, OG_IMAGE, SITE_NAME, SITE_URL, landingDescription, landingFaqs, publicFaqs, publicPageMeta, type Faq } from "../src/lib/publicCopy";
-import { LEGAL_DOCS, LEGAL_LAST_UPDATED } from "../src/content/legal";
-import { socialLinkList } from "../src/lib/socialLinks";
+import { availabilityFrom, euro, fallbackCatalog, parseCatalog, type CatalogPlan, type PlanAvailability } from "../src/shared/lib/planCatalogCore";
+import { LANDING_META, OG_IMAGE, SITE_NAME, SITE_URL, landingDescription, landingFaqs, publicFaqs, publicPageMeta, type Faq } from "../src/shared/lib/publicCopy";
+import { LEGAL_DOCS, LEGAL_LAST_UPDATED } from "../src/shared/content/legal";
+import { socialLinkList } from "../src/shared/lib/socialLinks";
 
 type BlogPost = {
   slug: string;

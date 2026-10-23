@@ -100,15 +100,27 @@ rápido y barato, y con `--limit=N` procesa un máximo por ejecución.
 ## Organización
 
 ```text
-src/pages/                Pantallas de la aplicación
-src/components/           Componentes de interfaz
-src/hooks/                Lógica reutilizable
-src/integrations/         Cliente y tipos de Supabase
-src/test/                 Pruebas y configuración
+src/
+  main.tsx, App.tsx       Arranque y rutas
+  web/                    La web pública (landing, planes, blog, recursos, legal)
+    pages/                  Páginas
+    components/             Secciones de la landing y piezas públicas
+  app/                    La aplicación (iPhone, Android, Mac y web con sesión)
+    pages/                  Hoy, entrenar, nutrición, progreso, ajustes, admin, acceso…
+    components/             dashboard/, admin/, auth/, scan/, trainer/, mobile/…
+  shared/                 Lo que usan las dos
+    components/             ui/ (botones, listas, tarjetas…), native/, platform/
+    lib/ hooks/ contexts/   Lógica, datos y estado
+    integrations/           Cliente y tipos de Supabase
+    config/ content/ types/ assets/ test/
+.claude/
+  agents/                 Agentes de la empresa (directores y empleados)
+  design/                 Lenguaje de diseño y checklist
+  empresa/                Organigrama, Atlas (cómo se dirige), estado y métricas
 supabase/functions/       Funciones de backend e integraciones
 supabase/migrations/      Esquema de datos
-ios/                      Proyecto iOS
-android/                  Proyecto Android
+ios/  android/  macos/    Apps nativas (iPhone, Android, Mac)
+seo/                      Prerender de la web para buscadores
 resources/                Iconos y splash
 store-assets/             Materiales de publicación
 ```

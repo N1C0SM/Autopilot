@@ -21,7 +21,7 @@ Motivo: un único agente basta; no hay trabajo paralelo que justifique subagente
 ## Diagnóstico técnico [HECHO, inspección de código 2026-10-22]
 - App React/Vite + Capacitor (iOS/Android), backend Supabase (edge functions), gestionada desde Lovable.
 - Libros: tabla `library_books` (precio como texto, `published`), cubierta y PDF en Storage; landing con `BookPreviewModal`.
-- Pago de libros: **Stripe Payment Links** configurados manualmente; `withBookRef` añade `client_reference_id=book-<id>` (`src/lib/buyLink.ts`).
+- Pago de libros: **Stripe Payment Links** configurados manualmente; `withBookRef` añade `client_reference_id=book-<id>` (`src/shared/lib/buyLink.ts`).
 - Entrega: `/payment-success` → `verify-book-purchase` recupera la sesión Stripe y comprueba `livemode`; `redeem-book-link` entrega.
 - Modo de pago global `settings.payment_mode` (test/live).
 - Memoria/tareas previas: `AGENTS.md` (decisiones técnicas), `roadmap.md`, roadmap admin en BD. No existían memoria empresarial ni sistema de agentes.
