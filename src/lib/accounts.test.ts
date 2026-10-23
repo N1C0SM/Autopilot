@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { setSession, getSession, signOut } = vi.hoisted(() => ({ setSession: vi.fn(), getSession: vi.fn(), signOut: vi.fn() }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { setSession, getSession, signOut } } }));
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { setSession, getSession, signOut }, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) } }));
 
 import { forgetAccount, listAccounts, prepareAnotherAccount, rememberSession, switchToAccount } from "./accounts";
 

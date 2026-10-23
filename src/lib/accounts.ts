@@ -45,8 +45,25 @@ export function rememberSession(session: Session) {
   };
   const list = listAccounts();
   const i = list.findIndex((a) => a.id === account.id);
-  if (i >= 0) list[i] = account; else list.push(account);
+  // El nombre y la foto del perfil ganan a los del registro (que a menudo no los traen).
+  if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar };
+  else list.push(account);
   save(list);
+  // Fuera del callback de auth: Supabase no admite consultas dentro de onAuthStateChange.
+  setTimeout(() => { void syncProfile(account.id); }, 0);
+}
+
+/** Nombre y foto de la ficha del perfil, los mismos que se ven en la app. */
+async function syncProfile(id: string) {
+  try {
+    const { data } = await supabase.from("profiles").select("name, avatar_url").eq("user_id", id).maybeSingle();
+    if (!data) return;
+    const list = listAccounts();
+    const i = list.findIndex((a) => a.id === id);
+    if (i < 0) return;
+    list[i] = { ...list[i], name: data.name?.trim() || list[i].name, avatar: data.avatar_url || list[i].avatar };
+    save(list);
+  } catch { /* sin conexión: se queda el nombre del registro */ }
 }
 
 export function forgetAccount(id: string) {

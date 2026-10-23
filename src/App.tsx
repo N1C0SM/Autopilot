@@ -1,3 +1,4 @@
+import WhoIsTraining from "@/components/native/WhoIsTraining";
 import Index from "./pages/Index";
 import { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
@@ -111,6 +112,7 @@ const App = () => (
         <Suspense fallback={null}><PlanShieldDialog /></Suspense>
         <BrowserRouter>
           <NativeDeepLinks />
+          <WhoIsTraining />
           <ImpersonationBanner />
           <OfflineBanner />
           <Suspense fallback={<RouteFallback />}>
