@@ -43,7 +43,7 @@ final class ActiveWorkout: ObservableObject {
             let last = previous[ex.name]?.filter { $0.isWarmup != true } ?? []
             logs[ex.name] = (0..<max(ex.series, 1)).map { i in
                 let prev = i < last.count ? last[i] : last.last
-                return SetLog(reps: prev?.reps ?? ex.reps, weight: prev?.weight ?? ex.weight, done: false, isWarmup: nil)
+                return SetLog(reps: prev?.reps ?? ex.repsTarget, weight: prev?.weight ?? ex.weight, done: false, isWarmup: nil)
             }
         }
         self.init(draft: WorkoutDraft(userId: userId, day: day, date: LocalDate.string(), logs: logs,

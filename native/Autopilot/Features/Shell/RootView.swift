@@ -121,6 +121,12 @@ struct MainShell: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selection: AppSection?
+    @State private var showSettings = false
+    @EnvironmentObject private var accounts: AccountStore
+
+    private var initial: String {
+        String((accounts.accounts.first { $0.id == session.userIdString }?.name ?? "?").prefix(1)).uppercased()
+    }
 
     private var flatSections: [AppSection] {
         switch session.role {
@@ -136,23 +142,19 @@ struct MainShell: View {
         Group {
             #if os(iOS)
             if sizeClass == .compact && session.role == .user {
-                TabView(selection: Binding(get: { selection ?? defaultSection }, set: { selection = $0 })) {
-                    ForEach(AppSection.userTabs) { section in
-                        NavigationStack {
-                            SectionView(section: section)
-                                .navigationTitle(section.tabTitle)
-                                .toolbar {
-                                    ToolbarItem(placement: .topBarTrailing) {
-                                        NavigationLink { AccountView().navigationTitle("Ajustes") } label: {
-                                            Image(systemName: "person.crop.circle").font(.title3)
-                                        }
-                                        .accessibilityLabel("Perfil y ajustes")
-                                    }
+                // Como la web en el móvil: cabecera con campana y avatar, y barra flotante abajo.
+                ZStack(alignment: .bottom) {
+                    NavigationStack {
+                        SectionView(section: selection ?? .home, onNavigate: { selection = $0 })
+                            .toolbar {
+                                ToolbarItem(placement: .topBarTrailing) {
+                                    HeaderButtons(initial: initial) { showSettings = true }
                                 }
-                        }
-                        .tabItem { Label(section.tabTitle, systemImage: section.symbol) }
-                        .tag(section)
+                            }
+                            .navigationDestination(isPresented: $showSettings) { AccountView().navigationTitle("Ajustes") }
                     }
+                    FloatingTabBar(tabs: AppSection.userTabs, selection: Binding(get: { selection ?? .home }, set: { selection = $0 }))
+                        .padding(.bottom, 4)
                 }
             } else {
                 split
@@ -230,7 +232,7 @@ struct MainShell: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)
             #endif
         } detail: {
-            NavigationStack { SectionView(section: selection ?? defaultSection) }
+            NavigationStack { SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 }) }
         }
     }
 }
@@ -238,11 +240,12 @@ struct MainShell: View {
 /// Contenido de cada sección.
 struct SectionView: View {
     let section: AppSection
+    var onNavigate: (AppSection) -> Void = { _ in }
 
     var body: some View {
         Group {
             switch section {
-            case .home: HomeView()
+            case .home: HomeView(onNavigate: onNavigate)
             case .train: TrainView()
             case .progress: ProgressScreen()
             case .nutrition: NutritionView()
@@ -255,6 +258,21 @@ struct SectionView: View {
             default: AdminWebSectionView(section: section)
             }
         }
-        .navigationTitle(section.title)
+        .navigationTitle(section.navTitle)
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(section == .home ? .inline : .large)
+        #endif
+    }
+}
+
+extension AppSection {
+    /// Título de la barra como en la web: «Hoy», «Plan», «Nutrición», «Progreso».
+    var navTitle: String {
+        switch self {
+        case .home: "Hoy"
+        case .train: "Plan"
+        case .progress: "Progreso"
+        default: title
+        }
     }
 }

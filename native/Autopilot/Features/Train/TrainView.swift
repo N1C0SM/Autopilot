@@ -8,6 +8,7 @@ struct TrainView: View {
     @State private var active: ActiveWorkout?
     @State private var selectedDay: String = DayNames.today
     @State private var starting = false
+    @State private var tab = 0
 
     private var currentPlan: DayPlan? {
         guard let plan = model.days.first(where: { $0.day == selectedDay }) else { return nil }
@@ -24,6 +25,8 @@ struct TrainView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
+                    SegmentedPill(options: ["Entrenar", "Rutina semanal"], selection: $tab)
+                    if tab == 1 { weeklyRoutine } else {
                     if !model.days.isEmpty { dayPicker }
                     if let resumable = ActiveWorkout.restore(userId: session.userIdString ?? ""), resumable.day.day == selectedDay {
                         Button { active = ActiveWorkout(draft: resumable) } label: {
@@ -36,9 +39,10 @@ struct TrainView: View {
                     } else {
                         restDay
                     }
+                    }
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 110)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
@@ -198,23 +202,41 @@ struct TrainView: View {
     }
 
     private var restDay: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: "moon.fill").font(.system(size: 28)).foregroundStyle(Palette.gold).accessibilityHidden(true)
-            Text("Día de descanso").font(.apTitle3)
-            Text("Recupera, o elige otra sesión de tu semana").font(.apSubhead).foregroundStyle(Palette.muted)
+        RestCard(title: "Día de descanso", message: "Recupera, o elige otra sesión de tu semana") {
             FlowRow {
                 ForEach(model.days.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }) { p in
                     Button(p.day) { Haptics.selection(); selectedDay = p.day }
-                        .font(.apSubhead.weight(.medium))
-                        .padding(.horizontal, 16).frame(minHeight: 44)
+                        .font(.apBody.weight(.medium))
+                        .padding(.horizontal, 20).frame(minHeight: 50)
                         .background(Color.white.opacity(0.1), in: Capsule())
                         .buttonStyle(.plain)
                 }
             }
-            .padding(.top, 6)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// «Rutina semanal»: la semana entera, cada día con su sesión.
+    private var weeklyRoutine: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(DayNames.all.enumerated()), id: \.element) { i, day in
+                let plan = model.days.first { $0.day == day }
+                Button { selectedDay = day; tab = 0; Haptics.selection() } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(day).font(.apHeadline).foregroundStyle(day == DayNames.today ? Palette.gold : Palette.foreground)
+                            Text(plan.map { $0.isGym ? ($0.exercises?.isEmpty == false ? $0.title : "Descanso") : $0.title } ?? "Descanso")
+                                .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                    }
+                    .padding(.horizontal, 16).frame(minHeight: 60)
+                    .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 

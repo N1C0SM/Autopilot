@@ -6,12 +6,30 @@ struct GymExercise: Codable, Hashable, Identifiable {
     var exercise_id: String
     var name: String
     var series: Int
-    var reps: Int
+    /// Texto como en la web: «10», «4-6», «30 s».
+    var reps: String
     var weight: String
     var rest: String
     var image_url: String?
     var muscle_group: String?
     var id: String { exercise_id + name }
+
+    /// Primer número de las repeticiones, para proponer la serie.
+    var repsTarget: Int { reps.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }.first ?? 10 }
+
+    enum CodingKeys: String, CodingKey { case exercise_id, name, series, reps, weight, rest, image_url, muscle_group }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        exercise_id = (try? c.decode(String.self, forKey: .exercise_id)) ?? ""
+        name = (try? c.decode(String.self, forKey: .name)) ?? ""
+        series = FlexibleValue.int(c, .series) ?? 3
+        reps = FlexibleValue.string(c, .reps) ?? "10"
+        weight = FlexibleValue.string(c, .weight) ?? ""
+        rest = FlexibleValue.string(c, .rest) ?? "90s"
+        image_url = try? c.decodeIfPresent(String.self, forKey: .image_url)
+        muscle_group = try? c.decodeIfPresent(String.self, forKey: .muscle_group)
+    }
 
     /// «90 s», «2 min», «60-90 s» → segundos (como `parseRestSeconds` en la web).
     var restSeconds: Int {
@@ -40,12 +58,42 @@ struct DayPlan: Codable, Hashable, Identifiable {
     }
 }
 
+/// Lee números o texto indistintamente (el JSON del plan mezcla ambos).
+enum FlexibleValue {
+    static func string<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) -> String? {
+        if let s = try? c.decode(String.self, forKey: key) { return s }
+        if let i = try? c.decode(Int.self, forKey: key) { return String(i) }
+        if let d = try? c.decode(Double.self, forKey: key) { return NumberText.decimal(d, digits: d.truncatingRemainder(dividingBy: 1) == 0 ? 0 : 1) }
+        return nil
+    }
+    static func int<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) -> Int? {
+        if let i = try? c.decode(Int.self, forKey: key) { return i }
+        if let d = try? c.decode(Double.self, forKey: key) { return Int(d) }
+        if let s = try? c.decode(String.self, forKey: key) { return Int(s.filter(\.isNumber)) }
+        return nil
+    }
+}
+
 /// Serie registrada (mismo JSON que `workout_logs.sets_completed`).
 struct SetLog: Codable, Hashable {
     var reps: Int
     var weight: String
     var done: Bool
     var isWarmup: Bool?
+
+    init(reps: Int, weight: String, done: Bool, isWarmup: Bool?) {
+        self.reps = reps; self.weight = weight; self.done = done; self.isWarmup = isWarmup
+    }
+
+    enum CodingKeys: String, CodingKey { case reps, weight, done, isWarmup }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        reps = FlexibleValue.int(c, .reps) ?? 0
+        weight = FlexibleValue.string(c, .weight) ?? ""
+        done = (try? c.decode(Bool.self, forKey: .done)) ?? false
+        isWarmup = try? c.decodeIfPresent(Bool.self, forKey: .isWarmup)
+    }
 }
 
 enum DayNames {

@@ -254,7 +254,7 @@ struct SetLine: View {
                 .accessibilityLabel("Peso de la serie \(index + 1) de \(exercise.name)")
             NumberField(text: Binding(get: { set.reps > 0 ? String(set.reps) : "" },
                                       set: { v in if let n = Int(v) { workout.update(exercise.name, set: index) { $0.reps = n } } }),
-                        placeholder: String(exercise.reps), big: isCurrent, decimal: false)
+                        placeholder: String(exercise.repsTarget), big: isCurrent, decimal: false)
                 .accessibilityLabel("Repeticiones de la serie \(index + 1) de \(exercise.name)")
             Button { workout.toggleDone(exercise, set: index) } label: {
                 ZStack {
