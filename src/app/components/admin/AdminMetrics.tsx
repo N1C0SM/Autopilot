@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { RefreshCw, Trash2, AlertCircle, BarChart3 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -15,7 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { HeroFigure, StatRow } from "@/app/components/admin/AdminStats";
 import { hapticTap, hapticNotify } from "@/shared/lib/native";
 import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
@@ -167,7 +166,7 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
   const hasDailyActivity = data.daily.some((day) => day.entrenos > 0 || day.registros > 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <p className="type-subhead text-muted-foreground">Planes y actividad de los clientes.</p>
@@ -190,36 +189,29 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
         {loadError && <p role="alert" className="type-footnote text-destructive">No se pudieron actualizar los datos. Se muestra la última carga correcta.</p>}
       </div>
 
-      <section aria-label="Resumen" className="space-y-5">
-        <HeroFigure
-          label="Estimación mensual"
-          value={fmtEur(data.estimatedMonthly)}
-          hint={`${fmtEur(data.estimatedPerPlan)} por plan activo`}
-        />
-        <StatRow
-          className="md:max-w-2xl"
-          items={[
-            { label: "Plus y Coach", value: data.activePlans, hint: `${pct(data.activePlans, data.total)}% del total` },
-            { label: "Clientes", value: data.total, hint: `+${data.newUsers7} esta semana` },
-            { label: "Activos 7 días", value: `${pct(data.active7, data.total)}%`, hint: `${data.active7} entrenando` },
-          ]}
-        />
-        <p className="type-footnote text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
+      <section aria-label="Resumen" className="space-y-3">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <Kpi label="Estimación mensual" value={fmtEur(data.estimatedMonthly)} hint={`${fmtEur(data.estimatedPerPlan)} por plan`} accent />
+          <Kpi label="Plus y Coach" value={data.activePlans} hint={`${pct(data.activePlans, data.total)}% del total`} />
+          <Kpi label="Clientes" value={data.total} hint={`+${data.newUsers7} esta semana`} />
+          <Kpi label="Activos 7 días" value={`${pct(data.active7, data.total)}%`} hint={`${data.active7} entrenando`} />
+        </div>
+        <p className="px-1 type-footnote text-muted-foreground">{MONTHLY_ESTIMATE_NOTE}</p>
       </section>
 
       {data.emailsFailed > 0 && (
-        <div className="flex items-start gap-4">
+        <Card className="flex items-start gap-4">
           <AlertCircle className="mt-0.5 h-7 w-7 shrink-0 text-destructive" strokeWidth={1.75} aria-hidden="true" />
           <div className="min-w-0">
             <p className="type-headline">{data.emailsFailed} emails fallidos</p>
             <p className="mt-1 type-subhead text-muted-foreground">En los últimos 30 días.</p>
           </div>
-        </div>
+        </Card>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-x-10">
-        <section>
-          <SectionHeader title="Clientes por plan" className="mb-4" />
+      <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
+        <Card>
+          <SectionHeader title="Clientes por plan" size="sm" className="mb-4" />
           <BarList
             rows={plans.map((p) => ({
               label: p.name,
@@ -229,21 +221,29 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
               tone: p.tone,
             }))}
           />
-        </section>
+        </Card>
 
-        <section>
-          <SectionHeader title="Embudo" className="mb-4" />
+        <Card>
+          <SectionHeader title="Embudo" size="sm" className="mb-4" />
           <BarList rows={funnel.map((f) => ({ label: f.label, value: f.value, percent: pct(f.value, data.total) }))} />
-        </section>
+        </Card>
 
-        <section>
-          <SectionHeader title="Actividad" className="mb-3" />
-          <StatRow items={activity} fourUpAt="2xl" />
-        </section>
+        <Card>
+          <SectionHeader title="Actividad" size="sm" className="mb-4" />
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-5">
+            {activity.map((a) => (
+              <div key={a.label} className="min-w-0">
+                <dt className="truncate type-footnote text-muted-foreground">{a.label}</dt>
+                <dd className="mt-0.5 font-rounded text-[28px] font-bold leading-[34px] tabular-nums">{a.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
 
-        <section>
+        <Card>
           <SectionHeader
             title="Últimos 30 días"
+            size="sm"
             hint={
               <span className="inline-flex gap-4">
                 <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" aria-hidden="true" />Entrenos</span>
@@ -275,7 +275,7 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
               className="py-8"
             />
           )}
-        </section>
+        </Card>
       </div>
 
       <AlertDialog open={confirmingReset} onOpenChange={setConfirmingReset}>
@@ -297,6 +297,22 @@ const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () =>
     </div>
   );
 };
+
+/** Tarjeta del sistema: sin borde, 22 px. */
+function Card({ className, children }: { className?: string; children: ReactNode }) {
+  return <section className={cn("rounded-2xl bg-card p-5", className)}>{children}</section>;
+}
+
+/** Cifra clave en tarjeta; `accent` la marca en dorado (una por pantalla). */
+function Kpi({ label, value, hint, accent }: { label: string; value: ReactNode; hint?: string; accent?: boolean }) {
+  return (
+    <div className="flex min-w-0 flex-col rounded-2xl bg-card p-4 lg:p-5">
+      <p className="truncate type-footnote text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 truncate font-rounded text-[28px] font-bold leading-[34px] tabular-nums lg:text-[34px] lg:leading-[41px]", accent && "text-primary")}>{value}</p>
+      {hint ? <p className="mt-0.5 truncate type-footnote text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
+}
 
 interface BarRow {
   label: string;
