@@ -267,7 +267,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
       {!selectedPlan && (
         expandedDay ? (
           <EmptyState
-            card
+            rest
             icon={Moon}
             title={selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`}
             description="Toca otro día para ver su sesión."
@@ -275,7 +275,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
               nextWorkDay ? (
                 <Button
                   type="button"
-                  variant="plain"
+                  variant="secondary"
+                  size="lg"
                   onClick={() => {
                     void hapticSelection();
                     setExpandedDay(nextWorkDay);
