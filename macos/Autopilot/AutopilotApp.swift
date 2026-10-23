@@ -33,7 +33,7 @@ final class Browser: ObservableObject {
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
         webView.underPageBackgroundColor = .black
-        webView.setValue(false, forKey: "drawsBackground")
+        webView.isInspectable = true
         webView.load(URLRequest(url: home))
     }
 
@@ -69,18 +69,29 @@ final class NavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        NSLog("Autopilot cargado: %@", webView.url?.absoluteString ?? "-")
         Task { @MainActor in self.browser?.isLoading = false }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        NSLog("Autopilot error: %@", error.localizedDescription)
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        NSLog("Autopilot error inicial: %@", error.localizedDescription)
     }
 }
 
 struct WebView: NSViewRepresentable {
     let browser: Browser
-    let delegate = NavigationDelegate()
+
+    // El delegado vive en el Coordinator: WebKit lo guarda como referencia débil.
+    func makeCoordinator() -> NavigationDelegate { NavigationDelegate() }
 
     func makeNSView(context: Context) -> WKWebView {
-        delegate.browser = browser
-        browser.webView.navigationDelegate = delegate
-        browser.webView.uiDelegate = delegate
+        context.coordinator.browser = browser
+        browser.webView.navigationDelegate = context.coordinator
+        browser.webView.uiDelegate = context.coordinator
         return browser.webView
     }
 
@@ -95,7 +106,6 @@ struct ContentView: View {
             Color.black.ignoresSafeArea()
             WebView(browser: browser)
                 .ignoresSafeArea()
-                .opacity(browser.isLoading && browser.webView.url == nil ? 0 : 1)
             if browser.isLoading && browser.webView.url == nil {
                 // Arranque: el logo sobre negro, como el splash del iPhone.
                 Image(nsImage: NSApp.applicationIconImage)
