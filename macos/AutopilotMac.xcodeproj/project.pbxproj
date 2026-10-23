@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		0428177D6B1554F6AAC1BC23 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FB590101945600F55DC1002F /* Assets.xcassets */; };
+		1342C71B6B4689491437982D /* dist in Resources */ = {isa = PBXBuildFile; fileRef = 3B822CB705010750544A68A6 /* dist */; };
 		21D4E8B7CABA2609751B7CE9 /* AutopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FD186408BF7463143C9F4DD /* AutopilotApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3B822CB705010750544A68A6 /* dist */ = {isa = PBXFileReference; lastKnownFileType = folder; name = dist; path = ../dist; sourceTree = SOURCE_ROOT; };
 		9CB40ABE5B94C605831E84DB /* Autopilot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		9FD186408BF7463143C9F4DD /* AutopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotApp.swift; sourceTree = "<group>"; };
 		FB590101945600F55DC1002F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -21,6 +23,7 @@
 		BFD95ED5F96FF6D740E4630A = {
 			isa = PBXGroup;
 			children = (
+				3B822CB705010750544A68A6 /* dist */,
 				E10CFE7C592DE703D6BFA3E0 /* Autopilot */,
 				F4CAEB9D2EFC5B7944172810 /* Products */,
 			);
@@ -103,6 +106,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0428177D6B1554F6AAC1BC23 /* Assets.xcassets in Resources */,
+				1342C71B6B4689491437982D /* dist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

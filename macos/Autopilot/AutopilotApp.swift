@@ -4,7 +4,56 @@ import WebKit
 // App nativa de macOS: ventana, menús y atajos de Mac alrededor de la misma
 // aplicación que usan la web y el iPhone (autopilotplan.com), con su sesión guardada.
 
-private let home = URL(string: "https://autopilotplan.com/dashboard")!
+/// La web va dentro de la app (carpeta `dist` de npm run build), como en el iPhone:
+/// siempre la última versión compilada, sin esperar a que se publique.
+private let scheme = "autopilot-mac"
+private let home = URL(string: "\(scheme)://localhost/dashboard")!
+
+/// Sirve los archivos de `web` y, para cualquier ruta de la app, su index.html (SPA).
+final class BundledWebHandler: NSObject, WKURLSchemeHandler {
+    private let root = Bundle.main.resourceURL!.appendingPathComponent("dist")
+
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        guard let url = task.request.url else { return }
+        var path = url.path.isEmpty ? "/" : url.path
+        if path.hasSuffix("/") { path += "index.html" }
+        var file = root.appendingPathComponent(path)
+        var isDir: ObjCBool = false
+        if FileManager.default.fileExists(atPath: file.path, isDirectory: &isDir), isDir.boolValue {
+            file = file.appendingPathComponent("index.html")
+        }
+        if !FileManager.default.fileExists(atPath: file.path) {
+            file = root.appendingPathComponent("index.html")
+        }
+        let data = (try? Data(contentsOf: file)) ?? Data()
+        let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Content-Type": mimeType(file.pathExtension), "Cache-Control": "no-cache"])!
+        task.didReceive(response)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
+
+    private func mimeType(_ ext: String) -> String {
+        switch ext.lowercased() {
+        case "html": "text/html; charset=utf-8"
+        case "js", "mjs": "text/javascript; charset=utf-8"
+        case "css": "text/css; charset=utf-8"
+        case "json", "webmanifest": "application/json"
+        case "svg": "image/svg+xml"
+        case "png": "image/png"
+        case "jpg", "jpeg": "image/jpeg"
+        case "webp": "image/webp"
+        case "woff2": "font/woff2"
+        case "woff": "font/woff"
+        case "ico": "image/x-icon"
+        case "txt": "text/plain; charset=utf-8"
+        case "xml": "application/xml"
+        default: "application/octet-stream"
+        }
+    }
+}
 
 /// Secciones del panel, con el mismo parámetro `section` que usan los atajos de Siri.
 enum Section: String, CaseIterable {
@@ -17,7 +66,7 @@ enum Section: String, CaseIterable {
         case .progress: "Progreso"
         }
     }
-    var url: URL { URL(string: "https://autopilotplan.com/dashboard?section=\(rawValue)")! }
+    var url: URL { URL(string: "\(scheme)://localhost/dashboard?section=\(rawValue)")! }
 }
 
 @MainActor
@@ -27,6 +76,7 @@ final class Browser: ObservableObject {
 
     init() {
         let config = WKWebViewConfiguration()
+        config.setURLSchemeHandler(BundledWebHandler(), forURLScheme: scheme)
         config.websiteDataStore = .default() // la sesión sobrevive al cerrar la app
         config.preferences.isElementFullscreenEnabled = true
         // La web reconoce la app de Mac (cuentas múltiples y detalles de escritorio).
@@ -53,7 +103,7 @@ final class NavigationDelegate: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
         guard let url = action.request.url, let host = url.host else { decisionHandler(.allow); return }
-        let isAutopilot = host.hasSuffix("autopilotplan.com") || host.hasSuffix("supabase.co")
+        let isAutopilot = url.scheme == scheme || host.hasSuffix("autopilotplan.com") || host.hasSuffix("supabase.co")
         if !isAutopilot && action.navigationType == .linkActivated {
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)

@@ -7,7 +7,9 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen } from "lucide-react";
+import { Home, Dumbbell, Apple, MessageCircle, Settings, LogOut, Sparkles, Lock, BookOpen, ArrowLeftRight } from "lucide-react";
+import { openAccountPicker } from "@/lib/accounts";
+import { supportsMultipleAccounts } from "@/lib/platform";
 import autopilotLogo from "@/assets/autopilot-logo.png";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -143,12 +145,18 @@ const UserSidebar = ({
         <div className="mx-4 mb-3 h-px bg-sidebar-border/50" />
 
         {/* Perfil */}
-        {profileName && (
-          <div className={cn(
-            "flex items-center gap-3 px-4 py-2.5 rounded-xl mx-2",
-            "hover:bg-sidebar-accent/40 transition-colors cursor-default",
-            collapsed && "justify-center px-0 mx-0",
-          )}>
+        {profileName && (() => {
+          // En las apps nativas el perfil es el selector de cuentas, como el menú de usuarios del Mac.
+          const canSwitch = supportsMultipleAccounts();
+          const Row = canSwitch ? "button" : "div";
+          return <Row
+            {...(canSwitch ? { type: "button" as const, onClick: () => openAccountPicker(), "aria-label": `${profileName}. Cambiar de cuenta` } : {})}
+            className={cn(
+              "flex w-[calc(100%-1rem)] items-center gap-3 px-4 py-2.5 rounded-xl mx-2 text-left",
+              "hover:bg-sidebar-accent/40 transition-colors",
+              canSwitch ? "cursor-pointer active:opacity-70" : "cursor-default",
+              collapsed && "justify-center px-0 mx-0",
+            )}>
             <div className={cn(
               "rounded-full bg-primary/15 flex items-center justify-center overflow-hidden shrink-0 ring-1 ring-primary/25",
               collapsed ? "h-8 w-8" : "h-8 w-8",
@@ -162,12 +170,14 @@ const UserSidebar = ({
               )}
             </div>
             {!collapsed && (
-              <span className="text-[13px] text-sidebar-foreground/60 truncate leading-tight">
-                {profileName}
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] text-sidebar-foreground/60 truncate leading-tight">{profileName}</span>
+                {canSwitch && <span className="block text-[12px] text-primary leading-tight mt-0.5">Cambiar de cuenta</span>}
               </span>
             )}
-          </div>
-        )}
+            {!collapsed && canSwitch && <ArrowLeftRight className="h-4 w-4 shrink-0 text-sidebar-foreground/40" aria-hidden="true" />}
+          </Row>;
+        })()}
 
         {/* Cerrar sesión */}
         <SidebarMenu className="px-3 mt-1">

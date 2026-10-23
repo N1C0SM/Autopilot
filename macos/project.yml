@@ -8,7 +8,12 @@ targets:
   Autopilot:
     type: application
     platform: macOS
-    sources: [Autopilot]
+    sources:
+      - Autopilot
+      # La web compilada (npm run build) va dentro de la app, en Resources/dist.
+      - path: ../dist
+        type: folder
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.autopilotplan.mac
