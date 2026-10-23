@@ -1,4 +1,4 @@
-import { Play, PencilLine } from "lucide-react";
+import { Play, PencilLine, Sparkles } from "lucide-react";
 import { IconTile } from "@/components/ui/icon-tile";
 import { generatePlanGuarded, isManualPlan } from "@/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
@@ -708,11 +708,13 @@ const Dashboard = () => {
             <Suspense fallback={<SectionFallback />}>
               {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
-                <div className="mx-auto mb-3 flex w-full max-w-md items-center justify-between gap-2 px-1 lg:max-w-2xl">
-                  <span className="truncate type-footnote text-muted-foreground">
+                // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
+                <div className="mx-auto mb-3 flex w-full max-w-2xl items-center gap-3 rounded-2xl bg-card py-2 pl-3 pr-2 lg:max-w-4xl">
+                  <IconTile icon={isManualPlan(dayPlans) ? PencilLine : Sparkles} />
+                  <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
                   </span>
-                  <div className="flex shrink-0 items-center">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     {[
                       { label: "Libre", aria: "Modo libre", Icon: Play, on: () => setFreeOpen(true) },
                       { label: "Editar", aria: "Editar rutina", Icon: PencilLine, on: () => setEditorOpen(true) },
@@ -722,7 +724,7 @@ const Dashboard = () => {
                         type="button"
                         aria-label={aria}
                         onClick={() => { void hapticTap(); on(); }}
-                        className="flex h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-primary transition active:opacity-50"
+                        className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 type-footnote font-semibold text-primary transition active:opacity-50"
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden />
                         {label}
