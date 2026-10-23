@@ -22,7 +22,7 @@ import { toast } from "sonner";
 import { signedUrlsWithExpiry, storagePathFor } from "@/lib/storageSign";
 import { toLocalDateString } from "@/lib/localDates";
 import { evolutionLabel, photoPose } from "@/components/progress/progressPhotos";
-import { compressImage } from "@/lib/imageCompression";
+import { compressImage, toBrowserFriendlyImage } from "@/lib/imageCompression";
 
 interface Photo {
   id: string;
@@ -386,7 +386,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
           continue;
         }
         try {
-          const optimizedFile = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
+          const optimizedFile = await compressImage(await toBrowserFriendlyImage(file), { maxDimension: 1600, quality: 0.82 });
           const path = `${userId}/${crypto.randomUUID()}.${ext}`;
 
           const { error: uploadError } = await supabase.storage

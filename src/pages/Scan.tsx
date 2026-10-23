@@ -1,4 +1,5 @@
 import { errorMessage, errorStatus } from "@/lib/runtimeValues";
+import { toBrowserFriendlyImage } from "@/lib/imageCompression";
 import { IconTile } from "@/components/ui/icon-tile";
 import React, { useState, useRef, useEffect } from "react";
 import { toPng } from "html-to-image";
@@ -183,13 +184,16 @@ type GoalPhysique = {
   storage_path?: string;
 };
 
-const fileToDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
+// HEIC (cámara del iPhone) se pasa antes a JPEG: si no, la foto guardada no se ve luego.
+const fileToDataUrl = async (input: File): Promise<string> => {
+  const file = await toBrowserFriendlyImage(input);
+  return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result as string);
     r.onerror = reject;
     r.readAsDataURL(file);
   });
+};
 
 const Dropzone = ({
   label,

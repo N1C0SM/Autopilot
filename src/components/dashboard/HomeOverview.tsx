@@ -460,8 +460,9 @@ const HomeOverview = ({
           )}
         </div>
 
-      {/* Tarjetas secundarias: Nutrición + Progreso, en su sección con título. */}
-      <h3 className="mb-3 mt-8 type-title3">Resumen</h3>
+      {/* Tarjetas secundarias: Nutrición + Progreso, en su sección con título (todo el ancho en web). */}
+      <section className="mt-8 lg:col-span-2 lg:mt-12">
+      <h3 className="mb-3 type-title3">Resumen</h3>
       <div className="grid grid-cols-2 gap-3 lg:gap-4">
         <OverviewRow
           title="Nutrición"
@@ -502,6 +503,7 @@ const HomeOverview = ({
           }
         />
       </div>
+      </section>
       </div>
       {discardDialog}
     </div>

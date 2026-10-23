@@ -3,6 +3,7 @@ import { buildWorkoutReview, type ReviewExercise } from "@/lib/workoutReview";
 import { Target, Trophy } from "lucide-react";
 import { hapticSelection, hapticTap } from "@/lib/native";
 import { cn } from "@/lib/utils";
+import { CountUp } from "@/components/ui/count-up";
 import { MuscleMapFigure } from "./MuscleMapFigure";
 import { WorkoutStoryShare } from "./WorkoutStoryShare";
 
@@ -68,13 +69,14 @@ export function WorkoutSummary({
     {
       label: totalVolume > 0 ? "Volumen" : "Series",
       value: totalVolume > 0 ? fmt(totalVolume) : String(completedSets),
+      count: totalVolume > 0 ? totalVolume : completedSets,
       unit: totalVolume > 0 ? "kg" : "",
       accent: true,
       note: pct !== null ? `${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} kg vs. anterior` : null,
       positive: diff >= 0,
     },
     totalVolume > 0
-      ? { label: "Series", value: String(completedSets), unit: "" }
+      ? { label: "Series", value: String(completedSets), count: completedSets, unit: "" }
       : { label: "Ejercicios", value: `${completedExercises}`, unit: `/${plannedExercises}` },
     totalVolume > 0
       ? { label: "Ejercicios", value: `${completedExercises}`, unit: `/${plannedExercises}` }
@@ -102,7 +104,7 @@ export function WorkoutSummary({
               <div key={m.label} className={tile}>
                 <p className={cn("type-footnote font-semibold", m.accent ? "text-primary" : "text-muted-foreground")}>{m.label}</p>
                 <p className={cn("mt-1 truncate font-rounded text-[30px] font-bold leading-[36px] tabular-nums", m.accent && "text-primary")}>
-                  {m.value}
+                  {"count" in m && typeof m.count === "number" ? <CountUp value={m.count} /> : m.value}
                   {m.unit && <span className="ml-0.5 text-[17px] font-semibold text-muted-foreground">{m.unit}</span>}
                 </p>
                 {"note" in m && m.note ? (
