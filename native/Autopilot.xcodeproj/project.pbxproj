@@ -29,6 +29,7 @@
 		87E60DB75F6066D44856E541 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E7B8525054278D389D0B59 /* ScanView.swift */; };
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
+		A3F7B49D3F50D6E4FB409B18 /* AdminLanding.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */; };
 		B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F83F6BD939EF251A757930A /* AdminExercises.swift */; };
 		B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54840FD78B7470F1A4A687B3 /* RoadmapView.swift */; };
 		B3C0E827FE1DBF6EAA3E3554 /* AdminRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */; };
@@ -66,6 +67,7 @@
 		922D1242F803ABF9EC7B42D3 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		92E329249B146C8FEF5E45AF /* TrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainView.swift; sourceTree = "<group>"; };
 		9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLanding.swift; sourceTree = "<group>"; };
 		B1837043D6026822C99B027E /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkout.swift; sourceTree = "<group>"; };
 		C3306B7A6F1F1C5159421755 /* AdminPayments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPayments.swift; sourceTree = "<group>"; };
@@ -98,6 +100,7 @@
 				1162F3D5C142878DA85F3630 /* AdminDrive.swift */,
 				13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */,
 				2F83F6BD939EF251A757930A /* AdminExercises.swift */,
+				ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */,
 				C3306B7A6F1F1C5159421755 /* AdminPayments.swift */,
 				C67655E7437E327953D3487E /* AdminPhysiques.swift */,
 				853847766E839A5A319D2EB4 /* AdminProducts.swift */,
@@ -333,6 +336,7 @@
 				224764578170A5967D49426F /* AdminDrive.swift in Sources */,
 				4CBC7F75637FA9EF8470AF7B /* AdminEmails.swift in Sources */,
 				B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */,
+				A3F7B49D3F50D6E4FB409B18 /* AdminLanding.swift in Sources */,
 				19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */,
 				37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */,
 				57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */,
