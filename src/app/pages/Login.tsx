@@ -1,4 +1,5 @@
-import { listAccounts, openAccountPicker } from "@/shared/lib/accounts";
+import { listAccounts, openAccountPicker, setRequirePassword } from "@/shared/lib/accounts";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Helmet } from "react-helmet-async";
@@ -30,6 +31,9 @@ const Login = () => {
     try { return JSON.parse(localStorage.getItem("autopilot:last-login") || "null")?.id || ""; } catch { return ""; }
   });
   const [password, setPassword] = useState("");
+  // Con otra cuenta ya guardada en el dispositivo se puede proteger esta con contraseña.
+  const [offerLock] = useState(() => supportsMultipleAccounts() && listAccounts().length > 0);
+  const [lockAccount, setLockAccount] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   // Si las credenciales son correctas pero el correo no está verificado, se
@@ -96,6 +100,7 @@ const Login = () => {
       // Resolve destination based on role
       const { data: { user: authedUser } } = await supabase.auth.getUser();
       if (authedUser) {
+        if (offerLock) setRequirePassword(authedUser.id, lockAccount);
         const { data: prof } = await supabase.from("profiles").select("name, avatar_url").eq("user_id", authedUser.id).maybeSingle();
         const memo = { id: cleaned, name: prof?.name || "", avatar: prof?.avatar_url || "" };
         try { localStorage.setItem("autopilot:last-login", JSON.stringify(memo)); } catch { /* noop */ }
@@ -244,6 +249,12 @@ const Login = () => {
             />
           </AuthFieldRow>
         </AuthFieldGroup>
+        {offerLock && (
+          <label htmlFor="lock-account" className="mt-4 flex min-h-11 cursor-pointer items-center gap-3 px-1">
+            <Checkbox id="lock-account" checked={lockAccount} onCheckedChange={(v) => { void hapticTap(); setLockAccount(v === true); }} />
+            <span className="type-subhead text-muted-foreground">Pedir contraseña al elegir esta cuenta</span>
+          </label>
+        )}
       </form>
 
       <div className="mt-3 text-center">

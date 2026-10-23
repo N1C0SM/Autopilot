@@ -14,7 +14,8 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/shared/components/ui/sidebar";
-import { LayoutDashboard, Users, UserCog, Dumbbell, LogOut, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle, Route } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { ADMIN_NAV_GROUPS, type AdminNavItem } from "@/app/components/admin/adminNav";
 import type { AdminSection } from "@/app/pages/Admin";
 import { hapticTap } from "@/shared/lib/native";
 
@@ -25,38 +26,8 @@ interface Props {
   onSignOut: () => void;
 }
 
-type NavItem = { title: string; section: AdminSection; icon: typeof LayoutDashboard };
+type NavItem = AdminNavItem;
 
-const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
-  { label: "General", items: [
-    { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
-    { title: "Métricas", section: "metrics", icon: BarChart3 },
-    { title: "Roadmap", section: "roadmap", icon: Route },
-  ] },
-  { label: "Personas", items: [
-    { title: "Usuarios", section: "users", icon: Users },
-    { title: "Entrenadores", section: "trainers", icon: UserCog },
-    { title: "Recordatorios", section: "reminders", icon: Mail },
-  ] },
-  { label: "Entrenamiento", items: [
-    { title: "Ejercicios", section: "exercises", icon: Dumbbell },
-    { title: "Reglas", section: "rules", icon: SlidersHorizontal },
-    { title: "Físicos", section: "physiques", icon: Target },
-    { title: "Drive · Libros", section: "drive", icon: FolderOpen },
-  ] },
-  { label: "Contenido", items: [
-    { title: "Landing", section: "landing", icon: Globe },
-    { title: "Blog", section: "blog", icon: FileText },
-    { title: "Emails", section: "emails", icon: MailOpen },
-  ] },
-  { label: "Negocio", items: [
-    { title: "Planes y productos", section: "products", icon: Layers },
-    { title: "Pagos", section: "payments", icon: CreditCard },
-  ] },
-  { label: "Cuenta", items: [
-    { title: "Mi cuenta", section: "account", icon: UserCircle },
-  ] },
-];
 const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -97,7 +68,7 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
       </SidebarHeader>
 
       <SidebarContent>
-        {NAV_GROUPS.map((group) => (
+        {ADMIN_NAV_GROUPS.map((group) => (
           <SidebarGroup key={group.label} className="py-1">
             <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
             <SidebarGroupContent>

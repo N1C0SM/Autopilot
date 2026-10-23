@@ -24,6 +24,7 @@ import { ArrowLeftRight } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import autopilotLogo from "@/shared/assets/autopilot-logo.png";
 import type { AdminSection } from "@/app/pages/Admin";
+import { ADMIN_NAV_GROUPS } from "@/app/components/admin/adminNav";
 
 interface Props {
   title: string;
@@ -38,18 +39,6 @@ interface Props {
   backLabel?: string;
 }
 
-const MENU: { label: string; section: AdminSection; icon: typeof Users }[] = [
-  { label: "Roadmap", section: "roadmap", icon: Route },
-  { label: "Usuarios", section: "users", icon: Users },
-  { label: "Entrenadores", section: "trainers", icon: UserCog },
-  { label: "Planes y productos", section: "products", icon: Layers },
-  { label: "Pagos", section: "payments", icon: CreditCard },
-  { label: "Drive · Libros", section: "drive", icon: FolderOpen },
-  { label: "Recordatorios", section: "reminders", icon: Mail },
-  { label: "Landing", section: "landing", icon: Globe },
-  { label: "Blog", section: "blog", icon: FileText },
-  { label: "Emails", section: "emails", icon: MailOpen },
-];
 
 /**
  * Como `titleInContent` de MobileAppShell, pero con el scroll del documento:
@@ -175,31 +164,27 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut, contentRef, 
               <SheetTitle className="type-large-title">Admin</SheetTitle>
             </div>
             <nav aria-label="Secciones de administración" className="flex-1 overflow-y-auto px-2 pb-3">
-              {MENU.map((m) => {
-                const isActive = section === m.section;
-                return (
-                  <button
-                    key={m.section}
-                    type="button"
-                    aria-current={isActive ? "page" : undefined}
-                    onClick={() => go(m.section)}
-                    className={cn(menuRow, isActive && "bg-primary/15 font-semibold text-primary")}
-                  >
-                    <m.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
-                    {m.label}
-                  </button>
-                );
-              })}
+              {ADMIN_NAV_GROUPS.map((group) => (
+                <div key={group.label} className="mb-2">
+                  <p className="px-3 pb-1 pt-2 type-footnote text-muted-foreground">{group.label}</p>
+                  {group.items.map((m) => {
+                    const isActive = section === m.section;
+                    return (
+                      <button
+                        key={m.section}
+                        type="button"
+                        aria-current={isActive ? "page" : undefined}
+                        onClick={() => go(m.section)}
+                        className={cn(menuRow, isActive && "bg-primary/15 font-semibold text-primary")}
+                      >
+                        <m.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
+                        {m.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
               <div className="mx-3 my-2 sep-t" />
-              <button
-                type="button"
-                aria-current={section === "account" ? "page" : undefined}
-                onClick={() => go("account")}
-                className={cn(menuRow, section === "account" && "bg-primary/15 font-semibold text-primary")}
-              >
-                <SettingsIcon className={cn("h-5 w-5 shrink-0", section === "account" ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
-                Mi cuenta
-              </button>
               {supportsMultipleAccounts() && <button
                 type="button"
                 onClick={() => { void hapticTap(); setOpen(false); openAccountPicker(); }}

@@ -52,6 +52,8 @@ export function rememberSession(session: Session) {
   // El nombre y la foto del perfil ganan a los del registro (que a menudo no los traen).
   if (i >= 0) list[i] = { ...account, name: list[i].name || account.name, avatar: list[i].avatar ?? account.avatar, requirePassword: list[i].requirePassword, expired: false };
   else list.push(account);
+  const lock = takePendingLock(account.id);
+  if (lock !== undefined) list[i >= 0 ? i : list.length - 1].requirePassword = lock;
   save(list);
   // Fuera del callback de auth: Supabase no admite consultas dentro de onAuthStateChange.
   setTimeout(() => { void syncProfile(account.id); }, 0);
@@ -104,8 +106,25 @@ export async function switchToAccount(id: string): Promise<SwitchResult> {
   }
 }
 
+const PENDING_LOCK_KEY = "autopilot.accounts.pending-lock";
+
 export function setRequirePassword(id: string, value: boolean) {
-  save(listAccounts().map((a) => (a.id === id ? { ...a, requirePassword: value } : a)));
+  const list = listAccounts();
+  if (list.some((a) => a.id === id)) {
+    save(list.map((a) => (a.id === id ? { ...a, requirePassword: value } : a)));
+    return;
+  }
+  // La sesión aún no se ha guardado: rememberSession lo aplica en cuanto llegue.
+  try { localStorage.setItem(PENDING_LOCK_KEY, JSON.stringify({ id, value })); } catch { /* sin almacenamiento */ }
+}
+
+function takePendingLock(id: string): boolean | undefined {
+  try {
+    const pending = JSON.parse(localStorage.getItem(PENDING_LOCK_KEY) || "null") as { id?: string; value?: boolean } | null;
+    if (pending?.id !== id) return undefined;
+    localStorage.removeItem(PENDING_LOCK_KEY);
+    return !!pending.value;
+  } catch { return undefined; }
 }
 
 /** Entra en una cuenta protegida con su contraseña. */
