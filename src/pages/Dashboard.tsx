@@ -924,8 +924,10 @@ const Dashboard = () => {
       {visited.map((s) => (
         <div
           key={s}
+          // Al cambiar de pestaña la sección entra con un fundido corto (la animación se
+          // reinicia al pasar de «hidden» a visible); sin animación con «reducir movimiento».
           className={s === section
-            ? `flex min-w-0 flex-1 flex-col justify-start pt-2${s === "chat" && chatFills ? " min-h-0" : ""}`
+            ? `flex min-w-0 flex-1 flex-col justify-start pt-2 animate-in fade-in-0 slide-in-from-bottom-1 duration-300 ease-out motion-reduce:animate-none${s === "chat" && chatFills ? " min-h-0" : ""}`
             : "hidden"}
         >
           {renderContent(s)}
