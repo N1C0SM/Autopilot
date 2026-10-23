@@ -12,6 +12,9 @@ import { buildExerciseHistory, type WorkoutLogRecord } from "@/lib/workoutMetric
 import { getProgressionSuggestion } from "@/lib/workoutProgression";
 import type { GymExerciseEntry } from "@/types/training";
 
+// Cifras en formato español: 49,6 kg (no 49.6).
+const kg = (value: number) => value.toLocaleString("es-ES", { maximumFractionDigits: 1 });
+
 export type FocusExercise = {
   name: string;
   image?: string | null;
@@ -40,12 +43,13 @@ const asSets = (value: unknown): LoggedSet[] => {
   });
 };
 
-const setLabel = (set: LoggedSet) => `${set.weight ? `${set.weight} kg` : "libre"} × ${set.reps}`;
+const decimalComma = (text: string) => text.replace(/(\d)\.(\d)/g, "$1,$2");
+const setLabel = (set: LoggedSet) => decimalComma(`${set.weight ? `${set.weight} kg` : "libre"} × ${set.reps}`);
 
 const shortDate = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short" }).replace(".", "");
 };
 
 /**
@@ -144,9 +148,9 @@ export const ExerciseFocus = ({
         </div>
 
         {(exercise?.series || exercise?.reps || exercise?.rest) && (
-          <dl className="mt-5 grid grid-cols-3">
-            {stats.map((item, i) => (
-              <div key={item.label} className={`px-3 first:pl-0 ${i > 0 ? "sep-l" : ""}`}>
+          <dl className="mt-5 grid grid-cols-3 gap-2.5">
+            {stats.map((item) => (
+              <div key={item.label} className="min-w-0 rounded-2xl bg-secondary p-3">
                 <dt className="type-footnote text-muted-foreground">{item.label}</dt>
                 <dd className="mt-0.5 font-rounded type-title2 tabular-nums">{item.value ?? "—"}</dd>
               </div>
@@ -157,9 +161,9 @@ export const ExerciseFocus = ({
         <ExerciseTechnique name={name} muscleGroup={exercise?.muscleGroup} />
 
         {(suggestion || best1Rm > 0) && (
-          <ul className="mt-7 space-y-5">
+          <ul className="mt-7 space-y-2.5">
             {suggestion && (
-              <li className="flex items-start gap-4">
+              <li className="flex items-start gap-3 rounded-2xl bg-secondary p-3.5">
                 <IconTile icon={TrendingUp} />
                 <div className="min-w-0">
                   <p className="type-headline">{suggestionTitle}</p>
@@ -168,10 +172,10 @@ export const ExerciseFocus = ({
               </li>
             )}
             {best1Rm > 0 && (
-              <li className="flex items-start gap-4">
+              <li className="flex items-start gap-3 rounded-2xl bg-secondary p-3.5">
                 <IconTile icon={Dumbbell} />
                 <div className="min-w-0">
-                  <p className="type-headline tabular-nums">{best1Rm.toFixed(1)} kg</p>
+                  <p className="type-headline tabular-nums">{kg(best1Rm)} kg</p>
                   <p className="mt-0.5 type-subhead text-muted-foreground">Tu mejor 1RM estimado en este ejercicio</p>
                 </div>
               </li>
@@ -204,11 +208,11 @@ export const ExerciseFocus = ({
               {history.slice(-6).reverse().map((entry) => (
                 <ListRow
                   key={entry.date}
-                  title={<span className="capitalize">{shortDate(entry.date)}</span>}
-                  subtitle={entry.bestSetLabel ?? `${entry.completedSets} series`}
+                  title={shortDate(entry.date)}
+                  subtitle={entry.bestSetLabel ? decimalComma(entry.bestSetLabel) : `${entry.completedSets} series`}
                   value={
                     <span className="tabular-nums">
-                      {entry.bestEstimated1RmKg ? `${entry.bestEstimated1RmKg.toFixed(1)} kg` : `${Math.round(entry.volumeKg)} kg vol.`}
+                      {entry.bestEstimated1RmKg ? `${kg(entry.bestEstimated1RmKg)} kg` : `${Math.round(entry.volumeKg)} kg vol.`}
                     </span>
                   }
                 />

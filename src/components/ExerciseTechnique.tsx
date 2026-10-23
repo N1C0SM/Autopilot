@@ -19,10 +19,10 @@ const ExerciseTechnique = ({
   return (
     <section className="mt-8" aria-label="Técnica">
       <h3 className="type-title3">Cómo se hace</h3>
-      <ol className="mt-3 space-y-3">
+      <ol className="mt-3 space-y-3 rounded-2xl bg-secondary p-4">
         {guide.steps.map((step, i) => (
           <li key={step} className="flex items-start gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 font-rounded type-subhead font-semibold tabular-nums text-primary">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 font-rounded type-subhead font-semibold tabular-nums text-primary">
               {i + 1}
             </span>
             <p className="min-w-0 pt-0.5 type-body">{step}</p>
@@ -31,7 +31,7 @@ const ExerciseTechnique = ({
       </ol>
 
       <h3 className="mt-7 type-title3">En qué fijarte</h3>
-      <ul className="mt-3 space-y-2.5">
+      <ul className="mt-3 space-y-2.5 rounded-2xl bg-secondary p-4">
         {guide.cues.map((cue) => (
           <li key={cue} className="flex items-start gap-3">
             <Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" strokeWidth={2.5} aria-hidden="true" />
@@ -41,7 +41,7 @@ const ExerciseTechnique = ({
       </ul>
 
       <h3 className="mt-7 type-title3">Evita</h3>
-      <ul className="mt-3 space-y-2.5">
+      <ul className="mt-3 space-y-2.5 rounded-2xl bg-secondary p-4">
         {guide.mistakes.map((mistake) => (
           <li key={mistake} className="flex items-start gap-3">
             <X className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={2.5} aria-hidden="true" />
