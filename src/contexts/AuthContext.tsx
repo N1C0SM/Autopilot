@@ -1,3 +1,5 @@
+import { forgetAccount, rememberSession } from "@/lib/accounts";
+import { supportsMultipleAccounts } from "@/lib/platform";
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
@@ -28,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       authEventReceived.current = true;
+      // En las apps nativas cada sesión queda guardada para poder cambiar de cuenta.
+      if (session && supportsMultipleAccounts()) rememberSession(session);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -83,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // El borrador del configurador puede contener datos de salud y de la
     // pareja del usuario anterior en un navegador compartido.
     clearConfiguratorDraft();
+    // Cerrar sesión revoca la sesión: esta cuenta deja de estar guardada en el dispositivo.
+    const { data } = await supabase.auth.getSession();
+    if (data.session) forgetAccount(data.session.user.id);
     await supabase.auth.signOut();
   };
 

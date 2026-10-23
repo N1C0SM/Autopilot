@@ -29,6 +29,8 @@ final class Browser: ObservableObject {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default() // la sesión sobrevive al cerrar la app
         config.preferences.isElementFullscreenEnabled = true
+        // La web reconoce la app de Mac (cuentas múltiples y detalles de escritorio).
+        config.applicationNameForUserAgent = "AutopilotMac/1.0"
         webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
@@ -95,7 +97,17 @@ struct WebView: NSViewRepresentable {
         return browser.webView
     }
 
-    func updateNSView(_ nsView: WKWebView, context: Context) {}
+    func updateNSView(_ nsView: WKWebView, context: Context) {
+        // Barra de título negra e integrada: los semáforos quedan sobre ella y la web empieza debajo.
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.backgroundColor = .black
+            window.styleMask.remove(.fullSizeContentView)
+            window.isMovableByWindowBackground = false
+        }
+    }
 }
 
 struct ContentView: View {
@@ -129,7 +141,8 @@ struct AutopilotApp: App {
                 .environmentObject(browser)
                 .preferredColorScheme(.dark)
         }
-        .windowStyle(.hiddenTitleBar)
+        .windowStyle(.titleBar)
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         .defaultSize(width: 1280, height: 820)
         .commands {
             CommandGroup(replacing: .newItem) {}

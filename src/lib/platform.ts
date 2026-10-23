@@ -63,3 +63,11 @@ export const isIOSNative = (): boolean => {
  * funcional, cambiar a `true` (o leer un env flag).
  */
 export const appleSignInEnabled = (): boolean => false;
+
+/** True dentro de la app nativa de macOS (macos/), que se identifica en el user agent. */
+export const isMacApp = (): boolean => {
+  try { return typeof navigator !== "undefined" && navigator.userAgent.includes("AutopilotMac/"); } catch { return false; }
+};
+
+/** Varias cuentas en el mismo dispositivo: solo en las apps nativas (iPhone, Android y Mac), no en la web. */
+export const supportsMultipleAccounts = (): boolean => isNativeApp() || isMacApp();

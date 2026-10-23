@@ -1,3 +1,4 @@
+import AccountSwitcher from "@/components/AccountSwitcher";
 import { errorMessage } from "@/lib/runtimeValues";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Switch } from "@/components/ui/switch";
@@ -1144,6 +1145,9 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
       <div className={`order-[7]${hideForAdmin}`}>
         <TravelModeCard userId={user.id} />
       </div>
+
+      {/* Cuentas en este dispositivo (solo apps nativas) */}
+      <AccountSwitcher currentId={user.id} />
 
       {/* Sign out */}
       <ListGroup className="order-8" header="Sesión" footer="Cierra tu sesión en este dispositivo.">
