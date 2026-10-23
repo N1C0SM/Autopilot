@@ -61,7 +61,25 @@ const PlanDifferences = () => {
           </p>
         </div>
 
-        <div className="mt-10 overflow-x-auto">
+        {/* Móvil: una fila por característica, con cada plan debajo; sin tabla que se salga de la pantalla. */}
+        <ul className="mt-10 overflow-hidden rounded-2xl bg-card md:hidden">
+          {plans[0].features.map((feature, i) => !plans.some((pl) => pl.features[i]?.included) ? null : (
+            <li key={feature.text} className="px-4 py-4 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border/60">
+              <p className="type-subhead text-foreground">{feature.text}</p>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                {plans.map((pl) => {
+                  const has = pl.features[i]?.included ?? false;
+                  return <span key={pl.name} className={`inline-flex items-center gap-1.5 type-footnote ${has ? "font-semibold text-foreground" : "text-muted-foreground/60"}`}>
+                    {has ? <Check className="h-4 w-4 text-primary" aria-hidden="true" /> : <X className="h-4 w-4" aria-hidden="true" />}
+                    {pl.name}<span className="sr-only">{has ? ": incluido" : ": no incluido"}</span>
+                  </span>;
+                })}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 hidden overflow-x-auto md:block">
           <div className="min-w-[800px]">
             <table className="w-full border-collapse text-left">
               <thead>
@@ -86,7 +104,8 @@ const PlanDifferences = () => {
               <tbody className="divide-y divide-border">
                 {Array.from({ length: maxFeatures }).map((_, i) => {
                   const feature = plans[0].features[i];
-                  if (!feature) return null;
+                  // Una característica que ningún plan visible incluye es de un plan oculto: no se anuncia.
+                  if (!feature || !plans.some((pl) => pl.features[i]?.included)) return null;
                   return (
                     <tr key={i} className="group hover:bg-accent/20 transition-colors">
                       <td className="py-4 pr-6 type-subhead text-foreground">
