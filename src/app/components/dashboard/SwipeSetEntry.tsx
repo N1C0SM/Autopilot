@@ -124,7 +124,7 @@ const SwipeSetEntry = ({
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
           placeholder="Ej: 80"
-          className="w-full h-14 rounded-2xl bg-card border border-border px-4 type-title3 font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+          className="w-full h-14 rounded-2xl bg-card px-4 type-title3 font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           autoFocus
           inputMode="numeric"
           aria-label="Peso en kg"

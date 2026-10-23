@@ -55,7 +55,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full mb-8 rounded-2xl border border-border bg-card/60 backdrop-blur p-5"
+      className="w-full mb-8 rounded-2xl bg-card/60 backdrop-blur p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -93,7 +93,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
                 <div className="w-full h-20 rounded-md mb-1.5 bg-muted/30" />
               )}
               <div className="type-caption2 uppercase tracking-wider text-muted-foreground">{label}</div>
-              <div className="text-base font-bold font-display text-gradient">
+              <div className="type-body font-bold font-display text-gradient">
                 {formatDecimal(r.physique ?? 0, 1)}
               </div>
             </div>

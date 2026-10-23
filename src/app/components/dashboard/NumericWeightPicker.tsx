@@ -99,7 +99,7 @@ const NumericWeightPicker = ({
       </label>
       
       <div
-        className="group relative h-48 w-full cursor-ns-resize rounded-2xl bg-card border border-border p-4 flex items-center justify-center overflow-hidden touch-pan-y"
+        className="group relative h-48 w-full cursor-ns-resize rounded-2xl bg-card p-4 flex items-center justify-center overflow-hidden touch-pan-y"
         onMouseDown={handleDown}
         onMouseMove={handleMove}
         onMouseUp={handleUp}
@@ -168,7 +168,7 @@ const NumericWeightPicker = ({
               onChange(formatted.toString());
               void hapticTap();
             }}
-            className="flex-1 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium active:bg-accent transition-colors"
+            className="flex-1 py-2 rounded-xl bg-secondary text-foreground type-subhead font-medium active:bg-accent transition-colors"
           >
             {val === min ? "0" : val === max / 2 ? `${val}` : `${max}`}
           </button>

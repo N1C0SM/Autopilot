@@ -57,11 +57,11 @@ const Greeting = ({ name, createdAt, completedDays }: Props) => {
     >
       <div className="flex items-center gap-2 mb-1">
         <Icon className="w-5 h-5 text-primary" />
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">
+        <h1 className="type-title2 sm:text-3xl font-bold font-display">
           {text}, <span className="text-gradient">{name || "campeón"}</span>
         </h1>
       </div>
-      <p className="text-sm text-muted-foreground ml-7">{phrase}</p>
+      <p className="type-subhead text-muted-foreground ml-7">{phrase}</p>
     </motion.div>
   );
 };

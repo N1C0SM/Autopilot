@@ -119,13 +119,13 @@ const Achievements = ({ userId }: Props) => {
   const unlocked = achievements.filter((a) => a.unlocked).length;
 
   return (
-    <div className="bg-card rounded-2xl p-6 border border-border card-shadow">
+    <div className="bg-card rounded-2xl p-6 card-shadow">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Award className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-bold font-display">Logros</h2>
+          <h2 className="type-headline font-bold font-display">Logros</h2>
         </div>
-        <span className="text-sm text-muted-foreground">
+        <span className="type-subhead text-muted-foreground">
           {unlocked}/{achievements.length} desbloqueados
         </span>
       </div>

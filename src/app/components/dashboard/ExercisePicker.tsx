@@ -95,8 +95,8 @@ const ExercisePicker = ({ open, onOpenChange, onPick, existing = [] }: Props) =>
 
   const chip = (active: boolean) =>
     cn(
-      "shrink-0 rounded-full border px-3.5 py-2 type-footnote font-medium transition-colors md:py-1.5",
-      active ? "border-primary bg-primary/15 text-foreground" : "border-border text-muted-foreground hover:text-foreground",
+      "shrink-0 rounded-full px-3.5 py-2 type-footnote font-medium transition-colors md:py-1.5",
+      active ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground hover:text-foreground",
     );
 
   return (

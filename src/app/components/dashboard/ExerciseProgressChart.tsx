@@ -88,7 +88,7 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
         >
           <TabsList aria-label="Métrica" className="h-8">
             {METRICS.map(([k, label]) => (
-              <TabsTrigger key={k} value={k} className="px-2.5 py-1 text-xs">{label}</TabsTrigger>
+              <TabsTrigger key={k} value={k} className="px-2.5 py-1 type-footnote">{label}</TabsTrigger>
             ))}
           </TabsList>
         </Tabs>

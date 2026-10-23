@@ -39,7 +39,7 @@ const OfflineBanner = ({ onRetry }: Props) => {
           "calc(0.75rem + env(safe-area-inset-bottom, 0px) + var(--mobile-nav-height) + 1rem)",
       }}
     >
-      <div className="flex w-full max-w-sm items-center gap-2 rounded-full border border-border/60 bg-card/95 px-3 py-2 shadow-lg backdrop-blur">
+      <div className="flex w-full max-w-sm items-center gap-2 rounded-full/60 bg-card/95 px-3 py-2 shadow-lg backdrop-blur">
         <WifiOff className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="flex-1 type-caption1 leading-tight">
           {stillOffline ? "Sigue sin conexión" : "Sin conexión"}

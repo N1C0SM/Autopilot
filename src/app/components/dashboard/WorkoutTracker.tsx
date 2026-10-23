@@ -1513,7 +1513,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
               .join(" → ");
 
             return (
-              <div key={`${selectedDay}-${i}`} className={started && !focusMode ? "overflow-hidden rounded-lg border border-border bg-card" : ""}>
+              <div key={`${selectedDay}-${i}`} className={started && !focusMode ? "overflow-hidden rounded-lg bg-card" : ""}>
                 {/* Exercise header: fila de lista en el resumen, título del ejercicio en foco */}
                 <Button
                   variant="ghost"
@@ -1804,7 +1804,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 initial={{ scale: 0.7, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 transition={{ type: "spring", stiffness: 420, damping: 14 }}
-                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
+                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 type-footnote font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
                                 <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
                                 <span>Récord personal · {livePR}</span>
                               </motion.div>

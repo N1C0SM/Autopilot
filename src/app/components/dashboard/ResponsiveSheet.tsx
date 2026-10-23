@@ -24,7 +24,7 @@ const ResponsiveSheet = ({ open, onOpenChange, title, description, desktopClassN
       <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
         <DrawerContent className="flex h-[94dvh] flex-col">
           <DrawerHeader className="px-5 pb-2 pt-3 text-left">
-            <DrawerTitle className="text-xl font-semibold tracking-tight">{title}</DrawerTitle>
+            <DrawerTitle className="type-title3 font-semibold tracking-tight">{title}</DrawerTitle>
             {description && <DrawerDescription>{description}</DrawerDescription>}
           </DrawerHeader>
           <div className="flex min-h-0 flex-1 flex-col px-5">{children}</div>
@@ -42,7 +42,7 @@ const ResponsiveSheet = ({ open, onOpenChange, title, description, desktopClassN
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn("flex max-h-[88dvh] flex-col gap-4", desktopClassName ?? "sm:max-w-lg")}>
         <DialogHeader>
-          <DialogTitle className="text-xl tracking-tight">{title}</DialogTitle>
+          <DialogTitle className="type-title3 tracking-tight">{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>

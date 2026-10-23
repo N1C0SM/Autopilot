@@ -21,7 +21,7 @@ const Stepper = ({ label, value, min, max, onChange }: { label: string; value: n
         inputMode="numeric"
         value={value}
         onChange={(e) => { const n = parseInt(e.target.value.replace(/\D/g, ""), 10); if (!Number.isNaN(n)) onChange(Math.max(min, Math.min(max, n))); }}
-        className="h-10 w-full min-w-0 bg-transparent text-center text-base font-semibold tabular-nums outline-none md:h-9 md:text-sm"
+        className="h-10 w-full min-w-0 bg-transparent text-center type-body font-semibold tabular-nums outline-none md:h-9 md:text-sm"
       />
       <button type="button" aria-label={`Más ${label}`} disabled={value >= max}
         onClick={() => { void hapticSelection(); onChange(Math.min(max, value + 1)); }}

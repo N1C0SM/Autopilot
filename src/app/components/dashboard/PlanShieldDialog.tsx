@@ -33,7 +33,7 @@ const PlanShieldDialog = () => {
       <div className="flex flex-1 flex-col justify-end gap-3 pb-4 md:justify-start md:pb-0">
         <div className="mb-2 flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/10 p-4">
           <ShieldCheck className="h-6 w-6 shrink-0 text-primary" aria-hidden />
-          <p className="text-sm text-muted-foreground">Elige qué hacer. Si guardas una copia, la recuperas cuando quieras desde «Editar mi rutina».</p>
+          <p className="type-subhead text-muted-foreground">Elige qué hacer. Si guardas una copia, la recuperas cuando quieras desde «Editar mi rutina».</p>
         </div>
         <Button size="lg" variant="hero" className="min-h-12 w-full" onClick={() => choose("keep")}>Conservar mi rutina</Button>
         <Button size="lg" variant="outline" className="min-h-12 w-full" onClick={() => choose("backup")}>Guardar copia y usar la automática</Button>

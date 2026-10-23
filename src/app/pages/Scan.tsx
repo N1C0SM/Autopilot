@@ -1429,7 +1429,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                             setObjectiveImg(p.image_url);
                             setSelectedPresetId(p.id);
                           }}
-                          className={`relative aspect-[3/4] overflow-hidden rounded-xl bg-card transition-transform duration-150 active:scale-[0.97] ${
+                          className={`relative aspect-[3/4] overflow-hidden rounded-2xl bg-card transition-transform duration-150 active:scale-[0.97] ${
                             isSel ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
                           }`}
                         >

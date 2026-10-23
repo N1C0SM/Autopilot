@@ -131,13 +131,13 @@ const ScanSummaryCard = ({ scan, onClose }: { scan: ScanData; onClose: () => voi
         <div className="mb-4 flex gap-6">
           {scores.map((s) => (
             <div key={s.label}>
-              <p className="text-2xl font-semibold tabular-nums">{formatDecimal(s.value, 1)}</p>
+              <p className="type-title2 font-semibold tabular-nums">{formatDecimal(s.value, 1)}</p>
               <p className="type-caption1 text-white/60">{s.label}</p>
             </div>
           ))}
           {fat !== null && (
             <div>
-              <p className="text-2xl font-semibold tabular-nums">~{Math.round(fat)}%</p>
+              <p className="type-title2 font-semibold tabular-nums">~{Math.round(fat)}%</p>
               <p className="type-caption1 text-white/60">Grasa estimada</p>
             </div>
           )}

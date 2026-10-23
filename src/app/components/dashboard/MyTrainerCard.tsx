@@ -30,7 +30,7 @@ const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card rounded-2xl p-4 border border-border flex items-center gap-4 flex-wrap"
+      className="bg-card rounded-2xl p-4 flex items-center gap-4 flex-wrap"
     >
       {trainer.photo_url ? (
         <img loading="lazy" decoding="async" src={trainer.photo_url} alt={trainer.name} className="w-12 h-12 rounded-full object-cover" />
@@ -41,8 +41,8 @@ const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
       )}
       <div className="flex-1 min-w-[10rem]">
         <p className="type-caption2 uppercase tracking-widest text-muted-foreground font-medium">Tu entrenador</p>
-        <p className="font-display font-bold text-base truncate">{trainer.name}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="font-display font-bold type-body truncate">{trainer.name}</p>
+        <p className="type-footnote text-muted-foreground">
           {trainer.headline || "Es quien prepara y ajusta tu entrenamiento y tu nutrición."}
         </p>
       </div>

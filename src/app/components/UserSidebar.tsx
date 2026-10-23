@@ -126,7 +126,7 @@ const UserSidebar = ({
                   </TooltipTrigger>
                   <TooltipContent
                     side="right"
-                    className="text-[13px] max-w-[220px] bg-card border-border text-foreground"
+                    className="type-footnote max-w-[220px] bg-card border-border text-foreground"
                   >
                     {isLocked
                       ? `${item.title} — no incluido en tu plan`
@@ -164,15 +164,15 @@ const UserSidebar = ({
               {profileAvatar ? (
                 <img loading="lazy" decoding="async" src={profileAvatar} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[12px] font-bold text-primary">
+                <span className="type-footnote font-bold text-primary">
                   {profileName.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
             {!collapsed && (
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] text-sidebar-foreground/60 truncate leading-tight">{profileName}</span>
-                {canSwitch && <span className="block text-[12px] text-primary leading-tight mt-0.5">Cambiar de cuenta</span>}
+                <span className="block type-footnote text-sidebar-foreground/60 truncate leading-tight">{profileName}</span>
+                {canSwitch && <span className="block type-footnote text-primary leading-tight mt-0.5">Cambiar de cuenta</span>}
               </span>
             )}
             {!collapsed && canSwitch && <ArrowLeftRight className="h-4 w-4 shrink-0 text-sidebar-foreground/40" aria-hidden="true" />}

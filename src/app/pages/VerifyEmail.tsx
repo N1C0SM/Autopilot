@@ -277,7 +277,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
                 <InputOTPSlot
                   key={index}
                   index={index}
-                  className="h-12 w-8 sm:h-14 sm:w-10 text-lg"
+                  className="h-12 w-8 sm:h-14 sm:w-10 type-headline"
                 />
               ))}
             </InputOTPGroup>
@@ -287,7 +287,7 @@ const VerifyEmail = ({ initialCooldown = 60 }: { initialCooldown?: number } = {}
                 <InputOTPSlot
                   key={index}
                   index={index}
-                  className="h-12 w-8 sm:h-14 sm:w-10 text-lg"
+                  className="h-12 w-8 sm:h-14 sm:w-10 type-headline"
                 />
               ))}
             </InputOTPGroup>

@@ -66,9 +66,9 @@ export default function OnboardingChoice() {
             transition={{ duration: 0.4 }}
             className="mb-8"
           >
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">Paso 1 · Empezar</p>
+            <p className="mb-2 type-footnote font-semibold uppercase tracking-[0.18em] text-primary">Paso 1 · Empezar</p>
             <h1 className="text-3xl font-bold leading-tight md:text-4xl">¿Cómo creamos tu plan?</h1>
-            <p className="mt-2 text-base text-muted-foreground">
+            <p className="mt-2 type-body text-muted-foreground">
               Las dos opciones terminan en tu rutina. Elige la que te resulte más cómoda.
             </p>
           </motion.div>
