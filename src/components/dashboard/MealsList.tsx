@@ -186,9 +186,10 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
                     role="group"
                     aria-label={`${m.label}: objetivo diario de ${fmt(m.value)} gramos, ${m.share} % de las calorías`}
                   >
-                    <div className="flex items-baseline justify-between gap-1">
-                      <p className="truncate type-footnote text-muted-foreground">{m.label}</p>
-                      <p className="shrink-0 type-footnote tabular-nums text-muted-foreground">{m.share} %</p>
+                    {/* Con letra grande el porcentaje baja de línea en vez de cortar la etiqueta. */}
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-1">
+                      <p className="type-footnote text-muted-foreground">{m.label}</p>
+                      <p className="type-footnote tabular-nums text-muted-foreground">{m.share} %</p>
                     </div>
                     <p className="mt-0.5 font-rounded text-[22px] font-bold leading-7 tabular-nums">
                       {fmt(m.value)}

@@ -32,7 +32,7 @@ const EmptyState = ({ icon: Icon, title, description, action, className, card, p
       <span aria-hidden="true" className="absolute right-8 top-8 h-24 w-24 rounded-full bg-primary/90 shadow-[0_0_60px_hsl(var(--primary)/0.45)] [mask-image:radial-gradient(circle_at_30%_35%,transparent_42%,#000_43%)]" />
       {[[18, 22], [34, 58], [12, 72], [46, 30], [26, 44]].map(([t, l]) => <span key={`${t}-${l}`} aria-hidden="true" className="absolute h-1 w-1 rounded-full bg-foreground/50" style={{ top: `${t}%`, left: `${l}%` }} />)}
     </>}
-    <div className="relative flex min-h-[18rem] flex-col justify-end p-5 text-left">
+    <div className={cn("relative flex min-h-[18rem] flex-col justify-end p-5 text-left", rest && !photo && "pt-36")}>
       {Icon && photo ? <Icon aria-hidden="true" className="h-6 w-6 text-primary" strokeWidth={2.25} /> : null}
       <p className="mt-2 font-rounded text-[28px] font-bold leading-tight tracking-tight">{title}</p>
       {description ? <p className="mt-1 type-subhead text-muted-foreground">{description}</p> : null}
