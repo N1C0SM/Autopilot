@@ -6,7 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { hapticSelection, hapticTap } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
-import { buildExerciseHistory, type ExerciseHistoryEntry, type WorkoutLogRecord } from "@/lib/workoutMetrics";
+import { buildExerciseHistory, buildTrainingOverview, type ExerciseHistoryEntry, type WorkoutLogRecord } from "@/lib/workoutMetrics";
+import { TrainingOverviewCard } from "@/components/dashboard/TrainingOverviewCard";
 import ExerciseProgressChart from "@/components/dashboard/ExerciseProgressChart";
 
 interface Props {
@@ -75,6 +76,7 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
     [historyByExercise],
   );
   const history = historyByExercise[selectedExercise] || [];
+  const overview = useMemo(() => buildTrainingOverview(historyByExercise), [historyByExercise]);
   const latest = history[history.length - 1];
   // Respeta siempre la métrica elegida: sin series con peso, la gráfica explica por qué no hay volumen.
   const selectedMetric = metric;
@@ -95,6 +97,13 @@ const WorkoutProgress = ({ userId, compact = false }: Props) => {
       aria-label="Progresión por ejercicio"
       className={compact ? "flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" : "flex flex-col"}
     >
+      {!loading && !loadError && exercises.length > 0 && (
+        <div className="mb-6">
+          <TrainingOverviewCard overview={overview} />
+          <h3 className="mb-3 mt-6 type-title3">Por ejercicio</h3>
+        </div>
+      )}
+
       {exercises.length > 0 && (
         // Selector de ejercicio — más discreto
         <div className="relative flex min-h-[44px] w-full items-center gap-2 rounded-xl bg-card px-3 transition-opacity duration-150 active:opacity-60 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring lg:min-h-[48px] lg:rounded-xl lg:px-4">
