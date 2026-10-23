@@ -181,6 +181,8 @@ struct MainShell: View {
                 Text(item.title).fontWeight(active ? .semibold : .regular)
             } icon: {
                 Image(systemName: item.symbol)
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(active ? Palette.gold : Palette.foreground)
             }
             .foregroundStyle(active ? Palette.gold : Palette.foreground)
             .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
@@ -210,11 +212,13 @@ struct MainShell: View {
                 }
                 Section {
                     Button { session.showPicker = true } label: {
-                        Label("Cambiar de cuenta", systemImage: "arrow.left.arrow.right").foregroundStyle(Palette.foreground)
+                        Label { Text("Cambiar de cuenta") } icon: { Image(systemName: "arrow.left.arrow.right").foregroundStyle(Palette.foreground) }
+                            .foregroundStyle(Palette.foreground)
                     }
                     .buttonStyle(.plain)
                     Button { Task { await session.signOut() } } label: {
-                        Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right").foregroundStyle(Palette.destructive)
+                        Label { Text("Cerrar sesión") } icon: { Image(systemName: "rectangle.portrait.and.arrow.right").foregroundStyle(Palette.destructive) }
+                            .foregroundStyle(Palette.destructive)
                     }
                     .buttonStyle(.plain)
                 }
