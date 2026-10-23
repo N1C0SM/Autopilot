@@ -1,14 +1,13 @@
 import type { ReactNode } from "react";
+import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 import ScrollReveal from "@/components/ScrollReveal";
 import { useScrollProgress } from "@/hooks/useScrollProgress";
 
-// Fotos reales de la biblioteca de ejercicios (Admin → Ejercicios).
-const IMG = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/";
 const MATERIAL = [
-  { label: "Gimnasio", photo: `${IMG}a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png` },
-  { label: "Mancuernas", photo: `${IMG}d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png` },
-  { label: "En casa", photo: `${IMG}14988835-a004-49d6-95c5-63978dbce978-1791475887313.png` },
-  { label: "Barra de dominadas", photo: `${IMG}7ab0b27f-f296-4fa6-bf07-8f8b026b0832-1791475152675.png` },
+  { label: "Gimnasio", photo: BRAND_PHOTOS.gym },
+  { label: "Mancuernas", photo: BRAND_PHOTOS.dumbbells },
+  { label: "En casa", photo: BRAND_PHOTOS.home },
+  { label: "Barra de dominadas", photo: BRAND_PHOTOS.pullupBar },
 ];
 
 type Benefit = { eyebrow: string; title: string; text: string; visual: ReactNode };

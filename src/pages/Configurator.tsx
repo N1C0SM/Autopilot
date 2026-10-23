@@ -18,6 +18,7 @@ import { Spinner } from "@/components/ui/spinner";
 import Screen from "@/components/native/Screen";
 import PageHead from "@/components/PageHead";
 import PlanPreview from "@/components/PlanPreview";
+import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 
 const DOW = [
   { v: 1, s: "L", l: "Lunes" }, { v: 2, s: "M", l: "Martes" }, { v: 3, s: "X", l: "Miércoles" },
@@ -27,7 +28,11 @@ const GOALS = [
   { v: "lose_weight", l: "Perder grasa" }, { v: "gain_muscle", l: "Ganar músculo" },
   { v: "recomp", l: "Recomposición" }, { v: "general_health", l: "Fuerza y salud" },
 ];
-const FOCUS = [{ v: "gimnasio", l: "Gimnasio" }, { v: "calistenia", l: "Calistenia" }, { v: "mixto", l: "Mixto" }];
+const FOCUS = [
+  { v: "gimnasio", l: "Gimnasio", photo: BRAND_PHOTOS.gym },
+  { v: "calistenia", l: "Calistenia", photo: BRAND_PHOTOS.pullupBar },
+  { v: "mixto", l: "Mixto", photo: BRAND_PHOTOS.dumbbells },
+];
 const DURATION = [{ v: 40, l: "30–45 min" }, { v: 55, l: "45–60 min" }, { v: 75, l: "60–90 min" }];
 const STRUCTURE = [
   { v: "full_body", l: "Full Body" }, { v: "torso_pierna", l: "Torso / Pierna" },
@@ -69,6 +74,27 @@ const draftResumeStep = (cfg: Cfg): number => {
 };
 
 type Option = { v: string | number; l: string; d?: string };
+
+/** Opciones con foto, como las fichas de material de la landing: misma identidad dentro y fuera. */
+const PhotoChoices = ({ header, options, value, onChange }: {
+  header: string; options: { v: string; l: string; photo: string }[]; value: string; onChange: (v: string) => void;
+}) => (
+  <section>
+    <h2 className="type-group-header px-4 pb-1.5">{header}</h2>
+    <div className="grid grid-cols-3 gap-2.5">
+      {options.map((o) => {
+        const on = o.v === value;
+        return <button key={o.v} type="button" aria-pressed={on} onClick={() => { void hapticSelection(); onChange(o.v); }}
+          className={cn("relative flex aspect-[4/5] items-end overflow-hidden rounded-2xl bg-card p-3 text-left ring-2 transition-[transform,box-shadow] duration-200 ease-out active:scale-[0.97]", on ? "ring-primary" : "ring-transparent")}>
+          <img src={o.photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
+          <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+          <span className="relative type-headline text-white">{o.l}</span>
+          <Check aria-hidden="true" strokeWidth={3} className={cn("absolute right-2 top-2 h-6 w-6 rounded-full bg-primary p-1 text-primary-foreground transition-opacity", on ? "opacity-100" : "opacity-0")} />
+        </button>;
+      })}
+    </div>
+  </section>
+);
 
 const Choices = ({ header, options, value, onChange }: {
   header?: string; options: Option[]; value: string | number; onChange: (v: string | number) => void;
@@ -340,7 +366,7 @@ const Configurator = () => {
               </Field>
             )}
             <Choices header="Objetivo" options={GOALS} value={c.goal} onChange={(v) => set("goal", String(v))} />
-            <Choices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", String(v))} />
+            <PhotoChoices header={t("¿Dónde entrenas?", "¿Dónde entrenáis?")} options={FOCUS} value={c.focus} onChange={(v) => set("focus", v)} />
           </>
         )}
 
