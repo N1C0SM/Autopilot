@@ -9,7 +9,7 @@ const RESTS = ["60 s", "90 s", "120 s", "180 s"];
 
 const Stepper = ({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void }) => (
   <div className="flex flex-col gap-1">
-    <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+    <span className="type-caption2 uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
     <div className="flex items-center rounded-xl border border-border/70 bg-background/40">
       <button type="button" aria-label={`Menos ${label}`} disabled={value <= min}
         onClick={() => { void hapticSelection(); onChange(Math.max(min, value - 1)); }}
@@ -66,7 +66,7 @@ const ExerciseRowEditor = ({ ex, index, total, onChange, onMove, onRemove }: Pro
             <Stepper label="Reps" value={reps} min={1} max={100} onChange={(n) => onChange({ ...ex, reps: n })} />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Descanso</span>
+            <span className="type-caption2 uppercase tracking-[0.12em] text-muted-foreground">Descanso</span>
             <div className="grid grid-cols-4 gap-1">
               {RESTS.map((r) => (
                 <button key={r} type="button" aria-pressed={ex.rest === r}

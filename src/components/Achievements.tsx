@@ -151,7 +151,7 @@ const Achievements = ({ userId }: Props) => {
                 className={`w-5 h-5 ${a.unlocked ? "text-primary" : "text-muted-foreground"}`}
               />
             </div>
-            <span className="text-[10px] font-semibold text-center leading-tight">
+            <span className="type-caption2 font-semibold text-center leading-tight">
               {a.title}
             </span>
             {!a.unlocked && a.progress !== undefined && a.target !== undefined && (

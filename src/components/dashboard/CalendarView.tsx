@@ -56,7 +56,7 @@ const FC_NATIVE = [
   "[&_.fc-toolbar-chunk:last-child_.fc-button]:!m-0 [&_.fc-toolbar-chunk:last-child_.fc-button]:!h-full [&_.fc-toolbar-chunk:last-child_.fc-button]:!min-w-0 [&_.fc-toolbar-chunk:last-child_.fc-button]:!flex-1 [&_.fc-toolbar-chunk:last-child_.fc-button]:!rounded-[7px] [&_.fc-toolbar-chunk:last-child_.fc-button]:!bg-transparent [&_.fc-toolbar-chunk:last-child_.fc-button]:!px-3 [&_.fc-toolbar-chunk:last-child_.fc-button]:!text-[13px] [&_.fc-toolbar-chunk:last-child_.fc-button]:!leading-[18px]",
   "[&_.fc-toolbar-chunk:last-child_.fc-button-active]:!bg-[#636366] [&_.fc-toolbar-chunk:last-child_.fc-button-active]:!font-semibold [&_.fc-toolbar-chunk:last-child_.fc-button-active]:!shadow-[0_3px_8px_rgba(0,0,0,0.12),0_3px_1px_rgba(0,0,0,0.04)]",
   // Rejilla: nada por debajo de 11 px y sin el brillo de hover en los eventos
-  "[&_.fc-col-header-cell-cushion]:!px-0 [&_.fc-col-header-cell-cushion]:!text-[11px] [&_.fc-timegrid-slot-label-cushion]:tabular-nums [&_.fc-daygrid-day-number]:!text-[13px] [&_.fc-daygrid-day-number]:tabular-nums",
+  "[&_.fc-col-header-cell-cushion]:!px-0 [&_.fc-col-header-cell-cushion]:!type-caption2 [&_.fc-timegrid-slot-label-cushion]:tabular-nums [&_.fc-daygrid-day-number]:!text-[13px] [&_.fc-daygrid-day-number]:tabular-nums",
   "[&_.fc-event:hover]:!filter-none [&_.fc-event:active]:opacity-70",
 ].join(" ");
 

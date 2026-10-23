@@ -119,7 +119,7 @@ export default function OnboardingChoice() {
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-lg font-semibold">{o.title}</h2>
                       {o.badge && (
-                        <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground">
+                        <span className="rounded-full bg-primary px-2 py-0.5 type-caption2 font-semibold text-primary-foreground">
                           {o.badge}
                         </span>
                       )}

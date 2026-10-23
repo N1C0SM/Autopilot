@@ -40,7 +40,7 @@ const MyTrainerCard = ({ onOpenChat }: { onOpenChat?: () => void }) => {
         </div>
       )}
       <div className="flex-1 min-w-[10rem]">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">Tu entrenador</p>
+        <p className="type-caption2 uppercase tracking-widest text-muted-foreground font-medium">Tu entrenador</p>
         <p className="font-display font-bold text-base truncate">{trainer.name}</p>
         <p className="text-xs text-muted-foreground">
           {trainer.headline || "Es quien prepara y ajusta tu entrenamiento y tu nutrición."}

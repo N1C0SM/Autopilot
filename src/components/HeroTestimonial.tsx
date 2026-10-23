@@ -43,7 +43,7 @@ const HeroTestimonial = () => {
           ))}
         </div>
         <p className="text-xs text-foreground/85 leading-relaxed line-clamp-2">“{t.text}”</p>
-        <p className="text-[10px] text-muted-foreground mt-1 truncate">
+        <p className="type-caption2 text-muted-foreground mt-1 truncate">
           {t.name}
           {t.result ? <span className="text-primary font-semibold"> · {t.result}</span> : null}
         </p>

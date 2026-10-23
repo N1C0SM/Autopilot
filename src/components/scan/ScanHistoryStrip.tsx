@@ -91,7 +91,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
               ) : (
                 <div className="w-full h-20 rounded-md mb-1.5 bg-muted/30" />
               )}
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+              <div className="type-caption2 uppercase tracking-wider text-muted-foreground">{label}</div>
               <div className="text-base font-bold font-display text-gradient">
                 {Number(r.physique ?? 0).toFixed(1)}
               </div>
