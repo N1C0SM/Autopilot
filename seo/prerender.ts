@@ -199,8 +199,8 @@ function buildRoutes(av: PlanAvailability, posts: BlogPost[]): Route[] {
         faqLd(lFaqs),
       ],
       body: page(`
-        <h1>Tu entrenamiento. Tu nutrición. Tu progreso.</h1>
-        ${p("Crea tu rutina según tu objetivo, tus días y tu material. Registra cada serie y mira cómo avanzas, en el gimnasio o en casa.")}
+        <h1>Entrena con plan. Registra cada serie. Mira cómo progresas.</h1>
+        ${p("Tu rutina según tu objetivo, tus días y tu material. En el gimnasio o en casa.")}
         <p>${a("/onboarding", "Crear mi rutina gratis")} · ${a("/como-funciona#demo", "Probar la demo")}</p>
         ${p("Free sin tarjeta y sin caducidad · Web y móvil")}
         <section><h2>Empieza gratis. Paga solo si te aporta.</h2>${p(`Gratis: crea tu rutina, registra tus entrenamientos y sigue tu progreso. ${paidLine}`)}${planList(av.plans)}<p>${a("/planes", "Ver la comparativa completa")}</p></section>
