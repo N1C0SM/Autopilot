@@ -14,7 +14,6 @@ import { hapticTap } from "@/lib/native";
 
 const ProductPreview = lazy(() => import("@/components/ProductPreview"));
 const PricingTiers = lazy(() => import("@/components/PricingTiers"));
-const PlanDifferences = lazy(() => import("@/components/PlanDifferences"));
 
 const legacySections: Record<string, string> = {
   "#pricing": "/planes", "#planes": "/planes", "#ver-app": "/como-funciona#demo",
@@ -121,8 +120,6 @@ export default function Index() {
       </div>
     </section>
 
-    {/* 3b · Diferencias entre planes (nuevo, más visible) */}
-    <PlanDifferences />
 
     {/* 4 · Cómo funciona */}
     <section aria-labelledby="como-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
