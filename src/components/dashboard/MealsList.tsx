@@ -9,6 +9,15 @@ import { ListGroup } from "@/components/ui/list";
 import { ProgressRing } from "@/components/ui/progress-ring";
 import type { MacroTargets } from "@/lib/nutrition";
 import { nutritionMacroError } from "@/lib/nutritionValidation";
+import { useMealPhoto } from "@/hooks/useSessionCover";
+
+/** Foto del plato generada con IA, con el mismo estilo oscuro y dorado que las sesiones. */
+const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
+  const src = useMealPhoto(dish);
+  return <span aria-hidden="true" className={cn("relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary transition-opacity", dim && "opacity-50")}>
+    {src && <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />}
+  </span>;
+};
 
 interface Meal {
   name: string;
@@ -54,7 +63,13 @@ const Notice = ({
   </div>
 );
 
+// Plato fijo para la portada cuando aún no hay comidas: una sola foto compartida por todos.
+const DEFAULT_DISH = "Pollo a la plancha con arroz integral y verduras asadas";
+
 const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
+  // Portada de Nutrición, como la de las sesiones: el primer plato del día o uno de referencia.
+  const coverPhoto = useMealPhoto(meals[0]?.description || DEFAULT_DISH);
+  const emptyMealPhoto = useMealPhoto(DEFAULT_DISH);
   const [done, setDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -110,6 +125,10 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
 
   return (
     <div className="space-y-8">
+      {coverPhoto && meals.length > 0 && <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-[28px] bg-card">
+        <img src={coverPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover animate-in fade-in duration-500" />
+        <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+      </div>}
       {(hasMeals || showTargets) && (
         <section aria-label="Resumen de hoy" className="rounded-2xl bg-card p-4">
           <div className="flex items-center gap-5">
@@ -225,6 +244,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
 
       {!hasMeals ? (
         <EmptyState
+          photo={emptyMealPhoto ?? undefined}
           card
           icon={Clock}
           title="Sin comidas todavía"
@@ -270,6 +290,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
                     {meal.description}
                   </span>
                 </span>
+                <span className="py-2"><MealPhoto dish={meal.description || meal.name} dim={isDone} /></span>
               </button>
             );
           })}

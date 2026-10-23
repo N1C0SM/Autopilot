@@ -61,8 +61,27 @@ async function toWebp(bytes: Uint8Array): Promise<Uint8Array | null> {
   }
 }
 
+/** Estilo de las fotos de comida: el mismo bodegón oscuro y cálido que las sesiones. */
+const MEAL_STYLE = [
+  "Cinematic editorial food photograph for a premium fitness app.",
+  "Setting: single plated dish on a dark matte stone surface, deep black background, warm golden side light (#d4af55 tone), soft shadows, shallow depth of field.",
+  "Composition: 3:2 frame, dish slightly off-center, three-quarter top-down angle, generous dark negative space.",
+  "Prohibited: no text, no captions, no watermarks, no brand names, no hands, no people, no cutlery clutter.",
+].join(" ");
+
+/** Texto del plato limpio y acotado: solo letras, números y puntuación básica. */
+function cleanDish(raw: unknown): string {
+  return String(raw || "").normalize("NFC").replace(/[^\p{L}\p{N} ,.()+-]/gu, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+}
+
+/** Clave estable del plato: minúsculas sin acentos ni cantidades, para reutilizar la foto. */
+function dishKey(dish: string): string {
+  return dish.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\d+\s*(g|gr|ml|kg|uds?|unidades?)\b/g, "")
+    .replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim().split(" ").slice(0, 8).join("_").slice(0, 80) || "comida";
+}
+
 /**
- * Portada de una sesión generada con IA según sus grupos musculares.
+ * Portada de una sesión (según sus grupos musculares) o foto de una comida, generada con IA.
  * Se guarda una vez por combinación de grupos y estilo en site-assets/session-covers/
  * y se reutiliza para todos los usuarios: la IA solo se paga la primera vez.
  */
@@ -76,26 +95,36 @@ Deno.serve(async (req) => {
     const { data: { user } } = await sb.auth.getUser(token);
     if (!user) return json({ error: "Unauthorized" }, 401);
 
-    const { exercise_ids: rawIds } = await req.json().catch(() => ({}));
-    const ids = Array.isArray(rawIds) ? rawIds.filter((x: unknown): x is string => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 20) : [];
-    if (!ids.length) return json({ error: "Faltan los ejercicios" }, 400);
-
+    const { exercise_ids: rawIds, meal: rawMeal } = await req.json().catch(() => ({}));
     const svc = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-    const { data: rows } = await svc.from("exercises").select("muscle_group").in("id", ids);
-    const groups = normalizeGroups((rows || []).map((r) => r.muscle_group));
-    const key = groups.join("-").replace(/\s+/g, "_");
-    const path = `session-covers/v${COVER_STYLE_VERSION}/${key}.webp`;
+
+    let key: string, folder: string, prompt: string;
+    if (rawMeal !== undefined) {
+      const dish = cleanDish(rawMeal);
+      if (dish.length < 3) return json({ error: "Falta la comida" }, 400);
+      key = dishKey(dish);
+      folder = `meal-photos/v${COVER_STYLE_VERSION}`;
+      prompt = `A healthy home-cooked dish: ${dish}. ${MEAL_STYLE}`;
+    } else {
+      const ids = Array.isArray(rawIds) ? rawIds.filter((x: unknown): x is string => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 20) : [];
+      if (!ids.length) return json({ error: "Faltan los ejercicios" }, 400);
+      const { data: rows } = await svc.from("exercises").select("muscle_group").in("id", ids);
+      const groups = normalizeGroups((rows || []).map((r) => r.muscle_group));
+      key = groups.join("-").replace(/\s+/g, "_");
+      folder = `session-covers/v${COVER_STYLE_VERSION}`;
+      prompt = `A training session focused on ${groups.join(", ")}: the athlete performs a classic strength exercise for ${groups[0]}. ${STYLE}`;
+    }
+    const path = `${folder}/${key}.webp`;
     const { data: pub } = svc.storage.from("site-assets").getPublicUrl(path);
 
     // Ya generada: se devuelve sin gastar IA.
-    const { data: existing } = await svc.storage.from("site-assets").list(`session-covers/v${COVER_STYLE_VERSION}`, { search: `${key}.webp` });
+    const { data: existing } = await svc.storage.from("site-assets").list(folder, { search: `${key}.webp` });
     if (existing?.some((f) => f.name === `${key}.webp`)) return json({ url: pub.publicUrl, cached: true });
 
     const cfg = await getAiConfig();
     const apiKey = cfg.mediaOrder[0] === "openai" ? cfg.openaiKey : cfg.lovableKey;
     if (!apiKey) return json({ error: "Falta la clave de IA del proyecto" }, 503);
 
-    const prompt = `A training session focused on ${groups.join(", ")}: the athlete performs a classic strength exercise for ${groups[0]}. ${STYLE}`;
     const r = await aiFetch(`${GATEWAY}/v1/images/generations`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
