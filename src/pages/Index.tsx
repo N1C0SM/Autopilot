@@ -1,4 +1,5 @@
 import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { lazy, Suspense, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
@@ -125,14 +126,18 @@ export default function Index() {
     <section aria-labelledby="como-titulo" className="px-5 py-14 sm:px-8 sm:py-20">
       <div className="mx-auto max-w-6xl">
         <h2 id="como-titulo" className="type-title1 sm:text-[40px] sm:leading-[44px]">Cómo funciona</h2>
-        <ol className="mt-8 grid gap-6 md:grid-cols-3 md:gap-10">
+        {/* Tres pasos en tarjetas, con el mismo lenguaje que la app. */}
+        <ol className="mt-8 grid gap-3 md:grid-cols-3 md:gap-4">
           {[
             [SlidersHorizontal, "Personaliza", "Objetivo, nivel, días, lesiones y material: gimnasio, casa o calistenia."],
             [Dumbbell, "Entrena", "Sigue tu sesión y apunta kg y repeticiones de cada serie."],
             [LineChart, "Progresa", plans.campaign ? "Consulta récords, volumen y peso. La siguiente carga se calcula con tus registros." : `Consulta récords, volumen y peso.${plans.plus ? ` En ${plans.plusName}, la carga siguiente se calcula con tus registros.` : ""}`],
-          ].map(([Icon, title, text]) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="flex items-start gap-4">
-            <span className="flex w-10 shrink-0 justify-center pt-0.5"><I className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" /></span>
-            <div className="min-w-0">
+          ].map(([Icon, title, text], index) => { const I = Icon as typeof Dumbbell; return <li key={title as string} className="rounded-2xl bg-card p-5">
+            <div className="flex items-center justify-between">
+              <IconTile icon={I} size="md" />
+              <span className="font-rounded type-title2 tabular-nums text-muted-foreground/40" aria-hidden="true">{index + 1}</span>
+            </div>
+            <div className="mt-4 min-w-0">
               <h3 className="type-headline">{title as string}</h3>
               <p className="mt-1 type-subhead text-muted-foreground">{text as string}</p>
             </div>

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
+import { IconTile } from "@/components/ui/icon-tile";
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, ClipboardList, LineChart, Target } from "lucide-react";
 import { Helmet } from "react-helmet-async";
@@ -73,14 +74,14 @@ export default function PublicInfo({ page }: { page: Page }) {
         <p className="mt-6 type-footnote text-muted-foreground">Los planes mensuales se renuevan automáticamente. Gestiona la cancelación desde Ajustes → Suscripción. <Link to="/preguntas-frecuentes" className="text-primary">Resolver dudas</Link></p>
       </section>}
       {page === "how" && <>
-        <ol className="mx-auto grid max-w-6xl gap-6 px-5 pb-10 sm:px-8 md:grid-cols-3 md:gap-10">
+        <ol className="mx-auto grid max-w-6xl gap-3 px-5 pb-10 sm:px-8 md:grid-cols-3 md:gap-4">
           {[
             [Target, "Cuéntanos tu objetivo", "Indica tu nivel, el material y los días que puedes entrenar."],
             [ClipboardList, "Crea tu rutina", `Empieza gratis.${plans.plus ? ` Si quieres nutrición y progresión de cargas automática, elige ${plans.plusName}.` : ""}${plans.coach ? ` ${plans.coachName} añade a Nicolás revisando tu plan.` : ""}`],
             [LineChart, "Registra y progresa", "Guarda tus series y compara tus entrenamientos para ver cómo avanzas."],
-          ].map(([Icon, title, text]) => { const I = Icon as typeof Target; return <li key={title as string} className="flex items-start gap-4">
-            <span className="flex w-10 shrink-0 justify-center pt-0.5"><I className="h-7 w-7 text-primary" strokeWidth={1.75} aria-hidden="true" /></span>
-            <div className="min-w-0"><h2 className="type-headline">{title as string}</h2><p className="mt-1 type-subhead text-muted-foreground">{text as string}</p></div>
+          ].map(([Icon, title, text], index) => { const I = Icon as typeof Target; return <li key={title as string} className="rounded-2xl bg-card p-5">
+            <div className="flex items-center justify-between"><IconTile icon={I} size="md" /><span className="font-rounded type-title2 tabular-nums text-muted-foreground/40" aria-hidden="true">{index + 1}</span></div>
+            <div className="mt-4 min-w-0"><h2 className="type-headline">{title as string}</h2><p className="mt-1 type-subhead text-muted-foreground">{text as string}</p></div>
           </li>; })}
         </ol>
         <ExplainerVideo />

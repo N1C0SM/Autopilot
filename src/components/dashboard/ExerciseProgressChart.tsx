@@ -1,5 +1,5 @@
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Dumbbell, Flag } from "lucide-react";
+import { Dumbbell } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProgressInlineState } from "@/components/progress/ProgressInlineState";
 import { hapticSelection } from "@/lib/native";
@@ -143,16 +143,29 @@ const ExerciseProgressChart = ({ exerciseName, history, metric, onMetricChange, 
           className={`mt-3 py-6 ${plotClass}`}
         />
       ) : (
-        <ProgressInlineState
-          icon={Flag}
-          title={startLabel ? `Punto de partida · ${startLabel}` : "Punto de partida"}
-          description={
-            history.length < 2
-              ? "Registra otra sesión de este ejercicio y aquí verás tu línea de progreso."
-              : "Registra otra sesión con peso y aquí verás tu línea de progreso."
-          }
-          className={`mt-3 py-6 ${plotClass}`}
-        />
+        // Vista previa en vez de un icono suelto: el primer punto real y la línea punteada
+        // hacia la próxima sesión, para que se entienda qué aparecerá aquí.
+        <div className={`mt-3 flex flex-col ${plotClass}`}>
+          <svg viewBox="0 0 300 120" className="h-full min-h-[120px] w-full flex-1" aria-hidden="true">
+            {[30, 60, 90].map((y) => (
+              <line key={y} x1="0" x2="300" y1={y} y2={y} stroke="hsl(var(--foreground))" strokeOpacity="0.07" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            ))}
+            <path d="M40 80 C 110 76, 170 58, 260 34" fill="none" stroke="hsl(var(--primary))" strokeOpacity="0.35" strokeWidth="2.5" strokeDasharray="2 7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            <circle cx="40" cy="80" r="11" fill="hsl(var(--primary))" fillOpacity="0.2" />
+            <circle cx="40" cy="80" r="6" fill="hsl(var(--primary))" />
+            <circle cx="260" cy="34" r="6" fill="none" stroke="hsl(var(--primary))" strokeOpacity="0.4" strokeWidth="2" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <div className="pt-3">
+            <div className="min-w-0">
+              <p className="type-headline">{startLabel ? `Punto de partida · ${startLabel}` : "Punto de partida"}</p>
+              <p className="mt-0.5 type-subhead text-muted-foreground">
+                {history.length < 2
+                  ? "Registra otra sesión de este ejercicio y aquí verás tu línea de progreso."
+                  : "Registra otra sesión con peso y aquí verás tu línea de progreso."}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

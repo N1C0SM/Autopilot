@@ -80,7 +80,7 @@ export default function PublicLayout({ title, description, children }: { title: 
         <div className="flex items-center lg:hidden">
           <Button variant="plain" asChild><Link to="/onboarding-choice" onClick={() => void hapticTap()}>Crear mi rutina</Link></Button>
           <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-            <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={1.75} /></Button></SheetTrigger>
+            <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Abrir menú" onClick={() => void hapticTap()}><Menu className="h-6 w-6" strokeWidth={2} /></Button></SheetTrigger>
             <SheetContent className="w-[min(90vw,360px)] overflow-y-auto px-4" onOpenAutoFocus={(e) => e.preventDefault()}>
               <SheetTitle className="text-primary">Autopilot</SheetTitle>
               <SheetDescription>Elige qué quieres consultar.</SheetDescription>
