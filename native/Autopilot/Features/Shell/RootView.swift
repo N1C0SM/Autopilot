@@ -253,9 +253,12 @@ struct SectionView: View {
             case .settings, .account: AccountView()
             case .trainerClients: TrainerClientsView()
             case .trainerProfile: TrainerProfileView()
-            case .adminMetrics, .adminDashboard: AdminMetricsView()
+            case .adminDashboard: AdminDashboardView(onNavigate: onNavigate)
+            case .adminMetrics: AdminMetricsWebView()
             case .adminUsers: AdminUsersView()
             case .adminRoadmap: RoadmapView()
+            case .adminReminders: AdminRemindersView()
+            case .adminPayments: AdminPaymentsView()
             default: AdminWebSectionView(section: section)
             }
         }
