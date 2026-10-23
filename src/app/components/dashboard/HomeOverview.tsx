@@ -318,7 +318,7 @@ const HomeOverview = ({
 
   return (
     // Con la sesión hecha no hay acción que centrar: el contenido se apila sin huecos.
-    <div className={cn("mx-auto flex w-full flex-col lg:max-w-5xl", !(completedToday && !activeWorkout) && "flex-1")}>
+    <div className={cn("flex w-full flex-col", !(completedToday && !activeWorkout) && "flex-1")}>
       {/* En web: dos columnas — saludo + semana a la izquierda, acción a la derecha */}
       <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[1fr_320px] lg:gap-x-12 lg:items-start">
         <div>

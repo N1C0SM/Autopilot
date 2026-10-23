@@ -205,7 +205,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange, onDe
     const trainerName = ownProfile?.display_name.trim() || selectedTrainer.name?.trim() || selectedTrainer.email.split("@")[0];
 
     return (
-      <div className="mx-auto max-w-3xl">
+      <div className="w-full">
         <div className="mb-6">
           <Button variant="plain" className={cn("-ml-2 gap-0.5 pl-1 pr-3", hostBar && "hidden md:inline-flex")} aria-label="Volver a entrenadores" onClick={() => { void hapticTap(); setSelectedTrainer(null); }}>
             <ChevronLeft className="h-5 w-5" strokeWidth={2.5} /> Entrenadores
@@ -376,7 +376,7 @@ const TrainerManagement = ({ allUsers, trainerIds, adminIds, onRolesChange, onDe
 
   // Trainer list
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <p className="type-subhead text-muted-foreground">{trainers.length} entrenador{trainers.length !== 1 ? "es" : ""}</p>
 
       {trainers.length > 0 ? (

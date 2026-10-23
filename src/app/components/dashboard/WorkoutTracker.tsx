@@ -1294,7 +1294,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
       {/* Gym day */}
       {currentPlan?.type === "gimnasio" && (
-        <div className={`flex flex-col gap-4 ${started ? "mx-auto w-full max-w-2xl flex-1 px-4 pt-3" : ""}`}>
+        <div className={`flex flex-col gap-4 ${started ? "w-full flex-1 px-4 pt-3" : ""}`}>
           {/* Today's workout summary */}
           <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
             {(() => {

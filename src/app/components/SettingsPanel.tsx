@@ -690,7 +690,7 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
   const goalTabStop = GOALS.some((g) => g.value === onboarding.goal) ? onboarding.goal : GOALS[0].value;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       {/* Profile */}
       <div className="order-1 flex flex-col gap-6">
         <div className="flex flex-col items-center px-4 pt-2 text-center">

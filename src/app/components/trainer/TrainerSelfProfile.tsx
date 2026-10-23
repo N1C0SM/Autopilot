@@ -139,7 +139,7 @@ const TrainerSelfProfile = ({ assignedClientCount }: { assignedClientCount: numb
   const canResign = assignedClientCount === 0;
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-6 pb-2 pt-2">
+    <div className="flex w-full min-w-0 flex-col gap-6 pb-2 pt-2">
       <form onSubmit={handleSave} className="flex flex-col gap-6">
         {/* Cabecera al estilo Apple ID: la foto y el nombre que ven tus clientes. */}
         <div className="flex flex-col items-center px-4 text-center">

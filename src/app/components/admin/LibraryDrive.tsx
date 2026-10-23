@@ -342,7 +342,7 @@ const LibraryDrive = () => {
     const packBooks = books.filter((x) => (x.kind || "book") === "book");
 
     return (
-      <div className="mx-auto max-w-3xl space-y-8">
+      <div className="w-full space-y-8">
         <div className="space-y-3">
           <InlineBack label={path.length ? path[path.length - 1].title : "Atrás"} onClick={() => setOpenId(null)} />
           <div className="flex items-start gap-3.5">
@@ -663,7 +663,7 @@ const LibraryDrive = () => {
   const countInside = (id: string) => books.filter((b) => b.parent_id === id).length;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="w-full space-y-4">
       <p className="max-w-xl type-subhead text-muted-foreground">
         Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones.
         Nada se ve fuera hasta que tú lo publicas.

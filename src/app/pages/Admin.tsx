@@ -251,7 +251,7 @@ const Admin = () => {
             )}
             <Suspense fallback={<div className="flex min-h-40 items-center justify-center" aria-hidden><Spinner /></div>}>
             {section === "dashboard" && (
-              <div className="max-w-5xl space-y-8">
+              <div className="w-full space-y-8">
                 <AdminStats users={clients} />
 
                 <ListGroup header="Requiere atención">
@@ -321,7 +321,7 @@ const Admin = () => {
             )}
 
             {section === "users" && (
-              <div className="max-w-5xl">
+              <div className="w-full">
                 {!selectedUser ? (
                   <UserList
                     users={users}
@@ -347,7 +347,7 @@ const Admin = () => {
             )}
 
             {section === "trainers" && (
-              <div className="max-w-5xl">
+              <div className="w-full">
                 <TrainerManagement
                   allUsers={users}
                   trainerIds={trainerIds}
@@ -358,49 +358,49 @@ const Admin = () => {
             )}
 
             {section === "reminders" && (
-              <div className="max-w-5xl">
+              <div className="w-full">
                 <PaymentReminders users={users.filter(u => !adminIds.has(u.user_id))} />
               </div>
             )}
 
             {section === "exercises" && (
-              <div className="max-w-3xl">
+              <div className="w-full">
                 <ExerciseLibraryFull />
               </div>
             )}
 
             {section === "drive" && (
-              <div className="max-w-5xl">
+              <div className="w-full">
                 <LibraryDrive />
               </div>
             )}
 
             {section === "rules" && (
-              <div className="max-w-2xl">
+              <div className="w-full">
                 <TrainingRulesEditor />
               </div>
             )}
 
             {section === "landing" && (
-              <div className="max-w-3xl">
+              <div className="w-full">
                 <SiteContentEditor />
               </div>
             )}
 
             {section === "blog" && (
-              <div className="max-w-4xl">
+              <div className="w-full">
                 <BlogPostsEditor />
               </div>
             )}
 
             {section === "physiques" && (
-              <div className="max-w-5xl">
+              <div className="w-full">
                 <GoalPhysiquesEditor />
               </div>
             )}
 
             {section === "payments" && (
-              <div className="max-w-2xl space-y-6">
+              <div className="w-full space-y-6">
                 <PaymentModeToggle />
               </div>
             )}
@@ -409,19 +409,19 @@ const Admin = () => {
             {section === "roadmap" && <RoadmapAdmin />}
 
             {section === "account" && (
-              <div className="max-w-2xl">
+              <div className="w-full">
                 <SettingsPanel adminMode />
               </div>
             )}
 
             {section === "emails" && (
-              <div className="max-w-4xl">
+              <div className="w-full">
                 <EmailTemplatesEditor />
               </div>
             )}
 
             {section === "metrics" && (
-              <div className="max-w-7xl">
+              <div className="w-full">
                 <AdminMetrics users={clients} onRefresh={refreshUsers} />
               </div>
             )}

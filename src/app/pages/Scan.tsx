@@ -1250,7 +1250,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         <NavBar
           solid={false}
           titleAsHeading={false}
-          className="container mx-auto max-w-7xl px-2"
+          className="w-full px-2"
           leading={
             <>
               {user && <SidebarTrigger className="hidden md:inline-flex" />}
@@ -1267,7 +1267,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
         />
       )}
 
-      <main className={embedded ? "w-full pb-6" : "container mx-auto max-w-7xl px-4 pt-2 pb-24"}>
+      <main className={embedded ? "w-full pb-6" : "w-full px-4 pt-2 pb-24"}>
         <AnimatePresence mode="wait">
           {!result && phase === "upload" ? (
             <motion.div
@@ -1276,7 +1276,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mx-auto w-full max-w-2xl space-y-10"
+              className="w-full space-y-10"
             >
               <header>
                 {!inline && (
@@ -1537,7 +1537,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mx-auto w-full max-w-2xl"
+              className="w-full"
             >
               <div className="text-center mb-8">
                 <div className="mx-auto w-[72px] h-[72px] rounded-[22%] bg-card flex items-center justify-center mb-5">
@@ -1735,7 +1735,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="mx-auto w-full max-w-2xl space-y-10"
+              className="w-full space-y-10"
             >
               {/* Protagonista: la puntuación de físico en un anillo, como Actividad */}
               <section>

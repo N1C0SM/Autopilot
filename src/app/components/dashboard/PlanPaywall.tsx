@@ -135,6 +135,6 @@ export const CoachPendingAssignment = () => (
     icon={UserCheck}
     title="Estamos asignándote un entrenador."
     description="Mientras tanto puedes seguir usando todo Plus. Te avisaremos en cuanto tengas a tu entrenador."
-    className="mx-auto max-w-2xl"
+    className="w-full"
   />
 );

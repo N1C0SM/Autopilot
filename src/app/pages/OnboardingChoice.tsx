@@ -47,7 +47,7 @@ export default function OnboardingChoice() {
       
       <div className="flex min-h-screen flex-col">
         <header className="app-chrome pt-safe">
-          <div className="container mx-auto flex h-14 max-w-2xl items-center px-4">
+          <div className="flex h-14 w-full items-center px-4">
             <button
               type="button"
               onClick={goBack}

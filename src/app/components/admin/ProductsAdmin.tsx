@@ -85,10 +85,10 @@ export default function ProductsAdmin() {
   ];
 
   return (
-    <div className="max-w-5xl space-y-8">
+    <div className="space-y-8">
       <ConsumerPlansAdmin />
 
-      <section className="max-w-3xl space-y-3">
+      <section className="space-y-3">
         <SectionHeader title="Usuarios por plan" />
         <ChipBar<PlanFilter> options={filters} value={filter} onChange={setFilter} aria-label="Filtrar por plan" />
         {visible.length === 0 ? (
@@ -125,7 +125,7 @@ export default function ProductsAdmin() {
       </section>
 
       {cfg && (
-        <section className="max-w-2xl space-y-4">
+        <section className="space-y-4">
           <SectionHeader title="Autopilot para entrenadores" />
           <div className="space-y-6">
             <ListGroup footer={cfg.enabled ? undefined : "El producto está construido pero actualmente no está disponible públicamente."}>
@@ -190,7 +190,7 @@ export default function ProductsAdmin() {
         </section>
       )}
 
-      <section className="max-w-3xl space-y-3">
+      <section className="space-y-3">
         <SectionHeader title={`Solicitudes de entrenadores (${apps.length})`} />
         {apps.length === 0 ? (
           <EmptyState icon={Inbox} title="Aún no hay solicitudes" />

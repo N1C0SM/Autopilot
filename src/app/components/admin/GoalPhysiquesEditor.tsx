@@ -160,7 +160,7 @@ const GoalPhysiquesEditor = () => {
   const editing = items.find((it) => it.id === editingId) ?? null;
 
   return (
-    <div className="space-y-6 md:max-w-2xl">
+    <div className="space-y-6">
       <div className="space-y-4">
         <p className="type-subhead text-muted-foreground">
           Físicos de referencia que verán los usuarios en el AI Scan. Pueden elegir uno como objetivo en vez de subir su propia foto.

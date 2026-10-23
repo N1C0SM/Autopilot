@@ -193,7 +193,7 @@ export default function RoadmapAdmin() {
   if (loading) return <div className="flex h-48 items-center justify-center"><Spinner /></div>;
   if (error) return <div className="py-12 space-y-4"><p>No se pudo cargar el Roadmap.</p><Button onClick={() => { setLoading(true); void load(); }}><RefreshCw />Reintentar</Button></div>;
 
-  return <div className="max-w-7xl mx-auto space-y-7 pb-6">
+  return <div className="w-full space-y-7 pb-6">
     <section className="border-b border-border pb-6">
       <div className="flex items-center justify-between gap-4"><div><p className="text-xs uppercase text-muted-foreground font-semibold">Autopilot · Dirección de producto</p><h2 className="type-title1 mt-2 flex items-center gap-2"><Focus className="size-6 text-primary" />Foco: v{current?.id ?? '1.0'}</h2></div><Button variant="ghost" size="icon" aria-label="Actualizar Roadmap" title="Actualizar" disabled={busy} onClick={() => void load()}><RefreshCw /></Button></div>
       <p className="text-muted-foreground mt-2">{current?.title}</p>

@@ -159,7 +159,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl lg:max-w-4xl flex-col gap-6" onErrorCapture={handleImageError}>
+    <div className="flex w-full flex-col gap-6" onErrorCapture={handleImageError}>
       <h2 className="sr-only">Rutina semanal</h2>
 
       <div

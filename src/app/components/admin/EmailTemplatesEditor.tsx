@@ -413,7 +413,7 @@ export default function EmailTemplatesEditor() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="w-full space-y-8">
       <p className="type-subhead text-muted-foreground">
         Personaliza el asunto y el HTML de cada email transaccional. Si está desactivado, se usa el diseño por defecto.
       </p>

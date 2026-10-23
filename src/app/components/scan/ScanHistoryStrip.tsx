@@ -54,7 +54,7 @@ export default function ScanHistoryStrip({ userId }: { userId: string }) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto mb-8 rounded-2xl border border-border bg-card/60 backdrop-blur p-5"
+      className="w-full mb-8 rounded-2xl border border-border bg-card/60 backdrop-blur p-5"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

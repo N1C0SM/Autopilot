@@ -561,7 +561,7 @@ const ProgressPhotos = ({ userId, onGoScan }: Props) => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl lg:max-w-5xl space-y-8">
+    <div className="w-full space-y-8">
       {loading && (
         <div className="grid grid-cols-3 gap-2" role="status" aria-label="Cargando fotos de progreso">
           {[0, 1, 2, 3, 4, 5].map((item) => <Skeleton key={item} className="aspect-[3/4] rounded-[10px]" />)}

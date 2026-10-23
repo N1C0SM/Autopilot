@@ -31,7 +31,7 @@ export default function BasicNutrition({ userId, onEdit }: { userId: string; onE
   if (failed) return <EmptyState icon={Apple} title="No se pudieron cargar tus objetivos" action={<Button onClick={onEdit}>Ver mis datos</Button>} />;
   if (!targets) return <Spinner label="Calculando objetivos" />;
   if (!targets.hasWeight) return <EmptyState icon={Apple} title="Completa tu peso para calcular tus objetivos" action={<Button onClick={onEdit}>Completar mis datos</Button>} />;
-  return <section className="mx-auto max-w-2xl space-y-8 py-4">
+  return <section className="w-full space-y-8 py-4">
     <h2 className="type-title1">Tus objetivos diarios</h2>
     <div className="flex items-center gap-6">
       <ProgressRing value={100} size={144} stroke={14} label={`Objetivo: ${targets.calories} kcal al día`}>

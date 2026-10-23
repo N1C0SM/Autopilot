@@ -658,7 +658,7 @@ const Dashboard = () => {
           {/* La oferta de Plus no espera a que acabe la primera semana: es cuando
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
-            <div className="mx-auto w-full space-y-8 empty:hidden lg:max-w-5xl">
+            <div className="w-full space-y-8 empty:hidden">
               {firstWeek && (
                 <div className="rounded-2xl bg-card p-4">
                   <div className="flex items-center gap-3">
@@ -709,7 +709,7 @@ const Dashboard = () => {
               {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
                 // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
-                <div className="mx-auto mb-3 flex w-full max-w-2xl items-center gap-2 rounded-2xl bg-card py-2 pl-4 pr-2 lg:max-w-4xl">
+                <div className="mb-3 flex w-full items-center gap-2 rounded-2xl bg-card py-2 pl-4 pr-2">
                   <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
                   </span>
@@ -1012,7 +1012,7 @@ const Dashboard = () => {
           </header>
 
           <main className={`min-w-0 flex-1 overflow-y-auto ${workoutMode ? "h-dvh p-0" : "p-4 md:p-8 lg:p-10 lg:pt-8"}`}>
-            <div className={`${workoutMode ? "h-full w-full" : "max-w-6xl mx-auto w-full"}`}>
+            <div className={`${workoutMode ? "h-full w-full" : "w-full"}`}>
               {pageContent}
             </div>
           </main>

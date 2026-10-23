@@ -130,7 +130,7 @@ const TrainerShell = ({ title, detail, screenKey, children }: TrainerShellProps)
           isDetail
             ? "pt-[calc(var(--nav-bar-height)+var(--safe-top,0px)+8px)]"
             : "pt-[calc(var(--nav-bar-height)+var(--safe-top,0px))]",
-          "md:mx-auto md:block md:h-auto md:max-w-5xl md:flex-1 md:overflow-visible md:overscroll-auto md:p-6 md:pb-8 lg:p-8",
+          "md:block md:h-auto md:w-full md:flex-1 md:overflow-visible md:overscroll-auto md:p-6 md:pb-8 lg:p-8",
         )}
       >
         {!detail && (

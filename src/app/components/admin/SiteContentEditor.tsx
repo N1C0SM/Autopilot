@@ -500,7 +500,7 @@ const SiteContentEditor = () => {
   const saveButton = "w-full md:w-auto";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-12">
+    <div className="w-full space-y-12">
       <p className="type-subhead text-muted-foreground">
         Lo que se ve en la home pública y la IA que lo genera.
       </p>
