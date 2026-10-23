@@ -49,7 +49,7 @@ struct HomeView: View {
                              detail: scheduled.isEmpty ? "Sin sesiones esta semana" : "\(min(doneDays.count, scheduled.count)) de \(scheduled.count) \(scheduled.count == 1 ? "sesión" : "sesiones") esta semana") { onNavigate(.progress) }
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 110)
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()

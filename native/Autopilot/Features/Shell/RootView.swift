@@ -143,18 +143,19 @@ struct MainShell: View {
             #if os(iOS)
             if sizeClass == .compact && session.role == .user {
                 // Como la web en el móvil: cabecera con campana y avatar, y barra flotante abajo.
-                ZStack(alignment: .bottom) {
-                    NavigationStack {
-                        SectionView(section: selection ?? .home, onNavigate: { selection = $0 })
-                            .toolbar {
-                                ToolbarItem(placement: .topBarTrailing) {
-                                    HeaderButtons(initial: initial) { showSettings = true }
-                                }
+                // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
+                NavigationStack {
+                    SectionView(section: selection ?? .home, onNavigate: { selection = $0 })
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                HeaderButtons(initial: initial) { showSettings = true }
                             }
-                            .navigationDestination(isPresented: $showSettings) { AccountView().navigationTitle("Ajustes") }
-                    }
-                    FloatingTabBar(tabs: AppSection.userTabs, selection: Binding(get: { selection ?? .home }, set: { selection = $0 }))
-                        .padding(.bottom, 4)
+                        }
+                        .navigationDestination(isPresented: $showSettings) { AccountView().navigationTitle("Ajustes") }
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            FloatingTabBar(tabs: AppSection.userTabs, selection: Binding(get: { selection ?? .home }, set: { selection = $0 }))
+                                .padding(.bottom, 4).padding(.top, 8)
+                        }
                 }
             } else {
                 split

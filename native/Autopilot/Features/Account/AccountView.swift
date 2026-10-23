@@ -191,7 +191,7 @@ struct AccountView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 110)
+            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
