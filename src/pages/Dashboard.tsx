@@ -1,4 +1,4 @@
-import { Play, PencilLine, Sparkles } from "lucide-react";
+import { Play, PencilLine } from "lucide-react";
 import { IconTile } from "@/components/ui/icon-tile";
 import { generatePlanGuarded, isManualPlan } from "@/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/lib/releaseScope";
@@ -709,8 +709,7 @@ const Dashboard = () => {
               {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
                 // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
-                <div className="mx-auto mb-3 flex w-full max-w-2xl items-center gap-3 rounded-2xl bg-card py-2 pl-3 pr-2 lg:max-w-4xl">
-                  <IconTile icon={isManualPlan(dayPlans) ? PencilLine : Sparkles} />
+                <div className="mx-auto mb-3 flex w-full max-w-2xl items-center gap-2 rounded-2xl bg-card py-2 pl-4 pr-2 lg:max-w-4xl">
                   <span className="min-w-0 flex-1 truncate type-subhead font-medium">
                     {isManualPlan(dayPlans) ? "Rutina personalizada" : "Piloto automático"}
                   </span>
