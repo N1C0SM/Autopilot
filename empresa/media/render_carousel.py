@@ -101,7 +101,10 @@ C={
       ("03","Blueprint Transformación","Tu plan completo de 12 semanas.",None)],
  save="Para cuando decidas empezar en serio.",book="Pack completo Autopilot",what="Base de fuerza + Atlas de progresiones + Blueprint Transformación.",old="99,70 € por separado",price="29,90 €"),
 }
-out=os.environ["OUT"]; os.makedirs(out,exist_ok=True)
-for k,c in C.items():
-    slides=[lambda i,n,c=c: cover(c,i,n)]+[lambda i,n,p=p,c=c: point(c,p,i,n) for p in c["pts"]]+[lambda i,n,c=c: save(c,i,n), lambda i,n,c=c: cta(c,i,n)]
-    for i,fn in enumerate(slides): fn(i,len(slides)).save(f"{out}/{k}-{i+1}.jpg",quality=92)
+def slides(c):
+    return [lambda i,n,c=c: cover(c,i,n)]+[lambda i,n,p=p,c=c: point(c,p,i,n) for p in c["pts"]]+[lambda i,n,c=c: save(c,i,n), lambda i,n,c=c: cta(c,i,n)]
+if __name__=="__main__":
+    out=os.environ["OUT"]; os.makedirs(out,exist_ok=True)
+    for k,c in C.items():
+        S=slides(c)
+        for i,fn in enumerate(S): fn(i,len(S)).save(f"{out}/{k}-{i+1}.jpg",quality=92)
