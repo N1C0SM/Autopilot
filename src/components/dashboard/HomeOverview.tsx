@@ -1,4 +1,3 @@
-import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 import { readMealsDone as readMealsDoneFor } from "@/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
@@ -436,17 +435,13 @@ const HomeOverview = ({
               <span className="shrink-0 type-subhead text-primary">Resumen</span>
             </button>
           ) : (
-            <div className="relative overflow-hidden rounded-[28px] bg-card">
-              {/* Misma foto de marca que la landing: el descanso también es parte del plan. */}
-              <img src={BRAND_PHOTOS.home} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_25%] opacity-90" />
-              <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
-              <div className="relative flex min-h-[18rem] flex-col justify-end p-5">
-                <Moon aria-hidden="true" className="h-6 w-6 text-primary" strokeWidth={2.25} />
-                <h3 className="mt-2 font-rounded text-[28px] font-bold leading-tight tracking-tight">Hoy toca descansar</h3>
-                <p className="mt-1 type-subhead text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones esta semana."}</p>
-                <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={openWeek}>Entrenar igualmente</Button>
-              </div>
-            </div>
+            <EmptyState
+              rest
+              icon={Moon}
+              title="Hoy toca descansar"
+              description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
+              action={<Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>}
+            />
           )}
           {activeWorkout && !activeWorkoutIsToday && (
             <div className="mt-4 rounded-2xl bg-card px-4 py-3 text-left">

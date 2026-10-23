@@ -1,4 +1,3 @@
-import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1236,7 +1235,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           card
           className="mt-2"
           icon={Moon}
-          photo={BRAND_PHOTOS.home}
+          rest
           title="Día de descanso"
           description="Recupera, o elige otra sesión de tu semana"
           action={
