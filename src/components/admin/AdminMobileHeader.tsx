@@ -17,6 +17,10 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import NavBar from "@/components/native/NavBar";
 import { hapticTap } from "@/lib/native";
+import { useAccountLongPress } from "@/hooks/useAccountLongPress";
+import { openAccountPicker } from "@/lib/accounts";
+import { supportsMultipleAccounts } from "@/lib/platform";
+import { ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import autopilotLogo from "@/assets/autopilot-logo.png";
 import type { AdminSection } from "@/pages/Admin";
@@ -100,6 +104,7 @@ const menuRow =
 
 /** Barra de navegación del panel admin en pantallas estrechas, con el menú de secciones. */
 const AdminMobileHeader = ({ title, section, onNavigate, onSignOut, contentRef, layoutKey, onBack, backLabel = "Atrás" }: Props) => {
+  const longPress = useAccountLongPress();
   const [open, setOpen] = useState(false);
   const barRef = useRef<HTMLElement>(null);
   const { scrolled, collapsed, hasHeading } = useContentTitleState(contentRef, barRef, layoutKey);
@@ -145,8 +150,10 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut, contentRef, 
           <SheetTrigger asChild>
             <button
               type="button"
-              aria-label="Menú de administración"
-              onClick={() => void hapticTap()}
+              aria-label={supportsMultipleAccounts() ? "Menú de administración. Mantén pulsado para cambiar de cuenta" : "Menú de administración"}
+              // Tras una pulsación larga no se abre el menú: ya se abrió el selector de cuentas.
+              onClick={(e) => { if (longPress.consumed()) { e.preventDefault(); return; } void hapticTap(); }}
+              {...longPress.handlers}
               className="inline-flex h-11 w-11 shrink-0 items-center justify-center transition-opacity active:opacity-60"
             >
               <img decoding="async" src={autopilotLogo} alt="" className="h-[30px] w-[30px] rounded-full object-cover" />
@@ -193,6 +200,14 @@ const AdminMobileHeader = ({ title, section, onNavigate, onSignOut, contentRef, 
                 <SettingsIcon className={cn("h-5 w-5 shrink-0", section === "account" ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
                 Mi cuenta
               </button>
+              {supportsMultipleAccounts() && <button
+                type="button"
+                onClick={() => { void hapticTap(); setOpen(false); openAccountPicker(); }}
+                className={menuRow}
+              >
+                <ArrowLeftRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                Cambiar de cuenta
+              </button>}
               <button
                 type="button"
                 onClick={() => {

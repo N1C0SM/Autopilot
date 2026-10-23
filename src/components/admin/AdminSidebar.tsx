@@ -1,3 +1,6 @@
+import { ArrowLeftRight } from "lucide-react";
+import { openAccountPicker } from "@/lib/accounts";
+import { supportsMultipleAccounts } from "@/lib/platform";
 import {
   Sidebar,
   SidebarContent,
@@ -93,6 +96,12 @@ const AdminSidebar = ({ section, onNavigate, userCount, onSignOut }: Props) => {
 
       <SidebarFooter>
         <SidebarMenu>
+          {supportsMultipleAccounts() && <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Cambiar de cuenta" onClick={() => { void hapticTap(); openAccountPicker(); }}>
+              <ArrowLeftRight aria-hidden="true" />
+              {!collapsed && <span>Cambiar de cuenta</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>}
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Cerrar sesión" onClick={() => { void hapticTap(); onSignOut(); }} className="text-destructive hover:text-destructive active:text-destructive">
               <LogOut aria-hidden="true" />
