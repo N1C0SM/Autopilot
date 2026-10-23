@@ -35,12 +35,14 @@
 		E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D06C6CE81D75452F06C8802 /* Backend.swift */; };
 		EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172F9A007BDD4D9E6CB124BB /* AccountView.swift */; };
 		EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80424D4030A49FC7F8638EEF /* RootView.swift */; };
+		EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F52B91A212936EB6B6D716 /* AdminBlog.swift */; };
 		FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B2604636425A7A76330A3C /* AutopilotApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		04DF82EEABE70C2CD7FA8478 /* Accounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accounts.swift; sourceTree = "<group>"; };
 		172F9A007BDD4D9E6CB124BB /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		18F52B91A212936EB6B6D716 /* AdminBlog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBlog.swift; sourceTree = "<group>"; };
 		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
@@ -85,6 +87,7 @@
 		06D9881E96130E38090738A6 /* Admin */ = {
 			isa = PBXGroup;
 			children = (
+				18F52B91A212936EB6B6D716 /* AdminBlog.swift */,
 				66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */,
 				C3306B7A6F1F1C5159421755 /* AdminPayments.swift */,
 				C67655E7437E327953D3487E /* AdminPhysiques.swift */,
@@ -316,6 +319,7 @@
 				EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */,
 				509D6E210D8DC96844E661C5 /* Accounts.swift in Sources */,
 				4E59183CC035EA035A02E697 /* ActiveWorkout.swift in Sources */,
+				EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */,
 				0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */,
 				19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */,
 				37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */,
