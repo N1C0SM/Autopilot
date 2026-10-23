@@ -255,6 +255,7 @@ struct SectionView: View {
             case .trainerProfile: TrainerProfileView()
             case .adminMetrics, .adminDashboard: AdminMetricsView()
             case .adminUsers: AdminUsersView()
+            case .adminRoadmap: RoadmapView()
             default: AdminWebSectionView(section: section)
             }
         }
