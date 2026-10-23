@@ -118,6 +118,8 @@ const PRsList = ({ userId }: Props) => {
     );
   }
 
+  // Decimales en español (49,6), como en el resto de la app.
+  const kg = (n: number) => n.toLocaleString("es-ES", { maximumFractionDigits: 1 });
   const top = prs[0];
   const topHasEstimate = top.estimated_1rm != null;
 
@@ -128,8 +130,8 @@ const PRsList = ({ userId }: Props) => {
           <IconTile icon={Trophy} />
           <p className="type-headline">Tu mejor marca</p>
         </div>
-        <p className="mt-4 font-rounded text-[48px] font-bold leading-none tabular-nums text-primary">
-          {topHasEstimate ? top.estimated_1rm : top.weight}
+        <p className="mt-4 font-rounded text-[64px] font-bold leading-none tracking-tight tabular-nums text-primary">
+          {kg(topHasEstimate ? top.estimated_1rm! : top.weight)}
           <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>
         </p>
         <p className="mt-2 type-subhead text-muted-foreground">
@@ -148,11 +150,11 @@ const PRsList = ({ userId }: Props) => {
             trailing={
               <span className="block text-right">
                 <span className="block type-body font-rounded font-semibold tabular-nums">
-                  {pr.weight} kg × {pr.reps}
+                  {kg(pr.weight)} kg × {pr.reps}
                 </span>
                 {pr.estimated_1rm != null && (
                   <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">
-                    1RM ~{pr.estimated_1rm} kg
+                    1RM ~{kg(pr.estimated_1rm)} kg
                   </span>
                 )}
               </span>
