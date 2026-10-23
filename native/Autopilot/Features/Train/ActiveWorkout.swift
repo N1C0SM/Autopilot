@@ -25,6 +25,12 @@ final class ActiveWorkout: ObservableObject {
     var previous: [String: [SetLog]] = [:]
     /// Duración objetivo del descanso actual, para la barra de progreso.
     @Published var restTarget: Int = 60
+    /// Esfuerzo de la sesión anterior (la sugerencia no sube carga tras un RPE ≥ 9).
+    var previousRpe: Int?
+    /// Ejercicio original → ejercicio que el usuario ha puesto en su lugar.
+    @Published var swaps: [String: String] = [:]
+    /// Récords batidos al terminar.
+    @Published var records: [String] = []
 
     private static func key(_ userId: String) -> String { "active-workout.\(userId)" }
 
@@ -52,8 +58,8 @@ final class ActiveWorkout: ObservableObject {
     }
 
     var exercises: [GymExercise] { draft.day.exercises ?? [] }
-    var doneSets: Int { draft.logs.values.flatMap { $0 }.filter(\.done).count }
-    var totalSets: Int { draft.logs.values.reduce(0) { $0 + $1.count } }
+    var doneSets: Int { draft.logs.values.flatMap { $0 }.filter { $0.done && $0.isWarmup != true }.count }
+    var totalSets: Int { draft.logs.values.flatMap { $0 }.filter { $0.isWarmup != true }.count }
     var volumeKg: Double {
         var total = 0.0
         for set in draft.logs.values.joined() where set.done && set.isWarmup != true {
@@ -79,7 +85,9 @@ final class ActiveWorkout: ObservableObject {
         update(exercise.name, set: index) { $0.done.toggle(); nowDone = $0.done }
         if nowDone {
             Haptics.success()
-            startRest(seconds: exercise.restSeconds)
+            // Descanso elegido en Ajustes → Tu forma de entrenar; si no hay, el del ejercicio.
+            let chosen = UserDefaults.standard.integer(forKey: "rest-seconds")
+            startRest(seconds: chosen > 0 ? chosen : exercise.restSeconds)
         } else {
             Haptics.tap()
         }
@@ -99,6 +107,80 @@ final class ActiveWorkout: ObservableObject {
         sets.remove(at: index)
         draft.logs[exercise] = sets
         persist()
+    }
+
+    // MARK: Sobrecarga, bajadas y calentamiento (como la web)
+
+    func applyProgression(_ exercise: String, _ s: ProgressionSuggestion) {
+        guard var sets = draft.logs[exercise] else { return }
+        for i in sets.indices where !sets[i].done {
+            if s.label == .addRep { sets[i].reps += 1 } else if !s.weight.isEmpty { sets[i].weight = s.weight }
+        }
+        draft.logs[exercise] = sets
+        persist()
+        Haptics.success()
+    }
+
+    func addDrop(_ exercise: String, set index: Int) {
+        update(exercise, set: index) { set in
+            var drops = set.drops ?? []
+            let base = drops.last.map { Progression.weight($0.weight) } ?? Progression.weight(set.weight)
+            let next = base.map { w in let v = (w * 0.8 * 2).rounded() / 2; return v.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(v)) : String(v) } ?? ""
+            drops.append(.init(reps: set.reps, weight: next))
+            set.drops = drops
+        }
+        Haptics.tap()
+    }
+
+    func updateDrop(_ exercise: String, set index: Int, drop: Int, _ change: (inout SetLog.Drop) -> Void) {
+        update(exercise, set: index) { set in
+            guard var drops = set.drops, drops.indices.contains(drop) else { return }
+            change(&drops[drop]); set.drops = drops
+        }
+    }
+
+    func removeDrop(_ exercise: String, set index: Int, drop: Int) {
+        update(exercise, set: index) { set in
+            guard var drops = set.drops, drops.indices.contains(drop) else { return }
+            drops.remove(at: drop); set.drops = drops.isEmpty ? nil : drops
+        }
+    }
+
+    func toggleWarmup(_ exercise: String, set index: Int) {
+        update(exercise, set: index) { $0.isWarmup = $0.isWarmup == true ? nil : true }
+        Haptics.selection()
+    }
+
+    func swap(_ original: String, to replacement: String?, userId: UUID) {
+        if let r = replacement { swaps[original] = r } else { swaps[original] = nil }
+        struct Pref: Encodable { let user_id: UUID; let original_exercise_name: String; let preferred_exercise_name: String?; let last_used_at: String }
+        Task {
+            _ = try? await Backend.client.from("exercise_user_preferences")
+                .upsert(Pref(user_id: userId, original_exercise_name: original, preferred_exercise_name: replacement, last_used_at: ISO8601DateFormatter().string(from: Date())),
+                        onConflict: "user_id,original_exercise_name").execute()
+        }
+    }
+
+    /// Mejor serie por 1RM estimado (Epley) frente al récord guardado; las de calentamiento nunca cuentan.
+    private func detectRecords(userId: UUID) async -> [String] {
+        struct PR: Encodable { let user_id: UUID; let exercise_name: String; let weight: Double; let reps: Int; let estimated_1rm: Double; let achieved_at: String }
+        struct Best: Decodable { let estimated_1rm: Double? }
+        var inserts: [PR] = []
+        for (name, sets) in draft.logs {
+            let done = sets.compactMap { s -> (Double, Int)? in
+                guard s.done, s.isWarmup != true, s.reps > 0, let w = Progression.weight(s.weight) else { return nil }
+                return (w, s.reps)
+            }
+            guard let best = done.max(by: { $0.0 * (1 + Double($0.1) / 30) < $1.0 * (1 + Double($1.1) / 30) }) else { continue }
+            let e1rm = best.0 * (1 + Double(best.1) / 30)
+            let existing: [Best] = (try? await Backend.client.from("personal_records").select("estimated_1rm")
+                .eq("user_id", value: userId).eq("exercise_name", value: name).order("estimated_1rm", ascending: false).limit(1).execute().value) ?? []
+            if e1rm > (existing.first?.estimated_1rm ?? 0) {
+                inserts.append(PR(user_id: userId, exercise_name: name, weight: best.0, reps: best.1, estimated_1rm: (e1rm * 10).rounded() / 10, achieved_at: draft.date))
+            }
+        }
+        if !inserts.isEmpty { _ = try? await Backend.client.from("personal_records").upsert(inserts, onConflict: "user_id,exercise_name,weight,reps").execute() }
+        return inserts.map(\.exercise_name)
     }
 
     // MARK: Descanso
@@ -152,6 +234,7 @@ final class ActiveWorkout: ObservableObject {
         do {
             try await TrainingRepo.saveLogs(userId: userId, day: draft.day.day, date: draft.date, logs: done, rpe: rpe)
             try await TrainingRepo.complete(userId: userId, day: draft.day.day, date: draft.date, rpe: rpe)
+            records = await detectRecords(userId: userId)
             skipRest()
             Self.clear(userId: draft.userId)
             Haptics.success()

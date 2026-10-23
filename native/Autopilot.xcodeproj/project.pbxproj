@@ -29,6 +29,7 @@
 		87E60DB75F6066D44856E541 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E7B8525054278D389D0B59 /* ScanView.swift */; };
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
+		9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D7A51FF897F39CC070F086 /* Progression.swift */; };
 		A3F7B49D3F50D6E4FB409B18 /* AdminLanding.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */; };
 		B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F83F6BD939EF251A757930A /* AdminExercises.swift */; };
 		B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54840FD78B7470F1A4A687B3 /* RoadmapView.swift */; };
@@ -77,6 +78,7 @@
 		D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminRules.swift; sourceTree = "<group>"; };
 		D9E053FD3BBE7DBA136AACF9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		EBDF230DE9FE12D555FC3505 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		F4D7A51FF897F39CC070F086 /* Progression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progression.swift; sourceTree = "<group>"; };
 		F4E7B8525054278D389D0B59 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -213,6 +215,7 @@
 				04DF82EEABE70C2CD7FA8478 /* Accounts.swift */,
 				5D06C6CE81D75452F06C8802 /* Backend.swift */,
 				2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */,
+				F4D7A51FF897F39CC070F086 /* Progression.swift */,
 				D9E053FD3BBE7DBA136AACF9 /* Session.swift */,
 				C60F84451BD2C06501A2E80E /* Training.swift */,
 			);
@@ -351,6 +354,7 @@
 				42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */,
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
 				642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */,
+				9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */,
 				B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */,
 				EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */,
 				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,

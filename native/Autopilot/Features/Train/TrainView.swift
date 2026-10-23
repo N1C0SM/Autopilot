@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 /// Entrenar, calcado de `WorkoutTracker.tsx` (antes de empezar): selector de días,
 /// portada, título, «N ejercicios · M series», «Empezar entrenamiento» y la lista «Ejercicios».
@@ -248,6 +249,11 @@ struct TrainView: View {
         let previous = await TrainingRepo.previousSets(userId: id, exercises: (day.exercises ?? []).map(\.name))
         let workout = ActiveWorkout(userId: idString, day: day, previous: previous)
         workout.previous = previous
+        workout.previousRpe = await TrainingRepo.previousRpe(userId: id, exercises: (day.exercises ?? []).map(\.name))
+        struct Pref: Decodable { let original_exercise_name: String; let preferred_exercise_name: String? }
+        let prefs: [Pref] = (try? await Backend.client.from("exercise_user_preferences").select("original_exercise_name, preferred_exercise_name")
+            .eq("user_id", value: id).execute().value) ?? []
+        for p in prefs { if let r = p.preferred_exercise_name, (day.exercises ?? []).contains(where: { $0.name == p.original_exercise_name }) { workout.swaps[p.original_exercise_name] = r } }
         workout.draft.currentExercise = focus
         workout.openExercises = [focus]
         active = workout

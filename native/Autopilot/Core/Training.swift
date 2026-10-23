@@ -80,12 +80,16 @@ struct SetLog: Codable, Hashable {
     var weight: String
     var done: Bool
     var isWarmup: Bool?
+    /// Bajadas del dropset (opcional, como en la web).
+    var drops: [Drop]?
 
-    init(reps: Int, weight: String, done: Bool, isWarmup: Bool?) {
-        self.reps = reps; self.weight = weight; self.done = done; self.isWarmup = isWarmup
+    struct Drop: Codable, Hashable { var reps: Int; var weight: String }
+
+    init(reps: Int, weight: String, done: Bool, isWarmup: Bool?, drops: [Drop]? = nil) {
+        self.reps = reps; self.weight = weight; self.done = done; self.isWarmup = isWarmup; self.drops = drops
     }
 
-    enum CodingKeys: String, CodingKey { case reps, weight, done, isWarmup }
+    enum CodingKeys: String, CodingKey { case reps, weight, done, isWarmup, drops }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -93,6 +97,7 @@ struct SetLog: Codable, Hashable {
         weight = FlexibleValue.string(c, .weight) ?? ""
         done = (try? c.decode(Bool.self, forKey: .done)) ?? false
         isWarmup = try? c.decodeIfPresent(Bool.self, forKey: .isWarmup)
+        drops = try? c.decodeIfPresent([Drop].self, forKey: .drops)
     }
 }
 
@@ -142,6 +147,15 @@ enum TrainingRepo {
         var out: [String: [SetLog]] = [:]
         for row in rows where out[row.exercise_name] == nil { out[row.exercise_name] = row.sets_completed ?? [] }
         return out
+    }
+
+    /// Esfuerzo de la última sesión de estos ejercicios (para no subir carga tras un RPE ≥ 9).
+    static func previousRpe(userId: UUID, exercises: [String]) async -> Int? {
+        struct Row: Decodable { let rpe: Int? }
+        guard !exercises.isEmpty, let rows: [Row] = try? await Backend.client.from("workout_logs").select("rpe")
+            .eq("user_id", value: userId).in("exercise_name", values: exercises).not("rpe", operator: .is, value: "null")
+            .order("logged_at", ascending: false).limit(1).execute().value else { return nil }
+        return rows.first?.rpe
     }
 
     static func saveLogs(userId: UUID, day: String, date: String, logs: [String: [SetLog]], rpe: Int?) async throws {
