@@ -1,3 +1,4 @@
+import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 import { readMealsDone as readMealsDoneFor } from "@/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
@@ -89,11 +90,14 @@ export const OverviewRow = ({
   icon,
   title,
   description,
+  value,
   onClick,
 }: {
   icon: ReactNode;
   title: string;
   description: ReactNode;
+  /** Cifra grande, como en la landing y en Fitness: lo primero que se lee. */
+  value?: ReactNode;
   onClick?: () => void;
 }) => {
   const className = "flex min-h-[7.5rem] min-w-0 flex-col rounded-2xl bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -103,7 +107,8 @@ export const OverviewRow = ({
         <span aria-hidden="true">{icon}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
       </span>
-      <span className="mt-auto block pt-4 type-headline">{title}</span>
+      {value != null && <span className="mt-auto block pt-4 font-rounded text-[30px] font-bold leading-none tracking-tight tabular-nums">{value}</span>}
+      <span className={`${value != null ? "mt-2" : "mt-auto pt-4"} block type-headline`}>{title}</span>
       <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{description}</span>
     </>
   );
@@ -232,14 +237,14 @@ const HomeOverview = ({
     : meals.length
       ? `${doneMealCount} de ${meals.length} comidas`
       : calorieLabel
-        ? `${calorieLabel} objetivo`
+        ? "Objetivo diario"
         : macroError
           ? "Objetivos por revisar"
           : "Ver plan de hoy";
   const nutritionExtra = !nutrition
     ? isIOSNative() ? null : "Incluido en Plus"
     : meals.length
-      ? macroError ? "Objetivos por revisar" : calorieLabel
+      ? macroError ? "Objetivos por revisar" : null
       : calorieLabel && macroError ? "Objetivos por revisar" : null;
 
   const readMealsDone = useCallback(() => {
@@ -431,15 +436,17 @@ const HomeOverview = ({
               <span className="shrink-0 type-subhead text-primary">Resumen</span>
             </button>
           ) : (
-            <EmptyState
-              className="py-0"
-              icon={Moon}
-              title="Hoy toca descansar"
-              description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
-              action={(
-                <Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>
-              )}
-            />
+            <div className="relative overflow-hidden rounded-[28px] bg-card">
+              {/* Misma foto de marca que la landing: el descanso también es parte del plan. */}
+              <img src={BRAND_PHOTOS.home} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_25%] opacity-90" />
+              <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
+              <div className="relative flex min-h-[18rem] flex-col justify-end p-5">
+                <Moon aria-hidden="true" className="h-6 w-6 text-primary" strokeWidth={2.25} />
+                <h3 className="mt-2 font-rounded text-[28px] font-bold leading-tight tracking-tight">Hoy toca descansar</h3>
+                <p className="mt-1 type-subhead text-muted-foreground">{nextSession ?? "Tu plan aún no tiene sesiones esta semana."}</p>
+                <Button type="button" variant="secondary" size="lg" className="mt-5 w-full" onClick={openWeek}>Entrenar igualmente</Button>
+              </div>
+            </div>
           )}
           {activeWorkout && !activeWorkoutIsToday && (
             <div className="mt-4 rounded-2xl bg-card px-4 py-3 text-left">
@@ -466,6 +473,7 @@ const HomeOverview = ({
       <div className="grid grid-cols-2 gap-3 lg:gap-4">
         <OverviewRow
           title="Nutrición"
+          value={nutrition && calorieTarget ? <>{calorieTarget.toLocaleString("es-ES")}<span className="ml-1 type-subhead font-semibold text-muted-foreground">kcal</span></> : undefined}
           onClick={() => onNavigate("nutrition")}
           icon={
             nutrition ? (
@@ -487,6 +495,7 @@ const HomeOverview = ({
         />
         <OverviewRow
           title="Progreso"
+          value={scheduledDays.length ? <>{sessionCount}<span className="type-title3 text-muted-foreground">/{scheduledDays.length}</span></> : undefined}
           onClick={() => onNavigate("progress")}
           icon={(
             <ProgressRing value={scheduledDays.length ? (sessionCount / scheduledDays.length) * 100 : 0} size={32} stroke={3.5}>
