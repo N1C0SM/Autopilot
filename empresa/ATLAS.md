@@ -10,6 +10,9 @@ Fuente de verdad del **cómo** se dirige la empresa. El estado vive en `ESTADO.m
 Gasto o contratación · publicar/desplegar en producción (Lovable publish incluido) · comunicaciones comerciales externas · acciones irreversibles · cambios en pagos, precios, permisos o datos · operaciones que puedan perjudicar a usuarios · decisiones estratégicas.
 Formato de solicitud (en `ESTADO.md › Aprobaciones`): decisión · motivo · riesgos · coste estimado · consecuencia de no actuar.
 
+## Organigrama y agentes
+CEO (fundador) → Co-CEO (Atlas, sesión principal) → Directores (solo planifican y delegan) → Empleados (construyen). Definición y agentes ejecutables en [`agents/`](../agents/README.md).
+
 ## Organización adaptativa
 Los departamentos son **funciones**, no agentes permanentes. Atlas los crea/cierra en `ESTADO.md › Organización` con: responsabilidad, habilidades, herramientas, entradas, criterio de aceptación.
 - Por defecto un solo agente ejecuta todas las funciones.
