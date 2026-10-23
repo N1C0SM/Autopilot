@@ -111,7 +111,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
   return (
     <div className="space-y-8">
       {(hasMeals || showTargets) && (
-        <section aria-label="Resumen de hoy">
+        <section aria-label="Resumen de hoy" className="rounded-2xl bg-card p-4">
           <div className="flex items-center gap-5">
             {hasMeals && (
               <ProgressRing
@@ -175,7 +175,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
                       {fmt(m.value)}
                       <span className="ml-0.5 type-subhead font-semibold text-muted-foreground">g</span>
                     </p>
-                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-primary/20" aria-hidden="true">
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary/20" aria-hidden="true">
                       <div className="h-full rounded-full bg-primary" style={{ width: `${m.share}%` }} />
                     </div>
                   </div>
@@ -225,6 +225,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
 
       {!hasMeals ? (
         <EmptyState
+          card
           icon={Clock}
           title="Sin comidas todavía"
           description="Guarda tus datos en Ajustes y podrás generarlas con tus macros."
