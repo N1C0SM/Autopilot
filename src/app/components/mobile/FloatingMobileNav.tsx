@@ -42,7 +42,13 @@ const FloatingMobileNav = ({ active, items, label, layoutId, onChange, className
     }}
     aria-label={label}
   >
-    <ul className="mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 material rounded-full p-1">
+    {/* Fondo que tapa el contenido entre la barra y el borde inferior: nada asoma por debajo ni a través de ella. */}
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -inset-x-3 -top-6 bg-gradient-to-t from-background via-background/95 to-transparent"
+      style={{ bottom: "calc(-0.75rem - env(safe-area-inset-bottom, 0px))" }}
+    />
+    <ul className="relative mx-auto flex h-[var(--mobile-nav-height)] max-w-[30rem] items-stretch gap-0.5 rounded-full bg-card p-1 shadow-[0_8px_24px_rgba(0,0,0,0.5)]">
       {items.map(({ key, label: itemLabel, icon: Icon, activeIcon: ActiveIcon, locked }) => {
         const isActive = active === key;
         return (

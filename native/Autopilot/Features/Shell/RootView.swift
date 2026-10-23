@@ -155,6 +155,13 @@ struct MainShell: View {
                         .safeAreaInset(edge: .bottom, spacing: 0) {
                             FloatingTabBar(tabs: AppSection.userTabs, selection: Binding(get: { selection ?? .home }, set: { selection = $0 }))
                                 .padding(.bottom, 4).padding(.top, 8)
+                                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+                                // Tapa lo que hay entre la barra y el borde: nada asoma por debajo.
+                                .background(
+                                    LinearGradient(colors: [.black.opacity(0), .black.opacity(0.95), .black], startPoint: .top, endPoint: .center)
+                                        .padding(.top, -24)
+                                        .ignoresSafeArea(edges: .bottom)
+                                )
                         }
                 }
             } else {
