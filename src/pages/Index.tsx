@@ -14,9 +14,11 @@ import ScrollWords from "@/components/ScrollWords";
 import BookShowcase from "@/components/BookShowcase";
 import StickySteps from "@/components/StickySteps";
 import { Dumbbell, LineChart, SlidersHorizontal } from "lucide-react";
+import DeviceShowcase from "@/components/DeviceShowcase";
 import PhoneStory from "@/components/PhoneStory";
 import FeatureGallery from "@/components/FeatureGallery";
 import Benefits from "@/components/Benefits";
+import AppStoreBadges from "@/components/AppStoreBadges";
 import HeroPhoneMotion from "@/components/HeroPhoneMotion";
 import { hapticTap } from "@/lib/native";
 
@@ -129,6 +131,7 @@ export default function Index() {
             <Button variant="plain" size="lg" asChild><a href="#demo" onClick={() => { void hapticTap(); track("plan_preview_view", { source: "hero" }); }}>Probar la demo</a></Button>
           </div>
           <p className="mt-4 type-footnote text-muted-foreground">Free sin tarjeta y sin caducidad · Web y móvil</p>
+          <AppStoreBadges size="compact" className="mt-6 lg:items-start lg:[&_.justify-center]:justify-start" align="center" />
         </div>
         <HeroPhoneMotion><div className="origin-top sm:scale-110 lg:scale-[1.18]"><PublicHeroPhone /></div></HeroPhoneMotion>
       </div>
@@ -145,6 +148,9 @@ export default function Index() {
 
     {/* 5 · Todo lo que incluye, en una galería horizontal */}
     <FeatureGallery />
+
+    {/* 5b · La app en el móvil y en el ordenador */}
+    <DeviceShowcase />
 
     {/* 6 · Cómo funciona, en tres actos */}
     <StickySteps eyebrow="Cómo funciona" steps={[
@@ -197,6 +203,7 @@ export default function Index() {
         <h2 className="type-display"><ScrollWords text="Empieza a entrenar con" accent="Autopilot" /></h2>
         <p className="mt-4 type-body text-muted-foreground md:text-[21px]">Gratis y sin tarjeta.</p>
         <Button variant="hero" size="lg" asChild className="mt-8 w-full sm:w-auto sm:px-12"><Link to="/onboarding" onClick={() => { void hapticTap(); track("cta_click", { cta: "free_signup", source: "final" }); }}>Crear mi rutina gratis</Link></Button>
+        <AppStoreBadges className="mt-8" label="También en tu móvil" />
       </div>
     </section>
 

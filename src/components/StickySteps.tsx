@@ -19,7 +19,8 @@ export default function StickySteps({ eyebrow, steps }: { eyebrow: string; steps
     </ol>
   </section>;
   return <section ref={ref} aria-label={eyebrow} style={{ height: `${steps.length * 100}vh` }} data-pinned className="relative">
-    <div className="sticky top-0 flex h-screen flex-col items-center justify-center px-5 text-center sm:px-8">
+    <ol className="sr-only">{steps.map((s, i) => <li key={s.title}><h3>{i + 1}. {s.title}</h3><p>{s.text}</p></li>)}</ol>
+    <div aria-hidden="true" className="sticky top-0 flex h-screen flex-col items-center justify-center px-5 text-center sm:px-8">
       <p className="type-subhead text-primary">{eyebrow}</p>
       <div className="relative mt-4 h-[460px] w-full max-w-5xl sm:h-[620px] md:h-[460px]">
         {steps.map(({ icon: I, title, text, visual }, i) => {

@@ -3,7 +3,15 @@ import { Apple, BookOpen, Dumbbell, LineChart, SlidersHorizontal, type LucideIco
 import { useScrollProgress } from "@/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/lib/planCatalog";
 
-type Card = { icon: LucideIcon; title: string; text: string; tag?: string };
+type Card = { icon: LucideIcon; title: string; text: string; tag?: string; photo?: string };
+
+// Fotos reales de ejercicios de la biblioteca de la app (las mismas que usa la demo).
+const IMG = "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/";
+const PHOTOS = {
+  squat: `${IMG}14988835-a004-49d6-95c5-63978dbce978-1791475887313.png`,
+  row: `${IMG}d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png`,
+  press: `${IMG}a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png`,
+};
 
 /**
  * Galería horizontal fija: el scroll vertical la desplaza en horizontal. La distancia
@@ -15,9 +23,10 @@ export default function FeatureGallery() {
   // Solo funciones que existen; las de pago dicen en qué plan están.
   const paid = plans.campaign ? undefined : plans.plus ? `En ${plans.plusName}` : null;
   const cards: Card[] = [
-    { icon: SlidersHorizontal, title: "Entrenamiento personalizado.", text: "Según tu objetivo, nivel, días, lesiones y material." },
+    { icon: SlidersHorizontal, title: "Entrenamiento personalizado.", text: "Según tu objetivo, nivel, días, lesiones y material.", photo: PHOTOS.squat },
+    { icon: Dumbbell, title: "Cada serie, registrada.", text: "Peso y repeticiones de cada serie, con lo que hiciste la última vez.", photo: PHOTOS.row },
     ...(paid !== null ? [
-      { icon: LineChart, title: "Progresión de cargas.", text: "La siguiente carga se calcula con tus registros.", tag: paid },
+      { icon: LineChart, title: "Progresión de cargas.", text: "La siguiente carga se calcula con tus registros.", tag: paid, photo: PHOTOS.press },
       { icon: Apple, title: "Nutrición guiada.", text: "Calorías y macros del día, ajustados a ti.", tag: paid },
     ] : []),
     { icon: BookOpen, title: "Guías en PDF.", text: "Fuerza, calistenia, nutrición y periodización. Pago único." },
@@ -39,8 +48,17 @@ export default function FeatureGallery() {
   const pinned = el && !still ? Math.min(1, Math.max(0, -el.getBoundingClientRect().top / Math.max(1, distance))) : 0;
 
   const row = <div ref={rowRef} className={`flex w-max gap-5 px-5 sm:px-8 md:gap-8 md:px-[8vw] ${still ? "" : "will-change-transform"}`} style={still ? undefined : { transform: `translate3d(${-pinned * distance}px,0,0)` }}>
-    {cards.map(({ icon: I, title, text, tag }, i) => <article key={title} className={`relative flex h-[min(30rem,64vh)] w-[min(80vw,26rem)] shrink-0 flex-col overflow-hidden rounded-[32px] p-7 md:p-10 ${i % 2 ? "bg-primary text-primary-foreground" : "bg-card"}`}>
-      {/* El icono es la imagen de la tarjeta: ocupa la mitad superior, en proporción con la caja. */}
+    {cards.map(({ icon: I, title, text, tag, photo }, i) => photo ? <article key={title} className="relative flex h-[min(30rem,64vh)] w-[min(80vw,26rem)] shrink-0 flex-col justify-end overflow-hidden rounded-[32px] bg-card p-7 md:p-10">
+      {/* Foto a sangre con un degradado hacia abajo para que el texto se lea. */}
+      <img src={photo} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_35%]" />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+      <div className="relative">
+        {tag && <p className="type-footnote font-semibold text-white/70">{tag}</p>}
+        <h3 className="mt-1 font-rounded text-[32px] font-bold leading-[1.05] tracking-tight text-white md:text-[44px]">{title}</h3>
+        <p className="mt-3 type-body text-white/75">{text}</p>
+      </div>
+    </article> : <article key={title} className={`relative flex h-[min(30rem,64vh)] w-[min(80vw,26rem)] shrink-0 flex-col overflow-hidden rounded-[32px] p-7 md:p-10 ${i % 2 ? "bg-primary text-primary-foreground" : "bg-card"}`}>
+      {/* Sin foto, el icono es la imagen de la tarjeta, en proporción con la caja. */}
       <div className="flex flex-1 items-center justify-center" aria-hidden="true">
         <div className={`flex aspect-square w-[46%] items-center justify-center rounded-[28%] ${i % 2 ? "bg-primary-foreground/10" : "bg-primary/10"}`}>
           <I className={`h-1/2 w-1/2 ${i % 2 ? "" : "text-primary"}`} strokeWidth={1.5} />

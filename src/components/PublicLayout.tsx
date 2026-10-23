@@ -8,6 +8,7 @@ import { ListGroup, ListRow } from "@/components/ui/list";
 import { hapticTap } from "@/lib/native";
 import { supabase } from "@/integrations/supabase/client";
 import { socialLinkList } from "@/lib/socialLinks";
+import AppStoreBadges from "@/components/AppStoreBadges";
 
 const navigation = [
   ["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ["/equipo", "Equipo"],
@@ -107,6 +108,7 @@ export default function PublicLayout({ title, description, children }: { title: 
             <Link to="/" className="font-rounded text-[28px] font-bold tracking-tight text-primary">Autopilot</Link>
             <p className="mt-3 max-w-xs type-subhead text-muted-foreground">Entrena con plan. Registra cada serie. Mira cómo progresas.</p>
             <Button variant="tinted" asChild className="mt-6"><Link to="/onboarding" onClick={() => void hapticTap()}>Crear mi rutina gratis</Link></Button>
+            <AppStoreBadges size="compact" align="start" className="mt-5" />
           </div>
           {[
             ["Producto", [["/como-funciona", "Cómo funciona"], ["/planes", "Planes"], ...(showApp ? [["/app", "App móvil"]] : []), ["/para-entrenadores", "Para entrenadores"]]],

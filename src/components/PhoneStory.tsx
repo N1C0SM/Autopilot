@@ -79,7 +79,9 @@ export default function PhoneStory() {
   </section>;
 
   return <section ref={ref} aria-label="Así funciona la app" data-pinned className="relative" style={{ height: `${SCREENS * 100}vh` }}>
-    <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden px-5 sm:px-8">
+    {/* VoiceOver no hace scroll: lee las tres escenas aquí; la capa animada queda oculta. */}
+    <ol className="sr-only">{scenes.map((s) => <li key={s.title}><h3>{s.title}</h3><p>{s.text}</p></li>)}</ol>
+    <div aria-hidden="true" className="sticky top-0 flex h-screen items-center justify-center overflow-hidden px-5 sm:px-8">
       <div className="mx-auto grid w-full max-w-5xl items-center gap-6 md:grid-cols-2 md:gap-16">
         {/* Texto: en móvil va encima del teléfono, en escritorio a la izquierda. */}
         <div className="relative h-28 text-center md:h-48 md:text-left">

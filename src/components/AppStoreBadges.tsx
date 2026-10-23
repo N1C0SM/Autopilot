@@ -76,7 +76,8 @@ const StoreBadges = ({
         const { data, error } = await supabase.rpc("get_public_settings");
         if (!alive || error) return;
         const row = Array.isArray(data) ? data[0] : data;
-        if (row) {
+        // El switch «Descarga de la app» del admin apaga las insignias en toda la web.
+        if (row && row.show_app_download !== false) {
           setAppStoreUrl((row.app_store_url || "").trim());
           setPlayStoreUrl((row.play_store_url || "").trim());
         }
