@@ -20,6 +20,7 @@
 		4B50EE3EBA1FA6A1C98BA0D4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7D2A2A74EF26831307F6611A /* Supabase */; };
 		4CBC7F75637FA9EF8470AF7B /* AdminEmails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */; };
 		4E59183CC035EA035A02E697 /* ActiveWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */; };
+		5083B9495BA08DC47D3AF36B /* AdminUserDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */; };
 		509D6E210D8DC96844E661C5 /* Accounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DF82EEABE70C2CD7FA8478 /* Accounts.swift */; };
 		57465A2CCC8862B96537FE2C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1837043D6026822C99B027E /* Components.swift */; };
 		57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853847766E839A5A319D2EB4 /* AdminProducts.swift */; };
@@ -69,6 +70,7 @@
 		92E329249B146C8FEF5E45AF /* TrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainView.swift; sourceTree = "<group>"; };
 		9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLanding.swift; sourceTree = "<group>"; };
+		AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminUserDetail.swift; sourceTree = "<group>"; };
 		B1837043D6026822C99B027E /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkout.swift; sourceTree = "<group>"; };
 		C3306B7A6F1F1C5159421755 /* AdminPayments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPayments.swift; sourceTree = "<group>"; };
@@ -108,6 +110,7 @@
 				853847766E839A5A319D2EB4 /* AdminProducts.swift */,
 				D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */,
 				6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */,
+				AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */,
 				215885F8A59B676130290EEB /* AdminViews.swift */,
 				54840FD78B7470F1A4A687B3 /* RoadmapView.swift */,
 			);
@@ -345,6 +348,7 @@
 				57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */,
 				B3C0E827FE1DBF6EAA3E3554 /* AdminRules.swift in Sources */,
 				C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */,
+				5083B9495BA08DC47D3AF36B /* AdminUserDetail.swift in Sources */,
 				39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */,
 				FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */,
 				E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */,

@@ -29,6 +29,10 @@ struct RoadmapView: View {
     @State private var proofFor: Item?
     @State private var proofText = ""
     @State private var toast: String?
+    @State private var proposals: [Proposal] = []
+    @State private var versionEdit: Version?
+    @State private var aiHelp: Item?
+    struct Proposal: Codable, Identifiable, Hashable { let id: String; var title: String?; var version_id: String?; let reason: String?; let effort: String?; let status: String?; let evidence: String? }
 
     private static let phaseNames = ["Lanzamiento y día a día", "Inteligencia y adaptación", "Análisis físico y visión", "Ecosistema y comunidad"]
     private static let statusLabels = [("idea", "Idea", "No realizado"), ("pending", "Pendiente", "En proceso"), ("done", "Hecho", "Finalizado")]
@@ -78,6 +82,20 @@ struct RoadmapView: View {
             Button("Cancelar", role: .cancel) {}
         } message: { Text("¿Eliminar «\(deleting?.title ?? "")»? No se puede deshacer.") }
         .sheet(item: $proofFor) { item in proofSheet(item) }
+        .sheet(isPresented: Binding(get: { !proposals.isEmpty }, set: { if !$0 { proposals = [] } })) { proposalsSheet }
+        .sheet(item: $versionEdit) { v in versionSheet(v) }
+        .sheet(item: $aiHelp) { item in
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Implementar con ayuda de IA").font(.apTitle2)
+                Text("La IA puede ayudarte a desarrollar esta tarea en Lovable. Algunas partes pueden requerir servicios externos o pruebas reales; el Roadmap no cambia ni publica la aplicación automáticamente.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                Text(item.title).font(.apHeadline)
+                Text(aiRequest(item)).font(.apFootnote).textSelection(.enabled).padding(12)
+                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Button("Copiar petición") { copy(aiRequest(item)); show("Petición copiada para Lovable"); aiHelp = nil }.buttonStyle(.pill)
+            }
+            .padding(24).frame(minWidth: 420).screenBackground()
+        }
         .overlay(alignment: .top) {
             if let toast {
                 Text(toast).font(.apSubhead.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 10)
@@ -179,12 +197,21 @@ struct RoadmapView: View {
                 Text(selected == "ice" ? "Hielo" : "v\(selected) · \(active?.title ?? "")").font(.apTitle2)
                 if let o = active?.objective { Text(o).font(.apSubhead).foregroundStyle(Palette.muted) }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .topTrailing) {
+                if let active { Button { versionEdit = active } label: { Image(systemName: "pencil") }.buttonStyle(.plain).frame(width: 44, height: 44).accessibilityLabel("Editar versión") }
+            }
             HStack(spacing: 8) {
                 PillField(label: "Buscar tareas", text: $search)
                 Button { creating = true; editing = Item(id: "", title: "", description: "", version_id: selected == "ice" ? nil : selected, status: "idea", effort: "medium", evidence: "") } label: {
                     Label("Tarea", systemImage: "plus")
                 }
                 .buttonStyle(PillButtonStyle(kind: .secondary)).frame(width: 130)
+                Button { Task { await classify(selectedTasks.filter { $0.status != "done" }) } } label: {
+                    Label("Revisar con IA", systemImage: busy ? "hourglass" : "wand.and.stars")
+                }
+                .buttonStyle(PillButtonStyle(kind: .secondary)).frame(width: 190)
+                .disabled(busy || selectedTasks.allSatisfy { $0.status == "done" })
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 12, alignment: .top)], spacing: 12) {
                 ForEach(selectedTasks) { taskCard($0) }
@@ -208,9 +235,14 @@ struct RoadmapView: View {
                     if ideas.isEmpty { Text("Una idea por línea…").foregroundStyle(Palette.muted).padding(18).allowsHitTesting(false) }
                 }
                 .accessibilityLabel("Lluvia de ideas")
-            Button { Task { await captureIdeas() } } label: { Label("Guardar ideas", systemImage: "plus") }
-                .buttonStyle(.pill).frame(maxWidth: 260)
-                .disabled(busy || ideas.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            HStack(spacing: 8) {
+                Button { Task { await captureIdeas() } } label: { Label("Guardar ideas", systemImage: "plus") }
+                    .buttonStyle(.pill).frame(maxWidth: 260)
+                    .disabled(busy || ideas.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button { Task { await classify(inbox) } } label: { Label("Ordenar con IA\(inbox.count > 25 ? " (25)" : "")", systemImage: "wand.and.stars") }
+                    .buttonStyle(PillButtonStyle(kind: .secondary)).frame(maxWidth: 260)
+                    .disabled(busy || inbox.isEmpty)
+            }
             ForEach(versions.filter { v in inbox.contains { $0.version_id == v.id } }) { v in
                 let group = inbox.filter { $0.version_id == v.id }
                 VStack(alignment: .leading, spacing: 10) {
@@ -303,10 +335,87 @@ struct RoadmapView: View {
                     .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 36, height: 36)
                     .accessibilityLabel("Eliminar \(item.title)")
             }
+            if item.status != "done" {
+                Button { aiHelp = item } label: { Label("Ayuda de IA", systemImage: "wand.and.stars").font(.apSubhead) }
+                    .buttonStyle(.plain).foregroundStyle(Palette.gold).frame(minHeight: 36)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func aiRequest(_ item: Item) -> String {
+        "Revisa si ya existe «\(item.title)» en Autopilot. Si falta, impleméntalo y pruébalo sin ampliar el alcance. Versión: \(item.version_id ?? "Hielo"). Detalles: \(item.description). Marca Hecho solo con evidencia verificable y avisa si está fuera del foco actual."
+    }
+
+    private func copy(_ text: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = text
+        #else
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string)
+        #endif
+    }
+
+    private func classify(_ target: [Item]) async {
+        guard !target.isEmpty else { return }
+        busy = true; defer { busy = false }
+        struct R: Decodable { let proposals: [Proposal]?; let error: String? }
+        do {
+            let r: R = try await Backend.client.functions.invoke("roadmap-ai", options: FunctionInvokeOptions(body: ["item_ids": Array(target.prefix(25).map(\.id))]))
+            if let e = r.error { show(e) } else { proposals = r.proposals ?? [] }
+        } catch { show("No se pudo ordenar con IA. Tus ideas siguen guardadas.") }
+    }
+
+    private func applyProposals() async {
+        struct Patch: Encodable { let title: String?; let version_id: String?; let status: String?; let evidence: String; let effort: String?; let ai_reason: String? }
+        for p in proposals {
+            let title = p.title?.trimmingCharacters(in: .whitespaces)
+            let ev = (p.evidence ?? "").isEmpty ? (items.first { $0.id == p.id }?.evidence ?? "") : (p.evidence ?? "")
+            _ = try? await Backend.client.from("roadmap_items")
+                .update(Patch(title: title?.isEmpty == false ? String(title!.prefix(80)) : nil, version_id: p.version_id, status: p.status, evidence: ev, effort: p.effort, ai_reason: p.reason))
+                .eq("id", value: p.id).execute()
+        }
+        proposals = []
+        show("Propuestas aplicadas")
+        await load()
+    }
+
+    private var proposalsSheet: some View {
+        NavigationStack {
+            List {
+                Section { Text("La IA propone; tú decides qué se guarda.").foregroundStyle(Palette.muted) }
+                ForEach($proposals) { $p in
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField("Título", text: Binding(get: { p.title ?? "" }, set: { p.title = $0 })).font(.apHeadline)
+                        if let original = items.first(where: { $0.id == p.id })?.title, original != p.title {
+                            Text("Escrito por ti: \(original)").font(.apFootnote).foregroundStyle(Palette.muted)
+                        }
+                        Picker("Destino", selection: Binding(get: { p.version_id ?? "ice" }, set: { p.version_id = $0 == "ice" ? nil : $0 })) {
+                            Text("Hielo").tag("ice")
+                            ForEach(versions) { v in Text("v\(v.id) · \(v.title)").tag(v.id) }
+                        }
+                        if let r = p.reason { Text(r).font(.apSubhead).foregroundStyle(Palette.muted) }
+                        if let e = p.evidence, !e.isEmpty { Text("Ya implementado · \(e)").font(.apFootnote).foregroundStyle(Palette.gold) }
+                        Button("Descartar propuesta") { proposals.removeAll { $0.id == p.id } }.font(.apFootnote)
+                    }
+                }
+            }
+            .navigationTitle("Propuesta de orden")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cerrar") { proposals = [] } }
+                ToolbarItem(placement: .confirmationAction) { Button("Aplicar (\(proposals.count))") { Task { await applyProposals() } } }
+            }
+        }
+        .frame(minWidth: 560, minHeight: 600)
+        .tint(Palette.gold)
+    }
+
+    private func versionSheet(_ v: Version) -> some View {
+        VersionEditor(version: v, isCurrent: v.is_current == true) { msg in
+            versionEdit = nil
+            if let msg { show(msg); Task { await load() } }
+        }
     }
 
     private func proofSheet(_ item: Item) -> some View {
@@ -462,5 +571,56 @@ struct GoldIconLabel: LabelStyle {
             configuration.icon.foregroundStyle(Palette.gold)
             configuration.title
         }
+    }
+}
+
+
+/// Editar versión: nombre, objetivo, etapa, notas y «Establecer como actual».
+struct VersionEditor: View {
+    @State var version: RoadmapView.Version
+    let isCurrent: Bool
+    var onDone: (String?) -> Void
+    @State private var saving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Nombre") { TextField("Nombre", text: $version.title) }
+                Section("Objetivo") { TextEditor(text: Binding(get: { version.objective ?? "" }, set: { version.objective = $0 })).frame(minHeight: 80) }
+                Section {
+                    Picker("Etapa de lanzamiento", selection: Binding(get: { version.release_stage ?? "internal" }, set: { version.release_stage = $0 })) {
+                        Text("Desarrollo interno").tag("internal"); Text("Beta").tag("beta"); Text("Candidata de lanzamiento").tag("rc"); Text("Publicada").tag("released")
+                    }
+                }
+                Section("Notas de versión") { TextEditor(text: Binding(get: { version.release_notes ?? "" }, set: { version.release_notes = $0 })).frame(minHeight: 100) }
+                if !isCurrent {
+                    Section {
+                        Button { Task {
+                            do { try await Backend.client.rpc("roadmap_set_current", params: ["target": version.id]).execute(); onDone("Foco actualizado") }
+                            catch { onDone("No se pudo cambiar el foco") }
+                        } } label: { Label("Establecer como actual", systemImage: "scope") }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle("Versión \(version.id)")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { onDone(nil) } }
+                ToolbarItem(placement: .confirmationAction) { Button("Guardar versión") { Task { await save() } }.disabled(version.title.trimmingCharacters(in: .whitespaces).isEmpty || saving) }
+            }
+        }
+        .frame(minWidth: 480, minHeight: 560)
+        .tint(Palette.gold)
+    }
+
+    private func save() async {
+        saving = true; defer { saving = false }
+        struct U: Encodable { let title: String; let objective: String?; let release_stage: String?; let release_notes: String?; let updated_at: String }
+        do {
+            try await Backend.client.from("roadmap_versions")
+                .update(U(title: version.title, objective: version.objective, release_stage: version.release_stage, release_notes: version.release_notes, updated_at: ISO8601DateFormatter().string(from: Date())))
+                .eq("id", value: version.id).execute()
+            onDone("Versión guardada")
+        } catch { onDone("No se pudo guardar") }
     }
 }

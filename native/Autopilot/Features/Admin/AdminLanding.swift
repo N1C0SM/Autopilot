@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import Supabase
 
 /// Landing, calcado de `SiteContentEditor.tsx`: Claves de IA (motor de texto, imágenes, vídeos y claves),
@@ -22,6 +23,10 @@ struct AdminLandingView: View {
     @State private var recs: [Recommendation] = []
     @State private var loading = true
     @State private var toast: String?
+    @State private var importing: String?
+    @State private var uploading = false
+    @State private var social: [String: String] = [:]
+    private static let networks = [("instagram", "Instagram"), ("tiktok", "TikTok"), ("youtube", "YouTube"), ("x", "X"), ("whatsapp", "WhatsApp")]
 
     private var id: String { settings.str("id") }
 
@@ -69,6 +74,12 @@ struct AdminLandingView: View {
                             settingText("URL del vídeo", "https://…", "hero_video_url", first: true)
                             settingText("URL del póster", "https://…", "hero_video_poster_url")
                         }
+                        HStack(spacing: 8) {
+                            Button { importing = "hero_video_url" } label: { Label("Subir vídeo", systemImage: "film") }.buttonStyle(.pillSecondary)
+                            Button { importing = "hero_video_poster_url" } label: { Label("Subir póster", systemImage: "photo") }.buttonStyle(.pillSecondary)
+                        }
+                        .frame(maxWidth: 420).disabled(uploading)
+                        if uploading { HStack { ProgressView(); Text("Subiendo…").foregroundStyle(Palette.muted) } }
                         Button("Guardar vídeo") { Task { await saveFields(["hero_video_url", "hero_video_poster_url"]) } }.buttonStyle(.pill).frame(maxWidth: 320)
                     }
                     section("Enlaces a la app (App Store / Google Play)", "Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web.") {
@@ -91,6 +102,19 @@ struct AdminLandingView: View {
                             settingText("Teléfono", "+34…", "contact_phone")
                         }
                         Button("Guardar entrenador") { Task { await saveFields(["trainer_name", "trainer_photo_url", "trainer_bio", "contact_phone"]) } }.buttonStyle(.pill).frame(maxWidth: 320)
+                    }
+                    section("Redes sociales", "Aparecen en el pie de la web y en los datos para buscadores. Escribe el usuario o el enlace.") {
+                        group {
+                            ForEach(Array(Self.networks.enumerated()), id: \.element.0) { i, n in
+                                HStack {
+                                    Text(n.1).font(.apBody).frame(width: 110, alignment: .leading)
+                                    TextField(n.0 == "whatsapp" ? "Teléfono con prefijo" : "usuario", text: Binding(get: { social[n.0] ?? "" }, set: { social[n.0] = $0 })).textFieldStyle(.plain)
+                                        .textContentTypeCompat(.username)
+                                }
+                                .rowStyle(first: i == 0)
+                            }
+                        }
+                        Button("Guardar redes") { Task { await saveSocial() } }.buttonStyle(.pill).frame(maxWidth: 320)
                     }
                     section("Testimonios", nil) {
                         Button { Task { await addTestimonial() } } label: { Label("Añadir testimonio", systemImage: "plus") }.buttonStyle(.pillSecondary).frame(maxWidth: 280)
@@ -117,6 +141,36 @@ struct AdminLandingView: View {
         .screenBackground()
         .overlay(alignment: .top) { ToastView(text: toast) }
         .task { await load() }
+        .fileImporter(isPresented: Binding(get: { importing != nil }, set: { if !$0 { importing = nil } }),
+                      allowedContentTypes: importing == "hero_video_url" ? [.movie, .mpeg4Movie] : [.image]) { result in
+            let field = importing
+            if case .success(let url) = result, let field { Task { await uploadHero(url, field: field) } }
+        }
+    }
+
+    private func uploadHero(_ url: URL, field: String) async {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return }
+        guard data.count <= 100 * 1024 * 1024 else { show("Máximo 100 MB"); return }
+        uploading = true; defer { uploading = false }
+        let ext = url.pathExtension.isEmpty ? (field == "hero_video_url" ? "mp4" : "jpg") : url.pathExtension.lowercased()
+        let path = "hero/\(Int(Date().timeIntervalSince1970 * 1000)).\(ext)"
+        let type = field == "hero_video_url" ? (ext == "webm" ? "video/webm" : "video/mp4") : (ext == "png" ? "image/png" : "image/jpeg")
+        do {
+            try await Backend.client.storage.from("site-assets").upload(path, data: data, options: FileOptions(contentType: type, upsert: true))
+            let public_ = try Backend.client.storage.from("site-assets").getPublicURL(path: path).absoluteString
+            settings[field] = .string(public_)
+            await saveFields([field])
+        } catch { show("No se pudo subir") }
+    }
+
+    private func saveSocial() async {
+        guard !id.isEmpty else { return }
+        var obj: [String: AnyJSON] = [:]
+        for (k, v) in social where !v.trimmingCharacters(in: .whitespaces).isEmpty { obj[k] = .string(v.trimmingCharacters(in: .whitespaces)) }
+        do { try await Backend.client.from("settings").update(["social_links": AnyJSON.object(obj)]).eq("id", value: id).execute(); show("Redes guardadas") }
+        catch { show("No se pudo guardar") }
     }
 
     // MARK: Claves de IA
@@ -281,6 +335,8 @@ struct AdminLandingView: View {
             .select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, recommendations, landing_ebooks_count, landing_recommendations_count")
             .limit(1).execute().value) ?? []
         settings = rows.first ?? [:]
+        let sl: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("social_links").limit(1).execute().value) ?? []
+        if case .object(let o) = sl.first?["social_links"] { for (k, v) in o { if case .string(let s) = v { social[k] = s } } }
         if let data = try? JSONEncoder().encode(settings["recommendations"] ?? .array([])) { recs = (try? JSONDecoder().decode([Recommendation].self, from: data)) ?? [] }
         struct S: Decodable { let key: String; let value: String }
         let s: [S] = (try? await Backend.client.from("app_secrets").select("key, value").execute().value) ?? []

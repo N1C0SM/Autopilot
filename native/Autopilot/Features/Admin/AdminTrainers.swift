@@ -141,8 +141,11 @@ struct TrainerDetail: View {
                     Text(trainer.email ?? "").font(.apSubhead).foregroundStyle(Palette.muted)
                     Text("\(mine.count) usuario\(mine.count == 1 ? "" : "s") asignado\(mine.count == 1 ? "" : "s")").font(.apFootnote).foregroundStyle(Palette.muted)
                 }
-                SegmentedPill(options: ["Perfil público", "Usuarios"], selection: $tab)
-                if tab == 0 { profileTab } else { usersTab }
+                SegmentedPill(options: ["Perfil público", "Usuarios", "Chat"], selection: $tab)
+                if tab == 0 { profileTab } else if tab == 1 { usersTab } else {
+                    ChatView(conversationUserId: trainer.user_id).frame(minHeight: 480)
+                    Text("Conversación privada admin ↔ entrenador.").font(.apFootnote).foregroundStyle(Palette.muted).frame(maxWidth: .infinity)
+                }
             }
             .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }

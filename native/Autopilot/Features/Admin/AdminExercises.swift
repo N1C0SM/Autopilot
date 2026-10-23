@@ -31,6 +31,9 @@ struct AdminExercisesView: View {
     @State private var editing: Exercise?
     @State private var preview: Exercise?
     @State private var visible = 60
+    @State private var batchConfirm = false
+    @State private var batch: (current: Int, total: Int, name: String)?
+    @State private var batchTask: Task<Void, Never>?
 
     private var base: [Exercise] {
         exercises.filter { e in
@@ -57,7 +60,21 @@ struct AdminExercisesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Button("Nuevo ejercicio") { editing = .blank() }.buttonStyle(.pill).frame(maxWidth: 260)
+                HStack(spacing: 8) {
+                    Button("Nuevo ejercicio") { editing = .blank() }.buttonStyle(.pill).frame(maxWidth: 260)
+                    Button { batchConfirm = true } label: { Label("Generar medios pendientes", systemImage: "sparkles") }
+                        .buttonStyle(.pillSecondary).frame(maxWidth: 300).disabled(batch != nil || pending.isEmpty)
+                }
+                if let b = batch {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Generando \(b.current) de \(b.total) · \(b.name)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                            Spacer()
+                            Button("Cancelar") { batchTask?.cancel(); batch = nil }.font(.apSubhead).foregroundStyle(Palette.gold).buttonStyle(.plain)
+                        }
+                        ProgressView(value: Double(b.current - 1), total: Double(max(b.total, 1))).tint(Palette.gold)
+                    }
+                }
                 HStack {
                     Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
                     TextField("Buscar ejercicio…", text: $search).textFieldStyle(.plain)
@@ -114,6 +131,12 @@ struct AdminExercisesView: View {
         }
         .screenBackground()
         .task { await load() }
+        .confirmationDialog("Generar medios pendientes", isPresented: $batchConfirm, titleVisibility: .visible) {
+            Button("Generar") { startBatch() }
+            Button("Ahora no", role: .cancel) {}
+        } message: {
+            Text("Se generará imagen y/o vídeo de técnica con IA para \(pending.count) ejercicios de los filtros actuales. Puede tardar bastante y consume créditos de IA. Se guarda a medida que se completa: si lo cancelas, podrás reanudarlo sin repetir los que ya estén listos.")
+        }
         .sheet(item: $editing) { ex in
             ExerciseEditor(exercise: ex, all: exercises) { changed in editing = nil; if changed { Task { await load() } } }
         }
@@ -126,6 +149,34 @@ struct AdminExercisesView: View {
                 Button("Cerrar") { preview = nil }.buttonStyle(.pillSecondary)
             }
             .padding(20).frame(minWidth: 480).screenBackground()
+        }
+    }
+
+    /// Ejercicios de los filtros actuales a los que les falta imagen o vídeo.
+    private var pending: [Exercise] { base.filter { ($0.image_url ?? "").isEmpty || ($0.video_url ?? "").isEmpty } }
+
+    private func startBatch() {
+        let queue = pending
+        batchTask = Task {
+            struct R: Decodable { let image_url: String?; let video_url: String?; let error: String? }
+            for (i, ex) in queue.enumerated() {
+                if Task.isCancelled { break }
+                batch = (i + 1, queue.count, ex.name)
+                if (ex.image_url ?? "").isEmpty {
+                    let _: R? = try? await Backend.client.functions.invoke("exercise-video", options: FunctionInvokeOptions(body: ["exercise_id": ex.id, "action": "image"]))
+                }
+                if (ex.video_url ?? "").isEmpty, !Task.isCancelled {
+                    let _: R? = try? await Backend.client.functions.invoke("exercise-video", options: FunctionInvokeOptions(body: ["exercise_id": ex.id, "action": "create"]))
+                    for _ in 0..<60 {
+                        if Task.isCancelled { break }
+                        try? await Task.sleep(for: .seconds(10))
+                        let c: R? = try? await Backend.client.functions.invoke("exercise-video", options: FunctionInvokeOptions(body: ["exercise_id": ex.id, "action": "check"]))
+                        if c?.video_url != nil || c?.error != nil { break }
+                    }
+                }
+            }
+            batch = nil
+            await load()
         }
     }
 

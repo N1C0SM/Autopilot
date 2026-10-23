@@ -190,7 +190,7 @@ struct AdminUsersView: View {
             Text(title.uppercased()).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
             VStack(spacing: 0) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, u in
-                    NavigationLink { AdminUserDetail(user: u).navigationTitle(u.display) } label: {
+                    NavigationLink { AdminUserFullDetail(userId: u.user_id, display: u.display, email: u.email ?? "").navigationTitle(u.display) } label: {
                         HStack(spacing: 12) {
                             AvatarView(name: u.display, url: u.avatar_url, size: 36)
                             VStack(alignment: .leading, spacing: 1) {
