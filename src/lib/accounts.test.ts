@@ -44,11 +44,14 @@ describe("cuentas en el dispositivo", () => {
     expect(listAccounts().find((a) => a.id === "u1")?.expired).toBe(false);
   });
 
-  it("añadir otra cuenta guarda la actual y sale solo en este dispositivo", async () => {
+  it("añadir otra cuenta guarda la actual sin cerrar su sesión en el servidor", async () => {
     getSession.mockResolvedValue({ data: { session: session("u1", "a@x.com") } });
+    localStorage.setItem("sb-ref-auth-token", "{}");
     await prepareAnotherAccount();
     expect(listAccounts().map((a) => a.id)).toEqual(["u1"]);
-    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
+    // Nunca se revoca en el servidor: la cuenta guardada sigue entrando sin contraseña.
+    expect(signOut).not.toHaveBeenCalled();
+    expect(localStorage.getItem("sb-ref-auth-token")).toBeNull();
     forgetAccount("u1");
     expect(listAccounts()).toEqual([]);
   });

@@ -128,11 +128,19 @@ function markExpired(id: string) {
   save(listAccounts().map((a) => (a.id === id ? { ...a, expired: true } : a)));
 }
 
-/** Deja la cuenta activa guardada y sale solo en este dispositivo, sin revocar su sesión. */
+/**
+ * Deja la cuenta activa guardada y la aparta solo de la pantalla. No llama a signOut:
+ * incluso con scope "local", Supabase revoca esa sesión en el servidor y la cuenta
+ * guardada volvería a pedir contraseña. Se borra la copia local y se recarga la app.
+ */
 export async function prepareAnotherAccount() {
   const { data } = await supabase.auth.getSession();
   if (data.session) rememberSession(data.session);
-  await supabase.auth.signOut({ scope: "local" });
+  try {
+    for (const key of Object.keys(localStorage)) {
+      if (/^sb-.+-auth-token$/.test(key)) localStorage.removeItem(key);
+    }
+  } catch { /* sin almacenamiento: no había sesión guardada */ }
 }
 
 /** Abre «¿Quién entrena?» desde cualquier sitio (avatar mantenido, menú del Mac). */
