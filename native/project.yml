@@ -33,8 +33,11 @@ targets:
     supportedDestinations: [iOS, macOS]
     sources:
       - Autopilot
+      - Shared
     dependencies:
       - package: Supabase
+      - target: AutopilotWidgets
+        platformFilter: iOS
     settings:
       base:
         # Mismos identificadores que las apps que mostraban la web: la nativa las sustituye.
@@ -48,3 +51,21 @@ targets:
         ENABLE_APP_SANDBOX[sdk=macosx*]: YES
         ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]: YES
         ENABLE_USER_SELECTED_FILES[sdk=macosx*]: readwrite
+        CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: Autopilot/App.entitlements
+        CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: Autopilot/App.entitlements
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
+  AutopilotWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Widgets
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets
+        INFOPLIST_FILE: Widgets/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: Widgets/Widgets.entitlements
+        SKIP_INSTALL: YES
+        TARGETED_DEVICE_FAMILY: "1,2"

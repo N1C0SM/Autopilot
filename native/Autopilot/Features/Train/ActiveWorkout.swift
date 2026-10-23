@@ -1,5 +1,8 @@
 import Foundation
 import UserNotifications
+#if os(iOS)
+import ActivityKit
+#endif
 
 /// Borrador del entreno en curso, guardado por usuario (como `activeWorkout.ts`):
 /// incluye el día, las series y el fin del descanso como hora absoluta, así se
@@ -205,9 +208,48 @@ final class ActiveWorkout: ObservableObject {
         draft.restEndsAt = nil
         persist()
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest"])
+        updateLiveActivity(endsAt: nil)
     }
 
+    // MARK: Isla dinámica
+
+    #if os(iOS)
+    private var activity: Activity<RestActivityAttributes>?
+    #endif
+
+    /// Muestra o actualiza el descanso en la isla dinámica y la pantalla de bloqueo.
+    private func updateLiveActivity(endsAt: Date?) {
+        #if os(iOS)
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard let endsAt else {
+            let a = activity; activity = nil
+            Task { await a?.end(nil, dismissalPolicy: .immediate) }
+            return
+        }
+        // Ejercicio y serie que tocan después del descanso.
+        var exercise = workout_currentName(), next = ""
+        for ex in exercises {
+            if let i = (draft.logs[ex.name] ?? []).firstIndex(where: { !$0.done }) {
+                let set = draft.logs[ex.name]![i]
+                exercise = swaps[ex.name] ?? ex.name
+                next = "serie \(i + 1) · \(set.weight.isEmpty ? "" : "\(set.weight.replacingOccurrences(of: ".", with: ",")) kg × ")\(set.reps)"
+                break
+            }
+        }
+        let state = RestActivityAttributes.ContentState(endsAt: endsAt, exercise: exercise, nextSet: next, doneSets: doneSets, totalSets: totalSets)
+        let content = ActivityContent(state: state, staleDate: endsAt.addingTimeInterval(60))
+        if let activity {
+            Task { await activity.update(content) }
+        } else {
+            activity = try? Activity.request(attributes: RestActivityAttributes(workoutTitle: draft.day.title), content: content)
+        }
+        #endif
+    }
+
+    private func workout_currentName() -> String { exercises[safe: draft.currentExercise]?.name ?? draft.day.title }
+
     private func scheduleRestNotification(at date: Date) {
+        updateLiveActivity(endsAt: date)
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
         center.removePendingNotificationRequests(withIdentifiers: ["rest"])

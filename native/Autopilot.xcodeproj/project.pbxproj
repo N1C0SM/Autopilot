@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */; };
 		19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3306B7A6F1F1C5159421755 /* AdminPayments.swift */; };
+		1D1D2EDEB1F6B06EF9F9AAD3 /* AutopilotWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A7028E351DD20C169D319C /* AutopilotWidgets.swift */; };
 		1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF230DE9FE12D555FC3505 /* HomeView.swift */; };
+		1D59B9E8FAAEE14DCC8B03E4 /* RestActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */; };
 		224764578170A5967D49426F /* AdminDrive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1162F3D5C142878DA85F3630 /* AdminDrive.swift */; };
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
@@ -28,6 +30,7 @@
 		7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */; };
 		84D2950407D627971026844C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */; };
 		87E60DB75F6066D44856E541 /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4E7B8525054278D389D0B59 /* ScanView.swift */; };
+		89B5649AF0B7ED30510113B6 /* AutopilotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
 		9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D7A51FF897F39CC070F086 /* Progression.swift */; };
@@ -39,11 +42,36 @@
 		C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */; };
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
 		E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D06C6CE81D75452F06C8802 /* Backend.swift */; };
+		E8D814157094FEA4DBDAAFE4 /* RestActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */; };
 		EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172F9A007BDD4D9E6CB124BB /* AccountView.swift */; };
 		EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80424D4030A49FC7F8638EEF /* RootView.swift */; };
 		EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F52B91A212936EB6B6D716 /* AdminBlog.swift */; };
 		FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B2604636425A7A76330A3C /* AutopilotApp.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A89CFF5334AEEF8E2CC85E8D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 64C75C56B04DDD4B729CC4AD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 63E1BD54C5AEDCB28EEFBCEF;
+			remoteInfo = AutopilotWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		66536A4DD5CE9F892A1E6A13 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				89B5649AF0B7ED30510113B6 /* AutopilotWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		04DF82EEABE70C2CD7FA8478 /* Accounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accounts.swift; sourceTree = "<group>"; };
@@ -54,10 +82,13 @@
 		1E2CBD0297E5F8BCF017644D /* Autopilot.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Autopilot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		215885F8A59B676130290EEB /* AdminViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminViews.swift; sourceTree = "<group>"; };
+		2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = AutopilotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		2F83F6BD939EF251A757930A /* AdminExercises.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminExercises.swift; sourceTree = "<group>"; };
+		38E2F87813CF2F5DC1B3F82A /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
 		54840FD78B7470F1A4A687B3 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
+		55A7028E351DD20C169D319C /* AutopilotWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotWidgets.swift; sourceTree = "<group>"; };
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
 		66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboard.swift; sourceTree = "<group>"; };
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
@@ -79,9 +110,12 @@
 		D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhoIsTrainingView.swift; sourceTree = "<group>"; };
 		D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminRules.swift; sourceTree = "<group>"; };
 		D9E053FD3BBE7DBA136AACF9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		E97E0218520E417DCAD4B1A1 /* Widgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Widgets.entitlements; sourceTree = "<group>"; };
 		EBDF230DE9FE12D555FC3505 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		ECA669F0BC617641B892F453 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F4D7A51FF897F39CC070F086 /* Progression.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Progression.swift; sourceTree = "<group>"; };
 		F4E7B8525054278D389D0B59 /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
+		FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestActivity.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,8 +155,20 @@
 			isa = PBXGroup;
 			children = (
 				83E35664504DEECF72134186 /* Autopilot */,
+				CD72E4CD24376B8573E995E9 /* Shared */,
+				0E56EBF931C1A00CEB70A3AE /* Widgets */,
 				4986BCFBE6B202E5AC6C5C51 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		0E56EBF931C1A00CEB70A3AE /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				55A7028E351DD20C169D319C /* AutopilotWidgets.swift */,
+				ECA669F0BC617641B892F453 /* Info.plist */,
+				E97E0218520E417DCAD4B1A1 /* Widgets.entitlements */,
+			);
+			path = Widgets;
 			sourceTree = "<group>";
 		};
 		190A819D784E2E4936A9083D /* Progress */ = {
@@ -187,6 +233,7 @@
 			isa = PBXGroup;
 			children = (
 				1E2CBD0297E5F8BCF017644D /* Autopilot.app */,
+				2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -203,6 +250,7 @@
 		83E35664504DEECF72134186 /* Autopilot */ = {
 			isa = PBXGroup;
 			children = (
+				38E2F87813CF2F5DC1B3F82A /* App.entitlements */,
 				9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */,
 				9F0A18D0B08C6111210BD536 /* App */,
 				8ED96A3628DDCEE39E99CDA8 /* Core */,
@@ -241,6 +289,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		CD72E4CD24376B8573E995E9 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		CEB9CAA1C0564A5F6759E98A /* Other */ = {
 			isa = PBXGroup;
 			children = (
@@ -268,10 +324,12 @@
 				EDD31AE9C2DA323093D8DE80 /* Sources */,
 				859A7186C695B7A234448BF4 /* Resources */,
 				E534E259182646DC1F88C193 /* Frameworks */,
+				66536A4DD5CE9F892A1E6A13 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C4485430BD730D92CC59B75D /* PBXTargetDependency */,
 			);
 			name = Autopilot;
 			packageProductDependencies = (
@@ -280,6 +338,23 @@
 			productName = Autopilot;
 			productReference = 1E2CBD0297E5F8BCF017644D /* Autopilot.app */;
 			productType = "com.apple.product-type.application";
+		};
+		63E1BD54C5AEDCB28EEFBCEF /* AutopilotWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1C20722977077BB6A397185D /* Build configuration list for PBXNativeTarget "AutopilotWidgets" */;
+			buildPhases = (
+				962EB1CF22E1C1C55A82C233 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AutopilotWidgets;
+			packageProductDependencies = (
+			);
+			productName = AutopilotWidgets;
+			productReference = 2A04724BF2FDC822C429933F /* AutopilotWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -291,6 +366,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					0C3CD606707F5E6F3B4507DC = {
+						DevelopmentTeam = 3245AGM98R;
+						ProvisioningStyle = Automatic;
+					};
+					63E1BD54C5AEDCB28EEFBCEF = {
 						DevelopmentTeam = 3245AGM98R;
 						ProvisioningStyle = Automatic;
 					};
@@ -314,6 +393,7 @@
 			projectRoot = "";
 			targets = (
 				0C3CD606707F5E6F3B4507DC /* Autopilot */,
+				63E1BD54C5AEDCB28EEFBCEF /* AutopilotWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -330,6 +410,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		962EB1CF22E1C1C55A82C233 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1D1D2EDEB1F6B06EF9F9AAD3 /* AutopilotWidgets.swift in Sources */,
+				1D59B9E8FAAEE14DCC8B03E4 /* RestActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		EDD31AE9C2DA323093D8DE80 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -359,6 +448,7 @@
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
 				642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */,
 				9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */,
+				E8D814157094FEA4DBDAAFE4 /* RestActivity.swift in Sources */,
 				B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */,
 				EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */,
 				87E60DB75F6066D44856E541 /* ScanView.swift in Sources */,
@@ -373,16 +463,66 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		C4485430BD730D92CC59B75D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 63E1BD54C5AEDCB28EEFBCEF /* AutopilotWidgets */;
+			targetProxy = A89CFF5334AEEF8E2CC85E8D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2F17AA86337C7DED95D13E9E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/Widgets.entitlements;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		69E4DAF9CBD9C5B7EC90C88C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/Widgets.entitlements;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		786C7F07EA265D14F0F28EC1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Autopilot/App.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = Autopilot/App.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -472,7 +612,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -543,7 +682,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = auto;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -554,11 +692,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]" = Autopilot/App.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = Autopilot/App.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"ENABLE_APP_SANDBOX[sdk=macosx*]" = YES;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				"ENABLE_OUTGOING_NETWORK_CONNECTIONS[sdk=macosx*]" = YES;
 				"ENABLE_USER_SELECTED_FILES[sdk=macosx*]" = readwrite;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -580,6 +721,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1C20722977077BB6A397185D /* Build configuration list for PBXNativeTarget "AutopilotWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				69E4DAF9CBD9C5B7EC90C88C /* Debug */,
+				2F17AA86337C7DED95D13E9E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		7723E56CC96E8CD965482C5C /* Build configuration list for PBXProject "Autopilot" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

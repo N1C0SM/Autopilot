@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import WidgetKit
 
 /// Hoy, calcado de `HomeOverview.tsx`: fecha, «Hola, Nombre.» + estado del día, la semana
 /// en círculos, la acción principal (empezar, hecho o descanso) y el «Resumen» con Nutrición y Progreso.
@@ -182,8 +183,22 @@ struct HomeView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Deja la sesión de hoy y la semana para los widgets.
+    private func publishWidget() {
+        let days = (0..<7).map { i -> Int in
+            let d = DayNames.all[i]
+            return doneDays.contains(d) ? 2 : (scheduled.contains { $0.day == d } ? 1 : 0)
+        }
+        WidgetStore.save(.init(title: todayPlan.map { $0.title.components(separatedBy: " · ")[0] } ?? "Descanso",
+                               detail: todayPlan.map(detail) ?? (nextSession ?? ""), isRest: todayPlan == nil,
+                               doneToday: completedToday, weekDone: min(doneDays.count, max(scheduled.count, doneDays.count)),
+                               weekPlanned: scheduled.count, weekDays: days, todayIndex: todayIndex, updated: Date()))
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     private func load() async {
         await model.load(userId: session.userId)
+        publishWidget()
         guard let id = session.userId else { return }
         struct P: Decodable { let name: String? }
         if let p: P = try? await Backend.client.from("profiles").select("name").eq("user_id", value: id).single().execute().value {
