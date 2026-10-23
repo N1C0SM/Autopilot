@@ -1,3 +1,4 @@
+import { useSessionCover } from "@/hooks/useSessionCover";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -194,6 +195,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const currentPlan = basePlan && sessionExtras.length > 0
     ? { ...basePlan, exercises: [...(basePlan.exercises ?? []), ...sessionExtras] }
     : basePlan;
+  // Portada de la sesión: generada con IA según sus músculos; mientras tanto, la foto del primer ejercicio.
+  const coverExercises = currentPlan?.exercises || [];
+  const firstExercise = coverExercises[0];
+  const sessionCover = useSessionCover(
+    coverExercises.map((e) => e.exercise_id),
+    firstExercise ? (exerciseMetadata.byId[firstExercise.exercise_id] || exerciseMetadata.byName[firstExercise.name])?.image_url || firstExercise.image_url || null : null,
+  );
   // En modo libre usamos un plan virtual con los ejercicios añadidos manualmente
   const freePlan = selectedDay === FREE_DAY && freeExercises.length > 0
     ? { day: FREE_DAY, type: "gimnasio" as const, exercises: freeExercises, routine_name: "Sesión libre", muscle_focus: null, sport: null, intensity: null, duration: null }
@@ -1287,13 +1295,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
             {(() => {
               const [name, ...rest] = String(trainingTitle || selectedDay).split(" · ");
-              // Portada de la sesión con la foto de su primer ejercicio, como las fichas de la landing.
-              const first = currentPlan?.exercises?.[0];
-              const cover = first ? (exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name])?.image_url || first.image_url : null;
               return (
                 <>
-                  {cover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card">
-                    <img src={cover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
+                  {sessionCover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card">
+                    <img key={sessionCover} src={sessionCover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
                     <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   </div>}
                   <h2 className="truncate font-rounded text-[32px] font-bold leading-tight tracking-tight">{name}</h2>
