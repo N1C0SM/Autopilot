@@ -1,3 +1,4 @@
+import { BRAND_PHOTOS } from "@/lib/brandPhotos";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, FileText, ChevronLeft, ChevronRight } from "lucide-react";
@@ -83,6 +84,7 @@ export default function OnboardingChoice() {
                 time: "≈ 1 min",
                 points: ["Sin fotos", "Lo más rápido"],
                 badge: "Recomendado",
+                photo: BRAND_PHOTOS.dumbbells,
               },
               {
                 key: "scan" as const,
@@ -93,6 +95,7 @@ export default function OnboardingChoice() {
                 time: "≈ 3 min",
                 points: ["Estimación orientativa", "Necesita fotos"],
                 badge: null,
+                photo: BRAND_PHOTOS.gym,
               },
             ]).map((o, i) => {
               const Icon = o.icon;
@@ -108,37 +111,40 @@ export default function OnboardingChoice() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: 0.08 + i * 0.08 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`group relative flex w-full items-start gap-4 rounded-2xl border p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    active ? "border-primary bg-primary/5" : "border-border bg-card"
-                  }`}
+                  className={`group relative flex w-full flex-col overflow-hidden rounded-[28px] bg-card text-left ring-2 transition-[box-shadow] focus-visible:outline-none focus-visible:ring-primary ${active ? "ring-primary/60" : "ring-transparent"}`}
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="h-6 w-6" aria-hidden="true" />
+                  {/* Foto de marca, como las fichas de la landing y del onboarding. */}
+                  <div aria-hidden="true" className="relative h-36 w-full overflow-hidden">
+                    <img src={o.photo} alt="" decoding="async" className="h-full w-full object-cover object-[50%_30%] transition-transform duration-500 group-hover:scale-[1.03]" />
+                    <span className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                    <span className="absolute bottom-3 left-5 flex h-10 w-10 items-center justify-center rounded-xl bg-black/60 text-primary backdrop-blur"><Icon className="h-5 w-5" /></span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-semibold">{o.title}</h2>
-                      {o.badge && (
-                        <span className="rounded-full bg-primary px-2 py-0.5 type-caption2 font-semibold text-primary-foreground">
-                          {o.badge}
-                        </span>
-                      )}
+                  <div className="flex w-full items-start gap-3 p-5 pt-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="font-rounded type-title3">{o.title}</h2>
+                        {o.badge && (
+                          <span className="rounded-full bg-primary px-2 py-0.5 type-caption2 font-semibold text-primary-foreground">
+                            {o.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 type-subhead text-muted-foreground">{o.desc}</p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="rounded-full bg-primary/15 px-2.5 py-0.5 type-footnote font-medium text-primary">{o.time}</span>
+                        {o.points.map((p) => (
+                          <span key={p} className="rounded-full bg-secondary px-2.5 py-0.5 type-footnote text-muted-foreground">{p}</span>
+                        ))}
+                      </div>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{o.desc}</p>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      <span className="rounded-full border border-primary/40 px-2.5 py-0.5 text-xs font-medium text-primary">{o.time}</span>
-                      {o.points.map((p) => (
-                        <span key={p} className="rounded-full bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">{p}</span>
-                      ))}
-                    </div>
+                    <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </div>
-                  <ChevronRight className="mt-3 h-5 w-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                 </motion.button>
               );
             })}
           </div>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <p className="mt-6 text-center type-footnote text-muted-foreground">
             Puedes hacer el scan más adelante desde tu panel.
           </p>
         </div>
