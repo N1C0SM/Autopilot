@@ -10,6 +10,7 @@
 		0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */; };
 		19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3306B7A6F1F1C5159421755 /* AdminPayments.swift */; };
 		1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF230DE9FE12D555FC3505 /* HomeView.swift */; };
+		224764578170A5967D49426F /* AdminDrive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1162F3D5C142878DA85F3630 /* AdminDrive.swift */; };
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
@@ -43,6 +44,7 @@
 
 /* Begin PBXFileReference section */
 		04DF82EEABE70C2CD7FA8478 /* Accounts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accounts.swift; sourceTree = "<group>"; };
+		1162F3D5C142878DA85F3630 /* AdminDrive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDrive.swift; sourceTree = "<group>"; };
 		13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEmails.swift; sourceTree = "<group>"; };
 		172F9A007BDD4D9E6CB124BB /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		18F52B91A212936EB6B6D716 /* AdminBlog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBlog.swift; sourceTree = "<group>"; };
@@ -93,6 +95,7 @@
 			children = (
 				18F52B91A212936EB6B6D716 /* AdminBlog.swift */,
 				66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */,
+				1162F3D5C142878DA85F3630 /* AdminDrive.swift */,
 				13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */,
 				2F83F6BD939EF251A757930A /* AdminExercises.swift */,
 				C3306B7A6F1F1C5159421755 /* AdminPayments.swift */,
@@ -327,6 +330,7 @@
 				4E59183CC035EA035A02E697 /* ActiveWorkout.swift in Sources */,
 				EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */,
 				0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */,
+				224764578170A5967D49426F /* AdminDrive.swift in Sources */,
 				4CBC7F75637FA9EF8470AF7B /* AdminEmails.swift in Sources */,
 				B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */,
 				19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */,
