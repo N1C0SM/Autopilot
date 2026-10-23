@@ -1288,9 +1288,16 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
           <section className={workoutCompleted || !completionReady || loadError || started ? "hidden" : "px-4 pt-2 md:px-0"}>
             {(() => {
               const [name, ...rest] = String(trainingTitle || selectedDay).split(" · ");
+              // Portada de la sesión con la foto de su primer ejercicio, como las fichas de la landing.
+              const first = currentPlan?.exercises?.[0];
+              const cover = first ? (exerciseMetadata.byId[first.exercise_id] || exerciseMetadata.byName[first.name])?.image_url || first.image_url : null;
               return (
                 <>
-                  <h2 className="truncate type-title1">{name}</h2>
+                  {cover && <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card">
+                    <img src={cover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                  </div>}
+                  <h2 className="truncate font-rounded text-[32px] font-bold leading-tight tracking-tight">{name}</h2>
                   {rest.length > 0 && <p className="mt-0.5 truncate type-subhead text-muted-foreground">{rest.join(" · ")}</p>}
                 </>
               );
