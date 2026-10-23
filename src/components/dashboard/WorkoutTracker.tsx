@@ -1700,7 +1700,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           const livePR = livePRs[`${ex.name}#${si}`];
                           // Serie hecha: la fila se atenúa y el círculo se rellena con el tinte.
                           // La de calentamiento va atenuada y nunca con el color de serie hecha.
-                          const dim = set.done ? "opacity-50" : "";
+                          const dim = set.done ? "opacity-60" : "";
                           const checkClass = set.done
                             ? isWarmup
                               ? "border-muted-foreground bg-muted-foreground text-background"
@@ -1709,7 +1709,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                               ? "border-destructive text-destructive"
                               : "border-muted-foreground/40 text-muted-foreground/40";
                           return (
-                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 ${si === firstPendingIndex ? "rounded-lg ring-1 ring-inset ring-primary/50 bg-primary/5" : ""}`}>
+                          <div key={si} aria-current={si === firstPendingIndex ? "step" : undefined} className={`pl-3 transition-colors duration-300 ${si === firstPendingIndex ? "rounded-lg ring-1 ring-inset ring-primary/50 bg-primary/5" : set.done && !isWarmup ? "rounded-lg bg-success/10" : ""}`}>
                             <div className={`py-2 pr-2 ${si > 0 ? "sep-t" : ""}`}>
                             {/* Segmento principal de la serie */}
                             <div className={SET_GRID}>
@@ -1769,17 +1769,28 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
                                 className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60"
                               >
-                                <span className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-150 ${checkClass}`}>
+                                {/* Al marcar, el círculo «salta» con un muelle (como Hevy/Fitness). */}
+                                <motion.span
+                                  key={set.done ? "done" : "pending"}
+                                  initial={set.done ? { scale: 0.6 } : false}
+                                  animate={{ scale: 1 }}
+                                  transition={{ type: "spring", stiffness: 520, damping: 17 }}
+                                  className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-150 ${checkClass}`}
+                                >
                                   <Check className="h-[18px] w-[18px]" strokeWidth={3} aria-hidden="true" />
-                                </span>
+                                </motion.span>
                               </Button>
                             </div>
 
                             {livePR && (
-                              <div className="mt-2 flex items-center gap-1.5 self-start rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
+                              <motion.div
+                                initial={{ scale: 0.7, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: "spring", stiffness: 420, damping: 14 }}
+                                className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
                                 <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
                                 <span>Récord personal · {livePR}</span>
-                              </div>
+                              </motion.div>
                             )}
 
                             {/* Dropset: bajadas dentro de la misma serie, sin descanso entre ellas */}
