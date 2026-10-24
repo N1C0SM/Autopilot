@@ -121,6 +121,33 @@ describe("weekly plan access", () => {
     expect(screen.getByText("2 ejercicios · 6 series")).toBeVisible();
   });
 
+  it("re-syncs the expanded day when a new day is asked for", () => {
+    setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
+    const { rerender } = render(
+      <TrainingPlanView
+        dayPlans={[
+          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] },
+          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] },
+        ]}
+        initialDay="Lunes"
+        onOpenWorkout={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Lunes, Piernas" })).toHaveAttribute("aria-expanded", "true");
+    rerender(
+      <TrainingPlanView
+        dayPlans={[
+          { day: "Lunes", type: "gimnasio", routine_name: "Piernas", exercises: [squat] },
+          { day: "Jueves", type: "gimnasio", routine_name: "Empuje", exercises: [squat] },
+        ]}
+        initialDay="Jueves"
+        onOpenWorkout={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Jueves, Empuje" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Lunes, Piernas" })).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("falls back to the composed placeholder when an exercise image fails to load", () => {
     setToday("2026-10-12T12:00:00"); // lunes
     render(
