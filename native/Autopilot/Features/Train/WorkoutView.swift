@@ -539,7 +539,7 @@ struct SetLine: View {
         .opacity(set.done ? 0.6 : 1)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isCurrent ? Palette.gold.opacity(0.05) : (set.done && !isWarmup ? Color.green.opacity(0.1) : .clear))
+                .fill(isCurrent ? Palette.gold.opacity(0.05) : (set.done && !isWarmup ? Palette.success.opacity(0.1) : .clear))
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
         )
         .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }

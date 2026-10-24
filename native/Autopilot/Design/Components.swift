@@ -37,22 +37,24 @@ struct RestCard<Action: View>: View {
     }
 }
 
-/// Botones redondos de la cabecera (campana y avatar con inicial), como `MobileHeader`.
+/// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt.
 struct HeaderButtons: View {
     let initial: String
     var onProfile: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             Button {} label: {
-                Image(systemName: "bell").font(.system(size: 17, weight: .medium))
-                    .frame(width: 40, height: 40).background(Palette.card, in: Circle())
+                Image("lu-bell").renderingMode(.template).resizable().frame(width: 17, height: 17)
+                    .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Notificaciones")
             Button(action: onProfile) {
-                Text(initial).font(.system(size: 17, weight: .semibold))
-                    .frame(width: 40, height: 40).background(Palette.card, in: Circle())
+                Text(initial).font(.apFootnote.weight(.semibold))
+                    .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Perfil y ajustes")
@@ -61,24 +63,32 @@ struct HeaderButtons: View {
     }
 }
 
-/// Barra de pestañas flotante (MobileTabBar): cápsula oscura con la pestaña activa en una píldora dorada.
+/// Barra flotante de la web (FloatingMobileNav + MobileTabBar): iconos Phosphor (normal / relleno),
+/// 68 pt de alto, píldora activa dorada al 90 % y texto negro, inactivas en gris.
 struct FloatingTabBar: View {
     let tabs: [AppSection]
     @Binding var selection: AppSection
+    @Namespace private var pill
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 2) {
             ForEach(tabs) { tab in
                 let active = tab == selection
-                Button { Haptics.selection(); selection = tab } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.tabSymbol(active: active)).font(.system(size: 21, weight: active ? .semibold : .regular))
-                            .frame(height: 26)
-                        Text(tab.tabTitle).font(.system(size: 12, weight: active ? .semibold : .regular))
+                Button { if active { Haptics.tap() } else { Haptics.selection() }; withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = tab } } label: {
+                    VStack(spacing: 2) {
+                        Image(tab.phosphor + (active ? "-fill" : "")).renderingMode(.template).resizable().frame(width: 24, height: 24)
+                            .frame(height: 28)
+                        Text(tab.tabTitle).font(.system(size: 11, weight: .medium)).lineLimit(1)
                     }
                     .foregroundStyle(active ? Color.black : Palette.muted)
-                    .frame(maxWidth: .infinity, minHeight: 58)
-                    .background { if active { Capsule().fill(Palette.gold).shadow(color: Palette.gold.opacity(0.35), radius: 10) } }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background {
+                        if active {
+                            Capsule().fill(Palette.gold.opacity(0.9))
+                                .shadow(color: Palette.gold.opacity(0.6), radius: 9, y: 6)
+                                .matchedGeometryEffect(id: "pill", in: pill)
+                        }
+                    }
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -86,8 +96,11 @@ struct FloatingTabBar: View {
                 .accessibilityAddTraits(active ? .isSelected : [])
             }
         }
-        .padding(6)
+        .padding(4)
+        .frame(height: 68)
+        .frame(maxWidth: 480)
         .background(Palette.card, in: Capsule())
+        .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
         .padding(.horizontal, 12)
     }
 }
@@ -136,6 +149,16 @@ struct ProgressRing: View {
 }
 
 extension AppSection {
+    /// Icono Phosphor de la pestaña (los mismos de MobileTabBar).
+    var phosphor: String {
+        switch self {
+        case .home: "ph-house"
+        case .train: "ph-barbell"
+        case .nutrition: "ph-fork-knife"
+        case .progress: "ph-chart-line-up"
+        default: "ph-house"
+        }
+    }
     func tabSymbol(active: Bool) -> String {
         switch self {
         case .home: active ? "house.fill" : "house"

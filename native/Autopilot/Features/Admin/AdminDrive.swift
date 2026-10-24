@@ -202,7 +202,7 @@ struct DriveItemEditor: View {
                             }
                             if kind == "book" {
                                 Button(book.file_path == nil ? "Subir PDF" : "Reemplazar PDF") { importingPDF = true }.foregroundStyle(Palette.gold)
-                                if book.file_path != nil { Text("PDF listo").font(.apFootnote).foregroundStyle(.green) }
+                                if book.file_path != nil { Text("PDF listo").font(.apFootnote).foregroundStyle(Palette.success) }
                             }
                         }
                         .buttonStyle(.plain)

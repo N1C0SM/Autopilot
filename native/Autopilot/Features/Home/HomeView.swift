@@ -120,10 +120,10 @@ struct HomeView: View {
         } else if completedToday {
             Button { Haptics.tap(); onNavigate(.train) } label: {
                 HStack(spacing: 14) {
-                    Image(systemName: "checkmark").font(.system(size: 18, weight: .heavy)).foregroundStyle(.green)
-                        .frame(width: 40, height: 40).background(Color.green.opacity(0.15), in: Circle())
+                    Image(systemName: "checkmark").font(.system(size: 18, weight: .heavy)).foregroundStyle(Palette.success)
+                        .frame(width: 40, height: 40).background(Palette.success.opacity(0.15), in: Circle())
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(.green)
+                        Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.success)
                         Text(todayPlan.map { $0.title.components(separatedBy: " · ")[0] } ?? "Sesión completada").font(.apHeadline).lineLimit(1)
                     }
                     Spacer()

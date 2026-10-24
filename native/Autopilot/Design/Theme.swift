@@ -9,7 +9,9 @@ enum Palette {
     static let secondary = Color(red: 0.177, green: 0.177, blue: 0.183)
     static let muted = Color(red: 0.67, green: 0.67, blue: 0.69)
     static let gold = Color(red: 0.844, green: 0.706, blue: 0.356)
-    static let destructive = Color(red: 1.0, green: 0.27, blue: 0.23)
+    static let destructive = Color(red: 1.0, green: 0.259, blue: 0.22)
+    /// --success 135 64% 50%
+    static let success = Color(red: 0.18, green: 0.82, blue: 0.34)
     static let separator = Color.white.opacity(0.12)
 }
 
