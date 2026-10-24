@@ -41,8 +41,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .home: "Inicio"
-        case .train: "Plan"
-        case .progress: "Progreso"
+        case .train: "Entrenamiento"
+        case .progress: "Mi progreso"
         case .nutrition: "Nutrición"
         case .scan: "Escáner"
         case .settings: "Ajustes"
@@ -207,8 +207,10 @@ struct MainShell: View {
             Label {
                 Text(item.title).fontWeight(active ? .semibold : .regular)
             } icon: {
-                Image(systemName: item.symbol)
-                    .symbolRenderingMode(.monochrome)
+                Group {
+                    if let lu = item.lucide { Image(lu).renderingMode(.template).resizable().frame(width: 18, height: 18) }
+                    else { Image(systemName: item.symbol).symbolRenderingMode(.monochrome) }
+                }
                     .foregroundStyle(active ? Palette.gold : Palette.foreground)
             }
             .foregroundStyle(active ? Palette.gold : Palette.foreground)
@@ -239,12 +241,12 @@ struct MainShell: View {
                 }
                 Section {
                     Button { session.showPicker = true } label: {
-                        Label { Text("Cambiar de cuenta") } icon: { Image(systemName: "arrow.left.arrow.right").foregroundStyle(Palette.foreground) }
+                        Label { Text("Cambiar de cuenta") } icon: { Image("lu-arrow-left-right").renderingMode(.template).resizable().frame(width: 18, height: 18).foregroundStyle(Palette.foreground) }
                             .foregroundStyle(Palette.foreground)
                     }
                     .buttonStyle(.plain)
                     Button { Task { await session.signOut() } } label: {
-                        Label { Text("Cerrar sesión") } icon: { Image(systemName: "rectangle.portrait.and.arrow.right").foregroundStyle(Palette.destructive) }
+                        Label { Text("Cerrar sesión") } icon: { Image("lu-log-out").renderingMode(.template).resizable().frame(width: 18, height: 18).foregroundStyle(Palette.destructive) }
                             .foregroundStyle(Palette.destructive)
                     }
                     .buttonStyle(.plain)
@@ -296,7 +298,15 @@ struct SectionView: View {
             default: AdminWebSectionView(section: section)
             }
         }
+        #if os(macOS)
+        .padding(.horizontal, section.lucide != nil ? 24 : 0)
+        .frame(maxWidth: section.lucide != nil ? 948 : .infinity)
+        .frame(maxWidth: .infinity)
+        .navigationTitle(section.deskTitle)
+        .navigationSubtitle(section.deskHint ?? "")
+        #else
         .navigationTitle(section.navTitle)
+        #endif
         #if os(iOS)
         .navigationBarTitleDisplayMode(section == .home ? .inline : .large)
         #endif
@@ -305,6 +315,37 @@ struct SectionView: View {
 
 extension AppSection {
     /// Título de la barra como en la web: «Hoy», «Plan», «Nutrición», «Progreso».
+    /// Icono Lucide de la barra lateral de escritorio (`UserSidebar.tsx`).
+    var lucide: String? {
+        switch self {
+        case .home: "lu-house"
+        case .train: "lu-dumbbell"
+        case .nutrition: "lu-apple"
+        case .progress: "lu-sparkles"
+        case .settings: "lu-settings"
+        default: nil
+        }
+    }
+
+    /// Título y pista de la cabecera de escritorio (SECTION_LABELS / SECTION_HINTS de la web).
+    var deskTitle: String {
+        switch self {
+        case .train: "Entrenamiento"
+        case .progress: "Progreso"
+        default: title
+        }
+    }
+    var deskHint: String? {
+        switch self {
+        case .home: "Tu entreno de hoy y lo que toca comer"
+        case .train: "Tu rutina de la semana. Marca las series al terminarlas"
+        case .nutrition: "Tus macros y comidas del día"
+        case .progress: "Fotos, peso y evolución semanal"
+        case .settings: "Perfil, suscripción y notificaciones"
+        default: nil
+        }
+    }
+
     var navTitle: String {
         switch self {
         case .home: "Hoy"

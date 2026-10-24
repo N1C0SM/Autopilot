@@ -7,26 +7,34 @@ struct RestCard<Action: View>: View {
     let message: String
     @ViewBuilder var action: Action
 
+    /// EmptyState `rest` de la web: halo, luna creciente de 96 pt con resplandor y cinco estrellas.
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Spacer(minLength: 150)
-            Text(title).font(.inter(.title).weight(.bold)).accessibilityAddTraits(.isHeader)
-            Text(message).font(.apBody).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
-            action.padding(.top, 14)
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 144)
+            Text(title).font(.inter(size: 28, weight: .bold)).tracking(-0.7).padding(.top, 8).accessibilityAddTraits(.isHeader)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
+            action.padding(.top, 20)
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(alignment: .topTrailing) {
-            ZStack(alignment: .topTrailing) {
-                RadialGradient(colors: [Palette.gold.opacity(0.28), .clear], center: .init(x: 0.82, y: 0.2), startRadius: 0, endRadius: 220)
-                Image(systemName: "moon.fill")
-                    .font(.inter(size: 120, weight: .regular))
-                    .foregroundStyle(Palette.gold)
-                    .rotationEffect(.degrees(-20))
-                    .padding(.top, 34).padding(.trailing, 34)
-                Canvas { ctx, size in
-                    for p in [CGPoint(x: 0.22, y: 0.13), CGPoint(x: 0.44, y: 0.2), CGPoint(x: 0.58, y: 0.28), CGPoint(x: 0.3, y: 0.38), CGPoint(x: 0.72, y: 0.12)] {
-                        ctx.fill(Path(ellipseIn: CGRect(x: p.x * size.width, y: p.y * size.height, width: 5, height: 5)), with: .color(.white.opacity(0.5)))
+        .padding(20)
+        .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
+        .background {
+            GeometryReader { geo in
+                ZStack(alignment: .topLeading) {
+                    Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.22), .clear], center: .center, startRadius: 0, endRadius: 144))
+                        .frame(width: 288, height: 288).offset(x: geo.size.width - 288 + 64, y: -80)
+                    Circle().fill(Palette.gold.opacity(0.9))
+                        .frame(width: 96, height: 96)
+                        .mask {
+                            Rectangle().overlay {
+                                Circle().frame(width: 77, height: 77).position(x: 28.8, y: 33.6).blendMode(.destinationOut)
+                            }
+                            .compositingGroup()
+                        }
+                        .shadow(color: Palette.gold.opacity(0.45), radius: 30)
+                        .offset(x: geo.size.width - 96 - 32, y: 32)
+                    ForEach([(0.18, 0.22), (0.34, 0.58), (0.12, 0.72), (0.46, 0.30), (0.26, 0.44)], id: \.0) { t, l in
+                        Circle().fill(Color.white.opacity(0.5)).frame(width: 4, height: 4)
+                            .offset(x: l * geo.size.width, y: t * geo.size.height)
                     }
                 }
             }
