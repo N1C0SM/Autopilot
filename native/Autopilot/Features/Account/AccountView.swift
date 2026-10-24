@@ -34,6 +34,19 @@ struct AccountView: View {
     @State private var travelUntil: String?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
+    @State private var subTier: String?
+    @State private var subStatus = ""
+    @State private var subEnd: Date?
+    @State private var isAdmin = false
+    /// Igual que la web: «training» = Plus; «full», «transform», «personal» = Coach.
+    private var planName: String { ["full", "transform", "personal"].contains(subTier ?? "") ? "Coach" : subTier == "training" ? "Plus" : "Free" }
+    private var paid: Bool { planName != "Free" }
+    private var subActive: Bool { subStatus == "active" || subStatus == "trialing" }
+
+    private func setRest(_ secs: Int) {
+        let v = min(600, max(15, secs))
+        restSeconds = v; UserDefaults.standard.set(v, forKey: "rest-seconds"); Haptics.selection()
+    }
 
     private static let goals = [("lose_weight", "Perder peso"), ("gain_muscle", "Ganar músculo"), ("improve_endurance", "Mejorar resistencia")]
     private static let rests = [(45, "45 s"), (60, "1 min"), (90, "1.5 min"), (120, "2 min"), (180, "3 min")]
@@ -100,24 +113,83 @@ struct AccountView: View {
                     .padding(.vertical, 6)
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Descanso entre series").font(.apBody)
-                        FlowRow {
-                            ForEach(Self.rests, id: \.0) { secs, label in
-                                Button(label) { restSeconds = secs; UserDefaults.standard.set(secs, forKey: "rest-seconds"); Haptics.selection() }
-                                    .font(.apSubhead.weight(.medium))
-                                    .padding(.horizontal, 14).frame(minHeight: 36)
-                                    .foregroundStyle(restSeconds == secs ? Color.black : Palette.foreground)
-                                    .background(restSeconds == secs ? Palette.gold : Palette.secondary, in: Capsule())
-                                    .buttonStyle(.plain)
-                            }
-                        }
+                        SegmentedPill(options: Self.rests.map(\.1), selection: Binding(
+                            get: { Self.rests.firstIndex { $0.0 == restSeconds } ?? -1 },
+                            set: { setRest(Self.rests[$0].0) }))
                     }
                     .padding(.vertical, 6)
+                    row("Personalizado") {
+                        TextField("90", text: Binding(get: { String(restSeconds) }, set: { restSeconds = Int($0) ?? restSeconds }))
+                            .multilineTextAlignment(.trailing).textFieldStyle(.plain)
+                            #if os(iOS)
+                            .keyboardType(.numberPad)
+                            #endif
+                            .onSubmit { setRest(restSeconds) }
+                        Text("segundos").foregroundStyle(Palette.muted)
+                    }
                 }
 
                 group("Cambiar contraseña") {
                     row("Nueva") { SecureField("Mínimo 6 caracteres", text: $newPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     row("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     actionRow("Cambiar contraseña", disabled: newPassword.count < 6 || newPassword != confirmPassword) { await changePassword() }
+                }
+
+                if !isAdmin {
+                    group("Suscripción") {
+                        HStack(spacing: 12) {
+                            Image(systemName: "crown").foregroundStyle(paid ? Palette.gold : Palette.muted).frame(width: 28)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Plan \(planName)").font(.apBody)
+                                Text(subActive ? (subStatus == "trialing" ? "Prueba gratuita activa" : "Suscripción activa") : paid ? "Acceso activo (pago único)" : "Cuenta Free · entrenador opcional")
+                                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                            }
+                        }
+                        .frame(minHeight: 44)
+                        if subActive, let end = subEnd {
+                            row(subStatus == "trialing" ? "Fin de la prueba" : "Próxima renovación") {
+                                Text(end.formatted(.dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "es_ES")))).foregroundStyle(Palette.muted)
+                            }
+                        }
+                    }
+                }
+
+                group("Privacidad y mis datos", footer: "Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.") {
+                    Button { Task { await exportData() } } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(busy ? "Generando…" : "Exportar mis datos").font(.apBody).foregroundStyle(Palette.gold)
+                            Text("Descarga un JSON con todo lo que tenemos sobre ti.").font(.apFootnote).foregroundStyle(Palette.muted)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).disabled(busy)
+                    Link(destination: URL(string: "https://autopilotplan.app/legal/privacidad")!) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Ver Política de Privacidad").font(.apBody).foregroundStyle(Palette.foreground)
+                                Text("Qué datos tratamos y con qué base legal.").font(.apFootnote).foregroundStyle(Palette.muted)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                        }
+                    }
+                }
+
+                group("Legal") {
+                    linkRow("Términos", "https://autopilotplan.app/legal/terminos")
+                    linkRow("Cookies", "https://autopilotplan.app/legal/cookies")
+                    linkRow("Disclaimer médico", "https://autopilotplan.app/legal/disclaimer-medico")
+                    linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
+                }
+
+                group("Modo viaje", footer: "Adapta tu plan cuando estás fuera de tu rutina habitual.") {
+                    Toggle(isOn: Binding(get: { travelActive }, set: { v in Task { await setTravel(v) } })) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Modo viaje").font(.apBody)
+                            Text(travelActive ? "Activo hasta \(String((travelUntil ?? "").prefix(10)))" : "Desactivado").font(.apFootnote).foregroundStyle(Palette.muted)
+                        }
+                    }
+                    .tint(Palette.gold)
                 }
 
                 group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac.") {
@@ -151,45 +223,20 @@ struct AccountView: View {
                     .buttonStyle(.plain)
                 }
 
-                group("Privacidad y mis datos", footer: "Conforme al RGPD tienes derecho a acceder, portar y eliminar tus datos en cualquier momento.") {
-                    Button { Task { await exportData() } } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(busy ? "Generando…" : "Exportar mis datos").font(.apBody).foregroundStyle(Palette.gold)
-                            Text("Descarga un JSON con todo lo que tenemos sobre ti.").font(.apFootnote).foregroundStyle(Palette.muted)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain).disabled(busy)
-                }
-
-                group("Modo viaje", footer: "Adapta tu plan cuando estás fuera de tu rutina habitual.") {
-                    Toggle(isOn: Binding(get: { travelActive }, set: { v in Task { await setTravel(v) } })) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Modo viaje").font(.apBody)
-                            Text(travelActive ? "Activo hasta \(String((travelUntil ?? "").prefix(10)))" : "Desactivado").font(.apFootnote).foregroundStyle(Palette.muted)
-                        }
-                    }
-                    .tint(Palette.gold)
-                }
-
-                group("Legal") {
-                    linkRow("Términos", "https://autopilotplan.app/legal/terminos")
-                    linkRow("Ver Política de Privacidad", "https://autopilotplan.app/legal/privacidad")
-                    linkRow("Cookies", "https://autopilotplan.app/legal/cookies")
-                    linkRow("Disclaimer médico", "https://autopilotplan.app/legal/disclaimer")
-                    linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
-                }
-
                 group("Sesión", footer: "Cierra tu sesión en este dispositivo.") {
                     Button { Task { await session.signOut() } } label: {
                         Text("Cerrar sesión").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
                 }
-                Button { confirmDelete = true } label: {
-                    Text("Eliminar cuenta").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, minHeight: 44)
+                VStack(spacing: 0) {
+                    Button { Haptics.warning(); confirmDelete = true } label: {
+                        Text("Eliminar cuenta").font(.apBody).foregroundStyle(Palette.destructive).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                            .padding(.horizontal, 16).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -339,13 +386,15 @@ struct AccountView: View {
 
     private func load() async {
         guard let id = session.userId else { return }
-        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let progress_public: Bool?; let travel_mode_until: String? }
-        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, progress_public, travel_mode_until")
+        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let progress_public: Bool?; let travel_mode_until: String?; let subscription_tier: String?; let subscription_status: String?; let subscription_end: Date? }
+        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, progress_public, travel_mode_until, subscription_tier, subscription_status, subscription_end")
             .eq("user_id", value: id).single().execute().value {
             name = p.name ?? ""; avatar = p.avatar_url
             namePublic = p.name_public ?? false; avatarPublic = p.avatar_public ?? false; progressPublic = p.progress_public ?? false
             travelUntil = p.travel_mode_until
+            subTier = p.subscription_tier; subStatus = p.subscription_status ?? "inactive"; subEnd = p.subscription_end
         }
+        isAdmin = session.role == .admin
         struct Avail: Decodable { let days: AnyJSON?; let hours: AnyJSON? }
         struct O: Decodable { let age: Double?; let height: Double?; let weight: Double?; let goal: String?; let availability: Avail?; let sports: String?; let nutrition_preferences: String?; let allergies: String? }
         if let o: O = try? await Backend.client.from("onboarding").select("age, height, weight, goal, availability, sports, nutrition_preferences, allergies")
@@ -415,7 +464,7 @@ private struct SeparatedLayout: _VariadicView_MultiViewRoot {
     func body(children: _VariadicView.Children) -> some View {
         ForEach(Array(children.enumerated()), id: \.element.id) { i, child in
             child
-                .padding(.horizontal, 16).padding(.vertical, 4)
+                .padding(.horizontal, 16).padding(.vertical, 6).frame(minHeight: 52, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
         }
