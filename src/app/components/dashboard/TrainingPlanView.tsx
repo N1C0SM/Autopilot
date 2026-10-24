@@ -1,4 +1,4 @@
-import { forwardRef, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
+import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
 import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame, Moon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -101,6 +101,10 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
   const trainsOn = (day?: string) =>
     Boolean(day) && dayPlans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
   const [expandedDay, setExpandedDay] = useState<string | null>(trainsOn(initialDay) ? initialDay! : todayName);
+  // La vista no se desmonta al cambiar de pestaña: sincroniza cada día pedido desde «Hoy».
+  useEffect(() => {
+    if (trainsOn(initialDay)) setExpandedDay(initialDay!);
+  }, [initialDay]);
   const [copied, setCopied] = useState(false);
   const [detail, setDetail] = useState<{
     name: string;

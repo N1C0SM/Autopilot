@@ -102,8 +102,16 @@ describe("dashboard home overview", () => {
     const onStartWorkout = vi.fn();
     render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
     fireEvent.click(screen.getByRole("button", { name: "Entrenar igualmente" }));
-    expect(onNavigate).toHaveBeenCalledWith("training");
+    // «Entrenar igualmente» abre la rutina semanal en el día de hoy.
+    expect(onNavigate).toHaveBeenCalledWith("training", "Domingo");
     expect(onStartWorkout).not.toHaveBeenCalled();
+  });
+
+  it("sends the completed card to training without a day (session summary)", () => {
+    const onNavigate = vi.fn();
+    render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} completedToday onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ver el resumen de la sesión de hoy" }));
+    expect(onNavigate).toHaveBeenCalledWith("training");
   });
 
   it("uses the direct start action only for today's planned session", () => {

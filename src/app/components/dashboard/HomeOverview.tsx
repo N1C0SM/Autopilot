@@ -313,7 +313,7 @@ const HomeOverview = ({
 
   const openWeek = () => {
     void hapticTap();
-    onNavigate("training");
+    onNavigate("training", DAYS_ORDER[todayIndex]);
   };
 
   return (
