@@ -30,16 +30,18 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))).capitalizedFirst)
-                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted)
-                (Text(firstName.isEmpty ? "Hola." : "Hola, \(firstName).") + Text("\n") + Text(stateLine).foregroundColor(Palette.muted))
-                    .font(.inter(.largeTitle).weight(.bold))
-                    .padding(.top, 2)
-                    .accessibilityAddTraits(.isHeader)
-
-                if !scheduled.isEmpty { weekStrip.padding(.top, 24) }
-
-                mainAction.padding(.top, completedToday ? 12 : 32).padding(.bottom, 32)
+                // Escritorio (lg de la web): saludo y semana a la izquierda, la acción en una columna de 320 a la derecha.
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 48) {
+                        heading(wide: true).frame(minWidth: 420, maxWidth: .infinity, alignment: .leading)
+                        mainAction.frame(width: 320).padding(.top, 64)
+                    }
+                    .padding(.bottom, 48)
+                    VStack(alignment: .leading, spacing: 0) {
+                        heading(wide: false)
+                        mainAction.padding(.top, completedToday ? 12 : 32).padding(.bottom, 32)
+                    }
+                }
 
                 Text("Resumen").font(.apTitle3).padding(.bottom, 12)
                 HStack(spacing: 12) {
@@ -60,6 +62,18 @@ struct HomeView: View {
         .refreshable { await load() }
         .task { await load() }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
+    }
+
+    private func heading(wide: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))).capitalizedFirst)
+                .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted)
+            (Text(firstName.isEmpty ? "Hola." : "Hola, \(firstName).") + Text("\n") + Text(stateLine).foregroundColor(Palette.muted))
+                .font(wide ? .inter(size: 44, weight: .bold) : .inter(.largeTitle).weight(.bold))
+                .padding(.top, 2)
+                .accessibilityAddTraits(.isHeader)
+            if !scheduled.isEmpty { weekStrip.frame(maxWidth: wide ? 320 : .infinity).padding(.top, 24) }
+        }
     }
 
     private var stateLine: String {
@@ -124,7 +138,7 @@ struct HomeView: View {
                         .frame(width: 40, height: 40).background(Palette.success.opacity(0.15), in: Circle())
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.success)
-                        Text(todayPlan.map { $0.title.components(separatedBy: " · ")[0] } ?? "Sesión completada").font(.apHeadline).lineLimit(1)
+                        Text(todayPlan.map { $0.title.components(separatedBy: " · ")[0] } ?? "Sesión completada").font(.apHeadline).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer()
                     Text("Resumen").font(.apSubhead).foregroundStyle(Palette.gold)

@@ -12,6 +12,7 @@ struct AutopilotApp: App {
                 .environmentObject(accounts)
                 .preferredColorScheme(.dark)
                 .tint(Palette.gold)
+                .toggleStyle(TrailingSwitchStyle())
                 .task { await session.start() }
         }
         #if os(macOS)

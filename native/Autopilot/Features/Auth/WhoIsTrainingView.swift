@@ -52,7 +52,7 @@ struct WhoIsTrainingView: View {
 
                 if let current = accounts.accounts.first(where: { $0.id == session.userIdString }), !current.requirePassword, session.session != nil {
                     Button("Seguir como \(current.name)") { session.showPicker = false }
-                        .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44)
+                        .font(.apSubhead).foregroundStyle(Palette.muted).frame(minHeight: 44).buttonStyle(.plain)
                 }
             }
             .frame(maxWidth: 640).frame(maxWidth: .infinity)

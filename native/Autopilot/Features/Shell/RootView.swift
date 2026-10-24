@@ -266,6 +266,7 @@ struct MainShell: View {
 
 /// Contenido de cada sección.
 struct SectionView: View {
+    @EnvironmentObject private var session: SessionModel
     let section: AppSection
     var onNavigate: (AppSection) -> Void = { _ in }
 
@@ -298,6 +299,8 @@ struct SectionView: View {
             default: AdminWebSectionView(section: section)
             }
         }
+        // Al cambiar o recuperar la cuenta, cada pantalla vuelve a cargar con el usuario correcto.
+        .id(session.userIdString ?? "")
         #if os(macOS)
         .padding(.horizontal, section.lucide != nil ? 24 : 0)
         .frame(maxWidth: section.lucide != nil ? 948 : .infinity)

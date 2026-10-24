@@ -192,3 +192,13 @@ enum NumberText {
         value.formatted(.number.locale(Locale(identifier: "es_ES")))
     }
 }
+
+/// Interruptor a la derecha de su texto, como las filas de la web (en Mac el `.switch` se pega al texto).
+struct TrailingSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 12) {
+            configuration.label.frame(maxWidth: .infinity, alignment: .leading)
+            Toggle("", isOn: configuration.$isOn).toggleStyle(.switch).labelsHidden()
+        }
+    }
+}
