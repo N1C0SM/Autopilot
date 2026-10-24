@@ -10,7 +10,7 @@ struct RestCard<Action: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Spacer(minLength: 150)
-            Text(title).font(.system(.title).weight(.bold)).accessibilityAddTraits(.isHeader)
+            Text(title).font(.inter(.title).weight(.bold)).accessibilityAddTraits(.isHeader)
             Text(message).font(.apBody).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
             action.padding(.top, 14)
         }
@@ -20,7 +20,7 @@ struct RestCard<Action: View>: View {
             ZStack(alignment: .topTrailing) {
                 RadialGradient(colors: [Palette.gold.opacity(0.28), .clear], center: .init(x: 0.82, y: 0.2), startRadius: 0, endRadius: 220)
                 Image(systemName: "moon.fill")
-                    .font(.system(size: 120, weight: .regular))
+                    .font(.inter(size: 120, weight: .regular))
                     .foregroundStyle(Palette.gold)
                     .rotationEffect(.degrees(-20))
                     .padding(.top, 34).padding(.trailing, 34)
@@ -85,14 +85,14 @@ struct FloatingTabBar: View {
                     VStack(spacing: 2) {
                         Image(tab.phosphor + (active ? "-fill" : "")).renderingMode(.template).resizable().frame(width: 24, height: 24)
                             .frame(height: 28)
-                        Text(tab.tabTitle).font(.system(size: 11, weight: .medium)).lineLimit(1)
+                        Text(tab.tabTitle).font(.inter(size: 11, weight: .medium)).lineLimit(1)
                     }
                     .foregroundStyle(active ? Color.black : Palette.muted)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background {
                         if active {
                             Capsule().fill(Palette.gold.opacity(0.9))
-                                .shadow(color: Palette.gold.opacity(0.6), radius: 9, y: 6)
+                                .shadow(color: Palette.gold.opacity(0.35), radius: 6, y: 6)
                                 .matchedGeometryEffect(id: "pill", in: pill)
                         }
                     }
@@ -121,7 +121,7 @@ struct SegmentedPill: View {
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { i in
                 Button { Haptics.selection(); selection = i } label: {
-                    Text(options[i]).font(.system(size: 13, weight: i == selection ? .semibold : .medium))
+                    Text(options[i]).font(.inter(size: 13, weight: i == selection ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .foregroundStyle(i == selection ? Palette.foreground : Palette.muted)
                         .frame(maxWidth: .infinity, minHeight: 32)
@@ -153,7 +153,7 @@ struct ProgressRing: View {
                 .rotationEffect(.degrees(-90))
             Group {
                 if symbol.hasPrefix("lu-") || symbol.hasPrefix("ph-") { Image(symbol).renderingMode(.template).resizable().frame(width: 14, height: 14) }
-                else { Image(systemName: symbol).font(.system(size: 13, weight: .semibold)) }
+                else { Image(systemName: symbol).font(.inter(size: 13, weight: .semibold)) }
             }
             .foregroundStyle(muted ? Palette.muted : Palette.gold)
         }
@@ -247,7 +247,7 @@ struct IconTile: View {
     var tint: Color = Palette.gold
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: size * 0.5625, weight: .semibold))
+            .font(.inter(size: size * 0.5625, weight: .semibold))
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))

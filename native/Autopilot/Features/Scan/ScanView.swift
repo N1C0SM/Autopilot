@@ -38,7 +38,7 @@ struct ScanView: View {
                 }
 
                 HStack(alignment: .top, spacing: 14) {
-                    Image(systemName: "target").font(.system(size: 18, weight: .semibold)).foregroundStyle(Palette.gold)
+                    Image(systemName: "target").font(.inter(size: 18, weight: .semibold)).foregroundStyle(Palette.gold)
                         .frame(width: 32, height: 32).background(Palette.gold.opacity(0.15), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Tu objetivo").font(.apHeadline)
@@ -83,9 +83,9 @@ struct ScanView: View {
                     Image(platformImage: image).resizable().scaledToFill()
                         .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
                 } else {
-                    Image(systemName: silhouette).font(.system(size: 150, weight: .ultraLight)).foregroundStyle(Color.white.opacity(0.06))
+                    Image(systemName: silhouette).font(.inter(size: 150, weight: .ultraLight)).foregroundStyle(Color.white.opacity(0.06))
                     VStack(spacing: 6) {
-                        Image(systemName: "square.and.arrow.up").font(.system(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
+                        Image(systemName: "square.and.arrow.up").font(.inter(size: 22, weight: .semibold)).foregroundStyle(Palette.gold)
                             .frame(width: 54, height: 54).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         Text(title).font(.apHeadline).foregroundStyle(Palette.foreground).padding(.top, 8)
                         Text(hint).font(.apSubhead).foregroundStyle(Palette.muted)
@@ -198,7 +198,7 @@ struct ScanResultView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Físico").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(NumberText.decimal(result.physique ?? 0)).font(.system(size: 64, weight: .bold).monospacedDigit())
+                    Text(NumberText.decimal(result.physique ?? 0)).font(.inter(size: 64, weight: .bold).monospacedDigit())
                     Text("/10").font(.apTitle3).foregroundStyle(Palette.muted)
                 }
             }

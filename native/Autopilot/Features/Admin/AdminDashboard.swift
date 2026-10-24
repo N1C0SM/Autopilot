@@ -78,7 +78,7 @@ struct HeroFigure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.apSubhead).foregroundStyle(Palette.muted)
-            Text(value).font(.system(size: 48, weight: .bold).monospacedDigit())
+            Text(value).font(.inter(size: 48, weight: .bold).monospacedDigit())
             if let hint { Text(hint).font(.apFootnote).foregroundStyle(Palette.muted) }
         }
         .accessibilityElement(children: .combine)
@@ -93,7 +93,7 @@ struct StatRow: View {
             ForEach(Array(items.enumerated()), id: \.offset) { i, item in
                 VStack(alignment: .leading, spacing: 0) {
                     Text(item.label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                    Text(item.value).font(.system(size: 28, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
+                    Text(item.value).font(.inter(size: 28, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
                     if let h = item.hint { Text(h).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1) }
                 }
                 .padding(.vertical, 12).padding(.leading, i > 0 ? 12 : 0).padding(.trailing, 12)
@@ -158,7 +158,7 @@ struct AdminDashboardView: View {
                                     Spacer()
                                     PlanBadge(planStatus: u.plan_status, traveling: u.traveling)
                                     PaymentDot(paid: u.payment_status == "paid")
-                                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                                    Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
                                 }
                                 .padding(.horizontal, 16).frame(minHeight: 56)
                                 .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 64) } }
@@ -184,9 +184,9 @@ struct AdminDashboardView: View {
             HStack {
                 Text(label).font(.apBody)
                 Spacer()
-                Text("\(value)").font(.system(.body).weight(.semibold).monospacedDigit())
+                Text("\(value)").font(.inter(.body).weight(.semibold).monospacedDigit())
                     .foregroundStyle(danger && value > 0 ? Palette.destructive : Palette.foreground)
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
             }
             .padding(.horizontal, 16).frame(minHeight: 50)
             .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
@@ -202,7 +202,7 @@ struct PlanBadge: View {
         let (label, color): (String, Color) = traveling ? ("En viaje", Palette.gold)
             : planStatus == "plan_ready" ? ("Plan listo", .green)
             : planStatus == "plan_pending" ? ("Pendiente", Palette.gold) : ("Onboarding", Palette.muted)
-        Text(label).font(.caption.weight(.medium)).padding(.horizontal, 8).padding(.vertical, 2)
+        Text(label).font(.inter(.caption).weight(.medium)).padding(.horizontal, 8).padding(.vertical, 2)
             .foregroundStyle(color).background(color.opacity(0.15), in: Capsule())
     }
 }
@@ -238,9 +238,9 @@ struct AdminMetricsWebView: View {
                 HStack {
                     Text("Planes y actividad de los clientes.").font(.apSubhead).foregroundStyle(Palette.muted)
                     Spacer()
-                    Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").font(.title3).foregroundStyle(Palette.gold) }
+                    Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").font(.inter(.title3)).foregroundStyle(Palette.gold) }
                         .buttonStyle(.plain).frame(width: 44, height: 44).accessibilityLabel("Actualizar")
-                    Button { Haptics.warning(); confirmReset = true } label: { Image(systemName: "trash").font(.title3).foregroundStyle(Palette.destructive) }
+                    Button { Haptics.warning(); confirmReset = true } label: { Image(systemName: "trash").font(.inter(.title3)).foregroundStyle(Palette.destructive) }
                         .buttonStyle(.plain).frame(width: 44, height: 44).accessibilityLabel("Resetear métricas")
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 12)], spacing: 12) {
@@ -254,7 +254,7 @@ struct AdminMetricsWebView: View {
                 if emailsFailed > 0 {
                     Card {
                         HStack(alignment: .top, spacing: 14) {
-                            Image(systemName: "exclamationmark.circle").font(.title2).foregroundStyle(Palette.destructive)
+                            Image(systemName: "exclamationmark.circle").font(.inter(.title2)).foregroundStyle(Palette.destructive)
                             VStack(alignment: .leading) {
                                 Text("\(emailsFailed) emails fallidos").font(.apHeadline)
                                 Text("En los últimos 30 días.").font(.apSubhead).foregroundStyle(Palette.muted)
@@ -300,7 +300,7 @@ struct AdminMetricsWebView: View {
                                 }
                             }
                             .chartYAxis(.hidden)
-                            .chartXAxis { AxisMarks(values: .stride(by: 7)) { _ in AxisValueLabel().font(.caption2) } }
+                            .chartXAxis { AxisMarks(values: .stride(by: 7)) { _ in AxisValueLabel().font(.inter(.caption2)) } }
                             .frame(height: 160)
                         } else {
                             EmptyStateView(symbol: "chart.bar", title: "Sin actividad", message: "No hay entrenos ni registros en los últimos 30 días.")
@@ -327,7 +327,7 @@ struct AdminMetricsWebView: View {
     private func mini(_ label: String, _ value: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-            Text("\(value)").font(.system(size: 28, weight: .bold).monospacedDigit())
+            Text("\(value)").font(.inter(size: 28, weight: .bold).monospacedDigit())
         }
         .accessibilityElement(children: .combine)
     }
@@ -366,6 +366,6 @@ struct AdminMetricsWebView: View {
 
 struct DotLabel: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
-        HStack(spacing: 5) { configuration.icon.font(.system(size: 7)); configuration.title.foregroundStyle(Palette.muted) }
+        HStack(spacing: 5) { configuration.icon.font(.inter(size: 7)); configuration.title.foregroundStyle(Palette.muted) }
     }
 }

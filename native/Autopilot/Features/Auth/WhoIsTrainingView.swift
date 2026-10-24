@@ -25,7 +25,7 @@ struct WhoIsTrainingView: View {
                                 HStack(spacing: 4) {
                                     Text(account.name).font(.apHeadline).lineLimit(1)
                                     if account.requirePassword {
-                                        Image(systemName: "lock.fill").font(.footnote).foregroundStyle(Palette.muted)
+                                        Image(systemName: "lock.fill").font(.inter(.footnote)).foregroundStyle(Palette.muted)
                                     }
                                 }
                                 if account.expired { Text("Vuelve a entrar").font(.apFootnote).foregroundStyle(Palette.muted) }
@@ -38,7 +38,7 @@ struct WhoIsTrainingView: View {
                     }
                     Button { session.addAnotherAccount() } label: {
                         VStack(spacing: 10) {
-                            Image(systemName: "plus").font(.system(size: 30, weight: .semibold)).foregroundStyle(Palette.gold)
+                            Image(systemName: "plus").font(.inter(size: 30, weight: .semibold)).foregroundStyle(Palette.gold)
                                 .frame(width: 88, height: 88).background(Palette.gold.opacity(0.15), in: Circle())
                             Text("Añadir").font(.apHeadline)
                         }
@@ -126,7 +126,7 @@ struct AvatarView: View {
 
     private var initial: some View {
         Text(String(name.prefix(1)).uppercased())
-            .font(.system(size: size * 0.42, weight: .bold))
+            .font(.inter(size: size * 0.42, weight: .bold))
             .foregroundStyle(Palette.gold)
             .frame(width: size, height: size)
             .background(Palette.secondary)

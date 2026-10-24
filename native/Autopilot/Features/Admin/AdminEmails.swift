@@ -58,7 +58,7 @@ struct AdminEmailsView: View {
                         FlowRow {
                             ForEach(current.placeholders, id: \.self) { p in
                                 Button("{{\(p)}}") { html += "{{\(p)}}"; Haptics.tap() }
-                                    .font(.system(.footnote, design: .monospaced)).padding(.horizontal, 10).frame(minHeight: 32)
+                                    .font(.inter(.footnote, design: .monospaced)).padding(.horizontal, 10).frame(minHeight: 32)
                                     .background(Palette.secondary, in: Capsule()).buttonStyle(.plain)
                                     .accessibilityLabel("Insertar {{\(p)}}")
                             }
@@ -67,7 +67,7 @@ struct AdminEmailsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("HTML").font(.apSubhead).foregroundStyle(Palette.muted)
                         TextEditor(text: $html)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(.inter(.caption, design: .monospaced))
                             .scrollContentBackground(.hidden)
                             .padding(10).frame(minHeight: 360)
                             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))

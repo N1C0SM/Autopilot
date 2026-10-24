@@ -18,6 +18,7 @@
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
+		3F2C6CDDECBA648B750DF998 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2087F6E61B3A0D2AD7B75E7A /* LoginView.swift */; };
 		45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D1242F803ABF9EC7B42D3 /* Theme.swift */; };
 		4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8C9FF8A9F9707540345088 /* OtherViews.swift */; };
@@ -28,6 +29,7 @@
 		509D6E210D8DC96844E661C5 /* Accounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04DF82EEABE70C2CD7FA8478 /* Accounts.swift */; };
 		57465A2CCC8862B96537FE2C /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1837043D6026822C99B027E /* Components.swift */; };
 		57B02A075F88DC56F40180DC /* AdminProducts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853847766E839A5A319D2EB4 /* AdminProducts.swift */; };
+		5FDD42D966E843635893C724 /* InterFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF43ECE1DCA7DF46622829D /* InterFont.swift */; };
 		642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */; };
 		7407111E1A4E7EA1161EEB24 /* WhoIsTrainingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */; };
 		84D2950407D627971026844C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */; };
@@ -36,6 +38,7 @@
 		9649678245C4FAEEB4E1A90C /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */; };
 		98563A606D28BC5688F28819 /* TrainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E329249B146C8FEF5E45AF /* TrainView.swift */; };
 		9A0975F2340BFE3928FD9F8A /* Progression.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D7A51FF897F39CC070F086 /* Progression.swift */; };
+		A2979883987D963EA66536EA /* InterFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF43ECE1DCA7DF46622829D /* InterFont.swift */; };
 		A3F7B49D3F50D6E4FB409B18 /* AdminLanding.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */; };
 		B0AED86AD0879DB4DC404BA5 /* AdminExercises.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F83F6BD939EF251A757930A /* AdminExercises.swift */; };
 		B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54840FD78B7470F1A4A687B3 /* RoadmapView.swift */; };
@@ -43,6 +46,7 @@
 		BC730C3B8CCAC5C94052F77F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */; };
 		C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */; };
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
+		D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D06C6CE81D75452F06C8802 /* Backend.swift */; };
 		E8D814157094FEA4DBDAAFE4 /* RestActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */; };
 		EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172F9A007BDD4D9E6CB124BB /* AccountView.swift */; };
@@ -89,7 +93,9 @@
 		2F83F6BD939EF251A757930A /* AdminExercises.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminExercises.swift; sourceTree = "<group>"; };
 		38E2F87813CF2F5DC1B3F82A /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
+		3EF43ECE1DCA7DF46622829D /* InterFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterFont.swift; sourceTree = "<group>"; };
 		5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		523B49FFF874D33F1F331FA9 /* InterVariable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = InterVariable.ttf; sourceTree = "<group>"; };
 		54840FD78B7470F1A4A687B3 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
 		55A7028E351DD20C169D319C /* AutopilotWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotWidgets.swift; sourceTree = "<group>"; };
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
@@ -182,6 +188,14 @@
 				853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */,
 			);
 			path = Progress;
+			sourceTree = "<group>";
+		};
+		1A8404261AB147D4E88C6CEA /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				523B49FFF874D33F1F331FA9 /* InterVariable.ttf */,
+			);
+			path = Fonts;
 			sourceTree = "<group>";
 		};
 		3F1FFDFFFF626911D41BF766 /* Features */ = {
@@ -298,7 +312,9 @@
 		CD72E4CD24376B8573E995E9 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				3EF43ECE1DCA7DF46622829D /* InterFont.swift */,
 				FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */,
+				1A8404261AB147D4E88C6CEA /* Fonts */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -411,6 +427,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				84D2950407D627971026844C /* Assets.xcassets in Resources */,
+				D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */,
 				022673AFB045A59ACCDA5275 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -419,6 +436,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3F2C6CDDECBA648B750DF998 /* InterVariable.ttf in Resources */,
 				2968F507CB0D0D9F7BE25714 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -431,6 +449,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1D1D2EDEB1F6B06EF9F9AAD3 /* AutopilotWidgets.swift in Sources */,
+				A2979883987D963EA66536EA /* InterFont.swift in Sources */,
 				1D59B9E8FAAEE14DCC8B03E4 /* RestActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -460,6 +479,7 @@
 				57465A2CCC8862B96537FE2C /* Components.swift in Sources */,
 				BC730C3B8CCAC5C94052F77F /* Haptics.swift in Sources */,
 				1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */,
+				5FDD42D966E843635893C724 /* InterFont.swift in Sources */,
 				42B37E40810ED706D583D9A5 /* LoginView.swift in Sources */,
 				4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */,
 				642DC69615ED6F9C9C49CE51 /* ProgressScreen.swift in Sources */,

@@ -24,21 +24,19 @@ enum Radius {
     static let hero: CGFloat = 28
 }
 
-/// Escala tipográfica de la web (`type-*`) sobre los estilos del sistema,
-/// así crece con el tamaño de texto de Ajustes (Dynamic Type).
+/// Escala tipográfica de la web (`type-*`) en Inter; crece con el tamaño de texto (Dynamic Type).
 extension Font {
-    static let apLargeTitle = Font.system(.largeTitle).weight(.bold)
-    static let apTitle1 = Font.system(.title).weight(.bold)
-    static let apTitle2 = Font.system(.title2).weight(.bold)
-    static let apTitle3 = Font.system(.title3).weight(.bold)
-    static let apHeadline = Font.headline
-    static let apBody = Font.body
-    static let apSubhead = Font.subheadline
-    static let apFootnote = Font.footnote
-    static let apCaption = Font.caption2
-    /// Cifra protagonista (34 pt, redondeada, crece con Dynamic Type).
-    static let apFigure = Font.system(.largeTitle).weight(.bold).monospacedDigit()
-    static let apFigureSmall = Font.system(.title).weight(.bold).monospacedDigit()
+    static let apLargeTitle = inter(size: 34, weight: .bold, relativeTo: .largeTitle)
+    static let apTitle1 = inter(size: 28, weight: .bold, relativeTo: .title)
+    static let apTitle2 = inter(size: 22, weight: .bold, relativeTo: .title2)
+    static let apTitle3 = inter(size: 20, weight: .bold, relativeTo: .title3)
+    static let apHeadline = inter(size: 17, weight: .semibold, relativeTo: .headline)
+    static let apBody = inter(size: 17, relativeTo: .body)
+    static let apSubhead = inter(size: 15, relativeTo: .subheadline)
+    static let apFootnote = inter(size: 13, relativeTo: .footnote)
+    static let apCaption = inter(size: 11, relativeTo: .caption2)
+    static let apFigure = inter(size: 34, weight: .bold, relativeTo: .largeTitle).monospacedDigit()
+    static let apFigureSmall = inter(size: 28, weight: .bold, relativeTo: .title).monospacedDigit()
 }
 
 /// Tarjeta del sistema: sin borde, 22 pt.

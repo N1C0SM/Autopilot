@@ -107,7 +107,7 @@ struct RoundCheckStyle: ToggleStyle {
         Button { configuration.isOn.toggle(); Haptics.selection() } label: {
             HStack(spacing: 12) {
                 Image(systemName: configuration.isOn ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
+                    .font(.inter(size: 22))
                     .foregroundStyle(configuration.isOn ? Palette.gold : Palette.muted)
                 configuration.label
                 Spacer(minLength: 0)

@@ -83,7 +83,7 @@ struct AccountView: View {
                             HStack {
                                 Text(label).font(.apBody)
                                 Spacer()
-                                if goal == value { Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(Palette.gold) }
+                                if goal == value { Image(systemName: "checkmark").font(.inter(.body).weight(.semibold)).foregroundStyle(Palette.gold) }
                             }
                             .contentShape(Rectangle())
                         }
@@ -170,7 +170,7 @@ struct AccountView: View {
                                 Text("Qué datos tratamos y con qué base legal.").font(.apFootnote).foregroundStyle(Palette.muted)
                             }
                             Spacer()
-                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                            Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
                         }
                     }
                 }
@@ -202,7 +202,7 @@ struct AccountView: View {
                             }
                             Spacer()
                             if a.id == session.userIdString {
-                                Image(systemName: "checkmark").font(.body.weight(.bold)).foregroundStyle(Palette.gold).accessibilityLabel("Cuenta actual")
+                                Image(systemName: "checkmark").font(.inter(.body).weight(.bold)).foregroundStyle(Palette.gold).accessibilityLabel("Cuenta actual")
                             } else {
                                 Button("Quitar") { accounts.forget(a.id) }.font(.apSubhead).foregroundStyle(Palette.muted).buttonStyle(.plain)
                                     .frame(minHeight: 44).accessibilityLabel("Quitar \(a.name) de este dispositivo")
@@ -213,7 +213,7 @@ struct AccountView: View {
                     }
                     Button { session.addAnotherAccount() } label: {
                         HStack(spacing: 12) {
-                            Image(systemName: "plus").font(.body.weight(.bold)).foregroundStyle(Palette.gold)
+                            Image(systemName: "plus").font(.inter(.body).weight(.bold)).foregroundStyle(Palette.gold)
                                 .frame(width: 44, height: 44).background(Palette.gold.opacity(0.15), in: Circle())
                             Text("Añadir otra cuenta").font(.apBody)
                             Spacer()
@@ -362,7 +362,7 @@ struct AccountView: View {
             HStack {
                 Text(title).font(.apBody).foregroundStyle(Palette.foreground)
                 Spacer()
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
             }
             .frame(minHeight: 44)
         }

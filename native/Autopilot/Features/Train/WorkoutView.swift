@@ -68,7 +68,7 @@ struct WorkoutView: View {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button { Haptics.tap(); discardOpen = true } label: {
-                    Image(systemName: "ellipsis").font(.system(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
+                    Image(systemName: "ellipsis").font(.inter(size: 15, weight: .bold)).foregroundStyle(Palette.gold)
                         .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -207,12 +207,12 @@ struct SessionExerciseCard: View {
                     }
                     Spacer(minLength: 0)
                     if allDone {
-                        Image(systemName: "checkmark").font(.system(size: 18, weight: .bold)).foregroundStyle(Palette.gold)
+                        Image(systemName: "checkmark").font(.inter(size: 18, weight: .bold)).foregroundStyle(Palette.gold)
                             .frame(width: 36, height: 44).accessibilityLabel("hecho")
                     } else {
                         ExerciseSwapMenu(workout: workout, exercise: exercise)
                     }
-                    Button { technique = true } label: { Image(systemName: "info.circle").font(.system(size: 19)) }
+                    Button { technique = true } label: { Image(systemName: "info.circle").font(.inter(size: 19)) }
                         .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 44, height: 44)
                         .accessibilityLabel("Ver ficha de técnica de \(exercise.name)")
                 }
@@ -256,9 +256,9 @@ struct SessionExerciseCard: View {
                         Text("Previa").frame(width: 52)
                         Text("Kg").frame(maxWidth: .infinity)
                         Text("Reps").frame(maxWidth: .infinity)
-                        Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).frame(width: 44)
+                        Image(systemName: "checkmark").font(.inter(size: 11, weight: .bold)).frame(width: 44)
                     }
-                    .font(.caption)
+                    .font(.inter(.caption))
                     .lineLimit(1).minimumScaleFactor(0.7)
                     .foregroundStyle(Palette.muted)
                     .padding(.leading, 12).padding(.trailing, 8)
@@ -335,7 +335,7 @@ struct FocusViewer: View {
                 if let i = ex.image_url, let u = URL(string: i) {
                     CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
                 } else {
-                    Image(systemName: "dumbbell").font(.title).foregroundStyle(Palette.muted)
+                    Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
                 }
             }
             .frame(maxWidth: .infinity).frame(height: 240)
@@ -385,7 +385,7 @@ struct ExerciseSwapMenu: View {
             }
             if options.isEmpty { Text("Buscando alternativas…") }
         } label: {
-            Image(systemName: "arrow.left.arrow.right").font(.system(size: 16, weight: .semibold)).frame(width: 44, height: 44)
+            Image(systemName: "arrow.left.arrow.right").font(.inter(size: 16, weight: .semibold)).frame(width: 44, height: 44)
         }
         .menuStyle(.borderlessButton).fixedSize()
         .foregroundStyle(Palette.muted)
@@ -444,14 +444,14 @@ struct SetLine: View {
         VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 8) {
             Group {
-                if isWarmup { Image(systemName: "flame.fill").font(.system(size: 14)) }
-                else { Text("\(index + 1)").font(.system(.headline).monospacedDigit()) }
+                if isWarmup { Image(systemName: "flame.fill").font(.inter(size: 14)) }
+                else { Text("\(index + 1)").font(.inter(.headline).monospacedDigit()) }
             }
                 .foregroundStyle(isCurrent ? Palette.gold : Palette.muted)
                 .frame(width: 24)
                 .accessibilityHidden(true)
             Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
-                .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
+                .font(.inter(.caption).monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
                 .frame(width: 52)
                 .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
             NumberField(text: Binding(get: { set.weight }, set: { v in workout.update(exercise.name, set: index) { $0.weight = v } }),
@@ -465,7 +465,7 @@ struct SetLine: View {
                 ZStack {
                     Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2)
                         .background(Circle().fill(set.done ? Palette.gold : .clear))
-                    Image(systemName: "checkmark").font(.system(size: 14, weight: .heavy))
+                    Image(systemName: "checkmark").font(.inter(size: 14, weight: .heavy))
                         .foregroundStyle(set.done ? Color.black : Palette.muted.opacity(0.4))
                 }
                 .frame(width: 32, height: 32)
@@ -479,7 +479,7 @@ struct SetLine: View {
         // Bajadas del dropset: dentro de la misma serie, sin descanso.
         ForEach(Array((set.drops ?? []).enumerated()), id: \.offset) { di, drop in
             HStack(spacing: 8) {
-                Image(systemName: "arrow.down.right").font(.system(size: 13)).foregroundStyle(Palette.muted).frame(width: 24)
+                Image(systemName: "arrow.down.right").font(.inter(size: 13)).foregroundStyle(Palette.muted).frame(width: 24)
                 Color.clear.frame(width: 52, height: 1)
                 NumberField(text: Binding(get: { drop.weight }, set: { v in workout.updateDrop(exercise.name, set: index, drop: di) { $0.weight = v } }),
                             placeholder: "kg", big: false, decimal: true)
@@ -488,7 +488,7 @@ struct SetLine: View {
                             placeholder: "reps", big: false, decimal: false)
                     .accessibilityLabel("Repeticiones de la bajada \(di + 1) de la serie \(index + 1)")
                 Button { workout.removeDrop(exercise.name, set: index, drop: di) } label: {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).frame(width: 26, height: 26).background(Palette.secondary, in: Circle())
+                    Image(systemName: "xmark").font(.inter(size: 11, weight: .bold)).frame(width: 26, height: 26).background(Palette.secondary, in: Circle())
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain).foregroundStyle(Palette.muted)
@@ -538,8 +538,8 @@ struct NumberField: View {
         TextField(placeholder, text: $text)
             .textFieldStyle(.plain)
             .multilineTextAlignment(.center)
-            .font(big ? .system(size: 22, weight: .bold).monospacedDigit()
-                      : .system(.headline).monospacedDigit())
+            .font(big ? .inter(size: 22, weight: .bold).monospacedDigit()
+                      : .inter(.headline).monospacedDigit())
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             #if os(iOS)
@@ -559,7 +559,7 @@ struct RestTimerRow: View {
             VStack(spacing: 8) {
                 HStack(spacing: 0) {
                     Text(String(format: "%d:%02d", left / 60, left % 60))
-                        .font(.system(size: 34, weight: .bold).monospacedDigit())
+                        .font(.inter(size: 34, weight: .bold).monospacedDigit())
                         .contentTransition(.numericText(countsDown: true))
                         .transaction { $0.animation = nil }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -735,9 +735,9 @@ struct WorkoutSummaryView: View {
         tile {
             VStack(alignment: .leading, spacing: 4) {
                 Text(label).font(.apFootnote.weight(.semibold)).foregroundStyle(accent ? Palette.gold : Palette.muted)
-                (Text(value).foregroundColor(accent ? Palette.gold : Palette.foreground) + Text(unit.isEmpty ? "" : " \(unit)").font(.system(size: 17, weight: .semibold)).foregroundColor(Palette.muted))
-                    .font(.system(size: 30, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
-                if let note { Text(note).font(.caption.weight(.medium).monospacedDigit()).foregroundStyle(positive ? Palette.success : Palette.muted).lineLimit(1) }
+                (Text(value).foregroundColor(accent ? Palette.gold : Palette.foreground) + Text(unit.isEmpty ? "" : " \(unit)").font(.inter(size: 17, weight: .semibold)).foregroundColor(Palette.muted))
+                    .font(.inter(size: 30, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
+                if let note { Text(note).font(.inter(.caption).weight(.medium).monospacedDigit()).foregroundStyle(positive ? Palette.success : Palette.muted).lineLimit(1) }
             }
         }
     }

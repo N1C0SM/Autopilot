@@ -20,17 +20,17 @@ struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { ctx in
             HStack(spacing: 14) {
-                Image(systemName: "timer").font(.title2.weight(.semibold)).foregroundStyle(gold)
+                Image(systemName: "timer").font(.inter(.title2).weight(.semibold)).foregroundStyle(gold)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Descanso").font(.caption).foregroundStyle(muted)
+                    Text("Descanso").font(.inter(.caption)).foregroundStyle(muted)
                     Text(timerInterval: Date()...max(Date(), ctx.state.endsAt), countsDown: true)
-                        .font(.system(size: 34, weight: .bold, design: .rounded)).monospacedDigit().foregroundStyle(.white)
+                        .font(.inter(size: 34, weight: .bold, design: .default)).monospacedDigit().foregroundStyle(.white)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(ctx.state.exercise).font(.subheadline.weight(.semibold)).foregroundStyle(.white).lineLimit(1)
-                    Text("Siguiente: \(ctx.state.nextSet)").font(.caption).foregroundStyle(muted).lineLimit(1)
-                    Text("\(ctx.state.doneSets) de \(ctx.state.totalSets) series").font(.caption).foregroundStyle(gold)
+                    Text(ctx.state.exercise).font(.inter(.subheadline).weight(.semibold)).foregroundStyle(.white).lineLimit(1)
+                    Text("Siguiente: \(ctx.state.nextSet)").font(.inter(.caption)).foregroundStyle(muted).lineLimit(1)
+                    Text("\(ctx.state.doneSets) de \(ctx.state.totalSets) series").font(.inter(.caption)).foregroundStyle(gold)
                 }
             }
             .padding(16)
@@ -39,17 +39,17 @@ struct RestLiveActivity: Widget {
         } dynamicIsland: { ctx in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Label("Descanso", systemImage: "timer").font(.caption.weight(.semibold)).foregroundStyle(gold)
+                    Label("Descanso", systemImage: "timer").font(.inter(.caption).weight(.semibold)).foregroundStyle(gold)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Text("\(ctx.state.doneSets)/\(ctx.state.totalSets)").font(.caption.monospacedDigit()).foregroundStyle(muted)
+                    Text("\(ctx.state.doneSets)/\(ctx.state.totalSets)").font(.inter(.caption).monospacedDigit()).foregroundStyle(muted)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     Text(timerInterval: Date()...max(Date(), ctx.state.endsAt), countsDown: true)
-                        .font(.system(size: 40, weight: .bold, design: .rounded)).monospacedDigit().multilineTextAlignment(.center)
+                        .font(.inter(size: 40, weight: .bold, design: .default)).monospacedDigit().multilineTextAlignment(.center)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("\(ctx.state.exercise) · siguiente \(ctx.state.nextSet)").font(.caption).foregroundStyle(muted).lineLimit(1)
+                    Text("\(ctx.state.exercise) · siguiente \(ctx.state.nextSet)").font(.inter(.caption)).foregroundStyle(muted).lineLimit(1)
                 }
             } compactLeading: {
                 Image(systemName: "timer").foregroundStyle(gold)
@@ -103,24 +103,24 @@ struct TodayView: View {
             .gaugeStyle(.accessoryCircularCapacity)
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 1) {
-                Text(s?.doneToday == true ? "Hecho hoy" : (s?.isRest == true ? "Descanso" : "Hoy")).font(.caption2)
-                Text(s?.title ?? "Autopilot").font(.headline).lineLimit(1)
-                Text("\(s?.weekDone ?? 0) de \(s?.weekPlanned ?? 0) esta semana").font(.caption2)
+                Text(s?.doneToday == true ? "Hecho hoy" : (s?.isRest == true ? "Descanso" : "Hoy")).font(.inter(.caption2))
+                Text(s?.title ?? "Autopilot").font(.inter(.headline)).lineLimit(1)
+                Text("\(s?.weekDone ?? 0) de \(s?.weekPlanned ?? 0) esta semana").font(.inter(.caption2))
             }
         default:
             VStack(alignment: .leading, spacing: 6) {
                 Text(s?.doneToday == true ? "HECHO HOY" : (s?.isRest == true ? "DESCANSO" : "HOY"))
-                    .font(.caption2.weight(.bold)).foregroundStyle(gold)
-                Text(s?.title ?? "Abre Autopilot").font(.system(.headline, design: .rounded).weight(.bold)).foregroundStyle(.white).lineLimit(2)
-                if let d = s?.detail, !d.isEmpty, family == .systemMedium { Text(d).font(.caption).foregroundStyle(muted) }
+                    .font(.inter(.caption2).weight(.bold)).foregroundStyle(gold)
+                Text(s?.title ?? "Abre Autopilot").font(.inter(.headline, design: .default).weight(.bold)).foregroundStyle(.white).lineLimit(2)
+                if let d = s?.detail, !d.isEmpty, family == .systemMedium { Text(d).font(.inter(.caption)).foregroundStyle(muted) }
                 Spacer(minLength: 0)
                 HStack(spacing: family == .systemMedium ? 8 : 3) {
                     ForEach(0..<7, id: \.self) { i in
                         let v = s?.weekDays[safe: i] ?? 0
                         ZStack {
                             Circle().fill(v == 2 ? gold : (i == s?.todayIndex ? gold.opacity(0.18) : card))
-                            if v == 2 { Image(systemName: "checkmark").font(.system(size: 8, weight: .heavy)).foregroundStyle(.black) }
-                            else { Text(Self.letters[i]).font(.system(size: 8, weight: .semibold)).foregroundStyle(v == 1 ? .white : muted) }
+                            if v == 2 { Image(systemName: "checkmark").font(.inter(size: 8, weight: .heavy)).foregroundStyle(.black) }
+                            else { Text(Self.letters[i]).font(.inter(size: 8, weight: .semibold)).foregroundStyle(v == 1 ? .white : muted) }
                         }
                         .frame(width: family == .systemMedium ? 24 : 16, height: family == .systemMedium ? 24 : 16)
                     }

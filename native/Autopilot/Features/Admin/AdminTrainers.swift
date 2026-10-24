@@ -87,7 +87,7 @@ struct AdminTrainersView: View {
             }
             Spacer()
             if let trailing { Image(systemName: trailing).foregroundStyle(Palette.gold) }
-            if chevron { Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted) }
+            if chevron { Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted) }
         }
         .padding(.horizontal, 16).frame(minHeight: 56)
         .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 64) } }
@@ -227,7 +227,7 @@ struct TrainerDetail: View {
                         HStack {
                             Text(u.email ?? "").font(.apBody).lineLimit(1)
                             Spacer()
-                            if assignments.contains(where: { $0.user_id == u.user_id }) { Text("Reasignar").font(.caption) }
+                            if assignments.contains(where: { $0.user_id == u.user_id }) { Text("Reasignar").font(.inter(.caption)) }
                             Image(systemName: "person.badge.plus").foregroundStyle(Palette.gold)
                         }
                         .padding(.horizontal, 16).frame(minHeight: 50)

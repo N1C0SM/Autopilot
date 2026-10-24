@@ -31,7 +31,7 @@ struct AdminPhysiquesView: View {
                                         Text(it.name.trimmingCharacters(in: .whitespaces).isEmpty ? "Sin nombre" : it.name).font(.apBody)
                                         Spacer()
                                         Text(it.visible ? "Visible" : "Oculto").font(.apBody).foregroundStyle(Palette.muted)
-                                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                                        Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
                                     }
                                     .padding(.horizontal, 16).padding(.vertical, 8)
                                     .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 84) } }

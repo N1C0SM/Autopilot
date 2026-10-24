@@ -33,7 +33,7 @@ struct HomeView: View {
                 Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))).capitalizedFirst)
                     .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted)
                 (Text(firstName.isEmpty ? "Hola." : "Hola, \(firstName).") + Text("\n") + Text(stateLine).foregroundColor(Palette.muted))
-                    .font(.system(.largeTitle).weight(.bold))
+                    .font(.inter(.largeTitle).weight(.bold))
                     .padding(.top, 2)
                     .accessibilityAddTraits(.isHeader)
 
@@ -81,7 +81,7 @@ struct HomeView: View {
                         ZStack {
                             Circle().fill(done ? Palette.gold : (isToday ? Palette.gold.opacity(0.15) : .clear))
                             if done {
-                                Image(systemName: "checkmark").font(.system(size: 18, weight: .semibold)).foregroundStyle(.black)
+                                Image(systemName: "checkmark").font(.inter(size: 18, weight: .semibold)).foregroundStyle(.black)
                             } else {
                                 Text(Self.letters[i]).font(.apSubhead.weight(isToday ? .semibold : .regular))
                                     .foregroundStyle(isToday ? Palette.gold : (trains ? Palette.foreground : Palette.muted))
@@ -120,7 +120,7 @@ struct HomeView: View {
         } else if completedToday {
             Button { Haptics.tap(); onNavigate(.train) } label: {
                 HStack(spacing: 14) {
-                    Image(systemName: "checkmark").font(.system(size: 20, weight: .heavy)).foregroundStyle(Palette.success)
+                    Image(systemName: "checkmark").font(.inter(size: 20, weight: .heavy)).foregroundStyle(Palette.success)
                         .frame(width: 40, height: 40).background(Palette.success.opacity(0.15), in: Circle())
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.success)
@@ -175,7 +175,7 @@ struct HomeView: View {
                         .rotationEffect(.degrees(180)).foregroundStyle(Palette.muted.opacity(0.6))
                 }
                 Spacer(minLength: 16)
-                if let value { value.font(.system(size: 30, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6) }
+                if let value { value.font(.inter(size: 30, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6) }
                 Text(title).font(.apHeadline).padding(.top, 8)
                 Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2).padding(.top, 2)
             }

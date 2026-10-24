@@ -200,12 +200,12 @@ struct AdminUsersView: View {
                             Spacer(minLength: 8)
                             if kind == "user" {
                                 let badge = planBadge(u)
-                                Text(badge.0).font(.caption.weight(.medium)).padding(.horizontal, 8).padding(.vertical, 2)
+                                Text(badge.0).font(.inter(.caption).weight(.medium)).padding(.horizontal, 8).padding(.vertical, 2)
                                     .foregroundStyle(badge.1).background(badge.1.opacity(0.15), in: Capsule())
                                 Circle().fill(u.payment_status == "paid" ? Color.green : Palette.muted.opacity(0.5)).frame(width: 8, height: 8)
                                     .accessibilityLabel(u.payment_status == "paid" ? "pagado" : "sin pagar")
                             }
-                            Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                            Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
                         }
                         .padding(.horizontal, 16).frame(minHeight: 60)
                         .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 64) } }
@@ -300,7 +300,7 @@ struct AdminWebSectionView: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Image(systemName: section.symbol).font(.system(size: 40, weight: .semibold)).foregroundStyle(Palette.gold)
+            Image(systemName: section.symbol).font(.inter(size: 40, weight: .semibold)).foregroundStyle(Palette.gold)
                 .accessibilityHidden(true)
             Text(section.title).font(.apTitle2)
             Text("Esta sección se edita en el panel web de Admin.").font(.apSubhead).foregroundStyle(Palette.muted)

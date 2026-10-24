@@ -334,13 +334,13 @@ struct ChatView: View {
             }
             HStack(spacing: 8) {
                 PhotosPicker(selection: $photo, matching: .images) {
-                    Image(systemName: "photo").font(.system(size: 18)).frame(width: 44, height: 44).background(Palette.secondary, in: Circle())
+                    Image(systemName: "photo").font(.inter(size: 18)).frame(width: 44, height: 44).background(Palette.secondary, in: Circle())
                 }
                 .buttonStyle(.plain).foregroundStyle(Palette.gold).accessibilityLabel("Adjuntar foto")
                 TextField("Escribe un mensaje…", text: $text, axis: .vertical).textFieldStyle(.plain).lineLimit(1...5)
                     .padding(.horizontal, 16).padding(.vertical, 12).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 Button { Task { await send() } } label: {
-                    Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).foregroundStyle(.black)
+                    Image(systemName: "arrow.up").font(.inter(size: 17, weight: .bold)).foregroundStyle(.black)
                         .frame(width: 44, height: 44).background(Palette.gold, in: Circle())
                 }
                 .buttonStyle(.plain).disabled((text.trimmingCharacters(in: .whitespaces).isEmpty && pending == nil) || sending)

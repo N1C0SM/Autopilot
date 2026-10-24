@@ -1,5 +1,4 @@
 import { Play, PencilLine } from "lucide-react";
-import { IconTile } from "@/shared/components/ui/icon-tile";
 import { generatePlanGuarded, isManualPlan } from "@/shared/lib/planShield";
 import { DASHBOARD_CHAT_ENABLED } from "@/shared/lib/releaseScope";
 import { readActiveWorkout } from "@/shared/lib/activeWorkout";
@@ -13,7 +12,7 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { Button } from "@/shared/components/ui/button";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Clock, Dumbbell, Flag, Lock } from "lucide-react";
+import { Clock, Dumbbell, Lock } from "lucide-react";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -36,7 +35,6 @@ import { useIsMobile } from "@/shared/hooks/use-mobile";
 import PageHead from "@/web/components/PageHead";
 import InfoHint from "@/shared/components/InfoHint";
 import { euro, usePlanAvailability } from "@/shared/lib/planCatalog";
-import { getFirstWeekJourney } from "@/shared/lib/firstWeek";
 import { isIOSNative } from "@/shared/lib/platform";
 
 import { useFreeCampaign } from "@/shared/lib/freeCampaign";
@@ -185,13 +183,6 @@ const Dashboard = () => {
       setWorkoutMode(true);
     }
   }, [searchParams]);
-  const [firstWeek, setFirstWeek] = useState<{
-    dayNumber: number;
-    startDate: string;
-    endDate: string;
-    target: number;
-    completed: number;
-  } | null>(null);
 
   const fetchData = useCallback(async ({
     syncSubscription = false,
@@ -271,16 +262,7 @@ const Dashboard = () => {
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
         const weekStartDate = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, "0")}-${String(weekStart.getDate()).padStart(2, "0")}`;
-        const firstWeekWindow = getFirstWeekJourney(profile.created_at, []);
-        const firstWeekCompletionsRequest = firstWeekWindow
-          ? supabase
-              .from("day_completions")
-              .select("completed_at, day_label")
-              .eq("user_id", user.id)
-              .gte("completed_at", firstWeekWindow.startDate)
-              .lte("completed_at", firstWeekWindow.endDate < todayDate ? firstWeekWindow.endDate : todayDate)
-          : Promise.resolve({ data: [], error: null });
-        const [{ data: tp }, { data: np }, { data: todayCompletion }, weeklyCompletions, firstWeekCompletions] = await Promise.all([
+        const [{ data: tp }, { data: np }, { data: todayCompletion }, weeklyCompletions] = await Promise.all([
           supabase.from("training_plan").select("workouts_json").eq("user_id", user.id).maybeSingle(),
           supabase.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", user.id).maybeSingle(),
           supabase
@@ -296,7 +278,6 @@ const Dashboard = () => {
             .eq("user_id", user.id)
             .gte("completed_at", weekStartDate)
             .lte("completed_at", todayDate),
-          firstWeekCompletionsRequest,
         ]);
 
         const plans = tp?.workouts_json as unknown as DayPlan[] | undefined;
@@ -321,19 +302,6 @@ const Dashboard = () => {
           setMeals(np.meals_json as unknown as Meal[]);
         }
         setCompletedToday(Boolean(todayCompletion));
-        const journey = getFirstWeekJourney(profile.created_at, plans || []);
-        if (journey) {
-          if (firstWeekCompletions.error) {
-            toast.error("No se pudo cargar el progreso de tu primera semana.");
-          }
-          setFirstWeek({
-            ...journey,
-            // Cuenta sesiones, no fechas: dos entrenos el mismo día son dos (como en Progreso).
-            completed: new Set((firstWeekCompletions.data || []).map((row) => `${row.completed_at}|${row.day_label ?? ""}`)).size,
-          });
-        } else {
-          setFirstWeek(null);
-        }
       }
     }
     lastFetchRef.current = Date.now();
@@ -659,23 +627,6 @@ const Dashboard = () => {
               más intención hay. Se mantiene compacta para no competir con entrenar. */}
           {!coaching && (
             <div className="w-full space-y-8 empty:hidden">
-              {firstWeek && (
-                <div className="rounded-2xl bg-card p-4">
-                  <div className="flex items-center gap-3">
-                    <IconTile icon={Flag} />
-                    <div className="min-w-0 flex-1">
-                      <p className="type-headline">Tu primera semana</p>
-                      <p className="type-footnote tabular-nums text-muted-foreground">Día {firstWeek.dayNumber} de 7</p>
-                    </div>
-                    <p className="shrink-0 font-rounded text-[22px] font-bold tabular-nums">
-                      {firstWeek.completed}<span className="text-[15px] font-semibold text-muted-foreground">/{firstWeek.target}</span>
-                    </p>
-                  </div>
-                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
-                    <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${Math.min(100, (firstWeek.completed / Math.max(1, firstWeek.target)) * 100)}%` }} />
-                  </div>
-                </div>
-              )}
               {!campaign && <CoachingOffer
                 onChoose={handleCompletePayment}
                 compact

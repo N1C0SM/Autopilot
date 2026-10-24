@@ -97,13 +97,13 @@ struct AdminBlogView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack(spacing: 6) {
                                     Text(p.title).font(.apSubhead.weight(.medium)).lineLimit(1)
-                                    Text(p.published ? "Publicado" : "Borrador").font(.caption2.weight(.bold))
+                                    Text(p.published ? "Publicado" : "Borrador").font(.inter(.caption2).weight(.bold))
                                         .padding(.horizontal, 6).padding(.vertical, 2)
                                         .foregroundStyle(p.published ? Palette.gold : Palette.muted)
                                         .background(p.published ? Palette.gold.opacity(0.2) : Palette.secondary, in: Capsule())
                                 }
                                 Text("\(p.category.flatMap { c in Self.categories.first { $0.0 == c }?.1 }.map { "\($0) · \(Self.reviewLabels[p.review_status ?? "draft"] ?? "") · " } ?? "")/blog/\(p.slug)")
-                                    .font(.caption2).foregroundStyle(Palette.muted).lineLimit(1)
+                                    .font(.inter(.caption2)).foregroundStyle(Palette.muted).lineLimit(1)
                             }
                             Spacer()
                             if p.published, let u = URL(string: "https://autopilotplan.app/blog/\(p.slug)") {
@@ -189,7 +189,7 @@ struct BlogEditor: View {
                 Section {
                     TextField("Título", text: $post.title)
                     TextField("Slug", text: $post.slug)
-                    Text("URL: /blog/\(post.slug.isEmpty ? "..." : post.slug)").font(.caption2).foregroundStyle(Palette.muted)
+                    Text("URL: /blog/\(post.slug.isEmpty ? "..." : post.slug)").font(.inter(.caption2)).foregroundStyle(Palette.muted)
                     TextField("Resumen", text: Binding(get: { post.excerpt ?? "" }, set: { post.excerpt = $0 }), axis: .vertical)
                     TextField("URL de portada", text: Binding(get: { post.cover_url ?? "" }, set: { post.cover_url = $0 }))
                     Toggle("Publicado", isOn: $post.published).tint(Palette.gold)
@@ -206,14 +206,14 @@ struct BlogEditor: View {
                     TextField("Nivel de evidencia", text: Binding(get: { post.evidence_level ?? "" }, set: { post.evidence_level = $0.isEmpty ? nil : $0 }))
                     TextField("Orden en el temario", text: Binding(get: { post.order_index.map(String.init) ?? "" }, set: { post.order_index = Int($0) }))
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Referencias (lista JSON: authors, year, title, journal, doi)").font(.caption)
-                        TextEditor(text: $refsText).font(.system(.caption, design: .monospaced)).frame(minHeight: 100)
+                        Text("Referencias (lista JSON: authors, year, title, journal, doi)").font(.inter(.caption))
+                        TextEditor(text: $refsText).font(.inter(.caption, design: .monospaced)).frame(minHeight: 100)
                         Text("Comprueba cada DOI en doi.org antes de marcar como Verificado. Sin verificar y sin referencias no se puede publicar.")
-                            .font(.caption2).foregroundStyle(Palette.muted)
+                            .font(.inter(.caption2)).foregroundStyle(Palette.muted)
                     }
                 }
                 Section {
-                    TextEditor(text: $post.body_markdown).font(.system(.callout, design: .monospaced)).frame(minHeight: 260)
+                    TextEditor(text: $post.body_markdown).font(.inter(.callout, design: .monospaced)).frame(minHeight: 260)
                 } header: { Text("Contenido") } footer: { Text("Soporta Markdown completo (#, **, listas, enlaces, código, tablas).") }
                 Section("SEO (opcional)") {
                     TextField("SEO title (sobrescribe el título)", text: Binding(get: { post.seo_title ?? "" }, set: { post.seo_title = $0 }))

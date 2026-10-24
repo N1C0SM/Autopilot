@@ -40,7 +40,7 @@ struct AdminRemindersView: View {
                             Button { if selected.contains(u.user_id) { selected.remove(u.user_id) } else { selected.insert(u.user_id) }; Haptics.selection() } label: {
                                 HStack(spacing: 12) {
                                     Image(systemName: selected.contains(u.user_id) ? "checkmark.circle.fill" : "circle")
-                                        .font(.system(size: 22)).foregroundStyle(selected.contains(u.user_id) ? Palette.gold : Palette.muted)
+                                        .font(.inter(size: 22)).foregroundStyle(selected.contains(u.user_id) ? Palette.gold : Palette.muted)
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(u.email ?? "").font(.apBody).lineLimit(1)
                                         Text("Registrado \(u.createdDate?.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES"))) ?? "")\(ds.map { " · Último email hace \($0)d" } ?? "")")
@@ -70,7 +70,7 @@ struct AdminRemindersView: View {
     }
 
     private func badge(_ text: String, _ color: Color) -> some View {
-        Text(text).font(.caption.weight(.medium)).padding(.horizontal, 8).padding(.vertical, 2)
+        Text(text).font(.inter(.caption).weight(.medium)).padding(.horizontal, 8).padding(.vertical, 2)
             .foregroundStyle(color).background(color.opacity(0.15), in: Capsule())
     }
 
@@ -206,7 +206,7 @@ struct AdminPaymentsView: View {
     private func linkRow(_ label: String, _ placeholder: String, _ value: Binding<String>, first: Bool = false) -> some View {
         HStack(spacing: 12) {
             Text(label).font(.apBody).frame(width: 100, alignment: .leading)
-            TextField(placeholder, text: value).textFieldStyle(.plain).font(.system(.subheadline, design: .monospaced))
+            TextField(placeholder, text: value).textFieldStyle(.plain).font(.inter(.subheadline, design: .monospaced))
                 .textContentTypeCompat(.username)
         }
         .padding(.horizontal, 16).frame(minHeight: 50)

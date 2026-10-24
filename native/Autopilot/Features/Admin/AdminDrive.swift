@@ -38,7 +38,7 @@ struct AdminDriveView: View {
                             Button("Drive") { path = [] }.fontWeight(path.isEmpty ? .semibold : .regular)
                                 .foregroundStyle(path.isEmpty ? Palette.foreground : Palette.gold).frame(minHeight: 44)
                             ForEach(Array(path.enumerated()), id: \.element.id) { i, p in
-                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(Palette.muted)
+                                Image(systemName: "chevron.right").font(.inter(.caption)).foregroundStyle(Palette.muted)
                                 Button(p.title) { path = Array(path.prefix(i + 1)) }.fontWeight(i == path.count - 1 ? .semibold : .regular)
                                     .foregroundStyle(i == path.count - 1 ? Palette.foreground : Palette.gold).frame(minHeight: 44)
                             }
@@ -128,7 +128,7 @@ struct AdminDriveView: View {
                     }
                     Spacer()
                     Text(b.published ? "Publicado" : "Borrador").font(.apBody).foregroundStyle(Palette.muted)
-                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                    Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 8)
                 .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 72) } }
@@ -192,7 +192,7 @@ struct DriveItemEditor: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
                             if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { ProgressView() } }
-                            else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.title).foregroundStyle(Palette.muted) }
+                            else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.inter(.title)).foregroundStyle(Palette.muted) }
                         }
                         .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         VStack(alignment: .leading, spacing: 8) {

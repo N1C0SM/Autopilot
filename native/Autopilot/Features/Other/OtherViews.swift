@@ -51,7 +51,7 @@ struct NutritionView: View {
             if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
             if hasMeals && macros == nil {
                 HStack(alignment: .top, spacing: 16) {
-                    Image(systemName: "person").font(.system(size: 24)).foregroundStyle(Palette.gold).frame(width: 40)
+                    Image(systemName: "person").font(.inter(size: 24)).foregroundStyle(Palette.gold).frame(width: 40)
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Tus macros aún no están personalizados").font(.apHeadline)
                         Text("Añade tu peso actual para calcularlos. Mientras tanto, las comidas de abajo son orientativas.").font(.apSubhead).foregroundStyle(Palette.muted)
@@ -84,7 +84,7 @@ struct NutritionView: View {
                             .stroke(Palette.gold, style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
                             .animation(.snappy, value: doneCount)
                         VStack(spacing: 4) {
-                            Text("\(doneCount)").font(.system(size: 44, weight: .bold).monospacedDigit())
+                            Text("\(doneCount)").font(.inter(size: 44, weight: .bold).monospacedDigit())
                             Text("de \(meals.count) \(meals.count == 1 ? "comida" : "comidas")").font(.apFootnote).foregroundStyle(Palette.muted)
                         }
                     }
@@ -93,7 +93,7 @@ struct NutritionView: View {
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     if showTargets {
-                        Text(NumberText.integer(Int(kcal))).font(.system(size: hasMeals ? 34 : 48, weight: .bold).monospacedDigit())
+                        Text(NumberText.integer(Int(kcal))).font(.inter(size: hasMeals ? 34 : 48, weight: .bold).monospacedDigit())
                         Text("kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
                     } else {
                         Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")").font(.apHeadline)
@@ -172,7 +172,7 @@ struct NutritionView: View {
                 Spacer()
                 Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
             }
-            (Text(NumberText.integer(Int(grams.rounded()))).font(.system(size: 22, weight: .bold).monospacedDigit()) + Text("g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
+            (Text(NumberText.integer(Int(grams.rounded()))).font(.inter(size: 22, weight: .bold).monospacedDigit()) + Text("g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
                 .padding(.top, 2)
             GeometryReader { geo in
                 Capsule().fill(Palette.gold.opacity(0.2))

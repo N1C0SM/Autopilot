@@ -161,7 +161,7 @@ struct MainShell: View {
                                 }
                                 .frame(height: 44)
                                 if current != .home {
-                                    Text(current.navTitle).font(.system(.largeTitle).weight(.bold))
+                                    Text(current.navTitle).font(.inter(.largeTitle).weight(.bold))
                                         .accessibilityAddTraits(.isHeader)
                                 }
                             }

@@ -37,7 +37,7 @@ struct ProgressScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Últimas 4 semanas").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(NumberText.integer(model.kg4w)).font(.system(size: 56, weight: .bold).monospacedDigit())
+                    Text(NumberText.integer(model.kg4w)).font(.inter(size: 56, weight: .bold).monospacedDigit())
                     Text("kg levantados").font(.apTitle3).foregroundStyle(Palette.muted)
                 }
                 HStack(spacing: 20) {
@@ -52,7 +52,7 @@ struct ProgressScreen: View {
                         .cornerRadius(8)
                 }
                 .chartYAxis(.hidden)
-                .chartXAxis { AxisMarks { _ in AxisValueLabel().font(.caption2).foregroundStyle(Palette.muted) } }
+                .chartXAxis { AxisMarks { _ in AxisValueLabel().font(.inter(.caption2)).foregroundStyle(Palette.muted) } }
                 .frame(height: 160)
                 .padding(.top, 20)
                 .accessibilityLabel("Kilos levantados por semana")
@@ -65,28 +65,15 @@ struct ProgressScreen: View {
             .background(Palette.card)
             .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
 
-            if !model.byExercise.isEmpty {
+            if !model.history.isEmpty {
                 Text("Por ejercicio").font(.apTitle3).padding(.top, 8)
-                ForEach(model.byExercise, id: \.name) { ex in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(ex.name).font(.apTitle3)
-                        Text("\(ex.sessions) \(ex.sessions == 1 ? "sesión" : "sesiones")").font(.apFootnote).foregroundStyle(Palette.muted)
-                        Text("\(NumberText.integer(Int(ex.bestVolume))) kg").font(.system(size: 34, weight: .bold).monospacedDigit()).padding(.top, 6)
-                        if ex.sessions < 2 {
-                            Text("Registra otra sesión de este ejercicio y aquí verás tu línea de progreso.")
-                                .font(.apFootnote).foregroundStyle(Palette.muted)
-                        }
-                    }
-                    .padding(20)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                }
+                ExerciseProgressSection(history: model.history, images: model.exerciseImages)
             }
         }
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
-        (Text(value).font(.system(.title3).weight(.bold)) + Text(" " + label).font(.apSubhead).foregroundColor(Palette.muted))
+        (Text(value).font(.inter(.title3).weight(.bold)) + Text(" " + label).font(.apSubhead).foregroundColor(Palette.muted))
     }
 
     // MARK: Físico (ProgressPhotos de la web)
@@ -140,7 +127,7 @@ struct ProgressScreen: View {
             .overlay { CachedAsyncImage(url: p.url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary } }
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(alignment: .bottomLeading) {
-                Text(label).font(.caption2.weight(.medium).monospacedDigit()).foregroundStyle(.white)
+                Text(label).font(.inter(.caption2).weight(.medium).monospacedDigit()).foregroundStyle(.white)
                     .padding(.horizontal, 6).padding(.vertical, 2).background(.black.opacity(0.55), in: Capsule()).padding(6)
             }
     }
@@ -161,7 +148,7 @@ struct ProgressScreen: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(Progression.kgText(best.e1rm)).font(.system(size: 64, weight: .bold))
+                            Text(Progression.kgText(best.e1rm)).font(.inter(size: 64, weight: .bold))
                             Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))
                         }
                         Text("1RM estimado en \(best.name)").font(.apSubhead).foregroundStyle(.white.opacity(0.75))
@@ -226,6 +213,10 @@ final class ProgressModel: ObservableObject {
 
     var maxWeekly: Double { weekly.map(\.kg).max() ?? 1 }
 
+    /// Historial por ejercicio como `buildExerciseHistory` de la web: una entrada por día.
+    @Published var history: [String: [ExerciseEntry]] = [:]
+    @Published var exerciseImages: [String: String] = [:]
+
     private static func volume(_ sets: [SetLog]?) -> Double {
         var total = 0.0
         for s in sets ?? [] where s.done && s.isWarmup != true {
@@ -277,6 +268,44 @@ final class ProgressModel: ObservableObject {
         byExercise = stats.map { ExerciseStat(name: $0.key, sessions: $0.value.dates.count, bestVolume: $0.value.best) }
             .sorted { $0.bestVolume > $1.bestVolume }
 
+        struct AllLog: Decodable {
+            let exercise_name: String; let sets_completed: [SetLog]?; let logged_at: String
+            enum K: String, CodingKey { case exercise_name, sets_completed, logged_at }
+            init(from d: Decoder) throws {
+                let c = try d.container(keyedBy: K.self)
+                exercise_name = try c.decode(String.self, forKey: .exercise_name)
+                logged_at = try c.decode(String.self, forKey: .logged_at)
+                sets_completed = try? c.decode([SetLog].self, forKey: .sets_completed)
+            }
+        }
+        let all: [AllLog] = (try? await Backend.client.from("workout_logs").select("exercise_name, sets_completed, logged_at")
+            .eq("user_id", value: userId).order("logged_at", ascending: true).limit(2000).execute().value) ?? []
+        var hist: [String: [String: ExerciseEntry]] = [:]
+        for l in all {
+            let day = String(l.logged_at.prefix(10))
+            guard let date = fmt.date(from: day) else { continue }
+            let sets = (l.sets_completed ?? []).filter { $0.done && $0.isWarmup != true && $0.reps > 0 }
+            guard !sets.isEmpty else { continue }
+            let weighted = sets.compactMap { s -> (Double, Int)? in
+                guard let w = Double(s.weight.replacingOccurrences(of: ",", with: ".")), w > 0 else { return nil }
+                return (w, s.reps)
+            }
+            let e1rm = weighted.map { $0.0 * (1 + Double($0.1) / 30) }.max().map { ($0 * 10).rounded() / 10 }
+            var e = hist[l.exercise_name]?[day] ?? ExerciseEntry(date: date, label: labelFmt.string(from: date).replacingOccurrences(of: ".", with: ""), volumeKg: 0, reps: 0, loadedSets: 0, best1Rm: nil)
+            e.volumeKg += weighted.reduce(0) { $0 + $1.0 * Double($1.1) }
+            e.reps += sets.reduce(0) { $0 + $1.reps }
+            e.loadedSets += weighted.count
+            if let v = e1rm, v > (e.best1Rm ?? 0) { e.best1Rm = v }
+            hist[l.exercise_name, default: [:]][day] = e
+        }
+        history = hist.mapValues { $0.values.sorted { $0.date < $1.date } }
+        let names = Array(history.keys)
+        if !names.isEmpty {
+            struct E: Decodable { let name: String; let image_url: String? }
+            let imgs: [E] = (try? await Backend.client.from("exercises").select("name, image_url").in("name", values: names).execute().value) ?? []
+            exerciseImages = Dictionary(imgs.compactMap { e in e.image_url.map { (e.name, $0) } }, uniquingKeysWith: { a, _ in a })
+        }
+
         struct WRow: Decodable { let weight: Double?; let logged_at: String? }
         if let rows: [WRow] = try? await Backend.client.from("weight_logs").select("weight, logged_at")
             .eq("user_id", value: userId).order("logged_at", ascending: true).limit(120).execute().value {
@@ -309,6 +338,152 @@ final class ProgressModel: ObservableObject {
                 let reps = r.reps ?? 1
                 return Record(name: r.exercise_name, weight: w, reps: reps, e1rm: r.estimated_1rm ?? w * (1 + Double(reps) / 30),
                               date: r.achieved_at ?? "", image: imgs.first { $0.name == r.exercise_name }?.image_url)
+            }
+        }
+    }
+}
+
+
+struct ExerciseEntry: Hashable { let date: Date; let label: String; var volumeKg: Double; var reps: Int; var loadedSets: Int; var best1Rm: Double? }
+
+/// «Por ejercicio» de `WorkoutProgress.tsx` + `ExerciseProgressChart.tsx`: portada con la foto del ejercicio
+/// (tocable para cambiar) y la gráfica con 1RM / Volumen / Reps.
+struct ExerciseProgressSection: View {
+    let history: [String: [ExerciseEntry]]
+    let images: [String: String]
+    @State private var selected = ""
+    @State private var metric = 0
+
+    private var names: [String] { history.keys.sorted { (history[$0]?.count ?? 0, $1) > (history[$1]?.count ?? 0, $0) } }
+    private func value(_ e: ExerciseEntry) -> Double? {
+        switch metric { case 1: e.loadedSets > 0 ? e.volumeKg.rounded() : nil; case 2: Double(e.reps); default: e.best1Rm }
+    }
+    private func r(_ v: Double) -> String { NumberText.decimal(v, digits: (v * 10).rounded().truncatingRemainder(dividingBy: 10) == 0 ? 0 : 1) }
+
+    var body: some View {
+        let name = selected.isEmpty ? (names.first ?? "") : selected
+        let entries = history[name] ?? []
+        VStack(alignment: .leading, spacing: 12) {
+            Menu {
+                Picker("Ejercicio", selection: Binding(get: { name }, set: { Haptics.selection(); selected = $0 })) {
+                    ForEach(names, id: \.self) { n in Text("\(n) · \(history[n]?.count ?? 0) \(history[n]?.count == 1 ? "sesión" : "sesiones")").tag(n) }
+                }
+            } label: { cover(name, count: entries.count) }
+            .menuStyle(.button).buttonStyle(.plain)
+            chart(name, entries).padding(16)
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
+    private func cover(_ name: String, count: Int) -> some View {
+        let img = images[name].flatMap(URL.init(string:))
+        return HStack(alignment: .bottom, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(count) \(count == 1 ? "sesión" : "sesiones")").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                Text(name).font(.inter(size: 26, weight: .bold)).foregroundStyle(.white).multilineTextAlignment(.leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.up.chevron.down").font(.inter(size: 16, weight: .semibold)).foregroundStyle(.white.opacity(0.7)).padding(.bottom, 4)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, minHeight: img == nil ? 0 : 176, alignment: .bottomLeading)
+        .background {
+            if let img {
+                Color.clear.overlay {
+                    CachedAsyncImage(url: img) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                }
+                .overlay { LinearGradient(colors: [.black.opacity(0.85), .black.opacity(0.3), .clear], startPoint: .bottom, endPoint: .top) }
+                .clipped()
+            } else { Palette.card }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private func chart(_ name: String, _ history: [ExerciseEntry]) -> some View {
+        let data = Array(history.suffix(16))
+        let values = data.compactMap(value)
+        let latest = history.last.flatMap(value)
+        let first = values.first
+        let best = values.max()
+        let change = (latest != nil && (first ?? 0) > 0) ? (latest! - first!) / first! * 100 : nil
+        let unit = metric == 2 ? "reps" : "kg"
+        let hasLine = values.count > 1
+        let sessions = "\(history.count) \(history.count == 1 ? "sesión" : "sesiones")"
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    (Text(latest.map(r) ?? "—").font(.inter(size: 32, weight: .bold).monospacedDigit()) + Text(" \(unit)").font(.apSubhead).foregroundColor(Palette.muted))
+                    HStack(spacing: 0) {
+                        if hasLine, let change {
+                            Text("\(change > 0 ? "+" : "")\(r(change))%").fontWeight(.medium).foregroundStyle(change >= 0 ? Palette.success : Palette.foreground)
+                            Text(" · ")
+                        }
+                        if hasLine, let best { Text("\(r(best)) \(unit) · ") }
+                        Text(sessions)
+                    }
+                    .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 0) {
+                    ForEach(Array(["1RM", "Volumen", "Reps"].enumerated()), id: \.offset) { i, l in
+                        Text(l).font(.apFootnote.weight(i == metric ? .semibold : .medium))
+                            .padding(.horizontal, 10).frame(height: 26)
+                            .background { if i == metric { RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Palette.accent) } }
+                            .contentShape(Rectangle())
+                            .onTapGesture { Haptics.selection(); withAnimation(.snappy) { metric = i } }
+                    }
+                }
+                .padding(3).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            if hasLine {
+                let lo = values.min() ?? 0, pad = max(1, ((best ?? 0) - lo) * 0.15)
+                Chart(Array(data.enumerated()), id: \.offset) { i, e in
+                    if let v = value(e) {
+                        AreaMark(x: .value("Sesión", i), yStart: .value("Base", lo - pad), yEnd: .value(unit, v))
+                            .foregroundStyle(LinearGradient(colors: [Palette.gold.opacity(0.35), Palette.gold.opacity(0)], startPoint: .top, endPoint: .bottom))
+                            .interpolationMethod(.monotone)
+                        LineMark(x: .value("Sesión", i), y: .value(unit, v))
+                            .foregroundStyle(Palette.gold).lineStyle(StrokeStyle(lineWidth: 2.5)).interpolationMethod(.monotone)
+                    }
+                }
+                .chartYScale(domain: (lo - pad)...((best ?? 1) + pad))
+                .chartXAxis {
+                    AxisMarks(values: [0, data.count - 1]) { v in
+                        AxisValueLabel { if let i = v.as(Int.self), data.indices.contains(i) { Text(data[i].label) } }
+                            .font(.inter(.caption)).foregroundStyle(Palette.muted)
+                    }
+                }
+                .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine().foregroundStyle(Palette.foreground.opacity(0.07)); AxisValueLabel().font(.inter(.caption)).foregroundStyle(Palette.muted) } }
+                .frame(height: 256)
+                .accessibilityLabel("Gráfica de \(name)")
+            } else if values.isEmpty && !history.isEmpty && metric != 2 {
+                VStack(spacing: 6) {
+                    Image(systemName: "dumbbell").font(.inter(size: 24)).foregroundStyle(Palette.muted)
+                    Text("Sin carga registrada").font(.apHeadline)
+                    Text("El 1RM y el volumen salen de las series con peso. En Reps ves tu evolución.").font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity).padding(.vertical, 24)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    Canvas { ctx, size in
+                        let sx = size.width / 300, sy = size.height / 120
+                        for y in [30.0, 60, 90] { var p = Path(); p.move(to: CGPoint(x: 0, y: y * sy)); p.addLine(to: CGPoint(x: size.width, y: y * sy)); ctx.stroke(p, with: .color(.white.opacity(0.07)), lineWidth: 1) }
+                        var c = Path(); c.move(to: CGPoint(x: 40 * sx, y: 80 * sy))
+                        c.addCurve(to: CGPoint(x: 260 * sx, y: 34 * sy), control1: CGPoint(x: 110 * sx, y: 76 * sy), control2: CGPoint(x: 170 * sx, y: 58 * sy))
+                        ctx.stroke(c, with: .color(Palette.gold.opacity(0.35)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, dash: [2, 7]))
+                        let p0 = CGPoint(x: 40 * sx, y: 80 * sy)
+                        ctx.fill(Path(ellipseIn: CGRect(x: p0.x - 11, y: p0.y - 11, width: 22, height: 22)), with: .color(Palette.gold.opacity(0.2)))
+                        ctx.fill(Path(ellipseIn: CGRect(x: p0.x - 6, y: p0.y - 6, width: 12, height: 12)), with: .color(Palette.gold))
+                        let p1 = CGPoint(x: 260 * sx, y: 34 * sy)
+                        ctx.stroke(Path(ellipseIn: CGRect(x: p1.x - 6, y: p1.y - 6, width: 12, height: 12)), with: .color(Palette.gold.opacity(0.4)), style: StrokeStyle(lineWidth: 2, dash: [3, 3]))
+                    }
+                    .frame(height: 140).accessibilityHidden(true)
+                    let start = (data.first { value($0) != nil } ?? history.last)?.label
+                    Text(start.map { "Punto de partida · \($0)" } ?? "Punto de partida").font(.apHeadline)
+                    Text(history.count < 2 ? "Registra otra sesión de este ejercicio y aquí verás tu línea de progreso." : "Registra otra sesión con peso y aquí verás tu línea de progreso.")
+                        .font(.apSubhead).foregroundStyle(Palette.muted)
+                }
             }
         }
     }

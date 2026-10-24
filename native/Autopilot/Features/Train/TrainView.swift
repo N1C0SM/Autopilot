@@ -114,7 +114,7 @@ struct TrainView: View {
                         .padding(.bottom, 14)
                         .accessibilityHidden(true)
                 }
-                Text(parts.first ?? "").font(.system(size: 32, weight: .bold)).lineLimit(1)
+                Text(parts.first ?? "").font(.inter(size: 32, weight: .bold)).lineLimit(1)
                     .accessibilityAddTraits(.isHeader)
                 if parts.count > 1 {
                     Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted).lineLimit(1)
@@ -282,7 +282,7 @@ struct ExerciseThumb: View {
             }
             if completed {
                 Color.black.opacity(0.5)
-                Image(systemName: "checkmark").font(.headline.weight(.bold)).foregroundStyle(Palette.gold)
+                Image(systemName: "checkmark").font(.inter(.headline).weight(.bold)).foregroundStyle(Palette.gold)
             }
         }
         .frame(width: size, height: size)

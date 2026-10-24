@@ -117,7 +117,7 @@ struct RoadmapView: View {
                         .labelStyle(GoldIconLabel())
                 }
                 Spacer()
-                Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").font(.title3) }
+                Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").font(.inter(.title3)) }
                     .buttonStyle(.plain).frame(width: 44, height: 44).accessibilityLabel("Actualizar Roadmap")
             }
             Text(current?.title ?? "").font(.apBody).foregroundStyle(Palette.muted)
@@ -295,7 +295,7 @@ struct RoadmapView: View {
             HStack(alignment: .top, spacing: 12) {
                 Button { changeStatus(item, item.status == "done" ? "idea" : "done") } label: {
                     Image(systemName: item.status == "done" ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 22)).foregroundStyle(item.status == "done" ? Palette.gold : Palette.muted)
+                        .font(.inter(size: 22)).foregroundStyle(item.status == "done" ? Palette.gold : Palette.muted)
                 }
                 .buttonStyle(.plain).frame(width: 30, height: 30)
                 .accessibilityLabel("Completar \(item.title)")
@@ -321,7 +321,7 @@ struct RoadmapView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Text(Self.statusLabels.first { $0.0 == item.status }?.1 ?? item.status)
-                        Image(systemName: "chevron.up.chevron.down").font(.caption)
+                        Image(systemName: "chevron.up.chevron.down").font(.inter(.caption))
                     }
                     .font(.apSubhead).padding(.horizontal, 14).frame(minHeight: 36)
                     .background(Palette.secondary, in: Capsule())
