@@ -7,12 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		022673AFB045A59ACCDA5275 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */; };
 		0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */; };
 		19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3306B7A6F1F1C5159421755 /* AdminPayments.swift */; };
 		1D1D2EDEB1F6B06EF9F9AAD3 /* AutopilotWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55A7028E351DD20C169D319C /* AutopilotWidgets.swift */; };
 		1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF230DE9FE12D555FC3505 /* HomeView.swift */; };
 		1D59B9E8FAAEE14DCC8B03E4 /* RestActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAAC13E96D7459CB0F5362B9 /* RestActivity.swift */; };
 		224764578170A5967D49426F /* AdminDrive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1162F3D5C142878DA85F3630 /* AdminDrive.swift */; };
+		2968F507CB0D0D9F7BE25714 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B2126D0198F80DBE4A0B72E8 /* PrivacyInfo.xcprivacy */; };
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
 		3CD2ECE76B612C811CF540BA /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E053FD3BBE7DBA136AACF9 /* Session.swift */; };
@@ -87,6 +89,7 @@
 		2F83F6BD939EF251A757930A /* AdminExercises.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminExercises.swift; sourceTree = "<group>"; };
 		38E2F87813CF2F5DC1B3F82A /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		3DC0DEEDEC81345BD48108A7 /* WorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
+		5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		54840FD78B7470F1A4A687B3 /* RoadmapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapView.swift; sourceTree = "<group>"; };
 		55A7028E351DD20C169D319C /* AutopilotWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotWidgets.swift; sourceTree = "<group>"; };
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
@@ -103,6 +106,7 @@
 		ABDC5FBCB982DC18600B15B1 /* AdminLanding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLanding.swift; sourceTree = "<group>"; };
 		AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminUserDetail.swift; sourceTree = "<group>"; };
 		B1837043D6026822C99B027E /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		B2126D0198F80DBE4A0B72E8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkout.swift; sourceTree = "<group>"; };
 		C3306B7A6F1F1C5159421755 /* AdminPayments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPayments.swift; sourceTree = "<group>"; };
 		C60F84451BD2C06501A2E80E /* Training.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Training.swift; sourceTree = "<group>"; };
@@ -166,6 +170,7 @@
 			children = (
 				55A7028E351DD20C169D319C /* AutopilotWidgets.swift */,
 				ECA669F0BC617641B892F453 /* Info.plist */,
+				B2126D0198F80DBE4A0B72E8 /* PrivacyInfo.xcprivacy */,
 				E97E0218520E417DCAD4B1A1 /* Widgets.entitlements */,
 			);
 			path = Widgets;
@@ -252,6 +257,7 @@
 			children = (
 				38E2F87813CF2F5DC1B3F82A /* App.entitlements */,
 				9FD92FC3A4FA899A9AF2A41F /* Assets.xcassets */,
+				5020C97FAD7768B09C004CD2 /* PrivacyInfo.xcprivacy */,
 				9F0A18D0B08C6111210BD536 /* App */,
 				8ED96A3628DDCEE39E99CDA8 /* Core */,
 				EED37997280EAC3134344A5E /* Design */,
@@ -344,6 +350,7 @@
 			buildConfigurationList = 1C20722977077BB6A397185D /* Build configuration list for PBXNativeTarget "AutopilotWidgets" */;
 			buildPhases = (
 				962EB1CF22E1C1C55A82C233 /* Sources */,
+				C862FB51E9F1443F009CE5D3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -404,6 +411,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				84D2950407D627971026844C /* Assets.xcassets in Resources */,
+				022673AFB045A59ACCDA5275 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C862FB51E9F1443F009CE5D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2968F507CB0D0D9F7BE25714 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -488,7 +504,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -507,7 +523,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = app.lovable.aa0029da00154c05a2b503e61df0f87c.widgets;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -537,7 +553,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -714,7 +730,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

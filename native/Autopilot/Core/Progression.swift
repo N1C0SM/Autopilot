@@ -40,7 +40,7 @@ enum Progression {
         let loaded = done.compactMap { weight($0.weight) }
         if loaded.isEmpty { return "Última vez: \(reps) reps" }
         if loaded.count == done.count, Set(loaded).count == 1 { return "Última vez: \(reps) reps con \(kg(loaded[0])) kg" }
-        return "Última vez: \(reps) reps con \(kg(loaded.min()!))–\(kg(loaded.max()!)) kg"
+        return "Última vez: \(reps) reps con \(kg(loaded.min() ?? 0))–\(kg(loaded.max() ?? 0)) kg"
     }
 
     static func suggestion(_ ex: GymExercise, previous: [SetLog]?, previousRpe: Int?) -> ProgressionSuggestion? {

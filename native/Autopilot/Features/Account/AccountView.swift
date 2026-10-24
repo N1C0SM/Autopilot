@@ -311,7 +311,7 @@ struct AccountView: View {
     }
 
     private func linkRow(_ title: String, _ url: String) -> some View {
-        Link(destination: URL(string: url)!) {
+        Link(destination: URL(string: url) ?? Backend.url) {
             HStack {
                 Text(title).font(.apBody).foregroundStyle(Palette.foreground)
                 Spacer()

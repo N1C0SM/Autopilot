@@ -45,7 +45,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER[sdk=iphonesimulator*]: app.lovable.aa0029da00154c05a2b503e61df0f87c
         PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]: app.autopilotplan.mac
         PRODUCT_NAME: Autopilot
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: NO
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
         ENABLE_APP_SANDBOX[sdk=macosx*]: YES
@@ -68,4 +68,4 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: Widgets/Widgets.entitlements
         SKIP_INSTALL: YES
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
