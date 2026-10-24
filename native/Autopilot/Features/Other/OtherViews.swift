@@ -192,23 +192,38 @@ private struct EmptyCard: View {
     let title: String
     let message: String
     @State private var url: URL?
+    /// EmptyState de la web: con foto, tarjeta alta con el texto abajo; sin foto, icono en su cuadrado tintado.
     var body: some View {
-        VStack(spacing: 0) {
+        Group {
             if let url {
-                Color.clear.frame(height: 160)
-                    .overlay { CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary } }
-                    .clipped().transition(.opacity)
+                VStack(alignment: .leading, spacing: 0) {
+                    Image("lu-clock").renderingMode(.template).resizable().frame(width: 24, height: 24).foregroundStyle(Palette.gold)
+                    Text(title).font(.inter(size: 28, weight: .bold)).tracking(-0.7).padding(.top, 8)
+                    Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
+                .background {
+                    CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                        .opacity(0.9)
+                        .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.7), .clear], startPoint: .bottom, endPoint: .top) }
+                        .clipped()
+                }
+                .background(Palette.card)
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .transition(.opacity)
+            } else {
+                VStack(spacing: 0) {
+                    IconTile(symbol: "lu-clock", size: 64)
+                    Text(title).font(.apTitle2).padding(.top, 20)
+                    Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                        .frame(maxWidth: 300).padding(.top, 6)
+                }
+                .padding(.vertical, 40).padding(.horizontal, 24)
+                .frame(maxWidth: .infinity)
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            VStack(spacing: 8) {
-                Image("lu-clock").renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
-                Text(title).font(.apHeadline)
-                Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-            }
-            .padding(.vertical, 32).padding(.horizontal, 24)
         }
-        .frame(maxWidth: .infinity)
-        .background(Palette.card)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .task { if let photo { let u = await AiCover.meal(photo); withAnimation { url = u } } }
     }
 }

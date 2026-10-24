@@ -254,8 +254,13 @@ struct IconTile: View {
     var size: CGFloat = 32
     var tint: Color = Palette.gold
     var body: some View {
-        Image(systemName: symbol)
-            .font(.inter(size: size * 0.5625, weight: .semibold))
+        Group {
+            if symbol.hasPrefix("lu-") || symbol.hasPrefix("ph-") {
+                Image(symbol).renderingMode(.template).resizable().frame(width: size * 0.5, height: size * 0.5)
+            } else {
+                Image(systemName: symbol).font(.inter(size: size * 0.5625, weight: .semibold))
+            }
+        }
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))
