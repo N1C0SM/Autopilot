@@ -147,30 +147,10 @@ struct WorkoutView: View {
     // MARK: Resumen final (WorkoutSummary)
 
     private var summarySheet: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Image(systemName: "checkmark.circle.fill").font(.system(size: 44)).foregroundStyle(Palette.gold).accessibilityHidden(true)
-            Text("Entrenamiento completado").font(.apTitle1)
-            Text(workout.draft.day.routine_name ?? workout.draft.day.title).font(.apSubhead).foregroundStyle(Palette.muted)
-            HStack(spacing: 12) {
-                FigureTile(label: "Tiempo", value: elapsed(Date()))
-                FigureTile(label: "Series", value: "\(workout.doneSets)")
-                FigureTile(label: "Carga", value: "\(NumberText.integer(Int(workout.volumeKg))) kg")
-            }
-            if !workout.records.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label("Récord personal", systemImage: "trophy.fill").font(.apHeadline).foregroundStyle(Palette.gold)
-                    ForEach(workout.records, id: \.self) { Text($0).font(.apBody) }
-                }
-                .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.gold.opacity(0.12), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            }
-            Text("Toca recuperar: hidrátate, come bien y mañana vuelves más fuerte.").font(.apFootnote).foregroundStyle(Palette.muted)
-            Button("Listo") { summaryOpen = false }.buttonStyle(.pill)
-        }
-        .padding(28)
-        .frame(minWidth: 380)
-        .presentationDetents([.large])
-        .presentationBackground(Palette.card)
+        WorkoutSummaryView(workout: workout, rpe: rpe) { summaryOpen = false }
+            .frame(minWidth: 380)
+            .presentationDetents([.large])
+            .presentationBackground(Palette.card)
     }
 
     // MARK: Esfuerzo (RPEDialog)
@@ -615,4 +595,187 @@ extension Array {
 
 extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
+
+/// Resumen final calcado de `WorkoutSummary.tsx`: páginas que se deslizan (Resumen y Comparar),
+/// puntos de página, «Listo» arriba y Compartir abajo.
+struct WorkoutSummaryView: View {
+    @ObservedObject var workout: ActiveWorkout
+    let rpe: Int?
+    var onDone: () -> Void
+    @State private var page = 0
+
+    private struct Item { let name: String; let change: String; let trend: Int; let proposal: String } // trend 1 sube, -1 baja, 0 igual, 2 nuevo
+
+    private var title: (String, String) {
+        let parts = workout.draft.day.title.components(separatedBy: " · ")
+        return (parts.first ?? "", parts.dropFirst().joined(separator: " · "))
+    }
+    private var dateLabel: String { Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))) }
+    private var previousVolume: Double {
+        workout.previous.values.joined().filter { $0.done && $0.isWarmup != true }
+            .reduce(0) { $0 + Double($1.reps) * (Double($1.weight.replacingOccurrences(of: ",", with: ".")) ?? 0) }
+    }
+    private var completedExercises: Int { workout.draft.logs.values.filter { $0.contains { $0.done && $0.isWarmup != true } }.count }
+
+    private func fmt(_ n: Double) -> String { NumberText.decimal(n, digits: n.rounded() == n ? 0 : 1) }
+
+    /// `buildWorkoutReview` de la web.
+    private var review: [Item] {
+        workout.exercises.compactMap { ex in
+            func valid(_ s: [SetLog]) -> [SetLog] { s.filter { $0.done && $0.isWarmup != true && $0.reps > 0 } }
+            func w(_ s: SetLog) -> Double? { let t = s.weight.trimmingCharacters(in: .whitespaces); return t.isEmpty ? nil : Double(t.replacingOccurrences(of: ",", with: ".")) }
+            let now = valid(workout.draft.logs[ex.name] ?? [])
+            guard !now.isEmpty else { return nil }
+            let before = valid(workout.previous[ex.name] ?? [])
+            let weighted = { (s: [SetLog]) in !s.isEmpty && s.allSatisfy { w($0) != nil } }
+            let top = { (s: [SetLog]) in s.map { w($0) ?? 0 }.max() ?? 0 }
+            let vol = { (s: [SetLog]) in s.reduce(0.0) { $0 + (w($1) ?? 0) * Double($1.reps) } }
+            let reps = { (s: [SetLog]) in s.reduce(0) { $0 + $1.reps } }
+            var delta: Double? = nil
+            var change = "Nuevo"
+            func sign(_ d: Double) -> String { d > 0 ? "+" : d < 0 ? "−" : "" }
+            if before.isEmpty {
+            } else if !weighted(now) || !weighted(before) {
+                let d = Double(reps(now) - reps(before)); delta = d; change = "\(sign(d))\(Int(abs(d))) reps"
+            } else if top(now) != top(before) {
+                let d = top(now) - top(before); delta = d; change = "\(sign(d))\(fmt(abs(d))) kg"
+            } else if now.count == before.count && zip(now, before).allSatisfy({ w($0) == w($1) }) {
+                let d = Double(reps(now) - reps(before)); delta = d; change = "\(sign(d))\(Int(abs(d))) reps"
+            } else {
+                let d = vol(now) - vol(before); delta = d
+                let pct = vol(before) > 0 ? Int((d / vol(before) * 100).rounded()) : 0
+                change = "\(d > 0 ? "+" : "−")\(pct == 0 ? "\(fmt(abs(d))) kg" : "\(abs(pct)) %")"
+            }
+            let proposal = (rpe ?? 0) >= 9 ? "Revisar esfuerzo y recuperación antes de aumentar la carga."
+                : (delta ?? 0) < 0 ? "Revisar descanso, técnica y sensaciones antes de cambiar la carga."
+                : (delta ?? 0) > 0 ? "Si la técnica fue sólida, sube un poco la carga en la próxima sesión."
+                : "Mantener el plan como referencia y reunir otra sesión comparable."
+            let trend = delta == nil ? 2 : delta! > 0 ? 1 : delta! < 0 ? -1 : 0
+            return Item(name: workout.swaps[ex.name] ?? ex.name, change: trend == 0 ? "=" : change, trend: trend, proposal: proposal)
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack { Spacer(); Button("Listo") { Haptics.tap(); onDone() }.font(.apHeadline).foregroundStyle(Palette.gold).frame(minHeight: 44).padding(.horizontal, 14) }
+            TabView(selection: $page) {
+                ScrollView { summaryPage.padding(.horizontal, 16) }.tag(0)
+                ScrollView { comparePage.padding(.horizontal, 16) }.tag(1)
+            }
+            #if os(iOS)
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            #endif
+            HStack(spacing: 8) {
+                ForEach(0..<2, id: \.self) { i in
+                    Circle().fill(Palette.foreground.opacity(i == page ? 1 : 0.25)).frame(width: 7, height: 7)
+                        .padding(.vertical, 12).padding(.horizontal, 4).contentShape(Rectangle())
+                        .onTapGesture { Haptics.selection(); withAnimation { page = i } }
+                }
+            }
+            ShareLink(item: shareText) { Text("Compartir").frame(maxWidth: .infinity) }
+                .buttonStyle(.pill).padding(.horizontal, 16).padding(.bottom, 16)
+        }
+    }
+
+    private var shareText: String {
+        var t = "\(workout.draft.day.title) · \(dateLabel)\n"
+        if workout.volumeKg > 0 { t += "\(NumberText.integer(Int(workout.volumeKg))) kg · " }
+        t += "\(workout.doneSets) series · \(completedExercises) ejercicios"
+        if !workout.records.isEmpty { t += "\n🏆 " + workout.records.joined(separator: " · ") }
+        return t + "\nautopilotplan.app"
+    }
+
+    private func tile<C: View>(@ViewBuilder _ c: () -> C) -> some View {
+        c().padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var summaryPage: some View {
+        let vol = workout.volumeKg
+        let diff = vol - previousVolume
+        let showNote = previousVolume > 0 && vol > 0
+        let planned = workout.exercises.count
+        let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Completado · \(dateLabel)").font(.apSubhead).foregroundStyle(Palette.muted)
+            Text(title.0).font(.apLargeTitle).lineLimit(1).padding(.top, 2)
+            if !title.1.isEmpty { Text(title.1).font(.apHeadline).foregroundStyle(Palette.muted).lineLimit(1).padding(.top, 2) }
+            LazyVGrid(columns: cols, spacing: 10) {
+                if vol > 0 {
+                    metric("Volumen", NumberText.integer(Int(vol)), "kg", accent: true, note: showNote ? "\(diff >= 0 ? "+" : "−")\(NumberText.integer(Int(abs(diff)))) kg vs. anterior" : nil, positive: diff >= 0)
+                    metric("Series", "\(workout.doneSets)", "")
+                    metric("Ejercicios", "\(completedExercises)", "/\(planned)")
+                } else {
+                    metric("Series", "\(workout.doneSets)", "", accent: true)
+                    metric("Ejercicios", "\(completedExercises)", "/\(planned)")
+                    metric("Récords", "\(workout.records.count)", "")
+                }
+                metric("Esfuerzo", rpe.map(String.init) ?? "—", rpe == nil ? "" : "/10")
+            }
+            .padding(.top, 16)
+            if !workout.records.isEmpty {
+                tile {
+                    HStack(spacing: 12) {
+                        Image("lu-trophy").renderingMode(.template).resizable().frame(width: 24, height: 24).foregroundStyle(Palette.gold)
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(workout.records.count == 1 ? "Nuevo récord" : "\(workout.records.count) récords nuevos").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                            Text(workout.records.joined(separator: " · ")).font(.apHeadline).lineLimit(1)
+                        }
+                    }
+                }
+                .padding(.top, 10)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func metric(_ label: String, _ value: String, _ unit: String, accent: Bool = false, note: String? = nil, positive: Bool = true) -> some View {
+        tile {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(label).font(.apFootnote.weight(.semibold)).foregroundStyle(accent ? Palette.gold : Palette.muted)
+                (Text(value).foregroundColor(accent ? Palette.gold : Palette.foreground) + Text(unit.isEmpty ? "" : " \(unit)").font(.system(size: 17, weight: .semibold)).foregroundColor(Palette.muted))
+                    .font(.system(size: 30, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
+                if let note { Text(note).font(.caption.weight(.medium).monospacedDigit()).foregroundStyle(positive ? Palette.success : Palette.muted).lineLimit(1) }
+            }
+        }
+    }
+
+    private var comparePage: some View {
+        let items = review
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Frente a la última vez").font(.apTitle2)
+            if items.isEmpty {
+                Text("Esta sesión será tu referencia para la próxima.").font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 16)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(items.prefix(6).enumerated()), id: \.offset) { i, it in
+                        HStack(spacing: 12) {
+                            Text(it.name).font(.apSubhead).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                            let color: Color = it.trend == 1 ? Palette.success : it.trend == -1 ? Palette.destructive : Palette.muted
+                            Text(it.change).font(.apFootnote.weight(.semibold).monospacedDigit()).foregroundStyle(color)
+                                .padding(.horizontal, 8).padding(.vertical, 2)
+                                .background((it.trend == 1 || it.trend == -1 ? color.opacity(0.15) : Palette.foreground.opacity(0.1)), in: Capsule())
+                        }
+                        .padding(.horizontal, 14).frame(minHeight: 44)
+                        .overlay(alignment: .bottom) { if i < min(items.count, 6) - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+                    }
+                }
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding(.top, 16)
+            }
+            tile {
+                HStack(alignment: .top, spacing: 12) {
+                    Image("lu-target").renderingMode(.template).resizable().frame(width: 20, height: 20).foregroundStyle(Palette.gold).padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Próxima sesión").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                        Text(items.first?.proposal ?? "Mantén tu plan como referencia para la próxima sesión.").font(.apSubhead)
+                    }
+                }
+            }
+            .padding(.top, 12)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 }
