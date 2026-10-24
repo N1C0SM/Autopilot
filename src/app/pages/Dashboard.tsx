@@ -591,8 +591,16 @@ const Dashboard = () => {
             onNavigate={(s, day) => {
               setAutoStartWorkout(false);
               if (s === "training") {
-                setTrainingView("plan");
-                setPlanFocusDay(day);
+                if (day) {
+                  // Día concreto desde la tira semanal: rutina semanal en ese día.
+                  setTrainingView("plan");
+                  setPlanFocusDay(day);
+                } else {
+                  // Sin día (resumen de la sesión hecha): la vista de entreno,
+                  // que muestra el resumen guardado del día.
+                  setTrainingView("tracker");
+                  setPlanFocusDay(undefined);
+                }
               }
               setSection(s as MobileTab);
             }}
