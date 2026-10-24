@@ -143,6 +143,11 @@ const Dashboard = () => {
   useEffect(() => {
     setVisited((v) => (v.includes(section) ? v : [...v, section]));
   }, [section]);
+  // Al salir de Entrenar se limpia el día pedido: si se vuelve a tocar el mismo
+  // día en «Hoy», la rutina semanal vuelve a abrirse en ese día.
+  useEffect(() => {
+    if (section !== "training") setPlanFocusDay(undefined);
+  }, [section]);
   const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records" | "scan">("evolution");
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [completedToday, setCompletedToday] = useState(false);
@@ -917,6 +922,7 @@ const Dashboard = () => {
         lockedTabs={!campaign && !coaching ? ["nutrition"] : []}
         hiddenTabs={hideChat ? ["chat"] : []}
         onSettings={() => setSection("settings")}
+        onResources={() => setSection("resources")}
         pushedTabs={PUSHED_TABS}
         onRefresh={() => fetchData()}
         workoutMode={workoutMode}
