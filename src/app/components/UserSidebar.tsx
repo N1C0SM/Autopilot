@@ -64,12 +64,12 @@ const UserSidebar = ({
 
         {/* ── Logo ── */}
         <div className={cn(
-          "flex items-center",
+          "flex items-center min-w-0",
           collapsed ? "justify-center px-0 py-6" : "px-6 py-6",
         )}>
-          <img src={autopilotLogo} alt="Autopilot" className="h-8 w-8 rounded-full object-cover" />
+          <img src={autopilotLogo} alt="Autopilot" className="h-8 w-8 shrink-0 rounded-full object-cover" />
           {!collapsed && (
-            <span className="ml-3 font-display text-[15px] font-semibold uppercase tracking-[0.3em] text-foreground">
+            <span className="ml-3 font-display text-[15px] font-semibold uppercase tracking-[0.3em] text-foreground whitespace-nowrap select-none">
               Autopilot
             </span>
           )}

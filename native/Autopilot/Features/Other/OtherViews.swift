@@ -39,7 +39,7 @@ struct NutritionView: View {
         let hasMeals = !meals.isEmpty
         let showTargets = macros != nil && kcal > 0
         if !hasMeals && kcal <= 0 {
-            EmptyCard(photo: nil, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
+            EmptyCard(photo: Self.defaultDish, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
         } else {
             if hasMeals, let cover {
                 Color.clear.frame(height: 176)
@@ -213,15 +213,37 @@ private struct EmptyCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                 .transition(.opacity)
             } else {
-                VStack(spacing: 0) {
-                    IconTile(symbol: "lu-clock", size: 64)
-                    Text(title).font(.apTitle2).padding(.top, 20)
-                    Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-                        .frame(maxWidth: 300).padding(.top, 6)
+                VStack(alignment: .leading, spacing: 0) {
+                    Spacer(minLength: 144)
+                    Text(title).font(.inter(size: 28, weight: .bold)).tracking(-0.7).padding(.top, 8)
+                    Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
                 }
-                .padding(.vertical, 40).padding(.horizontal, 24)
-                .frame(maxWidth: .infinity)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding(20)
+                .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
+                .background {
+                    GeometryReader { geo in
+                        ZStack(alignment: .topLeading) {
+                            Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.25), .clear], center: .center, startRadius: 0, endRadius: 144))
+                                .frame(width: 288, height: 288).offset(x: geo.size.width - 288 + 64, y: -80)
+                            ZStack {
+                                Circle().stroke(Palette.gold.opacity(0.2), lineWidth: 1.5).frame(width: 112, height: 112)
+                                Circle().fill(Palette.gold.opacity(0.12)).frame(width: 112, height: 112)
+                                Circle().stroke(Palette.gold.opacity(0.3), lineWidth: 1.5).frame(width: 80, height: 80)
+                                Circle().fill(Palette.gold.opacity(0.18)).frame(width: 80, height: 80)
+                                Circle().stroke(Palette.gold.opacity(0.5), lineWidth: 2).frame(width: 40, height: 40)
+                            }
+                            .shadow(color: Palette.gold.opacity(0.35), radius: 30)
+                            .offset(x: geo.size.width - 112 - 32, y: 32)
+                            ForEach([(0.22, 0.28), (0.38, 0.62), (0.16, 0.76), (0.50, 0.36), (0.30, 0.48)], id: \.0) { t, l in
+                                Circle().fill(Palette.gold.opacity(0.4)).frame(width: 4, height: 4)
+                                    .offset(x: l * geo.size.width, y: t * geo.size.height)
+                            }
+                        }
+                    }
+                    .accessibilityHidden(true)
+                }
+                .background(Palette.card)
+                .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }
         }
         .task { if let photo { let u = await AiCover.meal(photo); withAnimation { url = u } } }

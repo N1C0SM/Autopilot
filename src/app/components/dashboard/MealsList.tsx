@@ -10,10 +10,11 @@ import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 
 /** Foto del plato generada con IA, con el mismo estilo oscuro y dorado que las sesiones. */
 const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
-  const src = useMealPhoto(dish);
+  const src = useMealPhoto(dish) || BRAND_PHOTOS.meal;
   return <span aria-hidden="true" className={cn("relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary transition-opacity", dim && "opacity-50")}>
     {src && <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />}
   </span>;
@@ -68,8 +69,8 @@ const DEFAULT_DISH = "Pollo a la plancha con arroz integral y verduras asadas";
 
 const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
   // Portada de Nutrición, como la de las sesiones: el primer plato del día o uno de referencia.
-  const coverPhoto = useMealPhoto(meals[0]?.description || DEFAULT_DISH);
-  const emptyMealPhoto = useMealPhoto(DEFAULT_DISH);
+  const coverPhoto = useMealPhoto(meals[0]?.description || DEFAULT_DISH) || BRAND_PHOTOS.meal;
+  const emptyMealPhoto = useMealPhoto(DEFAULT_DISH) || BRAND_PHOTOS.meal;
   const [done, setDone] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -101,6 +102,8 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
   if (!meals.length && kcal <= 0) {
     return (
       <EmptyState
+        photo={emptyMealPhoto ?? undefined}
+        nutrition
         card
         icon={Clock}
         title="Aún no hay plan de comidas"
@@ -246,6 +249,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
       {!hasMeals ? (
         <EmptyState
           photo={emptyMealPhoto ?? undefined}
+          nutrition
           card
           icon={Clock}
           title="Sin comidas todavía"

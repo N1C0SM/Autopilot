@@ -938,7 +938,7 @@ const Dashboard = () => {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <PageHead
         title="Mi panel · Autopilot"
         description="Tu plan diario de entrenamiento y nutrición."
