@@ -215,29 +215,11 @@ struct TrainView: View {
         }
     }
 
-    /// «Rutina semanal»: la semana entera, cada día con su sesión.
+    /// «Rutina semanal», calcada de `TrainingPlanView.tsx`.
     private var weeklyRoutine: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(DayNames.all.enumerated()), id: \.element) { i, day in
-                let plan = model.days.first { $0.day == day }
-                Button { selectedDay = day; tab = 0; Haptics.selection() } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(day).font(.apHeadline).foregroundStyle(day == DayNames.today ? Palette.gold : Palette.foreground)
-                            Text(plan.map { $0.isGym ? ($0.exercises?.isEmpty == false ? $0.title : "Descanso") : $0.title } ?? "Descanso")
-                                .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
-                    }
-                    .padding(.horizontal, 16).frame(minHeight: 60)
-                    .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
+        WeeklyRoutineView(days: model.days, initialDay: selectedDay) { day in
+            selectedDay = day; tab = 0
         }
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private func start(_ day: DayPlan, focus: Int = 0) async {
@@ -355,5 +337,215 @@ final class PlanModel: ObservableObject {
 
     func completedToday(_ day: String) -> Bool {
         completions.contains { $0.day == day && $0.date == LocalDate.string() }
+    }
+}
+
+
+/// `TrainingPlanView` de la web: tira de días, la sesión elegida con su lista y las herramientas del plan.
+struct WeeklyRoutineView: View {
+    let days: [DayPlan]
+    let initialDay: String
+    var onOpen: (String) -> Void
+    @State private var expanded: String?
+    @State private var detail: GymExercise?
+    @State private var copied = false
+
+    private func workPlan(_ day: String) -> DayPlan? {
+        guard let p = days.first(where: { $0.day == day }), p.type == "gimnasio" || p.type == "actividad" else { return nil }
+        return p
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            dayStrip
+            if let day = expanded, let plan = workPlan(day) { session(day, plan) }
+            else if let day = expanded { rest(day) }
+            else { emptyCard(icon: "lu-calendar", title: "Elige un día", message: "Toca un día de la semana para ver su sesión.") }
+            tools
+            (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.app/legal/disclaimer-medico)"))
+                .tint(Palette.gold)
+                .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity).padding(.horizontal, 16)
+        }
+        .onAppear { if expanded == nil { expanded = workPlan(initialDay) != nil ? initialDay : DayNames.today } }
+        .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
+    }
+
+    private var dayStrip: some View {
+        HStack(spacing: 4) {
+            ForEach(DayNames.all, id: \.self) { day in
+                let plan = workPlan(day)
+                let isToday = day == DayNames.today
+                let isExpanded = expanded == day
+                Button {
+                    Haptics.selection()
+                    withAnimation(.snappy) { expanded = isExpanded ? nil : day }
+                } label: {
+                    Text(String(day.prefix(3))).font(.apSubhead.weight(.semibold))
+                        .foregroundStyle(isExpanded || isToday ? Palette.gold : plan != nil ? Palette.foreground : Palette.muted.opacity(0.6))
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(isExpanded ? Palette.gold.opacity(0.15) : (isToday || plan != nil) ? Palette.secondary : .clear))
+                }
+                .buttonStyle(.plain)
+                .disabled(plan == nil)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("\(day), \(plan?.title ?? "descanso")\(isToday ? ", hoy" : "")")
+            }
+        }
+        .padding(6)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    @ViewBuilder private func session(_ day: String, _ plan: DayPlan) -> some View {
+        let exercises = plan.exercises ?? []
+        let sets = exercises.reduce(0) { $0 + $1.series }
+        let summary = exercises.isEmpty ? nil : ["\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios")", sets > 0 ? "\(sets) \(sets == 1 ? "serie" : "series")" : nil].compactMap { $0 }.joined(separator: " · ")
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(day == DayNames.today ? "\(day) · hoy" : day).font(.apSubhead).foregroundStyle(Palette.muted)
+                Text(plan.title).font(.apTitle1)
+                if plan.isGym, let summary { Text(summary).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2) }
+            }
+            if !plan.isGym || !exercises.isEmpty {
+                Button("Abrir \(plan.isGym ? "sesión" : "actividad") del \(day.lowercased())") { Haptics.tap(); onOpen(day) }.buttonStyle(.pill)
+            }
+            if plan.isGym {
+                if !exercises.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(Array(exercises.enumerated()), id: \.offset) { i, ex in
+                            Button { detail = ex } label: {
+                                HStack(spacing: 12) {
+                                    ExerciseThumb(url: ex.image_url, size: 44)
+                                    HStack(spacing: 8) {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(ex.name).font(.apBody).lineLimit(2)
+                                            let info = [ex.rest, ex.muscle_group].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+                                            if !info.isEmpty { Text(info).font(.apSubhead).foregroundStyle(Palette.muted).lineLimit(1) }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        Text("\(ex.series) × \(ex.reps)").font(.apBody.monospacedDigit()).foregroundStyle(Palette.muted)
+                                        Image("lu-chevron-left").renderingMode(.template).resizable().frame(width: 16, height: 16)
+                                            .rotationEffect(.degrees(180)).foregroundStyle(Palette.muted.opacity(0.6))
+                                    }
+                                    .padding(.vertical, 10).padding(.trailing, 16)
+                                    .overlay(alignment: .bottom) { if i < exercises.count - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+                                }
+                                .padding(.leading, 16).frame(minHeight: 44).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                }
+            } else {
+                VStack(spacing: 0) {
+                    infoRow("lu-flame", "Intensidad", plan.intensity ?? "", last: false)
+                    infoRow("lu-clock", "Duración", plan.duration ?? "", last: true)
+                }
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            }
+        }
+    }
+
+    private func infoRow(_ icon: String, _ title: String, _ value: String, last: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20).foregroundStyle(Palette.muted).frame(width: 28)
+            HStack { Text(title).font(.apBody); Spacer(); Text(value).font(.apBody).foregroundStyle(Palette.muted) }
+                .frame(minHeight: 44)
+                .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+        }
+        .padding(.horizontal, 16)
+    }
+
+    @ViewBuilder private func rest(_ day: String) -> some View {
+        let i = DayNames.all.firstIndex(of: day) ?? 0
+        let next = (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
+        VStack(spacing: 8) {
+            Image("lu-moon").renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
+            Text(day == DayNames.today ? "Hoy es día de descanso" : "\(day) es día de descanso").font(.apHeadline)
+            Text("Toca otro día para ver su sesión.").font(.apSubhead).foregroundStyle(Palette.muted)
+            if let next {
+                Button("Ver el \(next.lowercased())") { Haptics.selection(); withAnimation(.snappy) { expanded = next } }
+                    .buttonStyle(.pillSecondary).fixedSize().padding(.top, 8)
+            }
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 32)
+    }
+
+    private func emptyCard(icon: String, title: String, message: String) -> some View {
+        VStack(spacing: 8) {
+            Image(icon).renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
+            Text(title).font(.apHeadline)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 32).padding(.horizontal, 24)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    private var tools: some View {
+        VStack(spacing: 0) {
+            Button { copy() } label: { toolRow(copied ? "lu-check" : "lu-copy", copied ? "Plan copiado" : "Copiar plan", last: false) }.buttonStyle(.plain)
+            ShareLink(item: PlanText.file(days)) { toolRow("lu-download", "Descargar plan", last: false) }.buttonStyle(.plain)
+            ShareLink(item: PlanText.calendar(days)) { toolRow("lu-calendar", "Exportar plan al calendario", last: true) }.buttonStyle(.plain)
+        }
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    private func toolRow(_ icon: String, _ label: String, last: Bool) -> some View {
+        HStack(spacing: 12) {
+            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20).foregroundStyle(Palette.muted).frame(width: 28)
+            Text(label).font(.apBody).foregroundStyle(Palette.foreground).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+        }
+        .padding(.leading, 16).contentShape(Rectangle())
+    }
+
+    private func copy() {
+        Haptics.tap()
+        #if os(iOS)
+        UIPasteboard.general.string = PlanText.text(days)
+        #else
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(PlanText.text(days), forType: .string)
+        #endif
+        copied = true
+        Task { try? await Task.sleep(for: .seconds(2)); copied = false }
+    }
+}
+
+/// Texto del plan como `planToText` de la web, y un .ics semanal para el calendario.
+enum PlanText {
+    static func text(_ days: [DayPlan]) -> String {
+        var t = "MI PLAN DE ENTRENAMIENTO\n" + String(repeating: "═", count: 40) + "\n\n"
+        for d in days {
+            t += "📅 \(d.day.uppercased())"
+            if d.isGym {
+                t += " — \(d.routine_name ?? "Gimnasio")\n   Músculos: \(d.muscle_focus ?? "")\n\n"
+                for e in d.exercises ?? [] { t += "   • \(e.name)\n     \(e.series) series × \(e.reps) reps | Descanso: \(e.rest)\n" }
+            } else {
+                t += " — \(d.sport ?? "Actividad")\n   Intensidad: \(d.intensity ?? "") | Duración: \(d.duration ?? "")\n"
+            }
+            t += "\n" + String(repeating: "─", count: 40) + "\n\n"
+        }
+        return t
+    }
+    static func file(_ days: [DayPlan]) -> URL {
+        let u = FileManager.default.temporaryDirectory.appendingPathComponent("mi-plan-entrenamiento.txt")
+        try? text(days).write(to: u, atomically: true, encoding: .utf8)
+        return u
+    }
+    static func calendar(_ days: [DayPlan]) -> URL {
+        let codes = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+        let cal = Calendar(identifier: .iso8601)
+        let monday = cal.date(from: cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
+        let f = DateFormatter(); f.dateFormat = "yyyyMMdd"
+        var ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Autopilot//Plan//ES\r\n"
+        for d in days where d.type == "gimnasio" || d.type == "actividad" {
+            guard let i = DayNames.all.firstIndex(of: d.day), let date = cal.date(byAdding: .day, value: i, to: monday) else { continue }
+            ics += "BEGIN:VEVENT\r\nUID:autopilot-\(codes[i])@autopilotplan.app\r\nDTSTART:\(f.string(from: date))T180000\r\nDURATION:PT1H\r\nRRULE:FREQ=WEEKLY;BYDAY=\(codes[i])\r\nSUMMARY:\(d.title)\r\nEND:VEVENT\r\n"
+        }
+        ics += "END:VCALENDAR\r\n"
+        let u = FileManager.default.temporaryDirectory.appendingPathComponent("plan-autopilot.ics")
+        try? ics.write(to: u, atomically: true, encoding: .utf8)
+        return u
     }
 }
