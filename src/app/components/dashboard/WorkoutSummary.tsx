@@ -95,6 +95,11 @@ export function WorkoutSummary({
       body: (
         <>
           <header>
+            <svg viewBox="0 0 56 56" className="mb-3 h-14 w-14" aria-hidden="true">
+              <circle cx="28" cy="28" r="24" fill="none" stroke="hsl(var(--primary) / 0.15)" strokeWidth="4" />
+              <circle cx="28" cy="28" r="24" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round" strokeDasharray="151" transform="rotate(-90 28 28)" className="done-ring" />
+              <path d="M19 28.5l6 6 12-13" fill="none" stroke="hsl(var(--primary))" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="27" className="done-check" />
+            </svg>
             <Desc className="type-subhead text-muted-foreground">Completado · {dateLabel}</Desc>
             <Title className={cn("mt-0.5 truncate", sheet ? "type-large-title" : "type-title1")}>{titleName}</Title>
             {titleDetail && <p className="mt-0.5 truncate type-headline text-muted-foreground">{titleDetail}</p>}
@@ -114,7 +119,7 @@ export function WorkoutSummary({
             ))}
             {records.length > 0 && (
               <div className={cn(tile, "col-span-2 flex items-center gap-3")}>
-                <Trophy className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
+                <Trophy className="soft-pop h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
                 <div className="min-w-0">
                   <p className="type-footnote font-semibold text-primary">{records.length === 1 ? "Nuevo récord" : `${records.length} récords nuevos`}</p>
                   <p className="truncate type-headline">{records.join(" · ")}</p>

@@ -549,3 +549,13 @@ body.keyboard-open main {
 @media (prefers-reduced-motion: reduce) {
   .animate-in { --tw-enter-translate-x: 0 !important; --tw-enter-translate-y: 0 !important; --tw-enter-scale: 1 !important; }
 }
+
+/* Celebración sobria al terminar: el anillo se cierra y aparece el check; el trofeo del récord entra suave. */
+@keyframes ring-close { from { stroke-dashoffset: 151; } to { stroke-dashoffset: 0; } }
+@keyframes check-draw { from { stroke-dashoffset: 27; } to { stroke-dashoffset: 0; } }
+@keyframes soft-pop { 0% { opacity: 0; transform: scale(0.6); } 70% { opacity: 1; transform: scale(1.06); } 100% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: no-preference) {
+  .done-ring { animation: ring-close 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .done-check { animation: check-draw 320ms ease-out 560ms both; }
+  .soft-pop { animation: soft-pop 480ms cubic-bezier(0.22, 1, 0.36, 1) 700ms both; }
+}

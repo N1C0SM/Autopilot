@@ -699,6 +699,7 @@ struct WorkoutSummaryView: View {
         let planned = workout.exercises.count
         let cols = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
         return VStack(alignment: .leading, spacing: 0) {
+            DoneMark().padding(.bottom, 12)
             Text("Completado · \(dateLabel)").font(.apSubhead).foregroundStyle(Palette.muted)
             Text(title.0).font(.apLargeTitle).lineLimit(1).padding(.top, 2)
             if !title.1.isEmpty { Text(title.1).font(.apHeadline).foregroundStyle(Palette.muted).lineLimit(1).padding(.top, 2) }
@@ -719,6 +720,7 @@ struct WorkoutSummaryView: View {
                 tile {
                     HStack(spacing: 12) {
                         Image("lu-trophy").renderingMode(.template).resizable().frame(width: 24, height: 24).foregroundStyle(Palette.gold)
+                            .modifier(SoftPop(delay: 0.7))
                         VStack(alignment: .leading, spacing: 0) {
                             Text(workout.records.count == 1 ? "Nuevo récord" : "\(workout.records.count) récords nuevos").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
                             Text(workout.records.joined(separator: " · ")).font(.apHeadline).lineLimit(1)
@@ -777,5 +779,41 @@ struct WorkoutSummaryView: View {
             .padding(.top, 12)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+
+/// Anillo dorado que se cierra y check que se dibuja (igual que `.done-ring` de la web). Sin animación si se reduce el movimiento.
+struct DoneMark: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var ring: CGFloat = 0
+    @State private var check: CGFloat = 0
+    var body: some View {
+        ZStack {
+            Circle().stroke(Palette.gold.opacity(0.15), lineWidth: 4)
+            Circle().trim(from: 0, to: ring).stroke(Palette.gold, style: StrokeStyle(lineWidth: 4, lineCap: .round)).rotationEffect(.degrees(-90))
+            Path { p in p.move(to: CGPoint(x: 19, y: 28.5)); p.addLine(to: CGPoint(x: 25, y: 34.5)); p.addLine(to: CGPoint(x: 37, y: 21.5)) }
+                .trim(from: 0, to: check)
+                .stroke(Palette.gold, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: 56, height: 56)
+        .accessibilityHidden(true)
+        .onAppear {
+            Haptics.success()
+            if reduceMotion { ring = 1; check = 1; return }
+            withAnimation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.7)) { ring = 1 }
+            withAnimation(.easeOut(duration: 0.32).delay(0.56)) { check = 1 }
+        }
+    }
+}
+
+/// Entrada suave con un pequeño rebote (`.soft-pop` de la web).
+struct SoftPop: ViewModifier {
+    var delay: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
+    func body(content: Content) -> some View {
+        content.scaleEffect(shown || reduceMotion ? 1 : 0.6).opacity(shown || reduceMotion ? 1 : 0)
+            .onAppear { withAnimation(.spring(response: 0.45, dampingFraction: 0.6).delay(delay)) { shown = true } }
     }
 }
