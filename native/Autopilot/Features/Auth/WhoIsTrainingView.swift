@@ -126,7 +126,7 @@ struct AvatarView: View {
 
     private var initial: some View {
         Text(String(name.prefix(1)).uppercased())
-            .font(.system(size: size * 0.42, weight: .bold, design: .rounded))
+            .font(.system(size: size * 0.42, weight: .bold))
             .foregroundStyle(Palette.gold)
             .frame(width: size, height: size)
             .background(Palette.secondary)

@@ -78,7 +78,7 @@ struct HeroFigure: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label).font(.apSubhead).foregroundStyle(Palette.muted)
-            Text(value).font(.system(size: 48, weight: .bold, design: .rounded).monospacedDigit())
+            Text(value).font(.system(size: 48, weight: .bold).monospacedDigit())
             if let hint { Text(hint).font(.apFootnote).foregroundStyle(Palette.muted) }
         }
         .accessibilityElement(children: .combine)
@@ -93,7 +93,7 @@ struct StatRow: View {
             ForEach(Array(items.enumerated()), id: \.offset) { i, item in
                 VStack(alignment: .leading, spacing: 0) {
                     Text(item.label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                    Text(item.value).font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
+                    Text(item.value).font(.system(size: 28, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6)
                     if let h = item.hint { Text(h).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1) }
                 }
                 .padding(.vertical, 12).padding(.leading, i > 0 ? 12 : 0).padding(.trailing, 12)
@@ -184,7 +184,7 @@ struct AdminDashboardView: View {
             HStack {
                 Text(label).font(.apBody)
                 Spacer()
-                Text("\(value)").font(.system(.body, design: .rounded).weight(.semibold).monospacedDigit())
+                Text("\(value)").font(.system(.body).weight(.semibold).monospacedDigit())
                     .foregroundStyle(danger && value > 0 ? Palette.destructive : Palette.foreground)
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(Palette.muted)
             }
@@ -327,7 +327,7 @@ struct AdminMetricsWebView: View {
     private func mini(_ label: String, _ value: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-            Text("\(value)").font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
+            Text("\(value)").font(.system(size: 28, weight: .bold).monospacedDigit())
         }
         .accessibilityElement(children: .combine)
     }

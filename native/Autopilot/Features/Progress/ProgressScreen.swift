@@ -37,7 +37,7 @@ struct ProgressScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Últimas 4 semanas").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(NumberText.integer(model.kg4w)).font(.system(size: 56, weight: .bold, design: .rounded).monospacedDigit())
+                    Text(NumberText.integer(model.kg4w)).font(.system(size: 56, weight: .bold).monospacedDigit())
                     Text("kg levantados").font(.apTitle3).foregroundStyle(Palette.muted)
                 }
                 HStack(spacing: 20) {
@@ -53,8 +53,8 @@ struct ProgressScreen: View {
                 }
                 .chartYAxis(.hidden)
                 .chartXAxis { AxisMarks { _ in AxisValueLabel().font(.caption2).foregroundStyle(Palette.muted) } }
-                .frame(height: 180)
-                .padding(.top, 24)
+                .frame(height: 160)
+                .padding(.top, 20)
                 .accessibilityLabel("Kilos levantados por semana")
             }
             .padding(20)
@@ -71,7 +71,7 @@ struct ProgressScreen: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(ex.name).font(.apTitle3)
                         Text("\(ex.sessions) \(ex.sessions == 1 ? "sesión" : "sesiones")").font(.apFootnote).foregroundStyle(Palette.muted)
-                        Text("\(NumberText.integer(Int(ex.bestVolume))) kg").font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit()).padding(.top, 6)
+                        Text("\(NumberText.integer(Int(ex.bestVolume))) kg").font(.system(size: 34, weight: .bold).monospacedDigit()).padding(.top, 6)
                         if ex.sessions < 2 {
                             Text("Registra otra sesión de este ejercicio y aquí verás tu línea de progreso.")
                                 .font(.apFootnote).foregroundStyle(Palette.muted)
@@ -86,7 +86,7 @@ struct ProgressScreen: View {
     }
 
     private func stat(_ value: String, _ label: String) -> some View {
-        (Text(value).font(.system(.title3, design: .rounded).weight(.bold)) + Text(" " + label).font(.apSubhead).foregroundColor(Palette.muted))
+        (Text(value).font(.system(.title3).weight(.bold)) + Text(" " + label).font(.apSubhead).foregroundColor(Palette.muted))
     }
 
     // MARK: Físico (ProgressPhotos de la web)
@@ -150,23 +150,23 @@ struct ProgressScreen: View {
     private var records: some View {
         VStack(alignment: .leading, spacing: 16) {
             if model.records.isEmpty {
-                EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Aparecen al superar tus mejores marcas.")
+                EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Registra tus entrenos con peso y rompe tu primer récord personal.")
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             } else if let best = model.records.max(by: { $0.e1rm < $1.e1rm }) {
                 ZStack(alignment: .bottomLeading) {
-                    Color.clear.frame(maxWidth: .infinity).frame(height: 340)
+                    Color.clear.frame(maxWidth: .infinity).frame(height: 256)
                         .overlay { CachedAsyncImage(url: best.image.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
                         .clipped()
-                    LinearGradient(colors: [.black.opacity(0.85), .black.opacity(0.2)], startPoint: .bottom, endPoint: .top)
+                    LinearGradient(colors: [.black.opacity(0.9), .black.opacity(0.45), .black.opacity(0.1)], startPoint: .bottom, endPoint: .top)
                     VStack(alignment: .leading, spacing: 4) {
-                        Label("Tu mejor marca", systemImage: "trophy").font(.apHeadline).foregroundStyle(Palette.gold)
+                        Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(Progression.kgText(best.e1rm)).font(.system(size: 72, weight: .bold, design: .rounded))
-                            Text("kg").font(.apTitle3).foregroundStyle(Palette.muted)
+                            Text(Progression.kgText(best.e1rm)).font(.system(size: 64, weight: .bold))
+                            Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))
                         }
-                        Text("1RM estimado en \(best.name)").font(.apBody).foregroundStyle(Palette.muted)
+                        Text("1RM estimado en \(best.name)").font(.apSubhead).foregroundStyle(.white.opacity(0.75))
                     }
-                    .padding(24)
+                    .padding(20)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
                 .accessibilityElement(children: .combine)
@@ -175,15 +175,15 @@ struct ProgressScreen: View {
                 VStack(spacing: 0) {
                     ForEach(Array(model.records.enumerated()), id: \.element.name) { i, pr in
                         HStack(spacing: 14) {
-                            ExerciseThumb(url: pr.image)
-                            VStack(alignment: .leading, spacing: 4) {
+                            ExerciseThumb(url: pr.image, size: 44)
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(pr.name).font(.apBody)
-                                Text(pr.dateText).font(.apSubhead).foregroundStyle(Palette.muted)
+                                Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted)
                             }
                             Spacer(minLength: 8)
                             VStack(alignment: .trailing, spacing: 4) {
-                                Text("\(Progression.kgText(pr.weight)) kg × \(pr.reps)").font(.apHeadline.monospacedDigit())
-                                Text("1RM ~\(Progression.kgText(pr.e1rm)) kg").font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted)
+                                Text("\(Progression.kgText(pr.weight)) kg × \(pr.reps)").font(.apBody.weight(.semibold).monospacedDigit())
+                                Text("1RM ~\(Progression.kgText(pr.e1rm)) kg").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
                             }
                         }
                         .padding(.horizontal, 16).padding(.vertical, 14)
@@ -191,7 +191,7 @@ struct ProgressScreen: View {
                         .accessibilityElement(children: .combine)
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
         }
     }

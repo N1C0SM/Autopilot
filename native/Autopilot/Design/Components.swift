@@ -10,7 +10,7 @@ struct RestCard<Action: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Spacer(minLength: 150)
-            Text(title).font(.system(.title, design: .rounded).weight(.bold)).accessibilityAddTraits(.isHeader)
+            Text(title).font(.system(.title).weight(.bold)).accessibilityAddTraits(.isHeader)
             Text(message).font(.apBody).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
             action.padding(.top, 14)
         }
@@ -40,6 +40,7 @@ struct RestCard<Action: View>: View {
 /// Cabecera de la web (MobileHeader): campana y avatar en círculos de 30 pt dentro de 44 pt.
 struct HeaderButtons: View {
     let initial: String
+    var avatar: String? = nil
     var onProfile: () -> Void
 
     var body: some View {
@@ -52,8 +53,14 @@ struct HeaderButtons: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Notificaciones")
             Button(action: onProfile) {
-                Text(initial).font(.apFootnote.weight(.semibold))
-                    .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
+                ZStack {
+                    Circle().fill(Palette.secondary)
+                    Text(initial).font(.apFootnote.weight(.semibold))
+                    if let a = avatar, let u = URL(string: a) {
+                        CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                    }
+                }
+                .frame(width: 30, height: 30).clipShape(Circle())
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
@@ -114,10 +121,11 @@ struct SegmentedPill: View {
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { i in
                 Button { Haptics.selection(); selection = i } label: {
-                    Text(options[i]).font(.apSubhead.weight(.semibold))
+                    Text(options[i]).font(.system(size: 13, weight: i == selection ? .semibold : .medium))
+                        .lineLimit(1).minimumScaleFactor(0.7)
                         .foregroundStyle(i == selection ? Palette.foreground : Palette.muted)
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .background { if i == selection { RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.white.opacity(0.16)) } }
+                        .frame(maxWidth: .infinity, minHeight: 32)
+                        .background { if i == selection { RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Palette.accent).shadow(color: .black.opacity(0.25), radius: 2, y: 1) } }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -125,7 +133,9 @@ struct SegmentedPill: View {
             }
         }
         .padding(4)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: 448)
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -141,7 +151,11 @@ struct ProgressRing: View {
             Circle().trim(from: 0, to: max(0, min(1, value / 100)))
                 .stroke(muted ? Palette.muted : Palette.gold, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-            Image(systemName: symbol).font(.system(size: 13, weight: .semibold)).foregroundStyle(muted ? Palette.muted : Palette.gold)
+            Group {
+                if symbol.hasPrefix("lu-") || symbol.hasPrefix("ph-") { Image(symbol).renderingMode(.template).resizable().frame(width: 14, height: 14) }
+                else { Image(systemName: symbol).font(.system(size: 13, weight: .semibold)) }
+            }
+            .foregroundStyle(muted ? Palette.muted : Palette.gold)
         }
         .frame(width: 32, height: 32)
         .accessibilityHidden(true)
@@ -233,7 +247,7 @@ struct IconTile: View {
     var tint: Color = Palette.gold
     var body: some View {
         Image(systemName: symbol)
-            .font(.system(size: size * 0.5, weight: .semibold))
+            .font(.system(size: size * 0.5625, weight: .semibold))
             .foregroundStyle(tint)
             .frame(width: size, height: size)
             .background(tint.opacity(0.15), in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous))

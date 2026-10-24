@@ -198,7 +198,7 @@ struct ScanResultView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Físico").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(NumberText.decimal(result.physique ?? 0)).font(.system(size: 64, weight: .bold, design: .rounded).monospacedDigit())
+                    Text(NumberText.decimal(result.physique ?? 0)).font(.system(size: 64, weight: .bold).monospacedDigit())
                     Text("/10").font(.apTitle3).foregroundStyle(Palette.muted)
                 }
             }

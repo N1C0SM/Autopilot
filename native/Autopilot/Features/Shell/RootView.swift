@@ -41,8 +41,8 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     var title: String {
         switch self {
         case .home: "Inicio"
-        case .train: "Entrenamiento"
-        case .progress: "Mi progreso"
+        case .train: "Plan"
+        case .progress: "Progreso"
         case .nutrition: "Nutrición"
         case .scan: "Escáner"
         case .settings: "Ajustes"
@@ -157,11 +157,11 @@ struct MainShell: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 ZStack {
                                     if current == .home { Text("Hoy").font(.apHeadline).accessibilityAddTraits(.isHeader) }
-                                    HStack { Spacer(); HeaderButtons(initial: initial) { showSettings = true } }
+                                    HStack { Spacer(); HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true } }
                                 }
                                 .frame(height: 44)
                                 if current != .home {
-                                    Text(current.navTitle).font(.system(.largeTitle, design: .default).weight(.bold))
+                                    Text(current.navTitle).font(.system(.largeTitle).weight(.bold))
                                         .accessibilityAddTraits(.isHeader)
                                 }
                             }

@@ -33,23 +33,23 @@ struct HomeView: View {
                 Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))).capitalizedFirst)
                     .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted)
                 (Text(firstName.isEmpty ? "Hola." : "Hola, \(firstName).") + Text("\n") + Text(stateLine).foregroundColor(Palette.muted))
-                    .font(.system(.largeTitle, design: .default).weight(.bold))
+                    .font(.system(.largeTitle).weight(.bold))
                     .padding(.top, 2)
                     .accessibilityAddTraits(.isHeader)
 
                 if !scheduled.isEmpty { weekStrip.padding(.top, 24) }
 
-                mainAction.padding(.vertical, 32)
+                mainAction.padding(.top, completedToday ? 12 : 32).padding(.bottom, 32)
 
                 Text("Resumen").font(.apTitle3).padding(.bottom, 12)
                 HStack(spacing: 12) {
                     overview(title: "Nutrición",
                              value: calories.map { Text(NumberText.integer($0)) + Text(" kcal").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted) },
-                             ring: ProgressRing(value: 0, symbol: "apple.logo", muted: calories == nil),
+                             ring: ProgressRing(value: 0, symbol: calories == nil ? "lu-lock" : "lu-apple", muted: calories == nil),
                              detail: calories == nil ? "Plan de nutrición" : "Objetivo diario") { onNavigate(.nutrition) }
                     overview(title: "Progreso",
                              value: scheduled.isEmpty ? nil : Text("\(min(doneDays.count, scheduled.count))") + Text("/\(scheduled.count)").font(.apTitle3).foregroundColor(Palette.muted),
-                             ring: ProgressRing(value: scheduled.isEmpty ? 0 : Double(min(doneDays.count, scheduled.count)) / Double(scheduled.count) * 100, symbol: "sparkles"),
+                             ring: ProgressRing(value: scheduled.isEmpty ? 0 : Double(min(doneDays.count, scheduled.count)) / Double(scheduled.count) * 100, symbol: "lu-sparkles"),
                              detail: scheduled.isEmpty ? "Sin sesiones esta semana" : "\(min(doneDays.count, scheduled.count)) de \(scheduled.count) \(scheduled.count == 1 ? "sesión" : "sesiones") esta semana") { onNavigate(.progress) }
                 }
             }
@@ -81,7 +81,7 @@ struct HomeView: View {
                         ZStack {
                             Circle().fill(done ? Palette.gold : (isToday ? Palette.gold.opacity(0.15) : .clear))
                             if done {
-                                Image(systemName: "checkmark").font(.system(size: 15, weight: .bold)).foregroundStyle(.black)
+                                Image(systemName: "checkmark").font(.system(size: 18, weight: .semibold)).foregroundStyle(.black)
                             } else {
                                 Text(Self.letters[i]).font(.apSubhead.weight(isToday ? .semibold : .regular))
                                     .foregroundStyle(isToday ? Palette.gold : (trains ? Palette.foreground : Palette.muted))
@@ -120,7 +120,7 @@ struct HomeView: View {
         } else if completedToday {
             Button { Haptics.tap(); onNavigate(.train) } label: {
                 HStack(spacing: 14) {
-                    Image(systemName: "checkmark").font(.system(size: 18, weight: .heavy)).foregroundStyle(Palette.success)
+                    Image(systemName: "checkmark").font(.system(size: 20, weight: .heavy)).foregroundStyle(Palette.success)
                         .frame(width: 40, height: 40).background(Palette.success.opacity(0.15), in: Circle())
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.success)
@@ -164,19 +164,23 @@ struct HomeView: View {
         return parts.joined(separator: " · ")
     }
 
+    /// OverviewRow de la web: anillo arriba a la izquierda y chevron a la derecha; abajo cifra 30, título y detalle.
     private func overview<V: View>(title: String, value: Text?, ring: V, detail: String, action: @escaping () -> Void) -> some View {
         Button { Haptics.tap(); action() } label: {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Text(title).font(.apHeadline)
-                    Spacer()
                     ring
+                    Spacer()
+                    Image("lu-chevron-left").renderingMode(.template).resizable().frame(width: 16, height: 16)
+                        .rotationEffect(.degrees(180)).foregroundStyle(Palette.muted.opacity(0.6))
                 }
-                if let value { value.font(.system(.title, design: .rounded).weight(.bold).monospacedDigit()) }
-                Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                Spacer(minLength: 16)
+                if let value { value.font(.system(size: 30, weight: .bold).monospacedDigit()).lineLimit(1).minimumScaleFactor(0.6) }
+                Text(title).font(.apHeadline).padding(.top, 8)
+                Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2).padding(.top, 2)
             }
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 130, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)

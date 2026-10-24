@@ -114,7 +114,7 @@ struct TrainView: View {
                         .padding(.bottom, 14)
                         .accessibilityHidden(true)
                 }
-                Text(parts.first ?? "").font(.system(size: 32, weight: .bold, design: .rounded)).lineLimit(1)
+                Text(parts.first ?? "").font(.system(size: 32, weight: .bold)).lineLimit(1)
                     .accessibilityAddTraits(.isHeader)
                 if parts.count > 1 {
                     Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted).lineLimit(1)
@@ -139,7 +139,7 @@ struct TrainView: View {
                         if let r = resumable { Haptics.tap(); active = ActiveWorkout(draft: r) } else { Task { await start(plan) } }
                     } label: {
                         if starting { ProgressView().tint(.black) }
-                        else { Label(resumable == nil ? "Empezar entrenamiento" : "Seguir entrenamiento", systemImage: "play.fill") }
+                        else { Label(resumable == nil ? "Empezar entrenamiento" : "Continuar entreno", systemImage: "play.fill") }
                     }
                     .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
                     .disabled(starting)
@@ -206,8 +206,8 @@ struct TrainView: View {
             FlowRow {
                 ForEach(model.days.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }) { p in
                     Button(p.day) { Haptics.selection(); selectedDay = p.day }
-                        .font(.apBody.weight(.medium))
-                        .padding(.horizontal, 20).frame(minHeight: 50)
+                        .font(.apSubhead.weight(.medium))
+                        .padding(.horizontal, 16).frame(minHeight: 44)
                         .background(Color.white.opacity(0.1), in: Capsule())
                         .buttonStyle(.plain)
                 }
@@ -288,6 +288,7 @@ struct ExerciseListRow: View {
 struct ExerciseThumb: View {
     let url: String?
     var completed = false
+    var size: CGFloat = 52
 
     var body: some View {
         ZStack {
@@ -302,7 +303,7 @@ struct ExerciseThumb: View {
                 Image(systemName: "checkmark").font(.headline.weight(.bold)).foregroundStyle(Palette.gold)
             }
         }
-        .frame(width: 52, height: 52)
+        .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .accessibilityHidden(true)
     }

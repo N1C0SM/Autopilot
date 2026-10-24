@@ -20,7 +20,7 @@ struct NutritionView: View {
                     let kcal = m.calories ?? (p * 4 + c * 4 + f * 9)
                     let total = max(p * 4 + c * 4 + f * 9, 1)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("\(Int(kcal.rounded()))").font(.system(size: 56, weight: .bold, design: .rounded).monospacedDigit())
+                        Text("\(Int(kcal.rounded()))").font(.system(size: 56, weight: .bold).monospacedDigit())
                         Text("kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4)
                         HStack(alignment: .top, spacing: 16) {
                             macro("Proteína", p, p * 4 / total)
@@ -88,7 +88,7 @@ struct NutritionView: View {
                 Spacer()
                 Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
             }
-            (Text("\(Int(grams.rounded()))").font(.system(.title2, design: .rounded).weight(.bold)) + Text("g").font(.apSubhead).foregroundColor(Palette.muted))
+            (Text("\(Int(grams.rounded()))").font(.system(.title2).weight(.bold)) + Text("g").font(.apSubhead).foregroundColor(Palette.muted))
             GeometryReader { geo in
                 Capsule().fill(Palette.gold.opacity(0.2))
                     .overlay(alignment: .leading) { Capsule().fill(Palette.gold).frame(width: geo.size.width * share) }

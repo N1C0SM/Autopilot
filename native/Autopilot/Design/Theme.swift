@@ -13,6 +13,10 @@ enum Palette {
     /// --success 135 64% 50%
     static let success = Color(red: 0.18, green: 0.82, blue: 0.34)
     static let separator = Color.white.opacity(0.12)
+    /// --accent 240 2% 23% (segmentado activo, pulsado)
+    static let accent = Color(red: 0.225, green: 0.225, blue: 0.235)
+    /// --border 240 2% 22%
+    static let border = Color(red: 0.216, green: 0.216, blue: 0.224)
 }
 
 enum Radius {
@@ -23,18 +27,18 @@ enum Radius {
 /// Escala tipográfica de la web (`type-*`) sobre los estilos del sistema,
 /// así crece con el tamaño de texto de Ajustes (Dynamic Type).
 extension Font {
-    static let apLargeTitle = Font.system(.largeTitle, design: .rounded).weight(.bold)
-    static let apTitle1 = Font.system(.title, design: .rounded).weight(.bold)
-    static let apTitle2 = Font.system(.title2, design: .rounded).weight(.bold)
-    static let apTitle3 = Font.system(.title3, design: .rounded).weight(.bold)
+    static let apLargeTitle = Font.system(.largeTitle).weight(.bold)
+    static let apTitle1 = Font.system(.title).weight(.bold)
+    static let apTitle2 = Font.system(.title2).weight(.bold)
+    static let apTitle3 = Font.system(.title3).weight(.bold)
     static let apHeadline = Font.headline
     static let apBody = Font.body
     static let apSubhead = Font.subheadline
     static let apFootnote = Font.footnote
     static let apCaption = Font.caption2
     /// Cifra protagonista (34 pt, redondeada, crece con Dynamic Type).
-    static let apFigure = Font.system(.largeTitle, design: .rounded).weight(.bold).monospacedDigit()
-    static let apFigureSmall = Font.system(.title, design: .rounded).weight(.bold).monospacedDigit()
+    static let apFigure = Font.system(.largeTitle).weight(.bold).monospacedDigit()
+    static let apFigureSmall = Font.system(.title).weight(.bold).monospacedDigit()
 }
 
 /// Tarjeta del sistema: sin borde, 22 pt.
@@ -55,16 +59,16 @@ struct Card<Content: View>: View {
 struct PillButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, destructive }
     var kind: Kind = .primary
-    var height: CGFloat = 52
+    var height: CGFloat = 50
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.apHeadline)
             .frame(maxWidth: .infinity, minHeight: height)
-            .padding(.horizontal, 20)
-            .foregroundStyle(kind == .primary ? Color.black : (kind == .destructive ? Palette.destructive : Palette.foreground))
-            .background(kind == .primary ? Palette.gold : Palette.secondary, in: Capsule())
+            .padding(.horizontal, 24)
+            .foregroundStyle(kind == .primary ? Color.black : Palette.foreground)
+            .background(kind == .primary ? Palette.gold : (kind == .destructive ? Palette.destructive : Palette.secondary), in: Capsule())
             .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
             .contentShape(Capsule())
     }

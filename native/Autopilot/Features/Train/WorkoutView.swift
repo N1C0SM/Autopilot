@@ -465,7 +465,7 @@ struct SetLine: View {
         HStack(spacing: 8) {
             Group {
                 if isWarmup { Image(systemName: "flame.fill").font(.system(size: 14)) }
-                else { Text("\(index + 1)").font(.system(.headline, design: .rounded).monospacedDigit()) }
+                else { Text("\(index + 1)").font(.system(.headline).monospacedDigit()) }
             }
                 .foregroundStyle(isCurrent ? Palette.gold : Palette.muted)
                 .frame(width: 24)
@@ -558,8 +558,8 @@ struct NumberField: View {
         TextField(placeholder, text: $text)
             .textFieldStyle(.plain)
             .multilineTextAlignment(.center)
-            .font(big ? .system(size: 22, weight: .bold, design: .rounded).monospacedDigit()
-                      : .system(.headline, design: .rounded).monospacedDigit())
+            .font(big ? .system(size: 22, weight: .bold).monospacedDigit()
+                      : .system(.headline).monospacedDigit())
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             #if os(iOS)
@@ -579,7 +579,7 @@ struct RestTimerRow: View {
             VStack(spacing: 8) {
                 HStack(spacing: 0) {
                     Text(String(format: "%d:%02d", left / 60, left % 60))
-                        .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                        .font(.system(size: 34, weight: .bold).monospacedDigit())
                         .contentTransition(.numericText(countsDown: true))
                         .transaction { $0.animation = nil }
                         .frame(maxWidth: .infinity, alignment: .leading)
