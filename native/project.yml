@@ -25,6 +25,8 @@ settings:
     INFOPLIST_KEY_UIUserInterfaceStyle: Dark
     INFOPLIST_KEY_NSCameraUsageDescription: "Para hacer las fotos de progreso y del escáner."
     INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Para elegir fotos de progreso y del escáner."
+    INFOPLIST_KEY_NSHealthShareUsageDescription: "Para leer tu peso corporal y calibrar automáticamente tu progreso y requerimientos nutricionales."
+    INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Para guardar tus entrenamientos y gasto calórico completados en Apple Salud."
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
 targets:

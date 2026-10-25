@@ -279,6 +279,19 @@ final class ActiveWorkout: ObservableObject {
             records = await detectRecords(userId: userId)
             skipRest()
             Self.clear(userId: draft.userId)
+            
+            // Integración Apple Health (v1.0 Roadmap): registrar HKWorkout en Apple Salud
+            let durationHours = max(0.1, Date().timeIntervalSince(draft.startedAt) / 3600.0)
+            let estimatedCalories = (volumeKg > 0 ? (volumeKg * 0.05) : 250.0) + (durationHours * 200.0)
+            Task {
+                _ = await HealthKitManager.shared.saveWorkout(
+                    title: draft.day.title,
+                    startedAt: draft.startedAt,
+                    endedAt: Date(),
+                    calories: estimatedCalories
+                )
+            }
+
             Haptics.success()
             return true
         } catch {
