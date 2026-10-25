@@ -13,7 +13,7 @@
 - [x] Fase C Apple: icono, capturas y texto (vídeo pendiente: grabar en iPhone real) para la candidatura (App Store Connect → Nominations)
 - [ ] Probar con usuarios reales en distintos iPhone (bloqueado: requiere dispositivos y usuarios)
 
-## Integración con el ecosistema Apple
+## Integración con el ecosistema Apple (versión posterior)
 - [x] HealthKit: guardar cada entrenamiento en Salud (duración, calorías) y leer el peso corporal (HealthKitManager.swift)
 - [ ] Widgets de pantalla de inicio y de bloqueo: sesión de hoy y racha semanal
 - [ ] App para Apple Watch: registrar series y ver el descanso desde la muñeca

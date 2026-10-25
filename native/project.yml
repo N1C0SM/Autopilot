@@ -71,3 +71,16 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Widgets/Widgets.entitlements
         SKIP_INSTALL: YES
         TARGETED_DEVICE_FAMILY: "1"
+schemes:
+  Autopilot:
+    build:
+      targets:
+        Autopilot: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
