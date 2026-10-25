@@ -17,6 +17,7 @@
     "android:aab": "npm run mobile:sync && cd android && ./gradlew bundleRelease",
     "test:watch": "vitest",
     "assets:generate": "capacitor-assets generate --iconBackgroundColor '#090909' --iconBackgroundColorDark '#090909' --splashBackgroundColor '#090909' --splashBackgroundColorDark '#090909'",
+    "roadmap:sync": "node scripts/sync-roadmap.mjs",
     "media:generate": "node scripts/generate-exercise-media.mjs",
     "media:count": "node scripts/generate-exercise-media.mjs --dry-run"
   },

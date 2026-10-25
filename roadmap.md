@@ -15,5 +15,5 @@
 
 ## Integración con el ecosistema Apple (versión posterior)
 - [x] HealthKit: guardar cada entrenamiento en Salud (duración, calorías) y leer el peso corporal (HealthKitManager.swift)
-- [ ] Widgets de pantalla de inicio y de bloqueo: sesión de hoy y racha semanal
+- [x] Widgets de pantalla de inicio y de bloqueo: sesión de hoy y racha semanal
 - [ ] App para Apple Watch: registrar series y ver el descanso desde la muñeca
