@@ -85,7 +85,6 @@ export type SwitchResult = "ok" | "offline" | "expired";
 export async function switchToAccount(id: string): Promise<SwitchResult> {
   const target = listAccounts().find((a) => a.id === id);
   if (!target) return "expired";
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
   const { data: current } = await supabase.auth.getSession();
   if (current.session) rememberSession(current.session);
   try {
@@ -94,16 +93,24 @@ export async function switchToAccount(id: string): Promise<SwitchResult> {
       rememberSession(data.session);
       return "ok";
     }
-    // Solo un rechazo del servidor (4xx) significa que la sesión ya no vale; lo demás es la red.
-    const status = (error as { status?: number } | null)?.status ?? 0;
-    if (status >= 400 && status < 500) {
-      markExpired(id);
-      return "expired";
-    }
-    return "offline";
-  } catch {
-    return "offline";
+    // Solo un fallo real de red es "sin conexión"; cualquier otro rechazo pide volver a entrar.
+    if (isNetworkError(error)) return "offline";
+    markExpired(id);
+    return "expired";
+  } catch (e) {
+    if (isNetworkError(e)) return "offline";
+    markExpired(id);
+    return "expired";
   }
+}
+
+/** navigator.onLine miente en Safari/macOS tras el reposo: solo cuenta un fetch que no llega. */
+export function isNetworkError(error: unknown): boolean {
+  if (!error) return false;
+  const e = error as { name?: string; message?: string; status?: number };
+  if (e.name === "AuthRetryableFetchError") return true;
+  if (e instanceof TypeError || e.name === "TypeError") return /fetch|network|load failed/i.test(e.message ?? "");
+  return /failed to fetch|networkerror|load failed|network request failed/i.test(e.message ?? "");
 }
 
 const PENDING_LOCK_KEY = "autopilot.accounts.pending-lock";
@@ -131,15 +138,14 @@ function takePendingLock(id: string): boolean | undefined {
 export async function signInSavedAccount(id: string, password: string): Promise<SwitchResult | "wrong"> {
   const target = listAccounts().find((a) => a.id === id);
   if (!target) return "expired";
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return "offline";
   const { data: current } = await supabase.auth.getSession();
   if (current.session && current.session.user.id !== id) rememberSession(current.session);
   try {
     const { data, error } = await supabase.auth.signInWithPassword({ email: target.email, password });
     if (data.session && !error) { rememberSession(data.session); return "ok"; }
-    return "wrong";
-  } catch {
-    return "offline";
+    return isNetworkError(error) ? "offline" : "wrong";
+  } catch (e) {
+    return isNetworkError(e) ? "offline" : "wrong";
   }
 }
 

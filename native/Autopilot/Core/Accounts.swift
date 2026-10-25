@@ -103,11 +103,10 @@ final class AccountStore: ObservableObject {
             remember(session)
             return .ok
         } catch {
-            if let authError = error as? AuthError, case .api = authError {
-                markExpired(id)
-                return .expired
-            }
-            return .offline
+            // Solo un fallo real de red es "sin conexión"; cualquier otro rechazo pide volver a entrar.
+            if Self.isNetworkError(error) { return .offline }
+            markExpired(id)
+            return .expired
         }
     }
 
@@ -120,8 +119,16 @@ final class AccountStore: ObservableObject {
             remember(session)
             return .ok
         } catch {
-            if (error as? URLError) != nil { return .offline }
+            if Self.isNetworkError(error) { return .offline }
             return .wrong
         }
+    }
+
+    static func isNetworkError(_ error: Error) -> Bool {
+        if error is URLError { return true }
+        let ns = error as NSError
+        if ns.domain == NSURLErrorDomain { return true }
+        if let underlying = ns.userInfo[NSUnderlyingErrorKey] as? NSError, underlying.domain == NSURLErrorDomain { return true }
+        return false
     }
 }

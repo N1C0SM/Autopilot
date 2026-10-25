@@ -66,10 +66,8 @@ final class SessionModel: ObservableObject {
             if let lockAccount { accounts.setRequirePassword(session.user.id.uuidString.lowercased(), lockAccount) }
             accounts.remember(session)
             addingAccount = false
-        } catch let error as URLError {
-            _ = error
-            throw LoginError.offline
         } catch {
+            if AccountStore.isNetworkError(error) { throw LoginError.offline }
             let text = String(describing: error)
             if text.contains("not confirmed") || text.contains("email_not_confirmed") { throw LoginError.unconfirmed }
             if text.contains("rate_limited") { throw LoginError.rateLimited }
