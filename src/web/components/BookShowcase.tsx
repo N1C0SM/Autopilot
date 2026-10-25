@@ -35,12 +35,26 @@ export default function BookShowcase() {
   const t = fan ? pin : 1;
 
   const info = (b: ShowBook) => <>
-    <h3 className="mt-5 line-clamp-2 type-headline">{b.title}</h3>
-    <p className="mt-1 type-subhead text-muted-foreground"><span className="font-semibold text-foreground">{b.price || "Gratis"}</span>{b.is_pack ? " · Pack" : b.pages ? ` · ${b.pages} págs.` : ""}</p>
-    <span className="mt-2 inline-flex min-h-11 items-center type-subhead text-primary">Ver guía</span>
+    <div className="flex items-center gap-2">
+      {b.is_pack && (
+        <span className="inline-block rounded-md bg-primary px-2 py-0.5 type-caption2 font-bold tracking-wider text-primary-foreground uppercase">
+          Pack
+        </span>
+      )}
+      <h3 className="line-clamp-2 type-headline">{b.title}</h3>
+    </div>
+    <p className="mt-1 type-subhead text-muted-foreground"><span className="font-semibold text-foreground">{b.price || "Gratis"}</span>{b.is_pack ? " · Todas las guías" : b.pages ? ` · ${b.pages} págs.` : ""}</p>
+    <span className="mt-2 inline-flex min-h-11 items-center type-subhead text-primary">Ver {b.is_pack ? "pack completo" : "guía"}</span>
   </>;
   const cover = (b: ShowBook) => <div className="transition-transform duration-500 ease-out group-hover:-translate-y-2 group-active:scale-[0.97]">
-    <div className="shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]"><BookCover title={b.title} src={b.cover} /></div>
+    <div className="relative shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]">
+      <BookCover title={b.title} src={b.cover} />
+      {b.is_pack && (
+        <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-primary px-3 py-1 text-[11px] font-bold tracking-wider text-primary-foreground shadow-lg uppercase backdrop-blur-sm">
+          Pack Completo
+        </div>
+      )}
+    </div>
   </div>;
 
   const header = <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
