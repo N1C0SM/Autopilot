@@ -103,11 +103,10 @@ final class AccountStore: ObservableObject {
             remember(session)
             return .ok
         } catch {
-            if let authError = error as? AuthError, case .api = authError {
-                markExpired(id)
-                return .expired
-            }
-            return .offline
+            // Solo un fallo real de red es "sin conexión"; cualquier otro rechazo pide volver a entrar.
+            if Self.isNetworkError(error) { return .offline }
+            markExpired(id)
+            return .expired
         }
     }
 
