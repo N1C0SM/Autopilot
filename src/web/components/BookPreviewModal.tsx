@@ -110,7 +110,7 @@ export default function BookPreviewModal({
               <p className="text-center type-large-title font-rounded tabular-nums">{book.price || "Gratis"}</p>
               <Button asChild variant="hero" size="lg" className="w-full">
                 <a href={book.url} target="_blank" rel="noreferrer" onClick={() => buy(book, "preview_modal")}>
-                  Comprar ahora
+                  {book.is_pack || /pack/i.test(book.title) ? "Comprar pack" : "Comprar ahora"}
                 </a>
               </Button>
             </>
@@ -123,7 +123,7 @@ export default function BookPreviewModal({
           {book.id && (
             <Button type="button" variant="ghost" className="w-full" onClick={() => void share()}>
               <Share className="mr-2 h-4 w-4" aria-hidden="true" />
-              Compartir guía
+              {book.is_pack || /pack/i.test(book.title) ? "Compartir pack" : "Compartir guía"}
             </Button>
           )}
         </div>

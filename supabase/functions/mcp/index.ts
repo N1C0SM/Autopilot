@@ -2,9 +2,6 @@
 // To take ownership, delete this banner line; the plugin then leaves the file alone.
 // supabase function: mcp
 // Bundled from src/shared/lib/mcp/index.ts by @lovable.dev/mcp-js.
-// <define:import.meta.env>
-var define_import_meta_env_default = { MODE: "production", BASE_URL: "/", DEV: false, PROD: true, SSR: false };
-
 // src/shared/lib/mcp/index.ts
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.1";
 
@@ -165,7 +162,7 @@ var log_weight_default = defineTool5({
 });
 
 // src/shared/lib/mcp/index.ts
-var projectRef = define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID || "enebrcdrdnfkyduzyrzm";
+var projectRef = "enebrcdrdnfkyduzyrzm";
 var mcp_default = defineMcp({
   name: "autopilot-mcp",
   title: "Autopilot",
