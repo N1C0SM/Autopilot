@@ -3,7 +3,7 @@ import { Apple, BookOpen, Dumbbell, LineChart, SlidersHorizontal, type LucideIco
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { usePublicBooks } from "@/shared/hooks/usePublicBooks";
-import { ProgressRing } from "@/shared/components/ui/progress-ring";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 import BookCover from "@/web/components/BookCover";
 
 type Card = { icon: LucideIcon; title: string; text: string; tag?: string; photo?: string; visual?: ReactNode };
@@ -14,6 +14,7 @@ const PHOTOS = {
   squat: `${IMG}14988835-a004-49d6-95c5-63978dbce978-1791475887313.png`,
   row: `${IMG}d5e30e05-0791-4886-84a0-7b2695728225-1791475865184.png`,
   press: `${IMG}a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png`,
+  meal: BRAND_PHOTOS.meal,
 };
 
 /**
@@ -26,11 +27,6 @@ export default function FeatureGallery() {
   const books = usePublicBooks();
   const pack = books?.find((b) => b.is_pack) ?? books?.[0];
   const hasPack = !!pack;
-  // Pantalla de nutrición de la app, con los mismos datos de ejemplo que la demo.
-  const nutrition = <div className="flex flex-col items-center">
-    <ProgressRing value={67} size={150} stroke={12} className="text-current"><span className="text-center"><span className="block font-rounded text-[30px] font-bold leading-none tabular-nums">2.300</span><span className="type-caption1 opacity-70">kcal</span></span></ProgressRing>
-    <p className="mt-4 type-subhead opacity-80">2 de 3 comidas</p>
-  </div>;
   // La portada real del pack, la misma que en el escaparate de guías.
   const guide = pack ? <div className="w-[52%] -rotate-3 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.7)]"><BookCover title={pack.title} src={pack.cover} /></div> : undefined;
   // Solo funciones que existen; las de pago dicen en qué plan están.
@@ -40,7 +36,7 @@ export default function FeatureGallery() {
     { icon: Dumbbell, title: "Cada serie, registrada.", text: "Peso y repeticiones de cada serie, con lo que hiciste la última vez.", photo: PHOTOS.row },
     ...(paid !== null ? [
       { icon: LineChart, title: "Progresión de cargas.", text: "La siguiente carga se calcula con tus registros.", tag: paid, photo: PHOTOS.press },
-      { icon: Apple, title: "Nutrición guiada.", text: "Calorías y macros del día, ajustados a ti.", tag: paid, visual: nutrition },
+      { icon: Apple, title: "Nutrición guiada.", text: "Calorías y macros del día, ajustados a ti.", tag: paid, photo: PHOTOS.meal },
     ] : []),
     { icon: BookOpen, title: "Guías en PDF.", text: "Fuerza, calistenia, nutrición y periodización. Pago único.", visual: guide },
   ];
