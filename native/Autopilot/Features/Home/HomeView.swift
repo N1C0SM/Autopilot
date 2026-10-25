@@ -29,8 +29,16 @@ struct HomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                // Escritorio (lg de la web): saludo y semana a la izquierda, la acción en una columna de 320 a la derecha.
+            VStack(alignment: .leading, spacing: 24) {
+                #if os(macOS)
+                // Layout adaptado a Mac: Saludo amplio + tira de semana a todo el ancho, y debajo la acción principal
+                VStack(alignment: .leading, spacing: 20) {
+                    heading(wide: true)
+                    mainAction
+                }
+                .padding(.bottom, 12)
+                #else
+                // En iOS: Vista compacta o dividida según el ancho disponible
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 48) {
                         heading(wide: true).frame(minWidth: 420, maxWidth: .infinity, alignment: .leading)
@@ -42,21 +50,24 @@ struct HomeView: View {
                         mainAction.padding(.top, completedToday ? 12 : 32).padding(.bottom, 32)
                     }
                 }
+                #endif
 
-                Text("Resumen").font(.apTitle3).padding(.bottom, 12)
-                HStack(spacing: 12) {
-                    overview(title: "Nutrición",
-                             value: calories.map { Text(NumberText.integer($0)) + Text(" kcal").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted) },
-                             ring: ProgressRing(value: 0, symbol: calories == nil ? "lu-lock" : "lu-apple", muted: calories == nil),
-                             detail: calories == nil ? "Plan de nutrición" : "Objetivo diario") { onNavigate(.nutrition) }
-                    overview(title: "Progreso",
-                             value: scheduled.isEmpty ? nil : Text("\(min(doneDays.count, scheduled.count))") + Text("/\(scheduled.count)").font(.apTitle3).foregroundColor(Palette.muted),
-                             ring: ProgressRing(value: scheduled.isEmpty ? 0 : Double(min(doneDays.count, scheduled.count)) / Double(scheduled.count) * 100, symbol: "lu-sparkles"),
-                             detail: scheduled.isEmpty ? "Sin sesiones esta semana" : "\(min(doneDays.count, scheduled.count)) de \(scheduled.count) \(scheduled.count == 1 ? "sesión" : "sesiones") esta semana") { onNavigate(.progress) }
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Resumen").font(.apTitle3)
+                    HStack(spacing: 16) {
+                        overview(title: "Nutrición",
+                                 value: calories.map { Text(NumberText.integer($0)) + Text(" kcal").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted) },
+                                 ring: ProgressRing(value: 0, symbol: calories == nil ? "lu-lock" : "lu-apple", muted: calories == nil),
+                                 detail: calories == nil ? "Plan de nutrición" : "Objetivo diario") { onNavigate(.nutrition) }
+                        overview(title: "Progreso",
+                                 value: scheduled.isEmpty ? nil : Text("\(min(doneDays.count, scheduled.count))") + Text("/\(scheduled.count)").font(.apTitle3).foregroundColor(Palette.muted),
+                                 ring: ProgressRing(value: scheduled.isEmpty ? 0 : Double(min(doneDays.count, scheduled.count)) / Double(scheduled.count) * 100, symbol: "lu-sparkles"),
+                                 detail: scheduled.isEmpty ? "Sin sesiones esta semana" : "\(min(doneDays.count, scheduled.count)) de \(scheduled.count) \(scheduled.count == 1 ? "sesión" : "sesiones") esta semana") { onNavigate(.progress) }
+                    }
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 24).padding(.top, 16).padding(.bottom, 32)
+            .frame(maxWidth: 1000, alignment: .leading)
         }
         .screenBackground()
         .refreshable { await load() }
@@ -72,7 +83,13 @@ struct HomeView: View {
                 .font(wide ? .inter(size: 44, weight: .bold) : .inter(.largeTitle).weight(.bold))
                 .padding(.top, 2)
                 .accessibilityAddTraits(.isHeader)
-            if !scheduled.isEmpty { weekStrip.frame(maxWidth: wide ? 320 : .infinity).padding(.top, 24) }
+            if !scheduled.isEmpty {
+                #if os(macOS)
+                weekStrip.frame(maxWidth: 420).padding(.top, 24)
+                #else
+                weekStrip.frame(maxWidth: wide ? 320 : .infinity).padding(.top, 24)
+                #endif
+            }
         }
     }
 
