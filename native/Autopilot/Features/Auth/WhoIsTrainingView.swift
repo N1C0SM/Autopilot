@@ -19,22 +19,47 @@ struct WhoIsTrainingView: View {
 
                 LazyVGrid(columns: columns, spacing: 24) {
                     ForEach(accounts.accounts) { account in
+                        let isDefault = accounts.defaultAccountId == account.id
                         Button { Task { await choose(account) } } label: {
                             VStack(spacing: 10) {
-                                AvatarView(name: account.name, url: account.avatar, size: 88)
+                                ZStack(alignment: .bottomTrailing) {
+                                    AvatarView(name: account.name, url: account.avatar, size: 88)
+                                    if isDefault {
+                                        Image(systemName: "star.fill").font(.system(size: 14, weight: .bold))
+                                            .foregroundStyle(Palette.gold)
+                                            .padding(3)
+                                            .background(Palette.background, in: Circle())
+                                            .offset(x: 2, y: 2)
+                                    }
+                                }
                                 HStack(spacing: 4) {
                                     Text(account.name).font(.apHeadline).lineLimit(1)
                                     if account.requirePassword {
                                         Image(systemName: "lock.fill").font(.inter(.footnote)).foregroundStyle(Palette.muted)
                                     }
                                 }
-                                if account.expired { Text("Vuelve a entrar").font(.apFootnote).foregroundStyle(Palette.muted) }
+                                if isDefault {
+                                    Text("Predeterminada").font(.apFootnote).foregroundStyle(Palette.gold)
+                                } else if account.expired {
+                                    Text("Vuelve a entrar").font(.apFootnote).foregroundStyle(Palette.muted)
+                                }
                             }
                             .frame(minHeight: 44)
                         }
                         .buttonStyle(.plain)
                         .disabled(busy)
-                        .accessibilityLabel(account.name + (account.requirePassword ? ", pide contraseña" : "") + (account.expired ? ", vuelve a entrar" : ""))
+                        .contextMenu {
+                            if isDefault {
+                                Button { accounts.setDefaultAccount(nil); Haptics.tap() } label: {
+                                    Label("Quitar predeterminada", systemImage: "star.slash")
+                                }
+                            } else {
+                                Button { accounts.setDefaultAccount(account.id); Haptics.tap() } label: {
+                                    Label("Usar como predeterminada", systemImage: "star.fill")
+                                }
+                            }
+                        }
+                        .accessibilityLabel(account.name + (isDefault ? ", predeterminada" : "") + (account.requirePassword ? ", pide contraseña" : "") + (account.expired ? ", vuelve a entrar" : ""))
                     }
                     Button { session.addAnotherAccount() } label: {
                         VStack(spacing: 10) {

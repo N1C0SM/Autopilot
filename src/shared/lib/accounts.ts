@@ -173,3 +173,20 @@ export const OPEN_ACCOUNT_PICKER = "autopilot:open-account-picker";
 export function openAccountPicker() {
   window.dispatchEvent(new Event(OPEN_ACCOUNT_PICKER));
 }
+
+// ── Cuenta predeterminada ──────────────────────────────────────────────
+
+const DEFAULT_KEY = "autopilot.accounts.default-id";
+
+/** ID de la cuenta marcada como predeterminada en este dispositivo, o null. */
+export function getDefaultAccountId(): string | null {
+  try { return localStorage.getItem(DEFAULT_KEY); } catch { return null; }
+}
+
+/** Marca (o desmarca con null) una cuenta como predeterminada. */
+export function setDefaultAccountId(id: string | null) {
+  try {
+    if (id) localStorage.setItem(DEFAULT_KEY, id);
+    else localStorage.removeItem(DEFAULT_KEY);
+  } catch { /* sin almacenamiento */ }
+}

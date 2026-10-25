@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { Lock, Plus, Pencil, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Lock, Plus, Pencil, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/shared/contexts/AuthContext";
-import { OPEN_ACCOUNT_PICKER, forgetAccount, listAccounts, prepareAnotherAccount, signInSavedAccount, switchToAccount, type SavedAccount } from "@/shared/lib/accounts";
+import { OPEN_ACCOUNT_PICKER, forgetAccount, getDefaultAccountId, listAccounts, prepareAnotherAccount, setDefaultAccountId, signInSavedAccount, switchToAccount, type SavedAccount } from "@/shared/lib/accounts";
 import { supportsMultipleAccounts } from "@/shared/lib/platform";
 import { clearAnonScanId } from "@/shared/lib/scanAttribution";
 import { clearPendingScanContext } from "@/shared/lib/pendingScan";
@@ -29,12 +29,33 @@ export default function WhoIsTraining() {
   const [password, setPassword] = useState("");
   const [wrong, setWrong] = useState(false);
 
+  // Track if we already auto-switched to default this session to avoid loops
+  const autoSwitched = useRef(false);
+
   useEffect(() => {
     if (loading || !supportsMultipleAccounts()) return;
     let shown = false;
     try { shown = sessionStorage.getItem(SHOWN) === "1"; sessionStorage.setItem(SHOWN, "1"); } catch { /* sin almacenamiento: se muestra */ }
     const list = listAccounts();
     const currentLocked = list.some((a) => a.id === user?.id && a.requirePassword);
+
+    // Auto-skip: si hay cuenta predeterminada sin contraseña, entrar directamente
+    if (!shown && !autoSwitched.current) {
+      const defId = getDefaultAccountId();
+      const defAccount = defId ? list.find((a) => a.id === defId) : null;
+      if (defAccount && !defAccount.requirePassword && !defAccount.expired) {
+        autoSwitched.current = true;
+        if (defAccount.id !== user?.id) {
+          void (async () => {
+            clearSharedDrafts();
+            const result = await switchToAccount(defAccount.id);
+            if (result === "ok") { window.location.assign("/dashboard"); }
+          })();
+        }
+        return; // Don't show the picker
+      }
+    }
+
     if (!shown && (list.length >= 2 || currentLocked)) { setAccounts(list); setOpen(true); }
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -126,27 +147,41 @@ export default function WhoIsTraining() {
         </form>
       ) : <>
       <ul className="relative mt-8 flex w-full max-w-md flex-col gap-3">
-        {accounts.map((a, i) => (
+        {accounts.map((a, i) => {
+          const isDefault = getDefaultAccountId() === a.id;
+          return (
           <li key={a.id} style={{ animationDelay: `${i * 60}ms` }} className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300">
             <button type="button" className={row} disabled={!!busy} onClick={() => void choose(a)}
-              aria-label={editing ? `Quitar a ${a.name} de este dispositivo` : `Entrar como ${a.name}`}>
+              aria-label={editing ? `Quitar a ${a.name} de este dispositivo` : `Entrar como ${a.name}${isDefault ? " (predeterminada)" : ""}`}>
               <span className={`${circle} bg-gradient-to-br from-primary to-primary/60`}>
                 {a.avatar
                   ? <img src={a.avatar} alt="" className="h-full w-full object-cover" />
                   : <span className="font-rounded text-[24px] font-bold text-primary-foreground">{(a.name || a.email).charAt(0).toUpperCase()}</span>}
                 {busy === a.id && <span className="absolute inset-0 animate-pulse bg-black/40" />}
+                {isDefault && <Star className="absolute -bottom-0.5 -right-0.5 h-4 w-4 fill-primary text-background" aria-hidden="true" />}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate type-headline">{a.name}</span>
+                <span className="flex items-center gap-2 truncate type-headline">
+                  {a.name}
+                  {isDefault && <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-primary">Predeterminada</span>}
+                </span>
                 <span className={`mt-0.5 block truncate type-subhead ${a.expired ? "text-primary" : "text-muted-foreground"}`}>{a.expired ? "Vuelve a entrar" : a.email}</span>
               </span>
               {!editing && a.requirePassword && <Lock className="h-4 w-4 shrink-0 text-muted-foreground" aria-label="Pide contraseña" />}
               {editing
                 ? <X className="h-5 w-5 shrink-0 text-destructive" strokeWidth={2.5} aria-hidden="true" />
-                : null}
+                : !editing && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); hapticTap(); if (isDefault) setDefaultAccountId(null); else setDefaultAccountId(a.id); setAccounts([...listAccounts()]); }}
+                    className={`flex h-8 items-center gap-1 rounded-full px-3 text-xs font-medium transition-colors ${isDefault ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground hover:text-foreground"}`}
+                    aria-label={isDefault ? "Quitar predeterminada" : "Fijar como predeterminada"}>
+                    <Star className={`h-3.5 w-3.5 ${isDefault ? "fill-primary" : ""}`} />
+                    {isDefault ? "Quitar" : "Fijar"}
+                  </button>
+                )}
             </button>
           </li>
-        ))}
+        );
+        })}
         {!editing && (
           <li className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both duration-300" style={{ animationDelay: `${accounts.length * 60}ms` }}>
             <button type="button" className={row} disabled={!!busy} onClick={() => void add()}>
