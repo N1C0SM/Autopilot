@@ -267,10 +267,13 @@ struct MealPhoto: View {
 /// Portadas con IA de la edge function `session-cover` (como `useSessionCover.ts`): se guardan por clave.
 enum AiCover {
     private static let store = "autopilot.aiCovers.v1"
+    /// Foto de plato de respaldo, la misma que usa la web (`BRAND_PHOTOS.meal`).
+    static let mealFallback = URL(string: "https://autopilotplan.com/healthy_meal_plate.jpg")
+    /// Igual que la web: si la IA no da foto, se muestra siempre la foto de respaldo.
     static func meal(_ dish: String) async -> URL? {
         let text = String(dish.trimmingCharacters(in: .whitespaces).prefix(120))
-        guard text.count >= 3 else { return nil }
-        return await fetch(key: "m:\(text.lowercased())", body: ["meal": text])
+        guard text.count >= 3 else { return mealFallback }
+        return await fetch(key: "m:\(text.lowercased())", body: ["meal": text]) ?? mealFallback
     }
     private static func fetch(key: String, body: [String: String]) async -> URL? {
         var cache = UserDefaults.standard.dictionary(forKey: store) as? [String: String] ?? [:]
