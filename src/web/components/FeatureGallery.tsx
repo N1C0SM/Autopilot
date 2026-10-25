@@ -26,10 +26,35 @@ export default function FeatureGallery() {
   const books = usePublicBooks();
   const pack = books?.find((b) => b.is_pack) ?? books?.[0];
   const hasPack = !!pack;
-  // Pantalla de nutrición de la app, con los mismos datos de ejemplo que la demo.
-  const nutrition = <div className="flex flex-col items-center">
-    <ProgressRing value={67} size={150} stroke={12} className="text-current"><span className="text-center"><span className="block font-rounded text-[30px] font-bold leading-none tabular-nums">2.300</span><span className="type-caption1 opacity-70">kcal</span></span></ProgressRing>
-    <p className="mt-4 type-subhead opacity-80">2 de 3 comidas</p>
+  // Pantalla de nutrición de la app, fiel al diseño real (ProductPreview nutrition view).
+  const nutrition = <div className="flex w-full flex-col gap-3 px-1">
+    {/* Anillo de calorías + resumen */}
+    <div className="flex items-center gap-3">
+      <ProgressRing value={62} size={72} stroke={6} className="shrink-0 text-current"><span className="text-center"><span className="block font-rounded text-[16px] font-bold leading-none tabular-nums">1.420</span><span className="text-[9px] opacity-60">kcal</span></span></ProgressRing>
+      <div className="min-w-0">
+        <p className="text-[13px] font-semibold leading-tight">Quedan 880 kcal</p>
+        <p className="text-[10px] leading-tight opacity-60">de 2.300 kcal · 2 de 3 comidas</p>
+      </div>
+    </div>
+    {/* Barras de macros */}
+    <div className="grid grid-cols-3 gap-2">
+      {([["Prot", 96, 150], ["Carbos", 150, 240], ["Grasas", 45, 75]] as const).map(([l, v, t]) => (
+        <div key={l}>
+          <p className="text-[9px] opacity-60">{l}</p>
+          <p className="font-rounded text-[12px] font-bold tabular-nums">{v}<span className="text-[9px] font-normal opacity-50">/{t}g</span></p>
+          <div className="mt-0.5 h-[3px] overflow-hidden rounded-full bg-current/10"><div className="h-full rounded-full bg-current" style={{ width: `${(v / t) * 100}%` }} /></div>
+        </div>
+      ))}
+    </div>
+    {/* Mini lista de comidas */}
+    <div className="space-y-1">
+      {([["Desayuno", true], ["Comida", true], ["Cena", false]] as const).map(([meal, done]) => (
+        <div key={meal} className="flex items-center gap-2">
+          <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-bold ${done ? "bg-current/90 text-card" : "border border-current/30"}`}>{done ? "✓" : ""}</span>
+          <span className={`text-[11px] ${done ? "opacity-70 line-through" : ""}`}>{meal}</span>
+        </div>
+      ))}
+    </div>
   </div>;
   // La portada real del pack, la misma que en el escaparate de guías.
   const guide = pack ? <div className="w-[52%] -rotate-3 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.7)]"><BookCover title={pack.title} src={pack.cover} /></div> : undefined;
