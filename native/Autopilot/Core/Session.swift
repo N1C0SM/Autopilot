@@ -24,8 +24,19 @@ final class SessionModel: ObservableObject {
             case .initialSession:
                 self.session = session
                 if let session { accounts.remember(session); await loadRole() }
-                let currentLocked = accounts.accounts.contains { $0.id == userIdString && $0.requirePassword }
-                showPicker = accounts.accounts.count >= 2 || currentLocked
+                
+                // Si hay una cuenta predeterminada marcada, la cargamos directamente sin preguntar quién entrena
+                if let defId = accounts.defaultAccountId,
+                   let target = accounts.accounts.first(where: { $0.id == defId }),
+                   !target.requirePassword {
+                    if userIdString != defId {
+                        _ = await accounts.switchTo(defId)
+                    }
+                    showPicker = false
+                } else {
+                    let currentLocked = accounts.accounts.contains { $0.id == userIdString && $0.requirePassword }
+                    showPicker = accounts.accounts.count >= 2 || currentLocked
+                }
                 ready = true
             case .signedIn, .tokenRefreshed, .userUpdated:
                 self.session = session

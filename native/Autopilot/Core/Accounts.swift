@@ -25,8 +25,18 @@ final class AccountStore: ObservableObject {
     private let pendingLockKey = "accounts.pending-lock"
 
     @Published private(set) var accounts: [SavedAccount] = []
+    @Published private(set) var defaultAccountId: String?
 
-    init() { accounts = load() }
+    init() {
+        accounts = load()
+        defaultAccountId = UserDefaults.standard.string(forKey: "accounts.default-id")
+    }
+
+    func setDefaultAccount(_ id: String?) {
+        defaultAccountId = id
+        if let id { UserDefaults.standard.set(id, forKey: "accounts.default-id") }
+        else { UserDefaults.standard.removeObject(forKey: "accounts.default-id") }
+    }
 
     private func load() -> [SavedAccount] {
         guard let data = Keychain.data(key) else { return [] }

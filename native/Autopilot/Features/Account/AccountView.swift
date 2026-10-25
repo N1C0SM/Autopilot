@@ -182,16 +182,6 @@ struct AccountView: View {
                     linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
                 }
 
-                group("Modo viaje", footer: "Adapta tu plan cuando estás fuera de tu rutina habitual.") {
-                    Toggle(isOn: Binding(get: { travelActive }, set: { v in Task { await setTravel(v) } })) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Modo viaje").font(.apBody)
-                            Text(travelActive ? "Activo hasta \(String((travelUntil ?? "").prefix(10)))" : "Desactivado").font(.apFootnote).foregroundStyle(Palette.muted)
-                        }
-                    }
-                    .tint(Palette.gold)
-                }
-
                 group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac.") {
                     ForEach(accounts.accounts) { a in
                         HStack(spacing: 12) {
@@ -201,6 +191,14 @@ struct AccountView: View {
                                 Text(a.expired ? "Vuelve a entrar" : a.email).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
                             }
                             Spacer()
+                            if accounts.defaultAccountId == a.id {
+                                Text("Predeterminada").font(.apFootnote).foregroundStyle(Palette.gold)
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(Palette.gold.opacity(0.12), in: Capsule())
+                            } else {
+                                Button("Fijar") { accounts.setDefaultAccount(a.id); Haptics.tap() }
+                                    .font(.apFootnote).foregroundStyle(Palette.muted).buttonStyle(.plain)
+                            }
                             if a.id == session.userIdString {
                                 Image(systemName: "checkmark").font(.inter(.body).weight(.bold)).foregroundStyle(Palette.gold).accessibilityLabel("Cuenta actual")
                             } else {
