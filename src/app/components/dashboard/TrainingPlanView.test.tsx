@@ -75,11 +75,12 @@ describe("weekly plan access", () => {
     // Ni el sábado pedido ni el miércoles de hoy: se abre el lunes, la siguiente sesión.
     expect(screen.getByRole("button", { name: "Lunes, Piernas" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("heading", { name: "Piernas" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Sábado, sin sesión" })).toBeDisabled();
-    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
+    // Los días sin sesión se pueden abrir (para ver que descansas), pero no se abren solos.
+    expect(screen.getByRole("button", { name: "Sábado, descanso" })).toBeEnabled();
+    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
   });
 
-  it("switches sessions from the day selector and keeps days without a session inert", () => {
+  it("opens a session from the selector and can open a rest day to see it is rest", () => {
     setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
     const onOpenWorkout = vi.fn();
     render(
@@ -95,9 +96,9 @@ describe("weekly plan access", () => {
     const thursday = screen.getByRole("button", { name: "Jueves, Running" });
     expect(thursday).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("45 min")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Miércoles, sin sesión, hoy" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Martes, sin sesión" })).toBeDisabled();
-    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Miércoles, descanso, hoy" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Martes, descanso" })).toBeEnabled();
+    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Abrir actividad del jueves" }));
     expect(onOpenWorkout).toHaveBeenCalledWith("Jueves");
@@ -105,6 +106,13 @@ describe("weekly plan access", () => {
     // Pulsar el día activo no lo deselecciona ni deja la vista vacía.
     fireEvent.click(thursday);
     expect(thursday).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("45 min")).toBeVisible();
+
+    // Abrir un día de descanso muestra que descansas y ofrece la próxima sesión.
+    fireEvent.click(screen.getByRole("button", { name: "Miércoles, descanso, hoy" }));
+    expect(screen.getByText("Hoy es día de descanso")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Ver el jueves" }));
+    expect(screen.getByRole("button", { name: "Jueves, Running" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("45 min")).toBeVisible();
   });
 
@@ -131,8 +139,8 @@ describe("weekly plan access", () => {
     setToday("2026-10-14T12:00:00"); // miércoles, sin sesión
     render(<TrainingPlanView dayPlans={[]} onOpenWorkout={vi.fn()} />);
     expect(screen.getByText("Tu plan aún no tiene sesiones")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Miércoles, sin sesión, hoy" })).toBeDisabled();
-    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Miércoles, descanso, hoy" })).toBeEnabled();
+    expect(screen.queryByText(/día de descanso/i)).not.toBeInTheDocument();
   });
 
   it("re-syncs the expanded day when a new day is asked for", () => {

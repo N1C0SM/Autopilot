@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
-import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame } from "lucide-react";
+import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame, Moon } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
@@ -172,7 +172,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
     toast.success("Plan descargado");
   };
 
-  // Solo los días con sesión se pueden abrir; el resto no es una pantalla navegable.
+  // Cualquier día se puede abrir: los que tienen sesión muestran su entreno y los
+  // que no, la tarjeta de descanso. La vista nunca se abre sola en un día de descanso.
   const workPlanFor = (day: string) => {
     const plan = dayPlans.find((p) => p.day === day);
     return plan?.type === "gimnasio" || plan?.type === "actividad" ? plan : undefined;
@@ -181,6 +182,10 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
   const selectedDay = expandedDay ?? "";
   const selectedIsToday = selectedDay === todayName;
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
+  // Siguiente día con sesión desde el día abierto: la tarjeta de descanso ofrece ir.
+  const nextWorkDay = expandedDay
+    ? DAYS_ORDER.map((_, i) => DAYS_ORDER[(DAYS_ORDER.indexOf(expandedDay) + 1 + i) % DAYS_ORDER.length]).find((day) => workPlanFor(day))
+    : undefined;
 
   return (
     <div className="flex w-full flex-col gap-6" onErrorCapture={handleImageError}>
@@ -195,7 +200,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
           const plan = workPlanFor(day);
           const isToday = day === todayName;
           const isExpanded = expandedDay === day;
-          const summary = plan ? sessionTitle(plan) : "sin sesión";
+          const summary = plan ? sessionTitle(plan) : "descanso";
           // El día elegido va tintado (el relleno macizo es solo para el botón de abrir la sesión).
           const tone = isExpanded
             ? "bg-primary/15 text-primary"
@@ -210,16 +215,12 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
               key={day}
               type="button"
               aria-label={`${day}, ${summary}${isToday ? ", hoy" : ""}`}
-              aria-expanded={plan ? isExpanded : undefined}
-              disabled={!plan}
+              aria-expanded={isExpanded}
               onClick={() => {
                 void hapticSelection();
-                // El día activo se queda activo: nunca se colapsa a una hoja vacía.
                 setExpandedDay(day);
               }}
-              className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                plan ? "active:opacity-60" : "cursor-default"
-              } ${tone}`}
+              className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-150 ease-out active:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${tone}`}
             >
               {day.slice(0, 3)}
             </button>
@@ -290,12 +291,26 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
       )}
 
       {!selectedPlan && (
-        <EmptyState
-          card
-          icon={CalendarDays}
-          title="Tu plan aún no tiene sesiones"
-          description="Edita tu rutina para añadir los días de la semana que quieras entrenar."
-        />
+        expandedDay ? (
+          <EmptyState
+            rest
+            icon={Moon}
+            title={selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`}
+            description={nextWorkDay ? `Tu próxima sesión es el ${nextWorkDay.toLocaleLowerCase("es-ES")}.` : "Recupera y vuelve con más fuerza."}
+            action={nextWorkDay ? (
+              <Button type="button" variant="secondary" size="lg" onClick={() => { void hapticSelection(); setExpandedDay(nextWorkDay); }}>
+                {`Ver el ${nextWorkDay.toLocaleLowerCase("es-ES")}`}
+              </Button>
+            ) : undefined}
+          />
+        ) : (
+          <EmptyState
+            card
+            icon={CalendarDays}
+            title="Tu plan aún no tiene sesiones"
+            description="Edita tu rutina para añadir los días de la semana que quieras entrenar."
+          />
+        )
       )}
 
       <ListGroup>

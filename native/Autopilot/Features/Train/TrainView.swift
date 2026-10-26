@@ -408,16 +408,15 @@ struct WeeklyRoutineView: View {
         return DayNames.all.first { workPlan($0) != nil }
     }
 
-    /// Día visible: siempre uno con sesión; pulsar el día activo no lo cierra.
-    private var activeDay: String? {
-        expanded.flatMap { workPlan($0) != nil ? $0 : nil } ?? defaultDay
-    }
+    /// Día visible: el elegido (aunque sea de descanso) o el que se abre por defecto.
+    private var activeDay: String? { expanded ?? defaultDay }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             dayStrip
-            if let day = activeDay, let plan = workPlan(day) { session(day, plan) }
-            else { NoSessionsCard() }
+            if let day = activeDay {
+                if let plan = workPlan(day) { session(day, plan) } else { rest(day) }
+            } else { NoSessionsCard() }
             tools
             (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.app/legal/disclaimer-medico)"))
                 .tint(Palette.gold)
@@ -443,9 +442,8 @@ struct WeeklyRoutineView: View {
                         .background(Circle().fill(isExpanded ? Palette.gold.opacity(0.15) : plan != nil ? Palette.secondary : .clear))
                 }
                 .buttonStyle(.plain)
-                .disabled(plan == nil)
                 .frame(maxWidth: .infinity)
-                .accessibilityLabel("\(day), \(plan?.title ?? "sin sesión")\(isToday ? ", hoy" : "")")
+                .accessibilityLabel("\(day), \(plan?.title ?? "descanso")\(isToday ? ", hoy" : "")")
             }
         }
         .padding(6)
@@ -518,6 +516,32 @@ struct WeeklyRoutineView: View {
                 .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
         }
         .padding(.horizontal, 16)
+    }
+
+    /// Tarjeta de descanso: solo aparece si el usuario toca un día sin sesión.
+    @ViewBuilder private func rest(_ day: String) -> some View {
+        let next = nextSession(after: day)
+        VStack(alignment: .leading, spacing: 12) {
+            Image(systemName: "moon.zzz.fill")
+                .font(.inter(size: 26, weight: .semibold))
+                .foregroundStyle(Palette.gold)
+                .accessibilityHidden(true)
+            Text(day == DayNames.today ? "Hoy es día de descanso" : "\(day) es día de descanso")
+                .font(.apTitle2)
+            Text(next.map { "Tu próxima sesión es el \($0.lowercased())." } ?? "Recupera y vuelve con más fuerza.")
+                .font(.apSubhead).foregroundStyle(Palette.muted)
+            if let next {
+                Button("Ver el \(next.lowercased())") {
+                    Haptics.selection()
+                    withAnimation(.snappy) { expanded = next }
+                }
+                .buttonStyle(.pillSecondary)
+                .padding(.top, 4)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private var tools: some View {
