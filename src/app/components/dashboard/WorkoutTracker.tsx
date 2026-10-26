@@ -1164,6 +1164,17 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     // propia cubre la zona segura superior y el pie fijo, la del indicador de inicio.
     <div className={`w-full min-w-0 ${started ? "flex min-h-[calc(100dvh-0.5rem)] flex-col" : ""}`}>
       <RecordCelebration moment={recordMoment} onDone={closeRecordMoment} />
+      {!started && onCancel && (
+        // Vista previa de una sesión abierta desde la rutina semanal: siempre hay vuelta.
+        <button
+          type="button"
+          onClick={() => { void hapticTap(); onCancel(); }}
+          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60"
+        >
+          <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
+          <span className="type-body">Rutina semanal</span>
+        </button>
+      )}
       {started && !workoutCompleted && (
         // -mt-2 compensa el pt-2 del contenedor de sección: la barra nace pegada al borde superior.
         <div className="sticky top-0 z-30 -mt-2">

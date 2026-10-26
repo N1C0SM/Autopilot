@@ -1,15 +1,14 @@
 import SwiftUI
 import Supabase
 
-/// Entrenar, calcado de `WorkoutTracker.tsx` (antes de empezar): selector de días,
-/// portada, título, «N ejercicios · M series», «Empezar entrenamiento» y la lista «Ejercicios».
+/// Entrenar es la rutina semanal (calcada de `TrainingPlanView.tsx`): tira de días,
+/// sesión elegida con sus ejercicios, herramientas y «Abrir sesión» para empezar.
 struct TrainView: View {
     @EnvironmentObject private var session: SessionModel
     @StateObject private var model = PlanModel()
     @State private var active: ActiveWorkout?
     @State private var selectedDay: String = DayNames.today
     @State private var starting = false
-    @State private var tab = 0
 
     /// Día visible: siempre uno con sesión, aunque `selectedDay` aún no se haya sincronizado.
     private var activeDay: String? {
@@ -54,15 +53,8 @@ struct TrainView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
-                    SegmentedPill(options: ["Entrenar", "Rutina semanal"], selection: $tab)
-                    if tab == 1 { weeklyRoutine } else {
-                    if !model.days.isEmpty { dayPicker }
-                    if let plan = currentPlan {
-                        if plan.isGym { gymSummary(plan) } else { activityDay(plan) }
-                    } else {
-                        NoSessionsCard()
-                    }
-                    }
+                    // Entrenar es la rutina semanal: el entreno se abre al pulsar una sesión.
+                    weeklyRoutine
                 }
             }
             .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
@@ -230,11 +222,26 @@ struct TrainView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// «Rutina semanal», calcada de `TrainingPlanView.tsx`.
+    /// «Rutina semanal», calcada de `TrainingPlanView.tsx`: única pantalla de Entrenar.
+    /// Pulsar «Abrir sesión» arranca el entreno; en actividad marca el día como hecho.
     private var weeklyRoutine: some View {
-        WeeklyRoutineView(days: model.days, initialDay: activeDay ?? selectedDay) { day in
-            selectedDay = day; tab = 0
+        WeeklyRoutineView(
+            days: model.days,
+            initialDay: activeDay ?? selectedDay,
+            completedDays: Set(model.completions.filter { $0.date >= LocalDate.daysAgo(6) }.map(\.day))
+        ) { day in
+            selectedDay = day
+            guard let plan = model.days.first(where: { $0.day == day }) else { return }
+            if plan.isGym { Task { await start(plan) } } else { Task { await completeActivity(plan) } }
         }
+    }
+
+    /// Actividad: se marca hecha desde la propia rutina, sin pantalla intermedia.
+    private func completeActivity(_ plan: DayPlan) async {
+        guard let id = session.userId, !model.completedToday(plan.day) else { return }
+        try? await TrainingRepo.complete(userId: id, day: plan.day, date: LocalDate.string(), rpe: nil)
+        Haptics.success()
+        await model.load(userId: id)
     }
 
     private func start(_ day: DayPlan, focus: Int = 0) async {
@@ -374,6 +381,8 @@ final class PlanModel: ObservableObject {
 struct WeeklyRoutineView: View {
     let days: [DayPlan]
     let initialDay: String
+    /// Días ya marcados como hechos esta semana: la actividad muestra «Actividad completada».
+    var completedDays: Set<String> = []
     var onOpen: (String) -> Void
     @State private var expanded: String?
     @State private var detail: GymExercise?
@@ -453,8 +462,15 @@ struct WeeklyRoutineView: View {
                 Text(plan.title).font(.apTitle1)
                 if plan.isGym, let summary { Text(summary).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2) }
             }
-            if !plan.isGym || !exercises.isEmpty {
-                Button("Abrir \(plan.isGym ? "sesión" : "actividad") del \(day.lowercased())") { Haptics.tap(); onOpen(day) }.buttonStyle(.pill)
+            if plan.isGym {
+                if !exercises.isEmpty {
+                    Button("Abrir sesión del \(day.lowercased())") { Haptics.tap(); onOpen(day) }.buttonStyle(.pill)
+                }
+            } else if completedDays.contains(day) {
+                Label("Actividad completada", systemImage: "checkmark.circle.fill")
+                    .font(.apHeadline).foregroundStyle(Palette.gold)
+            } else {
+                Button("Marcar actividad como hecha") { Haptics.tap(); onOpen(day) }.buttonStyle(.pill)
             }
             if plan.isGym {
                 if !exercises.isEmpty {

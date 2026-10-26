@@ -161,14 +161,8 @@ const Dashboard = () => {
   const [trainingView, setTrainingView] = useState<"tracker" | "plan">(() => {
     const fromParam = searchParams.get("view");
     if (fromParam === "plan" || fromParam === "tracker") return fromParam;
-    try {
-      const saved = sessionStorage.getItem("autopilot_training_view");
-      if (saved === "plan" || saved === "tracker") {
-        sessionStorage.removeItem("autopilot_training_view");
-        return saved;
-      }
-    } catch { /* storage no disponible */ }
-    return "tracker";
+    // Entrenar abre siempre en la rutina semanal: el tracker solo aparece al abrir una sesión.
+    return "plan";
   });
 
   useEffect(() => {
@@ -646,25 +640,9 @@ const Dashboard = () => {
       )}
 
       {hasPlan && section === "training" && user && (
-        <Tabs
-          value={trainingView}
-          onValueChange={(view) => {
-            void hapticSelection();
-            setTrainingView(view as "tracker" | "plan");
-          }}
-          className="w-full min-w-0"
-        >
-          {/* El plan de la semana estaba a 4 toques (Progreso). Ahora es un toque,
-              y solo se ofrece cuando no hay una sesión en marcha. */}
-          {!workoutMode && !autoStartWorkout && (
-            <TabsList aria-label="Entrenar o ver el plan" className="mx-auto mb-4 flex w-full max-w-md lg:max-w-lg">
-              <TabsTrigger value="tracker">Entrenar</TabsTrigger>
-              <TabsTrigger value="plan">Rutina semanal</TabsTrigger>
-            </TabsList>
-          )}
-          {/* Un solo panel: lo que se ve depende también de si hay una sesión en marcha. */}
-          <TabsContent value={trainingView} tabIndex={-1} className="mt-0">
-            <Suspense fallback={<SectionFallback />}>
+        // Entrenar es la rutina semanal; el tracker solo se abre al empezar una sesión.
+        <div className="w-full min-w-0">
+          <Suspense fallback={<SectionFallback />}>
               {/* Entrenar queda limpio: las herramientas de la rutina viven solo en «Rutina semanal». */}
               {trainingView === "plan" && !workoutMode && !autoStartWorkout && (
                 // Herramientas de la rutina en su tarjeta: modo del plan a la izquierda, acciones en píldoras.
@@ -710,7 +688,15 @@ const Dashboard = () => {
                     // Al terminar/salir, Hoy debe reflejar el día completado.
                     if (!active) void fetchData();
                   }}
-                  onCancel={() => { setWorkoutMode(false); setFreePlans(null); setResumeWorkout(false); setSection("home"); }}
+                  onCancel={() => {
+                    // «Salir» antes de empezar vuelve a la rutina semanal, no a Inicio.
+                    setWorkoutMode(false);
+                    setFreePlans(null);
+                    setResumeWorkout(false);
+                    setAutoStartWorkout(false);
+                    setTrainingView("plan");
+                    setSection("training");
+                  }}
                   onExit={() => {
                     setWorkoutMode(false);
                     setFreePlans(null);
@@ -721,8 +707,7 @@ const Dashboard = () => {
                 />
               )}
             </Suspense>
-          </TabsContent>
-        </Tabs>
+        </div>
       )}
 
       {user && (
