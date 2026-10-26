@@ -267,6 +267,8 @@ struct MealPhoto: View {
 /// Portadas con IA de la edge function `session-cover` (como `useSessionCover.ts`): se guardan por clave.
 enum AiCover {
     private static let store = "autopilot.aiCovers.v1"
+    /// Respuesta de la edge function: `{ "url": "..." }`.
+    private struct Response: Decodable { let url: String? }
     /// Foto de plato de respaldo, la misma que usa la web (`BRAND_PHOTOS.meal`).
     static let mealFallback = URL(string: "https://autopilotplan.com/healthy_meal_plate.jpg")
     /// Igual que la web: si la IA no da foto, se muestra siempre la foto de respaldo.
@@ -275,11 +277,17 @@ enum AiCover {
         guard text.count >= 3 else { return mealFallback }
         return await fetch(key: "m:\(text.lowercased())", body: ["meal": text]) ?? mealFallback
     }
-    private static func fetch(key: String, body: [String: String]) async -> URL? {
+    /// Portada de la sesión según sus ejercicios, como `useSessionCover.ts`: clave `s:<ids ordenados>`.
+    /// Si no hay ejercicios o la IA falla, devuelve la foto de respaldo (`fallback`).
+    static func session(exerciseIds: [String], fallback: URL?) async -> URL? {
+        let ids = exerciseIds.filter { !$0.isEmpty }.sorted()
+        guard !ids.isEmpty else { return fallback }
+        return await fetch(key: "s:\(ids.joined(separator: ","))", body: ["exercise_ids": ids]) ?? fallback
+    }
+    private static func fetch<Body: Encodable>(key: String, body: Body) async -> URL? {
         var cache = UserDefaults.standard.dictionary(forKey: store) as? [String: String] ?? [:]
         if let u = cache[key] { return URL(string: u) }
-        struct R: Decodable { let url: String? }
-        guard let r: R = try? await Backend.client.functions.invoke("session-cover", options: FunctionInvokeOptions(body: body)), let u = r.url else { return nil }
+        guard let r: Response = try? await Backend.client.functions.invoke("session-cover", options: FunctionInvokeOptions(body: body)), let u = r.url else { return nil }
         cache[key] = u
         UserDefaults.standard.set(cache, forKey: store)
         return URL(string: u)

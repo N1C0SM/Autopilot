@@ -74,6 +74,8 @@ async function syncProfile(id: string) {
 
 export function forgetAccount(id: string) {
   save(listAccounts().filter((a) => a.id !== id));
+  // Si era la predeterminada, la marca se va con ella: al abrir, picker limpio.
+  if (getDefaultAccountId() === id) setDefaultAccountId(null);
 }
 
 export type SwitchResult = "ok" | "offline" | "expired";

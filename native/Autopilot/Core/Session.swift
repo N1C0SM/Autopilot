@@ -25,17 +25,29 @@ final class SessionModel: ObservableObject {
                 self.session = session
                 if let session { accounts.remember(session); await loadRole() }
                 
-                // Si hay una cuenta predeterminada marcada, la cargamos directamente sin preguntar quién entrena
+                // Si hay una cuenta predeterminada marcada, entramos en ella sin preguntar quién entrena.
                 if let defId = accounts.defaultAccountId,
                    let target = accounts.accounts.first(where: { $0.id == defId }),
                    !target.requirePassword {
                     if userIdString != defId {
-                        _ = await accounts.switchTo(defId)
+                        // `switchTo` no actualiza este modelo: refrescamos sesión y rol solo si entra.
+                        switch await accounts.switchTo(defId) {
+                        case .ok:
+                            await switched()
+                        case .offline, .expired, .wrong:
+                            // Si la predeterminada falla (sin red, caducada o rechazada), mostramos el
+                            // picker para elegir o volver a entrar en vez de quedarnos sin salida.
+                            showPicker = true
+                        }
+                    } else {
+                        showPicker = false
                     }
-                    showPicker = false
                 } else {
+                    // Sin predeterminada utilizable (o protegida con contraseña): decidimos si hace falta el picker.
                     let currentLocked = accounts.accounts.contains { $0.id == userIdString && $0.requirePassword }
-                    showPicker = accounts.accounts.count >= 2 || currentLocked
+                    let defaultLocked = accounts.defaultAccountId
+                        .flatMap { id in accounts.accounts.first { $0.id == id } }?.requirePassword == true
+                    showPicker = accounts.accounts.count >= 2 || currentLocked || defaultLocked
                 }
                 ready = true
             case .signedIn, .tokenRefreshed, .userUpdated:

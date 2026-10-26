@@ -182,7 +182,7 @@ struct AccountView: View {
                     linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
                 }
 
-                group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac.") {
+                group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac. La predeterminada entra sola al abrir la app.") {
                     ForEach(accounts.accounts) { a in
                         HStack(spacing: 12) {
                             AvatarView(name: a.name, url: a.avatar, size: 44)

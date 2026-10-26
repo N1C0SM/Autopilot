@@ -83,7 +83,11 @@ final class AccountStore: ObservableObject {
         save(list)
     }
 
-    func forget(_ id: String) { save(accounts.filter { $0.id != id }) }
+    func forget(_ id: String) {
+        save(accounts.filter { $0.id != id })
+        // Si era la predeterminada, la marca se va con ella: al abrir, picker limpio.
+        if defaultAccountId == id { setDefaultAccount(nil) }
+    }
 
     func setRequirePassword(_ id: String, _ value: Bool) {
         if accounts.contains(where: { $0.id == id }) {

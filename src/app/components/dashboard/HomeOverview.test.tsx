@@ -1,14 +1,26 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import HomeOverview from "@/app/components/dashboard/HomeOverview";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 
-const mocks = vi.hoisted(() => ({ hapticTap: vi.fn(), ios: false, isNative: vi.fn().mockReturnValue(false) }));
+const mocks = vi.hoisted(() => ({
+  hapticTap: vi.fn(),
+  ios: false,
+  isNative: vi.fn().mockReturnValue(false),
+  /** Portada de IA devuelta por useSessionCover (null = sin portada aún). */
+  cover: null as string | null,
+}));
 vi.mock("@/shared/lib/native", () => ({ hapticTap: mocks.hapticTap, isNative: mocks.isNative }));
 vi.mock("@/shared/lib/platform", () => ({ isIOSNative: () => mocks.ios }));
+// La portada de IA y los metadatos de ejercicios son red: aquí lo que se prueba es
+// el respaldo (la foto del día siempre es real), no la edge function.
+vi.mock("@/shared/hooks/useSessionCover", () => ({ useSessionCover: () => mocks.cover }));
+vi.mock("@/shared/hooks/useExerciseMetadata", () => ({ useExerciseMetadata: () => ({ byId: {}, byName: {} }) }));
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.ios = false;
+  mocks.cover = null;
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -42,20 +54,62 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the weekly routine on the day tapped in the week strip", () => {
-    const onNavigate = vi.fn();
+  it("shows only today: there is no weekly strip and no day-by-day navigation", () => {
     const tomorrow = DAYS[(DAYS.indexOf(today) + 1) % 7];
+    const dayAfter = DAYS[(DAYS.indexOf(today) + 2) % 7];
+    const onNavigate = vi.fn();
     render(
       <HomeOverview
         dayPlans={[
           { day: today, type: "gimnasio", exercises: [] },
           { day: tomorrow, type: "gimnasio", routine_name: "Piernas", exercises: [{ exercise_id: "squat", name: "Sentadilla", series: 3, reps: 8, weight: "", rest: "90 s" }] },
+          { day: dayAfter, type: "actividad", sport: "Correr", duration: "30 min" },
         ]}
         onNavigate={onNavigate}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: `${tomorrow}: con sesión — ver entrenamiento` }));
-    expect(onNavigate).toHaveBeenCalledWith("training", tomorrow);
+
+    // Ni «Tu semana» ni celdas de día: Hoy es solo hoy.
+    expect(screen.queryByText(/Tu semana/i)).not.toBeInTheDocument();
+    expect(screen.queryAllByLabelText(/con sesión — ver entrenamiento/)).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: new RegExp(`^${tomorrow}:`) })).not.toBeInTheDocument();
+    // La acción principal sigue siendo la sesión de hoy…
+    expect(screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Empezar Entrenamiento de fuerza" }));
+    // …y va a entrenar sin pedir ningún día de la semana.
+    expect(onNavigate).toHaveBeenCalledWith("training");
+    expect(onNavigate).not.toHaveBeenCalledWith("training", expect.anything());
+  });
+
+  it("paints a real photo of today's session on a gym day, falling back to the brand photo", () => {
+    const { container } = render(
+      <HomeOverview
+        dayPlans={[{ day: today, type: "gimnasio", routine_name: "Pull B", exercises: [{ exercise_id: "row", name: "Remo", series: 4, reps: 8, weight: "", rest: "2 min" }] }]}
+        onNavigate={vi.fn()}
+      />,
+    );
+
+    const photo = container.querySelector("img");
+    expect(photo).not.toBeNull();
+    expect(photo).toHaveAttribute("src", BRAND_PHOTOS.gym);
+    // Es decorativa: el texto ya dice todo lo que hace falta.
+    expect(photo?.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it("prefers the session cover when there is one", () => {
+    mocks.cover = "https://cdn.example.com/cover.jpg";
+    const { container } = render(
+      <HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [{ exercise_id: "row", name: "Remo", series: 3, reps: 8, weight: "", rest: "90 s" }] }]} onNavigate={vi.fn()} />,
+    );
+    expect(container.querySelector("img")).toHaveAttribute("src", "https://cdn.example.com/cover.jpg");
+  });
+
+  it("does not invent a session photo on a rest day", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-04T12:00:00"));
+    const { container } = render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={vi.fn()} />);
+    expect(screen.getByText("Hoy toca descansar")).toBeVisible();
+    expect(container.querySelector("img")).toBeNull();
   });
 
   it("shows the weekly progress and nutrition cards while keeping paid nutrition reachable", () => {
@@ -70,7 +124,6 @@ describe("dashboard home overview", () => {
         onNavigate={onNavigate}
         completedThisWeek={2}
         nutrition={false}
-        coaching={false}
       />,
     );
 
@@ -95,15 +148,15 @@ describe("dashboard home overview", () => {
     expect(mocks.hapticTap).toHaveBeenCalledTimes(2);
   });
 
-  it("opens the routine week on a rest Sunday", () => {
+  it("opens training from a rest Sunday without asking for a weekday", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-04T12:00:00"));
     const onNavigate = vi.fn();
     const onStartWorkout = vi.fn();
     render(<HomeOverview dayPlans={[{ day: "Lunes", type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} onStartWorkout={onStartWorkout} />);
     fireEvent.click(screen.getByRole("button", { name: "Entrenar igualmente" }));
-    // «Entrenar igualmente» abre la rutina semanal en el día de hoy.
-    expect(onNavigate).toHaveBeenCalledWith("training", "Domingo");
+    // Sin tira de semana: se abre Entrenar, sin día concreto.
+    expect(onNavigate).toHaveBeenCalledWith("training");
     expect(onStartWorkout).not.toHaveBeenCalled();
   });
 
@@ -157,14 +210,15 @@ describe("dashboard home overview", () => {
     render(<HomeOverview dayPlans={[{ day: today, type: "gimnasio", exercises: [] }]} onNavigate={onNavigate} completedToday />);
 
     expect(screen.getByText("Hecho hoy")).toBeVisible();
-    expect(screen.getByRole("button", { name: new RegExp(`${today}, hoy: completado`) })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Ver el resumen de la sesión de hoy" }));
+    const doneCard = screen.getByRole("button", { name: "Ver el resumen de la sesión de hoy" });
+    expect(doneCard).toBeVisible();
+    fireEvent.click(doneCard);
     expect(onNavigate).toHaveBeenCalledWith("training");
     expect(mocks.hapticTap).toHaveBeenCalledTimes(1);
   });
 
   it("never mentions the paid plan on iOS", () => {
-    const props = { dayPlans: [{ day: today, type: "gimnasio" as const, exercises: [] }], onNavigate: vi.fn(), nutrition: false, coaching: false };
+    const props = { dayPlans: [{ day: today, type: "gimnasio" as const, exercises: [] }], onNavigate: vi.fn(), nutrition: false };
     render(<HomeOverview {...props} />);
     expect(screen.getByText(/Incluido en Plus/)).toBeVisible();
     cleanup();

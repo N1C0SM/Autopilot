@@ -38,25 +38,27 @@ export default function WhoIsTraining() {
     try { shown = sessionStorage.getItem(SHOWN) === "1"; sessionStorage.setItem(SHOWN, "1"); } catch { /* sin almacenamiento: se muestra */ }
     const list = listAccounts();
     const currentLocked = list.some((a) => a.id === user?.id && a.requirePassword);
+    const showPicker = () => { setAccounts(listAccounts()); setEditing(false); setOpen(true); };
 
-    // Auto-skip: si hay cuenta predeterminada sin contraseña, entrar directamente
+    // Cuenta predeterminada: se entra directo, sin preguntar. Si no se puede
+    // (sesión caducada o sin red), se abre el picker para elegir o volver a entrar.
     if (!shown && !autoSwitched.current) {
       const defId = getDefaultAccountId();
       const defAccount = defId ? list.find((a) => a.id === defId) : null;
       if (defAccount && !defAccount.requirePassword && !defAccount.expired) {
         autoSwitched.current = true;
-        if (defAccount.id !== user?.id) {
-          void (async () => {
-            clearSharedDrafts();
-            const result = await switchToAccount(defAccount.id);
-            if (result === "ok") { window.location.assign("/dashboard"); }
-          })();
-        }
-        return; // Don't show the picker
+        if (defAccount.id === user?.id) return; // Ya es la cuenta activa: entra directo.
+        void (async () => {
+          clearSharedDrafts();
+          const result = await switchToAccount(defAccount.id);
+          if (result === "ok") { window.location.assign("/dashboard"); return; }
+          showPicker();
+        })();
+        return;
       }
     }
 
-    if (!shown && (list.length >= 2 || currentLocked)) { setAccounts(list); setOpen(true); }
+    if (!shown && (list.length >= 2 || currentLocked)) showPicker();
   }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cambio rápido: mantener el avatar o, en el Mac, Cuenta → Cambiar de usuario.
@@ -129,6 +131,11 @@ export default function WhoIsTraining() {
       <h1 id="who-title" className="relative text-center font-rounded text-[34px] font-bold leading-tight tracking-tight sm:text-[44px]">
         {editing ? "Gestionar cuentas" : "¿Quién entrena?"}
       </h1>
+      {!editing && !asking && (
+        <p className="relative mt-3 max-w-sm text-center type-footnote text-muted-foreground">
+          Marca tu cuenta como predeterminada y entrará sola al abrir la app.
+        </p>
+      )}
       {asking ? (
         <form className="relative mt-8 flex w-full max-w-sm flex-col items-center" onSubmit={(e) => { e.preventDefault(); void unlock(); }}>
           <span className={`${circle} h-24 w-24 bg-gradient-to-br from-primary to-primary/60`}>

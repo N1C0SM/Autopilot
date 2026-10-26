@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useConfirm } from "@/app/components/admin/content/useConfirm";
 import { useSessionCover } from "@/shared/hooks/useSessionCover";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 
 interface Macros {
   protein: number;
@@ -34,7 +35,7 @@ interface Props {
   dayPlans: DayPlan[];
   meals?: Meal[];
   userId?: string;
-  /** Al ir a «training» puede pedirse un día concreto: la tira de la semana lo usa. */
+  /** Navegación del panel. «training» sin día abre la rutina de hoy. */
   onNavigate: (section: UserSection, day?: string) => void;
   onStartWorkout?: () => void;
   onResumeWorkout?: () => void;
@@ -42,15 +43,11 @@ interface Props {
   macros?: Macros | null;
   completedThisWeek?: number;
   completedToday?: boolean;
-  /** Días (day_label) ya completados esta semana, para pintar ✓ en la tira. */
-  completedDays?: Set<string>;
-  coaching?: boolean;
   nutrition?: boolean;
   planStatus?: string;
 }
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-const DAY_LETTERS = ["L", "M", "X", "J", "V", "S", "D"];
 
 const planTitle = (plan: DayPlan) =>
   plan.type === "gimnasio"
@@ -73,14 +70,6 @@ const estimateMinutes = (plan: DayPlan) => {
   );
   return seconds > 0 ? Math.max(5, Math.round(seconds / 300) * 5) : null;
 };
-
-interface ChatPreviewMessage {
-  id: string;
-  sender_id: string;
-  content: string;
-  media_type: string | null;
-  created_at: string;
-}
 
 /**
  * Tarjeta compacta de Hoy (como las de Fitness): anillo arriba, título y una línea gris.
@@ -139,8 +128,6 @@ const HomeOverview = ({
   macros,
   completedThisWeek = 0,
   completedToday = false,
-  completedDays,
-  coaching = true,
   nutrition = true,
   planStatus,
 }: Props) => {
@@ -184,26 +171,29 @@ const HomeOverview = ({
     }
   };
 
-  // Foto del día: portada generada con IA según los ejercicios del día
-  const exercisesForCover = todayPlan?.type === "gimnasio" ? todayPlan.exercises ?? [] : [];
-  const exerciseMetadata = useExerciseMetadata(dayPlans);
-  const coverExercises = exercisesForCover;
-  const firstExercise = coverExercises[0];
-  const sessionCover = useSessionCover(
-    coverExercises.map((e) => e.exercise_id),
-    firstExercise ? (exerciseMetadata.byId[firstExercise.exercise_id] || exerciseMetadata.byName[firstExercise.name])?.image_url || firstExercise.image_url || null : null,
-  );
-
-  const [chatMessages, setChatMessages] = useState<ChatPreviewMessage[]>([]);
-  const [chatLoaded, setChatLoaded] = useState(false);
-  const [chatError, setChatError] = useState(false);
   const [completedMeals, setCompletedMeals] = useState<Set<string>>(new Set());
+
+  // «Hoy» es solo el día de hoy: nada de tira semanal. Todo lo del día se calcula
+  // aquí arriba, antes de las portadas y los metadatos que lo usan (nada de TDZ).
   const now = new Date();
   const todayIndex = (now.getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
   const todayPlan = dayPlans.find((plan) => plan.day === todayName);
   const scheduledDays = dayPlans.filter((plan) => plan.type === "gimnasio" || plan.type === "actividad");
-  const plannedDays = new Set(scheduledDays.map((plan) => plan.day));
+
+  // Foto del día: portada de IA de la sesión de hoy, con la imagen del primer
+  // ejercicio como respaldo y la foto de marca si aún no hay ninguna (siempre
+  // hay una foto real en un día de gimnasio).
+  const exerciseMetadata = useExerciseMetadata(dayPlans);
+  const isGymDay = todayPlan?.type === "gimnasio";
+  const exercisesForCover = isGymDay ? todayPlan.exercises ?? [] : [];
+  const firstExercise = exercisesForCover[0];
+  const firstExerciseImage = firstExercise
+    ? (exerciseMetadata.byId[firstExercise.exercise_id] || exerciseMetadata.byName[firstExercise.name])?.image_url || firstExercise.image_url || null
+    : null;
+  const sessionCover = useSessionCover(exercisesForCover.map((exercise) => exercise.exercise_id), firstExerciseImage);
+  const dayPhoto = isGymDay ? sessionCover || BRAND_PHOTOS.gym : null;
+
   const exerciseCount = exercisesForCover.length;
   const firstName = profileName?.trim().split(/\s+/)[0];
   const dateLabel = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(now);
@@ -268,49 +258,6 @@ const HomeOverview = ({
     return () => window.removeEventListener("autopilot:meals-updated", readMealsDone);
   }, [readMealsDone]);
 
-  useEffect(() => {
-    if (!userId || !coaching) return;
-    let active = true;
-
-    const loadMessages = async () => {
-      const { data, error } = await supabase
-        .from("chat_messages")
-        .select("id, sender_id, content, media_type, created_at")
-        .eq("conversation_user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(2);
-      if (!active) return;
-      if (error) {
-        setChatError(true);
-      } else {
-        setChatMessages((data || []).reverse());
-      }
-      setChatLoaded(true);
-    };
-
-    void loadMessages();
-    const channel = supabase
-      .channel(`home-chat-preview-${userId}`)
-      .on("postgres_changes", {
-        event: "INSERT",
-        schema: "public",
-        table: "chat_messages",
-        filter: `conversation_user_id=eq.${userId}`,
-      }, (payload) => {
-        if (!active) return;
-        const message = payload.new as ChatPreviewMessage;
-        setChatMessages((current) => [...current, message].slice(-2));
-        setChatError(false);
-        setChatLoaded(true);
-      })
-      .subscribe();
-
-    return () => {
-      active = false;
-      void supabase.removeChannel(channel);
-    };
-  }, [userId, coaching]);
-
   if (planStatus === "plan_pending") {
     return (
       <EmptyState
@@ -322,15 +269,10 @@ const HomeOverview = ({
     );
   }
 
-  const openWeek = () => {
-    void hapticTap();
-    onNavigate("training", DAYS_ORDER[todayIndex]);
-  };
-
   return (
     // Con la sesión hecha no hay acción que centrar: el contenido se apila sin huecos.
     <div className={cn("flex w-full flex-col", !(completedToday && !activeWorkout) && "flex-1")}>
-      {/* En web: dos columnas — saludo + semana a la izquierda, acción a la derecha */}
+      {/* En web: dos columnas — saludo a la izquierda, foto y acción a la derecha */}
       <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[1fr_320px] lg:gap-x-12 lg:items-start">
         <div>
         <p className="type-subhead font-semibold text-muted-foreground">{greetingDate}</p>
@@ -346,50 +288,20 @@ const HomeOverview = ({
                   : "Hoy, a recuperar."}
           </span>
         </h2>
-
-        {scheduledDays.length > 0 && (
-          // La semana de un vistazo — clickable: navega a Entrenamiento
-          <ol aria-label="Tu semana" className="mt-6 grid grid-cols-7 rounded-2xl bg-card px-2 py-3 md:max-w-sm lg:max-w-xs">
-            {DAYS_ORDER.map((day, index) => {
-              const isToday = index === todayIndex;
-              const trains = plannedDays.has(day);
-              const done = Boolean(completedDays?.has(day)) || (isToday && completedToday);
-              return (
-                <li key={day} className="flex flex-col items-center gap-1">
-                  <button
-                    type="button"
-                    aria-label={`${day}${isToday ? ", hoy" : ""}: ${done ? "completado" : trains ? "con sesión" : "descanso"} — ver entrenamiento`}
-                    onClick={() => { void hapticTap(); onNavigate("training", day); }}
-                    className={cn(
-                      "flex h-9 w-9 items-center justify-center rounded-full type-subhead transition-opacity active:opacity-60",
-                      done
-                        ? "bg-primary text-primary-foreground"
-                        : isToday
-                          ? "bg-primary/15 font-semibold text-primary"
-                          : trains
-                            ? "text-foreground hover:bg-secondary"
-                            : "text-muted-foreground hover:bg-secondary/50",
-                    )}
-                  >
-                    {done ? <Check className="h-[18px] w-[18px]" strokeWidth={2.5} /> : DAY_LETTERS[index]}
-                  </button>
-                  <span
-                    aria-hidden="true"
-                    className={cn("h-[5px] w-[5px] rounded-full", trains && !done ? "bg-primary" : "bg-transparent")}
-                  />
-                </li>
-              );
-            })}
-          </ol>
-        )}
         </div>
 
         {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
         <div className={cn("flex flex-col lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16", completedToday && !activeWorkout ? "pt-3" : "flex-1 justify-center py-8 md:py-10")}>
-          {/* Foto del día: portada generada con IA según los ejercicios */}
-          {sessionCover && !activeWorkout && (
-            <div aria-hidden="true" className="mb-4 h-48 overflow-hidden rounded-[28px] bg-card lg:mb-6">
-              <img key={sessionCover} src={sessionCover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
+          {/* Foto del día: la sesión de hoy, siempre con una foto real */}
+          {dayPhoto && !activeWorkout && (
+            <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card lg:mb-6">
+              <img
+                key={dayPhoto}
+                src={dayPhoto}
+                alt=""
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500 motion-reduce:animate-none"
+              />
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             </div>
           )}
@@ -457,8 +369,8 @@ const HomeOverview = ({
               rest
               icon={Moon}
               title="Hoy toca descansar"
-              description={nextSession ?? "Tu plan aún no tiene sesiones esta semana."}
-              action={<Button type="button" variant="secondary" size="lg" className="w-full" onClick={openWeek}>Entrenar igualmente</Button>}
+              description={nextSession ?? "Tu plan aún no tiene sesiones."}
+              action={<Button type="button" variant="secondary" size="lg" className="w-full" onClick={() => { void hapticTap(); onNavigate("training"); }}>Entrenar igualmente</Button>}
             />
           )}
           {activeWorkout && !activeWorkoutIsToday && (

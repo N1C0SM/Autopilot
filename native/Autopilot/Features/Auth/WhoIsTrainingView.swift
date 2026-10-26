@@ -15,51 +15,59 @@ struct WhoIsTrainingView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
-                Text("¿Quién entrena?").font(.apLargeTitle).padding(.top, 56).accessibilityAddTraits(.isHeader)
+                VStack(spacing: 8) {
+                    Text("¿Quién entrena?").font(.apLargeTitle).padding(.top, 56).accessibilityAddTraits(.isHeader)
+                    Text("La cuenta predeterminada entra sola al abrir la app.")
+                        .font(.apFootnote).foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
+                }
 
                 LazyVGrid(columns: columns, spacing: 24) {
                     ForEach(accounts.accounts) { account in
                         let isDefault = accounts.defaultAccountId == account.id
-                        Button { Task { await choose(account) } } label: {
-                            VStack(spacing: 10) {
-                                ZStack(alignment: .bottomTrailing) {
-                                    AvatarView(name: account.name, url: account.avatar, size: 88)
-                                    if isDefault {
-                                        Image(systemName: "star.fill").font(.system(size: 14, weight: .bold))
-                                            .foregroundStyle(Palette.gold)
-                                            .padding(3)
-                                            .background(Palette.background, in: Circle())
-                                            .offset(x: 2, y: 2)
+                        // Elegir cuenta y fijar la predeterminada son botones hermanos, nunca anidados.
+                        VStack(spacing: 8) {
+                            Button { Task { await choose(account) } } label: {
+                                VStack(spacing: 10) {
+                                    ZStack(alignment: .bottomTrailing) {
+                                        AvatarView(name: account.name, url: account.avatar, size: 88)
+                                        if isDefault {
+                                            Image(systemName: "star.fill").font(.system(size: 14, weight: .bold))
+                                                .foregroundStyle(Palette.gold)
+                                                .padding(3)
+                                                .background(Palette.background, in: Circle())
+                                                .offset(x: 2, y: 2)
+                                        }
+                                    }
+                                    HStack(spacing: 4) {
+                                        Text(account.name).font(.apHeadline).lineLimit(1)
+                                        if account.requirePassword {
+                                            Image(systemName: "lock.fill").font(.inter(.footnote)).foregroundStyle(Palette.muted)
+                                        }
+                                    }
+                                    if account.expired {
+                                        Text("Vuelve a entrar").font(.apFootnote).foregroundStyle(Palette.muted)
                                     }
                                 }
-                                HStack(spacing: 4) {
-                                    Text(account.name).font(.apHeadline).lineLimit(1)
-                                    if account.requirePassword {
-                                        Image(systemName: "lock.fill").font(.inter(.footnote)).foregroundStyle(Palette.muted)
-                                    }
-                                }
+                                .frame(minHeight: 44)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(busy)
+                            .contextMenu {
                                 if isDefault {
-                                    Text("Predeterminada").font(.apFootnote).foregroundStyle(Palette.gold)
-                                } else if account.expired {
-                                    Text("Vuelve a entrar").font(.apFootnote).foregroundStyle(Palette.muted)
+                                    Button { accounts.setDefaultAccount(nil); Haptics.tap() } label: {
+                                        Label("Quitar predeterminada", systemImage: "star.slash")
+                                    }
+                                } else {
+                                    Button { accounts.setDefaultAccount(account.id); Haptics.tap() } label: {
+                                        Label("Usar como predeterminada", systemImage: "star.fill")
+                                    }
                                 }
                             }
-                            .frame(minHeight: 44)
+                            .accessibilityLabel(account.name + (isDefault ? ", predeterminada" : "") + (account.requirePassword ? ", pide contraseña" : "") + (account.expired ? ", vuelve a entrar" : ""))
+
+                            defaultButton(account, isDefault: isDefault)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(busy)
-                        .contextMenu {
-                            if isDefault {
-                                Button { accounts.setDefaultAccount(nil); Haptics.tap() } label: {
-                                    Label("Quitar predeterminada", systemImage: "star.slash")
-                                }
-                            } else {
-                                Button { accounts.setDefaultAccount(account.id); Haptics.tap() } label: {
-                                    Label("Usar como predeterminada", systemImage: "star.fill")
-                                }
-                            }
-                        }
-                        .accessibilityLabel(account.name + (isDefault ? ", predeterminada" : "") + (account.requirePassword ? ", pide contraseña" : "") + (account.expired ? ", vuelve a entrar" : ""))
                     }
                     Button { session.addAnotherAccount() } label: {
                         VStack(spacing: 10) {
@@ -84,6 +92,31 @@ struct WhoIsTrainingView: View {
         }
         .screenBackground()
         .sheet(item: $asking) { account in passwordSheet(account) }
+    }
+
+    /// Píldora visible para fijar o quitar la cuenta predeterminada, sin menú contextual.
+    private func defaultButton(_ account: SavedAccount, isDefault: Bool) -> some View {
+        Button {
+            Haptics.tap()
+            accounts.setDefaultAccount(isDefault ? nil : account.id)
+        } label: {
+            Text(isDefault ? "Predeterminada" : "Hacer predeterminada")
+                .font(.apFootnote.weight(isDefault ? .semibold : .regular))
+                .lineLimit(1).minimumScaleFactor(0.75)
+                .foregroundStyle(isDefault ? Color.black : Palette.muted)
+                .padding(.horizontal, 12).padding(.vertical, 7)
+                .background(isDefault ? Palette.gold : Color.clear, in: Capsule())
+                .overlay {
+                    if !isDefault { Capsule().strokeBorder(Palette.border, lineWidth: 1) }
+                }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(busy)
+        .accessibilityLabel(isDefault
+                            ? "Quitar \(account.name) como cuenta predeterminada"
+                            : "Hacer \(account.name) la cuenta predeterminada al abrir la app")
     }
 
     private func passwordSheet(_ account: SavedAccount) -> some View {

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { setSession, getSession, signOut, signInWithPassword } = vi.hoisted(() => ({ setSession: vi.fn(), getSession: vi.fn(), signOut: vi.fn(), signInWithPassword: vi.fn() }));
 vi.mock("@/shared/integrations/supabase/client", () => ({ supabase: { auth: { setSession, getSession, signOut, signInWithPassword }, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) } }));
 
-import { forgetAccount, listAccounts, prepareAnotherAccount, rememberSession, setRequirePassword, signInSavedAccount, switchToAccount } from "@/shared/lib/accounts";
+import { forgetAccount, getDefaultAccountId, listAccounts, prepareAnotherAccount, rememberSession, setDefaultAccountId, setRequirePassword, signInSavedAccount, switchToAccount } from "@/shared/lib/accounts";
 
 const session = (id: string, email: string, token = "r1") => ({
   access_token: `a-${token}`, refresh_token: token,
@@ -69,5 +69,25 @@ describe("cuentas en el dispositivo", () => {
     expect(await signInSavedAccount("u1", "buena")).toBe("ok");
     expect(signInWithPassword).toHaveBeenLastCalledWith({ email: "a@x.com", password: "buena" });
     expect(listAccounts()[0].refreshToken).toBe("r8");
+  });
+
+  it("la cuenta predeterminada se recuerda y se limpia al quitarla del dispositivo", () => {
+    rememberSession(session("u1", "a@x.com"));
+    rememberSession(session("u2", "b@x.com", "r2"));
+    expect(getDefaultAccountId()).toBeNull();
+
+    setDefaultAccountId("u2");
+    expect(getDefaultAccountId()).toBe("u2");
+    // Renovar tokens o volver a guardar la sesión no la olvida.
+    rememberSession(session("u1", "a@x.com", "r5"));
+    expect(getDefaultAccountId()).toBe("u2");
+
+    // Quitar del dispositivo la cuenta predeterminada limpia la marca.
+    forgetAccount("u2");
+    expect(getDefaultAccountId()).toBeNull();
+
+    setDefaultAccountId("u1");
+    setDefaultAccountId(null);
+    expect(getDefaultAccountId()).toBeNull();
   });
 });

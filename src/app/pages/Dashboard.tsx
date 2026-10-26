@@ -21,7 +21,6 @@ import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import NotificationsBell from "@/app/components/NotificationsBell";
 import { toast } from "sonner";
 import type { DayPlan } from "@/shared/types/training";
-import WeeklyProgress from "@/app/components/WeeklyProgress";
 import HomeOverview from "@/app/components/dashboard/HomeOverview";
 import RenewalFlow from "@/app/components/dashboard/RenewalFlow";
 import UserSidebar from "@/app/components/UserSidebar";
@@ -113,7 +112,6 @@ const Dashboard = () => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [completedDays, setCompletedDays] = useState<Set<string>>(new Set());
   const lastFetchRef = useRef(0);
   const [landingPlan] = useState<"training" | "full" | undefined>(readLandingPlan);
   /**
@@ -299,7 +297,6 @@ const Dashboard = () => {
               .map((row) => row.day_label)
               .filter((day): day is string => Boolean(day && scheduledDays.has(day))),
           );
-          setCompletedDays(days);
           setCompletedThisWeek(days.size);
         }
         if (np) {
@@ -589,7 +586,6 @@ const Dashboard = () => {
           <HomeOverview
             userId={user?.id}
             meals={meals}
-            coaching={coaching}
             nutrition={nutrition || campaign}
             planStatus={planStatus}
             dayPlans={dayPlans}
@@ -631,7 +627,6 @@ const Dashboard = () => {
             macros={nutrition ? macros : null}
             completedThisWeek={completedThisWeek}
             completedToday={completedToday}
-            completedDays={completedDays}
           />
           {!campaign && coaching && user && <RenewalFlow userId={user.id} subscriptionTier={subscriptionTier} />}
           {/* Modo viaje se gestiona ahora desde Ajustes; en Dashboard solo
