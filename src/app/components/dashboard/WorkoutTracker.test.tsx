@@ -79,11 +79,14 @@ describe("routine week navigation and saved session dates", () => {
     act(() => { setWorkoutView("user", "list"); });
     expect(readActiveWorkout("user")?.logs.Remo).toHaveLength(2);
   });
-  it("opens any routine from a rest Sunday without writing previewed sets", async () => {
+  it("opens the next routine when today has no session, without a rest screen", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} />);
-    await waitFor(() => expect(screen.getByText("Día de descanso")).toBeVisible());
+    // El domingo no entrena: se abre el lunes, la siguiente sesión, y ningún día sin sesión
+    // es seleccionable.
+    expect(screen.getByRole("tab", { name: "Domingo · sin sesión · hoy" })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: "Lunes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
     expect(screen.getAllByRole("tab")).toHaveLength(7);
-    fireEvent.click(screen.getByRole("tab", { name: "Lunes" }));
     expect(await screen.findByRole("button", { name: "Empezar entrenamiento" })).toBeVisible();
     expect(screen.getByText(/Se registra hoy/)).toHaveTextContent("4 de octubre");
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 850)); });
@@ -91,15 +94,19 @@ describe("routine week navigation and saved session dates", () => {
   });
   it("saves a Friday routine on the actual Sunday and prevents switching during the session", async () => {
     render(<WorkoutTracker userId="user" dayPlans={[plan("Viernes", "Press banca")]} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Viernes" }));
+    // El viernes es la siguiente sesión desde el domingo: se abre directamente.
+    expect(screen.getByRole("tab", { name: "Viernes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     expect(screen.queryByRole("tablist", { name: week })).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Peso de la serie 1 de Press banca" }), { target: { value: "35" } });
     fireEvent.click(screen.getByRole("button", { name: "Salir" }));
     await waitFor(() => expect(screen.getByRole("tablist", { name: week })).toBeVisible());
     expect(mocks.writes).toEqual([{ table: "workout_logs", rows: [expect.objectContaining({ day_label: "Viernes", logged_at: "2026-10-04", exercise_name: "Press banca", sets_completed: [expect.objectContaining({ weight: "35" })] })] }]);
-    fireEvent.click(screen.getByRole("tab", { name: /Domingo/ }));
-    await waitFor(() => expect(screen.getByText("Día de descanso")).toBeVisible());
+    // El domingo no tiene sesión y está desactivado: no se puede navegar a él.
+    expect(screen.getByRole("tab", { name: /Domingo/ })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: "Viernes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 850)); });
     expect(mocks.writes).toHaveLength(1);
   });
@@ -146,12 +153,14 @@ describe("routine week navigation and saved session dates", () => {
     expect(screen.queryByRole("textbox", { name: "Peso de la serie 1 de Press banca" })).not.toBeInTheDocument();
     expect(onAutoStartConsumed).toHaveBeenCalled();
   });
-  it("never auto-starts another routine when today is a rest day", async () => {
+  it("never auto-starts another routine when today has no session", async () => {
     const onAutoStartConsumed = vi.fn();
     render(<WorkoutTracker userId="user" dayPlans={[plan("Lunes", "Sentadilla")]} initialDay="Lunes" autoStart onAutoStartConsumed={onAutoStartConsumed} />);
     await waitFor(() => expect(onAutoStartConsumed).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByText("Día de descanso")).toBeVisible());
-    expect(screen.getByRole("tab", { name: /Domingo/ })).toHaveAttribute("aria-selected", "true");
+    // Sin sesión hoy, Inicio no auto-arranca otra rutina ni abre un día de descanso.
+    expect(screen.getByRole("tab", { name: "Lunes" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByText(/descanso/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(mocks.writes).toHaveLength(0);
   });
 

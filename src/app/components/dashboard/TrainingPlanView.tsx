@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState, type ButtonHTMLAttributes, type ReactNode, type SyntheticEvent } from "react";
-import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame, Moon } from "lucide-react";
+import { Calendar as CalendarIcon, CalendarDays, Check, Clock, Copy, Download, Flame } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListGroup, ListRow } from "@/shared/components/ui/list";
@@ -52,6 +52,28 @@ const sessionTitle = (plan: DayPlan) =>
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
+/** Solo los días con sesión existen en la vista: un día sin plan nunca es una pantalla. */
+const hasSessionIn = (plans: DayPlan[], day?: string | null) =>
+  Boolean(day) && plans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
+
+/** Siguiente día con sesión después de `from`, dando la vuelta a la semana. */
+const nextSessionIn = (plans: DayPlan[], from: string): string | null => {
+  const start = DAYS_ORDER.indexOf(from);
+  if (start < 0) return null;
+  for (let i = 1; i <= DAYS_ORDER.length; i += 1) {
+    const day = DAYS_ORDER[(start + i) % DAYS_ORDER.length];
+    if (hasSessionIn(plans, day)) return day;
+  }
+  return null;
+};
+
+/** Día que se abre siempre: el pedido si tiene sesión; si no, hoy; si no, la siguiente sesión. */
+const openDayFor = (plans: DayPlan[], preferred: string | undefined, today: string): string | null => {
+  if (hasSessionIn(plans, preferred)) return preferred!;
+  if (hasSessionIn(plans, today)) return today;
+  return nextSessionIn(plans, today);
+};
+
 const sessionSummary = (plan: DayPlan) => {
   const exercises = plan.exercises ?? [];
   if (exercises.length === 0) return null;
@@ -97,14 +119,16 @@ ToolRow.displayName = "ToolRow";
 const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
   const todayIndex = (new Date().getDay() + 6) % 7;
   const todayName = DAYS_ORDER[todayIndex];
-  /** Si el día pedido no tiene sesión, se abre el de hoy: mejor que una hoja vacía. */
-  const trainsOn = (day?: string) =>
-    Boolean(day) && dayPlans.some((p) => p.day === day && (p.type === "gimnasio" || p.type === "actividad"));
-  const [expandedDay, setExpandedDay] = useState<string | null>(trainsOn(initialDay) ? initialDay! : todayName);
+  // Nunca se abre un día sin sesión: el pedido, si no hoy, si no el siguiente que entrene.
+  const [expandedDay, setExpandedDay] = useState<string | null>(() => openDayFor(dayPlans, initialDay, todayName));
   // La vista no se desmonta al cambiar de pestaña: sincroniza cada día pedido desde «Hoy».
   useEffect(() => {
-    if (trainsOn(initialDay)) setExpandedDay(initialDay!);
-  }, [initialDay]);
+    if (hasSessionIn(dayPlans, initialDay)) setExpandedDay(initialDay!);
+  }, [dayPlans, initialDay]);
+  // El plan puede llegar después de montar: si el día abierto no tiene sesión, se abre el que toca.
+  useEffect(() => {
+    setExpandedDay((current) => (hasSessionIn(dayPlans, current) ? current : openDayFor(dayPlans, initialDay, todayName)));
+  }, [dayPlans, initialDay, todayName]);
   const [copied, setCopied] = useState(false);
   const [detail, setDetail] = useState<{
     name: string;
@@ -148,7 +172,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
     toast.success("Plan descargado");
   };
 
-  // Solo los días con sesión se pueden abrir; el resto son descanso.
+  // Solo los días con sesión se pueden abrir; el resto no es una pantalla navegable.
   const workPlanFor = (day: string) => {
     const plan = dayPlans.find((p) => p.day === day);
     return plan?.type === "gimnasio" || plan?.type === "actividad" ? plan : undefined;
@@ -156,10 +180,6 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
   const selectedPlan = expandedDay ? workPlanFor(expandedDay) : undefined;
   const selectedDay = expandedDay ?? "";
   const selectedIsToday = selectedDay === todayName;
-
-  const nextWorkDay = expandedDay
-    ? DAYS_ORDER.map((_, i) => DAYS_ORDER[(DAYS_ORDER.indexOf(expandedDay) + 1 + i) % DAYS_ORDER.length]).find((day) => workPlanFor(day))
-    : undefined;
   const hasExercises = Boolean(selectedPlan?.exercises && selectedPlan.exercises.length > 0);
 
   return (
@@ -175,7 +195,7 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
           const plan = workPlanFor(day);
           const isToday = day === todayName;
           const isExpanded = expandedDay === day;
-          const summary = plan ? sessionTitle(plan) : "descanso";
+          const summary = plan ? sessionTitle(plan) : "sin sesión";
           // El día elegido va tintado (el relleno macizo es solo para el botón de abrir la sesión).
           const tone = isExpanded
             ? "bg-primary/15 text-primary"
@@ -194,7 +214,8 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
               disabled={!plan}
               onClick={() => {
                 void hapticSelection();
-                setExpandedDay(isExpanded ? null : day);
+                // El día activo se queda activo: nunca se colapsa a una hoja vacía.
+                setExpandedDay(day);
               }}
               className={`flex h-11 w-11 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-full type-subhead lg:text-[16px] font-semibold transition-colors duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 plan ? "active:opacity-60" : "cursor-default"
@@ -269,31 +290,12 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
       )}
 
       {!selectedPlan && (
-        expandedDay ? (
-          <EmptyState
-            rest
-            icon={Moon}
-            title={selectedIsToday ? "Hoy es día de descanso" : `${selectedDay} es día de descanso`}
-            description="Toca otro día para ver su sesión."
-            action={
-              nextWorkDay ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="lg"
-                  onClick={() => {
-                    void hapticSelection();
-                    setExpandedDay(nextWorkDay);
-                  }}
-                >
-                  {`Ver el ${nextWorkDay.toLocaleLowerCase("es-ES")}`}
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          <EmptyState card icon={CalendarDays} title="Elige un día" description="Toca un día de la semana para ver su sesión." />
-        )
+        <EmptyState
+          card
+          icon={CalendarDays}
+          title="Tu plan aún no tiene sesiones"
+          description="Edita tu rutina para añadir los días de la semana que quieras entrenar."
+        />
       )}
 
       <ListGroup>

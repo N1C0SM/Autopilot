@@ -257,11 +257,13 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
         />
       ) : (
         <ListGroup header="Comidas de hoy">
-          {meals.map((meal, i) => {
+          {meals.map((meal) => {
             const isDone = done.has(meal.name);
             return (
               <button
-                key={i}
+                // Key por comida, no por índice: al regenerar el plan la fila se remonta
+                // y su foto no hereda la del plato anterior.
+                key={`${meal.name}·${meal.description}`}
                 type="button"
                 onClick={() => toggle(meal.name)}
                 aria-pressed={isDone}

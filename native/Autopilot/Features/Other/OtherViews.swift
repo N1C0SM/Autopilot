@@ -10,6 +10,8 @@ struct NutritionView: View {
     @State private var loaded = false
     @State private var done: Set<String> = []
     @State private var cover: URL?
+    /// Plato al que pertenece `cover`: si no es el primero del plan actual, no se pinta.
+    @State private var coverDish: String?
     struct Macros: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
     struct Meal: Decodable, Hashable { let name: String?; let description: String? }
     struct Row: Decodable { let macros_json: Macros?; let meals_json: [Meal]? }
@@ -19,6 +21,9 @@ struct NutritionView: View {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
         return "meals_done_\(session.userIdString ?? "")_\(c.year!)-\(c.month!)-\(c.day!)"
     }
+
+    /// Primer plato del plan actual: la portada siempre corresponde a este plato.
+    private var firstDish: String { meals.first?.description ?? Self.defaultDish }
 
     var body: some View {
         ScrollView {
@@ -41,7 +46,7 @@ struct NutritionView: View {
         if !hasMeals && kcal <= 0 {
             EmptyCard(photo: Self.defaultDish, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
         } else {
-            if hasMeals, let cover {
+            if hasMeals, let cover, coverDish == firstDish {
                 Color.clear.frame(height: 176)
                     .overlay { CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
                     .overlay { LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom) }
@@ -162,7 +167,17 @@ struct NutritionView: View {
         macros = rows.first?.macros_json
         meals = rows.first?.meals_json ?? []
         loaded = true
-        cover = await AiCover.meal(meals.first?.description ?? Self.defaultDish)
+        // La portada es del primer plato actual: si el plan cambió, se quita la anterior
+        // antes de pedir la nueva, para no enseñar el plato del plan de antes.
+        let dish = firstDish
+        if coverDish != dish {
+            cover = nil
+            coverDish = dish
+        }
+        let next = await AiCover.meal(dish)
+        // Solo se asigna si sigue vigente: otra carga pudo cambiar el plan mientras llegaba.
+        guard coverDish == dish else { return }
+        cover = next
     }
 
     private func macro(_ label: String, _ grams: Double, _ share: Double) -> some View {
@@ -253,13 +268,32 @@ private struct EmptyCard: View {
 /// Foto del plato generada por `session-cover`.
 struct MealPhoto: View {
     let dish: String
-    @State private var url: URL?
+    /// Foto resuelta junto con el plato al que pertenece: nunca se pinta la de otro plato.
+    private struct LoadedCover {
+        let dish: String
+        let url: URL?
+    }
+    @State private var loaded: LoadedCover?
+
+    /// Solo hay imagen si la guardada es la del plato actual.
+    private var url: URL? {
+        guard let loaded, loaded.dish == dish else { return nil }
+        return loaded.url
+    }
+
     var body: some View {
         ZStack {
             Palette.secondary
             if let url { CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear } }
         }
-        .task(id: dish) { url = await AiCover.meal(dish) }
+        .task(id: dish) {
+            // Se limpia la foto del plato anterior antes de pedir la del actual.
+            loaded = nil
+            let next = await AiCover.meal(dish)
+            // `.task(id:)` se cancela al cambiar de plato; además no se asigna nada si cambió.
+            guard !Task.isCancelled else { return }
+            loaded = LoadedCover(dish: dish, url: next)
+        }
         .accessibilityHidden(true)
     }
 }

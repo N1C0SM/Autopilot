@@ -11,9 +11,37 @@ struct TrainView: View {
     @State private var starting = false
     @State private var tab = 0
 
+    /// Día visible: siempre uno con sesión, aunque `selectedDay` aún no se haya sincronizado.
+    private var activeDay: String? {
+        if hasSession(model.days, selectedDay) { return selectedDay }
+        return defaultSessionDay(model.days)
+    }
+
     private var currentPlan: DayPlan? {
-        guard let plan = model.days.first(where: { $0.day == selectedDay }) else { return nil }
+        guard let day = activeDay, let plan = model.days.first(where: { $0.day == day }) else { return nil }
         return plan.isGym || plan.type == "actividad" ? plan : nil
+    }
+
+    private func hasSession(_ days: [DayPlan], _ day: String) -> Bool {
+        days.contains { $0.day == day && ($0.isGym || $0.type == "actividad") }
+    }
+
+    /// Siguiente día con sesión después de `from`, dando la vuelta a la semana.
+    private func nextSessionDay(_ days: [DayPlan], from day: String) -> String? {
+        guard let start = DayNames.all.firstIndex(of: day) else { return nil }
+        return (1...7).map { DayNames.all[(start + $0) % 7] }.first { hasSession(days, $0) }
+    }
+
+    /// Nunca se abre un día sin sesión: hoy si entrena; si no, la siguiente sesión de la semana.
+    private func defaultSessionDay(_ days: [DayPlan]) -> String? {
+        if hasSession(days, DayNames.today) { return DayNames.today }
+        return nextSessionDay(days, from: DayNames.today)
+    }
+
+    /// El plan llega de forma asíncrona: en cuanto hay días, `selectedDay` pasa a uno con sesión.
+    private func syncSelectedDay(_ days: [DayPlan]) {
+        guard !days.isEmpty, !hasSession(days, selectedDay) else { return }
+        if let day = defaultSessionDay(days) { selectedDay = day }
     }
 
     var body: some View {
@@ -32,7 +60,7 @@ struct TrainView: View {
                     if let plan = currentPlan {
                         if plan.isGym { gymSummary(plan) } else { activityDay(plan) }
                     } else {
-                        restDay
+                        NoSessionsCard()
                     }
                     }
                 }
@@ -43,6 +71,7 @@ struct TrainView: View {
         .screenBackground()
         .refreshable { await model.load(userId: session.userId) }
         .task { await model.load(userId: session.userId) }
+        .onChange(of: model.days) { _, days in syncSelectedDay(days) }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await model.load(userId: session.userId) } }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
             if active == nil, let day = model.days.first(where: { $0.day == DayNames.today }), day.isGym { Task { await start(day) } }
@@ -68,9 +97,8 @@ struct TrainView: View {
     private var dayPicker: some View {
         HStack(spacing: 4) {
             ForEach(DayNames.all, id: \.self) { day in
-                let plan = model.days.first { $0.day == day }
-                let hasWork = plan?.isGym == true || plan?.type == "actividad"
-                let isActive = day == selectedDay
+                let hasWork = hasSession(model.days, day)
+                let isActive = day == activeDay
                 let isToday = day == DayNames.today
                 Button {
                     guard day != selectedDay else { return }
@@ -78,18 +106,19 @@ struct TrainView: View {
                     selectedDay = day
                 } label: {
                     VStack(spacing: 4) {
-                        Text(String(day.prefix(3))).font(.apFootnote.weight(isActive || isToday ? .semibold : .regular))
+                        Text(String(day.prefix(3))).font(.apFootnote.weight(isActive || (isToday && hasWork) ? .semibold : .regular))
                         Circle()
                             .fill(hasWork ? (isActive ? Color.black : Palette.gold) : Color.clear)
                             .frame(width: 5, height: 5)
                     }
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .foregroundStyle(isActive ? Color.black : (isToday ? Palette.gold : Palette.muted))
+                    .foregroundStyle(isActive ? Color.black : hasWork ? (isToday ? Palette.gold : Palette.muted) : Palette.muted.opacity(0.4))
                     .background(isActive ? Palette.gold : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(day + (hasWork ? "" : " · descanso") + (isToday ? " · hoy" : ""))
+                .disabled(!hasWork)
+                .accessibilityLabel(day + (hasWork ? "" : " · sin sesión") + (isToday ? " · hoy" : ""))
                 .accessibilityAddTraits(isActive ? .isSelected : [])
             }
         }
@@ -102,7 +131,7 @@ struct TrainView: View {
     private func gymSummary(_ plan: DayPlan) -> some View {
         let exercises = plan.exercises ?? []
         let totalSets = exercises.reduce(0) { $0 + max($1.series, 1) }
-        let parts = (plan.routine_name ?? plan.muscle_focus ?? selectedDay).components(separatedBy: " · ")
+        let parts = (plan.routine_name ?? plan.muscle_focus ?? plan.day).components(separatedBy: " · ")
         let completed = model.completedToday(plan.day)
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
@@ -123,7 +152,7 @@ struct TrainView: View {
                     Text("\(exercises.count) ejercicios · \(totalSets) series").font(.apFootnote.monospacedDigit())
                         .foregroundStyle(Palette.muted).padding(.top, 4)
                 }
-                if selectedDay != DayNames.today {
+                if plan.day != DayNames.today {
                     Text("Se registra hoy · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))))")
                         .font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 4)
                 }
@@ -166,7 +195,7 @@ struct TrainView: View {
         }
     }
 
-    // MARK: Actividad y descanso
+    // MARK: Actividad
 
     private func activityDay(_ plan: DayPlan) -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -201,23 +230,9 @@ struct TrainView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var restDay: some View {
-        RestCard(title: "Día de descanso", message: "Recupera, o elige otra sesión de tu semana") {
-            FlowRow {
-                ForEach(model.days.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }) { p in
-                    Button(p.day) { Haptics.selection(); selectedDay = p.day }
-                        .font(.apSubhead.weight(.medium))
-                        .padding(.horizontal, 16).frame(minHeight: 44)
-                        .background(Color.white.opacity(0.1), in: Capsule())
-                        .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
     /// «Rutina semanal», calcada de `TrainingPlanView.tsx`.
     private var weeklyRoutine: some View {
-        WeeklyRoutineView(days: model.days, initialDay: selectedDay) { day in
+        WeeklyRoutineView(days: model.days, initialDay: activeDay ?? selectedDay) { day in
             selectedDay = day; tab = 0
         }
     }
@@ -242,6 +257,20 @@ struct TrainView: View {
 }
 
 extension ActiveWorkout: Identifiable { nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) } }
+
+/// Sin ninguna sesión en el plan no hay nada que abrir: estado neutro, nunca una pantalla de descanso.
+struct NoSessionsCard: View {
+    var body: some View {
+        VStack(spacing: 8) {
+            Image("lu-calendar").renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
+            Text("Tu plan aún no tiene sesiones").font(.apHeadline)
+            Text("Edita tu rutina para añadir los días de la semana que quieras entrenar.")
+                .font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 32).padding(.horizontal, 24)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+}
 
 /// Fila de ejercicio de la lista (miniatura, nombre, «N series · R reps · descanso»).
 struct ExerciseListRow: View {
@@ -355,19 +384,37 @@ struct WeeklyRoutineView: View {
         return p
     }
 
+    /// Siguiente día con sesión después de `day`, dando la vuelta a la semana.
+    private func nextSession(after day: String) -> String? {
+        guard let start = DayNames.all.firstIndex(of: day) else { return nil }
+        return (1...7).map { DayNames.all[(start + $0) % 7] }.first { workPlan($0) != nil }
+    }
+
+    /// Día que se abre siempre: el pedido si tiene sesión; si no, hoy; si no, la siguiente
+    /// sesión; si no, la primera de la semana. Nunca un día sin sesión.
+    private var defaultDay: String? {
+        if workPlan(initialDay) != nil { return initialDay }
+        if workPlan(DayNames.today) != nil { return DayNames.today }
+        if let next = nextSession(after: DayNames.today) { return next }
+        return DayNames.all.first { workPlan($0) != nil }
+    }
+
+    /// Día visible: siempre uno con sesión; pulsar el día activo no lo cierra.
+    private var activeDay: String? {
+        expanded.flatMap { workPlan($0) != nil ? $0 : nil } ?? defaultDay
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             dayStrip
-            if let day = expanded, let plan = workPlan(day) { session(day, plan) }
-            else if let day = expanded { rest(day) }
-            else { emptyCard(icon: "lu-calendar", title: "Elige un día", message: "Toca un día de la semana para ver su sesión.") }
+            if let day = activeDay, let plan = workPlan(day) { session(day, plan) }
+            else { NoSessionsCard() }
             tools
             (Text("Análisis asistido por IA · tu plan se adapta a ti · ") + Text("[no sustituye consejo médico](https://autopilotplan.app/legal/disclaimer-medico)"))
                 .tint(Palette.gold)
                 .font(.apFootnote).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity).padding(.horizontal, 16)
         }
-        .onAppear { if expanded == nil { expanded = workPlan(initialDay) != nil ? initialDay : DayNames.today } }
         .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
     }
 
@@ -376,20 +423,20 @@ struct WeeklyRoutineView: View {
             ForEach(DayNames.all, id: \.self) { day in
                 let plan = workPlan(day)
                 let isToday = day == DayNames.today
-                let isExpanded = expanded == day
+                let isExpanded = activeDay == day
                 Button {
                     Haptics.selection()
-                    withAnimation(.snappy) { expanded = isExpanded ? nil : day }
+                    withAnimation(.snappy) { expanded = day }
                 } label: {
                     Text(String(day.prefix(3))).font(.apSubhead.weight(.semibold))
-                        .foregroundStyle(isExpanded || isToday ? Palette.gold : plan != nil ? Palette.foreground : Palette.muted.opacity(0.6))
+                        .foregroundStyle(isExpanded || (isToday && plan != nil) ? Palette.gold : plan != nil ? Palette.foreground : Palette.muted.opacity(0.6))
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(isExpanded ? Palette.gold.opacity(0.15) : (isToday || plan != nil) ? Palette.secondary : .clear))
+                        .background(Circle().fill(isExpanded ? Palette.gold.opacity(0.15) : plan != nil ? Palette.secondary : .clear))
                 }
                 .buttonStyle(.plain)
                 .disabled(plan == nil)
                 .frame(maxWidth: .infinity)
-                .accessibilityLabel("\(day), \(plan?.title ?? "descanso")\(isToday ? ", hoy" : "")")
+                .accessibilityLabel("\(day), \(plan?.title ?? "sin sesión")\(isToday ? ", hoy" : "")")
             }
         }
         .padding(6)
@@ -455,31 +502,6 @@ struct WeeklyRoutineView: View {
                 .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
         }
         .padding(.horizontal, 16)
-    }
-
-    @ViewBuilder private func rest(_ day: String) -> some View {
-        let i = DayNames.all.firstIndex(of: day) ?? 0
-        let next = (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
-        VStack(spacing: 8) {
-            Image("lu-moon").renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
-            Text(day == DayNames.today ? "Hoy es día de descanso" : "\(day) es día de descanso").font(.apHeadline)
-            Text("Toca otro día para ver su sesión.").font(.apSubhead).foregroundStyle(Palette.muted)
-            if let next {
-                Button("Ver el \(next.lowercased())") { Haptics.selection(); withAnimation(.snappy) { expanded = next } }
-                    .buttonStyle(.pillSecondary).fixedSize().padding(.top, 8)
-            }
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 32)
-    }
-
-    private func emptyCard(icon: String, title: String, message: String) -> some View {
-        VStack(spacing: 8) {
-            Image(icon).renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
-            Text(title).font(.apHeadline)
-            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 32).padding(.horizontal, 24)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private var tools: some View {

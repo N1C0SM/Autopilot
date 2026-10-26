@@ -1,14 +1,25 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MealsList from "@/app/components/dashboard/MealsList";
+import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 
-const mocks = vi.hoisted(() => ({ hapticTap: vi.fn(), isNative: vi.fn().mockReturnValue(false) }));
+const mocks = vi.hoisted(() => ({
+  hapticTap: vi.fn(),
+  isNative: vi.fn().mockReturnValue(false),
+  invoke: vi.fn(),
+}));
 vi.mock("@/shared/lib/native", () => ({ hapticTap: mocks.hapticTap, isNative: mocks.isNative }));
+// La foto de cada plato la resuelve `session-cover`: se controla aquí para que el test sea
+// determinista y para poder dejar una petición «en camino» (que es cuando se colaba la vieja).
+vi.mock("@/shared/integrations/supabase/client", () => ({
+  supabase: { functions: { invoke: mocks.invoke } },
+}));
 
 beforeEach(() => {
   cleanup();
   localStorage.clear();
   vi.clearAllMocks();
+  mocks.invoke.mockResolvedValue({ data: { url: null }, error: null });
 });
 afterEach(cleanup);
 
@@ -102,5 +113,79 @@ describe("day summary", () => {
     expect(screen.getByText("Aún no hay plan de comidas")).toBeVisible();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByRole("group")).not.toBeInTheDocument();
+  });
+});
+
+/** Deja cada petición de foto pendiente y devuelve la lista para resolverlas a mano. */
+const pendingCovers = () => {
+  const pending: Array<(url: string | null) => void> = [];
+  mocks.invoke.mockImplementation(() => new Promise((resolve) => {
+    pending.push((url) => resolve({ data: { url }, error: null }));
+  }));
+  return pending;
+};
+
+const OLD_DISH = "Plato A";
+const OLD_PHOTO = "https://cdn.test/plato-a.jpg";
+const NEW_DISH = "Plato B";
+const NEW_PHOTO = "https://cdn.test/plato-b.jpg";
+
+/** Cuenta cada valor que devuelve el hook en cada render: así se ve el frame con la foto vieja. */
+const PhotoProbe = ({ dish, seen }: { dish: string; seen: Array<string | null> }) => {
+  seen.push(useMealPhoto(dish));
+  return null;
+};
+
+describe("meal photos follow the current dish", () => {
+  it("never paints the previous dish's photo while the new one is on its way", async () => {
+    const pending = pendingCovers();
+    const seen: Array<string | null> = [];
+    const { rerender } = render(<PhotoProbe dish={OLD_DISH} seen={seen} />);
+
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => { pending[0](OLD_PHOTO); });
+    await waitFor(() => expect(seen[seen.length - 1]).toBe(OLD_PHOTO));
+
+    // Se regenera el plan: el primer render con el plato nuevo no puede seguir enseñando el viejo.
+    seen.length = 0;
+    rerender(<PhotoProbe dish={NEW_DISH} seen={seen} />);
+    expect(seen).not.toContain(OLD_PHOTO);
+    expect(seen.every((url) => url === null)).toBe(true);
+
+    await waitFor(() => expect(pending).toHaveLength(2));
+    await act(async () => { pending[1](NEW_PHOTO); });
+    await waitFor(() => expect(seen[seen.length - 1]).toBe(NEW_PHOTO));
+  });
+
+  it("shows the new dish's cached photo straight away instead of the previous one", async () => {
+    localStorage.setItem("autopilot.aiCovers.v1", JSON.stringify({ "m:plato b": NEW_PHOTO }));
+    const pending = pendingCovers();
+    const seen: Array<string | null> = [];
+    const { rerender } = render(<PhotoProbe dish={OLD_DISH} seen={seen} />);
+
+    await waitFor(() => expect(pending).toHaveLength(1));
+    await act(async () => { pending[0](OLD_PHOTO); });
+    await waitFor(() => expect(seen[seen.length - 1]).toBe(OLD_PHOTO));
+
+    seen.length = 0;
+    rerender(<PhotoProbe dish={NEW_DISH} seen={seen} />);
+    expect(seen).not.toContain(OLD_PHOTO);
+    expect(seen[seen.length - 1]).toBe(NEW_PHOTO);
+  });
+});
+
+describe("meal rows", () => {
+  it("remounts the row when the dish changes so it cannot inherit the old photo", () => {
+    const { container, rerender } = render(
+      <MealsList meals={[{ name: "Comida", description: OLD_DISH }]} />,
+    );
+    const before = container.querySelector("button img");
+    expect(before).not.toBeNull();
+
+    rerender(<MealsList meals={[{ name: "Comida", description: NEW_DISH }]} />);
+    const after = container.querySelector("button img");
+
+    expect(after).not.toBeNull();
+    expect(after).not.toBe(before);
   });
 });
