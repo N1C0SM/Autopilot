@@ -17,6 +17,8 @@ vi.mock("@/app/components/ExerciseFocus", () => ({
 }));
 vi.mock("@/shared/components/AIDisclaimer", () => ({ default: () => null }));
 vi.mock("@/app/components/dashboard/CalendarExportDialog", () => ({ default: ({ trigger }: { trigger: ReactNode }) => <>{trigger}</> }));
+// La portada IA es red: aquí se prueba el respaldo de marca y el resto de la pantalla.
+vi.mock("@/shared/hooks/useSessionCover", () => ({ useSessionCover: () => null }));
 afterEach(() => {
   cleanup();
   vi.useRealTimers();

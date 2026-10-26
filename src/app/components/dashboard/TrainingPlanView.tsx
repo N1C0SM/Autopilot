@@ -13,6 +13,8 @@ import AIDisclaimer from "@/shared/components/AIDisclaimer";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
+import { useSessionCover } from "@/shared/hooks/useSessionCover";
+import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
 
 const DAYS_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -187,6 +189,18 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
     ? DAYS_ORDER.map((_, i) => DAYS_ORDER[(DAYS_ORDER.indexOf(expandedDay) + 1 + i) % DAYS_ORDER.length]).find((day) => workPlanFor(day))
     : undefined;
 
+  // Foto de la sesión igual que en «Hoy»: portada IA por ejercicios, imagen del primer
+  // ejercicio y, si no hay, foto de marca. El descanso tiene su propia tarjeta de noche.
+  const coverExercises = selectedPlan?.type === "gimnasio" ? selectedPlan.exercises ?? [] : [];
+  const firstCoverExercise = coverExercises[0];
+  const coverFallback = firstCoverExercise
+    ? (exerciseMetadata.byId[firstCoverExercise.exercise_id] || exerciseMetadata.byName[firstCoverExercise.name])?.image_url
+      || firstCoverExercise.image_url
+      || BRAND_PHOTOS.gym
+    : null;
+  const sessionCover = useSessionCover(coverExercises.map((exercise) => exercise.exercise_id), coverFallback);
+  const dayPhoto = selectedPlan?.type === "gimnasio" ? sessionCover || BRAND_PHOTOS.gym : null;
+
   return (
     <div className="flex w-full flex-col gap-6" onErrorCapture={handleImageError}>
       <h2 className="sr-only">Rutina semanal</h2>
@@ -230,6 +244,12 @@ const TrainingPlanView = ({ dayPlans, initialDay, onOpenWorkout }: Props) => {
 
       {selectedPlan?.type === "gimnasio" && (
         <section aria-label={`Sesión del ${selectedDay.toLocaleLowerCase("es-ES")}`} className="space-y-6">
+          {dayPhoto && (
+            <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-[28px] bg-card">
+              <img key={dayPhoto} src={dayPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%]" />
+              <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            </div>
+          )}
           <SessionHeader day={selectedDay} isToday={selectedIsToday} title={sessionTitle(selectedPlan)} summary={sessionSummary(selectedPlan)} />
           {onOpenWorkout && hasExercises && (
             <Button type="button" variant="hero" size="lg" className="w-full" onClick={() => onOpenWorkout(selectedDay)}>

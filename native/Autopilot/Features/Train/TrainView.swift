@@ -327,6 +327,44 @@ struct ExerciseThumb: View {
     }
 }
 
+/// Portada de la sesión en la rutina semanal: la misma foto que en «Hoy»
+/// (portada IA → primer ejercicio → foto de marca), para que entrenar y descansar
+/// hablen el mismo idioma visual.
+private struct RoutineCover: View {
+    let plan: DayPlan
+    private static let brand = URL(string: "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png")
+    private struct Loaded { let key: String; let url: URL? }
+    @State private var loaded: Loaded?
+
+    private var key: String { "\(plan.day)|\(plan.exercises?.first?.image_url ?? "")" }
+
+    private var shown: URL? {
+        let fallback = plan.exercises?.first?.image_url.flatMap(URL.init(string:)) ?? Self.brand
+        guard let loaded, loaded.key == key else { return fallback }
+        return loaded.url ?? fallback
+    }
+
+    var body: some View {
+        ZStack {
+            Palette.card
+            if let shown {
+                CachedAsyncImage(url: shown) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+            }
+            LinearGradient(colors: [.black.opacity(0.6), .clear], startPoint: .bottom, endPoint: .center)
+        }
+        .frame(maxWidth: .infinity).frame(height: 160)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .accessibilityHidden(true)
+        .task(id: key) {
+            let fallback = plan.exercises?.first?.image_url.flatMap(URL.init(string:)) ?? Self.brand
+            let ids = (plan.exercises ?? []).map(\.exercise_id).filter { !$0.isEmpty }
+            let next = ids.isEmpty ? fallback : await AiCover.session(exerciseIds: ids, fallback: fallback)
+            guard !Task.isCancelled else { return }
+            loaded = Loaded(key: key, url: next ?? fallback)
+        }
+    }
+}
+
 /// Fila que salta de línea (chips).
 struct FlowRow: Layout {
     var spacing: CGFloat = 8
@@ -455,6 +493,7 @@ struct WeeklyRoutineView: View {
         let sets = exercises.reduce(0) { $0 + $1.series }
         let summary = exercises.isEmpty ? nil : ["\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios")", sets > 0 ? "\(sets) \(sets == 1 ? "serie" : "series")" : nil].compactMap { $0 }.joined(separator: " · ")
         VStack(alignment: .leading, spacing: 24) {
+            if plan.isGym { RoutineCover(plan: plan) }
             VStack(alignment: .leading, spacing: 4) {
                 Text(day == DayNames.today ? "\(day) · hoy" : day).font(.apSubhead).foregroundStyle(Palette.muted)
                 Text(plan.title).font(.apTitle1)
@@ -518,30 +557,21 @@ struct WeeklyRoutineView: View {
         .padding(.horizontal, 16)
     }
 
-    /// Tarjeta de descanso: solo aparece si el usuario toca un día sin sesión.
+    /// Tarjeta de descanso de siempre (`RestCard`, la misma que la web): luna con halo.
     @ViewBuilder private func rest(_ day: String) -> some View {
         let next = nextSession(after: day)
-        VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: "moon.zzz.fill")
-                .font(.inter(size: 26, weight: .semibold))
-                .foregroundStyle(Palette.gold)
-                .accessibilityHidden(true)
-            Text(day == DayNames.today ? "Hoy es día de descanso" : "\(day) es día de descanso")
-                .font(.apTitle2)
-            Text(next.map { "Tu próxima sesión es el \($0.lowercased())." } ?? "Recupera y vuelve con más fuerza.")
-                .font(.apSubhead).foregroundStyle(Palette.muted)
+        RestCard(
+            title: day == DayNames.today ? "Hoy es día de descanso" : "\(day) es día de descanso",
+            message: next.map { "Tu próxima sesión es el \($0.lowercased())." } ?? "Recupera y vuelve con más fuerza."
+        ) {
             if let next {
                 Button("Ver el \(next.lowercased())") {
                     Haptics.selection()
                     withAnimation(.snappy) { expanded = next }
                 }
                 .buttonStyle(.pillSecondary)
-                .padding(.top, 4)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private var tools: some View {
