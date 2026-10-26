@@ -15,6 +15,8 @@ import { cn } from "@/shared/lib/utils";
 import { readActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, isActiveWorkoutToday, formatDraftDate, ACTIVE_WORKOUT_EVENT, type ActiveWorkout } from "@/shared/lib/activeWorkout";
 import { toast } from "sonner";
 import { useConfirm } from "@/app/components/admin/content/useConfirm";
+import { useSessionCover } from "@/shared/hooks/useSessionCover";
+import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 
 interface Macros {
   protein: number;
@@ -182,6 +184,16 @@ const HomeOverview = ({
     }
   };
 
+  // Foto del día: portada generada con IA según los ejercicios del día
+  const exercisesForCover = todayPlan?.type === "gimnasio" ? todayPlan.exercises ?? [] : [];
+  const exerciseMetadata = useExerciseMetadata(dayPlans);
+  const coverExercises = exercisesForCover;
+  const firstExercise = coverExercises[0];
+  const sessionCover = useSessionCover(
+    coverExercises.map((e) => e.exercise_id),
+    firstExercise ? (exerciseMetadata.byId[firstExercise.exercise_id] || exerciseMetadata.byName[firstExercise.name])?.image_url || firstExercise.image_url || null : null,
+  );
+
   const [chatMessages, setChatMessages] = useState<ChatPreviewMessage[]>([]);
   const [chatLoaded, setChatLoaded] = useState(false);
   const [chatError, setChatError] = useState(false);
@@ -192,8 +204,7 @@ const HomeOverview = ({
   const todayPlan = dayPlans.find((plan) => plan.day === todayName);
   const scheduledDays = dayPlans.filter((plan) => plan.type === "gimnasio" || plan.type === "actividad");
   const plannedDays = new Set(scheduledDays.map((plan) => plan.day));
-  const exercises = todayPlan?.type === "gimnasio" ? todayPlan.exercises ?? [] : [];
-  const exerciseCount = exercises.length;
+  const exerciseCount = exercisesForCover.length;
   const firstName = profileName?.trim().split(/\s+/)[0];
   const dateLabel = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(now);
   const greetingDate = dateLabel.charAt(0).toLocaleUpperCase("es") + dateLabel.slice(1);
@@ -208,7 +219,7 @@ const HomeOverview = ({
 
   const sessionDetail: string[] = [];
   if (todayPlan?.type === "gimnasio") {
-    const totalSeries = exercises.reduce((total, exercise) => total + (Number(exercise.series) || 0), 0);
+    const totalSeries = exercisesForCover.reduce((total, exercise) => total + (Number(exercise.series) || 0), 0);
     const minutes = estimateMinutes(todayPlan);
     if (exerciseCount) sessionDetail.push(`${exerciseCount} ${exerciseCount === 1 ? "ejercicio" : "ejercicios"}`);
     if (totalSeries) sessionDetail.push(`${totalSeries} ${totalSeries === 1 ? "serie" : "series"}`);
@@ -375,6 +386,13 @@ const HomeOverview = ({
 
         {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
         <div className={cn("flex flex-col lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16", completedToday && !activeWorkout ? "pt-3" : "flex-1 justify-center py-8 md:py-10")}>
+          {/* Foto del día: portada generada con IA según los ejercicios */}
+          {sessionCover && !activeWorkout && (
+            <div aria-hidden="true" className="mb-4 h-48 overflow-hidden rounded-[28px] bg-card lg:mb-6">
+              <img key={sessionCover} src={sessionCover} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500" />
+              <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            </div>
+          )}
           {activeWorkout && activeWorkoutIsToday ? (
             <div className="w-full">
               <p className="type-caption1 font-semibold text-primary">EN CURSO · HOY</p>
