@@ -94,7 +94,7 @@ var get_nutrition_plan_default = defineTool3({
 
 // src/shared/lib/mcp/tools/list-weight-logs.ts
 import { createClient as createClient4 } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool as defineTool4 } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z } from "npm:zod@^4.6.7";
 var list_weight_logs_default = defineTool4({
   name: "list_weight_logs",
@@ -127,7 +127,7 @@ var list_weight_logs_default = defineTool4({
 
 // src/shared/lib/mcp/tools/log-weight.ts
 import { createClient as createClient5 } from "npm:@supabase/supabase-js@^2.98.0";
-import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.0";
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.20.1";
 import { z as z2 } from "npm:zod@^4.6.7";
 var log_weight_default = defineTool5({
   name: "log_weight",
