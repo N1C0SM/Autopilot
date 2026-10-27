@@ -226,30 +226,34 @@ struct SessionExerciseCard: View {
             if isOpen {
                 VStack(spacing: 10) {
                     if !allDone, let p = Progression.suggestion(exercise, previous: workout.previous[exercise.name], previousRpe: workout.previousRpe) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(p.headline).font(.apSubhead.weight(.semibold).monospacedDigit()).lineLimit(1)
-                                Spacer()
-                                if p.canApply {
-                                    Button("Aplicar") { workout.applyProgression(exercise.name, p) }
-                                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
-                                        .accessibilityLabel(p.label == .up ? "Usar \(p.weight) kg en las series" : "Aplicar +1 rep")
+                                Button { showWhy.toggle() } label: {
+                                    Label(showWhy ? "Ocultar" : "Por qué", systemImage: showWhy ? "chevron.up" : "chart.line.uptrend.xyaxis")
+                                        .font(.apFootnote).foregroundStyle(Palette.muted)
+                                }
+                                .buttonStyle(.plain)
+                                if showWhy {
+                                    if let last = Progression.summarize(workout.previous[exercise.name]) { 
+                                        Text(last).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                                    }
+                                    Text(p.reason).font(.apFootnote).foregroundStyle(Palette.foreground.opacity(0.8)).padding(.top, 2)
                                 }
                             }
-                            .frame(minHeight: 44)
-                            Button { showWhy.toggle() } label: {
-                                Label("Por qué", systemImage: "chart.line.uptrend.xyaxis").font(.apFootnote).foregroundStyle(Palette.muted)
-                            }
-                            .buttonStyle(.plain).frame(minHeight: 32)
-                            if showWhy {
-                                if let last = Progression.summarize(workout.previous[exercise.name]) { Text(last).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted) }
-                                Text(p.reason).font(.apFootnote).foregroundStyle(Palette.foreground.opacity(0.8)).padding(.bottom, 6)
+                            Spacer()
+                            if p.canApply {
+                                Button("Aplicar") { workout.applyProgression(exercise.name, p) }
+                                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                                    .buttonStyle(.plain)
+                                    .frame(minHeight: 44)
+                                    .accessibilityLabel(p.label == .up ? "Usar \(p.weight) kg en las series" : "Aplicar +1 rep")
                             }
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 4)
+                        .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Palette.secondary.opacity(0.6), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .accessibilityElement(children: .contain)
-                        .accessibilityLabel("Por qué esta carga")
+                        .accessibilityLabel("Sugerencia de progresión")
                         .padding(.bottom, 8)
                     }
                     HStack(spacing: 8) {
@@ -273,29 +277,6 @@ struct SessionExerciseCard: View {
                         }
                     }
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-
-                    // Botones de acción solo si hay una serie pendiente
-                    if let currentIdx = firstPending {
-                        HStack(spacing: 8) {
-                            Button { workout.addDrop(exercise.name, set: currentIdx) } label: {
-                                Label("Añadir bajada", systemImage: "plus")
-                                    .font(.apSubhead.weight(.medium))
-                                    .frame(maxWidth: .infinity, minHeight: 48)
-                                    .background(Palette.secondary, in: Capsule())
-                            }
-                            Button { workout.toggleWarmup(exercise.name, set: currentIdx) } label: {
-                                let isWarmup = sets[currentIdx].isWarmup == true
-                                Label("Calentamiento", systemImage: isWarmup ? "flame.fill" : "flame")
-                                    .font(.apSubhead.weight(.medium))
-                                    .frame(maxWidth: .infinity, minHeight: 48)
-                                    .foregroundStyle(isWarmup ? Palette.gold : Palette.foreground)
-                                    .background(isWarmup ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
-                            }
-                            .accessibilityLabel("Marcar serie \(currentIdx + 1) como calentamiento")
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.top, 12)
-                    }
 
                     Button { workout.addSet(exercise.name) } label: {
                         Label("Añadir serie", systemImage: "plus").font(.apBody).frame(maxWidth: .infinity, minHeight: 44)
@@ -503,6 +484,28 @@ struct SetLine: View {
                 .sensoryFeedback(.success, trigger: set.done)
             }
             .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 10)
+            .contextMenu {
+                if !set.done {
+                    Button {
+                        workout.toggleWarmup(exercise.name, set: index)
+                    } label: {
+                        Label(isWarmup ? "Quitar calentamiento" : "Marcar como calentamiento", 
+                              systemImage: isWarmup ? "flame.fill" : "flame")
+                    }
+                    
+                    Button {
+                        workout.addDrop(exercise.name, set: index)
+                    } label: {
+                        Label("Añadir bajada", systemImage: "arrow.down.right")
+                    }
+                }
+                
+                Button(role: .destructive) {
+                    workout.removeSet(exercise.name, at: index)
+                } label: {
+                    Label("Eliminar serie", systemImage: "trash")
+                }
+            }
             
             // BAJADAS DEL DROPSET
             if let drops = set.drops, !drops.isEmpty {
