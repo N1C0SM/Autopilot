@@ -21,12 +21,6 @@ Autopilot/
 ├── 🤖 android/             # App Android (Capacitor)
 │   └── app/
 │
-├── 🍎 ios/                 # App iOS legacy (Capacitor)
-│   └── App/
-│
-├── 💻 macos/               # App macOS legacy (Capacitor)
-│   └── AutopilotMac.xcodeproj/
-│
 ├── 🗄️ supabase/            # Backend (edge functions, SQL)
 │   └── .temp/
 │
@@ -53,7 +47,6 @@ Autopilot/
 ## Notas
 
 - Las apps nativas (iPhone/Mac) son **SwiftUI puro** en `native/`
-- Las carpetas `ios/` y `macos/` son versiones legacy con Capacitor (ya no se envían)
-- Android sigue usando Capacitor
+- Android usa Capacitor
 - Todo comparte las mismas tablas de Supabase y lógica de negocio
 
