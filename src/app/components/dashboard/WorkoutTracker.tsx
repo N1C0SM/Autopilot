@@ -59,6 +59,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/shared/components/ui/drawer";
 import { addExerciseLoad } from "@/shared/lib/muscleMapping";
 import { FreeWorkoutPicker } from "@/app/components/dashboard/FreeWorkoutPicker";
+import { celebratePersonalRecord } from "@/shared/lib/confetti";
 
 interface Props {
   userId: string;
@@ -709,7 +710,8 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         void hapticImpact("heavy");
         void hapticNotify("success");
         setRecordMoment({ exercise: exerciseName, diff: `+${diff.toLocaleString("es-ES")} kg`, key: Date.now() });
-        try { navigator.vibrate?.([30, 60, 30]); } catch { /* noop */ }
+        void celebratePersonalRecord();
+        try { navigator.vibrate?.([50, 100, 50, 100, 200]); } catch { /* noop */ }
       }
     } else {
       void hapticTap();
