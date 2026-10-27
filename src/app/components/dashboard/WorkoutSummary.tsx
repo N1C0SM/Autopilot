@@ -1,11 +1,14 @@
 import { useRef, useState, type ElementType, type ReactNode } from "react";
 import { buildWorkoutReview, type ReviewExercise } from "@/shared/lib/workoutReview";
-import { Target, Trophy } from "lucide-react";
+import { Target, Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import { CountUp } from "@/shared/components/ui/count-up";
 import { MuscleMapFigure } from "@/app/components/dashboard/MuscleMapFigure";
 import { WorkoutStoryShare } from "@/app/components/dashboard/WorkoutStoryShare";
+import { motion } from "framer-motion";
+import { parsePositiveWeight } from "@/shared/lib/weight";
+import { isWorkoutSetWarmup } from "@/shared/lib/workoutSet";
 
 interface Props {
   /** Hoja al terminar: barra con «Listo» y pie fijo con Compartir. En línea: sin barra. */
@@ -94,34 +97,155 @@ export function WorkoutSummary({
       label: "Resumen",
       body: (
         <>
-          <header>
+          <header className="text-center">
             <Desc className="type-subhead text-muted-foreground">Completado · {dateLabel}</Desc>
-            <Title className={cn("mt-0.5 truncate", sheet ? "type-large-title" : "type-title1")}>{titleName}</Title>
+            <Title className={cn("mt-1 truncate", sheet ? "type-large-title" : "type-title1")}>{titleName}</Title>
             {titleDetail && <p className="mt-0.5 truncate type-headline text-muted-foreground">{titleDetail}</p>}
           </header>
-          <div className="mt-4 grid grid-cols-2 gap-2.5">
-            {metrics.map((m) => (
-              <div key={m.label} className={tile}>
-                <p className={cn("type-footnote font-semibold", m.accent ? "text-primary" : "text-muted-foreground")}>{m.label}</p>
-                <p className={cn("mt-1 truncate font-rounded text-[30px] font-bold leading-[36px] tabular-nums", m.accent && "text-primary")}>
-                  {"count" in m && typeof m.count === "number" ? <CountUp value={m.count} /> : m.value}
-                  {m.unit && <span className="ml-0.5 text-[17px] font-semibold text-muted-foreground">{m.unit}</span>}
-                </p>
-                {"note" in m && m.note ? (
-                  <p className={cn("truncate type-caption1 font-medium tabular-nums", m.positive ? "text-success" : "text-muted-foreground")}>{m.note}</p>
-                ) : null}
+
+          {/* Hero: Volumen total con comparación visual */}
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mt-6 text-center"
+          >
+            <div className="font-rounded text-[56px] font-bold leading-none tabular-nums text-primary">
+              <CountUp value={totalVolume} />
+              <span className="ml-1 text-[28px] text-muted-foreground">kg</span>
+            </div>
+            
+            {previousVolume > 0 && (
+              <motion.div 
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.3 }}
+                className="mt-3 flex items-center justify-center gap-2"
+              >
+                {diff > 0 ? (
+                  <>
+                    <TrendingUp className="h-5 w-5 text-success" strokeWidth={2.5} />
+                    <span className="font-rounded text-[22px] font-bold tabular-nums text-success">
+                      +{fmt(diff)} kg
+                    </span>
+                  </>
+                ) : diff < 0 ? (
+                  <>
+                    <TrendingDown className="h-5 w-5 text-warning" strokeWidth={2.5} />
+                    <span className="font-rounded text-[22px] font-bold tabular-nums text-warning">
+                      {fmt(diff)} kg
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Minus className="h-5 w-5 text-muted-foreground" strokeWidth={2.5} />
+                    <span className="type-headline text-muted-foreground">
+                      Mismo volumen
+                    </span>
+                  </>
+                )}
+              </motion.div>
+            )}
+          </motion.div>
+
+          {/* Récords personales destacados */}
+          {records.length > 0 && (
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.3 }}
+              className="mt-6 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-4 ring-1 ring-inset ring-amber-500/30"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="h-6 w-6 text-amber-400" strokeWidth={2} />
+                <span className="type-title3 text-amber-400">
+                  {records.length} Récord{records.length > 1 ? 's' : ''} Personal{records.length > 1 ? 'es' : ''}
+                </span>
               </div>
-            ))}
-            {records.length > 0 && (
-              <div className={cn(tile, "col-span-2 flex items-center gap-3")}>
-                <Trophy className="h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="type-footnote font-semibold text-primary">{records.length === 1 ? "Nuevo récord" : `${records.length} récords nuevos`}</p>
-                  <p className="truncate type-headline">{records.join(" · ")}</p>
+              
+              <div className="space-y-2">
+                {records.map((exerciseName, idx) => {
+                  const currentSet = current.find(e => e.name === exerciseName)?.sets.find(s => s.done && !isWorkoutSetWarmup(s));
+                  const prevSet = previous.find(e => e.name === exerciseName)?.sets.find(s => s.done && !isWorkoutSetWarmup(s));
+                  const currentWeight = parsePositiveWeight(currentSet?.weight);
+                  const prevWeight = parsePositiveWeight(prevSet?.weight);
+                  const weightDiff = currentWeight && prevWeight ? currentWeight - prevWeight : 0;
+                  
+                  return (
+                    <motion.div 
+                      key={exerciseName}
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 + idx * 0.1, duration: 0.3 }}
+                      className="flex items-center justify-between rounded-lg bg-black/10 px-3 py-2"
+                    >
+                      <span className="type-body font-medium text-amber-50">{exerciseName}</span>
+                      <div className="text-right">
+                        <div className="type-body font-bold tabular-nums text-amber-400">
+                          {currentWeight ? `${currentWeight}kg` : '—'}
+                        </div>
+                        {weightDiff > 0 && (
+                          <div className="type-caption1 tabular-nums text-amber-400/70">
+                            +{weightDiff}kg
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Stats grid */}
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.3 }}
+            className="mt-6 grid grid-cols-2 gap-3"
+          >
+            {/* Series completadas */}
+            <div className={cn(tile, "text-center")}>
+              <div className="type-caption1 font-semibold text-muted-foreground">
+                Series
+              </div>
+              <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+                {completedSets}
+              </div>
+            </div>
+            
+            {/* Ejercicios */}
+            <div className={cn(tile, "text-center")}>
+              <div className="type-caption1 font-semibold text-muted-foreground">
+                Ejercicios
+              </div>
+              <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+                {completedExercises}<span className="text-[20px] text-muted-foreground">/{plannedExercises}</span>
+              </div>
+            </div>
+            
+            {/* Músculos */}
+            <div className={cn(tile, "text-center")}>
+              <div className="type-caption1 font-semibold text-muted-foreground">
+                Músculos
+              </div>
+              <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+                {muscles.length}
+              </div>
+            </div>
+            
+            {/* RPE */}
+            {rpe !== null && (
+              <div className={cn(tile, "text-center")}>
+                <div className="type-caption1 font-semibold text-muted-foreground">
+                  Esfuerzo
+                </div>
+                <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+                  {rpe}<span className="text-[20px] text-muted-foreground">/10</span>
                 </div>
               </div>
             )}
-          </div>
+          </motion.div>
         </>
       ),
     },
