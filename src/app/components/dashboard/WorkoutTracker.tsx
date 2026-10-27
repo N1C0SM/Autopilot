@@ -1778,6 +1778,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 {trackingConfig.fixedBodyweight ? (
                                   <div aria-label="Peso corporal" className="flex h-11 w-full items-center justify-center rounded-[10px] bg-secondary type-body text-muted-foreground">PC</div>
                                 ) : (
+                                <>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -1791,6 +1792,13 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
                                 />
+                                {si === firstPendingIndex && (
+                                  <WeightAdjuster
+                                    currentWeight={parseFloat(set.weight) || 0}
+                                    onChange={(newWeight) => updateSet(ex.name, si, "weight", String(newWeight))}
+                                  />
+                                )}
+                                </>
                                 )}
                               </div>
 
