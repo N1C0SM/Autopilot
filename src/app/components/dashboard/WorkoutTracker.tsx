@@ -125,11 +125,20 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
   const [resumeDraft] = useState(() => resume ? readActiveWorkout(userId) : null);
   const [workoutView, setWorkoutViewState] = useState(() => getWorkoutView(userId));
   const [openExercises, setOpenExercises] = useState<number[]>([]);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => 
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
   useEffect(() => {
     const refresh = () => setWorkoutViewState(getWorkoutView(userId));
     window.addEventListener(WORKOUT_VIEW_EVENT, refresh);
     return () => window.removeEventListener(WORKOUT_VIEW_EVENT, refresh);
   }, [userId]);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handleChange = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
   const todayIndex = (new Date().getDay() + 6) % 7;
   const today = DAYS_ORDER[todayIndex];
   // El día abierto siempre tiene sesión: el borrador activo, el día pedido si entrena,
@@ -1170,7 +1179,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
         <button
           type="button"
           onClick={() => { void hapticTap(); onCancel(); }}
-          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60"
+          className="mb-2 inline-flex min-h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 [touch-action:manipulation]"
         >
           <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
           <span className="type-body">Rutina semanal</span>
@@ -1187,7 +1196,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                 type="button"
                 onClick={() => { void hapticTap(); void saveAndExit(); }}
                 disabled={saving}
-                className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 disabled:opacity-40"
+                className="inline-flex h-11 items-center gap-0.5 pl-0.5 pr-2 text-primary transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
               >
                 <ChevronLeft className="h-[22px] w-[22px]" strokeWidth={2.5} aria-hidden="true" />
                 <span className="type-body">Salir</span>
@@ -1201,7 +1210,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   aria-label="Más acciones"
                   onClick={() => { void hapticTap(); setDiscardOpen(true); }}
                   disabled={saving}
-                  className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40"
+                  className="inline-flex h-11 w-11 items-center justify-center transition-opacity active:opacity-60 disabled:opacity-40 [touch-action:manipulation]"
                 >
                   <span className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-secondary text-primary">
                     <MoreHorizontal className="h-[18px] w-[18px]" strokeWidth={2.5} aria-hidden="true" />
@@ -1792,11 +1801,14 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                   aria-invalid={Boolean(inputError && mainError && set.weight.trim())}
                                   className={`${NUMBER_FIELD} ${si === firstPendingIndex ? CURRENT_FIGURE : ""} ${isWarmup || (!set.done && prevSets?.[si]?.done && set.weight === prevSets[si].weight) ? "text-muted-foreground" : ""}`}
                                 />
-                                {si === firstPendingIndex && (
-                                  <WeightAdjuster
-                                    currentWeight={parseFloat(set.weight) || 0}
-                                    onChange={(newWeight) => updateSet(ex.name, si, "weight", String(newWeight))}
-                                  />
+                                {si === firstPendingIndex && !set.done && (
+                                  <div className="mt-2">
+                                    <WeightAdjuster
+                                      value={set.weight}
+                                      onChange={(newWeight) => updateSet(ex.name, si, "weight", newWeight)}
+                                      disabled={false}
+                                    />
+                                  </div>
                                 )}
                                 </>
                                 )}
@@ -1832,9 +1844,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 {/* Al marcar, el círculo «salta» con un muelle (como Hevy/Fitness). */}
                                 <motion.span
                                   key={set.done ? "done" : "pending"}
-                                  initial={set.done ? { scale: 0.6 } : false}
-                                  animate={{ scale: 1 }}
-                                  transition={{ type: "spring", stiffness: 520, damping: 17 }}
+                                  initial={set.done && !prefersReducedMotion ? { scale: 0.6 } : { opacity: 0.7 }}
+                                  animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+                                  transition={prefersReducedMotion ? { duration: 0.15 } : { type: "spring", stiffness: 520, damping: 17 }}
                                   className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-150 ${checkClass}`}
                                 >
                                   <Check className="h-[18px] w-[18px]" strokeWidth={3} aria-hidden="true" />
@@ -1844,9 +1856,9 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
 
                             {livePR && (
                               <motion.div
-                                initial={{ scale: 0.7, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                transition={{ type: "spring", stiffness: 420, damping: 14 }}
+                                initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.7, opacity: 0 }}
+                                animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+                                transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 420, damping: 14 }}
                                 className="mt-2 flex w-fit origin-left items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-0.5 type-footnote font-semibold text-amber-400 ring-1 ring-inset ring-amber-500/30 shadow-[0_0_10px_rgba(234,179,8,0.15)]">
                                 <Trophy className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden="true" />
                                 <span>Récord personal · {livePR}</span>
@@ -1986,7 +1998,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 380, damping: 36 }}
+                  transition={prefersReducedMotion ? { duration: 0.2 } : { type: "spring", stiffness: 380, damping: 36 }}
                   className="overflow-hidden"
                 >
                   <div role="timer" aria-label="Descanso entre series" className="pb-3">
@@ -1997,10 +2009,10 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                           {Math.floor(restTimer / 60)}:{(restTimer % 60).toString().padStart(2, "0")}
                         </p>
                       </div>
-                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60">−30</button>
-                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60">+30</button>
-                      <button type="button" aria-label="Saltar descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 px-2 type-body text-primary transition-opacity active:opacity-60">
-                        Saltar
+                      <button type="button" aria-label="Restar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(-30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">−30</button>
+                      <button type="button" aria-label="Sumar 30 segundos" onClick={() => { void hapticSelection(); adjustRest(30); }} className="h-11 min-w-11 px-2 type-body tabular-nums text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">+30</button>
+                      <button type="button" aria-label="Omitir descanso" onClick={() => { void hapticTap(); setRestTimer(null); }} className="-mr-2 h-11 rounded-lg bg-primary/10 px-3 type-body font-semibold text-primary transition-opacity active:opacity-60 [touch-action:manipulation]">
+                        Omitir
                       </button>
                     </div>
                     <div aria-hidden="true" className="mt-2 h-[3px] overflow-hidden rounded-full bg-secondary">
