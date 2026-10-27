@@ -31,8 +31,6 @@ export function applyProgressionToPendingSets(
   });
 }
 
-const incrementFor = (weight: number) => (weight >= 40 ? 2.5 : 1.25);
-
 const formatKg = (weight: number) => weight.toLocaleString("es-ES", { maximumFractionDigits: 2 });
 
 /**
@@ -140,10 +138,9 @@ export const getProgressionSuggestion = (
     };
   }
 
-  const nextWeight = Math.round((lastWeight + incrementFor(lastWeight)) * 100) / 100;
   return {
-    label: "Subir",
-    weight: String(nextWeight),
-    reason: `Completaste ${exercise.reps} reps en todas las series: prueba ${nextWeight} kg.`,
+    label: "Mantener",
+    weight: String(lastWeight),
+    reason: "Completaste el objetivo. Puedes mantener la carga o aumentarla manualmente si te sientes preparado.",
   };
 };
