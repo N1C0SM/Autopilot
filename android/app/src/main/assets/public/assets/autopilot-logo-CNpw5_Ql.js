@@ -1,0 +1,1 @@
+var e=`/assets/autopilot-logo-nI2KfNfH.png`;export{e as t};

@@ -1,0 +1,1 @@
+function e({weight:e,sex:t,goal:n}){let r=Number(e);if(!Number.isFinite(r)||r<=30)return{calories:null,protein:null,hasWeight:!1};let i=t===`female`?r*28:r*32;return{calories:Math.round(n===`lose_weight`?i-350:n===`gain_muscle`?i+300:i),protein:Math.round(r*2),hasWeight:!0}}export{e as t};

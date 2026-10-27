@@ -1,0 +1,1 @@
+import{p as e}from"./react-vendor-DrmNC-PY.js";import{i as t}from"./dist-62TeNfsI.js";var n=t(`Browser`,{web:()=>e(()=>import(`./web-BlIVyTco.js`).then(e=>new e.BrowserWeb),[])});export{n as Browser};

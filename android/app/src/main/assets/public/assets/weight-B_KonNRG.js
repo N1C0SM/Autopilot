@@ -1,0 +1,1 @@
+var e=e=>{if(typeof e!=`number`&&typeof e!=`string`)return null;let t=typeof e==`string`?e.trim().replace(`,`,`.`):e;if(t===``)return null;let n=Number(t);return Number.isFinite(n)&&n>0?n:null};export{e as t};

@@ -1,0 +1,1 @@
+var e=(e=new Date)=>`${e.getFullYear()}-${e.getMonth()+1}-${e.getDate()}`,t=(t,n=new Date)=>t?`meals_done_${t}_${e(n)}`:`meals_done_${e(n)}`;function n(e){try{let n=localStorage.getItem(t(e));return n?JSON.parse(n):[]}catch{return[]}}export{n,t};

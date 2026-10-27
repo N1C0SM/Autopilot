@@ -1,0 +1,1 @@
+var e=(e=new Date)=>`${e.getFullYear()}-${String(e.getMonth()+1).padStart(2,`0`)}-${String(e.getDate()).padStart(2,`0`)}`,t=e=>{let t=/^(\d{4})-(\d{2})-(\d{2})$/.exec(e);return t?new Date(Number(t[1]),Number(t[2])-1,Number(t[3]),12):new Date(e)};export{e as n,t};

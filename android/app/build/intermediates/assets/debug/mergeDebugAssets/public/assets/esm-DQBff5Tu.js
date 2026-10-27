@@ -1,0 +1,1 @@
+import{p as e}from"./react-vendor-BGGnU2c6.js";import{i as t}from"./dist-B-fBiTU6.js";var n=t(`SplashScreen`,{web:()=>e(()=>import(`./web-DpV_D5_x.js`).then(e=>new e.SplashScreenWeb),[])});export{n as SplashScreen};

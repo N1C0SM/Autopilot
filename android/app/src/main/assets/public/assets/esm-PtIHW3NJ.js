@@ -1,0 +1,1 @@
+import{p as e}from"./react-vendor-DrmNC-PY.js";import{i as t}from"./dist-62TeNfsI.js";var n=t(`App`,{web:()=>e(()=>import(`./web-rXY9f0hC.js`).then(e=>new e.AppWeb),[])});export{n as App};

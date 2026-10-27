@@ -7,11 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
 node_modules
-bun.lockb
-
-# Build outputs
 dist
 dist-ssr
 *.local
@@ -28,12 +24,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# Claude/Lovable AI artifacts
-.claude/
-.claude_backup/
-.lovable/
-
-# State local del CLI de Supabase (enlaces, caché)
+# Estado local del CLI de Supabase (enlaces, caché)
 supabase/.temp/
 
 # Variables de entorno locales (NUNCA commitear valores reales)
@@ -41,25 +32,3 @@ supabase/.temp/
 .env.local
 .env.*.local
 !.env.example
-
-# Native iOS/macOS builds
-native/Autopilot.xcodeproj/
-native/Autopilot/App.entitlements
-native/Autopilot/Assets.xcassets/
-native/Autopilot/PrivacyInfo.xcprivacy
-native/build/
-ios/
-macos/
-
-# Android builds  
-android/
-
-# Capacitor
-capacitor.config.ts
-
-# Testing & analysis
-.unlighthouse/
-.shots/
-
-# GitHub workflows (si son generados automáticamente)
-# .github/

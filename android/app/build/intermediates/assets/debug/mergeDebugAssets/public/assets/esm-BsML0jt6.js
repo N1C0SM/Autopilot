@@ -1,0 +1,1 @@
+import{p as e}from"./react-vendor-BGGnU2c6.js";import{i as t}from"./dist-B-fBiTU6.js";var n=t(`Browser`,{web:()=>e(()=>import(`./web-fhX66c5k.js`).then(e=>new e.BrowserWeb),[])});export{n as Browser};

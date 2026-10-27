@@ -1,0 +1,1 @@
+import{p as e}from"./react-vendor-BGGnU2c6.js";import{i as t}from"./dist-B-fBiTU6.js";var n=t(`Share`,{web:()=>e(()=>import(`./web-ibdK2Yh7.js`).then(e=>new e.ShareWeb),[])});export{n as Share};

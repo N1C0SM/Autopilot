@@ -1,0 +1,7 @@
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-tracing-1.2.0-0 /Users/Nicolas/.gradle/caches/8.14.3/transforms/dcfd9b438b7b1dc562c63a5efe9cf4a0/transformed/tracing-1.2.0/res
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-core-1.7.0-1 /Users/Nicolas/.gradle/caches/8.14.3/transforms/f3c8c5ab594c56ca9009b89515fbb52f/transformed/core-1.7.0/res
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-androidTest-2 /Users/Nicolas/Developer/Autopilot-source/android/app/build/generated/res/resValues/androidTest/debug
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-updated_navigation_xml-3 /Users/Nicolas/Developer/Autopilot-source/android/app/build/generated/updated_navigation_xml/debugAndroidTest
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-mergeDebugAndroidTestResources-4 /Users/Nicolas/Developer/Autopilot-source/android/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-mergeDebugAndroidTestResources-5 /Users/Nicolas/Developer/Autopilot-source/android/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
+app.lovable.aa0029da00154c05a2b503e61df0f87c.test.app-debugAndroidTest-6 /Users/Nicolas/Developer/Autopilot-source/android/app/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources

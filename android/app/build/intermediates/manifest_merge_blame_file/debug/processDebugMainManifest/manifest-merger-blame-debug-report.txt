@@ -1,0 +1,212 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="app.lovable.aa0029da00154c05a2b503e61df0f87c"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="36" />
+10
+11    <!-- Permissions -->
+12
+13    <uses-permission android:name="android.permission.INTERNET" />
+13-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:34:5-67
+13-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:34:22-64
+14    <uses-permission android:name="android.permission.CAMERA" />
+14-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:35:5-65
+14-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:35:22-62
+15    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+15-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:36:5-76
+15-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:36:22-73
+16    <uses-permission
+16-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:37:5-107
+17        android:name="android.permission.READ_EXTERNAL_STORAGE"
+17-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:37:22-77
+18        android:maxSdkVersion="32" />
+18-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:37:78-104
+19    <uses-permission
+19-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:38:5-108
+20        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+20-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:38:22-78
+21        android:maxSdkVersion="29" />
+21-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:38:79-105
+22
+23    <uses-feature
+23-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:39:5-85
+24        android:name="android.hardware.camera"
+24-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:39:19-57
+25        android:required="false" />
+25-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:39:58-82
+26    <uses-feature
+26-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:40:5-95
+27        android:name="android.hardware.camera.autofocus"
+27-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:40:19-67
+28        android:required="false" />
+28-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:40:68-92
+29
+30    <queries>
+30-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-11:15
+31        <intent>
+31-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:9-10:18
+32            <action android:name="android.support.customtabs.action.CustomTabsService" />
+32-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:13-90
+32-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:21-87
+33        </intent>
+34    </queries>
+35
+36    <uses-permission android:name="android.permission.VIBRATE" />
+36-->[:capacitor-haptics] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-66
+36-->[:capacitor-haptics] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/haptics/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:22-63
+37
+38    <permission
+38-->[androidx.core:core:1.17.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:22:5-24:47
+39        android:name="app.lovable.aa0029da00154c05a2b503e61df0f87c.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+39-->[androidx.core:core:1.17.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:23:9-81
+40        android:protectionLevel="signature" />
+40-->[androidx.core:core:1.17.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:24:9-44
+41
+42    <uses-permission android:name="app.lovable.aa0029da00154c05a2b503e61df0f87c.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+42-->[androidx.core:core:1.17.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:26:5-97
+42-->[androidx.core:core:1.17.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:26:22-94
+43
+44    <application
+44-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:3:5-30:19
+45        android:allowBackup="true"
+45-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:4:9-35
+46        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+46-->[androidx.core:core:1.17.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:28:18-86
+47        android:debuggable="true"
+48        android:extractNativeLibs="false"
+49        android:icon="@mipmap/ic_launcher"
+49-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:5:9-43
+50        android:label="@string/app_name"
+50-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:6:9-41
+51        android:roundIcon="@mipmap/ic_launcher_round"
+51-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:7:9-54
+52        android:supportsRtl="true"
+52-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:8:9-35
+53        android:theme="@style/AppTheme" >
+53-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:9:9-40
+54        <activity
+54-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:10:9-21:20
+55            android:name="app.lovable.aa0029da00154c05a2b503e61df0f87c.MainActivity"
+55-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:12:13-41
+56            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+56-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:11:13-148
+57            android:exported="true"
+57-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:16:13-36
+58            android:label="@string/title_activity_main"
+58-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:13:13-56
+59            android:launchMode="singleTask"
+59-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:15:13-44
+60            android:theme="@style/AppTheme.NoActionBarLaunch" >
+60-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:14:13-62
+61            <intent-filter>
+61-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:17:13-20:29
+62                <action android:name="android.intent.action.MAIN" />
+62-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:18:17-69
+62-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:18:25-66
+63
+64                <category android:name="android.intent.category.LAUNCHER" />
+64-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:19:17-77
+64-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:19:27-74
+65            </intent-filter>
+66        </activity>
+67
+68        <provider
+69            android:name="androidx.core.content.FileProvider"
+69-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:24:13-62
+70            android:authorities="app.lovable.aa0029da00154c05a2b503e61df0f87c.fileprovider"
+70-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:25:13-64
+71            android:exported="false"
+71-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:26:13-37
+72            android:grantUriPermissions="true" >
+72-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:27:13-47
+73            <meta-data
+73-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:28:13-112
+74                android:name="android.support.FILE_PROVIDER_PATHS"
+74-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:28:24-74
+75                android:resource="@xml/file_paths" />
+75-->/Users/Nicolas/Developer/Autopilot-source/android/app/src/main/AndroidManifest.xml:28:75-109
+76        </provider>
+77
+78        <activity
+78-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:9-18:75
+79            android:name="com.capacitorjs.plugins.browser.BrowserControllerActivity"
+79-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:15:13-85
+80            android:exported="false"
+80-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:16:13-37
+81            android:launchMode="singleTask"
+81-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:17:13-44
+82            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+82-->[:capacitor-browser] /Users/Nicolas/Developer/Autopilot-source/node_modules/@capacitor/browser/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:18:13-72
+83
+84        <provider
+84-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+85            android:name="androidx.startup.InitializationProvider"
+85-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+86            android:authorities="app.lovable.aa0029da00154c05a2b503e61df0f87c.androidx-startup"
+86-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+87            android:exported="false" >
+87-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+88            <meta-data
+88-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+89                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+89-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+90                android:value="androidx.startup" />
+90-->[androidx.emoji2:emoji2:1.3.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+91            <meta-data
+91-->[androidx.lifecycle:lifecycle-process:2.6.2] /Users/Nicolas/.gradle/caches/8.14.3/transforms/14a3b51da1167f75215e7e32d2231e74/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:29:13-31:52
+92                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+92-->[androidx.lifecycle:lifecycle-process:2.6.2] /Users/Nicolas/.gradle/caches/8.14.3/transforms/14a3b51da1167f75215e7e32d2231e74/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:30:17-78
+93                android:value="androidx.startup" />
+93-->[androidx.lifecycle:lifecycle-process:2.6.2] /Users/Nicolas/.gradle/caches/8.14.3/transforms/14a3b51da1167f75215e7e32d2231e74/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:31:17-49
+94            <meta-data
+94-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+95                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+95-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+96                android:value="androidx.startup" />
+96-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+97        </provider>
+98
+99        <receiver
+99-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+100            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+100-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+101            android:directBootAware="false"
+101-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+102            android:enabled="true"
+102-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+103            android:exported="true"
+103-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+104            android:permission="android.permission.DUMP" >
+104-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+105            <intent-filter>
+105-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+106                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+107            </intent-filter>
+108            <intent-filter>
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+109                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+109-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+109-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+110            </intent-filter>
+111            <intent-filter>
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+112                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+112-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+112-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+113            </intent-filter>
+114            <intent-filter>
+114-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+115                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+115-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+115-->[androidx.profileinstaller:profileinstaller:1.4.0] /Users/Nicolas/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92
+116            </intent-filter>
+117        </receiver>
+118    </application>
+119
+120</manifest>

@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-B0Z9INg1.js";import{i as t}from"./motion-DnpL4vob.js";import{t as n}from"./client-Dw1a14VW.js";var r=e(t(),1);function i(){let[e,t]=(0,r.useState)(null);return(0,r.useEffect)(()=>{n.rpc(`get_apk_download_enabled`).then(({data:e,error:n})=>{t(n?!0:e!==!1)})},[]),[e,t]}export{i as t};

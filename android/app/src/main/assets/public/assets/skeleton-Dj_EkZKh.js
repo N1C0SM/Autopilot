@@ -1,0 +1,1 @@
+import{r as e}from"./motion-BN2gZqCr.js";import{t}from"./utils-C16UUeRx.js";var n=e();function r({className:e,...r}){return(0,n.jsx)(`div`,{className:t(`animate-pulse rounded-lg bg-secondary`,e),...r})}export{r as t};

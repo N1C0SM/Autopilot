@@ -1,0 +1,95 @@
+# Autopilot
+
+> Autopilot (autopilotplan.com) es una app web y móvil en español para crear tu rutina de entrenamiento según tu objetivo, días y material (gimnasio, casa o calistenia), registrar cada serie y seguir tu progreso. El plan Free es gratis, sin tarjeta y sin caducidad.
+
+Creada y mantenida por Nicolás San Marcos (fundador y desarrollador), España. La rutina y la progresión usan reglas de entrenamiento fijas; la IA se usa para el análisis corporal por foto y el asistente de dudas. No sustituye el consejo médico.
+
+## Planes
+
+- **Free** — gratis, sin tarjeta y sin caducidad: Rutina inicial según tu objetivo, días y material; Registro de series, repeticiones y kg; Historial, peso y récords.
+
+## Páginas
+
+- [App de entrenamiento y nutrición. Empieza gratis](https://autopilotplan.com/): Crea tu rutina según tu objetivo, días y material, registra cada serie y sigue tu progreso en el gimnasio o en casa. Gratis, sin tarjeta.
+- [Planes y precios](https://autopilotplan.com/planes): Empieza gratis, sin tarjeta.
+- [Así funciona Autopilot](https://autopilotplan.com/como-funciona): Tu objetivo, tu rutina y tu progreso. Mira cómo se usa la app antes de crear tu cuenta.
+- [Quién está detrás de Autopilot](https://autopilotplan.com/equipo): Conoce a Nicolás San Marcos, fundador y desarrollador de Autopilot.
+- [Preguntas frecuentes](https://autopilotplan.com/preguntas-frecuentes): Resuelve tus dudas sobre los planes, el entrenamiento, el plan gratis y tu cuenta.
+- [Análisis corporal gratis con IA](https://autopilotplan.com/scan): Sube una foto y recibe un análisis estimado por IA de tu físico, con lo que más te limita y por dónde empezar. Gratis y sin tarjeta.
+- [Recursos: guías y artículos de entrenamiento](https://autopilotplan.com/recursos): Guías en PDF, recomendaciones y artículos sobre entrenamiento, nutrición e hipertrofia seleccionados por Autopilot.
+- [Blog de entrenamiento, nutrición e hipertrofia](https://autopilotplan.com/blog): Guías prácticas en español sobre entrenamiento de fuerza, hipertrofia, nutrición y progreso en el gimnasio o en casa.
+- [Conectar Autopilot con ChatGPT o Claude (MCP)](https://autopilotplan.com/connect): Conecta Autopilot a ChatGPT o Claude para consultar tu plan de entrenamiento y nutrición desde tu asistente.
+
+## Blog
+
+- [Frecuencia F1, F2 y F3: cuántas veces entrenar cada músculo](https://autopilotplan.com/blog/frecuencia-de-entrenamiento): Entrenar un músculo una, dos o tres veces por semana: qué dice la evidencia, para qué sirve la frecuencia y cómo elegirla según tu horario.
+- [RIR, RPE y fallo muscular: cómo medir el esfuerzo](https://autopilotplan.com/blog/rir-rpe-proximidad-al-fallo): Qué son el RIR y el RPE, cómo estimar las repeticiones en reserva, cuándo tiene sentido llegar al fallo y qué errores son más frecuentes.
+- [Volumen de entrenamiento: cuántas series necesitas](https://autopilotplan.com/blog/series-semanales-por-musculo): Cómo medir el volumen, cuántas series semanales por músculo recomienda la evidencia y cómo ajustarlas según tu experiencia y recuperación.
+- [Relación estímulo-fatiga: elegir ejercicios eficientes](https://autopilotplan.com/blog/estimulo-fatiga): Cómo valorar si un ejercicio o una serie compensa: cuánto estímulo aporta frente a la fatiga que genera, y por qué es un criterio útil pero teórico.
+- [Periodización y autorregulación: planificar sin rigidez](https://autopilotplan.com/blog/periodizacion-de-la-fuerza): Qué es la periodización lineal, ondulante y por bloques, qué dice la evidencia y cómo la autorregulación ajusta el plan a cómo estás cada día.
+- [Especificidad del entrenamiento: te adaptas a lo que practicas](https://autopilotplan.com/blog/especificidad-del-entrenamiento): Por qué el cuerpo se adapta de forma específica al gesto, la carga y la velocidad que entrenas, y cómo aplicar el principio sin caer en extremos.
+- [Potenciación del rendimiento: por qué a veces rindes más tras una serie pesada](https://autopilotplan.com/blog/potenciacion-del-rendimiento): Qué es la potenciación tras una contracción intensa, qué dice la evidencia sobre saltos y esprints y cuándo tiene sentido usarla.
+- [Fatiga central y periférica en el entrenamiento de fuerza](https://autopilotplan.com/blog/fatiga-central-y-periferica): Qué significa estar fatigado: lo que ocurre en el músculo y lo que ocurre en el sistema nervioso, y cómo gestionar la fatiga sin perder estímulo.
+- [Adaptaciones neurales: por qué ganas fuerza antes que músculo](https://autopilotplan.com/blog/adaptaciones-neurales): Las primeras semanas ganas fuerza muy rápido sin apenas crecer. Qué cambia en el sistema nervioso y por qué la técnica también es fuerza.
+- [Reclutamiento de unidades motoras y principio del tamaño](https://autopilotplan.com/blog/principio-de-henneman): Cómo decide el sistema nervioso qué fibras activar, qué es el principio del tamaño de Henneman y por qué el esfuerzo importa más que la carga.
+- [Rango de movimiento y movilidad: cuánto bajar y cómo mejorarla](https://autopilotplan.com/blog/rango-de-movimiento-completo-vs-parcial): Qué dice la evidencia sobre rango completo frente a parcial, cómo influye en la hipertrofia y por qué el entrenamiento de fuerza también mejora la movilidad.
+- [Insuficiencia activa y pasiva en músculos biarticulares](https://autopilotplan.com/blog/insuficiencia-activa-y-pasiva): Por qué algunos músculos pierden fuerza o recorrido según la posición de dos articulaciones a la vez, y cómo usarlo al elegir ejercicios.
+- [Perfiles de fuerza muscular: dónde eres fuerte y dónde débil](https://autopilotplan.com/blog/perfiles-de-fuerza-muscular): La capacidad del músculo para producir fuerza cambia a lo largo del recorrido. Qué es el perfil de fuerza y cómo se relaciona con la curva del ejercicio.
+- [Curvas de resistencia: cómo cambia la dificultad del ejercicio](https://autopilotplan.com/blog/perfil-de-resistencia): Qué es la curva de resistencia de un ejercicio, cómo la modifican mancuernas, poleas, máquinas y bandas, y cómo elegir según el objetivo.
+- [Brazos de momento y torque: la física de cada ejercicio](https://autopilotplan.com/blog/brazo-de-momento): Por qué la misma carga pesa distinto según la posición: qué son el brazo de momento y el torque, y cómo usarlos para elegir y ajustar ejercicios.
+- [Cómo maximizar la hipertrofia: lo que de verdad importa](https://autopilotplan.com/blog/como-maximizar-la-hipertrofia): Las variables con más peso en el crecimiento muscular ordenadas por prioridad: esfuerzo, volumen, progresión, proteína, constancia y descanso.
+- [Hipertrofia regional: por qué un músculo no crece igual en todas partes](https://autopilotplan.com/blog/hipertrofia-regional): Un músculo puede crecer más en unas zonas que en otras según el ejercicio. Qué sabemos sobre la hipertrofia regional y cómo usarlo con prudencia.
+- [Relación fuerza-longitud: por qué la posición cambia la fuerza](https://autopilotplan.com/blog/relacion-fuerza-longitud): La fuerza que produce un músculo depende de su longitud. Qué explica la curva fuerza-longitud y por qué importa al elegir ejercicios y rangos.
+- [Hipertrofia en posiciones alargadas](https://autopilotplan.com/blog/hipertrofia-en-estiramiento): Qué dicen los estudios sobre entrenar con el músculo estirado, por qué podría favorecer el crecimiento y qué no sabemos todavía.
+- [Tensión mecánica: el principal estímulo de la hipertrofia](https://autopilotplan.com/blog/tension-mecanica-hipertrofia): Qué es la tensión mecánica, por qué se considera el motor principal del crecimiento muscular y cómo generarla en cada serie sin necesidad de cargas máximas.
+- [Cómo progresar sin aumentar kilos](https://autopilotplan.com/blog/progresar-sin-aumentar-kilos): Opciones para seguir progresando cuando no puedes subir peso: repeticiones, series, rango, palancas y esfuerzo. Qué cuenta como progreso real y qué no.
+- [Cómo superar un estancamiento paso a paso](https://autopilotplan.com/blog/como-superar-un-estancamiento): Un método ordenado para diagnosticar por qué no progresas: registros, esfuerzo, volumen, recuperación y técnica, antes de cambiar toda la rutina.
+- [Cuándo aumentar el peso (y cuándo no)](https://autopilotplan.com/blog/cuando-aumentar-el-peso): Señales objetivas para subir la carga, cuánto aumentar en cada tipo de ejercicio y por qué subir demasiado pronto suele frenar tu progreso.
+- [Doble progresión: el método más simple para progresar](https://autopilotplan.com/blog/doble-progresion): Cómo funciona la doble progresión, por qué es ideal para la mayoría de personas y cómo aplicarla en el gimnasio y en calistenia paso a paso.
+- [Sobrecarga progresiva: 15 métodos y sus diferencias](https://autopilotplan.com/blog/sobrecarga-progresiva): Quince formas de progresar en el entrenamiento, cuáles aumentan de verdad la exigencia y cuáles solo cambian el ejercicio o la forma de medirlo.
+- [Los 20 errores más comunes en el gimnasio](https://autopilotplan.com/blog/errores-comunes-gimnasio): Veinte errores frecuentes de planificación, técnica, esfuerzo y hábitos que frenan el progreso, explicados con su porqué y cómo corregirlos.
+- [Cómo saber si estás progresando de verdad](https://autopilotplan.com/blog/como-saber-si-estas-progresando): Más allá del espejo y la báscula: qué indicadores fiables usar para saber si tu entrenamiento funciona y cuánto tiempo esperar antes de juzgar.
+- [Cómo construir una rutina de entrenamiento paso a paso](https://autopilotplan.com/blog/como-construir-una-rutina): Una guía práctica para diseñar tu propia rutina: frecuencia, selección de ejercicios, series, repeticiones y cómo progresar sin complicarte.
+- [Fuerza, hipertrofia, resistencia y potencia: en qué se diferencian](https://autopilotplan.com/blog/fuerza-hipertrofia-resistencia-potencia): Cuatro cualidades que se confunden a menudo. Qué significa cada una, cómo se entrena y por qué un mismo programa no las maximiza todas a la vez.
+- [Cómo crecen realmente los músculos](https://autopilotplan.com/blog/como-crecen-los-musculos): Qué ocurre dentro del músculo cuando entrenas, por qué la tensión mecánica es la clave y qué papel tienen el descanso, la proteína y el tiempo.
+
+## Preguntas frecuentes
+
+### ¿Qué incluye Autopilot?
+Free incluye rutina inicial, registro de entrenamientos y progreso, sin tarjeta.
+
+### ¿La demo me crea una cuenta o me cobra?
+No. La demo es un ejemplo interactivo con datos ficticios. Puedes explorarla sin registrarte. Para guardar tus propios entrenamientos, crea una cuenta gratis.
+
+### ¿El análisis inicial es gratis?
+Sí. El análisis corporal inicial con IA es gratis, sin tarjeta y sin necesidad de crear una cuenta.
+
+### ¿Necesito tarjeta para hacer el análisis?
+No. Solo necesitas una foto. El tiempo del análisis puede variar.
+
+### ¿Qué pasa después del análisis?
+Recibes un análisis visual estimado por IA y puedes crear tu rutina gratis.
+
+### ¿Quién prepara y ajusta mi plan?
+La rutina se genera con reglas de entrenamiento fijas a partir de tu objetivo, nivel, días y material.
+
+### ¿Y si entreno en casa?
+Sin problema. Indicas tu material exacto y la rutina se construye sobre esa base: calistenia, mancuernas en casa o cero material.
+
+### ¿Y si nunca he entrenado?
+La rutina parte de tu nivel real y progresa paso a paso, sin saltar fases.
+
+### ¿En qué se diferencia de ChatGPT o de una rutina de YouTube?
+ChatGPT te da un texto y YouTube una rutina genérica. Autopilot construye tu rutina con tus datos reales (nivel, material, días) y guarda cada serie para que veas tu progreso.
+
+### ¿Y si me voy de viaje o pierdo una semana?
+Retomas donde lo dejaste y puedes cambiar los días o el material desde la app. Si hay una lesión, consulta con un profesional sanitario antes de continuar.
+
+### ¿Y si veo que no es para mí?
+Empieza con el plan Free, sin tarjeta.
+
+## Optional
+
+- [Términos](https://autopilotplan.com/legal/terminos): condiciones del servicio, prueba, cancelación y devolución.
+- [Privacidad](https://autopilotplan.com/legal/privacidad): RGPD y LOPDGDD.
+- [Información de salud](https://autopilotplan.com/legal/disclaimer-medico): aviso médico.
