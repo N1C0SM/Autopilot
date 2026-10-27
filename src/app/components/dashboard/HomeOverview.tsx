@@ -272,8 +272,8 @@ const HomeOverview = ({
   return (
     // Con la sesión hecha no hay acción que centrar: el contenido se apila sin huecos.
     <div className={cn("flex w-full flex-col", !(completedToday && !activeWorkout) && "flex-1")}>
-      {/* En web: dos columnas — saludo a la izquierda, foto y acción a la derecha */}
-      <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[1fr_320px] lg:gap-x-12 lg:items-start">
+      {/* Saludo arriba a todo el ancho y la sesión de hoy debajo, en una sola columna */}
+      <div className="flex flex-1 flex-col">
         <div>
         <p className="type-subhead font-semibold text-muted-foreground">{greetingDate}</p>
         <h2 data-nav-title className="mt-0.5 type-large-title lg:text-[44px] lg:leading-[52px]">
@@ -290,23 +290,23 @@ const HomeOverview = ({
         </h2>
         </div>
 
-        {/* Acción principal: centrada en móvil/tablet, columna derecha en web */}
-        <div className={cn("flex flex-col lg:flex-none lg:min-w-[320px] lg:max-w-sm lg:py-0 lg:pt-16", completedToday && !activeWorkout ? "pt-3" : "flex-1 justify-center py-8 md:py-10")}>
+        {/* Acción principal: debajo del saludo. En móvil sigue centrada en el hueco que queda. */}
+        <div className={cn("flex flex-col", completedToday && !activeWorkout ? "mt-6" : "flex-1 justify-center py-8 md:py-10 lg:mt-10 lg:flex-none lg:justify-start lg:py-0")}>
           {/* Foto del día: la sesión de hoy, siempre con una foto real */}
           {dayPhoto && !activeWorkout && (
-            <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card lg:mb-6">
+            <div aria-hidden="true" className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card lg:mb-6 lg:h-[340px]">
               <img
                 key={dayPhoto}
                 src={dayPhoto}
                 alt=""
                 decoding="async"
-                className="absolute inset-0 h-full w-full object-cover object-[50%_30%] animate-in fade-in duration-500 motion-reduce:animate-none"
+                className="absolute inset-0 h-full w-full object-cover object-[50%_30%] lg:object-[50%_0%] animate-in fade-in duration-500 motion-reduce:animate-none"
               />
               <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             </div>
           )}
           {activeWorkout && activeWorkoutIsToday ? (
-            <div className="w-full">
+            <div className="w-full lg:max-w-md">
               <p className="type-caption1 font-semibold text-primary">EN CURSO · HOY</p>
               <h3 className="mt-1 type-title1">{planTitle(activeWorkout.plan)}</h3>
               <p className="mt-2 type-subhead tabular-nums text-muted-foreground">
@@ -332,19 +332,23 @@ const HomeOverview = ({
               className="group block w-full rounded-2xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
               aria-label={`Empezar ${sessionTitle}`}
             >
-              <span className="block truncate type-title1">{String(sessionTitle).split(" · ")[0]}</span>
-              {String(sessionTitle).includes(" · ") && (
-                <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{String(sessionTitle).split(" · ").slice(1).join(" · ")}</span>
-              )}
-              {sessionDetail.length > 0 && (
-                <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
-                  {sessionDetail.map((part, index) => (
-                    <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
-                  ))}
+              <span className="mt-6 flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-8">
+                <span className="block min-w-0">
+                  <span className="block truncate type-title1">{String(sessionTitle).split(" · ")[0]}</span>
+                  {String(sessionTitle).includes(" · ") && (
+                    <span className="mt-0.5 block truncate type-subhead text-muted-foreground">{String(sessionTitle).split(" · ").slice(1).join(" · ")}</span>
+                  )}
+                  {sessionDetail.length > 0 && (
+                    <span className="mt-1 block type-subhead tabular-nums text-muted-foreground">
+                      {sessionDetail.map((part, index) => (
+                        <span key={`${index}-${part}`}>{index > 0 && " · "}{part}</span>
+                      ))}
+                    </span>
+                  )}
                 </span>
-              )}
-              <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[12rem] md:inline-flex lg:w-full lg:flex">
-                Empezar entreno
+                <span className="flex h-[50px] w-full shrink-0 items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80 md:w-auto md:min-w-[14rem]">
+                  Empezar entreno
+                </span>
               </span>
             </button>
           ) : completedToday ? (
@@ -352,7 +356,7 @@ const HomeOverview = ({
             <button
               type="button"
               onClick={() => { void hapticTap(); onNavigate("training"); }}
-              className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-transform duration-150 active:scale-[0.98]"
+              className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-transform duration-150 active:scale-[0.98] lg:max-w-2xl"
               aria-label="Ver el resumen de la sesión de hoy"
             >
               <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
@@ -392,8 +396,8 @@ const HomeOverview = ({
           )}
         </div>
 
-      {/* Tarjetas secundarias: Nutrición + Progreso, en su sección con título (todo el ancho en web). */}
-      <section className="mt-8 lg:col-span-2 lg:mt-12">
+      {/* Tarjetas secundarias: Nutrición + Progreso, en su sección con título (todo el ancho). */}
+      <section className="mt-8 lg:mt-12">
       <h3 className="mb-3 type-title3">Resumen</h3>
       <div className="grid grid-cols-2 gap-3 lg:gap-4">
         <OverviewRow
