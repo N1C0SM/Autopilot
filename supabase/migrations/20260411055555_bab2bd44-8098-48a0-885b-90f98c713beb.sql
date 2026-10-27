@@ -1,1 +1,0 @@
-ALTER TABLE public.exercises ADD COLUMN alternative_id uuid REFERENCES public.exercises(id) ON DELETE SET NULL;

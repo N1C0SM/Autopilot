@@ -1,1 +1,0 @@
-ALTER TABLE public.onboarding ADD COLUMN equipment_type text NOT NULL DEFAULT 'Mixto';

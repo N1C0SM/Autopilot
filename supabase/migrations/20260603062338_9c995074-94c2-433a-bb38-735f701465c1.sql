@@ -1,1 +1,0 @@
-ALTER TABLE public.scan_leads ALTER COLUMN whatsapp DROP NOT NULL;

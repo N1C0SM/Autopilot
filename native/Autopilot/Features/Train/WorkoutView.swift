@@ -224,32 +224,37 @@ struct SessionExerciseCard: View {
             .accessibilityValue(isOpen ? "abierto" : "cerrado")
 
             if isOpen {
-                VStack(spacing: 6) {
+                VStack(spacing: 10) {
                     if !allDone, let p = Progression.suggestion(exercise, previous: workout.previous[exercise.name], previousRpe: workout.previousRpe) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(p.headline).font(.apSubhead.weight(.semibold).monospacedDigit()).lineLimit(1)
-                                Spacer()
-                                if p.canApply {
-                                    Button("Aplicar") { workout.applyProgression(exercise.name, p) }
-                                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
-                                        .accessibilityLabel(p.label == .up ? "Usar \(p.weight) kg en las series" : "Aplicar +1 rep")
+                                Button { showWhy.toggle() } label: {
+                                    Label(showWhy ? "Ocultar" : "Por qué", systemImage: showWhy ? "chevron.up" : "chart.line.uptrend.xyaxis")
+                                        .font(.apFootnote).foregroundStyle(Palette.muted)
+                                }
+                                .buttonStyle(.plain)
+                                if showWhy {
+                                    if let last = Progression.summarize(workout.previous[exercise.name]) { 
+                                        Text(last).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted).padding(.top, 4)
+                                    }
+                                    Text(p.reason).font(.apFootnote).foregroundStyle(Palette.foreground.opacity(0.8)).padding(.top, 2)
                                 }
                             }
-                            .frame(minHeight: 44)
-                            Button { showWhy.toggle() } label: {
-                                Label("Por qué", systemImage: "chart.line.uptrend.xyaxis").font(.apFootnote).foregroundStyle(Palette.muted)
-                            }
-                            .buttonStyle(.plain).frame(minHeight: 32)
-                            if showWhy {
-                                if let last = Progression.summarize(workout.previous[exercise.name]) { Text(last).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted) }
-                                Text(p.reason).font(.apFootnote).foregroundStyle(Palette.foreground.opacity(0.8)).padding(.bottom, 6)
+                            Spacer()
+                            if p.canApply {
+                                Button("Aplicar") { workout.applyProgression(exercise.name, p) }
+                                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                                    .buttonStyle(.plain)
+                                    .frame(minHeight: 44)
+                                    .accessibilityLabel(p.label == .up ? "Usar \(p.weight) kg en las series" : "Aplicar +1 rep")
                             }
                         }
-                        .padding(.horizontal, 12).padding(.vertical, 4)
+                        .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(Palette.secondary.opacity(0.6), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .accessibilityElement(children: .contain)
-                        .accessibilityLabel("Por qué esta carga")
+                        .accessibilityLabel("Sugerencia de progresión")
+                        .padding(.bottom, 8)
                     }
                     HStack(spacing: 8) {
                         Text("Serie").frame(width: 24)
@@ -278,8 +283,9 @@ struct SessionExerciseCard: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Palette.gold)
+                    .padding(.top, 8)
                 }
-                .padding(.horizontal, 8).padding(.bottom, 12).padding(.top, 4)
+                .padding(.horizontal, 8).padding(.bottom, 16).padding(.top, 8)
             }
         }
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -441,88 +447,111 @@ struct SetLine: View {
     private var isWarmup: Bool { self.set.isWarmup == true }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-        HStack(spacing: 8) {
-            Group {
-                if isWarmup { Image(systemName: "flame.fill").font(.inter(size: 14)) }
-                else { Text("\(index + 1)").font(.inter(.headline).monospacedDigit()) }
-            }
-                .foregroundStyle(isCurrent ? Palette.gold : Palette.muted)
-                .frame(width: 24)
-                .accessibilityHidden(true)
-            Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
-                .font(.inter(.caption).monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
-                .frame(width: 52)
-                .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
-            NumberField(text: Binding(get: { set.weight }, set: { v in workout.update(exercise.name, set: index) { $0.weight = v } }),
-                        placeholder: previous?.weight.nilIfEmpty ?? exercise.weight.nilIfEmpty ?? "kg", big: isCurrent, decimal: true)
-                .accessibilityLabel("Peso de la serie \(index + 1) de \(exercise.name)")
-            NumberField(text: Binding(get: { set.reps > 0 ? String(set.reps) : "" },
-                                      set: { v in if let n = Int(v) { workout.update(exercise.name, set: index) { $0.reps = n } } }),
-                        placeholder: String(exercise.repsTarget), big: isCurrent, decimal: false)
-                .accessibilityLabel("Repeticiones de la serie \(index + 1) de \(exercise.name)")
-            Button { workout.toggleDone(exercise, set: index) } label: {
-                ZStack {
-                    Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2)
-                        .background(Circle().fill(set.done ? Palette.gold : .clear))
-                    Image(systemName: "checkmark").font(.inter(size: 14, weight: .heavy))
-                        .foregroundStyle(set.done ? Color.black : Palette.muted.opacity(0.4))
-                }
-                .frame(width: 32, height: 32)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(set.done ? "Desmarcar" : "Marcar") serie \(index + 1) de \(exercise.name)")
-            .sensoryFeedback(.success, trigger: set.done)
-        }
-        // Bajadas del dropset: dentro de la misma serie, sin descanso.
-        ForEach(Array((set.drops ?? []).enumerated()), id: \.offset) { di, drop in
+        VStack(alignment: .leading, spacing: 0) {
+            // FILA PRINCIPAL: Serie | Previa | Kg | Reps | ✓
             HStack(spacing: 8) {
-                Image(systemName: "arrow.down.right").font(.inter(size: 13)).foregroundStyle(Palette.muted).frame(width: 24)
-                Color.clear.frame(width: 52, height: 1)
-                NumberField(text: Binding(get: { drop.weight }, set: { v in workout.updateDrop(exercise.name, set: index, drop: di) { $0.weight = v } }),
-                            placeholder: "kg", big: false, decimal: true)
-                    .accessibilityLabel("Peso de la bajada \(di + 1) de la serie \(index + 1)")
-                NumberField(text: Binding(get: { drop.reps > 0 ? String(drop.reps) : "" }, set: { v in if let n = Int(v) { workout.updateDrop(exercise.name, set: index, drop: di) { $0.reps = n } } }),
-                            placeholder: "reps", big: false, decimal: false)
-                    .accessibilityLabel("Repeticiones de la bajada \(di + 1) de la serie \(index + 1)")
-                Button { workout.removeDrop(exercise.name, set: index, drop: di) } label: {
-                    Image(systemName: "xmark").font(.inter(size: 11, weight: .bold)).frame(width: 26, height: 26).background(Palette.secondary, in: Circle())
-                        .frame(width: 44, height: 44)
+                Group {
+                    if isWarmup { Image(systemName: "flame.fill").font(.inter(size: 14)) }
+                    else { Text("\(index + 1)").font(.inter(.headline).monospacedDigit()) }
                 }
-                .buttonStyle(.plain).foregroundStyle(Palette.muted)
-                .accessibilityLabel("Quitar la bajada \(di + 1) de la serie \(index + 1)")
+                    .foregroundStyle(isCurrent ? Palette.gold : Palette.muted)
+                    .frame(width: 24)
+                    .accessibilityHidden(true)
+                Text(previous.map { $0.done ? "\($0.weight.isEmpty ? "—" : $0.weight.replacingOccurrences(of: ".", with: ","))×\($0.reps)" : "—" } ?? "—")
+                    .font(.inter(.caption).monospacedDigit()).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.7)
+                    .frame(width: 52)
+                    .accessibilityLabel("Previa: " + (previous.map { "\($0.weight) kilos por \($0.reps)" } ?? "sin datos"))
+                NumberField(text: Binding(get: { set.weight }, set: { v in workout.update(exercise.name, set: index) { $0.weight = v } }),
+                            placeholder: previous?.weight.nilIfEmpty ?? exercise.weight.nilIfEmpty ?? "kg", big: isCurrent, decimal: true)
+                    .accessibilityLabel("Peso de la serie \(index + 1) de \(exercise.name)")
+                NumberField(text: Binding(get: { set.reps > 0 ? String(set.reps) : "" },
+                                          set: { v in if let n = Int(v) { workout.update(exercise.name, set: index) { $0.reps = n } } }),
+                            placeholder: String(exercise.repsTarget), big: isCurrent, decimal: false)
+                    .accessibilityLabel("Repeticiones de la serie \(index + 1) de \(exercise.name)")
+                Button { workout.toggleDone(exercise, set: index) } label: {
+                    ZStack {
+                        Circle().strokeBorder(set.done ? Palette.gold : Palette.muted.opacity(0.4), lineWidth: 2)
+                            .background(Circle().fill(set.done ? Palette.gold : .clear))
+                        Image(systemName: "checkmark").font(.inter(size: 14, weight: .heavy))
+                            .foregroundStyle(set.done ? Color.black : Palette.muted.opacity(0.4))
+                    }
+                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(set.done ? "Desmarcar" : "Marcar") serie \(index + 1) de \(exercise.name)")
+                .sensoryFeedback(.success, trigger: set.done)
+            }
+            .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 10)
+            .contextMenu {
+                if !set.done {
+                    Button {
+                        workout.toggleWarmup(exercise.name, set: index)
+                    } label: {
+                        Label(isWarmup ? "Quitar calentamiento" : "Marcar como calentamiento", 
+                              systemImage: isWarmup ? "flame.fill" : "flame")
+                    }
+                    
+                    Button {
+                        workout.addDrop(exercise.name, set: index)
+                    } label: {
+                        Label("Añadir bajada", systemImage: "arrow.down.right")
+                    }
+                }
+                
+                Button(role: .destructive) {
+                    workout.removeSet(exercise.name, at: index)
+                } label: {
+                    Label("Eliminar serie", systemImage: "trash")
+                }
+            }
+            
+            // BAJADAS DEL DROPSET
+            if let drops = set.drops, !drops.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(Array(drops.enumerated()), id: \.offset) { di, drop in
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.down.right").font(.inter(size: 13)).foregroundStyle(Palette.muted).frame(width: 24)
+                            Color.clear.frame(width: 52, height: 1)
+                            NumberField(text: Binding(get: { drop.weight }, set: { v in workout.updateDrop(exercise.name, set: index, drop: di) { $0.weight = v } }),
+                                        placeholder: "kg", big: false, decimal: true)
+                                .accessibilityLabel("Peso de la bajada \(di + 1) de la serie \(index + 1)")
+                            NumberField(text: Binding(get: { drop.reps > 0 ? String(drop.reps) : "" }, set: { v in if let n = Int(v) { workout.updateDrop(exercise.name, set: index, drop: di) { $0.reps = n } } }),
+                                        placeholder: "reps", big: false, decimal: false)
+                                .accessibilityLabel("Repeticiones de la bajada \(di + 1) de la serie \(index + 1)")
+                            Button { workout.removeDrop(exercise.name, set: index, drop: di) } label: {
+                                Image(systemName: "xmark").font(.inter(size: 11, weight: .bold)).frame(width: 26, height: 26).background(Palette.secondary, in: Circle())
+                                    .frame(width: 44, height: 44)
+                            }
+                            .buttonStyle(.plain).foregroundStyle(Palette.muted)
+                            .accessibilityLabel("Quitar la bajada \(di + 1) de la serie \(index + 1)")
+                        }
+                    }
+                }
+                .padding(.leading, 12).padding(.trailing, 8).padding(.bottom, 8)
+            }
+            
+            // AVISO DE CALENTAMIENTO
+            if isWarmup && !set.done {
+                Text("Calentamiento: no cuenta en volumen, récords ni series completadas.")
+                    .font(.apFootnote)
+                    .foregroundStyle(Palette.muted)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
             }
         }
-        if isCurrent {
-            HStack(spacing: 8) {
-                Button { workout.addDrop(exercise.name, set: index) } label: {
-                    Label("Añadir bajada", systemImage: "plus").font(.apSubhead.weight(.medium)).frame(maxWidth: .infinity, minHeight: 36)
-                        .background(Palette.secondary, in: Capsule())
-                }
-                Button { workout.toggleWarmup(exercise.name, set: index) } label: {
-                    Label("Calentamiento", systemImage: isWarmup ? "flame.fill" : "flame").font(.apSubhead.weight(.medium)).frame(maxWidth: .infinity, minHeight: 36)
-                        .foregroundStyle(isWarmup ? Palette.gold : Palette.foreground)
-                        .background(isWarmup ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
-                }
-                .accessibilityLabel("\(isWarmup ? "Quitar" : "Marcar") la serie \(index + 1) como calentamiento")
-                .accessibilityAddTraits(isWarmup ? .isSelected : [])
-            }
-            .buttonStyle(.plain)
-        }
-        if isWarmup && !set.done {
-            Text("Calentamiento: no cuenta en volumen, récords ni series completadas.").font(.apFootnote).foregroundStyle(Palette.muted)
-        }
-        }
-        .padding(.leading, 12).padding(.trailing, 8).padding(.vertical, 8)
-        .opacity(set.done ? 0.6 : 1)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(isCurrent ? Palette.gold.opacity(0.05) : (set.done && !isWarmup ? Palette.success.opacity(0.1) : .clear))
                 .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(isCurrent ? Palette.gold.opacity(0.5) : .clear, lineWidth: 1))
         )
-        .overlay(alignment: .top) { if separator && !isCurrent { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) } }
+        .opacity(set.done ? 0.6 : 1)
+        .overlay(alignment: .top) { 
+            if separator && !isCurrent { 
+                Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 12) 
+            } 
+        }
         .accessibilityAction(named: "Quitar serie") { workout.removeSet(exercise.name, at: index) }
     }
 }

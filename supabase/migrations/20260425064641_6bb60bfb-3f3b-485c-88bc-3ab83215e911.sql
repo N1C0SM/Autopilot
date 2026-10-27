@@ -1,1 +1,0 @@
-ALTER TABLE public.training_schedule_overrides ADD COLUMN admin_note text;
