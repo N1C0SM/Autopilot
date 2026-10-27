@@ -47,6 +47,7 @@ native/Autopilot.xcodeproj/
 native/Autopilot/App.entitlements
 native/Autopilot/Assets.xcassets/
 native/Autopilot/PrivacyInfo.xcprivacy
+native/build/
 ios/
 macos/
 
