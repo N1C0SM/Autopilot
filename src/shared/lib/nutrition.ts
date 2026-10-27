@@ -20,21 +20,32 @@ export function resolveNutritionPreview({
   goal?: string | null;
 }, savedMacros?: unknown): NutritionPreview {
   const parsedWeight = Number(weight);
-  if (!Number.isFinite(parsedWeight) || parsedWeight <= 30) {
+  
+  // Validación estricta del peso
+  if (!Number.isFinite(parsedWeight) || parsedWeight <= 30 || parsedWeight > 300) {
     return { calories: null, protein: null, hasWeight: false };
   }
 
   // Si el plan ya tiene macros guardados, se muestran esos: así Nutrición y el plan coinciden.
   if (savedMacros && typeof savedMacros === "object") {
     const m = savedMacros as Record<string, unknown>;
-    const p = Number(m.protein), c = Number(m.carbs), f = Number(m.fats);
-    if (p > 0 && c >= 0 && f >= 0) {
-      const kcal = Number(m.calories) > 0 ? Number(m.calories) : p * 4 + c * 4 + f * 9;
-      return { calories: Math.round(kcal), protein: Math.round(p), hasWeight: true };
+    const p = Number(m.protein);
+    const c = Number(m.carbs);
+    const f = Number(m.fats);
+    
+    // Validar que los macros sean números válidos
+    if (Number.isFinite(p) && p > 0 && Number.isFinite(c) && c >= 0 && Number.isFinite(f) && f >= 0) {
+      const kcal = Number(m.calories);
+      const calculatedKcal = Number.isFinite(kcal) && kcal > 0 ? kcal : p * 4 + c * 4 + f * 9;
+      return {
+        calories: Math.round(calculatedKcal),
+        protein: Math.round(p),
+        hasWeight: true,
+      };
     }
   }
 
-
+  // Cálculo por defecto basado en peso, sexo y objetivo
   const base = sex === "female" ? parsedWeight * 28 : parsedWeight * 32;
   const calories = goal === "lose_weight"
     ? Math.round(base - 350)
@@ -43,7 +54,7 @@ export function resolveNutritionPreview({
       : Math.round(base);
 
   return {
-    calories,
+    calories: Math.max(1200, calories), // Mínimo saludable
     protein: Math.round(parsedWeight * 2),
     hasWeight: true,
   };

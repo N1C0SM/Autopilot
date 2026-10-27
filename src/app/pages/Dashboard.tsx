@@ -461,6 +461,25 @@ const Dashboard = () => {
   }
 
   const hasPlan = planStatus === "plan_ready";
+
+  // 🐛 FIX: Recalcular nutrition cuando campaign cambie o se actualice el perfil
+  useEffect(() => {
+    if (!user || planStatus !== "plan_ready") return;
+    const recalculate = async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (profile) {
+        const hasNutr = hasNutrition(profile, Date.now(), campaign);
+        setNutrition(hasNutr);
+      }
+    };
+    void recalculate();
+  }, [campaign, user, planStatus]);
+
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
   const isFull = subscriptionTier === "full";
