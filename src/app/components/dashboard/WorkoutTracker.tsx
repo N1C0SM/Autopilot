@@ -31,6 +31,7 @@ import { hapticImpact, hapticNotify, hapticSelection, hapticTap } from "@/shared
 import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
 import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
 import NumericWeightPicker from "@/app/components/dashboard/NumericWeightPicker";
+import { WeightAdjuster } from "@/app/components/dashboard/WeightAdjuster";
 import {
   addWorkoutSetDrop,
   createWorkoutSetLogs,
@@ -1818,7 +1819,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                                 variant="ghost"
                                 onClick={() => toggleSetDone(ex.name, si, restSec, trackingConfig.fixedBodyweight ? undefined : String(progression?.weight || prevSets?.[si]?.weight || ex.weight || ""))}
                                 aria-label={`${set.done ? "Desmarcar" : "Marcar"} serie ${si + 1} de ${ex.name}`}
-                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60"
+                                className="flex h-11 w-11 items-center justify-center justify-self-center rounded-full p-0 transition-opacity duration-150 active:opacity-60 [touch-action:manipulation]"
                               >
                                 {/* Al marcar, el círculo «salta» con un muelle (como Hevy/Fitness). */}
                                 <motion.span
