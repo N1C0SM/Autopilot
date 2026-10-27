@@ -1,1 +1,0 @@
-ALTER TABLE public.library_books ADD COLUMN IF NOT EXISTS pack_items uuid[] NOT NULL DEFAULT '{}';

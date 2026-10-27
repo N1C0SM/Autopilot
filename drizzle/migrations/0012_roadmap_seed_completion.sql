@@ -1,2 +1,0 @@
-ALTER TABLE public.roadmap_versions ADD COLUMN IF NOT EXISTS seed_initialized boolean NOT NULL DEFAULT false;
-UPDATE public.roadmap_versions SET seed_initialized = true WHERE EXISTS (SELECT 1 FROM public.roadmap_items WHERE source = 'master');

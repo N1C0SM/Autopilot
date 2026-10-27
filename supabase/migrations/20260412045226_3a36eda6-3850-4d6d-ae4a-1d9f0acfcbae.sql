@@ -1,1 +1,0 @@
-ALTER TABLE public.onboarding ADD COLUMN specific_goal text DEFAULT NULL;
