@@ -352,7 +352,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                     <div className="mt-5 flex items-center gap-5">
                       <ProgressRing value={62} size={116} stroke={12} label="Calorías del día">
                         <div className="text-center">
-                          <p className="font-rounded text-[28px] font-bold leading-none tabular-nums">1.420</p>
+                          <p className="type-figure text-[28px] font-bold leading-none tabular-nums">1.420</p>
                           <p className="mt-1 type-caption1 text-muted-foreground">de 2.300 kcal</p>
                         </div>
                       </ProgressRing>

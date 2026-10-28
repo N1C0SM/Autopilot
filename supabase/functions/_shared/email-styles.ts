@@ -5,7 +5,7 @@
  * Paleta:
  *   --background: #000000  (systemBackground dark)
  *   --card:       #111216  (secondarySystemGroupedBackground)
- *   --primary:    #FACC15  (amarillo marca, amarillo limpio)
+ *   --primary:    #D6B45B  (dorado de la app, hsl(43 61% 60%))
  *   --foreground: #FFFFFF
  *   --muted-fg:   #98989E  (secondaryLabel iOS)
  *   --border:     #1f2024  (opaque separator)
@@ -13,7 +13,7 @@
 
 export const email = {
   main: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#000000',
     padding: '24px 12px',
     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", Arial, sans-serif',
     WebkitFontSmoothing: 'antialiased' as const,
@@ -33,7 +33,7 @@ export const email = {
   header: {
     backgroundColor: '#08090b',
     padding: '36px 32px 0',
-    borderTop: '2px solid #FACC15',
+    borderTop: '2px solid #D6B45B',
     borderBottom: '1px solid #1f2024',
   },
 
@@ -103,7 +103,7 @@ export const email = {
 
   /** Botón CTA principal — amarillo de marca */
   button: {
-    backgroundColor: '#FACC15',
+    backgroundColor: '#D6B45B',
     color: '#000000',
     fontSize: '15px',
     fontWeight: 700 as const,
@@ -144,7 +144,7 @@ export const email = {
     fontFamily: '"SF Mono", "Fira Code", "Courier New", Courier, monospace',
     fontSize: '32px',
     fontWeight: 700 as const,
-    color: '#FACC15',
+    color: '#D6B45B',
     letterSpacing: '0',
     backgroundColor: '#111216',
     padding: '16px 12px',
@@ -155,7 +155,7 @@ export const email = {
   },
 
   link: {
-    color: '#FACC15',
+    color: '#D6B45B',
     textDecoration: 'underline' as const,
     wordBreak: 'break-all' as const,
   },

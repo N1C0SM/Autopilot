@@ -44,6 +44,7 @@
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
 		D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 523B49FFF874D33F1F331FA9 /* InterVariable.ttf */; };
 		E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D06C6CE81D75452F06C8802 /* Backend.swift */; };
+		E846B74C254E4DB014DFB90C /* BigShoulders-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */; };
 		EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172F9A007BDD4D9E6CB124BB /* AccountView.swift */; };
 		EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80424D4030A49FC7F8638EEF /* RootView.swift */; };
 		EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F52B91A212936EB6B6D716 /* AdminBlog.swift */; };
@@ -72,6 +73,7 @@
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
 		74B2604636425A7A76330A3C /* AutopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotApp.swift; sourceTree = "<group>"; };
 		80424D4030A49FC7F8638EEF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BigShoulders-Bold.ttf"; sourceTree = "<group>"; };
 		853847766E839A5A319D2EB4 /* AdminProducts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminProducts.swift; sourceTree = "<group>"; };
 		853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressScreen.swift; sourceTree = "<group>"; };
 		8A8C9FF8A9F9707540345088 /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
@@ -149,6 +151,7 @@
 		1A8404261AB147D4E88C6CEA /* Fonts */ = {
 			isa = PBXGroup;
 			children = (
+				833844952D3321A1BE6A4ADD /* BigShoulders-Bold.ttf */,
 				523B49FFF874D33F1F331FA9 /* InterVariable.ttf */,
 			);
 			path = Fonts;
@@ -357,6 +360,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				84D2950407D627971026844C /* Assets.xcassets in Resources */,
+				E846B74C254E4DB014DFB90C /* BigShoulders-Bold.ttf in Resources */,
 				D6DA59DC5917CE17B6D42958 /* InterVariable.ttf in Resources */,
 				022673AFB045A59ACCDA5275 /* PrivacyInfo.xcprivacy in Resources */,
 			);

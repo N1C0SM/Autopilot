@@ -84,7 +84,7 @@ struct HeroFigure: View {
                 .tracking(0.9)
                 .foregroundStyle(Palette.gold)
             Text(value)
-                .font(.inter(size: 48, weight: .bold).monospacedDigit())
+                .font(.figure(size: 48))
                 .tracking(-1)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)

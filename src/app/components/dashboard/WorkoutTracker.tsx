@@ -27,7 +27,7 @@ import { parsePositiveWeight } from "@/shared/lib/weight";
 import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
 import { ExerciseSwap } from "@/app/components/dashboard/ExerciseSwap";
 import { formatTrainingTitle } from "@/shared/lib/trainingDisplay";
-import { hapticImpact, hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
+import { hapticImpact, hapticNotify, hapticSelection, hapticSignature, hapticTap } from "@/shared/lib/native";
 import SwipeSetEntry from "@/app/components/dashboard/SwipeSetEntry";
 import LogAllSetsButton from "@/app/components/dashboard/LogAllSetsButton";
 import NumericWeightPicker from "@/app/components/dashboard/NumericWeightPicker";
@@ -673,6 +673,7 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
     }
     if (ghost) updateSet(exerciseName, setIndex, "weight", resolved);
     updateSet(exerciseName, setIndex, "done", !wasDone);
+    if (!wasDone) void hapticSignature();
 
     const exerciseIndex = activePlan?.exercises?.findIndex((exercise) => exercise.name === exerciseName) ?? -1;
     const sets = exerciseLogs[exerciseName] || [];

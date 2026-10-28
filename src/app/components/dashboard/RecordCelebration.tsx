@@ -29,7 +29,7 @@ export default function RecordCelebration({ moment, onDone }: { moment: RecordMo
           <Trophy className="h-8 w-8" strokeWidth={2.25} aria-hidden="true" />
         </span>
         <span className="mt-6 type-subhead font-semibold uppercase tracking-[0.12em] text-primary">Nuevo récord personal</span>
-        <span className="mt-2 font-rounded text-[72px] font-bold leading-none tracking-tight tabular-nums text-foreground">{moment.diff}</span>
+        <span className="mt-2 type-figure text-[72px] font-bold leading-none tracking-tight tabular-nums text-foreground">{moment.diff}</span>
         <span className="mt-3 max-w-xs type-title3 text-muted-foreground">{moment.exercise}</span>
       </span>
     </button>}

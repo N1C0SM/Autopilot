@@ -96,7 +96,7 @@ struct ScanView: View {
 
             if analyzing {
                 VStack(spacing: 10) {
-                    ProgressView().tint(Palette.gold).scaleEffect(1.15)
+                    BrandLoader().tint(Palette.gold).scaleEffect(1.15)
                         .accessibilityHidden(true)
                     Text("Analizando tu físico…").font(.apHeadline)
                     Text("Unos segundos y listo.").font(.apFootnote).foregroundStyle(Palette.muted)
@@ -172,7 +172,7 @@ struct ScanView: View {
     private var analyzeButton: some View {
         Button { Haptics.tap(); Task { await analyze() } } label: {
             HStack(spacing: 10) {
-                if analyzing { ProgressView().tint(.black) }
+                if analyzing { BrandLoader().tint(.black) }
                 Text(analyzing ? "Analizando…" : "Analizar mi físico")
             }
         }
@@ -549,7 +549,7 @@ struct ScanResultView: View {
             }
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(score(result.physique))
-                    .font(.inter(size: 64, weight: .bold).monospacedDigit())
+                    .font(.figure(size: 64))
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
                 if result.physique != nil {

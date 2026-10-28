@@ -90,7 +90,7 @@ struct AdminLandingView: View {
                         .frame(maxWidth: 420).disabled(uploading)
                         if uploading {
                             HStack(spacing: 8) {
-                                ProgressView().tint(Palette.gold)
+                                BrandLoader().tint(Palette.gold)
                                 Text("Subiendo…").font(.apFootnote).foregroundStyle(Palette.muted)
                             }
                             .accessibilityElement(children: .combine)

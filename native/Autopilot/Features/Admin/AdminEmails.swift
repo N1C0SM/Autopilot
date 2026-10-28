@@ -91,7 +91,7 @@ struct AdminEmailsView: View {
                         actionRow("Cargar HTML por defecto", systemImage: "arrow.down.doc") { confirmDefault = true }
                         if hasOverride { actionRow("Restaurar por defecto", systemImage: "arrow.counterclockwise", destructive: true) { confirmReset = true } }
                     }
-                    Button { Task { await save() } } label: { if saving { ProgressView().tint(.black) } else { Text("Guardar") } }
+                    Button { Task { await save() } } label: { if saving { BrandLoader().tint(.black) } else { Text("Guardar") } }
                         .buttonStyle(.pill).frame(maxWidth: 320).disabled(saving)
                 }
                 .padding(20).frame(maxWidth: .infinity, alignment: .leading)

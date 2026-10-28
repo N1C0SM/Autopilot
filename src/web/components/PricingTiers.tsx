@@ -58,7 +58,7 @@ const PricingTiersContent = ({ onSelect, recommended = "training", hideFree }: P
               <p className="mt-1 min-h-[2.5rem] type-subhead text-muted-foreground">{t.tagline}</p>
 
               <div className="mt-5 flex items-baseline gap-1.5">
-                <span className={`font-rounded text-[44px] font-bold leading-none tabular-nums ${isRec ? "text-primary" : "text-foreground"}`}>
+                <span className={`type-figure text-[44px] font-bold leading-none tabular-nums ${isRec ? "text-primary" : "text-foreground"}`}>
                   {price === 0 ? "Gratis" : euro(price)}
                 </span>
                 <span className="type-subhead text-muted-foreground">{price === 0 ? "" : " al mes"}</span>

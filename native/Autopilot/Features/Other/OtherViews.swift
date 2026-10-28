@@ -193,7 +193,7 @@ struct NutritionView: View {
                 .stroke(Palette.gold, style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
                 .animation(reduceMotion ? nil : .snappy, value: doneCount)
             VStack(spacing: 4) {
-                Text("\(doneCount)").font(.inter(size: 44, weight: .bold).monospacedDigit())
+                Text("\(doneCount)").font(.figure(size: 44))
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
                     .animation(reduceMotion ? nil : .snappy, value: doneCount)

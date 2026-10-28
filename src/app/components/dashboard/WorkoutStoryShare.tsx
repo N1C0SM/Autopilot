@@ -52,10 +52,26 @@ function drawFigure(ctx: CanvasRenderingContext2D, side: "front" | "back", p: Pr
 type Variant = "resumen" | "musculos";
 
 const F = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif";
+// Cifras con la firma de marca (Big Shoulders, .claude/design/marca.md).
+const FIG = `"Big Shoulders", ${F}`;
 const fmt = (n: number) => Math.round(n).toLocaleString("es-ES");
 
-// Firma común a todo lo que sale de Autopilot (stories, scan, emails): discreta, abajo.
+// Barras 2-1-2 de la marca, ancladas por abajo en (x, bottom).
+export function drawBrandBars(ctx: CanvasRenderingContext2D, x: number, bottom: number, size: number, color = "#D6B45B") {
+  const bar = Math.max(2, Math.round(size * 0.2)), gap = bar * 0.7;
+  ctx.fillStyle = color;
+  [size, size / 2, size].forEach((h, i) => {
+    ctx.beginPath();
+    ctx.roundRect(x + i * (bar + gap), bottom - h, bar, h, bar / 2);
+    ctx.fill();
+  });
+  return bar * 3 + gap * 2;
+}
+
+// Firma común a todo lo que sale de Autopilot (stories, scan, emails): barras y web, abajo.
 function drawSignature(ctx: CanvasRenderingContext2D, W: number, H: number) {
+  const w = 3 * 10 + 2 * 7;
+  drawBrandBars(ctx, W / 2 - w / 2, H - 140, 50);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = "#71717a"; ctx.font = `500 26px ${F}`;
   ctx.fillText("autopilotplan.com", W / 2, H - 90);
@@ -117,12 +133,12 @@ function drawHighlight(ctx: CanvasRenderingContext2D, p: Props, W: number, y: nu
   const hi = highlight(p);
   if (!hi) return;
   const isPr = hi.type === "pr";
-  const color = isPr ? "#FFAA3C" : "#34d399";
+  const color = isPr ? "#D6B45B" : "#34d399";
   let fs = 30;
   ctx.font = `600 ${fs}px ${F}`;
   while (ctx.measureText(hi.label).width + 72 > W - 152 && fs > 20) { fs -= 1; ctx.font = `600 ${fs}px ${F}`; }
   const bw = ctx.measureText(hi.label).width + 72, bh = 68, bx = (W - bw) / 2;
-  ctx.fillStyle = isPr ? "rgba(255,170,60,0.14)" : "rgba(52,211,153,0.14)";
+  ctx.fillStyle = isPr ? "rgba(214,180,91,0.14)" : "rgba(52,211,153,0.14)";
   ctx.beginPath(); ctx.roundRect(bx, y, bw, bh, bh / 2); ctx.fill();
   ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(hi.label, W / 2, y + bh / 2 + 1);
@@ -131,13 +147,13 @@ function drawHighlight(ctx: CanvasRenderingContext2D, p: Props, W: number, y: nu
 function drawBigKg(ctx: CanvasRenderingContext2D, value: string, cx: number, baseline: number, maxW: number, size: number) {
   ctx.textBaseline = "alphabetic";
   let s = size;
-  const measure = () => { ctx.font = `800 ${s}px ${F}`; const a = ctx.measureText(value).width; ctx.font = `600 ${s * 0.27}px ${F}`; return a + ctx.measureText("kg").width + 18; };
+  const measure = () => { ctx.font = `800 ${s}px ${FIG}`; const a = ctx.measureText(value).width; ctx.font = `600 ${s * 0.27}px ${F}`; return a + ctx.measureText("kg").width + 18; };
   while (measure() > maxW && s > 80) s -= 8;
-  ctx.font = `800 ${s}px ${F}`; const nw = ctx.measureText(value).width;
+  ctx.font = `800 ${s}px ${FIG}`; const nw = ctx.measureText(value).width;
   ctx.font = `600 ${s * 0.27}px ${F}`; const kw = ctx.measureText("kg").width;
   const x0 = cx - (nw + kw + 18) / 2;
   ctx.textAlign = "left";
-  ctx.font = `800 ${s}px ${F}`; ctx.fillStyle = "#fafafa";
+  ctx.font = `800 ${s}px ${FIG}`; ctx.fillStyle = "#fafafa";
   ctx.fillText(value, x0, baseline);
   ctx.font = `600 ${s * 0.27}px ${F}`; ctx.fillStyle = "#a1a1aa";
   ctx.fillText("kg", x0 + nw + 18, baseline);
@@ -168,7 +184,7 @@ function drawStats(ctx: CanvasRenderingContext2D, stats: [string, string][], W: 
     const cx = 76 + cw * i + cw / 2;
     if (i) { ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.fillRect(76 + cw * i, y - 70, 2, 130); }
     ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "#fafafa"; ctx.font = `700 84px ${F}`; ctx.fillText(value, cx, y);
+    ctx.fillStyle = "#fafafa"; ctx.font = `800 96px ${FIG}`; ctx.fillText(value, cx, y);
     ctx.fillStyle = "#a1a1aa"; ctx.font = `500 28px ${F}`; ctx.fillText(label, cx, y + 50);
   });
 }
@@ -215,6 +231,7 @@ export async function renderStory(p: Props, variant: Variant): Promise<Blob> {
   const ctx = c.getContext("2d");
   if (!ctx) throw new Error("canvas unavailable");
   const logo = await loadImage(autopilotLogo).catch(() => null);
+  await document.fonts?.load(`800 120px "Big Shoulders"`).catch(() => undefined);
   if (variant === "resumen") {
     drawResumen(ctx, p, W, H, logo);
   } else {

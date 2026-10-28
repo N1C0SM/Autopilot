@@ -32,7 +32,7 @@ const BENEFITS: Benefit[] = [
     text: "Antes de cada serie ves tu peso y tus repeticiones anteriores. Sin libretas.",
     visual: <div className="rounded-[28px] bg-card p-7">
       <p className="type-subhead text-muted-foreground">Remo con mancuerna</p>
-      <p className="mt-2 font-rounded text-[56px] font-bold leading-none tracking-tight tabular-nums">22 kg <span className="text-muted-foreground">× 10</span></p>
+      <p className="mt-2 type-figure text-[56px] font-bold leading-none tracking-tight tabular-nums">22 kg <span className="text-muted-foreground">× 10</span></p>
       <p className="mt-3 type-subhead text-primary">Última vez · hace 4 días</p>
     </div>,
   },

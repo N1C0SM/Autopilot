@@ -15,7 +15,7 @@ export default function StickySteps({ eyebrow, steps }: { eyebrow: string; steps
   const current = Math.floor(t);
   if (still) return <section ref={ref} aria-label={eyebrow} className="px-5 py-20 sm:px-8">
     <ol className="mx-auto grid max-w-3xl gap-12 text-center">
-      {steps.map(({ icon: I, title, text, visual }, i) => <li key={title}><span className="block font-rounded text-[96px] font-bold leading-none tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span><I className="mx-auto mt-2 h-8 w-8 text-muted-foreground" aria-hidden="true" /><h3 className="mt-4 font-rounded text-[40px] font-bold leading-tight">{title}</h3><p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">{text}</p>{visual && <div className="mx-auto mt-6 max-w-xs">{visual}</div>}</li>)}
+      {steps.map(({ icon: I, title, text, visual }, i) => <li key={title}><span className="block type-figure text-[96px] font-bold leading-none tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span><I className="mx-auto mt-2 h-8 w-8 text-muted-foreground" aria-hidden="true" /><h3 className="mt-4 font-rounded text-[40px] font-bold leading-tight">{title}</h3><p className="mx-auto mt-2 max-w-md type-body text-muted-foreground">{text}</p>{visual && <div className="mx-auto mt-6 max-w-xs">{visual}</div>}</li>)}
     </ol>
   </section>;
   return <section ref={ref} aria-label={eyebrow} style={{ height: `${steps.length * 100}vh` }} data-pinned className="relative">
@@ -29,7 +29,7 @@ export default function StickySteps({ eyebrow, steps }: { eyebrow: string; steps
           const opacity = on ? Math.min(1, local * 7 + (i === 0 ? 1 : 0),(1 - local) * 7 + (i === steps.length - 1 ? 1 : 0)) : 0;
           return <div key={title} aria-hidden={!on} className="absolute inset-0 grid items-center gap-6 md:grid-cols-2 md:gap-14 md:text-left" style={{ opacity, transform: `translateY(${(1 - opacity) * 20}px)` }}>
             <div className="flex flex-col items-center md:items-start">
-              <span className="font-rounded text-[clamp(80px,min(18vw,18vh),180px)] font-bold leading-none tracking-tighter tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span>
+              <span className="type-figure text-[clamp(80px,min(18vw,18vh),180px)] font-bold leading-none tracking-tighter tabular-nums text-primary">{String(i + 1).padStart(2, "0")}</span>
               <h3 className="mt-3 font-rounded text-[44px] font-bold leading-[1.05] tracking-tight sm:text-[64px]">{title}</h3>
               <p className="mt-3 max-w-sm type-body text-muted-foreground md:text-[21px] md:leading-[28px]">{text}</p>
             </div>

@@ -24,7 +24,7 @@ export function TrainingOverviewCard({ overview }: { overview: TrainingOverview 
       {/* Halo dorado como en la landing: la cifra es la protagonista. */}
       <span aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.18),transparent)]" />
       <p className="relative type-subhead font-semibold text-primary">Últimas 4 semanas</p>
-      <p className="relative mt-1 font-rounded text-[56px] font-bold leading-none tracking-tight tabular-nums">
+      <p className="relative mt-1 type-figure text-[56px] font-bold leading-none tracking-tight tabular-nums">
         {fmt(overview.last4WeeksVolumeKg)}<span className="ml-1.5 type-title3 text-muted-foreground">kg levantados</span>
       </p>
       <div className="relative mt-4 flex flex-wrap gap-x-6 gap-y-1">

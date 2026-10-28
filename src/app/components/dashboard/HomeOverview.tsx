@@ -97,7 +97,7 @@ export const OverviewRow = ({
         <span aria-hidden="true">{icon}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
       </span>
-      {value != null && <span className="mt-auto block pt-4 font-rounded text-[30px] font-bold leading-none tracking-tight tabular-nums">{value}</span>}
+      {value != null && <span className="mt-auto block pt-4 type-figure text-[30px] font-bold leading-none tracking-tight tabular-nums">{value}</span>}
       <span className={`${value != null ? "mt-2" : "mt-auto pt-4"} block type-headline`}>{title}</span>
       <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{description}</span>
     </>

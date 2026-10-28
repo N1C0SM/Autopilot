@@ -36,3 +36,7 @@ Documentos:
 | Pantallas de acceso | piezas de `src/app/components/auth/AuthScreenParts.tsx` |
 
 Si algo de esta tabla no sirve, se amplía el componente común. No se copia y se modifica en una pantalla.
+
+## Firma de marca
+
+Lee `marca.md`. La regla es que **Autopilot se reconozca sin logo**: barras 2-1-2, cifras en Big Shoulders, el dorado único, el loader con las barras y la háptica 2-1-2.

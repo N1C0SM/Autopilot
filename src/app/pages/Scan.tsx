@@ -1602,7 +1602,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               className="mx-auto flex min-h-[60dvh] max-w-md flex-col items-center justify-center py-12 text-center"
             >
               <ProgressRing value={scanProgress} size={160} stroke={12} className="mb-8" label="Progreso del análisis">
-                <span className="font-rounded text-[34px] font-bold leading-none tabular-nums">
+                <span className="type-figure text-[34px] font-bold leading-none tabular-nums">
                   {Math.round(scanProgress)}
                   <span className="type-headline text-muted-foreground">%</span>
                 </span>
@@ -1753,7 +1753,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 <div className="mt-8 flex flex-col items-center text-center">
                   <ProgressRing value={result.physique * 10} size={200} stroke={14} label="Puntuación de físico">
                     <div className="flex flex-col items-center">
-                      <span className="font-rounded text-[56px] font-bold leading-none tabular-nums min-[390px]:text-[64px]">
+                      <span className="type-figure text-[56px] font-bold leading-none tabular-nums min-[390px]:text-[64px]">
                         {formatDecimal(result.physique, 1)}
                       </span>
                       <span className="mt-1.5 type-footnote text-muted-foreground">Físico · de 10</span>

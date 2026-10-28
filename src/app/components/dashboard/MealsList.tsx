@@ -143,7 +143,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
                 label={`${doneCount} de ${meals.length} comidas hechas hoy`}
               >
                 <span className="flex flex-col items-center">
-                  <span className="font-rounded text-[44px] font-bold leading-none tabular-nums text-foreground">
+                  <span className="type-figure text-[44px] font-bold leading-none tabular-nums text-foreground">
                     {doneCount}
                   </span>
                   <span className="mt-1 type-footnote tabular-nums text-muted-foreground">
@@ -157,7 +157,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
                 <>
                   <p
                     className={cn(
-                      "font-rounded font-bold leading-none tabular-nums",
+                      "type-figure font-bold leading-none tabular-nums",
                       hasMeals ? "text-[34px]" : "text-[48px]",
                     )}
                   >

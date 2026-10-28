@@ -359,3 +359,38 @@ extension View {
         #endif
     }
 }
+
+/// Firma de Autopilot («Ritmo»): tres barras 2-1-2. Logo sin texto, marca de agua y loader;
+/// la misma pieza que `BrandMark` en la web. Con `beat` late, salvo con «Reducir movimiento».
+struct BrandMark: View {
+    var size: CGFloat = 24
+    var beat = false
+    var color: Color = Palette.gold
+    @State private var low = false
+
+    var body: some View {
+        let bar = max(2, (size * 0.2).rounded())
+        HStack(alignment: .bottom, spacing: bar * 0.7) {
+            ForEach(0..<3, id: \.self) { i in
+                Capsule()
+                    .fill(color)
+                    .frame(width: bar, height: i == 1 ? size / 2 : size)
+                    .scaleEffect(x: 1, y: low ? 0.45 : 1, anchor: .bottom)
+                    .animation(beat ? .spring(response: 0.6, dampingFraction: 0.55).repeatForever().delay(Double(i) * 0.12) : nil, value: low)
+            }
+        }
+        .frame(height: size, alignment: .bottom)
+        .accessibilityHidden(true)
+        .onAppear { if beat && !A11y.reduceMotion { low = true } }
+    }
+}
+
+/// Carga con la firma de marca en lugar del `ProgressView` genérico.
+struct BrandLoader: View {
+    var size: CGFloat = 20
+    var body: some View {
+        BrandMark(size: size, beat: true, color: Palette.muted)
+            .accessibilityElement()
+            .accessibilityLabel("Cargando")
+    }
+}

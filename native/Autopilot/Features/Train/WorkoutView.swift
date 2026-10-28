@@ -189,7 +189,7 @@ struct WorkoutView: View {
             Button {
                 finish()
             } label: {
-                if workout.saving { HStack { ProgressView().tint(.black); Text("Guardando…") } } else { Text("Terminar entrenamiento") }
+                if workout.saving { HStack { BrandLoader().tint(.black); Text("Guardando…") } } else { Text("Terminar entrenamiento") }
             }
             .buttonStyle(.pill)
             .disabled(workout.saving || workout.doneSets == 0)
@@ -226,7 +226,7 @@ struct WorkoutView: View {
                     }
                 }
             } label: {
-                if workout.saving { ProgressView().tint(.black) } else { Text("Guardar") }
+                if workout.saving { BrandLoader().tint(.black) } else { Text("Guardar") }
             }
             .buttonStyle(.pill)
             .disabled(workout.saving)
@@ -529,7 +529,7 @@ struct FocusViewer: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous).fill(Palette.card)
                 if let i = ex.image_url, let u = URL(string: i) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
                 } else {
                     Image(systemName: "dumbbell").font(.inter(.title)).foregroundStyle(Palette.muted)
                 }
@@ -1257,7 +1257,7 @@ struct WorkoutSummaryView: View {
                 eyebrow("AUTOPILOT")
                 Spacer(minLength: 10)
                 Text(title.0)
-                    .font(.inter(size: 42, weight: .bold))
+                    .font(.figure(size: 42))
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
                 if !title.1.isEmpty {

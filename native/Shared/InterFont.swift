@@ -34,3 +34,19 @@ extension Font {
         return inter(size: size, weight: style == .headline ? .semibold : .regular, relativeTo: style)
     }
 }
+
+/// Firma de marca: cifras protagonistas en Big Shoulders (igual que `.type-figure` en la web).
+enum FigureFont {
+    static let name: String = {
+        if let url = Bundle.main.url(forResource: "BigShoulders-Bold", withExtension: "ttf") {
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+        return "Big Shoulders"
+    }()
+}
+
+extension Font {
+    static func figure(size: CGFloat, relativeTo style: Font.TextStyle = .largeTitle) -> Font {
+        Font.custom(FigureFont.name, size: size, relativeTo: style).weight(.heavy).monospacedDigit()
+    }
+}

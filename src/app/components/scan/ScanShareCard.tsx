@@ -12,7 +12,9 @@ export interface ScanShareData {
 }
 
 const MUTED = "#a1a1aa";
-const GOLD = "#FFAA3C";
+// Cifras con la firma de marca (.claude/design/marca.md).
+const FIG = "'Big Shoulders', -apple-system, system-ui, sans-serif";
+const GOLD = "#D6B45B";
 
 /** Story 1080×1920 que se exporta a PNG; mismo lenguaje visual que la story del entreno. */
 const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos: string[] }>(({ result, photos }, ref) => {
@@ -26,7 +28,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
       style={{
         width: 1080,
         height: 1920,
-        background: "radial-gradient(ellipse 900px 640px at 50% 0%, rgba(255,170,60,0.09) 0%, transparent 70%), linear-gradient(#08090b, #020203)",
+        background: "radial-gradient(ellipse 900px 640px at 50% 0%, rgba(214,180,91,0.09) 0%, transparent 70%), linear-gradient(#08090b, #020203)",
         color: "#fafafa",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif",
         padding: "82px 76px 70px",
@@ -59,14 +61,14 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
 
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 28, color: MUTED, fontWeight: 600 }}>Físico</div>
-          <div style={{ fontSize: 200, fontWeight: 800, letterSpacing: -6, lineHeight: 1, marginTop: 8 }}>
+          <div style={{ fontFamily: FIG, fontSize: 240, fontWeight: 800, lineHeight: 1, marginTop: 8 }}>
             {formatDecimal(result.physique, 1)}
-            <span style={{ fontSize: 60, color: MUTED, fontWeight: 600, letterSpacing: 0 }}> /10</span>
+            <span style={{ fontFamily: "inherit", fontSize: 72, color: MUTED, fontWeight: 600 }}> /10</span>
           </div>
           <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
             {stats.map(([label, value, color], i) => (
               <div key={label} style={{ padding: "0 56px", borderLeft: i ? "2px solid rgba(255,255,255,0.12)" : "none" }}>
-                <div style={{ fontSize: 64, fontWeight: 700, color: color ?? "#fafafa" }}>{value}</div>
+                <div style={{ fontFamily: FIG, fontSize: 80, fontWeight: 800, color: color ?? "#fafafa" }}>{value}</div>
                 <div style={{ fontSize: 28, color: MUTED, fontWeight: 500, marginTop: 4 }}>{label}</div>
               </div>
             ))}
@@ -81,7 +83,7 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
             {focus.length > 0 && (
               <div style={{ marginTop: 28, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
                 {focus.map((f) => (
-                  <span key={f} style={{ fontSize: 28, fontWeight: 600, padding: "14px 30px", borderRadius: 999, background: "rgba(255,170,60,0.14)", color: GOLD }}>
+                  <span key={f} style={{ fontSize: 28, fontWeight: 600, padding: "14px 30px", borderRadius: 999, background: "rgba(214,180,91,0.14)", color: GOLD }}>
                     {f}
                   </span>
                 ))}
@@ -92,6 +94,9 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
       </div>
 
       <div style={{ textAlign: "center" }}>
+        <div aria-hidden style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 7, height: 50, marginBottom: 24 }}>
+          {[50, 25, 50].map((h, i) => <span key={i} style={{ width: 10, height: h, borderRadius: 5, background: GOLD }} />)}
+        </div>
         <div style={{ fontSize: 22, color: "#52525b" }}>Lectura orientativa con IA</div>
         <div style={{ fontSize: 26, color: "#71717a", fontWeight: 500, marginTop: 8 }}>autopilotplan.com/scan</div>
       </div>

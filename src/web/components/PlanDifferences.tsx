@@ -91,7 +91,7 @@ const PlanDifferences = () => {
                         <h3 className="type-title3 text-foreground">{pl.name}</h3>
                         <p className="mt-2 type-subhead text-muted-foreground">{pl.tagline}</p>
                         <div className="mt-3 flex justify-center items-baseline gap-1.5">
-                          <span className={`font-rounded text-[32px] font-bold leading-none tabular-nums ${pl.price === 0 ? "text-primary" : "text-foreground"}`}>
+                          <span className={`type-figure text-[32px] font-bold leading-none tabular-nums ${pl.price === 0 ? "text-primary" : "text-foreground"}`}>
                             {pl.price === 0 ? "Gratis" : euro(pl.price)}
                           </span>
                           {pl.price > 0 && <span className="type-subhead text-muted-foreground">/mes</span>}
@@ -145,7 +145,7 @@ const PlanDifferences = () => {
               <h4 className="type-title3">{pl.name}</h4>
               <p className="mt-2 type-subhead text-muted-foreground">{pl.tagline}</p>
               <div className="mt-4 flex items-baseline justify-center gap-1.5">
-                <span className={`font-rounded text-[28px] font-bold leading-none tabular-nums ${pl.price === 0 ? "text-primary" : "text-foreground"}`}>
+                <span className={`type-figure text-[28px] font-bold leading-none tabular-nums ${pl.price === 0 ? "text-primary" : "text-foreground"}`}>
                   {pl.price === 0 ? "Gratis" : euro(pl.price)}
                 </span>
                 {pl.price > 0 && <span className="type-subhead text-muted-foreground">/mes</span>}

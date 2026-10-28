@@ -91,7 +91,7 @@ export const PlanPaywall = ({
 
       <div className="mt-6 text-center">
         <p className="type-subhead text-muted-foreground">Autopilot {t.name}</p>
-        <h2 className="mt-1 font-rounded text-[44px] font-bold leading-none tabular-nums">
+        <h2 className="mt-1 type-figure text-[44px] font-bold leading-none tabular-nums">
           {t.price} €<span className="type-title3 text-muted-foreground">/mes</span>
         </h2>
       </div>

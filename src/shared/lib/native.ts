@@ -142,6 +142,26 @@ export async function hapticImpact(weight: "light" | "medium" | "heavy" = "mediu
   } catch { /* This native capability may be unavailable on the current platform. */ }
 }
 
+/**
+ * Firma táctil de Autopilot («Ritmo» 2-1-2): fuerte, suave, fuerte. Solo al cerrar una
+ * serie, para que la sensación sea propia de la marca (.claude/design/marca.md).
+ */
+export async function hapticSignature() {
+  if (!isNative()) {
+    webVibrate([18, 70, 8, 70, 18]);
+    return;
+  }
+  try {
+    const { Haptics, ImpactStyle } = await import("@capacitor/haptics");
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    await Haptics.impact({ style: ImpactStyle.Heavy });
+    await wait(90);
+    await Haptics.impact({ style: ImpactStyle.Light });
+    await wait(90);
+    await Haptics.impact({ style: ImpactStyle.Heavy });
+  } catch { /* This native capability may be unavailable on the current platform. */ }
+}
+
 /** Cambio de selección: control segmentado, selector, interruptor, paso de un stepper. */
 export async function hapticSelection() {
   if (!isNative()) {

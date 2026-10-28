@@ -190,7 +190,7 @@ final class ActiveWorkout: ObservableObject {
         var nowDone = false
         update(exercise.name, set: index) { $0.done.toggle(); nowDone = $0.done }
         if nowDone {
-            Haptics.success()
+            Haptics.signature()
             // Descanso elegido en Ajustes → Tu forma de entrenar; si no hay, el del ejercicio.
             let chosen = UserDefaults.standard.integer(forKey: "rest-seconds")
             startRest(seconds: chosen > 0 ? chosen : exercise.restSeconds)

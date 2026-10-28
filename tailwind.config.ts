@@ -45,6 +45,8 @@ export default {
         sans: ["var(--font-sans)"],
         body: ["var(--font-body)"],
         rounded: ["var(--font-rounded)"],
+        // Firma de marca: cifras protagonistas (kg, %, récords).
+        figure: ["var(--font-figure)"],
         mono: ["ui-monospace", "SF Mono", "SFMono-Regular", "Menlo", "monospace"],
       },
       colors: {
@@ -126,6 +128,11 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(48 100% 50% / 0.15)" },
           "50%": { boxShadow: "0 0 40px hsl(48 100% 50% / 0.3)" },
         },
+        // Firma de marca «Ritmo»: tres barras que laten 2-1-2 (excéntrica, pausa, concéntrica).
+        "brand-beat": {
+          "0%, 100%": { transform: "scaleY(1)" },
+          "50%": { transform: "scaleY(0.45)" },
+        },
         // UIActivityIndicatorView: each blade fades from full to faint in turn.
         "ios-spinner": {
           "0%": { opacity: "1" },
@@ -156,6 +163,7 @@ export default {
         "fade-in": "fade-in 0.6s ease-out forwards",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "ios-spinner": "ios-spinner 0.8s linear infinite",
+        "brand-beat": "brand-beat 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) infinite",
         "sheet-up": "sheet-up 0.42s cubic-bezier(0.32, 0.72, 0, 1) backwards",
         "sheet-down": "sheet-down 0.3s cubic-bezier(0.32, 0.72, 0, 1) both",
         "alert-in": "alert-in 0.24s cubic-bezier(0.32, 0.72, 0, 1) both",

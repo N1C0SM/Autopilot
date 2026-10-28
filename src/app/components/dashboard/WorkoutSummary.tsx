@@ -110,7 +110,7 @@ export function WorkoutSummary({
             transition={{ duration: 0.3 }}
             className="mt-6 text-center"
           >
-            <div className="font-rounded text-[56px] font-bold leading-none tabular-nums text-primary">
+            <div className="type-figure text-[56px] font-bold leading-none tabular-nums text-primary">
               <CountUp value={totalVolume} />
               <span className="ml-1 text-[28px] text-muted-foreground">kg</span>
             </div>
@@ -209,7 +209,7 @@ export function WorkoutSummary({
               <div className="type-caption1 font-semibold text-muted-foreground">
                 Series
               </div>
-              <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+              <div className="mt-2 type-figure text-[36px] font-bold leading-none tabular-nums">
                 {completedSets}
               </div>
             </div>
@@ -219,7 +219,7 @@ export function WorkoutSummary({
               <div className="type-caption1 font-semibold text-muted-foreground">
                 Ejercicios
               </div>
-              <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+              <div className="mt-2 type-figure text-[36px] font-bold leading-none tabular-nums">
                 {completedExercises}<span className="text-[20px] text-muted-foreground">/{plannedExercises}</span>
               </div>
             </div>
@@ -229,7 +229,7 @@ export function WorkoutSummary({
               <div className="type-caption1 font-semibold text-muted-foreground">
                 Músculos
               </div>
-              <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+              <div className="mt-2 type-figure text-[36px] font-bold leading-none tabular-nums">
                 {muscles.length}
               </div>
             </div>
@@ -240,7 +240,7 @@ export function WorkoutSummary({
                 <div className="type-caption1 font-semibold text-muted-foreground">
                   Esfuerzo
                 </div>
-                <div className="mt-2 font-rounded text-[36px] font-bold leading-none tabular-nums">
+                <div className="mt-2 type-figure text-[36px] font-bold leading-none tabular-nums">
                   {rpe}<span className="text-[20px] text-muted-foreground">/10</span>
                 </div>
               </div>

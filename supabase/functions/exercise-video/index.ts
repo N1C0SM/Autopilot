@@ -13,7 +13,7 @@ const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
 /** Estilo visual maestro compartido por foto y vídeo (coherencia tipo Hevy/Symmetry). */
 const STYLE = [
   "Setting: minimalist dark photo studio, matte charcoal rubber gym flooring, clean empty dark background, no clutter, no background people, no mirrors, no logos.",
-  "Lighting: soft overhead studio lighting with subtle rim light defining muscle contours, neutral color grading, slightly desaturated.",
+  "Lighting: soft overhead studio lighting with subtle rim light defining muscle contours, Autopilot house look: warm amber color grade, deep crushed blacks, saturation about 85%, fine film grain, a soft pool of warm light on the athlete fading to pure black at the edges and the bottom third.",
   "Athlete: one lean athletic adult wearing fitted dark charcoal compression sportswear and minimalist flat training shoes.",
   "Framing: locked tripod shot at mid-torso height, full body always fully inside frame, 16:9.",
   "Prohibited: no text, no captions, no watermarks, no logos, no music, no on-screen graphics, no morphed or floating equipment, no extra limbs, no camera movement, no cuts.",

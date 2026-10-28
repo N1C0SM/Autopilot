@@ -174,7 +174,7 @@ struct AdminExercisesView: View {
                     VideoPlayer(player: AVPlayer(url: u)).frame(minHeight: 360)
                         .accessibilityLabel("Vídeo de técnica de \(ex.name)")
                 } else if let i = ex.image_url, let u = URL(string: i) {
-                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
                         .accessibilityLabel("Imagen de \(ex.name)")
                 }
                 Text(ex.name).font(.apTitle3)
@@ -276,7 +276,7 @@ struct ExerciseEditor: View {
                 }
                 Section("Imagen del ejercicio") {
                     if let i = exercise.image_url, let u = URL(string: i), !i.isEmpty {
-                        CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }.frame(maxHeight: 220)
+                        CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }.frame(maxHeight: 220)
                     }
                     PhotosPicker(selection: $photo, matching: .images) { Text("Subir imagen").foregroundStyle(Palette.gold) }
                     if !exercise.id.isEmpty {
@@ -296,7 +296,7 @@ struct ExerciseEditor: View {
                         ForEach(all.filter { $0.id != exercise.id }) { Text($0.name).tag($0.id) }
                     }
                 }
-                if let busy { Section { HStack { ProgressView(); Text(busy) } } }
+                if let busy { Section { HStack { BrandLoader(); Text(busy) } } }
                 if let error { Section { Text(error).foregroundStyle(Palette.destructive) } }
                 if !exercise.id.isEmpty { Section { Button("Eliminar ejercicio", role: .destructive) { confirmDelete = true } } }
             }

@@ -37,7 +37,7 @@ struct TrainView: View {
             VStack(alignment: .leading, spacing: 16) {
                 if model.loading && model.days.isEmpty {
                     VStack(spacing: 12) {
-                        ProgressView()
+                        BrandLoader()
                         Text("Comprobando tu sesión…").font(.apSubhead).foregroundStyle(Palette.muted)
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)

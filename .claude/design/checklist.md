@@ -35,3 +35,10 @@ Pásala en cada pantalla nueva o cambiada. Si algo falla, no se publica.
 - [ ] `npx vitest run` y `npx tsc --noEmit -p tsconfig.app.json` en verde.
 - [ ] Push a `main` (genera el APK de Android y la web) y publicar en Lovable.
 - [ ] Reinstalar en iPhone y Mac.
+
+## Test sin logo
+
+- [ ] Si tapo el logo y la palabra «Autopilot», ¿se sigue sabiendo que es Autopilot? (barras, cifras en `.type-figure`, dorado, tratamiento de foto)
+- [ ] La carga usa `Spinner` o `BrandLoader`, nunca aspas ni `ProgressView`.
+- [ ] Solo un `BrandMark` por vista, y nunca como relleno.
+- [ ] Ningún dorado fuera del token (`--primary` / `Palette.gold`).

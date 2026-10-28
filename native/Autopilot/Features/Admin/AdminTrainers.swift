@@ -426,7 +426,7 @@ struct TrainerDetail: View {
                 Task { await save() }
             } label: {
                 if saving {
-                    ProgressView().tint(.black)
+                    BrandLoader().tint(.black)
                 } else {
                     Text("Guardar perfil")
                 }

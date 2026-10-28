@@ -558,7 +558,7 @@ struct ChatView: View {
                                                    message: "Escribe abajo para empezar la conversación.")
                                 }
                             } else {
-                                ProgressView()
+                                BrandLoader()
                                     .tint(Palette.gold)
                                     .frame(maxWidth: .infinity)
                                     .padding(.top, 48)
@@ -571,7 +571,7 @@ struct ChatView: View {
                                 if mine { Spacer(minLength: 40) }
                                 VStack(alignment: .leading, spacing: 4) {
                                     if let u = m.media_url, let url = URL(string: u) {
-                                        CachedAsyncImage(url: url) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                                        CachedAsyncImage(url: url) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
                                             .frame(maxWidth: 240)
                                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                                     }

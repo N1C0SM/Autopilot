@@ -85,7 +85,7 @@ struct AdminRulesView: View {
                             .rowStyle(first: i == 0)
                         }
                     }
-                    Button { Task { await save() } } label: { if saving { ProgressView().tint(.black) } else { Text("Guardar reglas") } }
+                    Button { Task { await save() } } label: { if saving { BrandLoader().tint(.black) } else { Text("Guardar reglas") } }
                         .buttonStyle(.pill).frame(maxWidth: 320).disabled(saving)
                 }
                 .padding(20).frame(maxWidth: .infinity, alignment: .leading)
@@ -394,7 +394,7 @@ struct AdminLoadingView: View {
     var message = "Cargando…"
 
     var body: some View {
-        ProgressView()
+        BrandLoader()
             .tint(Palette.gold)
             .frame(maxWidth: .infinity)
             .padding(.top, 60)

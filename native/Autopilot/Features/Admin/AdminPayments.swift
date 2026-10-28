@@ -112,7 +112,7 @@ struct AdminRemindersView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { composing = false }.disabled(sending) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { Task { await send() } } label: { if sending { ProgressView() } else { Text("Enviar") } }.disabled(sending)
+                    Button { Task { await send() } } label: { if sending { BrandLoader() } else { Text("Enviar") } }.disabled(sending)
                 }
             }
         }
@@ -189,7 +189,7 @@ struct AdminPaymentsView: View {
             } else {
                 VStack(alignment: .leading, spacing: 24) {
                     AdminPaneHeader("Elige si los cobros van en pruebas o en producción y pega el enlace de cada plan, libro y pack. Se usa siempre el del modo activo.") {
-                        Button { Task { await save() } } label: { if saving { ProgressView().tint(.black) } else { Text("Guardar configuración") } }
+                        Button { Task { await save() } } label: { if saving { BrandLoader().tint(.black) } else { Text("Guardar configuración") } }
                             .buttonStyle(.pill).frame(maxWidth: 360).disabled(saving)
                     }
 

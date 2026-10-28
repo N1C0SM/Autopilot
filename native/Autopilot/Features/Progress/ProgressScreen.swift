@@ -170,7 +170,7 @@ struct ProgressScreen: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Últimas 4 semanas").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(NumberText.integer(model.kg4w)).font(.inter(size: 56, weight: .bold).monospacedDigit())
+                Text(NumberText.integer(model.kg4w)).font(.figure(size: 56))
                     // Cifra grande: que no se corte con Dynamic Type o números largos.
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
@@ -251,7 +251,7 @@ struct ProgressScreen: View {
         .fullScreenCoverCompat(item: $viewing) { p in
             ZStack {
                 Color.black.ignoresSafeArea()
-                CachedAsyncImage(url: p.url) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                CachedAsyncImage(url: p.url) { $0.resizable().scaledToFit() } placeholder: { BrandLoader() }
             }
             .onTapGesture { viewing = nil }
             .accessibilityLabel("Foto de progreso del \(p.shortDate). Toca para cerrar")
@@ -385,7 +385,7 @@ struct ProgressScreen: View {
             VStack(alignment: .leading, spacing: 4) {
                 Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(best.e1rmText).font(.inter(size: 64, weight: .bold))
+                    Text(best.e1rmText).font(.figure(size: 64))
                         .lineLimit(1).minimumScaleFactor(0.6)
                         .contentTransition(.numericText())
                     Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))

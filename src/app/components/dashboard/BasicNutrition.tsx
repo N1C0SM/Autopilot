@@ -119,7 +119,7 @@ export default function BasicNutrition({ userId, onEdit }: { userId: string; onE
           label={`Objetivo: ${targets.calories} kcal al día`}
         >
           <span className="flex flex-col items-center">
-            <span className="font-rounded text-[36px] font-bold leading-none tabular-nums text-foreground">
+            <span className="type-figure text-[36px] font-bold leading-none tabular-nums text-foreground">
               {targets.calories?.toLocaleString("es-ES")}
             </span>
             <span className="mt-1 type-footnote text-muted-foreground">kcal / día</span>

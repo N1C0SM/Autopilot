@@ -130,7 +130,7 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
       <div>
         <div className="flex items-center gap-4">
           <div className="min-w-0">
-            <p className="font-rounded text-[34px] font-bold leading-none tabular-nums">
+            <p className="type-figure text-[34px] font-bold leading-none tabular-nums">
               {latestWeight ? <>{formatKg(latestWeight.weight)}<span className="ml-1 type-headline text-muted-foreground">kg</span></> : "—"}
             </p>
             <p className="mt-1.5 flex items-center gap-1 type-footnote text-muted-foreground tabular-nums">
@@ -204,7 +204,7 @@ const ProgressCharts = ({ userId, compact = false }: Props) => {
 
       {ready && latestWeight && (
         <section aria-label="Evolución de peso">
-          <p className="font-rounded text-[56px] font-bold leading-none tabular-nums">
+          <p className="type-figure text-[56px] font-bold leading-none tabular-nums">
             {formatKg(latestWeight.weight)}
             <span className="ml-1.5 type-title3 text-muted-foreground">kg</span>
           </p>

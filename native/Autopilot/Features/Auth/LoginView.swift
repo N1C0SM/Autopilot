@@ -55,7 +55,7 @@ struct LoginView: View {
                         if loading {
                             // El icono de carga no aporta nada a VoiceOver: el botón ya dice
                             // «Iniciando sesión» mientras dura la petición.
-                            ProgressView().tint(.black).accessibilityHidden(true)
+                            BrandLoader().tint(.black).accessibilityHidden(true)
                         } else {
                             Text("Iniciar sesión")
                         }

@@ -287,7 +287,7 @@ struct BlogEditor: View {
             .navigationTitle(post.id.isEmpty ? "Nuevo artículo" : "Editar artículo")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { onDone(nil) } }
-                ToolbarItem(placement: .confirmationAction) { Button { Task { await save() } } label: { if saving { ProgressView() } else { Text("Guardar") } }.disabled(saving) }
+                ToolbarItem(placement: .confirmationAction) { Button { Task { await save() } } label: { if saving { BrandLoader() } else { Text("Guardar") } }.disabled(saving) }
             }
         }
         .frame(minWidth: 620, minHeight: 720)

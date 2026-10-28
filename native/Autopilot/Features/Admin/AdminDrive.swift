@@ -239,7 +239,7 @@ struct DriveItemEditor: View {
                     HStack(alignment: .top, spacing: 16) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
-                            if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { ProgressView() } }
+                            if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { BrandLoader() } }
                             else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.inter(.title)).foregroundStyle(Palette.muted) }
                         }
                         .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -301,7 +301,7 @@ struct DriveItemEditor: View {
                     }
                     .tint(Palette.gold)
                 }
-                if let busy { Section { HStack { ProgressView(); Text(busy) } } }
+                if let busy { Section { HStack { BrandLoader(); Text(busy) } } }
                 if let message { Section { Text(message) } }
                 Section { Button("Eliminar", role: .destructive) { confirmDelete = true } }
             }

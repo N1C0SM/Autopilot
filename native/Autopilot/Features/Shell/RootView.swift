@@ -104,8 +104,8 @@ struct RootView: View {
     var body: some View {
         Group {
             if !session.ready {
-                // Arranque con la marca (no una pantalla negra).
-                Image("Logo").resizable().scaledToFit().frame(width: 96, height: 96).clipShape(Circle())
+                // Arranque con la firma de marca: las mismas barras del splash, ahora latiendo.
+                BrandMark(size: 48, beat: true)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
                     .accessibilityLabel("Autopilot")
             } else if session.showPicker {

@@ -140,7 +140,7 @@ struct PhysiqueEditor: View {
                         .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         .frame(maxWidth: .infinity)
                     PhotosPicker(selection: $photo, matching: .images) {
-                        HStack { Text(item.image_url.isEmpty ? "Subir foto" : "Cambiar foto").foregroundStyle(Palette.gold); Spacer(); if uploading { ProgressView() } }
+                        HStack { Text(item.image_url.isEmpty ? "Subir foto" : "Cambiar foto").foregroundStyle(Palette.gold); Spacer(); if uploading { BrandLoader() } }
                     }
                     .disabled(uploading)
                 }

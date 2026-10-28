@@ -286,7 +286,7 @@ struct AccountView: View {
                                     .disabled(switching != nil)
                                     .overlay(alignment: .trailing) {
                                         if switching == a.id {
-                                            ProgressView().tint(Palette.gold).padding(.trailing, 6)
+                                            BrandLoader().tint(Palette.gold).padding(.trailing, 6)
                                                 .accessibilityLabel("Cambiando de cuenta")
                                         }
                                     }
@@ -825,7 +825,7 @@ private struct AccountUnlockSheet: View {
             Button {
                 Task { await unlock() }
             } label: {
-                if busy { ProgressView().tint(.black) } else { Text("Entrar") }
+                if busy { BrandLoader().tint(.black) } else { Text("Entrar") }
             }
             .buttonStyle(PillButtonStyle(kind: .primary, height: 50))
             .disabled(busy || password.isEmpty)

@@ -81,14 +81,14 @@ export default function BeforeAfterCompare({
           <ScanImage src={photoUrl} alt="Scan anterior" className="aspect-[3/4] w-full rounded-2xl" />
           <figcaption className="mt-2">
             <span className="block type-subhead text-muted-foreground">Antes · {dateLabel}</span>
-            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{formatDecimal(pPhys, 1)}</span>
+            <span className="mt-0.5 block type-figure text-[34px] font-bold leading-none tabular-nums">{formatDecimal(pPhys, 1)}</span>
           </figcaption>
         </figure>
         <figure className="min-w-0">
           <ScanImage src={currentPhoto} alt="Scan actual" className="aspect-[3/4] w-full rounded-2xl" />
           <figcaption className="mt-2">
             <span className="block type-subhead font-semibold text-primary">Ahora</span>
-            <span className="mt-0.5 block font-rounded text-[34px] font-bold leading-none tabular-nums">{formatDecimal(currentScores.physique, 1)}</span>
+            <span className="mt-0.5 block type-figure text-[34px] font-bold leading-none tabular-nums">{formatDecimal(currentScores.physique, 1)}</span>
           </figcaption>
         </figure>
       </div>
