@@ -532,67 +532,18 @@ struct WeeklyRoutineView: View {
 
     /// Descanso del día elegido: luna, eyebrow, título, subtexto y acción en el mismo eje, con el
     /// radio hero y la misma altura reservada que la tarjeta de descanso de Inicio.
+    /// Día de descanso con la misma tarjeta de la luna que Inicio (`RestCard`).
     @ViewBuilder private func rest(_ day: String) -> some View {
         let i = DayNames.all.firstIndex(of: day) ?? 0
         let nextDay = (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
-        let nextPlan = nextDay.flatMap { workPlan($0) }
-        let exercises = nextPlan?.exercises ?? []
-        // Portada de la próxima sesión: la foto del primer ejercicio que tenga imagen.
-        let cover = exercises.compactMap(\.image_url).first { !$0.isEmpty }
-        VStack(alignment: .leading, spacing: 0) {
-            // La foto de la próxima sesión se ve arriba; el texto va abajo, sobre el degradado.
-            Spacer(minLength: 112)
-
-            HStack(spacing: 8) {
-                ZStack {
-                    Circle().fill(Palette.gold.opacity(0.18)).frame(width: 28, height: 28)
-                    Image("lu-moon").renderingMode(.template).resizable().frame(width: 14, height: 14)
-                        .foregroundStyle(Palette.gold)
-                }
-                Text("Descanso").font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
-                    .foregroundStyle(Palette.gold)
+        let message = nextDay.flatMap { d in workPlan(d).map { "Tu próxima sesión es el \(d.lowercased()): \($0.title)." } }
+            ?? "Recupera; toca otro día para ver su sesión."
+        RestCard(title: day == DayNames.today ? "Hoy es día de descanso" : "El \(day.lowercased()) es día de descanso", message: message) {
+            if let nextDay {
+                Button("Ver el \(nextDay.lowercased())") { Haptics.selection(); expanded = nextDay }
+                    .buttonStyle(.pillSecondary)
             }
-            .accessibilityHidden(true)
-
-            Text(day == DayNames.today ? "Hoy toca descansar" : "El \(day.lowercased()) toca descansar")
-                .font(.apTitle2).multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 12)
-                .accessibilityAddTraits(.isHeader)
-            Text("Recupera; toca otro día para ver su sesión.")
-                .font(.apSubhead).foregroundStyle(Palette.muted)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 6)
-
         }
-        .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 24)
-        // Misma altura mínima que `RestCard` en Inicio: con foto la tarjeta crece lo justo.
-        .frame(maxWidth: .infinity, minHeight: 288, alignment: .topLeading)
-        .background {
-            GeometryReader { geo in
-                ZStack {
-                    Group {
-                        if let cover, let url = URL(string: cover) {
-                            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { coverBackdrop }
-                        } else {
-                            coverBackdrop
-                        }
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
-                    // Degradado: la portada se ve arriba y el texto queda legible abajo.
-                    LinearGradient(stops: [
-                        .init(color: .black.opacity(0.05), location: 0),
-                        .init(color: .black.opacity(0.30), location: 0.32),
-                        .init(color: .black.opacity(0.72), location: 0.58),
-                        .init(color: .black.opacity(0.94), location: 0.82),
-                        .init(color: .black.opacity(0.98), location: 1),
-                    ], startPoint: .top, endPoint: .bottom)
-                }
-            }
-            .accessibilityHidden(true)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
     /// Fondo elegante cuando la sesión aún no tiene foto: degradado de tarjeta y halo dorado.
