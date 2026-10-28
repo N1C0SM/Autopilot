@@ -13,6 +13,7 @@ struct AccountView: View {
     @EnvironmentObject private var session: SessionModel
     @EnvironmentObject private var accounts: AccountStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
     @State private var avatar: String?
@@ -42,6 +43,9 @@ struct AccountView: View {
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
     @State private var subTier: String?
+    /// Cuenta a la que se está cambiando (spinner) y cuenta que pide contraseña.
+    @State private var switching: String?
+    @State private var unlocking: SavedAccount?
     @State private var subStatus = ""
     @State private var subEnd: Date?
     @State private var isAdmin = false
@@ -265,8 +269,18 @@ struct AccountView: View {
                                     .accessibilityElement(children: .combine)
                                     .accessibilityLabel("\(a.name), \(a.email), cuenta actual")
                             } else {
-                                Button { Haptics.tap(); session.showPicker = true } label: { accountIdentity(a) }
+                                Button {
+                                    Haptics.tap()
+                                    Task { await switchToAccount(a) }
+                                } label: { accountIdentity(a) }
                                     .buttonStyle(PressableCardStyle(scale: 0.99))
+                                    .disabled(switching != nil)
+                                    .overlay(alignment: .trailing) {
+                                        if switching == a.id {
+                                            ProgressView().tint(Palette.gold).padding(.trailing, 6)
+                                                .accessibilityLabel("Cambiando de cuenta")
+                                        }
+                                    }
                                     .accessibilityLabel("\(a.name), \(a.expired ? "vuelve a entrar" : a.email)\(a.id == accounts.defaultId ? ", cuenta predeterminada" : "")")
                                     .accessibilityHint("Abre esta cuenta")
                                 Button("Quitar") { Haptics.warning(); accounts.forget(a.id) }
@@ -362,6 +376,41 @@ struct AccountView: View {
             Button("Eliminar cuenta", role: .destructive) { Task { await deleteAccount() } }
             Button("Cancelar", role: .cancel) {}
         } message: { Text("Se borrarán tu cuenta y todos tus datos de forma permanente. No se puede deshacer.") }
+        .sheet(item: $unlocking) { target in
+            AccountUnlockSheet(target: target) { password in
+                let result = await accounts.signIn(target.id, password: password)
+                guard result == .ok else { return false }
+                await session.switched()
+                Haptics.success()
+                show("Ahora entrenas como \(target.name)")
+                dismiss()
+                return true
+            }
+        }
+    }
+
+    /// Cambia a otra cuenta guardada sin pasar por «¿Quién entrena?».
+    /// Solo se pide contraseña si esa cuenta la tiene (o si su sesión caducó).
+    private func switchToAccount(_ target: SavedAccount) async {
+        guard target.id != session.userIdString, switching == nil else { return }
+        if target.expired || target.requirePassword {
+            unlocking = target
+            return
+        }
+        switching = target.id
+        defer { switching = nil }
+        switch await accounts.switchTo(target.id) {
+        case .ok:
+            await session.switched()
+            Haptics.success()
+            show("Ahora entrenas como \(target.name)")
+            dismiss()
+        case .offline:
+            Haptics.error()
+            show("Sin conexión: no se ha cambiado de cuenta.")
+        case .expired, .wrong:
+            unlocking = target
+        }
     }
 
     private func uploadAvatar(_ p: PhotosPickerItem?) async {
@@ -726,4 +775,64 @@ struct JSONDoc: FileDocument {
     init(data: Data) { self.data = data }
     init(configuration: ReadConfiguration) throws { data = configuration.file.regularFileContents ?? Data() }
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
+}
+
+/// Pide la contraseña de una cuenta guardada sin salir de Ajustes.
+private struct AccountUnlockSheet: View {
+    let target: SavedAccount
+    var onUnlock: (String) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var password = ""
+    @State private var busy = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: 14) {
+            VStack(spacing: 4) {
+                Text(target.name).font(.apTitle2)
+                Text(target.email).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+            }
+            .padding(.top, 8)
+
+            SecureField("Contraseña", text: $password)
+                .textContentType(.password)
+                .submitLabel(.go)
+                .onSubmit { Task { await unlock() } }
+                .padding(14)
+                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .accessibilityLabel("Contraseña de \(target.name)")
+
+            if let error {
+                Text(error).font(.apFootnote).foregroundStyle(Palette.destructive)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Button {
+                Task { await unlock() }
+            } label: {
+                if busy { ProgressView().tint(.black) } else { Text("Entrar") }
+            }
+            .buttonStyle(PillButtonStyle(kind: .primary, height: 50))
+            .disabled(busy || password.isEmpty)
+
+            Button("Cancelar") { dismiss() }
+                .buttonStyle(.pillSecondary)
+        }
+        .padding(24)
+        .presentationDetents([.medium])
+        .presentationBackground(Palette.card)
+    }
+
+    private func unlock() async {
+        guard !busy else { return }
+        busy = true
+        error = nil
+        let ok = await onUnlock(password)
+        busy = false
+        if !ok {
+            Haptics.error()
+            error = "Contraseña incorrecta. Inténtalo de nuevo."
+        }
+    }
 }
