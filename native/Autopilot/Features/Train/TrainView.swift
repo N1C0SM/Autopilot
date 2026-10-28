@@ -11,6 +11,7 @@ struct TrainView: View {
     @State private var starting = false
     /// Día con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
     @State private var resumableDay: String?
+    @State private var editing = false
 
     /// Paridad con la web responsive: la misma pantalla en todas partes, con más aire y una
     /// portada de sesión a todo el ancho en iPad/Mac. El iPhone se queda exactamente igual.
@@ -42,11 +43,13 @@ struct TrainView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else if model.days.isEmpty {
+                    routineBar
                     EmptyStateView(symbol: "dumbbell",
                                    title: model.error ?? "Aún no hay rutina",
                                    message: model.error == nil ? "En cuanto tengamos tu plan, verás aquí tu semana."
                                                                : "Desliza hacia abajo para volver a intentarlo.")
                 } else {
+                    routineBar
                     WeeklyRoutineView(days: model.days,
                                       initialDay: DayNames.today,
                                       doneToday: model.completedToday(DayNames.today),
@@ -75,6 +78,10 @@ struct TrainView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in Task { await openToday() } }
+        .sheet(isPresented: $editing) {
+            PlanEditorView(original: model.days) { saved in model.days = saved }
+                .presentationBackground(Palette.background)
+        }
         #if os(iOS)
         .fullScreenCover(item: $active) { workout in workoutStack(workout) }
         #else
@@ -92,6 +99,24 @@ struct TrainView: View {
     }
 
     // MARK: Cargar y abrir la sesión de la rutina
+
+    /// Barra de la rutina (como la web): modo del plan y «Editar» para crear o cambiar tu rutina.
+    private var routineBar: some View {
+        HStack(spacing: 8) {
+            Text(model.days.contains { $0.custom == true } ? "Rutina personalizada" : "Piloto automático")
+                .font(.apSubhead.weight(.medium)).frame(maxWidth: .infinity, alignment: .leading)
+            Button { Haptics.tap(); editing = true } label: {
+                Label("Editar", image: "lu-settings").labelStyle(.titleOnly)
+                    .font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold)
+                    .padding(.horizontal, 14).frame(height: 36)
+                    .background(Palette.secondary, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Editar rutina")
+        }
+        .padding(.leading, 16).padding(.trailing, 8).padding(.vertical, 8)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
 
     private func load() async {
         await model.load(userId: session.userId)

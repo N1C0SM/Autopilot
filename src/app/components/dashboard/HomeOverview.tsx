@@ -97,7 +97,7 @@ export const OverviewRow = ({
         <span aria-hidden="true">{icon}</span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" strokeWidth={2.5} aria-hidden="true" />
       </span>
-      {value != null && <span className="mt-auto block pt-4 type-figure text-[30px] font-bold leading-none tracking-tight tabular-nums">{value}</span>}
+      {value != null && <span className="mt-auto block pt-4 type-figure text-[40px] font-bold leading-none tracking-tight tabular-nums">{value}</span>}
       <span className={`${value != null ? "mt-2" : "mt-auto pt-4"} block type-headline`}>{title}</span>
       <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{description}</span>
     </>
@@ -113,60 +113,6 @@ export const OverviewRow = ({
       className={className}
     >
       {inner}
-    </button>
-  );
-};
-
-/** Widget de Nutrición: kcal del día, barras de macros y comidas hechas. */
-const NutritionWidget = ({ locked, calories, macros, meals, mealsDone, detail, onClick }: {
-  locked: boolean;
-  calories: number | null;
-  macros: Macros | null;
-  meals: number;
-  mealsDone: number;
-  detail: ReactNode;
-  onClick: () => void;
-}) => {
-  const items = macros ? [
-    { label: "Proteína", grams: macros.protein, kcal: macros.protein * 4 },
-    { label: "Carbos", grams: macros.carbs, kcal: macros.carbs * 4 },
-    { label: "Grasas", grams: macros.fats, kcal: macros.fats * 9 },
-  ] : [];
-  const total = items.reduce((sum, item) => sum + item.kcal, 0) || 1;
-  return (
-    <button
-      type="button"
-      onClick={() => { void hapticTap(); onClick(); }}
-      className="flex w-full min-w-0 flex-col gap-4 rounded-2xl bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <span className="flex items-start justify-between gap-3">
-        <span className="min-w-0">
-          <span className="block type-headline">Nutrición</span>
-          <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{detail}</span>
-        </span>
-        <ProgressRing value={!locked && meals ? (mealsDone / meals) * 100 : 0} size={32} stroke={3.5} className={locked ? "text-muted-foreground" : undefined}>
-          {locked ? <LockKeyhole className="h-[14px] w-[14px]" strokeWidth={2.25} /> : <Apple className="h-[14px] w-[14px]" strokeWidth={2.25} />}
-        </ProgressRing>
-      </span>
-      {!locked && calories != null && (
-        <span className="flex items-end justify-between gap-4">
-          <span className="type-figure text-[40px] text-foreground">
-            {calories.toLocaleString("es-ES")}<span className="ml-1 font-sans type-subhead font-semibold text-muted-foreground">kcal</span>
-          </span>
-          {items.length > 0 && (
-            <span className="grid min-w-0 flex-1 grid-cols-3 gap-2">
-              {items.map((item) => (
-                <span key={item.label} className="min-w-0">
-                  <span className="block h-1.5 overflow-hidden rounded-full bg-secondary">
-                    <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.round((item.kcal / total) * 100)}%` }} />
-                  </span>
-                  <span className="mt-1.5 block truncate type-caption1 tabular-nums text-muted-foreground">{Math.round(item.grams)} g {item.label.toLocaleLowerCase("es")}</span>
-                </span>
-              ))}
-            </span>
-          )}
-        </span>
-      )}
     </button>
   );
 };
@@ -461,35 +407,29 @@ const HomeOverview = ({
           )}
         </div>
 
-      {/* Widgets de Inicio: Nutrición a lo ancho y, debajo, Semana y Último récord. */}
+      {/* Widgets de Inicio: dos cuadrados lado a lado, Nutrición y Último récord. */}
       <section className="mt-8 lg:mt-12">
-      <h3 className="mb-3 type-title3">Widgets</h3>
-      <div className="grid grid-cols-2 gap-3 lg:gap-4">
-        <div className="col-span-2">
-          <NutritionWidget
-            locked={!nutrition}
-            calories={calorieTarget}
-            macros={macros && !macroError ? macros : null}
-            meals={meals.length}
-            mealsDone={doneMealCount}
-            detail={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
-            onClick={() => onNavigate("nutrition")}
-          />
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:gap-4 [&>*]:aspect-square">
         <OverviewRow
-          title="Semana"
-          value={scheduledDays.length ? <>{sessionCount}<span className="type-title3 text-muted-foreground">/{scheduledDays.length}</span></> : undefined}
-          onClick={() => onNavigate("progress")}
-          icon={(
-            <ProgressRing value={scheduledDays.length ? (sessionCount / scheduledDays.length) * 100 : 0} size={32} stroke={3.5}>
-              <Sparkles className="h-[14px] w-[14px]" strokeWidth={2.25} />
-            </ProgressRing>
-          )}
-          description={scheduledDays.length ? `${sessionCount} de ${scheduledDays.length} ${scheduledDays.length === 1 ? "sesión" : "sesiones"}` : "Sin sesiones esta semana"}
+          title="Nutrición"
+          value={nutrition && calorieTarget ? <>{calorieTarget.toLocaleString("es-ES")}<span className="ml-1 font-sans type-subhead font-semibold text-muted-foreground">kcal</span></> : undefined}
+          onClick={() => onNavigate("nutrition")}
+          icon={
+            nutrition ? (
+              <ProgressRing value={meals.length ? (doneMealCount / meals.length) * 100 : 0} size={32} stroke={3.5}>
+                <Apple className="h-[14px] w-[14px]" strokeWidth={2.25} />
+              </ProgressRing>
+            ) : (
+              <ProgressRing value={0} size={32} stroke={3.5} className="text-muted-foreground">
+                <LockKeyhole className="h-[14px] w-[14px]" strokeWidth={2.25} />
+              </ProgressRing>
+            )
+          }
+          description={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
         />
         <OverviewRow
           title={lastPr ? lastPr.exercise_name : "Récords"}
-          value={lastPr ? <>{lastPr.weight.toLocaleString("es-ES")}<span className="ml-1 type-subhead font-semibold text-muted-foreground">kg</span></> : undefined}
+          value={lastPr ? <>{lastPr.weight.toLocaleString("es-ES")}<span className="ml-1 font-sans type-subhead font-semibold text-muted-foreground">kg</span></> : undefined}
           onClick={() => onNavigate("progress")}
           icon={(
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">

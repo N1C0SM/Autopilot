@@ -1,13 +1,12 @@
 import SwiftUI
 import ImageIO
 
-/// Tarjeta de descanso de la web (`EmptyState rest`): luna dorada con halo, estrellas, título y acción.
+/// Tarjeta de descanso de la web (`EmptyState rest`): la «A» de marca tenue con halo, título y acción.
 struct RestCard<Action: View>: View {
     let title: String
     let message: String
     @ViewBuilder var action: Action
 
-    /// EmptyState `rest` de la web: halo, luna creciente de 96 pt con resplandor y cinco estrellas.
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer(minLength: 144)
@@ -17,27 +16,14 @@ struct RestCard<Action: View>: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
-        .background {
-            GeometryReader { geo in
-                ZStack(alignment: .topLeading) {
-                    Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.22), .clear], center: .center, startRadius: 0, endRadius: 144))
-                        .frame(width: 288, height: 288).offset(x: geo.size.width - 288 + 64, y: -80)
-                    Circle().fill(Palette.gold.opacity(0.9))
-                        .frame(width: 96, height: 96)
-                        .mask {
-                            Rectangle().overlay {
-                                Circle().frame(width: 77, height: 77).position(x: 28.8, y: 33.6).blendMode(.destinationOut)
-                            }
-                            .compositingGroup()
-                        }
-                        .shadow(color: Palette.gold.opacity(0.45), radius: 30)
-                        .offset(x: geo.size.width - 96 - 32, y: 32)
-                    ForEach([(0.18, 0.22), (0.34, 0.58), (0.12, 0.72), (0.46, 0.30), (0.26, 0.44)], id: \.0) { t, l in
-                        Circle().fill(Color.white.opacity(0.5)).frame(width: 4, height: 4)
-                            .offset(x: l * geo.size.width, y: t * geo.size.height)
-                    }
-                }
+        .background(alignment: .topTrailing) {
+            // Descanso con la firma de marca (no un dibujo): la «A» grande y tenue con su halo.
+            ZStack {
+                Circle().fill(RadialGradient(colors: [Palette.gold.opacity(0.18), .clear], center: .center, startRadius: 0, endRadius: 150))
+                    .frame(width: 300, height: 300)
+                BrandMark(size: 132, color: Palette.gold.opacity(0.28))
             }
+            .offset(x: 70, y: -70)
             .accessibilityHidden(true)
         }
         .background(Palette.card)

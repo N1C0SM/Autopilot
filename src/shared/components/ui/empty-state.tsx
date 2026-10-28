@@ -1,5 +1,6 @@
 import * as React from "react";
 import { IconTile } from "@/shared/components/ui/icon-tile";
+import { BrandMark } from "./brand-mark";
 import { cn } from "@/shared/lib/utils";
 
 interface EmptyStateProps {
@@ -30,9 +31,9 @@ const EmptyState = ({ icon: Icon, title, description, action, className, card, p
       <img src={photo} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover object-[50%_25%] opacity-90" />
       <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-card via-card/70 to-transparent" />
     </> : rest ? <>
-      <span aria-hidden="true" className="absolute -right-16 -top-20 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.22),transparent)]" />
-      <span aria-hidden="true" className="absolute right-8 top-8 h-24 w-24 rounded-full bg-primary/90 shadow-[0_0_60px_hsl(var(--primary)/0.45)] [mask-image:radial-gradient(circle_at_30%_35%,transparent_42%,#000_43%)]" />
-      {[[18, 22], [34, 58], [12, 72], [46, 30], [26, 44]].map(([t, l]) => <span key={`${t}-${l}`} aria-hidden="true" className="absolute h-1 w-1 rounded-full bg-foreground/50" style={{ top: `${t}%`, left: `${l}%` }} />)}
+      {/* Descanso con la firma de marca (no un dibujo): la «A» grande y tenue con su halo. */}
+      <span aria-hidden="true" className="absolute -right-16 -top-20 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.18),transparent)]" />
+      <BrandMark size={132} className="absolute -right-4 -top-4 text-primary/30" />
     </> : <>
       <span aria-hidden="true" className="absolute -right-16 -top-20 h-72 w-72 rounded-full bg-[radial-gradient(closest-side,hsl(var(--primary)/0.25),transparent)]" />
       <div aria-hidden="true" className="absolute right-8 top-8 flex h-28 w-28 items-center justify-center rounded-full border border-primary/20 bg-primary/10 shadow-[0_0_60px_hsl(var(--primary)/0.35)]">

@@ -19,6 +19,12 @@ struct GymExercise: Codable, Hashable, Identifiable {
 
     enum CodingKeys: String, CodingKey { case exercise_id, name, series, reps, weight, rest, image_url, muscle_group }
 
+    init(exercise_id: String, name: String, series: Int, reps: String, weight: String, rest: String,
+         image_url: String? = nil, muscle_group: String? = nil) {
+        self.exercise_id = exercise_id; self.name = name; self.series = series; self.reps = reps
+        self.weight = weight; self.rest = rest; self.image_url = image_url; self.muscle_group = muscle_group
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         exercise_id = (try? c.decode(String.self, forKey: .exercise_id)) ?? ""

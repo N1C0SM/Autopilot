@@ -127,11 +127,9 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("Semana")).toBeVisible();
-    expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
-    expect(screen.getByText("Plan de nutrición")).toBeVisible();
+        expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    const progressCard = screen.getByRole("button", { name: /Semana/ });
+    const progressCard = screen.getByRole("button", { name: /Récords/ });
     expect(nutritionCard).toBeVisible();
     expect(progressCard).toBeVisible();
     // Los widgets van juntos en su rejilla, después de la acción principal.

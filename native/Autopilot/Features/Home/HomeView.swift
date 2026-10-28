@@ -200,70 +200,20 @@ struct HomeView: View {
         .frame(maxWidth: 448, alignment: .leading)
     }
 
-    /// Widgets de Inicio, como la web: Nutrición a lo ancho y, debajo, Semana y Último récord.
+    /// Widgets de Inicio, como la web: dos cuadrados lado a lado, Nutrición y Último récord.
     private var widgets: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Widgets").font(.apTitle3)
-            nutritionWidget
-            HStack(alignment: .top, spacing: 12) {
-                let done = min(model.completions.count, snapshot?.scheduled.count ?? 0)
-                let total = snapshot?.scheduled.count ?? 0
-                widgetTile(symbol: "lu-sparkles", ring: total > 0 ? Double(done) / Double(total) : 0,
-                           value: total > 0 ? "\(done)/\(total)" : nil, unit: nil, title: "Semana",
-                           detail: total > 0 ? "\(done) de \(total) sesiones" : "Sin sesiones esta semana") { onNavigate(.progress) }
-                let pr = snapshot?.lastPr
-                widgetTile(symbol: "lu-trophy", ring: nil,
-                           value: pr.map { $0.weight.rounded() == $0.weight ? NumberText.integer(Int($0.weight)) : NumberText.decimal($0.weight) }, unit: pr == nil ? nil : "kg",
-                           title: pr?.exercise ?? "Récords",
-                           detail: pr.map { "\($0.reps) reps · \($0.dateLabel)" } ?? "Tu primer récord llegará entrenando") { onNavigate(.progress) }
-            }
+        HStack(alignment: .top, spacing: 12) {
+            let kcal = snapshot?.calories
+            widgetTile(symbol: kcal == nil ? "lu-lock" : "lu-apple", ring: nil,
+                       value: kcal.map { NumberText.integer($0) }, unit: kcal == nil ? nil : "kcal", title: "Nutrición",
+                       detail: kcal == nil ? "Sin plan de nutrición todavía" : "Objetivo diario") { onNavigate(.nutrition) }
+            let pr = snapshot?.lastPr
+            widgetTile(symbol: "lu-trophy", ring: nil,
+                       value: pr.map { $0.weight.rounded() == $0.weight ? NumberText.integer(Int($0.weight)) : NumberText.decimal($0.weight) },
+                       unit: pr == nil ? nil : "kg",
+                       title: pr?.exercise ?? "Récords",
+                       detail: pr.map { "\($0.reps) reps · \($0.dateLabel)" } ?? "Tu primer récord llegará entrenando") { onNavigate(.progress) }
         }
-    }
-
-    /// Widget de Nutrición: kcal del día y barras de macros (proteína, carbos, grasas).
-    private var nutritionWidget: some View {
-        Button { Haptics.tap(); onNavigate(.nutrition) } label: {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Nutrición").font(.apHeadline)
-                        Text(snapshot?.calories == nil ? "Sin plan de nutrición todavía" : "Objetivo diario")
-                            .font(.apFootnote).foregroundStyle(Palette.muted)
-                    }
-                    Spacer()
-                    ProgressRing(value: 0, symbol: snapshot?.calories == nil ? "lu-lock" : "lu-apple")
-                }
-                if let kcal = snapshot?.calories {
-                    HStack(alignment: .bottom, spacing: 16) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(NumberText.integer(kcal)).font(.figure(size: 40))
-                            Text("kcal").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted)
-                        }
-                        if let m = snapshot?.macros {
-                            let items = [("proteína", m.p, m.p * 4), ("carbos", m.c, m.c * 4), ("grasas", m.f, m.f * 9)]
-                            let total = max(1, items.reduce(0) { $0 + $1.2 })
-                            HStack(spacing: 8) {
-                                ForEach(items, id: \.0) { item in
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        GeometryReader { g in
-                                            Capsule().fill(Palette.secondary)
-                                                .overlay(alignment: .leading) { Capsule().fill(Palette.gold).frame(width: g.size.width * item.2 / total) }
-                                        }
-                                        .frame(height: 6)
-                                        Text("\(Int(item.1.rounded())) g \(item.0)").font(.apCaption).foregroundStyle(Palette.muted).lineLimit(1)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-        }
-        .buttonStyle(.pressableCard)
-        .accessibilityLabel((snapshot?.calories).map { "Nutrición, \(NumberText.integer($0)) kilocalorías de objetivo" } ?? "Nutrición")
     }
 
     /// Widget compacto (Semana, Récord): icono arriba, cifra grande, título y una línea gris.
@@ -275,7 +225,7 @@ struct HomeView: View {
                 Spacer(minLength: 16)
                 if let value {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(value).font(.figure(size: 30))
+                        Text(value).font(.figure(size: 40)).minimumScaleFactor(0.6).lineLimit(1)
                         if let unit { Text(unit).font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted) }
                     }
                     .padding(.bottom, 8)
@@ -285,7 +235,8 @@ struct HomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .aspectRatio(1, contentMode: .fill)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.pressableCard)
@@ -296,14 +247,13 @@ struct HomeView: View {
 
     @ViewBuilder private var mainAction: some View {
         if let s = snapshot {
-            if s.completedToday || s.plan == nil {
-                if let n = nextPlan {
-                    nextSessionCard(n)
-                } else {
-                    RestCard(title: "Hoy toca descansar", message: nextSession(s.scheduled) ?? "Tu plan aún no tiene sesiones.") {
-                        Button("Entrenar igualmente") { Haptics.tap(); onNavigate(.train) }
-                            .buttonStyle(.pillSecondary)
-                    }
+            // Siempre lo que toca HOY (como la web): hecho, descanso o la sesión de hoy.
+            if s.completedToday {
+                doneCard(s.plan)
+            } else if s.plan == nil {
+                RestCard(title: "Hoy toca descansar", message: nextSession(s.scheduled) ?? "Tu plan aún no tiene sesiones.") {
+                    Button("Entrenar igualmente") { Haptics.tap(); onNavigate(.train) }
+                        .buttonStyle(.pillSecondary)
                 }
             } else if let plan = s.plan {
                 startCard(plan)
@@ -311,6 +261,27 @@ struct HomeView: View {
         } else {
             todaySkeleton
         }
+    }
+
+    /// «Hecho hoy» (fila de la web): check verde, título de la sesión y «Resumen», que abre la hoja.
+    private func doneCard(_ plan: DayPlan?) -> some View {
+        Button { Haptics.tap(); openSheet() } label: {
+            HStack(spacing: 14) {
+                Image("lu-check").renderingMode(.template).resizable().frame(width: 20, height: 20)
+                    .foregroundStyle(Palette.success)
+                    .frame(width: 40, height: 40).background(Palette.success.opacity(0.15), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.success)
+                    Text(plan.map { $0.title.components(separatedBy: " · ").first ?? $0.title } ?? "Sesión completada").font(.apHeadline).lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Resumen").font(.apSubhead).foregroundStyle(Palette.gold)
+            }
+            .padding(18)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+        .buttonStyle(.pressableCard)
+        .accessibilityLabel("Ver el resumen de la sesión de hoy")
     }
 
     /// Esqueleto con la misma altura que la tarjeta final: Inicio no salta al terminar de cargar.
