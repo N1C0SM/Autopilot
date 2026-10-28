@@ -15,6 +15,10 @@ interface State {
 }
 
 const MAX_AUTO_RETRIES = 3;
+/** Clave de sessionStorage con la última recarga automática. */
+const AUTO_RELOAD_KEY = "autopilot_auto_reload";
+/** Ventana en la que no se permite otra recarga automática (60 s). */
+const AUTO_RELOAD_WINDOW_MS = 60_000;
 
 /**
  * Captura errores de render y se recupera sola: reintenta el render en silencio
@@ -29,8 +33,12 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidMount() {
+    // La marca de «ya recargamos» caduca sola; NO se borra al montar. Antes se borraba aquí y,
+    // como el montaje ocurre antes del fallo, la app entraba en un bucle infinito de recargas
+    // (pantalla en blanco) sin llegar a mostrar nunca la pantalla de error.
     try {
-      sessionStorage.removeItem("autopilot_auto_reload");
+      const at = Number(sessionStorage.getItem(AUTO_RELOAD_KEY) || "0");
+      if (!at || Date.now() - at > AUTO_RELOAD_WINDOW_MS) sessionStorage.removeItem(AUTO_RELOAD_KEY);
     } catch {
       /* ignorar */
     }
@@ -45,11 +53,13 @@ export default class ErrorBoundary extends Component<Props, State> {
       }, 250);
       return;
     }
-    // Último recurso: una sola recarga automática, sin pantalla de error ni botones.
+    // Último recurso: como mucho una recarga automática por minuto. Si el fallo se repite
+    // (un bug de render reproducible), se enseña la pantalla de error en vez de recargar en bucle.
     try {
-      const reloads = Number(sessionStorage.getItem("autopilot_auto_reload") || "0");
-      if (reloads < 1) {
-        sessionStorage.setItem("autopilot_auto_reload", String(reloads + 1));
+      const at = Number(sessionStorage.getItem(AUTO_RELOAD_KEY) || "0");
+      const alreadyReloaded = at > 0 && Date.now() - at < AUTO_RELOAD_WINDOW_MS;
+      if (!alreadyReloaded) {
+        sessionStorage.setItem(AUTO_RELOAD_KEY, String(Date.now()));
         this.setState({ reloading: true });
         window.setTimeout(() => window.location.reload(), 400);
       }

@@ -403,6 +403,28 @@ const Dashboard = () => {
     if (!loading && hideChat && section === "chat") setSection("home");
   }, [loading, hideChat, section, setSection]);
 
+  // Recalcular nutrición cuando cambie la campaña o se actualice el perfil.
+  // OJO: este efecto tiene que estar aquí arriba, antes de los `return` de carga/error.
+  // Cuando estaba después, el primer render (loading) no lo ejecutaba y el segundo sí:
+  // React lanzaba «Rendered more hooks than during the previous render» y el Dashboard
+  // se quedaba en blanco justo después de iniciar sesión.
+  useEffect(() => {
+    if (!user || planStatus !== "plan_ready") return;
+    const recalculate = async () => {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profile) {
+        const hasNutr = hasNutrition(profile, Date.now(), campaign);
+        setNutrition(hasNutr);
+      }
+    };
+    void recalculate();
+  }, [campaign, user, planStatus]);
+
   // Mejorar de Entrenamiento a Completo: portal de Stripe si existe cliente, si no checkout directo.
   const handleUpgradeToFull = async () => {
     if (isIOSNative()) return;
@@ -461,24 +483,6 @@ const Dashboard = () => {
   }
 
   const hasPlan = planStatus === "plan_ready";
-
-  // 🐛 FIX: Recalcular nutrition cuando campaign cambie o se actualice el perfil
-  useEffect(() => {
-    if (!user || planStatus !== "plan_ready") return;
-    const recalculate = async () => {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("payment_status, subscription_tier, subscription_status, subscription_end, stripe_payment_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      
-      if (profile) {
-        const hasNutr = hasNutrition(profile, Date.now(), campaign);
-        setNutrition(hasNutr);
-      }
-    };
-    void recalculate();
-  }, [campaign, user, planStatus]);
 
   const isTrainingOnly = coaching && !nutrition;
   const isTransform = subscriptionTier === "transform";
