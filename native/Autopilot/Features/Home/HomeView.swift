@@ -263,25 +263,44 @@ struct HomeView: View {
         }
     }
 
-    /// «Hecho hoy» (fila de la web): check verde, título de la sesión y «Resumen», que abre la hoja.
+    /// Hecho hoy: la misma portada grande con foto, marcada como hecha, y debajo la siguiente
+    /// sesión en una línea. Se toca y abre el resumen del entreno de hoy.
     private func doneCard(_ plan: DayPlan?) -> some View {
-        Button { Haptics.tap(); openSheet() } label: {
-            HStack(spacing: 14) {
-                Image("lu-check").renderingMode(.template).resizable().frame(width: 20, height: 20)
+        let exercises = plan?.exercises ?? []
+        let cover = exercises.compactMap { $0.image_url }.first.flatMap(URL.init(string:))
+        let title = plan.map { $0.title.components(separatedBy: " · ")[0] } ?? "Sesión completada"
+        let next = nextPlan.map { "Siguiente: \($0.day.lowercased()) · \($0.plan.title.components(separatedBy: " · ")[0])" }
+        return Button { Haptics.tap(); openSheet() } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                ZStack(alignment: .bottomLeading) {
+                    CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                        .frame(maxWidth: .infinity).frame(height: 210).clipped()
+                        .overlay { LinearGradient(colors: [.clear, .black.opacity(0.82)], startPoint: .center, endPoint: .bottom) }
+                    HStack(spacing: 6) {
+                        Image("lu-check").renderingMode(.template).resizable().frame(width: 12, height: 12)
+                        Text("HECHO HOY").font(.apCaption.weight(.bold)).tracking(0.8)
+                    }
                     .foregroundStyle(Palette.success)
-                    .frame(width: 40, height: 40).background(Palette.success.opacity(0.15), in: Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Hecho hoy").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.success)
-                    Text(plan.map { $0.title.components(separatedBy: " · ").first ?? $0.title } ?? "Sesión completada").font(.apHeadline).lineLimit(1)
+                    .shadow(color: .black.opacity(0.55), radius: 6)
+                    .padding(18)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Resumen").font(.apSubhead).foregroundStyle(Palette.gold)
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title).font(.apTitle2).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        Text(next ?? "Buen trabajo. Hoy toca recuperar.").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                    }
+                    Spacer(minLength: 8)
+                    Text("Resumen").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                }
+                .padding(18)
             }
-            .padding(18)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .background(Palette.card)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         }
         .buttonStyle(.pressableCard)
-        .accessibilityLabel("Ver el resumen de la sesión de hoy")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Hecho hoy: \(title). \(next ?? "")")
+        .accessibilityHint("Abre el resumen del entreno de hoy")
     }
 
     /// Esqueleto con la misma altura que la tarjeta final: Inicio no salta al terminar de cargar.

@@ -363,21 +363,27 @@ const HomeOverview = ({
               </span>
             </button>
           ) : completedToday ? (
-            // Hecho: una tarjeta compacta con la sesión, no un estado vacío.
+            // Hecho: la misma portada grande con foto, marcada como hecha, y la siguiente sesión debajo.
             <button
               type="button"
               onClick={() => { void hapticTap(); onNavigate("training"); }}
-              className="flex w-full items-center gap-3.5 rounded-2xl bg-card p-4 text-left transition-transform duration-150 active:scale-[0.98] lg:max-w-2xl"
+              className="block w-full overflow-hidden rounded-[28px] bg-card text-left transition-transform duration-150 active:scale-[0.98] lg:max-w-2xl"
               aria-label="Ver el resumen de la sesión de hoy"
             >
-              <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                <Check className="h-5 w-5" strokeWidth={3} />
+              <span className="relative block h-[210px] bg-secondary">
+                {(sessionCover || BRAND_PHOTOS.gym) && <img src={sessionCover || BRAND_PHOTOS.gym} alt="" className="h-full w-full object-cover" />}
+                <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/80" />
+                <span className="absolute bottom-4 left-[18px] flex items-center gap-1.5 type-caption1 font-bold uppercase tracking-[0.08em] text-success">
+                  <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />Hecho hoy
+                </span>
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block type-footnote font-semibold text-success">Hecho hoy</span>
-                <span className="block truncate type-headline">{todayPlan ? String(planTitle(todayPlan)).split(" · ")[0] : "Sesión completada"}</span>
+              <span className="flex items-center gap-3 p-[18px]">
+                <span className="min-w-0 flex-1">
+                  <span className="block type-title2">{todayPlan ? String(planTitle(todayPlan)).split(" · ")[0] : "Sesión completada"}</span>
+                  <span className="mt-0.5 block type-footnote text-muted-foreground">{nextSession ?? "Buen trabajo. Hoy toca recuperar."}</span>
+                </span>
+                <span className="shrink-0 type-subhead font-semibold text-primary">Resumen</span>
               </span>
-              <span className="shrink-0 type-subhead text-primary">Resumen</span>
             </button>
           ) : (
             <EmptyState
