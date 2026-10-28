@@ -12,6 +12,7 @@ import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
 
 /** Foto del plato generada con IA, con el mismo estilo oscuro y dorado que las sesiones. */
 const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
@@ -98,6 +99,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   // (sync-nutrition-macros comprueba el acceso a nutrición antes de generar nada).
   const [generating, setGenerating] = useState(false);
   const [generateFailed, setGenerateFailed] = useState(false);
+  const [noAccess, setNoAccess] = useState(false);
   const asked = useRef(false);
   const generate = async () => {
     asked.current = true;
@@ -105,6 +107,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
     setGenerateFailed(false);
     const { data, error } = await supabase.functions.invoke("sync-nutrition-macros", { body: { regenerate_meals: true } });
     setGenerating(false);
+    if (data?.reason === "no_access") { setNoAccess(true); return; }
     if (error || !data?.meals_updated) { setGenerateFailed(true); return; }
     window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
     onMealsGenerated?.();
@@ -269,7 +272,9 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
         </Notice>
       )}
 
-      {!hasMeals ? (
+      {!hasMeals && noAccess ? (
+        <MealsPlusCard />
+      ) : !hasMeals ? (
         <EmptyState
           photo={emptyMealPhoto ?? undefined}
           nutrition

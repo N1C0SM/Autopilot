@@ -340,9 +340,8 @@ struct NutritionView: View {
                 await prefetchCovers(coverDish: coverDish)
             } else if hasAccess == nil {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
-                let access: Bool = (try? await Backend.client.rpc("has_active_nutrition_access", params: ["_user_id": id.uuidString]).execute().value) ?? false
-                hasAccess = access
-                if access { await generateMeals() }
+                // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
+                await generateMeals()
             }
         } catch {
             // Si la vista se cerró a mitad de la carga no hay error que enseñar.
@@ -355,10 +354,12 @@ struct NutritionView: View {
     /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).
     private func generateMeals() async {
         struct Body: Encodable { let regenerate_meals = true }
-        struct Result: Decodable { let meals_updated: Bool? }
+        struct Result: Decodable { let meals_updated: Bool?; let reason: String? }
         generating = true; generateFailed = false
         let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: Body()))
         generating = false
+        if result?.reason == "no_access" { hasAccess = false; return }
+        hasAccess = true
         guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
         macros = row.macros_json
         meals = row.meals_json ?? []
