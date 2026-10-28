@@ -391,6 +391,12 @@ struct MainShell: View {
             #endif
         } detail: {
             NavigationStack { SectionView(section: selection ?? defaultSection, onNavigate: { selection = $0 }) }
+                // Negro de borde a borde, también bajo la barra de título de la ventana.
+                .background(Palette.background.ignoresSafeArea())
+                #if os(macOS)
+                .toolbarBackground(Palette.background, for: .windowToolbar)
+                .toolbarBackground(.visible, for: .windowToolbar)
+                #endif
         }
     }
 }
