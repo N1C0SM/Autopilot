@@ -232,8 +232,13 @@ struct HomeView: View {
                             detail: String, macros: (p: Double, c: Double, f: Double)? = nil, action: @escaping () -> Void) -> some View {
         Button { Haptics.tap(); action() } label: {
             VStack(alignment: .leading, spacing: 0) {
-                if let m = macros { MacroRingSmall(p: m.p, c: m.c, f: m.f) }
-                else { ProgressRing(value: (ring ?? 0) * 100, symbol: symbol) }
+                Group {
+                    if let m = macros { MacroRingSmall(p: m.p, c: m.c, f: m.f) }
+                    else { ProgressRing(value: (ring ?? 0) * 100, symbol: symbol) }
+                }
+                // En Mac/iPad las tarjetas son más anchas: el icono crece para no quedarse diminuto.
+                .scaleEffect(wideLayout ? 1.4 : 1, anchor: .topLeading)
+                .frame(width: wideLayout ? 45 : 32, height: wideLayout ? 45 : 32, alignment: .topLeading)
                 Spacer(minLength: 16)
                 if let value {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
