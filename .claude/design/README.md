@@ -39,4 +39,4 @@ Si algo de esta tabla no sirve, se amplía el componente común. No se copia y s
 
 ## Firma de marca
 
-Lee `marca.md`. La regla es que **Autopilot se reconozca sin logo**: barras 2-1-2, cifras en Big Shoulders, el dorado único, el loader con las barras y la háptica 2-1-2.
+Lee `marca.md`. La regla es que **Autopilot se reconozca sin logo**: la «A» con rayo, cifras en Big Shoulders, el dorado único, el loader con la «A» y la háptica 2-1-2.

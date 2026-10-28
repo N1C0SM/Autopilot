@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dumbbell, Video } from "lucide-react";
 import VideoEmbed, { toEmbedUrl } from "@/web/components/VideoEmbed";
 import { cn } from "@/shared/lib/utils";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 
 const isDirectFile = (url: string) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
 
@@ -86,6 +87,8 @@ type Props = {
  * siempre 16:9 y con el mismo radio, así que nunca hay saltos de layout.
  */
 const ExerciseMedia = ({ video, image, name, className = "", emptyLabel = "Sin vídeo de técnica todavía" }: Props) => {
+  // Intro de marca de 1 s al reproducir (la «A» con el rayo latiendo sobre negro) y marca de agua fija.
+  const [intro, setIntro] = useState(false);
   if (video && isDirectFile(video)) {
     return (
       // El héroe es el vídeo con su portada: se ve al abrir la ficha y se
@@ -97,8 +100,19 @@ const ExerciseMedia = ({ video, image, name, className = "", emptyLabel = "Sin v
           playsInline
           controls
           preload="metadata"
+          onPlay={(e) => {
+            if (e.currentTarget.currentTime > 0.2) return;
+            setIntro(true);
+            window.setTimeout(() => setIntro(false), 1000);
+          }}
           className="h-full w-full object-cover"
         />
+        <BrandMark size={14} className="pointer-events-none absolute bottom-3 right-3 opacity-60" />
+        {intro && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black motion-safe:animate-fade-in">
+            <BrandMark size={36} beat />
+          </div>
+        )}
       </div>
     );
   }

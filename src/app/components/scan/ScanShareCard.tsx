@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import autopilotLogo from "@/shared/assets/autopilot-logo.png";
+import { BrandMark } from "@/shared/components/ui/brand-mark";
 
 export interface ScanShareData {
   physique: number;
@@ -94,8 +95,8 @@ const ScanShareCard = forwardRef<HTMLDivElement, { result: ScanShareData; photos
       </div>
 
       <div style={{ textAlign: "center" }}>
-        <div aria-hidden style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 7, height: 50, marginBottom: 24 }}>
-          {[50, 25, 50].map((h, i) => <span key={i} style={{ width: 10, height: h, borderRadius: 5, background: GOLD }} />)}
+        <div aria-hidden style={{ display: "flex", justifyContent: "center", marginBottom: 24, color: GOLD }}>
+          <BrandMark size={56} className="text-current" />
         </div>
         <div style={{ fontSize: 22, color: "#52525b" }}>Lectura orientativa con IA</div>
         <div style={{ fontSize: 26, color: "#71717a", fontWeight: 500, marginTop: 8 }}>autopilotplan.com/scan</div>

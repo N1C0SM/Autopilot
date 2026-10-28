@@ -360,8 +360,8 @@ extension View {
     }
 }
 
-/// Firma de Autopilot («Ritmo»): tres barras 2-1-2. Logo sin texto, marca de agua y loader;
-/// la misma pieza que `BrandMark` en la web. Con `beat` late, salvo con «Reducir movimiento».
+/// Firma de Autopilot: la «A» con rayo (misma geometría que `BRAND_A`/`BRAND_BOLT` en la web).
+/// Logo, marca de agua y loader. Con `beat` el rayo late, salvo con «Reducir movimiento».
 struct BrandMark: View {
     var size: CGFloat = 24
     var beat = false
@@ -369,19 +369,28 @@ struct BrandMark: View {
     @State private var low = false
 
     var body: some View {
-        let bar = max(2, (size * 0.2).rounded())
-        HStack(alignment: .bottom, spacing: bar * 0.7) {
-            ForEach(0..<3, id: \.self) { i in
-                Capsule()
-                    .fill(color)
-                    .frame(width: bar, height: i == 1 ? size / 2 : size)
-                    .scaleEffect(x: 1, y: low ? 0.45 : 1, anchor: .bottom)
-                    .animation(beat ? .spring(response: 0.6, dampingFraction: 0.55).repeatForever().delay(Double(i) * 0.12) : nil, value: low)
-            }
+        ZStack {
+            BrandShape(points: [(50, 10), (88, 86), (70, 86), (50, 44), (30, 86), (12, 86)]).fill(color)
+            BrandShape(points: [(52, 55), (44, 70), (49.5, 70), (47, 81), (56, 65), (50.5, 65)]).fill(color)
+                .opacity(low ? 0.35 : 1)
+                .animation(beat ? .spring(response: 0.6, dampingFraction: 0.55).repeatForever() : nil, value: low)
         }
-        .frame(height: size, alignment: .bottom)
+        .frame(width: size, height: size)
         .accessibilityHidden(true)
         .onAppear { if beat && !A11y.reduceMotion { low = true } }
+    }
+}
+
+/// Polígono en coordenadas 0–100 recortado al cuadro 10…90 × 8…88 (igual que el viewBox web).
+private struct BrandShape: Shape {
+    let points: [(CGFloat, CGFloat)]
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let map = { (pt: (CGFloat, CGFloat)) in CGPoint(x: rect.minX + (pt.0 - 10) / 80 * rect.width, y: rect.minY + (pt.1 - 8) / 80 * rect.height) }
+        p.move(to: map(points[0]))
+        points.dropFirst().forEach { p.addLine(to: map($0)) }
+        p.closeSubpath()
+        return p
     }
 }
 

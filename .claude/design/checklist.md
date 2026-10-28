@@ -38,7 +38,7 @@ Pásala en cada pantalla nueva o cambiada. Si algo falla, no se publica.
 
 ## Test sin logo
 
-- [ ] Si tapo el logo y la palabra «Autopilot», ¿se sigue sabiendo que es Autopilot? (barras, cifras en `.type-figure`, dorado, tratamiento de foto)
+- [ ] Si tapo el logo y la palabra «Autopilot», ¿se sigue sabiendo que es Autopilot? (la «A», cifras en `.type-figure`, dorado, tratamiento de foto)
 - [ ] La carga usa `Spinner` o `BrandLoader`, nunca aspas ni `ProgressView`.
 - [ ] Solo un `BrandMark` por vista, y nunca como relleno.
 - [ ] Ningún dorado fuera del token (`--primary` / `Palette.gold`).

@@ -11,7 +11,7 @@ export interface SpinnerProps extends Omit<React.HTMLAttributes<HTMLSpanElement>
 }
 
 /**
- * Indicador de actividad con la firma de Autopilot: las tres barras 2-1-2 latiendo.
+ * Indicador de actividad con la firma de Autopilot: la «A» con el rayo latiendo.
  * Hereda el color del texto; por defecto, gris secundario.
  */
 const Spinner = ({ size = "md", label = "Cargando", className, style, ...props }: SpinnerProps) => (

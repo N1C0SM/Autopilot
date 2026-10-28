@@ -104,8 +104,8 @@ struct RootView: View {
     var body: some View {
         Group {
             if !session.ready {
-                // Arranque con la firma de marca: las mismas barras del splash, ahora latiendo.
-                BrandMark(size: 48, beat: true)
+                // Arranque con la firma de marca: la misma «A» del splash, con el rayo latiendo.
+                BrandMark(size: 72, beat: true)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).screenBackground()
                     .accessibilityLabel("Autopilot")
             } else if session.showPicker {

@@ -128,10 +128,10 @@ export default {
           "0%, 100%": { boxShadow: "0 0 20px hsl(48 100% 50% / 0.15)" },
           "50%": { boxShadow: "0 0 40px hsl(48 100% 50% / 0.3)" },
         },
-        // Firma de marca «Ritmo»: tres barras que laten 2-1-2 (excéntrica, pausa, concéntrica).
+        // Firma de marca: el rayo de la «A» late (carga, arranque, récord).
         "brand-beat": {
-          "0%, 100%": { transform: "scaleY(1)" },
-          "50%": { transform: "scaleY(0.45)" },
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.35", transform: "scale(0.8)" },
         },
         // UIActivityIndicatorView: each blade fades from full to faint in turn.
         "ios-spinner": {
