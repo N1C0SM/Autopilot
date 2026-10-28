@@ -1,5 +1,7 @@
 # Roadmap
 
+- [ ] Muestras públicas fieles al móvil: Hoy, Entrenar, Progreso y navegación; verificar en móvil y escritorio.
+
 - [x] Resumen final del cuestionario más visual (semana, objetivo, datos clave)
 - [x] Pantalla para elegir cómo empezar rediseñada
 - [x] Revisión de portada web y panel de ordenador (textos duplicados, alineación)

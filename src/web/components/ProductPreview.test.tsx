@@ -37,7 +37,7 @@ afterEach(cleanup);
 describe("public product preview", () => {
   it("records, undoes and resets sample exercises", async () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Sentadilla goblet" }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 2 de Sentadilla goblet" }));
@@ -50,15 +50,16 @@ describe("public product preview", () => {
 
   it("retains the demo session across views and labels illustrative data", async () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
     fireEvent.click(await screen.findByRole("button", { name: "Empezar entrenamiento" }));
     fireEvent.click(screen.getByRole("tab", { name: /Remo con mancuerna/ }));
     fireEvent.click(screen.getByRole("button", { name: "Marcar serie 1 de Remo con mancuerna" }));
+    fireEvent.click(screen.getByRole("button", { name: "Terminar entreno" }));
     fireEvent.click(screen.getByRole("button", { name: "Nutrición" }));
     await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: "Progreso" }));
     await waitFor(() => expect(screen.getByText(/gráficas se construyen con tus propias series completadas/)).toBeVisible());
-    fireEvent.click(screen.getByRole("button", { name: "Plan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Entrenar" }));
     expect(await screen.findByRole("status")).toHaveTextContent("1 de 9 series");
     expect(screen.getByText(/Demo con datos ficticios/)).toBeVisible();
   });
@@ -70,6 +71,7 @@ describe("public product preview", () => {
     await waitFor(() => expect(screen.getByRole("img", { name: "Gráfica de volumen para Sentadilla goblet" })).toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: "Fuerza estimada" }));
     await waitFor(() => expect(screen.getByRole("img", { name: "Gráfica de fuerza estimada para Sentadilla goblet" })).toBeVisible());
+    fireEvent.click(screen.getByRole("tab", { name: "Récords" }));
     expect(screen.getByText("Récords personales")).toBeVisible();
     expect(screen.queryByText("Cintura")).not.toBeInTheDocument();
   });
@@ -83,7 +85,7 @@ describe("public product preview", () => {
 
   it("opens nutrition from the summary row on the home screen", async () => {
     render(<ProductPreview onPlans={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: /^Nutrición 2 de 3 comidas/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Nutrición 2 de 3 comidas/ }));
     await waitFor(() => expect(screen.getByText(/Comidas ilustrativas/)).toBeVisible());
   });
 

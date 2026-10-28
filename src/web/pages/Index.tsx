@@ -8,6 +8,7 @@ import { track } from "@/shared/lib/analytics";
 import { COACH_CONTACT_CHANNEL, type PlanKey } from "@/shared/config/tiers";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { LANDING_META, landingDescription, landingFaqs } from "@/shared/lib/publicCopy";
+import { PublicTrainingScreen, PublicProgressScreen } from "@/web/components/PublicAppScreen";
 import PublicHeroPhone from "@/web/components/PublicHeroPhone";
 import FreePlanSection from "@/web/components/FreePlanSection";
 import ScrollWords from "@/web/components/ScrollWords";
@@ -155,8 +156,8 @@ export default function Index() {
     {/* 6 · Cómo funciona, en tres actos */}
     <StickySteps eyebrow="Cómo funciona" steps={[
       { icon: SlidersHorizontal, title: "Personaliza.", text: "Tu objetivo, nivel, días y material.", visual: <StepPanel>{[["Objetivo", "Ganar músculo"], ["Nivel", "Intermedio"], ["Días", "4 por semana"], ["Material", "Gimnasio"]].map(([k, v]) => <div key={k} className="flex items-center justify-between py-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-border/50"><span className="type-subhead text-muted-foreground">{k}</span><span className="type-headline">{v}</span></div>)}</StepPanel> },
-      { icon: Dumbbell, title: "Entrena.", text: "Consulta tu rutina y registra las series de cada sesión.", visual: <StepPanel><p className="type-headline">Press banca</p>{[["1", "60", "10"], ["2", "60", "9"], ["3", "60", "8"]].map(([n, kg, r]) => <div key={n} className="mt-3 grid grid-cols-[1.5rem_1fr_1fr_1.25rem] items-center gap-3 tabular-nums"><span className="type-subhead text-muted-foreground">{n}</span><span className="rounded-lg bg-primary/15 py-2 text-center type-body">{kg} kg</span><span className="rounded-lg bg-primary/15 py-2 text-center type-body">{r}</span><span className="h-5 w-5 rounded-full bg-primary" /></div>)}</StepPanel> },
-      { icon: LineChart, title: "Progresa.", text: "Revisa tu historial, récords y volumen.", visual: <StepPanel><p className="type-subhead text-muted-foreground">Historial · Press banca</p><div className="mt-4 flex h-36 items-end gap-3">{[52, 55, 55, 57.5, 60].map((kg, i) => <div key={i} className={`flex-1 rounded-md ${i === 4 ? "bg-primary" : "bg-primary/30"}`} style={{ height: `${((kg - 45) / 15) * 100}%` }} />)}</div><p className="mt-3 type-footnote text-muted-foreground">Datos de ejemplo</p></StepPanel> },
+      { icon: Dumbbell, title: "Entrena.", text: "Consulta tu rutina y registra las series de cada sesión.", visual: <div aria-hidden="true" className="h-[42rem] overflow-hidden rounded-[28px] bg-background"><PublicTrainingScreen active /></div> },
+      { icon: LineChart, title: "Progresa.", text: "Revisa tu historial, récords y volumen.", visual: <div aria-hidden="true" className="h-[34rem] overflow-hidden rounded-[28px] bg-background"><PublicProgressScreen /></div> },
     ]} />
 
     {/* 6b · Demo interactiva */}

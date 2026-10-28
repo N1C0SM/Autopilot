@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { BookOpen, Dumbbell, Home, LineChart } from "lucide-react";
-import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot } from "@/web/components/PublicPhone";
+import { Apple, BookOpen, Dumbbell, Home, LineChart, Settings, Sparkles } from "lucide-react";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot, PhoneTabBar } from "@/web/components/PublicPhone";
+import { PublicTrainingScreen } from "@/web/components/PublicAppScreen";
 import ScrollWords from "@/web/components/ScrollWords";
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
@@ -18,21 +19,11 @@ function LaptopScreen() {
     </div>
     <div className="flex min-h-0 flex-1">
       <nav aria-hidden="true" className="hidden w-36 shrink-0 flex-col gap-1 border-r border-border/40 p-3 sm:flex">
-        {[[Home, "Hoy"], [Dumbbell, "Plan"], [LineChart, "Progreso"], [BookOpen, "Recursos"]].map(([I, label], i) => { const Icon = I as typeof Home; return <span key={label as string} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 type-footnote ${i === 0 ? "bg-secondary font-semibold" : "text-muted-foreground"}`}><Icon className="h-3.5 w-3.5" />{label as string}</span>; })}
+        {[[Home, "Inicio"], [Dumbbell, "Entrenamiento"], [Apple, "Nutrición"], [LineChart, "Mi progreso"], [Settings, "Ajustes"], [BookOpen, "Recursos"]].map(([I, label], i) => { const Icon = I as typeof Home; return <span key={label as string} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 type-footnote ${i === 0 ? "bg-secondary font-semibold" : "text-muted-foreground"}`}><Icon className="h-3.5 w-3.5" />{label as string}</span>; })}
       </nav>
-      <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 md:grid-cols-[1.1fr_1fr]">
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 ">
         <div className="min-w-0 origin-top-left scale-[0.8]"><PhoneHome plans={plans} /></div>
-        <div className="hidden min-w-0 flex-col gap-3 md:flex">
-          <div className="rounded-2xl bg-card p-4">
-            <p className="type-caption1 text-muted-foreground">Progreso · Sentadilla goblet</p>
-            <div className="mt-3 flex h-28 items-end gap-2">
-              {WEEK.map((w, i) => <div key={w.d} className="flex flex-1 flex-col items-center gap-1"><div className={`w-full rounded ${i === WEEK.length - 1 ? "bg-primary" : "bg-primary/35"}`} style={{ height: `${((w.kg - 14) / 8) * 90}px` }} /><span className="type-caption2 text-muted-foreground">{w.d}</span></div>)}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[["Volumen", "540 kg"], ["Récord", "20 kg × 10"]].map(([k, v]) => <div key={k} className="rounded-2xl bg-card p-3"><p className="type-caption2 text-muted-foreground">{k}</p><p className="type-subhead font-semibold tabular-nums">{v}</p></div>)}
-          </div>
-        </div>
+
       </div>
     </div>
   </div>;
@@ -43,7 +34,7 @@ function LaptopShot() {
   const [failed, setFailed] = useState(false);
   if (failed) return <LaptopScreen />;
   return <img
-    src="/app-shots/mac-hoy.png"
+    src="/app-shots/mac-hoy.jpg"
     alt="Autopilot en el ordenador"
     className="h-full w-full object-cover object-top"
     loading="lazy"
@@ -82,13 +73,13 @@ export default function DeviceShowcase() {
       </div>
 
       {/* Móvil delante, a la derecha, entrando desde abajo. */}
-      {/* La caja mide lo que el teléfono escalado (22rem × 37.4rem por el factor), así no desborda. */}
-      <div className="absolute -bottom-6 right-[2%] h-[calc(37.4rem*var(--s))] w-[calc(22rem*var(--s))] drop-shadow-[0_30px_40px_rgba(0,0,0,0.7)] [--s:0.36] sm:right-[4%] sm:[--s:0.55] md:[--s:0.66]" style={{ transform: `translateY(${(1 - t) * 80}px)`, opacity: 0.3 + t * 0.7 }}>
+      {/* La caja mide lo que el teléfono escalado (22rem × 44.4rem por el factor), así no desborda. */}
+      <div className="absolute -bottom-6 right-[2%] h-[calc(44.4rem*var(--s))] w-[calc(22rem*var(--s))] drop-shadow-[0_30px_40px_rgba(0,0,0,0.7)] [--s:0.36] sm:right-[4%] sm:[--s:0.55] md:[--s:0.66]" style={{ transform: `translateY(${(1 - t) * 80}px)`, opacity: 0.3 + t * 0.7 }}>
         <div className="absolute left-0 top-0 w-[22rem] origin-top-left" style={{ transform: "scale(var(--s))" }}>
           <PhoneShot
             src="/app-shots/entrenar.jpg"
             alt="Pantalla de Entrenar de la app Autopilot"
-            fallback={<PhoneFrame screenClassName="h-[37rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden px-4 pt-3"><PhoneHome plans={plans} /></div></PhoneFrame>}
+            fallback={<PhoneFrame screenClassName="h-[44rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden pb-24"><PublicTrainingScreen /></div><PhoneTabBar tabs={[{ key: "home", label: "Hoy", icon: Home }, { key: "training", label: "Entrenar", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Apple }, { key: "progress", label: "Progreso", icon: Sparkles }]} active="training" onSelect={() => undefined} /></PhoneFrame>}
           />
         </div>
       </div>

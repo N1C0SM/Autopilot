@@ -1,8 +1,11 @@
 import { useState, type ReactNode } from "react";
-import { Apple, Bell, Sparkles, type LucideIcon } from "lucide-react";
+import { Apple, Bell, BookOpen, Sparkles, type LucideIcon } from "lucide-react";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { OverviewRow } from "@/app/components/dashboard/HomeOverview";
 import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
+import { Button } from "@/shared/components/ui/button";
+import { Barbell, ChartLineUp, ForkKnife, House } from "@phosphor-icons/react";
+import { previewExercises } from "@/web/components/previewData";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -37,6 +40,7 @@ export function PhoneFrame({ children, className, screenClassName, chrome = true
 export function PhoneAppBar({ avatar }: { avatar: ReactNode }) {
   return (
     <div aria-hidden className="flex h-11 shrink-0 items-center justify-end gap-2 px-3">
+      <span className="flex h-11 w-11 items-center justify-center"><BookOpen className="h-[22px] w-[22px]" /></span>
       <span className="flex h-11 w-11 items-center justify-center"><Bell className="h-[22px] w-[22px]" /></span>
       <span className="flex h-11 w-11 items-center justify-center">
         <span className="flex h-[30px] w-[30px] items-center justify-center overflow-hidden rounded-full bg-secondary type-footnote font-semibold">{avatar}</span>
@@ -51,18 +55,19 @@ export type PhoneTab = { key: string; label: string; icon: LucideIcon };
 export function PhoneTabBar({ tabs, active, onSelect, label = "Secciones de la demo" }: { tabs: readonly PhoneTab[]; active: string; onSelect: (key: string) => void; label?: string }) {
   const cols = tabs.length === 5 ? "grid-cols-5" : "grid-cols-4";
   const item = (isActive: boolean) => cn(
-    "relative flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full type-caption2 font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
-    isActive ? "bg-secondary text-primary" : "text-muted-foreground",
+    "relative flex h-14 min-w-0 w-full flex-col px-0 py-0 [&_svg]:size-6 hover:bg-transparent items-center justify-center gap-0.5 rounded-full type-caption2 font-medium text-[11px] leading-tight transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
+    isActive ? "bg-primary/90 text-primary-foreground" : "text-muted-foreground",
   );
+  const glyphs = { home: House, training: Barbell, nutrition: ForkKnife, progress: ChartLineUp };
   return (
-    <nav className="material absolute inset-x-3 bottom-5 z-10 rounded-full p-1 shadow-[0_8px_32px_rgba(0,0,0,0.5)]" role="group" aria-label={label}>
+    <nav className="absolute inset-x-3 bottom-5 z-10 rounded-full bg-card p-1" role="group" aria-label={label}>
       <div className={cn("grid", cols)}>
-        {tabs.map(({ key, label: text, icon: Icon }) => (
-          <button key={key} type="button" aria-pressed={active === key} onClick={() => onSelect(key)} className={item(active === key)}>
-            <Icon className="h-6 w-6" strokeWidth={active === key ? 2.25 : 2} />
+        {tabs.map(({ key, label: text, icon: Icon }) => { const Glyph = glyphs[key as keyof typeof glyphs]; return (
+          <Button variant="ghost" key={key} type="button" aria-pressed={active === key} onClick={() => onSelect(key)} className={item(active === key)}>
+            {Glyph ? <Glyph className="h-6 w-6" weight={active === key ? "fill" : "regular"} /> : <Icon className="h-6 w-6" />}
             <span className="max-w-full truncate px-0.5">{text}</span>
-          </button>
-        ))}
+          </Button>
+        ); })}
       </div>
     </nav>
   );
@@ -127,9 +132,10 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
         {name ? `Hola, ${name}.` : "Hola."}
         <span className="block text-muted-foreground">A entrenar.</span>
       </Greeting>
-      <div className="mt-6"><PhoneWeek planned={week.planned} today={week.today} /></div>
+
 
       <div className="py-8">
+        <div className="relative mb-4 h-48 overflow-hidden rounded-[28px] bg-card"><img src={previewExercises[0].image} alt="Sentadilla goblet" loading="lazy" decoding="async" className="h-full w-full object-cover object-[50%_30%]" /></div>
         {(() => {
           const body = (
             <>
@@ -138,7 +144,7 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
                 {DEMO_SESSION.exercises} ejercicios · {DEMO_SESSION.series} series · unos {DEMO_SESSION.minutes} min
               </span>
               <span className="mt-6 flex h-[50px] w-full items-center justify-center rounded-[14px] bg-primary px-5 type-headline text-primary-foreground transition-[opacity,transform] duration-150 ease-out group-active:scale-[0.98] group-active:opacity-80">
-                Empezar
+                Empezar entreno
               </span>
             </>
           );
@@ -148,15 +154,18 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
         })()}
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5">
+      <h3 className="mb-3 type-title3">Resumen</h3>
+      <div className="grid grid-cols-2 gap-3">
         <OverviewRow
           title="Nutrición"
+          value={<>2.300<span className="ml-1 type-subhead text-muted-foreground">kcal</span></>}
           onClick={onNutrition}
           icon={<ProgressRing value={67} size={32} stroke={3.5}><Apple className="h-[14px] w-[14px]" strokeWidth={2.25} /></ProgressRing>}
-          description="2 de 3 comidas · 2.300 kcal"
+          description="2 de 3 comidas"
         />
         <OverviewRow
           title="Progreso"
+          value={<>{week.done}<span className="type-title3 text-muted-foreground">/{week.planned.length}</span></>}
           onClick={onProgress}
           icon={<ProgressRing value={(week.done / week.planned.length) * 100} size={32} stroke={3.5}><Sparkles className="h-[14px] w-[14px]" strokeWidth={2.25} /></ProgressRing>}
           description={`${week.done} de ${week.planned.length} sesiones esta semana`}

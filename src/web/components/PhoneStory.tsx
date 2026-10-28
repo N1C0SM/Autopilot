@@ -1,54 +1,8 @@
-import { Pause } from "lucide-react";
-import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot } from "@/web/components/PublicPhone";
+import { Home, Dumbbell, Apple, Sparkles } from "lucide-react";
+import { PublicTrainingScreen, PublicProgressScreen } from "@/web/components/PublicAppScreen";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot, PhoneTabBar } from "@/web/components/PublicPhone";
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
-
-// Mismos datos de ejemplo que la demo interactiva (ProductPreview): nada que la app no haga.
-const SETS = [
-  { kg: "20", reps: "9", done: true },
-  { kg: "20", reps: "9", done: true },
-  { kg: "20", reps: "", done: false },
-];
-const HISTORY = [{ d: "4 sep", kg: 18 }, { d: "11 sep", kg: 18 }, { d: "18 sep", kg: 20 }, { d: "25 sep", kg: 20 }];
-
-function WorkoutScreen() {
-  return <div className="flex h-full flex-col px-4 pt-3">
-    <p className="type-subhead font-semibold text-muted-foreground">Ejercicio 1 de 3</p>
-    <p className="mt-0.5 type-title1">Sentadilla goblet</p>
-    <p className="mt-1 type-subhead text-muted-foreground">Última vez: 18 kg × 10</p>
-    <div className="mt-6 grid grid-cols-[2rem_1fr_1fr_2rem] gap-2 px-1 type-footnote text-muted-foreground"><span className="text-center">#</span><span className="text-center">kg</span><span className="text-center">Reps</span><span /></div>
-    {SETS.map((s, i) => <div key={i} className="mt-2 grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2">
-      <span className="text-center type-headline tabular-nums">{i + 1}</span>
-      <span className={`rounded-lg py-2 text-center type-body tabular-nums ${s.done ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground"}`}>{s.kg}</span>
-      <span className={`rounded-lg py-2 text-center type-body tabular-nums ${s.done ? "bg-primary/15 text-foreground" : "bg-secondary text-muted-foreground"}`}>{s.reps || "—"}</span>
-      <span className={`mx-auto h-5 w-5 rounded-full ${s.done ? "bg-primary" : "border-2 border-muted-foreground/40"}`} aria-hidden="true" />
-    </div>)}
-    <div className="material mx-2 mt-auto mb-24 flex items-center justify-between rounded-full px-5 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
-      <span className="type-subhead text-muted-foreground">Descanso</span>
-      <span className="font-rounded type-title2 tabular-nums">1:24</span>
-      <Pause className="h-5 w-5 text-primary" aria-hidden="true" />
-    </div>
-  </div>;
-}
-
-function ProgressScreen({ suggest }: { suggest: boolean }) {
-  const max = 22, min = 14;
-  return <div className="flex h-full flex-col px-4 pt-3">
-    <p className="type-subhead font-semibold text-muted-foreground">Progreso</p>
-    <p className="mt-0.5 type-title1">Sentadilla goblet</p>
-    <div className="mt-6 flex h-40 items-end gap-3 rounded-2xl bg-card p-4">
-      {HISTORY.map((h, i) => <div key={h.d} className="flex flex-1 flex-col items-center gap-2">
-        <span className="type-caption1 tabular-nums text-muted-foreground">{h.kg}</span>
-        <div className={`w-full rounded-md ${i === HISTORY.length - 1 ? "bg-primary" : "bg-primary/35"}`} style={{ height: `${((h.kg - min) / (max - min)) * 90}px` }} />
-        <span className="type-caption2 text-muted-foreground">{h.d}</span>
-      </div>)}
-    </div>
-    <div className="mt-4 grid grid-cols-2 gap-3">
-      {[["Volumen", "540 kg"], ["Récord", "20 kg × 10"]].map(([k, v]) => <div key={k} className="rounded-2xl bg-card p-3"><p className="type-caption1 text-muted-foreground">{k}</p><p className="type-headline tabular-nums">{v}</p></div>)}
-    </div>
-    {suggest && <div className="mt-4 rounded-2xl bg-primary/15 p-3"><p className="type-caption1 text-primary">Próxima sesión</p><p className="type-subhead">La carga se calcula con tus registros.</p></div>}
-  </div>;
-}
 
 /**
  * Demostración tipo página de producto: el teléfono queda fijo y su pantalla cambia
@@ -60,8 +14,8 @@ export default function PhoneStory() {
   const suggest = plans.campaign || plans.plus;
   const scenes = [
     { eyebrow: "Tu día está preparado", title: "Abres la app. Sabes qué toca.", text: "La rutina del día ya está organizada: no tienes que decidir qué ejercicio hacer.", shot: "/app-shots/hoy.jpg", fallback: <div className="px-4 pt-3"><PhoneHome plans={plans} /></div> },
-    { eyebrow: "Cada serie cuenta", title: "Entrena. Registra. Sigue.", text: "Apunta peso y repeticiones de cada serie; el historial de tus sesiones queda guardado.", shot: "/app-shots/entrenar.jpg", fallback: <WorkoutScreen /> },
-    { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", shot: "/app-shots/progreso.jpg", fallback: <ProgressScreen suggest={suggest} /> },
+    { eyebrow: "Cada serie cuenta", title: "Entrena. Registra. Sigue.", text: "Apunta peso y repeticiones de cada serie; el historial de tus sesiones queda guardado.", shot: "/app-shots/registro.jpg", fallback: <PublicTrainingScreen active /> },
+    { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", shot: "/app-shots/progreso.jpg", fallback: <PublicProgressScreen /> },
   ];
   // Una pantalla y media por escena en escritorio: tiempo para leer y mirar; en móvil, una.
   const SCREENS = typeof window !== "undefined" && window.innerWidth >= 768 ? 4.5 : 3.5;
@@ -75,13 +29,13 @@ export default function PhoneStory() {
       src={scenes[i].shot}
       alt={scenes[i].title}
       fallback={
-        <PhoneFrame screenClassName="h-[37rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden">{scenes[i].fallback}</div></PhoneFrame>
+        <PhoneFrame screenClassName="h-[44rem]"><PhoneAppBar avatar="N" /><div className={`flex-1 overflow-hidden ${i === 1 ? "" : "pb-24"}`}>{scenes[i].fallback}</div>{i !== 1 && <PhoneTabBar tabs={[{ key: "home", label: "Hoy", icon: Home }, { key: "training", label: "Entrenar", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Apple }, { key: "progress", label: "Progreso", icon: Sparkles }]} active={i === 0 ? "home" : "progress"} onSelect={() => undefined} />}</PhoneFrame>
       }
     />
   </div>;
 
   if (still) return <section ref={ref} aria-label="Así funciona la app" className="space-y-16 px-5 py-20 sm:px-8">
-    {scenes.map((s, i) => <div key={s.title} className="mx-auto max-w-sm text-center"><p className="type-subhead text-primary">{s.eyebrow}</p><h3 className="mt-2 type-title1">{s.title}</h3><p className="mt-2 type-body text-muted-foreground">{s.text}</p><div className="relative mt-6 h-[37rem]">{phone(i)}</div></div>)}
+    {scenes.map((s, i) => <div key={s.title} className="mx-auto max-w-sm text-center"><p className="type-subhead text-primary">{s.eyebrow}</p><h3 className="mt-2 type-title1">{s.title}</h3><p className="mt-2 type-body text-muted-foreground">{s.text}</p><div className="relative mt-6 h-[44rem]">{phone(i)}</div></div>)}
   </section>;
 
   return <section ref={ref} aria-label="Así funciona la app" data-pinned className="relative" style={{ height: `${SCREENS * 100}vh` }}>
@@ -101,8 +55,8 @@ export default function PhoneStory() {
             </div>;
           })}
         </div>
-        <div className="relative mx-auto h-[min(37rem,62vh)] w-full max-w-[19rem] md:max-w-[22rem]" style={{ transform: `scale(${0.97 + Math.sin((t % 1) * Math.PI) * 0.03})` }}>
-          <div className="absolute inset-0 origin-top scale-[0.85] md:scale-100">
+        <div className="relative mx-auto h-[min(44rem,62vh)] w-full max-w-[19rem] md:max-w-[19rem]" style={{ transform: `scale(${0.97 + Math.sin((t % 1) * Math.PI) * 0.03})` }}>
+          <div className="absolute inset-0 origin-top scale-[0.72] md:scale-[0.85]">
             {scenes.map((_, i) => {
               const local = t - i;
               const o = i === current ? Math.min(1, local * 6 + (i === 0 ? 1 : 0), (1 - local) * 6 + (i === scenes.length - 1 ? 1 : 0)) : 0;
