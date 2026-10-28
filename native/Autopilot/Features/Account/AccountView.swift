@@ -390,13 +390,11 @@ struct AccountView: View {
     }
 
     /// Cambia a otra cuenta guardada sin pasar por «¿Quién entrena?».
-    /// Solo se pide contraseña si esa cuenta la tiene (o si su sesión caducó).
+    /// Entra directa aunque la cuenta tenga contraseña: esa protección es solo para el
+    /// selector de al abrir, no para cambiar desde Ajustes con la sesión activa.
+    /// Solo se pide contraseña si la sesión guardada caducó de verdad.
     private func switchToAccount(_ target: SavedAccount) async {
         guard target.id != session.userIdString, switching == nil else { return }
-        if target.expired || target.requirePassword {
-            unlocking = target
-            return
-        }
         switching = target.id
         defer { switching = nil }
         switch await accounts.switchTo(target.id) {
