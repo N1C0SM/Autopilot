@@ -252,9 +252,9 @@ struct HomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: wideLayout ? 168 : nil, alignment: .leading)
-            // Cuadrados en el iPhone; en Mac/iPad, a la altura de su contenido (si no, ocupan media pantalla).
-            .aspectRatio(wideLayout ? nil : 1, contentMode: .fill)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Cuadrados en el iPhone; en Mac/iPad, altura fija (si no, ocupan media pantalla).
+            .squareTile(!wideLayout, height: 200)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.pressableCard)
@@ -1072,5 +1072,13 @@ private struct ConfettiView: View {
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+
+private extension View {
+    /// Cuadrada (iPhone) o con altura fija (Mac/iPad), sin estirarse con el ancho.
+    @ViewBuilder func squareTile(_ square: Bool, height: CGFloat) -> some View {
+        if square { aspectRatio(1, contentMode: .fill) } else { frame(height: height) }
     }
 }
