@@ -17,14 +17,17 @@ export function createResponsesCall(
   messages: ModelMessage[],
   instructions?: string,
 ) {
-  const runIdFetch = createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request));
+  const isLovable = config.baseURL.includes("lovable");
+  const runIdFetch = isLovable ? createLovableAiGatewayRunIdFetch(getLovableAiGatewayRunId(request)) : null;
   const provider = createOpenAI({
     baseURL: `${config.baseURL.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1`,
     apiKey: config.apiKey,
-    headers: { "Lovable-API-Key": config.apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: runIdFetch.fetch,
+    ...(isLovable
+      ? { headers: { "Lovable-API-Key": config.apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" }, fetch: runIdFetch!.fetch }
+      : {}),
   });
-  const reasoning = config.model !== "openai/chat-latest";
+  // Los extras de razonamiento solo los entiende el gateway de Lovable.
+  const reasoning = isLovable && config.model !== "openai/chat-latest";
   let callError: unknown;
   const result = streamText({
     maxRetries: 0,
@@ -53,6 +56,8 @@ export function createResponsesCall(
     result,
     getError: () => callError,
     response: () =>
-      withLovableAiGatewayRunIdHeader(result.toUIMessageStreamResponse({ sendReasoning: true }), runIdFetch),
+      isLovable && runIdFetch
+        ? withLovableAiGatewayRunIdHeader(result.toUIMessageStreamResponse({ sendReasoning: true }), runIdFetch)
+        : result.toUIMessageStreamResponse(),
   };
 }

@@ -1,5 +1,6 @@
 // Proveedor de IA compartido: Lovable AI, OpenAI, Claude o DeepSeek.
-// Modo (app_secrets.AI_PROVIDER): "auto" (tus claves primero, Lovable como último recurso) o "lovable".
+// Modo (app_secrets.AI_PROVIDER): "auto" usa los créditos de Lovable primero y, si no hay
+// (sin saldo, clave ausente o error), cae a OpenAI y luego a Claude. "lovable" fuerza solo Lovable.
 // DeepSeek es SOLO texto: no genera imágenes ni vídeos.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 
@@ -28,15 +29,16 @@ export async function getAiConfig() {
   const deepseek = deepseekKey ? (["deepseek"] as const) : [];
 
   // Cadena de proveedores:
-  //  - "auto"     -> OpenAI -> Claude -> DeepSeek -> Lovable
+  //  - "auto"     -> Lovable -> OpenAI -> Claude -> DeepSeek
+  //                  (los créditos de Lovable primero; si no quedan, tus claves)
   //  - "deepseek" -> DeepSeek primero para el TEXTO; las imágenes y los vídeos
   //                  se saltan DeepSeek (no puede generarlos) y siguen por
-  //                  OpenAI -> Lovable.
+  //                  Lovable -> OpenAI.
   //  - "lovable"  -> solo Lovable.
   const defaultOrder: ProviderId[] =
     mode === "lovable" ? ["lovable"]
-      : mode === "deepseek" ? [...deepseek, ...openai, ...anthropic, "lovable"]
-        : [...openai, ...anthropic, ...deepseek, "lovable"];
+      : mode === "deepseek" ? [...deepseek, "lovable", ...openai, ...anthropic]
+        : ["lovable", ...openai, ...anthropic, ...deepseek];
 
   // Orden personalizado de TEXTO (app_secrets.AI_TEXT_ORDER, p. ej. "deepseek,openai").
   // Solo entran los proveedores listados y con clave; si queda vacío, Lovable como red de seguridad.

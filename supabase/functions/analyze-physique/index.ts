@@ -3,6 +3,7 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
+import { getAiConfig } from "../_shared/ai-provider.ts";
 import { z } from "npm:zod";
 import { jsonrepair } from "npm:jsonrepair@3";
 
@@ -139,15 +140,40 @@ const AnalysisSchema = z.object({
   }).partial().optional(),
 });
 
-const createLovableAiGatewayProvider = (lovableApiKey: string) =>
-  createOpenAICompatible({
-    name: "lovable",
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    headers: {
-      "Lovable-API-Key": lovableApiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-    },
-  });
+type VisionProvider = {
+  id: string;
+  baseURL: string;
+  apiKey: string;
+  model: string;
+  headers?: Record<string, string>;
+};
+
+/// Prueba los proveedores de visión en orden (Lovable -> OpenAI -> Claude) hasta que uno
+/// responda. Antes solo existía Lovable: si se quedaba sin créditos el Scan moría con 500.
+const generateVision = async (
+  providers: VisionProvider[],
+  args: { temperature: number; maxOutputTokens: number; system: string; messages: unknown },
+): Promise<string> => {
+  let lastError: unknown = null;
+  for (const p of providers) {
+    try {
+      const provider = createOpenAICompatible({ name: p.id, baseURL: p.baseURL, apiKey: p.apiKey, headers: p.headers });
+      const { text } = await generateText({
+        model: provider(p.model) as unknown as Parameters<typeof generateText>[0]["model"],
+        temperature: args.temperature,
+        maxOutputTokens: args.maxOutputTokens,
+        system: args.system,
+        messages: args.messages as NonNullable<Parameters<typeof generateText>[0]["messages"]>,
+      });
+      if (text?.trim()) return text;
+      throw new Error("respuesta vacía");
+    } catch (e) {
+      lastError = e;
+      console.warn(`[analyze-physique] proveedor ${p.id} falló: ${errorMessage(e)}`);
+    }
+  }
+  throw lastError ?? new Error("No se pudo analizar la foto");
+};
 
 // Repara JSON cortado a medias (respuesta truncada): elimina el último fragmento
 // incompleto y cierra las llaves/corchetes que queden abiertos.
@@ -255,8 +281,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+    // Cadena de visión: créditos de Lovable primero, luego ChatGPT y por último Claude.
+    const aiCfg = await getAiConfig();
+    const visionProviders: VisionProvider[] = [];
+    if (aiCfg.lovableKey) {
+      visionProviders.push({
+        id: "lovable",
+        baseURL: "https://ai.gateway.lovable.dev/v1",
+        apiKey: aiCfg.lovableKey,
+        model: "google/gemini-2.5-flash",
+        headers: { "Lovable-API-Key": aiCfg.lovableKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
+      });
+    }
+    if (aiCfg.openaiKey) {
+      visionProviders.push({ id: "openai", baseURL: "https://api.openai.com/v1", apiKey: aiCfg.openaiKey, model: "gpt-4.1-mini" });
+    }
+    if (aiCfg.anthropicKey) {
+      visionProviders.push({ id: "anthropic", baseURL: "https://api.anthropic.com/v1", apiKey: aiCfg.anthropicKey, model: "claude-sonnet-4-5" });
+    }
+    if (visionProviders.length === 0) throw new Error("No hay ningún proveedor de IA configurado");
 
     // Describimos al modelo, en orden, exactamente qué imágenes recibe.
     const order: string[] = [];
@@ -294,9 +337,7 @@ Deno.serve(async (req) => {
     if (backImage) userContent.push({ type: "image", image: backImage });
     if (objectiveImage) userContent.push({ type: "image", image: objectiveImage });
 
-    const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY);
-    const { text } = await generateText({
-      model: gateway("google/gemini-2.5-flash"),
+    const text = await generateVision(visionProviders, {
       temperature: 0.1,
       maxOutputTokens: 4000,
       system:
