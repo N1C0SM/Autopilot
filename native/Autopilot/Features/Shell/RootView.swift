@@ -402,6 +402,25 @@ struct SectionView: View {
     var onNavigate: (AppSection) -> Void = { _ in }
 
     var body: some View {
+        #if os(macOS)
+        // La web de escritorio ocupa todo el ancho (`<main>` es `w-full` con `p-4 md:p-8 lg:p-10`,
+        // sin `max-w`): aquí no hay tope de 948, solo el padding del lienzo.
+        GeometryReader { geo in
+            canvas
+                .padding(.horizontal, section.lucide != nil ? Self.canvasPadding(for: geo.size.width) : 0)
+        }
+        #else
+        canvas
+        #endif
+    }
+
+    /// Padding horizontal del lienzo de escritorio, como `p-4` / `md:p-8` / `lg:p-10` de la web.
+    private static func canvasPadding(for width: CGFloat) -> CGFloat {
+        width >= 1024 ? 32 : width >= 768 ? 24 : 16
+    }
+
+    /// Sección elegida, con su carga y su título de barra.
+    private var canvas: some View {
         Group {
             switch section {
             case .home: HomeView(onNavigate: onNavigate)
@@ -433,9 +452,6 @@ struct SectionView: View {
         // Al cambiar o recuperar la cuenta, cada pantalla vuelve a cargar con el usuario correcto.
         .id(session.userIdString ?? "")
         #if os(macOS)
-        .padding(.horizontal, section.lucide != nil ? 24 : 0)
-        .frame(maxWidth: section.lucide != nil ? 948 : .infinity)
-        .frame(maxWidth: .infinity)
         .navigationTitle(section.deskTitle)
         .navigationSubtitle(section.deskHint ?? "")
         #else

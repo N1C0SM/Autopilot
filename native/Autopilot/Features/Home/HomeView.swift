@@ -25,9 +25,10 @@ struct HomeView: View {
     /// exactamente lo mismo (los bloques del esqueleto son el fantasma de los de la tarjeta).
     private static let cardMinHeight: CGFloat = 240
 
-    /// Paridad con la web responsive: en iPhone (y ventanas estrechas) una sola columna, como el
-    /// móvil; en iPad horizontal y Mac, rejilla de dos columnas como los `lg:` de `HomeOverview`.
-    /// En Mac manda el ancho de la ventana (la rejilla adaptativa decide cuántas columnas caben).
+    /// Paridad con la web de escritorio: en iPhone (y ventanas estrechas) la columna del móvil; en
+    /// iPad horizontal y Mac, la misma columna del móvil pero a todo el ancho, con la foto héroe
+    /// grande y el resumen en dos tarjetas (`HomeOverview.tsx`).
+    /// En Mac manda el ancho de la ventana (la disposición no se acota a un máximo fijo).
     private var wideLayout: Bool {
         #if os(macOS)
         return true
@@ -36,14 +37,14 @@ struct HomeView: View {
         #endif
     }
 
-    /// Columnas adaptativas de 420-520 pt: una caída a una columna cuando no caben dos, y nunca
-    /// una tarjeta estirada de lado a lado en una ventana grande.
-    private var homeColumns: [GridItem] {
-        if wideLayout {
-            [GridItem(.adaptive(minimum: 420, maximum: 520), spacing: 18, alignment: .top)]
-        } else {
-            [GridItem(.flexible(), spacing: 0, alignment: .top)]
-        }
+    /// En Mac el lienzo y su padding los pone `SectionView` (como `<main>` con `lg:p-10`); así no
+    /// se suma dos veces. En iPad el lienzo es de la propia pantalla, como antes.
+    private var horizontalPadding: CGFloat {
+        #if os(macOS)
+        return 0
+        #else
+        return wideLayout ? 24 : 16
+        #endif
     }
 
     private var todayIndex: Int { DayNames.all.firstIndex(of: DayNames.today) ?? 0 }
@@ -61,22 +62,22 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 // Saludo siempre a todo el ancho (en la web el titular tampoco se parte en columnas).
                 heading(wide: wideLayout)
-                // Bloques de hoy en rejilla adaptativa: sesión/próxima sesión y nutrición.
-                LazyVGrid(columns: homeColumns, alignment: .leading, spacing: wideLayout ? 18 : 28) {
-                    // La tarjeta héroe nunca se estira más de 520 pt, ni siquiera cuando la rejilla
-                    // cae a una sola columna (iPad vertical o ventana estrecha del Mac).
-                    mainAction.frame(maxWidth: wideLayout ? 520 : .infinity, alignment: .leading)
-                    nutritionRow.frame(maxWidth: wideLayout ? 520 : .infinity, alignment: .leading)
+                if wideLayout {
+                    // Escritorio como `HomeOverview.tsx`: una sola columna ancha.
+                    wideToday
+                    resumen
+                } else {
+                    // iPhone: exactamente la columna de siempre (sin foto héroe ni resumen extra).
+                    VStack(alignment: .leading, spacing: 28) {
+                        mainAction
+                        nutritionRow
+                    }
+                    .padding(.top, 24)
                 }
-                .padding(.top, wideLayout ? 32 : 24)
             }
-            .padding(.horizontal, wideLayout ? 24 : 16)
+            .padding(.horizontal, horizontalPadding)
             .padding(.top, wideLayout ? 24 : 8)
             .padding(.bottom, 16)
-            // En Mac/iPad el bloque no se estira sin límite: dos columnas de 520 como máximo y
-            // el conjunto centrado, como el lienzo de la web de escritorio.
-            .frame(maxWidth: wideLayout ? 1106 : .infinity, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: wideLayout ? .center : .leading)
         }
         .screenBackground()
         .refreshable { await load() }
@@ -130,6 +131,98 @@ struct HomeView: View {
         if s.plan?.isGym == true { return "A entrenar." }
         if let p = s.plan, p.type == "actividad" { return "A \(p.sport ?? "moverte")." }
         return "Hoy, a recuperar."
+    }
+
+    // MARK: Escritorio (web `HomeOverview.tsx`: una columna ancha con foto héroe)
+
+    /// Lo de hoy en iPad/Mac: foto héroe a todo el ancho y, debajo, el texto y la acción.
+    @ViewBuilder private var wideToday: some View {
+        if let s = snapshot {
+            VStack(alignment: .leading, spacing: 0) {
+                // La web pinta la portada de la sesión de hoy antes que nada (`lg:h-[340px]`).
+                if s.plan?.isGym == true, let cover = todayCover {
+                    heroPhoto(cover)
+                }
+                if let plan = s.plan, !s.completedToday {
+                    wideStart(plan).padding(.top, 24)
+                } else {
+                    mainAction.padding(.top, 24)
+                }
+            }
+        } else {
+            mainAction
+        }
+    }
+
+    /// Primera foto de la sesión de hoy (la portada que usa la web).
+    private var todayCover: URL? {
+        (snapshot?.plan?.exercises ?? []).compactMap { $0.image_url }.first.flatMap(URL.init(string:))
+    }
+
+    /// Foto héroe a todo el ancho (la web: `lg:h-[340px]`), con degradado y radio de héroe.
+    private func heroPhoto(_ url: URL) -> some View {
+        CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+            .frame(maxWidth: .infinity)
+            .frame(height: 340)
+            .clipped()
+            .overlay {
+                LinearGradient(colors: [.clear, .black.opacity(0.55)], startPoint: .center, endPoint: .bottom)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            .padding(.top, 32)
+            .accessibilityHidden(true)
+    }
+
+    /// Texto y CTA de la sesión de hoy, sin tarjeta y con ancho de lectura (web: `lg:max-w-md`).
+    private func wideStart(_ plan: DayPlan) -> some View {
+        let parts = plan.title.components(separatedBy: " · ")
+        let summary = detail(plan)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(plan.isGym ? "Hoy · entreno" : "Hoy · actividad")
+                .font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                .foregroundStyle(Palette.gold)
+            Text(parts[0]).font(.apTitle1).lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+            if parts.count > 1 {
+                Text(parts.dropFirst().joined(separator: " · "))
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .lineLimit(2).fixedSize(horizontal: false, vertical: true).padding(.top, 2)
+            }
+            if !summary.isEmpty {
+                Text(summary).font(.apSubhead.monospacedDigit())
+                    .foregroundStyle(Palette.muted).padding(.top, 4)
+            }
+            Button { openSheet() } label: { Text("Ver la sesión") }
+                .buttonStyle(.pill)
+                .frame(maxWidth: 224)
+                .padding(.top, 20)
+        }
+        .frame(maxWidth: 448, alignment: .leading)
+    }
+
+    /// «Resumen» en dos tarjetas, como el `grid-cols-2` de la web.
+    private var resumen: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Resumen").font(.apTitle3).padding(.top, 32)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
+                      alignment: .leading, spacing: 16) {
+                nutritionRow
+                progressRow
+            }
+        }
+    }
+
+    /// Acceso a Progreso (la web enseña las sesiones de la semana).
+    private var progressRow: some View {
+        let done = model.completions.count
+        let total = snapshot?.scheduled.count ?? 0
+        return linkRow(symbol: "lu-sparkles",
+                       title: "Progreso",
+                       detail: total > 0 ? "\(done) de \(total) sesiones esta semana" : "Tu evolución semana a semana",
+                       label: "Progreso") {
+            onNavigate(.progress)
+        }
+        .accessibilityHint("Abre tu progreso")
     }
 
     // MARK: Lo único de hoy (empezar, resultados o descanso)

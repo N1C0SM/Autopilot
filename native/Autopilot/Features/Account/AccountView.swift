@@ -73,6 +73,15 @@ struct AccountView: View {
         setRest(v)
     }
 
+    /// En Mac el padding horizontal lo pone `RootView` (el `<main>` de la web): aquí 0.
+    private var pagePadding: CGFloat {
+        #if os(macOS)
+        return 0
+        #else
+        return 16
+        #endif
+    }
+
     private static let goals = [("lose_weight", "Perder peso"), ("gain_muscle", "Ganar músculo"), ("improve_endurance", "Mejorar resistencia")]
     private static let rests = [(45, "45 s"), (60, "1 min"), (90, "1.5 min"), (120, "2 min"), (180, "3 min")]
 
@@ -340,7 +349,7 @@ struct AccountView: View {
                 }
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
+            .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()

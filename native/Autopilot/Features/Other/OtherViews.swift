@@ -14,6 +14,15 @@ struct NutritionView: View {
     @State private var loaded = false
     /// La red ha fallado en todos los intentos: se ofrece reintentar en vez de un vacío falso.
     @State private var failed = false
+    /// En Mac el padding horizontal lo pone `RootView` (el `<main>` de la web): aquí 0.
+    private var pagePadding: CGFloat {
+        #if os(macOS)
+        return 0
+        #else
+        return 16
+        #endif
+    }
+
     /// Evita dos cargas simultáneas (`.task` + botón de reintentar).
     @State private var loading = false
     @State private var done: Set<String> = []
@@ -48,7 +57,7 @@ struct NutritionView: View {
                     NutritionSkeleton()
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 24)
+            .padding(.horizontal, pagePadding).padding(.top, 8).padding(.bottom, 24)
             // Móvil: la misma columna de siempre; iPad/Mac: el ancho de la rejilla de escritorio.
             .frame(maxWidth: NutritionGrid.contentWidth(singleColumn: singleColumn))
             .frame(maxWidth: .infinity)

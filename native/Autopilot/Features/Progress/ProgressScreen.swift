@@ -28,12 +28,9 @@ struct ProgressScreen: View {
     /// rompería el tamaño del contenido).
     @State private var contentWidth: CGFloat = 0
 
-    // MARK: Disposición responsive (iPhone igual que siempre · iPad/Mac en rejilla de escritorio)
+    // MARK: Disposición responsive (iPhone igual que siempre · iPad/Mac a todo el ancho)
 
-    /// En escritorio el contenido se acota y se centra: dos columnas de ~320-380 pt como la web.
-    private let wideContentWidth: CGFloat = 800
-
-    /// Escritorio con ancho suficiente para dos columnas (mínimo ~320 pt por tarjeta).
+    /// Escritorio (iPad horizontal/Mac): la web ocupa todo el ancho (`<main>` sin `max-w`).
     /// En iPhone (ancho compacto) siempre es `false`: la disposición actual queda intacta.
     private var isWide: Bool {
         guard sizeClass != .compact else { return false }
@@ -41,16 +38,20 @@ struct ProgressScreen: View {
         return contentWidth == 0 || contentWidth >= 700
     }
 
-    /// Rejilla adaptativa de escritorio: mínimo ~320 pt por tarjeta (2 columnas en iPad/Mac).
-    private var wideColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 320), spacing: 16)]
+    /// En Mac el lienzo y su padding los pone `SectionView` (web: `<main>` con `lg:p-10`); así no
+    /// se suma dos veces. En iPad el lienzo es de la propia pantalla, como antes.
+    private var horizontalPadding: CGFloat {
+        #if os(macOS)
+        return 0
+        #else
+        return 16
+        #endif
     }
 
-    /// Columnas de las fotos: 3 en iPhone (como siempre); rejilla más ancha en escritorio
-    /// (la web usa 4 columnas en `md` y 6 en `lg`).
+    /// Rejilla de fotos como la web: 3 columnas en iPhone, 4 en `md` y 6 en `lg`.
     private var photoColumns: [GridItem] {
-        isWide ? [GridItem(.adaptive(minimum: 110), spacing: 8)]
-               : Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        let count = isWide ? (contentWidth >= 944 ? 6 : 4) : 3
+        return Array(repeating: GridItem(.flexible(), spacing: 8), count: count)
     }
 
     var body: some View {
@@ -78,9 +79,9 @@ struct ProgressScreen: View {
                         .accessibilityHidden(tab != 3)
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
-            // En iPhone ocupa todo el ancho (exactamente como antes); en escritorio se acota y centra.
-            .frame(maxWidth: isWide ? wideContentWidth : .infinity, alignment: .leading)
+            .padding(.horizontal, horizontalPadding).padding(.top, 8).padding(.bottom, 16)
+            // La web va a todo el ancho (solo la barra de pestañas está acotada, y ya lo hace
+            // `SegmentedPill`): sin tope de 800 ni centrado.
             .background {
                 GeometryReader { geo in
                     Color.clear.preference(key: ProgressContentWidthKey.self, value: geo.size.width)
@@ -118,20 +119,11 @@ struct ProgressScreen: View {
     // MARK: Fuerza
 
     private var strength: some View {
-        Group {
-            if isWide {
-                // Escritorio: hero y «Por ejercicio» lado a lado (2 columnas de ~320-380 pt).
-                LazyVGrid(columns: wideColumns, alignment: .leading, spacing: 16) {
-                    strengthHero
-                    strengthExercises
-                }
-            } else {
-                // iPhone: una columna, exactamente como hasta ahora.
-                VStack(alignment: .leading, spacing: 16) {
-                    strengthHero
-                    strengthExercises
-                }
-            }
+        // Como la web (`WorkoutProgress`): una sola columna a todo el ancho, hero arriba y
+        // «Por ejercicio» debajo (también en escritorio; antes iban en dos columnas de 320).
+        VStack(alignment: .leading, spacing: 16) {
+            strengthHero
+            strengthExercises
         }
     }
 
@@ -156,8 +148,7 @@ struct ProgressScreen: View {
         if model.detailsLoaded {
             if !model.history.isEmpty {
                 VStack(alignment: .leading, spacing: 16) {
-                    // En escritorio la celda ya empieza a la altura de la tarjeta del hero.
-                    Text("Por ejercicio").font(.apTitle3).padding(.top, isWide ? 0 : 8)
+                    Text("Por ejercicio").font(.apTitle3).padding(.top, 8)
                     ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
                 }
             } else {
@@ -362,14 +353,15 @@ struct ProgressScreen: View {
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             } else if let best = model.bestRecord {
                 if isWide {
-                    // Escritorio: tarjeta de la mejor marca y lista lado a lado (la web usa
-                    // `lg:grid-cols-[280px_1fr]`); dos columnas iguales aquí.
-                    LazyVGrid(columns: wideColumns, alignment: .leading, spacing: 16) {
-                        recordsHero(best)
+                    // Escritorio como la web (`lg:grid-cols-[280px_1fr]`): la mejor marca fija a
+                    // 280 pt y la lista ocupando el resto del ancho.
+                    HStack(alignment: .top, spacing: 32) {
+                        recordsHero(best).frame(width: 280)
                         VStack(alignment: .leading, spacing: 16) {
                             recordsHeader
                             recordsTable
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 } else {
                     // iPhone: una columna, exactamente como hasta ahora.
@@ -414,7 +406,7 @@ struct ProgressScreen: View {
     }
 
     /// Lista de récords: `LazyVStack` en iPhone (como hasta ahora) y pila normal en la celda de
-    /// escritorio, donde el alto debe ser determinista para que la rejilla no salte.
+    /// escritorio, donde el alto debe ser determinista para que el layout no salte.
     private var recordsTable: some View {
         Group {
             if isWide {
@@ -499,13 +491,14 @@ struct ProgressScreen: View {
         ProgressSkeletonPulse {
             Group {
                 if isWide {
-                    // Misma rejilla de dos columnas que el contenido real: sin saltos al cargar.
-                    LazyVGrid(columns: wideColumns, alignment: .leading, spacing: 16) {
-                        ProgressSkeletonBlock(height: 256, radius: Radius.hero)
+                    // Misma disposición que el contenido real (280 + resto): sin saltos al cargar.
+                    HStack(alignment: .top, spacing: 32) {
+                        ProgressSkeletonBlock(height: 256, radius: Radius.hero).frame(width: 280)
                         VStack(alignment: .leading, spacing: 16) {
                             ProgressSkeletonBlock(height: 12, radius: 6, width: 188)
                             recordsSkeletonRows
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 16) {
