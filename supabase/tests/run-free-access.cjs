@@ -1,0 +1,33 @@
+const { PGlite } = require(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+const fs=require('fs');
+(async()=>{
+ const db=new PGlite();
+ await db.exec(`
+ CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
+ CREATE SCHEMA auth;
+ CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+ CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT current_setting('request.jwt.claim.role',true) $$;
+ CREATE TABLE auth.users(id uuid primary key,email text,raw_user_meta_data jsonb);
+ CREATE TYPE public.app_role AS ENUM('admin','user','trainer');
+ CREATE TABLE public.profiles(user_id uuid PRIMARY KEY,email text,name text,referred_by text,payment_status text DEFAULT 'unpaid',subscription_tier text,subscription_status text,subscription_end timestamptz,stripe_customer_id text,stripe_payment_id text);
+ CREATE FUNCTION public.has_role(uuid,public.app_role) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+ CREATE FUNCTION public.is_trainer_of(uuid,uuid) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+ CREATE TABLE public.chat_messages(sender_id uuid,conversation_user_id uuid);
+ CREATE TABLE public.nutrition_plan(user_id uuid);
+ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ ALTER TABLE public.nutrition_plan ENABLE ROW LEVEL SECURITY;
+ CREATE POLICY owner_read ON public.profiles FOR SELECT TO authenticated USING(user_id=auth.uid());
+ CREATE POLICY owner_chat ON public.chat_messages FOR INSERT TO authenticated WITH CHECK(sender_id=auth.uid() AND conversation_user_id=auth.uid());
+ CREATE POLICY owner_nutrition ON public.nutrition_plan FOR SELECT TO authenticated USING(user_id=auth.uid());
+ GRANT USAGE ON SCHEMA auth,public TO authenticated;
+ GRANT SELECT,UPDATE ON public.profiles TO authenticated;
+ GRANT INSERT ON public.chat_messages TO authenticated;
+ GRANT SELECT,INSERT,UPDATE ON public.nutrition_plan TO authenticated;
+ `);
+ await db.exec(fs.readFileSync('supabase/migrations/20260929120000_free_and_coaching_access.sql','utf8'));
+ await db.exec('CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();');
+ await db.exec(fs.readFileSync('supabase/tests/free_coaching_access.sql','utf8'));
+ console.log('PASS: free signup, metadata escalation, billing protection, free chat rejection, training trial, nutrition gating, expiration');
+ await db.close();
+})();

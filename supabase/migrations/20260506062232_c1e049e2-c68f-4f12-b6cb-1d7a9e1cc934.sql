@@ -1,0 +1,1 @@
+ALTER TABLE public.onboarding ADD COLUMN IF NOT EXISTS goal_photo_url text;
