@@ -409,6 +409,8 @@ struct SectionView: View {
             canvas
                 .padding(.horizontal, section.lucide != nil ? Self.canvasPadding(for: geo.size.width) : 0)
         }
+        // El margen del lienzo también es negro: sin esto se veía una franja gris a los lados.
+        .background(Palette.background.ignoresSafeArea())
         #else
         canvas
         #endif
