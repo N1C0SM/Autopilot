@@ -6,6 +6,9 @@ import Supabase
 /// detalle en una hoja (ejercicios con foto y acción). La semana vive en Entrenar.
 struct HomeView: View {
     @EnvironmentObject private var session: SessionModel
+    #if !os(macOS)
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    #endif
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var model = PlanModel()
     /// Todo lo de hoy en un único valor: se publica de golpe y se cachea por usuario y día.
@@ -22,6 +25,27 @@ struct HomeView: View {
     /// exactamente lo mismo (los bloques del esqueleto son el fantasma de los de la tarjeta).
     private static let cardMinHeight: CGFloat = 240
 
+    /// Paridad con la web responsive: en iPhone (y ventanas estrechas) una sola columna, como el
+    /// móvil; en iPad horizontal y Mac, rejilla de dos columnas como los `lg:` de `HomeOverview`.
+    /// En Mac manda el ancho de la ventana (la rejilla adaptativa decide cuántas columnas caben).
+    private var wideLayout: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return sizeClass == .regular
+        #endif
+    }
+
+    /// Columnas adaptativas de 420-520 pt: una caída a una columna cuando no caben dos, y nunca
+    /// una tarjeta estirada de lado a lado en una ventana grande.
+    private var homeColumns: [GridItem] {
+        if wideLayout {
+            [GridItem(.adaptive(minimum: 420, maximum: 520), spacing: 18, alignment: .top)]
+        } else {
+            [GridItem(.flexible(), spacing: 0, alignment: .top)]
+        }
+    }
+
     private var todayIndex: Int { DayNames.all.firstIndex(of: DayNames.today) ?? 0 }
 
     /// Foto de hoy: la recién cargada o, si aún no hay, la cacheada en memoria para este usuario.
@@ -35,23 +59,24 @@ struct HomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                // Escritorio (lg de la web): el saludo a la izquierda y lo de hoy en una columna de 320.
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 48) {
-                        heading(wide: true).frame(minWidth: 420, maxWidth: .infinity, alignment: .leading)
-                        mainAction.frame(width: 320).padding(.top, 52)
-                    }
-                    .padding(.bottom, 36)
-                    VStack(alignment: .leading, spacing: 0) {
-                        heading(wide: false)
-                        mainAction.padding(.top, 24).padding(.bottom, 28)
-                    }
+                // Saludo siempre a todo el ancho (en la web el titular tampoco se parte en columnas).
+                heading(wide: wideLayout)
+                // Bloques de hoy en rejilla adaptativa: sesión/próxima sesión y nutrición.
+                LazyVGrid(columns: homeColumns, alignment: .leading, spacing: wideLayout ? 18 : 28) {
+                    // La tarjeta héroe nunca se estira más de 520 pt, ni siquiera cuando la rejilla
+                    // cae a una sola columna (iPad vertical o ventana estrecha del Mac).
+                    mainAction.frame(maxWidth: wideLayout ? 520 : .infinity, alignment: .leading)
+                    nutritionRow.frame(maxWidth: wideLayout ? 520 : .infinity, alignment: .leading)
                 }
-                // Una sola tarjeta grande arriba; debajo, la información de hoy.
-                nutritionRow
+                .padding(.top, wideLayout ? 32 : 24)
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, wideLayout ? 24 : 16)
+            .padding(.top, wideLayout ? 24 : 8)
+            .padding(.bottom, 16)
+            // En Mac/iPad el bloque no se estira sin límite: dos columnas de 520 como máximo y
+            // el conjunto centrado, como el lienzo de la web de escritorio.
+            .frame(maxWidth: wideLayout ? 1106 : .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: wideLayout ? .center : .leading)
         }
         .screenBackground()
         .refreshable { await load() }

@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { BookOpen, Dumbbell, Home, LineChart } from "lucide-react";
-import { PhoneAppBar, PhoneFrame, PhoneHome } from "@/web/components/PublicPhone";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot } from "@/web/components/PublicPhone";
 import ScrollWords from "@/web/components/ScrollWords";
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
@@ -37,6 +38,20 @@ function LaptopScreen() {
   </div>;
 }
 
+/** Captura REAL de la app de Mac; si aún no está, se pinta la maqueta HTML. */
+function LaptopShot() {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <LaptopScreen />;
+  return <img
+    src="/app-shots/mac-hoy.png"
+    alt="Autopilot en el ordenador"
+    className="h-full w-full object-cover object-top"
+    loading="lazy"
+    decoding="async"
+    onError={() => setFailed(true)}
+  />;
+}
+
 /**
  * La app en el móvil y en el ordenador. La tapa del portátil se abre con el scroll
  * y el móvil entra por delante; sin movimiento, ambos se muestran ya colocados.
@@ -59,7 +74,7 @@ export default function DeviceShowcase() {
       {/* Portátil: pantalla con bisel y base. */}
       <div className="mx-auto w-[92%] origin-bottom will-change-transform" style={{ transform: `rotateX(${lid}deg)` }}>
         <div className="rounded-t-[18px] border border-border/60 bg-secondary p-2 shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)] sm:p-3">
-          <div className="aspect-[16/10] overflow-hidden rounded-[8px]"><LaptopScreen /></div>
+          <div className="aspect-[16/10] overflow-hidden rounded-[8px]"><LaptopShot /></div>
         </div>
       </div>
       <div aria-hidden="true" className="relative mx-auto h-3 w-full rounded-b-[14px] bg-gradient-to-b from-secondary to-muted sm:h-4">
@@ -70,7 +85,11 @@ export default function DeviceShowcase() {
       {/* La caja mide lo que el teléfono escalado (22rem × 37.4rem por el factor), así no desborda. */}
       <div className="absolute -bottom-6 right-[2%] h-[calc(37.4rem*var(--s))] w-[calc(22rem*var(--s))] drop-shadow-[0_30px_40px_rgba(0,0,0,0.7)] [--s:0.36] sm:right-[4%] sm:[--s:0.55] md:[--s:0.66]" style={{ transform: `translateY(${(1 - t) * 80}px)`, opacity: 0.3 + t * 0.7 }}>
         <div className="absolute left-0 top-0 w-[22rem] origin-top-left" style={{ transform: "scale(var(--s))" }}>
-          <PhoneFrame screenClassName="h-[37rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden px-4 pt-3"><PhoneHome plans={plans} /></div></PhoneFrame>
+          <PhoneShot
+            src="/app-shots/entrenar.jpg"
+            alt="Pantalla de Entrenar de la app Autopilot"
+            fallback={<PhoneFrame screenClassName="h-[37rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden px-4 pt-3"><PhoneHome plans={plans} /></div></PhoneFrame>}
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { Pause } from "lucide-react";
-import { PhoneAppBar, PhoneFrame, PhoneHome } from "@/web/components/PublicPhone";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot } from "@/web/components/PublicPhone";
 import { useScrollProgress } from "@/shared/hooks/useScrollProgress";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 
@@ -59,9 +59,9 @@ export default function PhoneStory() {
   // La recomendación de carga solo se anuncia donde el producto la calcula (Plus o campaña abierta).
   const suggest = plans.campaign || plans.plus;
   const scenes = [
-    { eyebrow: "Tu día está preparado", title: "Abres la app. Sabes qué toca.", text: "La rutina del día ya está organizada: no tienes que decidir qué ejercicio hacer.", screen: <div className="px-4 pt-3"><PhoneHome plans={plans} /></div> },
-    { eyebrow: "Cada serie cuenta", title: "Entrena. Registra. Sigue.", text: "Apunta peso y repeticiones de cada serie; el historial de tus sesiones queda guardado.", screen: <WorkoutScreen /> },
-    { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", screen: <ProgressScreen suggest={suggest} /> },
+    { eyebrow: "Tu día está preparado", title: "Abres la app. Sabes qué toca.", text: "La rutina del día ya está organizada: no tienes que decidir qué ejercicio hacer.", shot: "/app-shots/hoy.jpg", fallback: <div className="px-4 pt-3"><PhoneHome plans={plans} /></div> },
+    { eyebrow: "Cada serie cuenta", title: "Entrena. Registra. Sigue.", text: "Apunta peso y repeticiones de cada serie; el historial de tus sesiones queda guardado.", shot: "/app-shots/entrenar.jpg", fallback: <WorkoutScreen /> },
+    { eyebrow: "Visualiza tu progreso", title: "Mira cómo progresas.", text: suggest ? "Consulta tus registros y tu evolución. La siguiente carga se calcula con ellos." : "Consulta tus registros y entiende tu evolución.", shot: "/app-shots/progreso.jpg", fallback: <ProgressScreen suggest={suggest} /> },
   ];
   // Una pantalla y media por escena en escritorio: tiempo para leer y mirar; en móvil, una.
   const SCREENS = typeof window !== "undefined" && window.innerWidth >= 768 ? 4.5 : 3.5;
@@ -71,7 +71,13 @@ export default function PhoneStory() {
   const current = Math.min(scenes.length - 1, Math.floor(t));
 
   const phone = (i: number, style?: React.CSSProperties) => <div key={i} className="absolute inset-0" style={style} aria-hidden={i !== current}>
-    <PhoneFrame screenClassName="h-[37rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden">{scenes[i].screen}</div></PhoneFrame>
+    <PhoneShot
+      src={scenes[i].shot}
+      alt={scenes[i].title}
+      fallback={
+        <PhoneFrame screenClassName="h-[37rem]"><PhoneAppBar avatar="N" /><div className="flex-1 overflow-hidden">{scenes[i].fallback}</div></PhoneFrame>
+      }
+    />
   </div>;
 
   if (still) return <section ref={ref} aria-label="Así funciona la app" className="space-y-16 px-5 py-20 sm:px-8">

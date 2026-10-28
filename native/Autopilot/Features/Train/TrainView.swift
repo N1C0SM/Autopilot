@@ -5,11 +5,22 @@ import Supabase
 /// El detalle de la sesión de hoy vive en Inicio; aquí solo el plan de la semana.
 struct TrainView: View {
     @EnvironmentObject private var session: SessionModel
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var model = PlanModel()
     @State private var active: ActiveWorkout?
     @State private var starting = false
     /// Día con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
     @State private var resumableDay: String?
+
+    /// Paridad con la web responsive y con Inicio: en iPhone y ventanas estrechas, la tira de
+    /// días del móvil; en iPad horizontal y Mac, la rejilla semanal de escritorio.
+    private var wideLayout: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return sizeClass == .regular
+        #endif
+    }
 
     var body: some View {
         ScrollView {
@@ -34,8 +45,13 @@ struct TrainView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // En escritorio, más aire y el lienzo centrado con un máximo (como Inicio): la rejilla
+            // nunca se estira de lado a lado en una ventana enorme.
+            .padding(.horizontal, wideLayout ? 24 : 16)
+            .padding(.top, wideLayout ? 24 : 8)
+            .padding(.bottom, 16)
+            .frame(maxWidth: wideLayout ? 1058 : .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: wideLayout ? .center : .leading)
         }
         .screenBackground()
         .refreshable { await load() }
@@ -245,8 +261,11 @@ final class PlanModel: ObservableObject {
 
 /// `TrainingPlanView` de la web: tira de días y la sesión elegida con las fotos de sus ejercicios.
 /// Es lo único que se muestra en Entrenar, junto con el descanso del día que toque.
+/// En iPad y Mac la tira se convierte en la rejilla semanal de escritorio (`LazyVGrid` adaptativa);
+/// en iPhone se queda exactamente igual que antes.
 struct WeeklyRoutineView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var sizeClass
     let days: [DayPlan]
     let initialDay: String
     /// El entreno de hoy ya está hecho: su acción pasa a ser «completado».
@@ -258,6 +277,26 @@ struct WeeklyRoutineView: View {
     @State private var detail: GymExercise?
     @State private var copied = false
 
+    /// Alto mínimo de las tarjetas de la rejilla: el de una tarjeta con el título a dos líneas,
+    /// así todas las de una fila miden igual (y crecen solas con Dynamic Type si hace falta).
+    private static let dayCardMinHeight: CGFloat = 127
+
+    /// Paridad con Inicio: en iPad horizontal y Mac, rejilla; en iPhone y ventanas estrechas, tira.
+    private var wideLayout: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return sizeClass == .regular
+        #endif
+    }
+
+    /// Rejilla adaptativa de 280 pt de mínimo: 2 columnas en iPad vertical y 3 en horizontal o Mac.
+    /// El tope de ancho del lienzo (1058) es el que evita 4-5 días por fila, así las columnas
+    /// siempre reparten el ancho disponible sin dejar un hueco a la derecha.
+    private var weekColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 280), spacing: 18, alignment: .top)]
+    }
+
     private func workPlan(_ day: String) -> DayPlan? {
         guard let p = days.first(where: { $0.day == day }), p.type == "gimnasio" || p.type == "actividad" else { return nil }
         return p
@@ -265,7 +304,7 @@ struct WeeklyRoutineView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            dayStrip
+            if wideLayout { weekGrid } else { dayStrip }
             if let day = expanded, let plan = workPlan(day) { session(day, plan) }
             else if let day = expanded { rest(day) }
             else { emptyCard(icon: "lu-calendar", title: "Elige un día", message: "Toca un día de la semana para ver su sesión.") }
@@ -325,6 +364,129 @@ struct WeeklyRoutineView: View {
         .dynamicTypeSize(...DynamicTypeSize.accessibility1)
         .accessibilityElement(children: .contain)
         .sensoryFeedback(.selection, trigger: expanded)
+    }
+
+    // MARK: Rejilla semanal (iPad / Mac)
+
+    /// Los 7 días como tarjetas seleccionables, con el mismo lenguaje que el resto de la app.
+    /// La acción de empezar/continuar sigue en el detalle de abajo, igual que en el iPhone.
+    private var weekGrid: some View {
+        LazyVGrid(columns: weekColumns, alignment: .leading, spacing: 18) {
+            ForEach(DayNames.all, id: \.self) { day in
+                dayCard(day)
+            }
+        }
+        .sensoryFeedback(.selection, trigger: expanded)
+        .accessibilityElement(children: .contain)
+    }
+
+    /// Tarjeta de un día: icono, cabecera con insignias (HOY / EN CURSO / hecho), título corto y
+    /// detalle. El día abierto se marca con el filete dorado (dorado = selección, como la tira).
+    private func dayCard(_ day: String) -> some View {
+        let plan = workPlan(day)
+        let isToday = day == DayNames.today
+        let isSelected = expanded == day
+        let done = isToday && doneToday
+        let inProgress = resumableDay == day && !done
+        // Título corto, como en las tarjetas de Inicio: el nombre completo vive en el detalle.
+        let title = plan.map { $0.title.components(separatedBy: " · ")[0] }
+            ?? (isToday ? "Hoy toca descansar" : "Descanso")
+        return Button {
+            Haptics.selection()
+            withAnimation(reduceMotion ? nil : .snappy) { expanded = day }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                IconTile(symbol: dayIconSymbol(plan), size: 40)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Text(day.uppercased())
+                            .font(.apCaption.weight(.semibold)).tracking(0.6)
+                            // Mismo criterio que la tira: dorado = día abierto; hoy solo lleva su
+                            // insignia, para que HOY y SELECCIONADO nunca compitan.
+                            .foregroundStyle(isSelected ? Palette.gold
+                                             : (isToday || plan != nil) ? Palette.foreground : Palette.muted)
+                        if isToday { cardBadge("HOY") } else if inProgress { cardBadge("EN CURSO") }
+                        Spacer(minLength: 4)
+                        if done {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.inter(size: 14, weight: .semibold))
+                                .foregroundStyle(Palette.success)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    Text(title)
+                        .font(.apTitle3)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let plan {
+                        // Plan sin ejercicios: se dice, en vez de mostrar un descanso que no toca.
+                        Text(dayMeta(plan) ?? (plan.isGym ? "Sin ejercicios asignados" : "Actividad"))
+                            .font(.apSubhead).foregroundStyle(Palette.muted)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("Recupera; toca otro día para ver su sesión.")
+                            .font(.apSubhead).foregroundStyle(Palette.muted)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: Self.dayCardMinHeight, alignment: .topLeading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(isSelected ? Palette.gold : Color.clear, lineWidth: 1.5)
+            }
+        }
+        .buttonStyle(.pressableCard)
+        .accessibilityLabel(cardLabel(day, plan: plan, done: done))
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint("Muestra el detalle de este día")
+    }
+
+    /// Insignia pequeña de estado en la cabecera de la tarjeta.
+    private func cardBadge(_ text: String) -> some View {
+        Text(text)
+            .font(.apCaption.weight(.bold)).tracking(0.6)
+            .foregroundStyle(Palette.gold)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Palette.gold.opacity(0.15), in: Capsule())
+    }
+
+    /// Icono del día: mancuerna (gimnasio), caminar (actividad) o luna (descanso).
+    private func dayIconSymbol(_ plan: DayPlan?) -> String {
+        guard let plan else { return "lu-moon" }
+        return plan.isGym ? "ph-barbell" : "figure.walk"
+    }
+
+    /// «N ejercicios · M series» o intensidad y duración, igual que el resumen del detalle.
+    private func dayMeta(_ plan: DayPlan) -> String? {
+        if plan.isGym {
+            let exercises = plan.exercises ?? []
+            guard !exercises.isEmpty else { return nil }
+            let sets = exercises.reduce(0) { $0 + max($1.series, 1) }
+            return "\(exercises.count) \(exercises.count == 1 ? "ejercicio" : "ejercicios") · \(sets) \(sets == 1 ? "serie" : "series")"
+        }
+        let parts = [plan.intensity, planDurations(plan)].compactMap { $0 }.filter { !$0.isEmpty && $0 != "—" }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+
+    /// Lectura de VoiceOver de la tarjeta: día, sesión, detalle y estado.
+    private func cardLabel(_ day: String, plan: DayPlan?, done: Bool) -> String {
+        var parts = [day]
+        if day == DayNames.today { parts.append("hoy") }
+        if let plan {
+            parts.append(plan.title)
+            if let meta = dayMeta(plan) { parts.append(meta) }
+        } else {
+            parts.append("descanso")
+        }
+        if done { parts.append("completado") }
+        else if resumableDay == day { parts.append("entreno en curso") }
+        return parts.joined(separator: ", ")
     }
 
     @ViewBuilder private func session(_ day: String, _ plan: DayPlan) -> some View {

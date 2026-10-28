@@ -18,11 +18,40 @@ import Supabase
 struct ProgressScreen: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @StateObject private var model = ProgressModel()
     @State private var tab = 0
     @State private var viewing: ProgressModel.Photo?
     /// «Scan» se monta la primera vez que se abre y se queda vivo: cambiar de pestaña no lo reinicia.
     @State private var scanMounted = false
+    /// Ancho del contenido, medido con una preferencia (un `GeometryReader` envolviendo el scroll
+    /// rompería el tamaño del contenido).
+    @State private var contentWidth: CGFloat = 0
+
+    // MARK: Disposición responsive (iPhone igual que siempre · iPad/Mac en rejilla de escritorio)
+
+    /// En escritorio el contenido se acota y se centra: dos columnas de ~320-380 pt como la web.
+    private let wideContentWidth: CGFloat = 800
+
+    /// Escritorio con ancho suficiente para dos columnas (mínimo ~320 pt por tarjeta).
+    /// En iPhone (ancho compacto) siempre es `false`: la disposición actual queda intacta.
+    private var isWide: Bool {
+        guard sizeClass != .compact else { return false }
+        // Antes de medir (primer fotograma) se asume escritorio: Mac/iPad no parpadean al abrir.
+        return contentWidth == 0 || contentWidth >= 700
+    }
+
+    /// Rejilla adaptativa de escritorio: mínimo ~320 pt por tarjeta (2 columnas en iPad/Mac).
+    private var wideColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 320), spacing: 16)]
+    }
+
+    /// Columnas de las fotos: 3 en iPhone (como siempre); rejilla más ancha en escritorio
+    /// (la web usa 4 columnas en `md` y 6 en `lg`).
+    private var photoColumns: [GridItem] {
+        isWide ? [GridItem(.adaptive(minimum: 110), spacing: 8)]
+               : Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+    }
 
     var body: some View {
         ScrollView {
@@ -38,8 +67,11 @@ struct ProgressScreen: View {
                 // el resto de pestañas: así conserva la foto elegida, el análisis y el estado.
                 if scanMounted || tab == 3 {
                     ScanView(onScanned: { model.invalidatePhotos() })
+                        // En escritorio el formulario no se estira: se acota y se centra (web: max-w-md).
+                        .frame(maxWidth: isWide ? 560 : .infinity)
                         .frame(minHeight: tab == 3 ? 400 : 0)
                         .frame(height: tab == 3 ? nil : 0)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .clipped()
                         .opacity(tab == 3 ? 1 : 0)
                         .allowsHitTesting(tab == 3)
@@ -47,8 +79,16 @@ struct ProgressScreen: View {
                 }
             }
             .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // En iPhone ocupa todo el ancho (exactamente como antes); en escritorio se acota y centra.
+            .frame(maxWidth: isWide ? wideContentWidth : .infinity, alignment: .leading)
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(key: ProgressContentWidthKey.self, value: geo.size.width)
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
+        .onPreferenceChange(ProgressContentWidthKey.self) { contentWidth = $0 }
         .screenBackground()
         .refreshable {
             // El gesto espera la descarga (el indicador debe durar lo que tarda) y renueva también
@@ -78,37 +118,60 @@ struct ProgressScreen: View {
     // MARK: Fuerza
 
     private var strength: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            if model.strengthLoaded {
-                strengthCard
-            } else if let error = model.strengthError {
-                // Sin conexión y sin datos previos: se explica en vez de dejar latiendo el esqueleto
-                // (o de pintar «0 kg», que parecería que no has entrenado).
-                ProgressRetryCard(title: "No hemos podido cargar tu progreso", message: error) {
-                    Task { await model.load(userId: session.userId, force: true) }
+        Group {
+            if isWide {
+                // Escritorio: hero y «Por ejercicio» lado a lado (2 columnas de ~320-380 pt).
+                LazyVGrid(columns: wideColumns, alignment: .leading, spacing: 16) {
+                    strengthHero
+                    strengthExercises
                 }
             } else {
-                // Esqueleto con la altura real de la tarjeta: al llegar los datos no salta el layout.
-                strengthSkeleton
+                // iPhone: una columna, exactamente como hasta ahora.
+                VStack(alignment: .leading, spacing: 16) {
+                    strengthHero
+                    strengthExercises
+                }
             }
+        }
+    }
 
-            if model.detailsLoaded {
-                if !model.history.isEmpty {
-                    Text("Por ejercicio").font(.apTitle3).padding(.top, 8)
+    /// Tarjeta del hero (cifras + barras), su esqueleto o el aviso de error.
+    @ViewBuilder private var strengthHero: some View {
+        if model.strengthLoaded {
+            strengthCard
+        } else if let error = model.strengthError {
+            // Sin conexión y sin datos previos: se explica en vez de dejar latiendo el esqueleto
+            // (o de pintar «0 kg», que parecería que no has entrenado).
+            ProgressRetryCard(title: "No hemos podido cargar tu progreso", message: error) {
+                Task { await model.load(userId: session.userId, force: true) }
+            }
+        } else {
+            // Esqueleto con la altura real de la tarjeta: al llegar los datos no salta el layout.
+            strengthSkeleton
+        }
+    }
+
+    /// «Por ejercicio» (o su esqueleto / aviso de error).
+    @ViewBuilder private var strengthExercises: some View {
+        if model.detailsLoaded {
+            if !model.history.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    // En escritorio la celda ya empieza a la altura de la tarjeta del hero.
+                    Text("Por ejercicio").font(.apTitle3).padding(.top, isWide ? 0 : 8)
                     ExerciseProgressSection(history: model.history, images: model.exerciseImages, names: model.exerciseNames)
-                } else {
-                    // Cuenta recién creada: sin esto la pestaña parecía rota (solo la tarjeta a 0 kg).
-                    EmptyStateView(symbol: "chart.line.uptrend.xyaxis", title: "Aún no hay progreso",
-                                   message: "Cuando registres tus primeros entrenos verás aquí la evolución por ejercicio.")
-                        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                }
-            } else if let error = model.detailsError {
-                ProgressRetryCard(title: "No hemos podido cargar «Por ejercicio»", message: error) {
-                    Task { await model.load(userId: session.userId, force: true) }
                 }
             } else {
-                exerciseSkeleton
+                // Cuenta recién creada: sin esto la pestaña parecía rota (solo la tarjeta a 0 kg).
+                EmptyStateView(symbol: "chart.line.uptrend.xyaxis", title: "Aún no hay progreso",
+                               message: "Cuando registres tus primeros entrenos verás aquí la evolución por ejercicio.")
+                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             }
+        } else if let error = model.detailsError {
+            ProgressRetryCard(title: "No hemos podido cargar «Por ejercicio»", message: error) {
+                Task { await model.load(userId: session.userId, force: true) }
+            }
+        } else {
+            exerciseSkeleton
         }
     }
 
@@ -171,7 +234,7 @@ struct ProgressScreen: View {
     // MARK: Físico (ProgressPhotos de la web)
 
     private var physique: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        Group {
             if !model.photosLoaded, let error = model.photosError {
                 // Las fotos son lo único que hay en esta pestaña: sin conexión se avisa y se reintenta.
                 ProgressRetryCard(title: "No hemos podido cargar tus fotos", message: error) {
@@ -180,36 +243,17 @@ struct ProgressScreen: View {
             } else if !model.photosLoaded {
                 // Primera vez en «Físico»: esqueleto mientras llegan las filas y se firman las fotos.
                 physiqueSkeleton
-            } else {
-                if model.photos.isEmpty {
-                    // Sin ninguna foto, «Compara tu evolución» no tenía sentido: se explica de
-                    // dónde salen las fotos (las guarda cada scan), como en la web.
-                    photosEmpty
-                } else if let before = model.comparison.last, let after = model.comparison.first {
-                    VStack(spacing: 16) {
-                        HStack(spacing: 8) { photoTile(before, label: "Antes"); photoTile(after, label: "Ahora") }
-                        // Abre la foto más reciente a pantalla completa (la comparación ya se ve arriba,
-                        // lado a lado): antes el texto prometía algo que la hoja no hacía.
-                        Button("Ver la última foto") { viewing = after }.buttonStyle(.pill)
-                    }
-                } else {
-                    // Hacen falta dos fotos del mismo ángulo: el mismo aviso que en la web.
-                    compareTeaser
+            } else if isWide {
+                // Escritorio como la web: comparación acotada (`max-w-xl`) y rejilla de fotos más ancha.
+                VStack(alignment: .leading, spacing: 24) {
+                    comparisonBlock.frame(maxWidth: 576, alignment: .leading)
+                    photoMonths
                 }
-                // Solo se construyen las filas visibles: con muchos meses y fotos el scroll sigue fluido.
-                LazyVStack(alignment: .leading, spacing: 24) {
-                    ForEach(model.photoGroups) { group in
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(group.month).font(.apHeadline)
-                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                                ForEach(group.photos) { p in
-                                    Button { viewing = p } label: { photoTile(p, label: p.shortDate) }
-                                        .buttonStyle(.plain)
-                                        .accessibilityLabel("Progreso: ver foto del \(p.shortDate)")
-                                }
-                            }
-                        }
-                    }
+            } else {
+                // iPhone: una columna, exactamente como hasta ahora.
+                VStack(alignment: .leading, spacing: 24) {
+                    comparisonBlock
+                    photoMonths
                 }
             }
         }
@@ -220,6 +264,43 @@ struct ProgressScreen: View {
             }
             .onTapGesture { viewing = nil }
             .accessibilityLabel("Foto de progreso del \(p.shortDate). Toca para cerrar")
+        }
+    }
+
+    /// Comparación «antes/ahora» y avisos (sin fotos / faltan dos del mismo ángulo).
+    @ViewBuilder private var comparisonBlock: some View {
+        if model.photos.isEmpty {
+            // Sin ninguna foto, «Compara tu evolución» no tenía sentido: se explica de
+            // dónde salen las fotos (las guarda cada scan), como en la web.
+            photosEmpty
+        } else if let before = model.comparison.last, let after = model.comparison.first {
+            VStack(spacing: 16) {
+                HStack(spacing: 8) { photoTile(before, label: "Antes"); photoTile(after, label: "Ahora") }
+                // Abre la foto más reciente a pantalla completa (la comparación ya se ve arriba,
+                // lado a lado): antes el texto prometía algo que la hoja no hacía.
+                Button("Ver la última foto") { viewing = after }.buttonStyle(.pill)
+            }
+        } else {
+            // Hacen falta dos fotos del mismo ángulo: el mismo aviso que en la web.
+            compareTeaser
+        }
+    }
+
+    /// Fotos agrupadas por mes. Sigue siendo perezoso: solo se construyen las celdas visibles.
+    private var photoMonths: some View {
+        LazyVStack(alignment: .leading, spacing: 24) {
+            ForEach(model.photoGroups) { group in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(group.month).font(.apHeadline)
+                    LazyVGrid(columns: photoColumns, spacing: 8) {
+                        ForEach(group.photos) { p in
+                            Button { viewing = p } label: { photoTile(p, label: p.shortDate) }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Progreso: ver foto del \(p.shortDate)")
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -269,7 +350,7 @@ struct ProgressScreen: View {
     // MARK: Récords (como la web: tarjeta «Tu mejor marca» y lista «Tus récords personales»)
 
     private var records: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        Group {
             if !model.recordsLoaded, let error = model.recordsError {
                 ProgressRetryCard(title: "No hemos podido cargar tus récords", message: error) {
                     Task { await model.load(userId: session.userId, force: true) }
@@ -280,50 +361,89 @@ struct ProgressScreen: View {
                 EmptyStateView(symbol: "trophy", title: "Sin récords aún", message: "Registra tus entrenos con peso y rompe tu primer récord personal.")
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
             } else if let best = model.bestRecord {
-                ZStack(alignment: .bottomLeading) {
-                    Color.clear.frame(maxWidth: .infinity).frame(height: 256)
-                        .overlay { CachedAsyncImage(url: best.image.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
-                        .clipped()
-                    LinearGradient(colors: [.black.opacity(0.9), .black.opacity(0.45), .black.opacity(0.1)], startPoint: .bottom, endPoint: .top)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(best.e1rmText).font(.inter(size: 64, weight: .bold))
-                                .lineLimit(1).minimumScaleFactor(0.6)
-                                .contentTransition(.numericText())
-                            Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))
+                if isWide {
+                    // Escritorio: tarjeta de la mejor marca y lista lado a lado (la web usa
+                    // `lg:grid-cols-[280px_1fr]`); dos columnas iguales aquí.
+                    LazyVGrid(columns: wideColumns, alignment: .leading, spacing: 16) {
+                        recordsHero(best)
+                        VStack(alignment: .leading, spacing: 16) {
+                            recordsHeader
+                            recordsTable
                         }
-                        Text("1RM estimado en \(best.name)").font(.apSubhead).foregroundStyle(.white.opacity(0.75))
                     }
-                    .padding(20)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                .accessibilityElement(children: .combine)
-
-                Text("TUS RÉCORDS PERSONALES").font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 12)
-                // Hasta 50 récords: LazyVStack para crear solo las filas que caben en pantalla.
-                LazyVStack(spacing: 0) {
-                    ForEach(Array(model.records.enumerated()), id: \.element.name) { i, pr in
-                        HStack(spacing: 14) {
-                            ProgressRecordThumb(url: pr.image, size: 44)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(pr.name).font(.apBody)
-                                // Sin fecha (dato raro en el servidor) no se deja una línea vacía.
-                                if !pr.dateText.isEmpty { Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted) }
-                            }
-                            Spacer(minLength: 8)
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text("\(pr.weightText) kg × \(pr.reps)").font(.apBody.weight(.semibold).monospacedDigit())
-                                Text("1RM ~\(pr.e1rmText) kg").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
-                            }
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 14)
-                        .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 82) } }
-                        .accessibilityElement(children: .combine)
+                } else {
+                    // iPhone: una columna, exactamente como hasta ahora.
+                    VStack(alignment: .leading, spacing: 16) {
+                        recordsHero(best)
+                        recordsHeader
+                        recordsTable
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
+        }
+    }
+
+    /// Tarjeta grande «Tu mejor marca».
+    private func recordsHero(_ best: ProgressModel.Record) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            Color.clear.frame(maxWidth: .infinity).frame(height: 256)
+                .overlay { CachedAsyncImage(url: best.image.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
+                .clipped()
+            LinearGradient(colors: [.black.opacity(0.9), .black.opacity(0.45), .black.opacity(0.1)], startPoint: .bottom, endPoint: .top)
+            VStack(alignment: .leading, spacing: 4) {
+                Label("Tu mejor marca", systemImage: "trophy").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(best.e1rmText).font(.inter(size: 64, weight: .bold))
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                        .contentTransition(.numericText())
+                    Text("kg").font(.apTitle3).foregroundStyle(.white.opacity(0.7))
+                }
+                Text("1RM estimado en \(best.name)").font(.apSubhead).foregroundStyle(.white.opacity(0.75))
+            }
+            .padding(20)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    private var recordsHeader: some View {
+        Text("TUS RÉCORDS PERSONALES")
+            .font(.apFootnote).foregroundStyle(Palette.muted)
+            // En escritorio la cabecera abre su columna; en iPhone conserva su aire sobre la lista.
+            .padding(.top, isWide ? 0 : 12)
+    }
+
+    /// Lista de récords: `LazyVStack` en iPhone (como hasta ahora) y pila normal en la celda de
+    /// escritorio, donde el alto debe ser determinista para que la rejilla no salte.
+    private var recordsTable: some View {
+        Group {
+            if isWide {
+                VStack(spacing: 0) { recordsRows }
+            } else {
+                LazyVStack(spacing: 0) { recordsRows }
+            }
+        }
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    @ViewBuilder private var recordsRows: some View {
+        ForEach(Array(model.records.enumerated()), id: \.element.name) { i, pr in
+            HStack(spacing: 14) {
+                ProgressRecordThumb(url: pr.image, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(pr.name).font(.apBody)
+                    // Sin fecha (dato raro en el servidor) no se deja una línea vacía.
+                    if !pr.dateText.isEmpty { Text(pr.dateText).font(.apFootnote).foregroundStyle(Palette.muted) }
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(pr.weightText) kg × \(pr.reps)").font(.apBody.weight(.semibold).monospacedDigit())
+                    Text("1RM ~\(pr.e1rmText) kg").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 14)
+            .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 82) } }
+            .accessibilityElement(children: .combine)
         }
     }
 
@@ -361,8 +481,11 @@ struct ProgressScreen: View {
     private var physiqueSkeleton: some View {
         ProgressSkeletonPulse {
             VStack(alignment: .leading, spacing: 24) {
+                // En escritorio la comparación va acotada, igual que el contenido real.
                 ProgressSkeletonBlock(height: 96, radius: Radius.card)
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                    .frame(maxWidth: isWide ? 576 : .infinity, alignment: .leading)
+                // Mismas columnas que la rejilla real (6 en escritorio, 3 en iPhone).
+                LazyVGrid(columns: photoColumns, spacing: 8) {
                     ForEach(0..<6, id: \.self) { _ in
                         Color.clear.aspectRatio(3/4, contentMode: .fit)
                             .overlay { RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary) }
@@ -374,27 +497,44 @@ struct ProgressScreen: View {
 
     private var recordsSkeleton: some View {
         ProgressSkeletonPulse {
-            VStack(alignment: .leading, spacing: 16) {
-                ProgressSkeletonBlock(height: 256, radius: Radius.hero)
-                ProgressSkeletonBlock(height: 12, radius: 6, width: 188).padding(.horizontal, 16).padding(.top, 12)
-                VStack(spacing: 0) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        HStack(spacing: 14) {
-                            ProgressSkeletonBlock(height: 44, radius: 12, width: 44)
-                            VStack(alignment: .leading, spacing: 6) {
-                                ProgressSkeletonBlock(height: 12, radius: 6, width: 132)
-                                ProgressSkeletonBlock(height: 10, radius: 5, width: 82)
-                            }
-                            Spacer(minLength: 8)
-                            ProgressSkeletonBlock(height: 12, radius: 6, width: 92)
+            Group {
+                if isWide {
+                    // Misma rejilla de dos columnas que el contenido real: sin saltos al cargar.
+                    LazyVGrid(columns: wideColumns, alignment: .leading, spacing: 16) {
+                        ProgressSkeletonBlock(height: 256, radius: Radius.hero)
+                        VStack(alignment: .leading, spacing: 16) {
+                            ProgressSkeletonBlock(height: 12, radius: 6, width: 188)
+                            recordsSkeletonRows
                         }
-                        .padding(.horizontal, 16).padding(.vertical, 14)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ProgressSkeletonBlock(height: 256, radius: Radius.hero)
+                        ProgressSkeletonBlock(height: 12, radius: 6, width: 188).padding(.horizontal, 16).padding(.top, 12)
+                        recordsSkeletonRows
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
         }
+    }
+
+    private var recordsSkeletonRows: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: 14) {
+                    ProgressSkeletonBlock(height: 44, radius: 12, width: 44)
+                    VStack(alignment: .leading, spacing: 6) {
+                        ProgressSkeletonBlock(height: 12, radius: 6, width: 132)
+                        ProgressSkeletonBlock(height: 10, radius: 5, width: 82)
+                    }
+                    Spacer(minLength: 8)
+                    ProgressSkeletonBlock(height: 12, radius: 6, width: 92)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 14)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }
 
@@ -1295,6 +1435,12 @@ struct ExerciseProgressSection: View {
 }
 
 // MARK: - Esqueletos de carga
+
+/// Ancho del contenido de Progreso: decide entre la disposición de iPhone y la rejilla de escritorio.
+private struct ProgressContentWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
 
 /// Error de red con reintento: mismo patrón que el resto de la app (tarjeta + «Reintentar» en píldora).
 /// Sin esto, un fallo de conexión dejaba un esqueleto eterno (o ceros que parecían datos reales).

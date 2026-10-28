@@ -11,7 +11,6 @@
 		0AF7A76A7DE34BBAE1C7B70C /* AdminDashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */; };
 		19B55FB6A0EB01AEF6114860 /* AdminPayments.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3306B7A6F1F1C5159421755 /* AdminPayments.swift */; };
 		1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDF230DE9FE12D555FC3505 /* HomeView.swift */; };
-		20664F5D071BFB000D75E795 /* GlassmorphicDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E26511A515E7DE9E6BE458 /* GlassmorphicDashboardView.swift */; };
 		224764578170A5967D49426F /* AdminDrive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1162F3D5C142878DA85F3630 /* AdminDrive.swift */; };
 		37AB3736DA2D27767EF5091A /* AdminPhysiques.swift in Sources */ = {isa = PBXBuildFile; fileRef = C67655E7437E327953D3487E /* AdminPhysiques.swift */; };
 		39012991BB9D556B10C68E0C /* AdminViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 215885F8A59B676130290EEB /* AdminViews.swift */; };
@@ -20,7 +19,6 @@
 		45C59E19DE5DBDD2398090D4 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 922D1242F803ABF9EC7B42D3 /* Theme.swift */; };
 		4A4158E5A447BF480BE6C342 /* OtherViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A8C9FF8A9F9707540345088 /* OtherViews.swift */; };
 		4B50EE3EBA1FA6A1C98BA0D4 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 7D2A2A74EF26831307F6611A /* Supabase */; };
-		4C1D0FFD8E9D282A9CD991D8 /* GlassmorphicRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73CB99FFBF569C3D7C238B02 /* GlassmorphicRootView.swift */; };
 		4CBC7F75637FA9EF8470AF7B /* AdminEmails.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13BFD641222C0CC2169DE1E7 /* AdminEmails.swift */; };
 		4E59183CC035EA035A02E697 /* ActiveWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E855A95CA7F59CEC743EDB /* ActiveWorkout.swift */; };
 		5083B9495BA08DC47D3AF36B /* AdminUserDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFB057618D570CFBDF91E63 /* AdminUserDetail.swift */; };
@@ -41,7 +39,6 @@
 		B303B7824C6D835D37EB539F /* RoadmapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54840FD78B7470F1A4A687B3 /* RoadmapView.swift */; };
 		B3C0E827FE1DBF6EAA3E3554 /* AdminRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */; };
 		BC730C3B8CCAC5C94052F77F /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABEA2EE0F4882F9B05D3C21 /* Haptics.swift */; };
-		BD90104AC660232157239DB2 /* GlassmorphicTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FADF1976C661E4322A6E52C /* GlassmorphicTokens.swift */; };
 		C17254753A884901E29E432F /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A57E68C8EAB6DFD893FAFDF5 /* HealthKitManager.swift */; };
 		C33EEF6918E30230C1551E46 /* AdminTrainers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */; };
 		C38BFD538EEEA7E82ADCB392 /* Training.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60F84451BD2C06501A2E80E /* Training.swift */; };
@@ -50,7 +47,6 @@
 		EA850B866D90DA72011F3A9A /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172F9A007BDD4D9E6CB124BB /* AccountView.swift */; };
 		EB35510AE5F8A100568AEED6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80424D4030A49FC7F8638EEF /* RootView.swift */; };
 		EE5E7A661E85D7347DAA3162 /* AdminBlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18F52B91A212936EB6B6D716 /* AdminBlog.swift */; };
-		F897FF198162FAC9B14005CC /* GlassmorphicComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 862767A1C06705210A5712D6 /* GlassmorphicComponents.swift */; };
 		FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74B2604636425A7A76330A3C /* AutopilotApp.swift */; };
 /* End PBXBuildFile section */
 
@@ -74,13 +70,10 @@
 		5D06C6CE81D75452F06C8802 /* Backend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Backend.swift; sourceTree = "<group>"; };
 		66ACDDCD9DCD34A77D715501 /* AdminDashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboard.swift; sourceTree = "<group>"; };
 		6AB2F8559DD0B658B4DA48C0 /* AdminTrainers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminTrainers.swift; sourceTree = "<group>"; };
-		73CB99FFBF569C3D7C238B02 /* GlassmorphicRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassmorphicRootView.swift; sourceTree = "<group>"; };
 		74B2604636425A7A76330A3C /* AutopilotApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutopilotApp.swift; sourceTree = "<group>"; };
-		7FADF1976C661E4322A6E52C /* GlassmorphicTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassmorphicTokens.swift; sourceTree = "<group>"; };
 		80424D4030A49FC7F8638EEF /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		853847766E839A5A319D2EB4 /* AdminProducts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminProducts.swift; sourceTree = "<group>"; };
 		853B2DAC8254F0DD0241B738 /* ProgressScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressScreen.swift; sourceTree = "<group>"; };
-		862767A1C06705210A5712D6 /* GlassmorphicComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassmorphicComponents.swift; sourceTree = "<group>"; };
 		8A8C9FF8A9F9707540345088 /* OtherViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherViews.swift; sourceTree = "<group>"; };
 		922D1242F803ABF9EC7B42D3 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		92E329249B146C8FEF5E45AF /* TrainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainView.swift; sourceTree = "<group>"; };
@@ -95,7 +88,6 @@
 		C60F84451BD2C06501A2E80E /* Training.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Training.swift; sourceTree = "<group>"; };
 		C67655E7437E327953D3487E /* AdminPhysiques.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPhysiques.swift; sourceTree = "<group>"; };
 		D2B6432A97E06E936915D024 /* WhoIsTrainingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhoIsTrainingView.swift; sourceTree = "<group>"; };
-		D4E26511A515E7DE9E6BE458 /* GlassmorphicDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassmorphicDashboardView.swift; sourceTree = "<group>"; };
 		D9CE1814A5ED5A9830CBCCFE /* AdminRules.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminRules.swift; sourceTree = "<group>"; };
 		D9E053FD3BBE7DBA136AACF9 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		EBDF230DE9FE12D555FC3505 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -181,7 +173,6 @@
 		3FD248CE85B5D519C876E0A9 /* Home */ = {
 			isa = PBXGroup;
 			children = (
-				D4E26511A515E7DE9E6BE458 /* GlassmorphicDashboardView.swift */,
 				EBDF230DE9FE12D555FC3505 /* HomeView.swift */,
 			);
 			path = Home;
@@ -190,7 +181,6 @@
 		3FE327EF9EC6A814C0EFDB5D /* Shell */ = {
 			isa = PBXGroup;
 			children = (
-				73CB99FFBF569C3D7C238B02 /* GlassmorphicRootView.swift */,
 				80424D4030A49FC7F8638EEF /* RootView.swift */,
 			);
 			path = Shell;
@@ -296,8 +286,6 @@
 			isa = PBXGroup;
 			children = (
 				B1837043D6026822C99B027E /* Components.swift */,
-				862767A1C06705210A5712D6 /* GlassmorphicComponents.swift */,
-				7FADF1976C661E4322A6E52C /* GlassmorphicTokens.swift */,
 				922D1242F803ABF9EC7B42D3 /* Theme.swift */,
 			);
 			path = Design;
@@ -401,10 +389,6 @@
 				FE5FFFEBFADDA7C63208E610 /* AutopilotApp.swift in Sources */,
 				E3C379D882AD856AB8A82CA5 /* Backend.swift in Sources */,
 				57465A2CCC8862B96537FE2C /* Components.swift in Sources */,
-				F897FF198162FAC9B14005CC /* GlassmorphicComponents.swift in Sources */,
-				20664F5D071BFB000D75E795 /* GlassmorphicDashboardView.swift in Sources */,
-				4C1D0FFD8E9D282A9CD991D8 /* GlassmorphicRootView.swift in Sources */,
-				BD90104AC660232157239DB2 /* GlassmorphicTokens.swift in Sources */,
 				BC730C3B8CCAC5C94052F77F /* Haptics.swift in Sources */,
 				C17254753A884901E29E432F /* HealthKitManager.swift in Sources */,
 				1D236648E7FF2EC8FE627E00 /* HomeView.swift in Sources */,

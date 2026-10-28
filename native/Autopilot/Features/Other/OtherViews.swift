@@ -7,6 +7,8 @@ struct NutritionView: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Ancho de la ventana: el iPhone sigue en una columna y iPad/Mac pasan a la rejilla de escritorio.
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var macros: Macros?
     @State private var meals: [Meal] = []
     @State private var loaded = false
@@ -30,6 +32,10 @@ struct NutritionView: View {
         return "meals_done_\(session.userIdString ?? "")_\(c.year!)-\(c.month!)-\(c.day!)"
     }
 
+    /// iPhone: una columna. iPad/Mac: rejilla de escritorio (ver `NutritionGrid`). Con texto
+    /// muy grande también una columna, para que las cifras y las comidas no se compriman.
+    private var singleColumn: Bool { sizeClass == .compact || dynamicTypeSize.isAccessibilitySize }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
@@ -43,7 +49,9 @@ struct NutritionView: View {
                 }
             }
             .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 24)
-            .frame(maxWidth: 720).frame(maxWidth: .infinity)
+            // Móvil: la misma columna de siempre; iPad/Mac: el ancho de la rejilla de escritorio.
+            .frame(maxWidth: NutritionGrid.contentWidth(singleColumn: singleColumn))
+            .frame(maxWidth: .infinity)
         }
         .screenBackground()
         .task { await load() }
@@ -57,39 +65,59 @@ struct NutritionView: View {
         let showTargets = macros != nil && kcal > 0
         if !hasMeals && kcal <= 0 {
             EmptyCard(photo: Self.defaultDish, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
+                .frame(maxWidth: 560)
         } else {
-            if hasMeals, let cover {
-                Color.clear.frame(height: 176)
-                    .overlay { CachedAsyncImage(url: cover, maxSide: 420) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
-                    .overlay { LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom) }
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                    .accessibilityHidden(true)
-            }
-            if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
-            if hasMeals && macros == nil {
-                HStack(alignment: .top, spacing: 16) {
-                    Image(systemName: "person").font(.inter(size: 24)).foregroundStyle(Palette.gold).frame(width: 40)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Tus macros aún no están personalizados").font(.apHeadline)
-                        Text("Añade tu peso actual para calcularlos. Mientras tanto, las comidas de abajo son orientativas.").font(.apSubhead).foregroundStyle(Palette.muted)
-                    }
+            // Escritorio (md/lg de la web): el resumen (portada, objetivos/macros y avisos) y las
+            // comidas en dos columnas. En el iPhone la rejilla se queda en una y conserva el orden.
+            LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn), alignment: .leading, spacing: singleColumn ? 32 : 24) {
+                VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
+                    if hasMeals { coverCard }
+                    if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
+                    if hasMeals && macros == nil { macroNotice }
+                }
+                if hasMeals {
+                    mealsSection
+                } else {
+                    EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía", message: "Guarda tus datos en Ajustes y podrás generarlas con tus macros.")
                 }
             }
-            if !hasMeals {
-                EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía", message: "Guarda tus datos en Ajustes y podrás generarlas con tus macros.")
-            } else {
-                VStack(alignment: .leading, spacing: 8) {
-                    // Alineado con el borde de la tarjeta (sin sangría): todas las secciones de la
-                    // pantalla comparten el mismo eje vertical.
-                    Text("COMIDAS DE HOY")
-                        .font(.apFootnote.weight(.semibold)).tracking(0.6)
-                        .foregroundStyle(Palette.muted)
-                    VStack(spacing: 0) {
-                        ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in mealRow(meal, last: i == meals.count - 1) }
-                    }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                }
+        }
+    }
+
+    /// Portada del primer plato (héroe de la web): 176 pt, radio 28 y degradado hacia negro.
+    @ViewBuilder private var coverCard: some View {
+        if let cover {
+            Color.clear.frame(height: 176)
+                .overlay { CachedAsyncImage(url: cover, maxSide: 420) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
+                .overlay { LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom) }
+                .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+                .accessibilityHidden(true)
+        }
+    }
+
+    /// Aviso de macros sin personalizar: las comidas de abajo siguen siendo orientativas.
+    private var macroNotice: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: "person").font(.inter(size: 24)).foregroundStyle(Palette.gold).frame(width: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Tus macros aún no están personalizados").font(.apHeadline)
+                Text("Añade tu peso actual para calcularlos. Mientras tanto, las comidas de abajo son orientativas.").font(.apSubhead).foregroundStyle(Palette.muted)
             }
+        }
+    }
+
+    /// «Comidas de hoy»: cabecera y filas marcables con su foto.
+    private var mealsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Alineado con el borde de la tarjeta (sin sangría): todas las secciones de la
+            // pantalla comparten el mismo eje vertical.
+            Text("COMIDAS DE HOY")
+                .font(.apFootnote.weight(.semibold)).tracking(0.6)
+                .foregroundStyle(Palette.muted)
+            VStack(spacing: 0) {
+                ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in mealRow(meal, last: i == meals.count - 1) }
+            }
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
     }
 
@@ -113,6 +141,8 @@ struct NutritionView: View {
                 .padding(.top, 6)
                 .accessibilityHint("Vuelve a pedir tu plan de comidas")
         }
+        // En iPad/Mac el error no se estira a todo el ancho: se queda como una tarjeta de columna.
+        .frame(maxWidth: 560)
     }
 
     /// Resumen del día: anillo de comidas hechas y objetivos. Con texto grande el anillo pasa
@@ -355,59 +385,22 @@ struct NutritionView: View {
 /// que laten suavemente, para que la pantalla no aparezca vacía ni dé un salto al cargar.
 private struct NutritionSkeleton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pulsing = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 32) {
-            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .fill(Palette.card)
-                .frame(height: 176)
-            // Misma estructura que el resumen real: anillo y cifras arriba, macros debajo.
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 20) {
-                    Circle().stroke(Palette.secondary, lineWidth: 14).frame(width: 136, height: 136).padding(7)
-                    VStack(alignment: .leading, spacing: 10) {
-                        bar(width: 132, height: 34)
-                        bar(width: 104, height: 12)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 8)
-                }
-                HStack(alignment: .top, spacing: 16) {
-                    bar(height: 44)
-                    bar(height: 44)
-                    bar(height: 44)
-                }
-                .padding(.top, 24)
-                bar(width: 220, height: 11).padding(.top, 16)
+        let singleColumn = sizeClass == .compact || dynamicTypeSize.isAccessibilitySize
+        // La misma rejilla que el contenido real: esqueleto de resumen y de comidas en dos
+        // columnas en iPad/Mac y en una en el iPhone, para que al llegar los datos nada salte.
+        LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn), alignment: .leading, spacing: singleColumn ? 32 : 24) {
+            VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
+                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                    .fill(Palette.card)
+                    .frame(height: 176)
+                summarySkeleton
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            VStack(alignment: .leading, spacing: 8) {
-                // Mismo eje que las tarjetas (sin sangría).
-                bar(width: 110, height: 11)
-                VStack(spacing: 0) {
-                    ForEach(0..<3, id: \.self) { i in
-                        HStack(spacing: 12) {
-                            Circle().fill(Palette.secondary).frame(width: 24, height: 24)
-                            VStack(alignment: .leading, spacing: 6) {
-                                bar(height: 12)
-                                bar(width: 140, height: 10)
-                            }
-                            Spacer(minLength: 0)
-                            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary).frame(width: 56, height: 56)
-                        }
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 72)
-                        .overlay(alignment: .bottom) {
-                            // 16 + 24 (check) + 12: el separador arranca donde el texto.
-                            if i < 2 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 52).padding(.trailing, 16) }
-                        }
-                    }
-                }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            }
+            mealsSkeleton
         }
         .opacity(pulsing ? 0.5 : 1)
         .task {
@@ -418,6 +411,59 @@ private struct NutritionSkeleton: View {
         .accessibilityLabel("Cargando tu plan de comidas")
     }
 
+    /// Fantasma del resumen: anillo y cifras arriba, macros debajo.
+    private var summarySkeleton: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 20) {
+                Circle().stroke(Palette.secondary, lineWidth: 14).frame(width: 136, height: 136).padding(7)
+                VStack(alignment: .leading, spacing: 10) {
+                    bar(width: 132, height: 34)
+                    bar(width: 104, height: 12)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
+            }
+            HStack(alignment: .top, spacing: 16) {
+                bar(height: 44)
+                bar(height: 44)
+                bar(height: 44)
+            }
+            .padding(.top, 24)
+            bar(width: 220, height: 11).padding(.top, 16)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    /// Fantasma de «Comidas de hoy»: tres filas con check, textos y foto.
+    private var mealsSkeleton: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Mismo eje que las tarjetas (sin sangría).
+            bar(width: 110, height: 11)
+            VStack(spacing: 0) {
+                ForEach(0..<3, id: \.self) { i in
+                    HStack(spacing: 12) {
+                        Circle().fill(Palette.secondary).frame(width: 24, height: 24)
+                        VStack(alignment: .leading, spacing: 6) {
+                            bar(height: 12)
+                            bar(width: 140, height: 10)
+                        }
+                        Spacer(minLength: 0)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary).frame(width: 56, height: 56)
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(minHeight: 72)
+                    .overlay(alignment: .bottom) {
+                        // 16 + 24 (check) + 12: el separador arranca donde el texto.
+                        if i < 2 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 52).padding(.trailing, 16) }
+                    }
+                }
+            }
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+    }
+
     /// Bloque gris del esqueleto; sin ancho se estira a lo disponible.
     private func bar(width: CGFloat? = nil, height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: height / 2, style: .continuous)
@@ -425,6 +471,19 @@ private struct NutritionSkeleton: View {
             .frame(width: width, height: height)
             .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
     }
+}
+
+/// Rejilla de Nutrición: una columna en el iPhone y rejilla adaptativa en iPad/Mac, como el paso
+/// a varias columnas (`md:`/`lg:`) de la web. El tope de 1000 pt evita tres columnas en una Mac
+/// muy ancha y el máximo de 560 pt que las columnas se estiren feas.
+private enum NutritionGrid {
+    static func columns(singleColumn: Bool) -> [GridItem] {
+        if singleColumn { return [GridItem(.flexible(), spacing: 24, alignment: .top)] }
+        return [GridItem(.adaptive(minimum: 320, maximum: 560), spacing: 24, alignment: .top)]
+    }
+
+    /// Ancho máximo del contenido: la columna de siempre en el iPhone y hasta 1000 pt en iPad/Mac.
+    static func contentWidth(singleColumn: Bool) -> CGFloat { singleColumn ? 720 : 1000 }
 }
 
 /// Tarjeta vacía de la web (EmptyState card), con foto opcional arriba.

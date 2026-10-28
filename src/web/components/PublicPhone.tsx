@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Apple, Bell, Sparkles, type LucideIcon } from "lucide-react";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 import { OverviewRow } from "@/app/components/dashboard/HomeOverview";
@@ -6,12 +6,12 @@ import type { PlanAvailability } from "@/shared/lib/planCatalogCore";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * Pieces of the fake phone shown on the public site. They reproduce the app's
- * current look (black screen, system type, grouped rows, floating tab bar) and are
- * shared by the hero (static picture) and the interactive demo. Pure markup: no data, no motion.
+ * Piezas del móvil de la web pública. `PhoneShot` pinta capturas REALES de la app
+ * (las de `public/app-shots/`); el resto (PhoneHome, PhoneTabBar…) son la demo interactiva
+ * y el respaldo si una captura aún no está. Markup puro: sin datos ni movimiento.
  */
 
-export function PhoneFrame({ children, className, screenClassName }: { children: ReactNode; className?: string; screenClassName?: string }) {
+export function PhoneFrame({ children, className, screenClassName, chrome = true }: { children: ReactNode; className?: string; screenClassName?: string; chrome?: boolean }) {
   return (
     <div className={cn("relative mx-auto w-full max-w-[22rem] rounded-[3.25rem] bg-secondary p-[3px]", className)}>
       <span aria-hidden className="absolute -left-[2px] top-24 h-8 w-[3px] rounded-l-md bg-secondary" />
@@ -19,13 +19,13 @@ export function PhoneFrame({ children, className, screenClassName }: { children:
       <span aria-hidden className="absolute -left-[2px] top-52 h-12 w-[3px] rounded-l-md bg-secondary" />
       <span aria-hidden className="absolute -right-[2px] top-40 h-16 w-[3px] rounded-r-md bg-secondary" />
       <div className={cn("relative flex flex-col overflow-hidden rounded-[3rem] bg-background", screenClassName)}>
-        <div aria-hidden className="flex shrink-0 items-center justify-between px-8 pb-1 pt-4 type-subhead font-semibold">
+        {chrome && <div aria-hidden className="flex shrink-0 items-center justify-between px-8 pb-1 pt-4 type-subhead font-semibold">
           <span>9:41</span>
           <span className="flex items-center gap-1.5">
             <svg viewBox="0 0 16 12" className="h-3 w-4 fill-current"><rect x="0" y="7" width="3" height="5" rx="0.5" /><rect x="4.5" y="5" width="3" height="7" rx="0.5" /><rect x="9" y="2.5" width="3" height="9.5" rx="0.5" /><rect x="13" y="0" width="3" height="12" rx="0.5" /></svg>
             <svg viewBox="0 0 24 12" className="h-3 w-6"><rect x="0.5" y="0.5" width="20" height="11" rx="3" fill="none" stroke="currentColor" strokeOpacity="0.4" /><rect x="2" y="2" width="15" height="8" rx="1.5" fill="currentColor" /><rect x="22" y="4" width="2" height="4" rx="1" fill="currentColor" fillOpacity="0.4" /></svg>
           </span>
-        </div>
+        </div>}
         {children}
         <span aria-hidden className="absolute bottom-1.5 left-1/2 h-1 w-28 -translate-x-1/2 rounded-full bg-foreground/30" />
       </div>
@@ -163,5 +163,28 @@ export function PhoneHome({ heading, onSession, onNutrition, onProgress, name }:
         />
       </div>
     </div>
+  );
+}
+
+/**
+ * Captura REAL de la app dentro del marco del teléfono. La imagen trae su propia barra de
+ * estado (por eso `chrome={false}`); si aún no está el fichero, se pinta `fallback`.
+ */
+export function PhoneShot({ src, alt, className, fallback }: { src: string; alt: string; className?: string; fallback?: ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed && fallback) return <>{fallback}</>;
+  return (
+    <PhoneFrame className={className} screenClassName="bg-background" chrome={false}>
+      {!failed && (
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover object-top"
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      )}
+    </PhoneFrame>
   );
 }
