@@ -298,6 +298,13 @@ struct AccountView: View {
                             }
                             if a.id != session.userIdString {
                                 Divider()
+                                // Cambiar directamente también desde el menú de mantener pulsado.
+                                Button {
+                                    Haptics.tap()
+                                    Task { await switchToAccount(a) }
+                                } label: {
+                                    Label("Cambiar a esta cuenta", systemImage: "arrow.left.arrow.right")
+                                }
                                 Button("Quitar de este dispositivo", role: .destructive) { Haptics.warning(); accounts.forget(a.id) }
                             }
                         }
