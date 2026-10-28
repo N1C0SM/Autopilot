@@ -1,3 +1,5 @@
+import { ChipGroup } from "@/shared/components/ui/chip-group";
+import { FOOD_AVOID, FOOD_LIKES, readLikes, splitList, toggleInList, writeLikes } from "@/shared/lib/foodPrefs";
 import AccountSwitcher from "@/app/components/AccountSwitcher";
 import { errorMessage } from "@/shared/lib/runtimeValues";
 import { useState, useEffect, useRef, type ReactNode } from "react";
@@ -858,10 +860,18 @@ const SettingsPanel = ({ onUpgrade, adminMode = false }: { onUpgrade?: (plan: "t
           <ListGroup header="Deportes">
             <Textarea aria-label="Deportes" value={onboarding.sports} onChange={(e) => editOnboarding({ sports: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
+          <div className="space-y-6">
+            <ChipGroup header="Lo que te gusta" options={FOOD_LIKES}
+              isOn={(v) => readLikes(onboarding.nutrition_preferences).includes(v)}
+              onToggle={(v) => editOnboarding({ nutrition_preferences: writeLikes(onboarding.nutrition_preferences, toggleInList(readLikes(onboarding.nutrition_preferences), v)) })} />
+            <ChipGroup header="Lo que no comes" options={FOOD_AVOID}
+              isOn={(v) => splitList(onboarding.allergies).some((x) => x.toLowerCase() === v.toLowerCase())}
+              onToggle={(v) => editOnboarding({ allergies: toggleInList(splitList(onboarding.allergies), v).join(", ") })} />
+          </div>
           <ListGroup header="Preferencias nutricionales">
             <Textarea aria-label="Preferencias nutricionales" value={onboarding.nutrition_preferences} onChange={(e) => editOnboarding({ nutrition_preferences: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
-          <ListGroup header="Alergias">
+          <ListGroup header="Alergias y otros alimentos a evitar">
             <Textarea aria-label="Alergias" value={onboarding.allergies} onChange={(e) => editOnboarding({ allergies: e.target.value })} className={blockTextarea} rows={2} />
           </ListGroup>
 

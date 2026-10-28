@@ -76,7 +76,7 @@ struct NutritionView: View {
         let kcal = (macros?.calories ?? 0) > 0 ? macros!.calories! : energy.rounded()
         let hasMeals = !meals.isEmpty
         let showTargets = macros != nil && kcal > 0
-        if !hasMeals && hasAccess == false {
+        if !hasMeals && kcal <= 0 && hasAccess == false {
             // Sin Plus (la RLS no deja leer el plan): el aviso de Plus, no un «no hay plan».
             EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
                       message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")

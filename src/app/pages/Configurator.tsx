@@ -1,3 +1,5 @@
+import { ChipGroup } from "@/shared/components/ui/chip-group";
+import { FOOD_AVOID, FOOD_LIKES, splitList, toggleInList, writeLikes } from "@/shared/lib/foodPrefs";
 import { generatePlanGuarded } from "@/shared/lib/planShield";
 import { clearConfiguratorDraft, readConfiguratorDraft, saveConfiguratorDraft } from "@/shared/lib/configuratorDraft";
 import { useEffect, useRef, useState } from "react";
@@ -57,11 +59,11 @@ const TIMES = Array.from({ length: 32 }, (_, i) => {
 
 type Cfg = {
   mode: string; partner_email: string; goal: string; focus: string; days: number[]; minutes: number; structure: string;
-  meals: number; avoid: string; cooking: string; weight: string; checkin_dow: number; checkin_time: string; style: string;
+  meals: number; avoid: string; likes: string[]; dislikes: string[]; cooking: string; weight: string; checkin_dow: number; checkin_time: string; style: string;
 };
 const initial: Cfg = {
   mode: "individual", partner_email: "", goal: "", focus: "", days: [], minutes: 55, structure: "coach",
-  meals: 3, avoid: "", cooking: "normal", weight: "", checkin_dow: 0, checkin_time: "19:30", style: "flexible",
+  meals: 3, avoid: "", likes: [], dislikes: [], cooking: "normal", weight: "", checkin_dow: 0, checkin_time: "19:30", style: "flexible",
 };
 
 const label = (arr: { v: string | number; l: string }[], v: string | number) => arr.find((x) => x.v === v)?.l ?? "—";
@@ -264,8 +266,10 @@ const Configurator = () => {
       return;
     }
     setSaving(true);
-    const nutrition = [`${c.meals} comidas al día`, `Cocina: ${label(COOKING, c.cooking)}`, c.avoid && `Evitar: ${c.avoid}`]
-      .filter(Boolean).join(" · ");
+    const likes = c.likes ?? [];
+    const dislikes = c.dislikes ?? [];
+    const nutrition = writeLikes([`${c.meals} comidas al día`, `Cocina: ${label(COOKING, c.cooking)}`, c.avoid && `Evitar: ${c.avoid}`]
+      .filter(Boolean).join(" · "), likes);
     const { error } = await supabase.from("onboarding").upsert({
       user_id: user.id,
       goal: c.goal,
@@ -273,6 +277,7 @@ const Configurator = () => {
       equipment_type: c.focus === "gimnasio" ? "Gimnasio" : c.focus === "calistenia" ? "Calistenia" : "Mixto",
       intensity_level: 7,
       nutrition_preferences: nutrition,
+      allergies: [...dislikes, ...splitList(c.avoid)].join(", "),
       // Acepta «72,5» y nunca borra un peso ya guardado si el campo se deja vacío.
       ...(Number(String(c.weight).replace(",", ".")) > 30 ? { weight: Number(String(c.weight).replace(",", ".")) } : {}),
       availability: {
@@ -383,8 +388,12 @@ const Configurator = () => {
           <>
             <Choices header={t("Comidas al día", "Comidas al día que hacéis juntos")} options={[2, 3, 4, 5].map((n) => ({ v: n, l: `${n} comidas` }))} value={c.meals} onChange={(v) => set("meals", Number(v))} />
             <Choices header={t("¿Te gusta cocinar?", "¿Os gusta cocinar?")} options={COOKING} value={c.cooking} onChange={(v) => set("cooking", String(v))} />
-            <Field header={t("¿Algo que no quieras ver? (opcional)", "¿Algo que ninguno quiera ver? (opcional)")}>
-              <Input autoComplete="off" enterKeyHint="next" aria-label="Alimentos que no quieres ver" placeholder="Ej. pescado, avena…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
+            <ChipGroup header={t("¿Qué te gusta comer?", "¿Qué os gusta comer?")} options={FOOD_LIKES}
+              isOn={(v) => (c.likes ?? []).includes(v)} onToggle={(v) => set("likes", toggleInList(c.likes ?? [], v))} />
+            <ChipGroup header={t("¿Qué no comes?", "¿Qué no coméis?")} options={FOOD_AVOID}
+              isOn={(v) => (c.dislikes ?? []).includes(v)} onToggle={(v) => set("dislikes", toggleInList(c.dislikes ?? [], v))} />
+            <Field header="¿Algo más que evitar? (opcional)">
+              <Input autoComplete="off" enterKeyHint="next" aria-label="Otros alimentos que no quieres ver" placeholder="Ej. avena, champiñones…" value={c.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </Field>
             <Field header="Tu peso en kg (opcional)">
               <Input type="text" inputMode="decimal" enterKeyHint="done" autoComplete="off" aria-label="Tu peso en kg" placeholder="Ej. 72 kg" value={c.weight} onChange={(e) => set("weight", e.target.value.replace(/[^\d.,]/g, ""))} />

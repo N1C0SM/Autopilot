@@ -131,8 +131,18 @@ struct AccountView: View {
                     fieldRow("Minutos/sesión") { numberField($minutes) }
                 }
                 group("Deportes") { TextField("Fútbol los martes, pádel…", text: $sports, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44) }
+                group("Lo que te gusta") {
+                    FoodChips(options: FoodPrefs.likes, isOn: { FoodPrefs.readLikes(nutritionPrefs).contains($0) }) { v in
+                        nutritionPrefs = FoodPrefs.writeLikes(nutritionPrefs, FoodPrefs.toggle(FoodPrefs.readLikes(nutritionPrefs), v))
+                    }
+                }
+                group("Lo que no comes") {
+                    FoodChips(options: FoodPrefs.avoid, isOn: { v in FoodPrefs.split(allergies).contains { $0.lowercased() == v.lowercased() } }) { v in
+                        allergies = FoodPrefs.toggle(FoodPrefs.split(allergies), v).joined(separator: ", ")
+                    }
+                }
                 group("Preferencias nutricionales") { TextField("Vegetariano, sin lactosa…", text: $nutritionPrefs, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44) }
-                group("Alergias") {
+                group("Alergias y otros alimentos a evitar") {
                     TextField("Frutos secos, marisco…", text: $allergies, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44)
                     actionRow("Guardar datos") { await saveData() }
                 }
@@ -848,5 +858,58 @@ private struct AccountUnlockSheet: View {
             Haptics.error()
             error = "Contraseña incorrecta. Inténtalo de nuevo."
         }
+    }
+}
+
+/// Gustos y alimentos a evitar como chips (igual que `src/shared/lib/foodPrefs.ts`).
+enum FoodPrefs {
+    static let likes = ["Pollo", "Ternera", "Pescado", "Huevos", "Arroz", "Pasta", "Patata", "Legumbres",
+                        "Verduras", "Fruta", "Yogur", "Avena", "Pan", "Frutos secos", "Tofu"]
+    static let avoid = ["Lactosa", "Gluten", "Frutos secos", "Marisco", "Pescado", "Huevo", "Cerdo", "Carne roja",
+                        "Vegetariano", "Vegano", "Picante"]
+    private static let prefix = "Le gusta: "
+
+    static func split(_ text: String) -> [String] {
+        text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+    static func toggle(_ list: [String], _ item: String) -> [String] {
+        list.contains { $0.lowercased() == item.lowercased() } ? list.filter { $0.lowercased() != item.lowercased() } : list + [item]
+    }
+    static func readLikes(_ prefs: String) -> [String] {
+        guard let seg = prefs.components(separatedBy: " · ").first(where: { $0.hasPrefix(prefix) }) else { return [] }
+        return split(String(seg.dropFirst(prefix.count)))
+    }
+    static func writeLikes(_ prefs: String, _ likes: [String]) -> String {
+        var parts = prefs.components(separatedBy: " · ").map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix(prefix) }
+        if !likes.isEmpty { parts.append(prefix + likes.joined(separator: ", ")) }
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// Chips de selección múltiple en píldora (`ChipGroup` de la web).
+struct FoodChips: View {
+    let options: [String]
+    let isOn: (String) -> Bool
+    let onToggle: (String) -> Void
+
+    var body: some View {
+        FlowRow(spacing: 8) {
+            ForEach(options, id: \.self) { o in
+                let on = isOn(o)
+                Button { Haptics.selection(); onToggle(o) } label: {
+                    HStack(spacing: 6) {
+                        if on { Image("lu-check").renderingMode(.template).resizable().frame(width: 14, height: 14) }
+                        Text(o).font(.apSubhead.weight(.medium))
+                    }
+                    .padding(.horizontal, 14).frame(height: 38)
+                    .foregroundStyle(on ? Palette.gold : Palette.foreground)
+                    .background(on ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 10)
     }
 }
