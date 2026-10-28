@@ -185,12 +185,12 @@ struct NutritionView: View {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 16) {
-                        if hasMeals { mealsRing(doneCount: doneCount) }
+                        if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
                         summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount)
                     }
                 } else {
                     HStack(alignment: .center, spacing: 20) {
-                        if hasMeals { mealsRing(doneCount: doneCount) }
+                        if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
                         summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount)
                     }
                 }
@@ -206,6 +206,30 @@ struct NutritionView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    /// Sin comidas: anillo con el reparto de macros (proteína, carbos, grasas) y las kcal dentro.
+    private func macroRing(kcal: Double, p: Double, c: Double, f: Double) -> some View {
+        let parts = [p * 4, c * 4, f * 9]
+        let total = max(1, parts.reduce(0, +))
+        let shades = [Palette.gold, Palette.gold.opacity(0.6), Palette.gold.opacity(0.32)]
+        let gap = 0.012
+        return ZStack {
+            Circle().stroke(Palette.secondary, lineWidth: 14)
+            ForEach(0..<3, id: \.self) { i in
+                let start = parts[..<i].reduce(0, +) / total
+                let end = start + parts[i] / total
+                Circle().trim(from: start + gap, to: max(start + gap, end - gap))
+                    .stroke(shades[i], style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
+            }
+            VStack(spacing: 2) {
+                Text(NumberText.integer(Int(kcal))).font(.figure(size: 40)).lineLimit(1).minimumScaleFactor(0.6)
+                Text("kcal").font(.apFootnote).foregroundStyle(Palette.muted)
+            }
+        }
+        .frame(width: 136, height: 136).padding(7)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Objetivo de \(Int(kcal)) kilocalorías: \(Int(p)) g de proteína, \(Int(c)) g de carbohidratos y \(Int(f)) g de grasas")
     }
 
     /// Anillo de comidas hechas (mismo tamaño que el hueco del esqueleto).
