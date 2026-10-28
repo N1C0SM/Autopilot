@@ -247,8 +247,9 @@ struct HomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .aspectRatio(1, contentMode: .fill)
+            .frame(maxWidth: .infinity, minHeight: wideLayout ? 168 : nil, alignment: .leading)
+            // Cuadrados en el iPhone; en Mac/iPad, a la altura de su contenido (si no, ocupan media pantalla).
+            .aspectRatio(wideLayout ? nil : 1, contentMode: .fill)
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.pressableCard)
