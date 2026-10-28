@@ -267,7 +267,9 @@ struct HomeView: View {
     /// sesión en una línea. Se toca y abre el resumen del entreno de hoy.
     private func doneCard(_ plan: DayPlan?) -> some View {
         let exercises = plan?.exercises ?? []
-        let cover = exercises.compactMap { $0.image_url }.first.flatMap(URL.init(string:))
+        // Sin foto de la sesión (p. ej. entreno libre en día de descanso): la foto de marca del gimnasio.
+        let cover = URL(string: exercises.compactMap { $0.image_url }.first { !$0.isEmpty }
+            ?? "https://enebrcdrdnfkyduzyrzm.supabase.co/storage/v1/object/public/site-assets/exercise-images/a31c7206-d2a4-4b31-856a-f5dec09b890e-1791475829849.png")
         let title = plan.map { $0.title.components(separatedBy: " · ")[0] } ?? "Sesión completada"
         let next = nextPlan.map { "Siguiente: \($0.day.lowercased()) · \($0.plan.title.components(separatedBy: " · ")[0])" }
         return Button { Haptics.tap(); openSheet() } label: {
@@ -622,11 +624,14 @@ struct HomeView: View {
     }
 
     private func fetchLastPr(userId: UUID) async -> LastPR? {
-        struct R: Decodable { let exercise_name: String; let weight: Double; let reps: Int; let achieved_at: Date }
+        struct R: Decodable { let exercise_name: String; let weight: Double; let reps: Int; let achieved_at: String }
         let rows: [R] = (try? await Backend.client.from("personal_records").select("exercise_name, weight, reps, achieved_at")
             .eq("user_id", value: userId).order("achieved_at", ascending: false).limit(1).execute().value) ?? []
         guard let r = rows.first else { return snapshot?.lastPr }
-        return LastPR(exercise: r.exercise_name, weight: r.weight, reps: r.reps, achievedAt: r.achieved_at)
+        // Fecha como texto: Postgres devuelve microsegundos que el decodificador de fechas no acepta.
+        let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: r.achieved_at) ?? ISO8601DateFormatter().date(from: r.achieved_at) ?? Date()
+        return LastPR(exercise: r.exercise_name, weight: r.weight, reps: r.reps, achievedAt: date)
     }
 
 }
