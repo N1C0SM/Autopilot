@@ -1,6 +1,6 @@
 import { readMealsDone as readMealsDoneFor } from "@/shared/lib/mealsDone";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles } from "lucide-react";
+import { Apple, Check, ChevronRight, Clock, LockKeyhole, Moon, Sparkles, Trophy } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
@@ -113,6 +113,60 @@ export const OverviewRow = ({
       className={className}
     >
       {inner}
+    </button>
+  );
+};
+
+/** Widget de Nutrición: kcal del día, barras de macros y comidas hechas. */
+const NutritionWidget = ({ locked, calories, macros, meals, mealsDone, detail, onClick }: {
+  locked: boolean;
+  calories: number | null;
+  macros: Macros | null;
+  meals: number;
+  mealsDone: number;
+  detail: ReactNode;
+  onClick: () => void;
+}) => {
+  const items = macros ? [
+    { label: "Proteína", grams: macros.protein, kcal: macros.protein * 4 },
+    { label: "Carbos", grams: macros.carbs, kcal: macros.carbs * 4 },
+    { label: "Grasas", grams: macros.fats, kcal: macros.fats * 9 },
+  ] : [];
+  const total = items.reduce((sum, item) => sum + item.kcal, 0) || 1;
+  return (
+    <button
+      type="button"
+      onClick={() => { void hapticTap(); onClick(); }}
+      className="flex w-full min-w-0 flex-col gap-4 rounded-2xl bg-card p-4 text-left transition-transform duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block type-headline">Nutrición</span>
+          <span className="mt-0.5 block type-footnote tabular-nums text-muted-foreground">{detail}</span>
+        </span>
+        <ProgressRing value={!locked && meals ? (mealsDone / meals) * 100 : 0} size={32} stroke={3.5} className={locked ? "text-muted-foreground" : undefined}>
+          {locked ? <LockKeyhole className="h-[14px] w-[14px]" strokeWidth={2.25} /> : <Apple className="h-[14px] w-[14px]" strokeWidth={2.25} />}
+        </ProgressRing>
+      </span>
+      {!locked && calories != null && (
+        <span className="flex items-end justify-between gap-4">
+          <span className="type-figure text-[40px] text-foreground">
+            {calories.toLocaleString("es-ES")}<span className="ml-1 font-sans type-subhead font-semibold text-muted-foreground">kcal</span>
+          </span>
+          {items.length > 0 && (
+            <span className="grid min-w-0 flex-1 grid-cols-3 gap-2">
+              {items.map((item) => (
+                <span key={item.label} className="min-w-0">
+                  <span className="block h-1.5 overflow-hidden rounded-full bg-secondary">
+                    <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.round((item.kcal / total) * 100)}%` }} />
+                  </span>
+                  <span className="mt-1.5 block truncate type-caption1 tabular-nums text-muted-foreground">{Math.round(item.grams)} g {item.label.toLocaleLowerCase("es")}</span>
+                </span>
+              ))}
+            </span>
+          )}
+        </span>
+      )}
     </button>
   );
 };
@@ -246,6 +300,17 @@ const HomeOverview = ({
     : meals.length
       ? macroError ? "Objetivos por revisar" : null
       : calorieLabel && macroError ? "Objetivos por revisar" : null;
+
+  // Widget «Último récord»: la mejor marca más reciente del usuario.
+  const [lastPr, setLastPr] = useState<{ exercise_name: string; weight: number; reps: number; achieved_at: string } | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void supabase.from("personal_records").select("exercise_name, weight, reps, achieved_at")
+      .eq("user_id", userId).order("achieved_at", { ascending: false }).limit(1)
+      .then(({ data }) => { if (!cancelled) setLastPr(data?.[0] ?? null); });
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const readMealsDone = useCallback(() => {
     setCompletedMeals(new Set(readMealsDoneFor(userId)));
@@ -396,34 +461,23 @@ const HomeOverview = ({
           )}
         </div>
 
-      {/* Tarjetas secundarias: Nutrición + Progreso, en su sección con título (todo el ancho). */}
+      {/* Widgets de Inicio: Nutrición a lo ancho y, debajo, Semana y Último récord. */}
       <section className="mt-8 lg:mt-12">
-      <h3 className="mb-3 type-title3">Resumen</h3>
+      <h3 className="mb-3 type-title3">Widgets</h3>
       <div className="grid grid-cols-2 gap-3 lg:gap-4">
+        <div className="col-span-2">
+          <NutritionWidget
+            locked={!nutrition}
+            calories={calorieTarget}
+            macros={macros && !macroError ? macros : null}
+            meals={meals.length}
+            mealsDone={doneMealCount}
+            detail={<><span>{nutritionMain}</span>{nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}</>}
+            onClick={() => onNavigate("nutrition")}
+          />
+        </div>
         <OverviewRow
-          title="Nutrición"
-          value={nutrition && calorieTarget ? <>{calorieTarget.toLocaleString("es-ES")}<span className="ml-1 type-subhead font-semibold text-muted-foreground">kcal</span></> : undefined}
-          onClick={() => onNavigate("nutrition")}
-          icon={
-            nutrition ? (
-              <ProgressRing value={meals.length ? (doneMealCount / meals.length) * 100 : 0} size={32} stroke={3.5}>
-                <Apple className="h-[14px] w-[14px]" strokeWidth={2.25} />
-              </ProgressRing>
-            ) : (
-              <ProgressRing value={0} size={32} stroke={3.5} className="text-muted-foreground">
-                <LockKeyhole className="h-[14px] w-[14px]" strokeWidth={2.25} />
-              </ProgressRing>
-            )
-          }
-          description={(
-            <>
-              <span>{nutritionMain}</span>
-              {nutritionExtra && <span>{` · ${nutritionExtra}`}</span>}
-            </>
-          )}
-        />
-        <OverviewRow
-          title="Progreso"
+          title="Semana"
           value={scheduledDays.length ? <>{sessionCount}<span className="type-title3 text-muted-foreground">/{scheduledDays.length}</span></> : undefined}
           onClick={() => onNavigate("progress")}
           icon={(
@@ -431,14 +485,20 @@ const HomeOverview = ({
               <Sparkles className="h-[14px] w-[14px]" strokeWidth={2.25} />
             </ProgressRing>
           )}
-          description={
-            scheduledDays.length ? (
-              <>
-                <span>{`${sessionCount} de ${scheduledDays.length} ${scheduledDays.length === 1 ? "sesión" : "sesiones"}`}</span>
-                <span> esta semana</span>
-              </>
-            ) : "Sin sesiones esta semana"
-          }
+          description={scheduledDays.length ? `${sessionCount} de ${scheduledDays.length} ${scheduledDays.length === 1 ? "sesión" : "sesiones"}` : "Sin sesiones esta semana"}
+        />
+        <OverviewRow
+          title={lastPr ? lastPr.exercise_name : "Récords"}
+          value={lastPr ? <>{lastPr.weight.toLocaleString("es-ES")}<span className="ml-1 type-subhead font-semibold text-muted-foreground">kg</span></> : undefined}
+          onClick={() => onNavigate("progress")}
+          icon={(
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Trophy className="h-[14px] w-[14px]" strokeWidth={2.25} />
+            </span>
+          )}
+          description={lastPr
+            ? `${lastPr.reps} reps · ${new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short" }).format(new Date(lastPr.achieved_at))}`
+            : "Tu primer récord llegará entrenando"}
         />
       </div>
       </section>

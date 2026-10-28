@@ -127,15 +127,15 @@ describe("dashboard home overview", () => {
       />,
     );
 
-    expect(screen.getByText("Progreso")).toBeVisible();
+    expect(screen.getByText("Semana")).toBeVisible();
     expect(screen.getByText("2 de 3 sesiones")).toBeVisible();
     expect(screen.getByText("Plan de nutrición")).toBeVisible();
     const nutritionCard = screen.getByRole("button", { name: /Nutrición/ });
-    const progressCard = screen.getByRole("button", { name: /Progreso/ });
+    const progressCard = screen.getByRole("button", { name: /Semana/ });
     expect(nutritionCard).toBeVisible();
     expect(progressCard).toBeVisible();
-    // Las dos tarjetas secundarias van juntas, después de la acción principal.
-    expect(nutritionCard.parentElement).toBe(progressCard.parentElement);
+    // Los widgets van juntos en su rejilla, después de la acción principal.
+    expect(nutritionCard.closest(".grid")).toBe(progressCard.closest(".grid"));
     const startButton = screen.getByRole("button", { name: /Empezar Entrenamiento de fuerza/ });
     expect(startButton).toBeVisible();
     const allButtons = screen.getAllByRole("button");

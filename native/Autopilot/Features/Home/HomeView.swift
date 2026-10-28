@@ -65,12 +65,12 @@ struct HomeView: View {
                 if wideLayout {
                     // Escritorio como `HomeOverview.tsx`: una sola columna ancha.
                     wideToday
-                    resumen
+                    widgets.padding(.top, 32)
                 } else {
-                    // iPhone: exactamente la columna de siempre (sin foto héroe ni resumen extra).
+                    // iPhone: la acción de hoy y, debajo, los widgets (como `HomeOverview.tsx`).
                     VStack(alignment: .leading, spacing: 28) {
                         mainAction
-                        nutritionRow
+                        widgets
                     }
                     .padding(.top, 24)
                 }
@@ -200,29 +200,96 @@ struct HomeView: View {
         .frame(maxWidth: 448, alignment: .leading)
     }
 
-    /// «Resumen» en dos tarjetas, como el `grid-cols-2` de la web.
-    private var resumen: some View {
+    /// Widgets de Inicio, como la web: Nutrición a lo ancho y, debajo, Semana y Último récord.
+    private var widgets: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Resumen").font(.apTitle3).padding(.top, 32)
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)],
-                      alignment: .leading, spacing: 16) {
-                nutritionRow
-                progressRow
+            Text("Widgets").font(.apTitle3)
+            nutritionWidget
+            HStack(alignment: .top, spacing: 12) {
+                let done = min(model.completions.count, snapshot?.scheduled.count ?? 0)
+                let total = snapshot?.scheduled.count ?? 0
+                widgetTile(symbol: "lu-sparkles", ring: total > 0 ? Double(done) / Double(total) : 0,
+                           value: total > 0 ? "\(done)/\(total)" : nil, unit: nil, title: "Semana",
+                           detail: total > 0 ? "\(done) de \(total) sesiones" : "Sin sesiones esta semana") { onNavigate(.progress) }
+                let pr = snapshot?.lastPr
+                widgetTile(symbol: "lu-trophy", ring: nil,
+                           value: pr.map { $0.weight.rounded() == $0.weight ? NumberText.integer(Int($0.weight)) : NumberText.decimal($0.weight) }, unit: pr == nil ? nil : "kg",
+                           title: pr?.exercise ?? "Récords",
+                           detail: pr.map { "\($0.reps) reps · \($0.dateLabel)" } ?? "Tu primer récord llegará entrenando") { onNavigate(.progress) }
             }
         }
     }
 
-    /// Acceso a Progreso (la web enseña las sesiones de la semana).
-    private var progressRow: some View {
-        let done = model.completions.count
-        let total = snapshot?.scheduled.count ?? 0
-        return linkRow(symbol: "lu-sparkles",
-                       title: "Progreso",
-                       detail: total > 0 ? "\(done) de \(total) sesiones esta semana" : "Tu evolución semana a semana",
-                       label: "Progreso") {
-            onNavigate(.progress)
+    /// Widget de Nutrición: kcal del día y barras de macros (proteína, carbos, grasas).
+    private var nutritionWidget: some View {
+        Button { Haptics.tap(); onNavigate(.nutrition) } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Nutrición").font(.apHeadline)
+                        Text(snapshot?.calories == nil ? "Sin plan de nutrición todavía" : "Objetivo diario")
+                            .font(.apFootnote).foregroundStyle(Palette.muted)
+                    }
+                    Spacer()
+                    ProgressRing(value: 0, symbol: snapshot?.calories == nil ? "lu-lock" : "lu-apple")
+                }
+                if let kcal = snapshot?.calories {
+                    HStack(alignment: .bottom, spacing: 16) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(NumberText.integer(kcal)).font(.figure(size: 40))
+                            Text("kcal").font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted)
+                        }
+                        if let m = snapshot?.macros {
+                            let items = [("proteína", m.p, m.p * 4), ("carbos", m.c, m.c * 4), ("grasas", m.f, m.f * 9)]
+                            let total = max(1, items.reduce(0) { $0 + $1.2 })
+                            HStack(spacing: 8) {
+                                ForEach(items, id: \.0) { item in
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        GeometryReader { g in
+                                            Capsule().fill(Palette.secondary)
+                                                .overlay(alignment: .leading) { Capsule().fill(Palette.gold).frame(width: g.size.width * item.2 / total) }
+                                        }
+                                        .frame(height: 6)
+                                        Text("\(Int(item.1.rounded())) g \(item.0)").font(.apCaption).foregroundStyle(Palette.muted).lineLimit(1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
-        .accessibilityHint("Abre tu progreso")
+        .buttonStyle(.pressableCard)
+        .accessibilityLabel((snapshot?.calories).map { "Nutrición, \(NumberText.integer($0)) kilocalorías de objetivo" } ?? "Nutrición")
+    }
+
+    /// Widget compacto (Semana, Récord): icono arriba, cifra grande, título y una línea gris.
+    private func widgetTile(symbol: String, ring: Double?, value: String?, unit: String?, title: String,
+                            detail: String, action: @escaping () -> Void) -> some View {
+        Button { Haptics.tap(); action() } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                ProgressRing(value: (ring ?? 0) * 100, symbol: symbol)
+                Spacer(minLength: 16)
+                if let value {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(value).font(.figure(size: 30))
+                        if let unit { Text(unit).font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.muted) }
+                    }
+                    .padding(.bottom, 8)
+                }
+                Text(title).font(.apHeadline).lineLimit(1)
+                Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+        .buttonStyle(.pressableCard)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: Lo único de hoy (empezar, resultados o descanso)
@@ -489,16 +556,6 @@ struct HomeView: View {
         .accessibilityHint("Abre la rutina de la semana")
     }
 
-    /// Objetivo de nutrición de hoy.
-    private var nutritionRow: some View {
-        linkRow(symbol: snapshot?.calories == nil ? "lu-lock" : "lu-apple",
-                title: "Nutrición de hoy",
-                detail: (snapshot?.calories).map { "\(NumberText.integer($0)) kcal de objetivo" } ?? "Sin plan de nutrición todavía",
-                label: (snapshot?.calories).map { "Nutrición de hoy, \(NumberText.integer($0)) kilocalorías de objetivo" } ?? "Nutrición de hoy") {
-            onNavigate(.nutrition)
-        }
-        .accessibilityHint("Abre tu plan de nutrición de hoy")
-    }
 
     // MARK: Datos
 
@@ -530,10 +587,13 @@ struct HomeView: View {
         async let planLoad: Void = model.load(userId: id)
         async let name = fetchFirstName(userId: id)
         async let kcal = fetchCalories(userId: id)
-        let (firstName, calories) = await (name, kcal)
+        async let pr = fetchLastPr(userId: id)
+        let (firstName, nutrition, lastPr) = await (name, kcal, pr)
         await planLoad
         // Un único estado (y a la caché) al terminar la fase: sin redibujados en cadena.
-        let snap = makeSnapshot(firstName: firstName, calories: calories)
+        var snap = makeSnapshot(firstName: firstName, calories: nutrition.kcal)
+        snap.macros = nutrition.macros
+        snap.lastPr = lastPr
         todayState = snap
         TodayCache.shared.save(snap, userId: id)
     }
@@ -559,14 +619,24 @@ struct HomeView: View {
         return (p.name ?? "").components(separatedBy: " ").first ?? ""
     }
 
-    private func fetchCalories(userId: UUID) async -> Int? {
+    private func fetchCalories(userId: UUID) async -> (kcal: Int?, macros: (p: Double, c: Double, f: Double)?) {
         struct M: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
         struct N: Decodable { let macros_json: M? }
         let rows: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
         guard let m = rows.first?.macros_json, m.protein != nil || m.calories != nil else {
-            return snapshot?.calories
+            return (snapshot?.calories, snapshot?.macros)
         }
-        return Int((m.calories ?? ((m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9)).rounded())
+        let kcal = Int((m.calories ?? ((m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9)).rounded())
+        let macros = m.protein.map { (p: $0, c: m.carbs ?? 0, f: m.fats ?? 0) }
+        return (kcal, macros)
+    }
+
+    private func fetchLastPr(userId: UUID) async -> LastPR? {
+        struct R: Decodable { let exercise_name: String; let weight: Double; let reps: Int; let achieved_at: Date }
+        let rows: [R] = (try? await Backend.client.from("personal_records").select("exercise_name, weight, reps, achieved_at")
+            .eq("user_id", value: userId).order("achieved_at", ascending: false).limit(1).execute().value) ?? []
+        guard let r = rows.first else { return snapshot?.lastPr }
+        return LastPR(exercise: r.exercise_name, weight: r.weight, reps: r.reps, achievedAt: r.achieved_at)
     }
 
 }
@@ -584,6 +654,18 @@ private struct TodaySnapshot {
     var resumable = false
     var firstName = ""
     var calories: Int?
+    /// Gramos de proteína, carbos y grasas del plan (widget de Nutrición).
+    var macros: (p: Double, c: Double, f: Double)?
+    /// Última mejor marca (widget de Récord).
+    var lastPr: LastPR?
+}
+
+struct LastPR {
+    let exercise: String
+    let weight: Double
+    let reps: Int
+    let achievedAt: Date
+    var dateLabel: String { achievedAt.formatted(.dateTime.day().month(.abbreviated).locale(Locale(identifier: "es_ES"))) }
 }
 
 /// Cache en memoria (por usuario y día) de lo de hoy: Inicio pinta sin esperar a la red.
