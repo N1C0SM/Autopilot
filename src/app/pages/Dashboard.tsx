@@ -776,11 +776,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      {campaign && section === "nutrition" && user && !nutrition && <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} />}
+      {campaign && section === "nutrition" && user && !nutrition && <BasicNutrition userId={user.id} onEdit={() => setSection("settings")} onUpgrade={() => void handleCompletePayment("training")} />}
       {hasPlan && section === "nutrition" && nutrition && (
         <div className="w-full">
           <Suspense fallback={<SectionFallback />}>
-            <MealsList userId={user?.id} meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} />
+            <MealsList userId={user?.id} meals={meals} macros={macros} onOpenProfile={() => setSection("settings")} onMealsGenerated={() => void fetchData()} />
           </Suspense>
         </div>
       )}

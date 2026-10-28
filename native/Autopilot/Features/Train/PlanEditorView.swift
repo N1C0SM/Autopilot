@@ -164,7 +164,9 @@ private struct ExerciseEditRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
+                CachedAsyncImage(url: exercise.image_url.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                    .frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 Text(exercise.name).font(.apHeadline).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
                 iconButton("lu-chevron-left", rotation: 90, label: "Subir", disabled: index == 0) { onMove(-1) }
                 iconButton("lu-chevron-left", rotation: -90, label: "Bajar", disabled: index == total - 1) { onMove(1) }
@@ -215,12 +217,15 @@ struct ExercisePickerView: View {
     @State private var rows: [Row] = []
     @State private var query = ""
     @State private var selected: [String] = []
+    @State private var group: String?
+    private var groups: [String] { Array(Set(rows.compactMap(\.muscle_group))).sorted() }
 
     private var filtered: [Row] {
         let fold: (String) -> String = { $0.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current) }
         let q = fold(query.trimmingCharacters(in: .whitespaces))
         return rows.filter { row in
             guard !existing.contains(row.name) else { return false }
+            if let group, row.muscle_group != group { return false }
             if q.isEmpty { return true }
             let name: String = fold(row.name)
             let group: String = fold(row.muscle_group ?? "")
@@ -230,14 +235,25 @@ struct ExercisePickerView: View {
 
     var body: some View {
         NavigationStack {
-            List(filtered) { row in
+            List {
+                Section {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            chip("Todos", active: group == nil) { group = nil }
+                            ForEach(groups, id: \.self) { g in chip(g, active: group == g) { group = g } }
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+                ForEach(filtered) { row in
                 Button {
                     Haptics.selection()
                     if let i = selected.firstIndex(of: row.id) { selected.remove(at: i) } else { selected.append(row.id) }
                 } label: {
                     HStack(spacing: 12) {
                         CachedAsyncImage(url: row.image_url.flatMap(URL.init(string:))) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                            .frame(width: 44, height: 44).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .frame(width: 64, height: 64).clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(row.name).font(.apBody)
                             if let g = row.muscle_group { Text(g).font(.apFootnote).foregroundStyle(Palette.muted) }
@@ -250,6 +266,7 @@ struct ExercisePickerView: View {
                 }
                 .buttonStyle(.plain)
                 .listRowBackground(Palette.card)
+                }
             }
             .scrollContentBackground(.hidden)
             .screenBackground()
@@ -270,6 +287,16 @@ struct ExercisePickerView: View {
         .task {
             rows = (try? await Backend.client.from("exercises").select("id,name,muscle_group,image_url").order("name").execute().value) ?? []
         }
+    }
+
+    private func chip(_ label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button { Haptics.selection(); action() } label: {
+            Text(label).font(.apFootnote.weight(.semibold))
+                .padding(.horizontal, 14).frame(height: 34)
+                .foregroundStyle(active ? Color.black : Palette.foreground)
+                .background(active ? Palette.gold : Palette.secondary, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Nuevos ejercicios con los valores por defecto de la web: 3 × 10, 90 s de descanso.

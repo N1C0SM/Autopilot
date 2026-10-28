@@ -1,5 +1,6 @@
 import { mealsDoneKey, readMealsDone } from "@/shared/lib/mealsDone";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { supabase } from "@/shared/integrations/supabase/client";
 import { Check, Clock, TriangleAlert, UserRound, type LucideIcon } from "lucide-react";
 import { hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
@@ -30,6 +31,8 @@ interface Props {
   macros?: MacroTargets | null;
   onOpenProfile?: () => void;
   userId?: string;
+  /** Con Plus y sin comidas, se generan solas con el onboarding y se avisa al padre. */
+  onMealsGenerated?: () => void;
 }
 
 const todayKey = (userId?: string) => mealsDoneKey(userId);
@@ -67,7 +70,7 @@ const Notice = ({
 // Plato fijo para la portada cuando aún no hay comidas: una sola foto compartida por todos.
 const DEFAULT_DISH = "Pollo a la plancha con arroz integral y verduras asadas";
 
-const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
+const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: Props) => {
   // Portada de Nutrición, como la de las sesiones: el primer plato del día o uno de referencia.
   const coverPhoto = useMealPhoto(meals[0]?.description || DEFAULT_DISH) || BRAND_PHOTOS.meal;
   const emptyMealPhoto = useMealPhoto(DEFAULT_DISH) || BRAND_PHOTOS.meal;
@@ -90,6 +93,26 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
     // Hoy escucha este evento para refrescar su anillo de comidas sin remount.
     window.dispatchEvent(new Event("autopilot:meals-updated"));
   };
+
+  // Plus sin comidas: se preparan una vez, en el servidor, con las preferencias del onboarding
+  // (sync-nutrition-macros comprueba el acceso a nutrición antes de generar nada).
+  const [generating, setGenerating] = useState(false);
+  const [generateFailed, setGenerateFailed] = useState(false);
+  const asked = useRef(false);
+  const generate = async () => {
+    asked.current = true;
+    setGenerating(true);
+    setGenerateFailed(false);
+    const { data, error } = await supabase.functions.invoke("sync-nutrition-macros", { body: { regenerate_meals: true } });
+    setGenerating(false);
+    if (error || !data?.meals_updated) { setGenerateFailed(true); return; }
+    window.dispatchEvent(new Event("autopilot:nutrition-plan-updated"));
+    onMealsGenerated?.();
+  };
+  useEffect(() => {
+    if (!meals.length && onMealsGenerated && !asked.current) void generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meals.length]);
 
   const ratio = meals.length ? meals.filter((m) => done.has(m.name)).length / meals.length : 0;
   const p = Number(macros?.protein) || 0;
@@ -252,8 +275,11 @@ const MealsList = ({ meals, macros, onOpenProfile, userId }: Props) => {
           nutrition
           card
           icon={Clock}
-          title="Sin comidas todavía"
-          description="Guarda tus datos en Ajustes y podrás generarlas con tus macros."
+          title={generating ? "Preparando tus comidas…" : "Sin comidas todavía"}
+          description={generating
+            ? "Autopilot está creando tus comidas con tus gustos y alergias del onboarding."
+            : "No hemos podido prepararlas. Revisa tus datos en Ajustes o vuelve a intentarlo."}
+          action={!generating && generateFailed ? <Button variant="secondary" size="lg" onClick={() => void generate()}>Volver a intentarlo</Button> : undefined}
         />
       ) : (
         <ListGroup header="Comidas de hoy">

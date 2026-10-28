@@ -1,3 +1,4 @@
+import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
 import { useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
 import { resolveNutritionPreview, type NutritionPreview } from "@/shared/lib/nutrition";
@@ -7,7 +8,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Apple } from "lucide-react";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
 
-export default function BasicNutrition({ userId, onEdit }: { userId: string; onEdit: () => void }) {
+export default function BasicNutrition({ userId, onEdit, onUpgrade }: { userId: string; onEdit: () => void; onUpgrade?: () => void }) {
   const [targets, setTargets] = useState<NutritionPreview | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -149,6 +150,7 @@ export default function BasicNutrition({ userId, onEdit }: { userId: string; onE
       <Button variant="plain" onClick={onEdit}>
         Actualizar mis datos
       </Button>
+      <MealsPlusCard onUpgrade={onUpgrade} />
     </section>
   );
 }

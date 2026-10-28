@@ -27,6 +27,10 @@ struct NutritionView: View {
     @State private var loading = false
     @State private var done: Set<String> = []
     @State private var cover: URL?
+    /// Sin comidas: nil = comprobando, true = tiene Plus (se generan), false = aviso de Plus.
+    @State private var hasAccess: Bool?
+    @State private var generating = false
+    @State private var generateFailed = false
     struct Macros: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
     struct Meal: Decodable, Hashable { let name: String?; let description: String? }
     struct Row: Decodable { let macros_json: Macros?; let meals_json: [Meal]? }
@@ -87,7 +91,22 @@ struct NutritionView: View {
                 if hasMeals {
                     mealsSection
                 } else {
-                    EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía", message: "Guarda tus datos en Ajustes y podrás generarlas con tus macros.")
+                    if hasAccess == false {
+                        // Como `MealsPlusCard` de la web; en iOS sin enlace a pagos externos.
+                        EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
+                                  message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
+                    } else if generating || hasAccess == nil {
+                        EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
+                                  message: "Autopilot está creando tus comidas con tus gustos y alergias del onboarding.")
+                    } else {
+                        VStack(alignment: .leading, spacing: 12) {
+                            EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía",
+                                      message: "No hemos podido prepararlas. Revisa tus datos en Ajustes o vuelve a intentarlo.")
+                            if generateFailed {
+                                Button("Volver a intentarlo") { Task { await generateMeals() } }.buttonStyle(.pillSecondary)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -315,6 +334,11 @@ struct NutritionView: View {
             if !meals.isEmpty {
                 // Portada y fotos de todas las comidas en paralelo; la lista ya está pintada.
                 await prefetchCovers(coverDish: coverDish)
+            } else if hasAccess == nil {
+                // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
+                let access: Bool = (try? await Backend.client.rpc("has_active_nutrition_access", params: ["_user_id": id.uuidString]).execute().value) ?? false
+                hasAccess = access
+                if access { await generateMeals() }
             }
         } catch {
             // Si la vista se cerró a mitad de la carga no hay error que enseñar.
@@ -322,6 +346,19 @@ struct NutritionView: View {
             // Con datos ya cargados se mantienen; sin datos es un fallo de red real.
             if macros == nil && meals.isEmpty { failed = true } else { loaded = true }
         }
+    }
+
+    /// Comidas del día con las preferencias del onboarding (`sync-nutrition-macros`, igual que la web).
+    private func generateMeals() async {
+        struct Body: Encodable { let regenerate_meals = true }
+        struct Result: Decodable { let meals_updated: Bool? }
+        generating = true; generateFailed = false
+        let result: Result? = try? await Backend.client.functions.invoke("sync-nutrition-macros", options: FunctionInvokeOptions(body: Body()))
+        generating = false
+        guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
+        macros = row.macros_json
+        meals = row.meals_json ?? []
+        if !meals.isEmpty { await prefetchCovers(coverDish: meals.first?.description ?? Self.defaultDish) }
     }
 
     /// Plan con reintentos y backoff: un fallo transitorio de red no debe dejar macros
