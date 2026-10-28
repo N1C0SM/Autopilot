@@ -403,3 +403,40 @@ struct BrandLoader: View {
             .accessibilityLabel("Cargando")
     }
 }
+
+
+/// Anillo pequeño con el reparto de macros (proteína, carbos, grasas) en tres tonos de dorado.
+struct MacroRingSmall: View {
+    let p: Double, c: Double, f: Double
+    var size: CGFloat = 32
+    var body: some View {
+        let parts = [p * 4, c * 4, f * 9]
+        let total = max(1, parts.reduce(0, +))
+        let shades = [Palette.gold, Palette.gold.opacity(0.6), Palette.gold.opacity(0.32)]
+        ZStack {
+            Circle().stroke(Palette.secondary, lineWidth: 3.5)
+            ForEach(0..<3, id: \.self) { i in
+                let start = parts[..<i].reduce(0, +) / total
+                Circle().trim(from: start + 0.02, to: max(start + 0.02, start + parts[i] / total - 0.02))
+                    .stroke(shades[i], style: StrokeStyle(lineWidth: 3.5, lineCap: .round)).rotationEffect(.degrees(-90))
+            }
+            Image("lu-apple").renderingMode(.template).resizable().frame(width: 14, height: 14).foregroundStyle(Palette.gold)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Macros estimados con el onboarding cuando no se puede leer el plan (sin Plus): misma fórmula
+/// que `resolveNutritionPreview` de la web; grasas al 25 % de las kcal y el resto en carbohidratos.
+enum MacroEstimate {
+    static func load(userId: UUID) async -> (kcal: Double, p: Double, c: Double, f: Double)? {
+        struct O: Decodable { let weight: Double?; let sex: String?; let goal: String? }
+        guard let o: O = try? await Backend.client.from("onboarding").select("weight, sex, goal").eq("user_id", value: userId).single().execute().value,
+              let w = o.weight, w > 30, w <= 300 else { return nil }
+        let base = o.sex == "female" ? w * 28 : w * 32
+        let kcal = max(1200, (o.goal == "lose_weight" ? base - 350 : o.goal == "gain_muscle" ? base + 300 : base).rounded())
+        let p = (w * 2).rounded(), f = (kcal * 0.25 / 9).rounded()
+        return (kcal, p, max(0, ((kcal - p * 4 - f * 9) / 4).rounded()), f)
+    }
+}

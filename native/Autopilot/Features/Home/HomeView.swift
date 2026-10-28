@@ -206,7 +206,8 @@ struct HomeView: View {
             let kcal = snapshot?.calories
             widgetTile(symbol: kcal == nil ? "lu-lock" : "lu-apple", ring: kcal == nil ? nil : mealsRing,
                        value: kcal.map { NumberText.integer($0) }, unit: kcal == nil ? nil : "kcal", title: "Nutrición",
-                       detail: kcal == nil ? "Sin plan de nutrición todavía" : "Objetivo diario") { onNavigate(.nutrition) }
+                       detail: kcal == nil ? "Sin plan de nutrición todavía" : "Objetivo diario",
+                       macros: snapshot?.macros) { onNavigate(.nutrition) }
             let pr = snapshot?.lastPr
             widgetTile(symbol: "lu-trophy", ring: nil,
                        value: pr.map { $0.weight.rounded() == $0.weight ? NumberText.integer(Int($0.weight)) : NumberText.decimal($0.weight) },
@@ -228,10 +229,11 @@ struct HomeView: View {
 
     /// Widget compacto (Semana, Récord): icono arriba, cifra grande, título y una línea gris.
     private func widgetTile(symbol: String, ring: Double?, value: String?, unit: String?, title: String,
-                            detail: String, action: @escaping () -> Void) -> some View {
+                            detail: String, macros: (p: Double, c: Double, f: Double)? = nil, action: @escaping () -> Void) -> some View {
         Button { Haptics.tap(); action() } label: {
             VStack(alignment: .leading, spacing: 0) {
-                ProgressRing(value: (ring ?? 0) * 100, symbol: symbol)
+                if let m = macros { MacroRingSmall(p: m.p, c: m.c, f: m.f) }
+                else { ProgressRing(value: (ring ?? 0) * 100, symbol: symbol) }
                 Spacer(minLength: 16)
                 if let value {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -627,6 +629,8 @@ struct HomeView: View {
         struct N: Decodable { let macros_json: M?; let meals_json: [Meal]? ; struct Meal: Decodable { let name: String? } }
         let rows: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
         guard let m = rows.first?.macros_json, m.protein != nil || m.calories != nil else {
+            // Sin Plus no se puede leer el plan: los macros se estiman con el onboarding (siempre gratis).
+            if let e = await MacroEstimate.load(userId: userId) { return (Int(e.kcal), (p: e.p, c: e.c, f: e.f), 0) }
             return (snapshot?.calories, snapshot?.macros, snapshot?.mealCount ?? 0)
         }
         let kcal = Int((m.calories ?? ((m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9)).rounded())

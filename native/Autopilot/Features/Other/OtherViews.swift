@@ -396,15 +396,8 @@ struct NutritionView: View {
     /// Objetivo estimado con peso, sexo y objetivo del onboarding: kcal y proteína como la web;
     /// grasas al 25 % de las kcal y el resto en carbohidratos.
     private func estimatedMacros(_ id: UUID) async -> Macros? {
-        struct O: Decodable { let weight: Double?; let sex: String?; let goal: String? }
-        guard let o: O = try? await Backend.client.from("onboarding").select("weight, sex, goal").eq("user_id", value: id).single().execute().value,
-              let w = o.weight, w > 30, w <= 300 else { return nil }
-        let base = o.sex == "female" ? w * 28 : w * 32
-        let kcal = max(1200, (o.goal == "lose_weight" ? base - 350 : o.goal == "gain_muscle" ? base + 300 : base).rounded())
-        let protein = (w * 2).rounded()
-        let fats = (kcal * 0.25 / 9).rounded()
-        let carbs = max(0, ((kcal - protein * 4 - fats * 9) / 4).rounded())
-        return Macros(calories: kcal, protein: protein, carbs: carbs, fats: fats)
+        guard let e = await MacroEstimate.load(userId: id) else { return nil }
+        return Macros(calories: e.kcal, protein: e.p, carbs: e.c, fats: e.f)
     }
 
     /// Plan con reintentos y backoff: un fallo transitorio de red no debe dejar macros
