@@ -651,9 +651,11 @@ private struct EmptyCard: View {
         .task(id: photo) {
             guard let photo else { return }
             // Si cambia el plato se resuelve ya su foto (caché o respaldo), nunca la anterior.
-            url = AiCover.cachedMeal(photo) ?? AiCover.mealFallback
+            // Solo se usa una foto que de verdad descarga; si no, la del plato de referencia.
+            let cached = AiCover.cachedMeal(photo)
+            if let cached, await ImageCache.shared.load(cached) != nil { url = cached } else { url = AiCover.mealFallback }
             let resolved = await AiCover.meal(photo)
-            guard !Task.isCancelled, let resolved, resolved != url else { return }
+            guard !Task.isCancelled, let resolved, resolved != url, await ImageCache.shared.load(resolved) != nil else { return }
             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { url = resolved }
         }
     }
