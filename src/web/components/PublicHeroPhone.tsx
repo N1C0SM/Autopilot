@@ -1,5 +1,6 @@
+import { Home, Dumbbell, Apple, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot } from "@/web/components/PublicPhone";
+import { PhoneAppBar, PhoneFrame, PhoneHome, PhoneShot, PhoneTabBar } from "@/web/components/PublicPhone";
 import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import { supabase } from "@/shared/integrations/supabase/client";
 
@@ -42,11 +43,12 @@ export default function PublicHeroPhone() {
         src="/app-shots/hoy.jpg"
         alt="Pantalla de Hoy de la app Autopilot"
         fallback={
-          <PhoneFrame screenClassName="h-[37rem]">
+          <PhoneFrame screenClassName="h-[44rem]">
             <PhoneAppBar avatar={<OwnerAvatar photo={owner.photo} initial={ownerInitial} />} />
-            <div className="flex-1 overflow-hidden px-4 pt-3">
+            <div className="flex-1 overflow-hidden px-4 pb-24 pt-3">
               <PhoneHome plans={plans} />
             </div>
+            <PhoneTabBar tabs={[{ key: "home", label: "Hoy", icon: Home }, { key: "training", label: "Entrenar", icon: Dumbbell }, { key: "nutrition", label: "Nutrición", icon: Apple }, { key: "progress", label: "Progreso", icon: Sparkles }]} active="home" onSelect={() => undefined} />
           </PhoneFrame>
         }
       />
