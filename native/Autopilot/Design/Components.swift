@@ -221,7 +221,7 @@ final class ImageCache {
     private var inflight: [URL: Task<PlatformImage?, Never>] = [:]
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
-        c.urlCache = URLCache(memoryCapacity: 30_000_000, diskCapacity: 300_000_000)
+        c.urlCache = URLCache(memoryCapacity: 60_000_000, diskCapacity: 500_000_000)
         c.requestCachePolicy = .returnCacheDataElseLoad
         return URLSession(configuration: c)
     }()

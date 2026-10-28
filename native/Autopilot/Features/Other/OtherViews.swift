@@ -603,10 +603,13 @@ private struct EmptyCard: View {
                 .padding(20)
                 .frame(maxWidth: .infinity, minHeight: 288, alignment: .bottomLeading)
                 .background {
-                    CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
+                    // La foto se ajusta al hueco de la tarjeta (en Mac la tarjeta es ancha y, sin
+                    // este marco, la imagen no se dibujaba).
+                    Color.clear
+                        .overlay { CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
+                        .clipped()
                         .opacity(0.9)
                         .overlay { LinearGradient(colors: [Palette.card, Palette.card.opacity(0.7), .clear], startPoint: .bottom, endPoint: .top) }
-                        .clipped()
                 }
                 .background(Palette.card)
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
