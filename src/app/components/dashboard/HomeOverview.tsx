@@ -422,7 +422,7 @@ const HomeOverview = ({
           onClick={() => onNavigate("nutrition")}
           icon={
             nutrition ? (
-              <ProgressRing value={meals.length ? (doneMealCount / meals.length) * 100 : 0} size={32} stroke={3.5}>
+              <ProgressRing value={meals.length ? (doneMealCount / meals.length) * 100 : calorieTarget ? 100 : 0} size={32} stroke={3.5}>
                 <Apple className="h-[14px] w-[14px]" strokeWidth={2.25} />
               </ProgressRing>
             ) : (

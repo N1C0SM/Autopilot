@@ -204,7 +204,7 @@ struct HomeView: View {
     private var widgets: some View {
         HStack(alignment: .top, spacing: 12) {
             let kcal = snapshot?.calories
-            widgetTile(symbol: kcal == nil ? "lu-lock" : "lu-apple", ring: nil,
+            widgetTile(symbol: kcal == nil ? "lu-lock" : "lu-apple", ring: kcal == nil ? nil : mealsRing,
                        value: kcal.map { NumberText.integer($0) }, unit: kcal == nil ? nil : "kcal", title: "Nutrición",
                        detail: kcal == nil ? "Sin plan de nutrición todavía" : "Objetivo diario") { onNavigate(.nutrition) }
             let pr = snapshot?.lastPr
@@ -214,6 +214,16 @@ struct HomeView: View {
                        title: pr?.exercise ?? "Récords",
                        detail: pr.map { "\($0.reps) reps · \($0.dateLabel)" } ?? "Tu primer récord llegará entrenando") { onNavigate(.progress) }
         }
+    }
+
+    /// Anillo de Nutrición: comidas marcadas hoy; sin comidas, el objetivo del día completo.
+    private var mealsRing: Double {
+        let total = snapshot?.mealCount ?? 0
+        guard total > 0 else { return 1 }
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        let key = "meals_done_\(session.userIdString ?? "")_\(c.year!)-\(c.month!)-\(c.day!)"
+        let done = UserDefaults.standard.data(forKey: key).flatMap { try? JSONDecoder().decode([String].self, from: $0) }?.count ?? 0
+        return min(1, Double(done) / Double(total))
     }
 
     /// Widget compacto (Semana, Récord): icono arriba, cifra grande, título y una línea gris.
@@ -585,6 +595,7 @@ struct HomeView: View {
         // Un único estado (y a la caché) al terminar la fase: sin redibujados en cadena.
         var snap = makeSnapshot(firstName: firstName, calories: nutrition.kcal)
         snap.macros = nutrition.macros
+        snap.mealCount = nutrition.meals
         snap.lastPr = lastPr
         todayState = snap
         TodayCache.shared.save(snap, userId: id)
@@ -611,16 +622,16 @@ struct HomeView: View {
         return (p.name ?? "").components(separatedBy: " ").first ?? ""
     }
 
-    private func fetchCalories(userId: UUID) async -> (kcal: Int?, macros: (p: Double, c: Double, f: Double)?) {
+    private func fetchCalories(userId: UUID) async -> (kcal: Int?, macros: (p: Double, c: Double, f: Double)?, meals: Int) {
         struct M: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
-        struct N: Decodable { let macros_json: M? }
-        let rows: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
+        struct N: Decodable { let macros_json: M?; let meals_json: [Meal]? ; struct Meal: Decodable { let name: String? } }
+        let rows: [N] = (try? await Backend.client.from("nutrition_plan").select("macros_json, meals_json").eq("user_id", value: userId).limit(1).execute().value) ?? []
         guard let m = rows.first?.macros_json, m.protein != nil || m.calories != nil else {
-            return (snapshot?.calories, snapshot?.macros)
+            return (snapshot?.calories, snapshot?.macros, snapshot?.mealCount ?? 0)
         }
         let kcal = Int((m.calories ?? ((m.protein ?? 0) * 4 + (m.carbs ?? 0) * 4 + (m.fats ?? 0) * 9)).rounded())
         let macros = m.protein.map { (p: $0, c: m.carbs ?? 0, f: m.fats ?? 0) }
-        return (kcal, macros)
+        return (kcal, macros, rows.first?.meals_json?.count ?? 0)
     }
 
     private func fetchLastPr(userId: UUID) async -> LastPR? {
@@ -653,6 +664,8 @@ private struct TodaySnapshot {
     var macros: (p: Double, c: Double, f: Double)?
     /// Última mejor marca (widget de Récord).
     var lastPr: LastPR?
+    /// Número de comidas del plan (anillo del widget de Nutrición).
+    var mealCount = 0
 }
 
 struct LastPR {
