@@ -20,6 +20,7 @@ struct AdminDriveView: View {
     @State private var covers: [String: String] = [:]
     @State private var path: [(id: String, title: String)] = []
     @State private var loading = true
+    @State private var failed = false
     @State private var open: Book?
     @State private var renaming: Book?
     @State private var newName = ""
@@ -29,44 +30,41 @@ struct AdminDriveView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones. Nada se ve fuera hasta que tú lo publicas.")
-                    .font(.apSubhead).foregroundStyle(Palette.muted)
-                HStack {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 2) {
-                            Button("Drive") { path = [] }.fontWeight(path.isEmpty ? .semibold : .regular)
-                                .foregroundStyle(path.isEmpty ? Palette.foreground : Palette.gold).frame(minHeight: 44)
-                            ForEach(Array(path.enumerated()), id: \.element.id) { i, p in
-                                Image(systemName: "chevron.right").font(.inter(.caption)).foregroundStyle(Palette.muted)
-                                Button(p.title) { path = Array(path.prefix(i + 1)) }.fontWeight(i == path.count - 1 ? .semibold : .regular)
-                                    .foregroundStyle(i == path.count - 1 ? Palette.foreground : Palette.gold).frame(minHeight: 44)
+            if loading {
+                AdminLoadingView(message: "Cargando el Drive")
+            } else if failed {
+                AdminErrorCard(message: "No se pudo cargar el Drive. Comprueba la conexión y vuelve a intentarlo.") {
+                    Task { await load() }
+                }
+                .padding(20)
+            } else {
+                VStack(alignment: .leading, spacing: 24) {
+                    AdminPaneHeader("Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones. Nada se ve fuera hasta que tú lo publicas.") {
+                        HStack(spacing: 12) {
+                            breadcrumb
+                            Spacer(minLength: 0)
+                            newMenu
+                        }
+                    }
+                    let items = books.filter { $0.parent_id == parentId }
+                    if items.isEmpty {
+                        EmptyStateView(symbol: "folder", title: path.isEmpty ? "El Drive está vacío" : "Esta carpeta está vacía",
+                                       message: "Pulsa «Nuevo» para crear una carpeta, un libro o un pack.")
+                    } else {
+                        AdminRows {
+                            ForEach(Array(items.enumerated()), id: \.element.id) { i, b in
+                                row(b, first: i == 0)
                             }
                         }
-                        .buttonStyle(.plain).font(.apSubhead)
                     }
-                    Menu("Nuevo") {
-                        Button { Task { await create("folder") } } label: { Label("Carpeta", systemImage: "folder.badge.plus") }
-                        Button { Task { await create("book") } } label: { Label("Libro (portada + PDF)", systemImage: "book.closed") }
-                        Button { Task { await create("pack") } } label: { Label("Pack (elige libros)", systemImage: "shippingbox") }
-                    }
-                    .tint(Palette.gold).fixedSize()
                 }
-                let items = books.filter { $0.parent_id == parentId }
-                if loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 40) }
-                else if items.isEmpty { EmptyStateView(symbol: "folder", title: "Esta carpeta está vacía", message: "Pulsa «Nuevo» para empezar.") }
-                else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { i, b in row(b, first: i == 0) }
-                    }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                }
+                .padding(20).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .overlay(alignment: .top) { ToastView(text: toast) }
         .task { await load() }
+        .refreshable { await load() }
         .sheet(item: $open) { b in
             DriveItemEditor(book: b, allBooks: books, cover: covers[b.id]) { saved in
                 if let saved, let i = books.firstIndex(where: { $0.id == saved.id }) { books[i] = saved }
@@ -81,29 +79,66 @@ struct AdminDriveView: View {
         }
     }
 
+    /// Ruta de carpetas del Drive.
+    private var breadcrumb: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
+                Button("Drive") { path = [] }.fontWeight(path.isEmpty ? .semibold : .regular)
+                    .foregroundStyle(path.isEmpty ? Palette.foreground : Palette.gold).frame(minHeight: 44)
+                ForEach(Array(path.enumerated()), id: \.element.id) { i, p in
+                    Image(systemName: "chevron.right").font(.inter(.caption)).foregroundStyle(Palette.muted)
+                        .accessibilityHidden(true)
+                    Button(p.title) { path = Array(path.prefix(i + 1)) }.fontWeight(i == path.count - 1 ? .semibold : .regular)
+                        .foregroundStyle(i == path.count - 1 ? Palette.foreground : Palette.gold).frame(minHeight: 44)
+                        .lineLimit(1)
+                }
+            }
+            .buttonStyle(.plain).font(.apSubhead)
+        }
+        .accessibilityLabel("Ruta del Drive")
+    }
+
+    /// Menú «Nuevo», con el mismo aspecto de píldora que el resto de acciones.
+    private var newMenu: some View {
+        Menu {
+            Button { Task { await create("folder") } } label: { Label("Carpeta", systemImage: "folder.badge.plus") }
+            Button { Task { await create("book") } } label: { Label("Libro (portada + PDF)", systemImage: "book.closed") }
+            Button { Task { await create("pack") } } label: { Label("Pack (elige libros)", systemImage: "shippingbox") }
+        } label: {
+            Label("Nuevo", systemImage: "plus")
+                .font(.apHeadline)
+                .foregroundStyle(Palette.foreground)
+                .padding(.horizontal, 24)
+                .frame(minHeight: 44)
+                .background(Palette.secondary, in: Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .accessibilityLabel("Crear carpeta, libro o pack")
+    }
+
     @ViewBuilder private func row(_ b: Book, first: Bool) -> some View {
         let kind = b.resolvedKind
         if kind == "folder" {
-            Button { path.append((b.id, b.title)) } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "folder.fill").foregroundStyle(Palette.gold).frame(width: 44)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(b.title).font(.apBody)
-                        Text("\(books.filter { $0.parent_id == b.id }.count) elementos").font(.apFootnote).foregroundStyle(Palette.muted)
-                    }
-                    Spacer()
+            Button { Haptics.selection(); path.append((b.id, b.title)) } label: {
+                AdminListRow(b.title, detail: "\(books.filter { $0.parent_id == b.id }.count) elementos") {
+                    IconTile(symbol: "folder.fill", size: 44)
+                } trailing: {
                     Menu {
                         Button("Renombrar") { newName = b.title; renaming = b }
                         Button("Eliminar carpeta", role: .destructive) { Task { await remove(b) } }
-                    } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }
+                    } label: {
+                        Image(systemName: "ellipsis").font(.inter(.body).weight(.semibold))
+                            .foregroundStyle(Palette.muted).frame(width: 44, height: 44)
+                    }
                     .menuStyle(.borderlessButton).fixedSize()
                     .accessibilityLabel("Opciones de \(b.title)")
                 }
-                .padding(.horizontal, 16).frame(minHeight: 60)
-                .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 72) } }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityHint("Abre la carpeta")
+            .adminRowDivider(first: first, leading: 72)
         } else {
             let thumb = covers[b.id] ?? (kind == "pack" ? (b.pack_items?.first).flatMap { covers[$0] } : nil)
             let detail: String = {
@@ -115,31 +150,44 @@ struct AdminDriveView: View {
                 }
             }()
             Button { open = b } label: {
-                HStack(spacing: 12) {
+                AdminListRow(b.title.isEmpty ? "Sin título" : b.title,
+                             detail: "\(Self.kindLabel[kind] ?? "") · \(detail)") {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
-                        if let t = thumb, let u = URL(string: t) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear } }
-                        else { Image(systemName: Self.kindSymbol[kind] ?? "doc").foregroundStyle(Palette.muted) }
+                        if let t = thumb, let u = URL(string: t) {
+                            CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                        } else {
+                            Image(systemName: Self.kindSymbol[kind] ?? "doc").foregroundStyle(Palette.muted)
+                        }
                     }
-                    .frame(width: 44, height: 60).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(b.title.isEmpty ? "Sin título" : b.title).font(.apBody).lineLimit(1)
-                        Text("\(Self.kindLabel[kind] ?? "") · \(detail)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                    .frame(width: 44, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityHidden(true)
+                } trailing: {
+                    HStack(spacing: 6) {
+                        AdminStatusPill(text: b.published ? "Publicado" : "Borrador",
+                                        tint: b.published ? Palette.gold : Palette.muted)
+                        Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold))
+                            .foregroundStyle(Palette.muted).accessibilityHidden(true)
                     }
-                    Spacer()
-                    Text(b.published ? "Publicado" : "Borrador").font(.apBody).foregroundStyle(Palette.muted)
-                    Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 8)
-                .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 72) } }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityHint("Abre la ficha para editarlo")
+            .adminRowDivider(first: first, leading: 72)
         }
     }
 
     private func load() async {
-        books = (try? await Backend.client.from("library_books").select().order("is_folder", ascending: false).order("sort_order").execute().value) ?? []
+        loading = true
+        do {
+            books = try await Backend.client.from("library_books").select()
+                .order("is_folder", ascending: false).order("sort_order").execute().value
+            failed = false
+        } catch {
+            failed = true; loading = false; return
+        }
         loading = false
         for b in books where covers[b.id] == nil {
             guard let c = b.cover_path else { continue }
@@ -190,11 +238,11 @@ struct DriveItemEditor: View {
                 Section {
                     HStack(alignment: .top, spacing: 16) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
+                            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
                             if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { ProgressView() } }
                             else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.inter(.title)).foregroundStyle(Palette.muted) }
                         }
-                        .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         VStack(alignment: .leading, spacing: 8) {
                             Text(AdminDriveView.kindLabel[kind] ?? "").font(.apSubhead).foregroundStyle(Palette.muted)
                             if kind != "video" {

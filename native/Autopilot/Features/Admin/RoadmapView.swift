@@ -50,16 +50,17 @@ struct RoadmapView: View {
     var body: some View {
         Group {
             if loading {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                AdminLoadingView(message: "Cargando el Roadmap")
+                    .frame(maxHeight: .infinity)
             } else if failed {
-                VStack(spacing: 14) {
-                    Text("No se pudo cargar el Roadmap.")
-                    Button { Task { await load() } } label: { Label("Reintentar", systemImage: "arrow.clockwise") }.buttonStyle(.pill).frame(maxWidth: 240)
+                AdminErrorCard(message: "No se pudo cargar el Roadmap. Comprueba la conexión y vuelve a intentarlo.") {
+                    Task { await load() }
                 }
+                .padding(20)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 24) {
                         header
                         SegmentedPill(options: ["Versiones", "Ideas (\(inbox.count))", "Historial"], selection: $tab).frame(maxWidth: 520)
                         switch tab {
@@ -75,6 +76,7 @@ struct RoadmapView: View {
         }
         .screenBackground()
         .task { await load() }
+        .refreshable { await load() }
         .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
         .sheet(item: $editing) { item in TaskEditor(item: item, versions: versions, isNew: creating) { saved in Task { await save(saved) } } }
         .confirmationDialog("Eliminar tarea", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
@@ -90,19 +92,13 @@ struct RoadmapView: View {
                 Text("La IA puede ayudarte a desarrollar esta tarea en Lovable. Algunas partes pueden requerir servicios externos o pruebas reales; el Roadmap no cambia ni publica la aplicación automáticamente.")
                     .font(.apSubhead).foregroundStyle(Palette.muted)
                 Text(item.title).font(.apHeadline)
-                Text(aiRequest(item)).font(.apFootnote).textSelection(.enabled).padding(12)
-                    .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                Text(aiRequest(item)).font(.apFootnote).textSelection(.enabled)
+                    .adminFieldBox(radius: 14)
                 Button("Copiar petición") { copy(aiRequest(item)); show("Petición copiada para Lovable"); aiHelp = nil }.buttonStyle(.pill)
             }
             .padding(24).frame(minWidth: 420).screenBackground()
         }
-        .overlay(alignment: .top) {
-            if let toast {
-                Text(toast).font(.apSubhead.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(.ultraThinMaterial, in: Capsule()).padding(.top, 8)
-            }
-        }
-        .animation(.easeOut(duration: 0.2), value: toast)
+        .overlay(alignment: .top) { ToastView(text: toast) }
         .onChange(of: ideas) { _, v in UserDefaults.standard.set(v, forKey: "roadmap-ideas") }
     }
 
@@ -113,17 +109,23 @@ struct RoadmapView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("AUTOPILOT · DIRECCIÓN DE PRODUCTO").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.muted)
+                        .lineLimit(1).minimumScaleFactor(0.7)
                     Label("Foco: v\(current?.id ?? "1.0")", systemImage: "scope").font(.apTitle1)
                         .labelStyle(GoldIconLabel())
+                        .lineLimit(1).minimumScaleFactor(0.7)
                 }
                 Spacer()
-                Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").font(.inter(.title3)) }
-                    .buttonStyle(.plain).frame(width: 44, height: 44).accessibilityLabel("Actualizar Roadmap")
+                AdminIconButton(symbol: "arrow.clockwise", label: "Actualizar Roadmap", tint: Palette.foreground) {
+                    Task { await load() }
+                }
             }
             Text(current?.title ?? "").font(.apBody).foregroundStyle(Palette.muted)
             HStack(spacing: 14) {
                 ProgressView(value: currentTasks.isEmpty ? 0 : Double(doneCount) / Double(currentTasks.count)).tint(Palette.gold)
+                    .accessibilityLabel("Progreso de la versión \(current?.id ?? "")")
+                    .accessibilityValue("\(doneCount) de \(currentTasks.count) tareas hechas")
                 Text("\(doneCount)/\(currentTasks.count) hechos").font(.apFootnote.monospacedDigit())
+                    .lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: 520)
             .padding(.top, 8)
@@ -170,7 +172,7 @@ struct RoadmapView: View {
                                     if v.is_current == true { Circle().fill(Palette.gold).frame(width: 6, height: 6) }
                                     Spacer(minLength: 0)
                                 }
-                                .padding(.horizontal, 10).frame(minHeight: 34)
+                                .padding(.horizontal, 10).frame(minHeight: 44)
                                 .foregroundStyle(selected == v.id ? Palette.gold : Palette.foreground)
                                 .background(selected == v.id ? Palette.gold.opacity(0.15) : .clear, in: Capsule())
                                 .contentShape(Capsule())
@@ -201,22 +203,27 @@ struct RoadmapView: View {
             .overlay(alignment: .topTrailing) {
                 if let active { Button { versionEdit = active } label: { Image(systemName: "pencil") }.buttonStyle(.plain).frame(width: 44, height: 44).accessibilityLabel("Editar versión") }
             }
-            HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 PillField(label: "Buscar tareas", text: $search)
-                Button { creating = true; editing = Item(id: "", title: "", description: "", version_id: selected == "ice" ? nil : selected, status: "idea", effort: "medium", evidence: "") } label: {
-                    Label("Tarea", systemImage: "plus")
+                HStack(spacing: 10) {
+                    Button { creating = true; editing = Item(id: "", title: "", description: "", version_id: selected == "ice" ? nil : selected, status: "idea", effort: "medium", evidence: "") } label: {
+                        Label("Nueva tarea", systemImage: "plus")
+                    }
+                    .buttonStyle(PillButtonStyle(kind: .secondary)).frame(maxWidth: 180)
+                    Button { Task { await classify(selectedTasks.filter { $0.status != "done" }) } } label: {
+                        Label("Revisar con IA", systemImage: busy ? "hourglass" : "wand.and.stars")
+                    }
+                    .buttonStyle(PillButtonStyle(kind: .secondary)).frame(maxWidth: 220)
+                    .disabled(busy || selectedTasks.allSatisfy { $0.status == "done" })
                 }
-                .buttonStyle(PillButtonStyle(kind: .secondary)).frame(width: 130)
-                Button { Task { await classify(selectedTasks.filter { $0.status != "done" }) } } label: {
-                    Label("Revisar con IA", systemImage: busy ? "hourglass" : "wand.and.stars")
-                }
-                .buttonStyle(PillButtonStyle(kind: .secondary)).frame(width: 190)
-                .disabled(busy || selectedTasks.allSatisfy { $0.status == "done" })
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 12, alignment: .top)], spacing: 12) {
                 ForEach(selectedTasks) { taskCard($0) }
             }
-            if selectedTasks.isEmpty { Text("No hay tareas aquí.").foregroundStyle(Palette.muted).frame(maxWidth: .infinity).padding(.vertical, 40) }
+            if selectedTasks.isEmpty {
+                EmptyStateView(symbol: "tray", title: "No hay tareas aquí",
+                               message: "Crea una tarea o cambia de versión para ver las de otra.")
+            }
         }
     }
 
@@ -224,15 +231,15 @@ struct RoadmapView: View {
 
     private var ideasTab: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Lluvia de ideas").font(.apTitle2)
+            SectionTitle(title: "Lluvia de ideas", hint: "Una idea por línea. Después puedes ordenarlas con IA o guardarlas como tareas.")
             TextEditor(text: $ideas)
-                .scrollContentBackground(.hidden)
                 .font(.apBody)
-                .padding(12)
-                .frame(minHeight: 160)
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                .adminEditorBox(minHeight: 160)
                 .overlay(alignment: .topLeading) {
-                    if ideas.isEmpty { Text("Una idea por línea…").foregroundStyle(Palette.muted).padding(18).allowsHitTesting(false) }
+                    if ideas.isEmpty {
+                        Text("Una idea por línea…").font(.apBody).foregroundStyle(Palette.muted)
+                            .padding(16).allowsHitTesting(false)
+                    }
                 }
                 .accessibilityLabel("Lluvia de ideas")
             HStack(spacing: 8) {
@@ -263,7 +270,10 @@ struct RoadmapView: View {
                     ForEach(ice) { taskCard($0) }
                 }
             }
-            if inbox.isEmpty { Text("Sin ideas pendientes de ordenar.").foregroundStyle(Palette.muted) }
+            if inbox.isEmpty {
+                EmptyStateView(symbol: "lightbulb", title: "Sin ideas pendientes",
+                               message: "Escribe una idea por línea y pulsa Guardar ideas.")
+            }
         }
     }
 
@@ -277,7 +287,10 @@ struct RoadmapView: View {
                     Text("v\(v.id) · \(v.title)").font(.apHeadline)
                     Text(["internal": "Desarrollo interno", "beta": "Beta", "rc": "Candidata", "released": "Publicada"][v.release_stage ?? "internal"] ?? "")
                         .font(.apFootnote).foregroundStyle(Palette.gold)
-                    if let n = v.release_notes, !n.isEmpty { Text(n).font(.apSubhead).foregroundStyle(Palette.muted) }
+                    if let n = v.release_notes, !n.isEmpty {
+                        Text(n).font(.apSubhead).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     ForEach(items.filter { $0.version_id == v.id && $0.status == "done" }) { i in
                         Label(i.title, systemImage: "checkmark").font(.apSubhead).labelStyle(GoldIconLabel())
                     }
@@ -291,22 +304,29 @@ struct RoadmapView: View {
     // MARK: Tarjeta de tarea
 
     private func taskCard(_ item: Item) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+        Card(padding: 16) {
+            HStack(alignment: .top, spacing: 8) {
                 Button { changeStatus(item, item.status == "done" ? "idea" : "done") } label: {
                     Image(systemName: item.status == "done" ? "checkmark.circle.fill" : "circle")
                         .font(.inter(size: 22)).foregroundStyle(item.status == "done" ? Palette.gold : Palette.muted)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain).frame(width: 30, height: 30)
+                .buttonStyle(.plain)
                 .accessibilityLabel("Completar \(item.title)")
+                .accessibilityAddTraits(item.status == "done" ? .isSelected : [])
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title).font(.apHeadline).strikethrough(item.status == "done")
                         .foregroundStyle(item.status == "done" ? Palette.muted : Palette.foreground)
-                    if !item.description.isEmpty { Text(item.description).font(.apSubhead).foregroundStyle(Palette.muted) }
+                    if !item.description.isEmpty {
+                        Text(item.description).font(.apSubhead).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Spacer(minLength: 0)
-                Button { creating = false; editing = item } label: { Image(systemName: "pencil") }
-                    .buttonStyle(.plain).frame(width: 36, height: 36).accessibilityLabel("Editar \(item.title)")
+                AdminIconButton(symbol: "pencil", label: "Editar \(item.title)", tint: Palette.muted) {
+                    creating = false; editing = item
+                }
             }
             if !item.evidence.isEmpty {
                 Label(item.evidence, systemImage: "checkmark").font(.apFootnote)
@@ -323,26 +343,26 @@ struct RoadmapView: View {
                         Text(Self.statusLabels.first { $0.0 == item.status }?.1 ?? item.status)
                         Image(systemName: "chevron.up.chevron.down").font(.inter(.caption))
                     }
-                    .font(.apSubhead).padding(.horizontal, 14).frame(minHeight: 36)
-                    .background(Palette.secondary, in: Capsule())
+                    .font(.apSubhead)
+                    .foregroundStyle(item.status == "done" ? Palette.gold : Palette.muted)
+                    .padding(.horizontal, 14).frame(minHeight: 44)
+                    .background((item.status == "done" ? Palette.gold.opacity(0.15) : Palette.secondary), in: Capsule())
                 }
                 .menuStyle(.button).buttonStyle(.plain)
                 .accessibilityLabel("Estado de \(item.title)")
                 Text("\(Self.effortLabels[item.effort] ?? item.effort)\(item.version_id.map { " · v\($0)" } ?? " · Hielo")")
                     .font(.apFootnote).foregroundStyle(Palette.muted)
-                Spacer()
-                Button { deleting = item } label: { Image(systemName: "trash") }
-                    .buttonStyle(.plain).foregroundStyle(Palette.muted).frame(width: 36, height: 36)
-                    .accessibilityLabel("Eliminar \(item.title)")
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                AdminIconButton(symbol: "trash", label: "Eliminar \(item.title)", tint: Palette.muted) {
+                    deleting = item
+                }
             }
             if item.status != "done" {
-                Button { aiHelp = item } label: { Label("Ayuda de IA", systemImage: "wand.and.stars").font(.apSubhead) }
-                    .buttonStyle(.plain).foregroundStyle(Palette.gold).frame(minHeight: 36)
+                AdminTextButton(title: "Ayuda de IA", systemImage: "wand.and.stars") { aiHelp = item }
             }
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func aiRequest(_ item: Item) -> String {
@@ -423,8 +443,8 @@ struct RoadmapView: View {
             Text("¿Cómo sabes que está hecho?").font(.apTitle2)
             Text("«\(item.title)» no tiene prueba en el código. Escribe qué lo demuestra (p. ej. «compra real probada el 18/10»). Se mostrará como confirmado por ti, no como verificado.")
                 .font(.apSubhead).foregroundStyle(Palette.muted)
-            TextEditor(text: $proofText).scrollContentBackground(.hidden).padding(10).frame(minHeight: 100)
-                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            TextEditor(text: $proofText)
+                .adminFieldBox(minHeight: 100, radius: 14)
                 .accessibilityLabel("Prueba de finalización")
             Button("Marcar como Hecho") {
                 let proof = proofText.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -9,38 +9,52 @@ struct AdminPhysiquesView: View {
 
     @State private var items: [Physique] = []
     @State private var loading = true
+    @State private var failed = false
     @State private var editing: Physique?
     @State private var toast: String?
 
     var body: some View {
         ScrollView {
-            if loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 60) } else {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Físicos de referencia que verán los usuarios en el AI Scan. Pueden elegir uno como objetivo en vez de subir su propia foto.")
-                        .font(.apSubhead).foregroundStyle(Palette.muted)
-                    Button("Añadir físico") { Task { await add() } }.buttonStyle(.pill).frame(maxWidth: 260)
+            if loading {
+                AdminLoadingView(message: "Cargando los físicos de referencia")
+            } else if failed {
+                AdminErrorCard(message: "No se pudieron cargar los físicos de referencia. Comprueba la conexión y vuelve a intentarlo.") {
+                    Task { await load() }
+                }
+                .padding(20)
+            } else {
+                VStack(alignment: .leading, spacing: 24) {
+                    AdminPaneHeader("Físicos de referencia que verán los usuarios en el AI Scan. Pueden elegir uno como objetivo en vez de subir su propia foto.") {
+                        Button("Añadir físico") { Task { await add() } }
+                            .buttonStyle(.pill).frame(maxWidth: 260)
+                    }
                     if items.isEmpty {
-                        EmptyStateView(symbol: "target", title: "Aún no hay físicos", message: "Añade el primero con una foto y un nombre.")
+                        EmptyStateView(symbol: "target", title: "Aún no hay físicos",
+                                       message: "Añade el primero con una foto y un nombre.")
                     } else {
-                        VStack(spacing: 0) {
+                        AdminRows {
                             ForEach(Array(items.enumerated()), id: \.element.id) { i, it in
                                 Button { editing = it } label: {
-                                    HStack(spacing: 12) {
-                                        PhysiqueImage(url: it.image_url).frame(width: 56, height: 56)
+                                    AdminListRow(it.name.trimmingCharacters(in: .whitespaces).isEmpty ? "Sin nombre" : it.name,
+                                                 detail: it.visible ? "Visible en el AI Scan" : "Oculto para los usuarios") {
+                                        PhysiqueImage(url: it.image_url)
+                                            .frame(width: 56, height: 56)
                                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                        Text(it.name.trimmingCharacters(in: .whitespaces).isEmpty ? "Sin nombre" : it.name).font(.apBody)
-                                        Spacer()
-                                        Text(it.visible ? "Visible" : "Oculto").font(.apBody).foregroundStyle(Palette.muted)
-                                        Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
+                                    } trailing: {
+                                        HStack(spacing: 6) {
+                                            AdminStatusPill(text: it.visible ? "Visible" : "Oculto",
+                                                            tint: it.visible ? Palette.gold : Palette.muted)
+                                            Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold))
+                                                .foregroundStyle(Palette.muted).accessibilityHidden(true)
+                                        }
                                     }
-                                    .padding(.horizontal, 16).padding(.vertical, 8)
-                                    .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 84) } }
                                     .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityHint("Abre la ficha para editarlo")
+                                .adminRowDivider(first: i == 0, leading: 84)
                             }
                         }
-                        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                 }
                 .padding(20).frame(maxWidth: .infinity, alignment: .leading)
@@ -49,6 +63,7 @@ struct AdminPhysiquesView: View {
         .screenBackground()
         .overlay(alignment: .top) { ToastView(text: toast) }
         .task { await load() }
+        .refreshable { await load() }
         .sheet(item: $editing) { it in
             PhysiqueEditor(item: it) { saved in
                 if let saved, let i = items.firstIndex(where: { $0.id == saved.id }) { items[i] = saved; show("Guardado") }
@@ -61,7 +76,14 @@ struct AdminPhysiquesView: View {
     }
 
     private func load() async {
-        items = (try? await Backend.client.from("goal_physiques").select("id, name, image_url, sort_order, visible").order("sort_order").execute().value) ?? []
+        loading = true
+        do {
+            items = try await Backend.client.from("goal_physiques").select("id, name, image_url, sort_order, visible")
+                .order("sort_order").execute().value
+            failed = false
+        } catch {
+            failed = true
+        }
         loading = false
     }
 
@@ -80,20 +102,23 @@ struct AdminPhysiquesView: View {
     private func show(_ t: String) { toast = t; Task { try? await Task.sleep(for: .seconds(2.5)); toast = nil } }
 }
 
-/// Foto con hueco gris de respaldo, nunca imagen rota.
+/// Foto con hueco gris de respaldo, nunca imagen rota. Usa la caché de imágenes de la app
+/// para no volver a descargarla en cada redibujado de la lista.
 struct PhysiqueImage: View {
     let url: String
+
     var body: some View {
         ZStack {
             Palette.secondary
             if let u = URL(string: url), !url.isEmpty {
-                AsyncImage(url: u) { phase in
-                    if let image = phase.image { image.resizable().scaledToFill() } else { placeholder }
-                }
-            } else { placeholder }
+                CachedAsyncImage(url: u, maxSide: 600) { $0.resizable().scaledToFill() } placeholder: { placeholder }
+            } else {
+                placeholder
+            }
         }
         .accessibilityHidden(true)
     }
+
     private var placeholder: some View {
         Image(systemName: "person.fill").resizable().scaledToFit().padding(14).foregroundStyle(Palette.muted.opacity(0.6))
     }

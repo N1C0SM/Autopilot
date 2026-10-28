@@ -6,6 +6,7 @@ import Supabase
 struct AdminRulesView: View {
     @State private var row: [String: AnyJSON] = [:]
     @State private var loading = true
+    @State private var failed = false
     @State private var saving = false
     @State private var toast: String?
 
@@ -24,14 +25,20 @@ struct AdminRulesView: View {
 
     var body: some View {
         ScrollView {
-            if loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 60) }
-            else if row.isEmpty { EmptyStateView(symbol: "slider.horizontal.3", title: "Sin reglas", message: "No se encontraron reglas de generación.") }
-            else {
+            if loading {
+                AdminLoadingView(message: "Cargando las reglas del motor")
+            } else if failed {
+                AdminErrorCard(message: "No se pudieron cargar las reglas de generación. Comprueba la conexión y vuelve a intentarlo.") {
+                    Task { await load() }
+                }
+                .padding(20)
+            } else if row.isEmpty {
+                EmptyStateView(symbol: "slider.horizontal.3", title: "Sin reglas", message: "No se encontraron reglas de generación.")
+                    .padding(20)
+            } else {
                 VStack(alignment: .leading, spacing: 24) {
-                    HStack {
-                        Text("Configuración del motor Autopilot").font(.apSubhead).foregroundStyle(Palette.muted)
-                        Spacer()
-                        Button("Restablecer") { resetDefaults() }.foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
+                    AdminPaneHeader("Cómo monta Autopilot cada sesión: volumen, series por prioridad, repeticiones, descansos, límites y recuperación.") {
+                        AdminTextButton(title: "Restablecer valores", systemImage: "arrow.counterclockwise") { resetDefaults() }
                     }
                     group("Volumen por sesión") {
                         numberRow("Mínimo de series", "min_sets_per_session", first: true)
@@ -57,32 +64,29 @@ struct AdminRulesView: View {
                         numberRow("Máx. ejercicios P3", "max_p3_exercises")
                     }
                     group("Patrones obligatorios") {
-                        FlowRow {
+                        FlowRow(spacing: 8) {
                             ForEach(Self.patterns, id: \.self) { p in
-                                let on = requiredPatterns.contains(p)
-                                Button(p) { togglePattern(p) }
-                                    .font(.apSubhead.weight(.medium)).padding(.horizontal, 16).frame(minHeight: 36)
-                                    .foregroundStyle(on ? Palette.gold : Palette.muted)
-                                    .background(on ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
-                                    .buttonStyle(.plain)
-                                    .accessibilityAddTraits(on ? .isSelected : [])
+                                AdminChip(title: p, selected: requiredPatterns.contains(p)) { togglePattern(p) }
                             }
                         }
-                        .padding(16)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
                     group("Horas de recuperación por músculo") {
                         ForEach(Array(recovery.keys.sorted().enumerated()), id: \.element) { i, muscle in
-                            HStack {
-                                Text(muscle).font(.apBody)
-                                Spacer()
-                                countField(Binding(get: { recovery[muscle] ?? 0 }, set: { setRecovery(muscle, $0) }), label: "Horas de recuperación de \(muscle)")
+                            HStack(spacing: 8) {
+                                Text(muscle).font(.apBody).lineLimit(1).minimumScaleFactor(0.85)
+                                Spacer(minLength: 12)
+                                AdminNumberField(label: "Horas de recuperación de \(muscle)",
+                                                 value: Binding(get: { recovery[muscle] ?? 0 }, set: { setRecovery(muscle, $0) }),
+                                                 width: 64)
                                 Text("h").font(.apSubhead).foregroundStyle(Palette.muted)
                             }
                             .rowStyle(first: i == 0)
                         }
                     }
-                    Button { Task { await save() } } label: { if saving { ProgressView().tint(.black) } else { Text("Guardar") } }
-                        .buttonStyle(.pill).disabled(saving)
+                    Button { Task { await save() } } label: { if saving { ProgressView().tint(.black) } else { Text("Guardar reglas") } }
+                        .buttonStyle(.pill).frame(maxWidth: 320).disabled(saving)
                 }
                 .padding(20).frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -122,52 +126,42 @@ struct AdminRulesView: View {
 
     private func group<C: View>(_ header: String, footer: String? = nil, @ViewBuilder content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(header.uppercased()).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
-            VStack(spacing: 0) { content() }.background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            if let footer { Text(footer).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16) }
+            ListGroupView(header: header) { content() }
+            if let footer {
+                Text(footer).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
-    private func countField(_ value: Binding<Int>, label: String, width: CGFloat = 64) -> some View {
-        TextField("0", text: Binding(get: { String(value.wrappedValue) }, set: { value.wrappedValue = Int($0) ?? 0 }))
-            .textFieldStyle(.plain).multilineTextAlignment(.trailing).font(.apBody.monospacedDigit())
-            .padding(.horizontal, 10).frame(width: width, height: 36)
-            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            #if os(iOS)
-            .keyboardType(.numberPad)
-            #endif
-            .accessibilityLabel(label)
-    }
-
     private func numberRow(_ label: String, _ key: String, first: Bool = false) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             Text(label).font(.apBody)
-            Spacer()
-            countField(Binding(get: { int(key) }, set: { row[key] = .integer($0) }), label: label)
+            Spacer(minLength: 12)
+            AdminNumberField(label: label, value: Binding(get: { int(key) }, set: { row[key] = .integer($0) }), width: 64)
         }
         .rowStyle(first: first)
     }
 
     private func rangeRow(_ label: String, _ prefix: String, first: Bool = false) -> some View {
         HStack(spacing: 8) {
-            Text(label).font(.apBody)
-            Spacer()
-            countField(Binding(get: { int("\(prefix)_min") }, set: { row["\(prefix)_min"] = .integer($0) }), label: "\(label), mínimo de series", width: 56)
+            Text(label).font(.apBody).lineLimit(1).minimumScaleFactor(0.85)
+            Spacer(minLength: 12)
+            AdminNumberField(label: "\(label), mínimo de series",
+                             value: Binding(get: { int("\(prefix)_min") }, set: { row["\(prefix)_min"] = .integer($0) }), width: 56)
             Text("–").foregroundStyle(Palette.muted)
-            countField(Binding(get: { int("\(prefix)_max") }, set: { row["\(prefix)_max"] = .integer($0) }), label: "\(label), máximo de series", width: 56)
+            AdminNumberField(label: "\(label), máximo de series",
+                             value: Binding(get: { int("\(prefix)_max") }, set: { row["\(prefix)_max"] = .integer($0) }), width: 56)
         }
         .rowStyle(first: first)
     }
 
     private func textRow(_ label: String, _ key: String, first: Bool = false) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             Text(label).font(.apBody)
-            Spacer()
-            TextField("", text: Binding(get: { str(key) }, set: { row[key] = .string($0) }))
-                .textFieldStyle(.plain).multilineTextAlignment(.trailing)
-                .padding(.horizontal, 10).frame(width: 96, height: 36)
-                .background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .accessibilityLabel(label)
+            Spacer(minLength: 12)
+            AdminCompactField(label: label, text: Binding(get: { str(key) }, set: { row[key] = .string($0) }),
+                              width: 96, monospaced: false)
         }
         .rowStyle(first: first)
     }
@@ -175,11 +169,17 @@ struct AdminRulesView: View {
     // MARK: Datos
 
     private func load() async {
-        let rows: [[String: AnyJSON]] = (try? await Backend.client.from("training_rules").select().limit(1).execute().value) ?? []
-        row = rows.first ?? [:]
-        if !row.isEmpty {
-            if requiredPatterns.isEmpty { row["required_patterns"] = Self.defaults["required_patterns"] }
-            if recovery.isEmpty { row["recovery_hours"] = Self.defaults["recovery_hours"] }
+        loading = true
+        do {
+            let rows: [[String: AnyJSON]] = try await Backend.client.from("training_rules").select().limit(1).execute().value
+            row = rows.first ?? [:]
+            if !row.isEmpty {
+                if requiredPatterns.isEmpty { row["required_patterns"] = Self.defaults["required_patterns"] }
+                if recovery.isEmpty { row["recovery_hours"] = Self.defaults["recovery_hours"] }
+            }
+            failed = false
+        } catch {
+            failed = true
         }
         loading = false
     }
@@ -206,10 +206,307 @@ struct AdminRulesView: View {
     private func show(_ t: String) { toast = t; Task { try? await Task.sleep(for: .seconds(2.5)); toast = nil } }
 }
 
+// MARK: - Piezas compartidas de Admin
+
+// Mismas piezas en todas las pantallas de administración para que el Admin no parezca otra app:
+// cabecera, tarjetas de filas, píldoras, campos, separadores y estados de carga/vacío/error.
+// Los colores salen de `Palette`, los radios de `Radius` y la tipografía de la escala `.ap*`.
+
+/// Cabecera de una pantalla de Admin: contexto y acciones. El título lo pone la navegación.
+struct AdminPaneHeader<Actions: View>: View {
+    private let text: String
+    private let actions: Actions
+
+    init(_ text: String, @ViewBuilder actions: () -> Actions) {
+        self.text = text
+        self.actions = actions()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(text)
+                .font(.apSubhead)
+                .foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            actions
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+extension AdminPaneHeader where Actions == EmptyView {
+    init(_ text: String) { self.init(text) { EmptyView() } }
+}
+
+/// Tarjeta con filas pegadas (sin cabecera propia). Las separaciones las pone `rowStyle`.
+struct AdminRows<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+    var body: some View {
+        VStack(spacing: 0) { content }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+}
+
+/// Fila de lista de Admin: lo que la identifica (miniatura o icono), título, detalle y accesorios.
+struct AdminListRow<Leading: View, Trailing: View>: View {
+    private let title: String
+    private let detail: String?
+    private let leading: Leading
+    private let trailing: Trailing
+
+    init(_ title: String, detail: String? = nil,
+         @ViewBuilder leading: () -> Leading,
+         @ViewBuilder trailing: () -> Trailing) {
+        self.title = title
+        self.detail = detail
+        self.leading = leading()
+        self.trailing = trailing()
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            leading
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.apBody).foregroundStyle(Palette.foreground).lineLimit(2)
+                if let detail, !detail.isEmpty {
+                    Text(detail).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
+                }
+            }
+            Spacer(minLength: 8)
+            trailing
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .frame(minHeight: 56)
+        .contentShape(Rectangle())
+    }
+}
+
+/// Píldora de estado (Publicado, Borrador, Visible, Oculto, plan…).
+struct AdminStatusPill: View {
+    let text: String
+    var tint: Color = Palette.muted
+
+    var body: some View {
+        Text(text)
+            .font(.apCaption.weight(.semibold))
+            .foregroundStyle(tint)
+            .lineLimit(1).minimumScaleFactor(0.8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(tint.opacity(0.15), in: Capsule())
+    }
+}
+
+/// Chip de filtro o segmento; la opción activa va en dorado suave.
+struct AdminChip: View {
+    let title: String
+    var selected = false
+    var monospaced = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(monospaced ? .inter(size: 13, weight: .regular, design: .monospaced, relativeTo: .footnote) : .apSubhead.weight(.medium))
+                .lineLimit(1).minimumScaleFactor(0.7)
+                .foregroundStyle(selected ? Palette.gold : Palette.muted)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(selected ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// Botón de icono con área táctil de 44 pt y etiqueta para VoiceOver.
+struct AdminIconButton: View {
+    let symbol: String
+    let label: String
+    var tint: Color = Palette.muted
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.inter(.body).weight(.semibold))
+                .foregroundStyle(tint)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+/// Acción secundaria de texto (dorada o destructiva) con área táctil de 44 pt.
+struct AdminTextButton: View {
+    let title: String
+    var systemImage: String? = nil
+    var tint: Color = Palette.gold
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let systemImage {
+                    Image(systemName: systemImage).font(.inter(.footnote).weight(.semibold))
+                }
+                Text(title).font(.apSubhead.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(tint)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Acción pequeña en píldora dentro de una fila (guardar una clave o un campo).
+struct AdminSmallAction: View {
+    let title: String
+    var tint: Color = Palette.gold
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.apSubhead.weight(.semibold))
+                .lineLimit(1)
+                .foregroundStyle(tint)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(tint.opacity(0.15), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Estado de carga común: indicador centrado y etiqueta para VoiceOver.
+struct AdminLoadingView: View {
+    var message = "Cargando…"
+
+    var body: some View {
+        ProgressView()
+            .tint(Palette.gold)
+            .frame(maxWidth: .infinity)
+            .padding(.top, 60)
+            .accessibilityLabel(message)
+    }
+}
+
+/// Estado de error común: tarjeta con icono, mensaje y «Reintentar».
+struct AdminErrorCard: View {
+    var title = "No se pudo cargar"
+    let message: String
+    let retry: () -> Void
+
+    var body: some View {
+        Card {
+            HStack(alignment: .top, spacing: 12) {
+                IconTile(symbol: "exclamationmark.triangle", size: 40, tint: Palette.destructive)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.apHeadline)
+                    Text(message).font(.apFootnote).foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Button("Reintentar") { retry() }
+                .buttonStyle(.pillSecondary)
+                .frame(maxWidth: 240)
+        }
+    }
+}
+
+/// Campo numérico compacto (cifra a la derecha y teclado numérico en iOS).
+struct AdminNumberField: View {
+    let label: String
+    @Binding var value: Int
+    var width: CGFloat = 64
+    var onSubmit: (() -> Void)? = nil
+
+    var body: some View {
+        AdminCompactField(label: label,
+                          text: Binding(get: { String(value) }, set: { value = Int($0) ?? 0 }),
+                          width: width, numeric: true, onSubmit: onSubmit)
+    }
+}
+
+/// Campo de texto corto en píldora gris del sistema; `numeric` activa el teclado numérico.
+struct AdminCompactField: View {
+    let label: String
+    @Binding var text: String
+    var width: CGFloat = 64
+    var numeric = false
+    var monospaced = true
+    var onSubmit: (() -> Void)? = nil
+
+    var body: some View {
+        Group {
+            #if os(iOS)
+            if numeric { field.keyboardType(.numberPad) } else { field }
+            #else
+            field
+            #endif
+        }
+        .accessibilityLabel(label)
+    }
+
+    private var field: some View {
+        TextField("", text: $text)
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.trailing)
+            .font(monospaced ? .apBody.monospacedDigit() : .apBody)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 44, maxWidth: width, minHeight: 44)
+            .background(Palette.secondary, in: Capsule())
+            .onSubmit { onSubmit?() }
+    }
+}
+
 extension View {
+    /// Campo de una línea en píldora gris del sistema (44 pt).
+    func adminField(monospaced: Bool = false, minHeight: CGFloat = 44) -> some View {
+        self.textFieldStyle(.plain)
+            .font(monospaced ? .inter(size: 15, weight: .regular, design: .monospaced, relativeTo: .subheadline) : .apBody)
+            .padding(.horizontal, 14)
+            .frame(minHeight: minHeight)
+            .background(Palette.secondary, in: Capsule())
+    }
+
+    /// Campo o editor corto de varias líneas: gris del sistema con esquinas de tarjeta.
+    func adminFieldBox(minHeight: CGFloat = 88, radius: CGFloat = 14) -> some View {
+        self.padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(minHeight: minHeight, alignment: .topLeading)
+            .background(Palette.secondary, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+    }
+
+    /// Editor largo sobre tarjeta (HTML, Markdown, ideas).
+    func adminEditorBox(minHeight: CGFloat) -> some View {
+        self.scrollContentBackground(.hidden)
+            .padding(12)
+            .frame(minHeight: minHeight)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    /// Separador fino entre filas de una tarjeta, alineado con el texto.
+    func adminRowDivider(first: Bool, leading: CGFloat = 16) -> some View {
+        overlay(alignment: .top) {
+            if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, leading) }
+        }
+    }
+
     /// Fila de lista agrupada: 16 pt a los lados, 50 pt de alto y línea fina encima salvo la primera.
-    func rowStyle(first: Bool) -> some View {
-        self.padding(.horizontal, 16).frame(minHeight: 50)
-            .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
+    /// `leading` alinea la línea con el texto cuando la fila lleva miniatura.
+    func rowStyle(first: Bool, leading: CGFloat = 16, minHeight: CGFloat = 50) -> some View {
+        self.padding(.horizontal, 16).frame(minHeight: minHeight)
+            .overlay(alignment: .top) { if !first { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, leading) } }
     }
 }

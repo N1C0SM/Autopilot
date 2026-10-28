@@ -11,7 +11,7 @@ struct RestCard<Action: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer(minLength: 144)
-            Text(title).font(.inter(size: 28, weight: .bold)).tracking(-0.7).padding(.top, 8).accessibilityAddTraits(.isHeader)
+            Text(title).font(.apTitle1).tracking(-0.7).padding(.top, 8).accessibilityAddTraits(.isHeader)
             Text(message).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 4).fixedSize(horizontal: false, vertical: true)
             action.padding(.top, 20)
         }
@@ -53,13 +53,7 @@ struct HeaderButtons: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Button {} label: {
-                Image("lu-bell").renderingMode(.template).resizable().frame(width: 17, height: 17)
-                    .frame(width: 30, height: 30).background(Palette.secondary, in: Circle())
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Notificaciones")
+            // La campana era un botón sin acción (no hay notificaciones todavía): fuera hasta 1.1.
             Button(action: onProfile) {
                 ZStack {
                     Circle().fill(Palette.secondary)
@@ -84,12 +78,17 @@ struct FloatingTabBar: View {
     let tabs: [AppSection]
     @Binding var selection: AppSection
     @Namespace private var pill
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 2) {
             ForEach(tabs) { tab in
                 let active = tab == selection
-                Button { if active { Haptics.tap() } else { Haptics.selection() }; withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = tab } } label: {
+                Button {
+                    if active { Haptics.tap() } else { Haptics.selection() }
+                    // Con «Reducir movimiento» la píldora cambia de sitio al instante (sin spring).
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.85)) { selection = tab }
+                } label: {
                     VStack(spacing: 2) {
                         Image(tab.phosphor + (active ? "-fill" : "")).renderingMode(.template).resizable().frame(width: 24, height: 24)
                             .frame(height: 28)
@@ -117,26 +116,43 @@ struct FloatingTabBar: View {
         .background(Palette.card, in: Capsule())
         .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
         .padding(.horizontal, 12)
+        // La barra se lee como un grupo de pestañas (VoiceOver anuncia «pestaña, seleccionada»).
+        .accessibilityElement(children: .contain)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 }
 
 /// Control segmentado de la web (`TabsList`): fondo oscuro y la opción activa en gris claro.
+/// La píldora visible mide 32 pt, pero cada opción tiene 44 pt de área táctil (mínimo de Apple).
 struct SegmentedPill: View {
     let options: [String]
     @Binding var selection: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { i in
-                Button { Haptics.selection(); selection = i } label: {
+                Button {
+                    Haptics.selection()
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) { selection = i }
+                } label: {
                     Text(options[i]).font(.inter(size: 13, weight: i == selection ? .semibold : .medium))
                         .lineLimit(1).minimumScaleFactor(0.7)
                         .foregroundStyle(i == selection ? Palette.foreground : Palette.muted)
-                        .frame(maxWidth: .infinity, minHeight: 32)
-                        .background { if i == selection { RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Palette.accent).shadow(color: .black.opacity(0.25), radius: 2, y: 1) } }
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 44)
+                        .background {
+                            // La píldora activa conserva sus 32 pt visuales dentro del área de 44.
+                            if i == selection {
+                                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Palette.accent)
+                                    .frame(height: 32)
+                                    .shadow(color: .black.opacity(0.25), radius: 2, y: 1)
+                            }
+                        }
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(options[i])
                 .accessibilityAddTraits(i == selection ? .isSelected : [])
             }
         }
@@ -144,6 +160,9 @@ struct SegmentedPill: View {
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .frame(maxWidth: 448)
         .frame(maxWidth: .infinity)
+        // Control de geometría fija: se limita el crecimiento del texto para que no se trunque.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -197,7 +216,9 @@ extension AppSection {
 @MainActor
 final class ImageCache {
     static let shared = ImageCache()
-    private let memory = NSCache<NSURL, PlatformImage>()
+    private let memory = NSCache<NSString, PlatformImage>()
+    /// Una sola descarga en vuelo por URL: varias vistas con la misma foto comparten la petición.
+    private var inflight: [URL: Task<PlatformImage?, Never>] = [:]
     private let session: URLSession = {
         let c = URLSessionConfiguration.default
         c.urlCache = URLCache(memoryCapacity: 30_000_000, diskCapacity: 300_000_000)
@@ -205,13 +226,57 @@ final class ImageCache {
         return URLSession(configuration: c)
     }()
 
-    func cached(_ url: URL) -> PlatformImage? { memory.object(forKey: url as NSURL) }
+    /// La clave incluye el tamaño: una miniatura de 200 px no compite con la foto grande.
+    private func key(_ url: URL, _ maxSide: CGFloat) -> NSString {
+        "\(url.absoluteString)|#\(Int(maxSide))" as NSString
+    }
+
+    func cached(_ url: URL, maxSide: CGFloat = 900) -> PlatformImage? {
+        memory.object(forKey: key(url, maxSide))
+    }
 
     func load(_ url: URL, maxSide: CGFloat = 900) async -> PlatformImage? {
-        if let hit = memory.object(forKey: url as NSURL) { return hit }
-        guard let (data, _) = try? await session.data(from: url) else { return nil }
-        // Se reduce fuera del hilo principal: las fotos originales son muy grandes.
-        let image = await Task.detached(priority: .userInitiated) { () -> PlatformImage? in
+        let k = key(url, maxSide)
+        if let hit = memory.object(forKey: k) { return hit }
+        if let running = inflight[url] { return await running.value }
+        let task = Task { [weak self] () -> PlatformImage? in
+            guard let self else { return nil }
+            return await self.download(url, maxSide: maxSide)
+        }
+        inflight[url] = task
+        let image = await task.value
+        inflight[url] = nil
+        if let image { memory.setObject(image, forKey: k) }
+        return image
+    }
+
+    /// Calienta la caché con las fotos que se van a ver (rutina, sesión, próximas comidas).
+    func prefetch(_ urls: [URL], maxSide: CGFloat = 900) {
+        guard !urls.isEmpty else { return }
+        Task { [weak self] in
+            for url in urls.prefix(24) {
+                guard let self else { return }
+                _ = await self.load(url, maxSide: maxSide)
+            }
+        }
+    }
+
+    private func download(_ url: URL, maxSide: CGFloat) async -> PlatformImage? {
+        // 3 intentos con espera corta: una red mala no debe dejar el hueco para siempre.
+        for attempt in 0..<3 {
+            if let (data, response) = try? await session.data(from: url),
+               (response as? HTTPURLResponse)?.statusCode ?? 200 < 400,
+               let image = await Self.decode(data, maxSide: maxSide) {
+                return image
+            }
+            if attempt < 2 { try? await Task.sleep(nanoseconds: 250_000_000) }
+        }
+        return nil
+    }
+
+    /// Reduce fuera del hilo principal: las fotos originales son muy grandes.
+    private static func decode(_ data: Data, maxSide: CGFloat) async -> PlatformImage? {
+        await Task.detached(priority: .userInitiated) { () -> PlatformImage? in
             guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
             let opts: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: maxSide * 3, kCGImageSourceCreateThumbnailWithTransform: true]
             guard let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, opts as CFDictionary) else { return nil }
@@ -221,29 +286,45 @@ final class ImageCache {
             return NSImage(cgImage: cg, size: .zero)
             #endif
         }.value
-        if let image { memory.setObject(image, forKey: url as NSURL) }
-        return image
     }
 }
 
 struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     let url: URL?
+    /// Tamaño máximo de decodificación (px en pantalla × 3). Las miniaturas usan menos.
+    let maxSide: CGFloat
     @ViewBuilder var content: (Image) -> Content
     @ViewBuilder var placeholder: () -> Placeholder
     @State private var image: PlatformImage?
+    /// URL de la imagen que hay ahora mismo en `image`: al cambiar de URL no se queda la anterior.
+    @State private var imageURL: URL?
 
-    init(url: URL?, @ViewBuilder content: @escaping (Image) -> Content, @ViewBuilder placeholder: @escaping () -> Placeholder) {
-        self.url = url; self.content = content; self.placeholder = placeholder
-        _image = State(initialValue: url.flatMap { u in MainActor.assumeIsolated { ImageCache.shared.cached(u) } })
+    init(url: URL?, maxSide: CGFloat = 900,
+         @ViewBuilder content: @escaping (Image) -> Content,
+         @ViewBuilder placeholder: @escaping () -> Placeholder) {
+        self.url = url; self.maxSide = maxSide
+        self.content = content; self.placeholder = placeholder
+        let cached = url.flatMap { u in MainActor.assumeIsolated { ImageCache.shared.cached(u, maxSide: maxSide) } }
+        _image = State(initialValue: cached)
+        _imageURL = State(initialValue: cached != nil ? url : nil)
     }
 
     var body: some View {
         Group {
             if let image { content(Image(platformImage: image)) } else { placeholder() }
         }
-        .task(id: url) {
-            guard image == nil, let url else { return }
-            image = await ImageCache.shared.load(url)
+        .task(id: "\(url?.absoluteString ?? "")|\(Int(maxSide))") {
+            guard let url else { image = nil; imageURL = nil; return }
+            // Misma URL ya resuelta (normalmente leída de caché): no hay nada que hacer.
+            guard imageURL != url else { return }
+            // La URL cambió (p. ej. del respaldo a la portada de la IA): se descarta la imagen vieja.
+            if let hit = ImageCache.shared.cached(url, maxSide: maxSide) {
+                image = hit; imageURL = url
+                return
+            }
+            image = nil; imageURL = nil
+            guard let loaded = await ImageCache.shared.load(url, maxSide: maxSide), !Task.isCancelled else { return }
+            image = loaded; imageURL = url
         }
     }
 }

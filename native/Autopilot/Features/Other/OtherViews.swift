@@ -1,19 +1,29 @@
 import SwiftUI
 import Supabase
-/// y la lista de comidas (o «Sin comidas todavía»).
+
 /// Nutrición, calcada de `MealsList.tsx`: portada del primer plato, resumen con anillo de comidas
-/// hechas y objetivos, y «Comidas de hoy» marcables con su foto.
+/// hechas y objetivos, y «Comidas de hoy» marcables con su foto (o «Sin comidas todavía»).
 struct NutritionView: View {
     @EnvironmentObject private var session: SessionModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var macros: Macros?
     @State private var meals: [Meal] = []
     @State private var loaded = false
+    /// La red ha fallado en todos los intentos: se ofrece reintentar en vez de un vacío falso.
+    @State private var failed = false
+    /// Evita dos cargas simultáneas (`.task` + botón de reintentar).
+    @State private var loading = false
     @State private var done: Set<String> = []
     @State private var cover: URL?
     struct Macros: Decodable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
     struct Meal: Decodable, Hashable { let name: String?; let description: String? }
     struct Row: Decodable { let macros_json: Macros?; let meals_json: [Meal]? }
     static let defaultDish = "Pollo a la plancha con arroz integral y verduras asadas"
+    /// Intentos totales al cargar el plan: el primero más dos reintentos automáticos.
+    private static let loadAttempts = 3
+    /// Espera entre reintentos (backoff creciente) para dejar pasar fallos transitorios.
+    private static let retryBackoff: [Duration] = [.milliseconds(400), .milliseconds(1600)]
 
     private var doneKey: String {
         let c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
@@ -23,7 +33,14 @@ struct NutritionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                if loaded { content }
+                if failed {
+                    retryCard
+                } else if loaded {
+                    content
+                } else {
+                    // Skeleton en vez de una pantalla vacía mientras llega la red.
+                    NutritionSkeleton()
+                }
             }
             .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 24)
             .frame(maxWidth: 720).frame(maxWidth: .infinity)
@@ -43,9 +60,9 @@ struct NutritionView: View {
         } else {
             if hasMeals, let cover {
                 Color.clear.frame(height: 176)
-                    .overlay { CachedAsyncImage(url: cover) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
+                    .overlay { CachedAsyncImage(url: cover, maxSide: 420) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
                     .overlay { LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom) }
-                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
                     .accessibilityHidden(true)
             }
             if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
@@ -62,7 +79,11 @@ struct NutritionView: View {
                 EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía", message: "Guarda tus datos en Ajustes y podrás generarlas con tus macros.")
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("COMIDAS DE HOY").font(.apFootnote).foregroundStyle(Palette.muted).padding(.leading, 16)
+                    // Alineado con el borde de la tarjeta (sin sangría): todas las secciones de la
+                    // pantalla comparten el mismo eje vertical.
+                    Text("COMIDAS DE HOY")
+                        .font(.apFootnote.weight(.semibold)).tracking(0.6)
+                        .foregroundStyle(Palette.muted)
                     VStack(spacing: 0) {
                         ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in mealRow(meal, last: i == meals.count - 1) }
                     }
@@ -72,50 +93,117 @@ struct NutritionView: View {
         }
     }
 
+    /// Error de red: un vacío aquí parecería «no tienes plan», así que se explica y se reintenta.
+    private var retryCard: some View {
+        Card(padding: 20) {
+            // Icono alineado con la primera línea del título (no con el centro del bloque).
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "wifi.exclamationmark").font(.inter(size: 20)).foregroundStyle(Palette.gold)
+                Text("No hemos podido cargar tu plan").font(.apTitle3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("Revisa tu conexión y vuelve a intentarlo. Tus macros y comidas siguen guardados.")
+                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            Button {
+                // Mientras se repite la petición vuelve el skeleton.
+                failed = false
+                Task { await load() }
+            } label: { Text("Reintentar") }
+                .buttonStyle(.pill)
+                .padding(.top, 6)
+                .accessibilityHint("Vuelve a pedir tu plan de comidas")
+        }
+    }
+
+    /// Resumen del día: anillo de comidas hechas y objetivos. Con texto grande el anillo pasa
+    /// encima del texto para que nada se comprima ni se salga de la tarjeta.
     private func summary(kcal: Double, p: Double, c: Double, f: Double, energy: Double, hasMeals: Bool, showTargets: Bool) -> some View {
         let doneCount = meals.filter { done.contains($0.name ?? "") }.count
-        let remaining = meals.count - doneCount
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 20) {
-                if hasMeals {
-                    ZStack {
-                        Circle().stroke(Palette.gold.opacity(0.2), lineWidth: 14)
-                        Circle().trim(from: 0, to: Double(doneCount) / Double(max(meals.count, 1)))
-                            .stroke(Palette.gold, style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
-                            .animation(.snappy, value: doneCount)
-                        VStack(spacing: 4) {
-                            Text("\(doneCount)").font(.inter(size: 44, weight: .bold).monospacedDigit())
-                            Text("de \(meals.count) \(meals.count == 1 ? "comida" : "comidas")").font(.apFootnote).foregroundStyle(Palette.muted)
-                        }
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 16) {
+                        if hasMeals { mealsRing(doneCount: doneCount) }
+                        summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount)
                     }
-                    .frame(width: 136, height: 136).padding(7)
-                    .accessibilityElement(children: .ignore).accessibilityLabel("\(doneCount) de \(meals.count) comidas hechas hoy")
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    if showTargets {
-                        Text(NumberText.integer(Int(kcal))).font(.inter(size: hasMeals ? 34 : 48, weight: .bold).monospacedDigit())
-                        Text("kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
-                    } else {
-                        Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")").font(.apHeadline)
-                        Text(remaining == 0 ? "Has marcado todas las comidas de hoy." : "Márcalas según las vayas haciendo.").font(.apSubhead).foregroundStyle(Palette.muted)
+                } else {
+                    HStack(alignment: .center, spacing: 20) {
+                        if hasMeals { mealsRing(doneCount: doneCount) }
+                        summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             if showTargets {
-                HStack(alignment: .top, spacing: 16) {
-                    macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
-                    macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
-                    macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
-                }
-                .padding(.top, 24)
+                macroRow(p: p, c: c, f: f, energy: energy).padding(.top, 24)
                 Text("Objetivos de tu plan para hoy. Marcar comidas no mide las calorías consumidas.")
-                    .font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 16)
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 16)
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    /// Anillo de comidas hechas (mismo tamaño que el hueco del esqueleto).
+    private func mealsRing(doneCount: Int) -> some View {
+        ZStack {
+            Circle().stroke(Palette.gold.opacity(0.2), lineWidth: 14)
+            Circle().trim(from: 0, to: Double(doneCount) / Double(max(meals.count, 1)))
+                .stroke(Palette.gold, style: StrokeStyle(lineWidth: 14, lineCap: .round)).rotationEffect(.degrees(-90))
+                .animation(reduceMotion ? nil : .snappy, value: doneCount)
+            VStack(spacing: 4) {
+                Text("\(doneCount)").font(.inter(size: 44, weight: .bold).monospacedDigit())
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : .snappy, value: doneCount)
+                Text("de \(meals.count) \(meals.count == 1 ? "comida" : "comidas")")
+                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+        }
+        .frame(width: 136, height: 136).padding(7)
+        .accessibilityElement(children: .ignore).accessibilityLabel("\(doneCount) de \(meals.count) comidas hechas hoy")
+    }
+
+    /// Objetivo en kcal o, sin macros todavía, cuántas comidas quedan.
+    private func summaryNumbers(kcal: Double, hasMeals: Bool, showTargets: Bool, doneCount: Int) -> some View {
+        let remaining = meals.count - doneCount
+        return VStack(alignment: .leading, spacing: 6) {
+            if showTargets {
+                Text(NumberText.integer(Int(kcal)))
+                    .font(.inter(size: hasMeals ? 34 : 48, weight: .bold).monospacedDigit())
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                Text("kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")")
+                    .font(.apHeadline).fixedSize(horizontal: false, vertical: true)
+                Text(remaining == 0 ? "Has marcado todas las comidas de hoy." : "Márcalas según las vayas haciendo.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Los tres macros: tres columnas en horizontal y apilados con texto grande (cada fila
+    /// conserva su barra a todo el ancho, así el porcentaje y los gramos no se parten).
+    @ViewBuilder private func macroRow(p: Double, c: Double, f: Double, energy: Double) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 16) {
+                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
+                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
+                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
+            }
+        } else {
+            HStack(alignment: .top, spacing: 16) {
+                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
+                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
+                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
+            }
+        }
     }
 
     private func mealRow(_ meal: Meal, last: Bool) -> some View {
@@ -130,10 +218,12 @@ struct NutritionView: View {
                 .frame(width: 24, height: 24)
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : .white)
+                        Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : Palette.foreground)
+                            .fixedSize(horizontal: false, vertical: true)
                         if let d = meal.description { Text(d).font(.apSubhead).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1)).lineLimit(2) }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // La foto ocupa lo mismo en todas las filas (56 · radio 12), como en el esqueleto.
                     MealPhoto(dish: meal.description ?? name).frame(width: 56, height: 56)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous)).opacity(isDone ? 0.5 : 1)
                 }
@@ -146,37 +236,112 @@ struct NutritionView: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isDone ? .isSelected : [])
+        .accessibilityValue(isDone ? "hecha" : "pendiente")
+        .accessibilityHint(isDone ? "Desmarca esta comida" : "Marca esta comida como hecha")
     }
 
     private func toggle(_ name: String) {
-        Haptics.tap()
-        if done.contains(name) { done.remove(name) } else { done.insert(name) }
+        let wasDone = done.contains(name)
+        if wasDone {
+            done.remove(name)
+            Haptics.selection()
+        } else {
+            done.insert(name)
+            // Al completar todas las comidas del día, un éxito claro (como el checklist del entreno).
+            if !meals.isEmpty && done.count == meals.count { Haptics.success() } else { Haptics.tap() }
+        }
         if let data = try? JSONEncoder().encode(Array(done)) { UserDefaults.standard.set(data, forKey: doneKey) }
     }
 
     private func load() async {
+        guard !loading else { return }
+        loading = true
+        defer { loading = false }
+
+        // Lo marcado del día es local: se pinta de inmediato y no depende de la red.
         if let data = UserDefaults.standard.data(forKey: doneKey), let arr = try? JSONDecoder().decode([String].self, from: data) { done = Set(arr) }
-        guard let id = session.userId else { loaded = true; return }
-        let rows: [Row] = (try? await Backend.client.from("nutrition_plan").select("macros_json, meals_json")
-            .eq("user_id", value: id).limit(1).execute().value) ?? []
-        macros = rows.first?.macros_json
-        meals = rows.first?.meals_json ?? []
-        loaded = true
-        cover = await AiCover.meal(meals.first?.description ?? Self.defaultDish)
+        guard let id = session.userId else { loaded = true; failed = false; return }
+
+        do {
+            let row = try await fetchPlan(id)
+            macros = row?.macros_json
+            meals = row?.meals_json ?? []
+            // La portada se resuelve desde caché antes de pintar: sin parpadeo ni salto.
+            let coverDish = meals.first?.description ?? Self.defaultDish
+            if !meals.isEmpty {
+                cover = AiCover.cachedMeal(coverDish) ?? AiCover.mealFallback
+            }
+            loaded = true
+            failed = false
+            if !meals.isEmpty {
+                // Portada y fotos de todas las comidas en paralelo; la lista ya está pintada.
+                await prefetchCovers(coverDish: coverDish)
+            }
+        } catch {
+            // Si la vista se cerró a mitad de la carga no hay error que enseñar.
+            if Task.isCancelled { return }
+            // Con datos ya cargados se mantienen; sin datos es un fallo de red real.
+            if macros == nil && meals.isEmpty { failed = true } else { loaded = true }
+        }
+    }
+
+    /// Plan con reintentos y backoff: un fallo transitorio de red no debe dejar macros
+    /// ni comidas vacíos para siempre.
+    private func fetchPlan(_ id: UUID) async throws -> Row? {
+        var lastError: Error?
+        for attempt in 0..<Self.loadAttempts {
+            if attempt > 0 {
+                try? await Task.sleep(for: Self.retryBackoff[min(attempt - 1, Self.retryBackoff.count - 1)])
+                if Task.isCancelled { throw CancellationError() }
+            }
+            do {
+                let rows: [Row] = try await Backend.client.from("nutrition_plan").select("macros_json, meals_json")
+                    .eq("user_id", value: id).limit(1).execute().value
+                return rows.first
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError ?? URLError(.unknown)
+    }
+
+    /// Precarga en paralelo la portada y la foto de cada plato. `MealPhoto` encontrará
+    /// después la URL en caché, así que no se repiten las llamadas lentas a `session-cover`.
+    private func prefetchCovers(coverDish: String) async {
+        let dishes = Set(meals.map { $0.description ?? $0.name ?? "" }.filter { !$0.isEmpty && $0 != coverDish })
+        async let coverURL = AiCover.meal(coverDish)
+        async let photos: Void = prefetchPhotos(dishes)
+        let resolved = await coverURL
+        if !Task.isCancelled { cover = resolved }
+        _ = await photos
+    }
+
+    /// Fotos de las comidas a la vez; `CoverStore` garantiza una sola petición por plato.
+    private func prefetchPhotos(_ dishes: Set<String>) async {
+        await withTaskGroup(of: Void.self) { group in
+            for dish in dishes {
+                group.addTask { _ = await AiCover.meal(dish) }
+            }
+        }
     }
 
     private func macro(_ label: String, _ grams: Double, _ share: Double) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
-                Spacer()
-                Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Spacer(minLength: 4)
+                Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit())
+                    .foregroundStyle(Palette.muted).lineLimit(1)
             }
             (Text(NumberText.integer(Int(grams.rounded()))).font(.inter(size: 22, weight: .bold).monospacedDigit()) + Text("g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
+                .lineLimit(1).minimumScaleFactor(0.7)
                 .padding(.top, 2)
             GeometryReader { geo in
                 Capsule().fill(Palette.gold.opacity(0.2))
-                    .overlay(alignment: .leading) { Capsule().fill(Palette.gold).frame(width: geo.size.width * share) }
+                    .overlay(alignment: .leading) {
+                        Capsule().fill(Palette.gold).frame(width: geo.size.width * max(0, min(1, share)))
+                    }
             }
             .frame(height: 6).padding(.top, 8)
         }
@@ -186,12 +351,98 @@ struct NutritionView: View {
     }
 }
 
+/// Esqueleto de Nutrición mientras llega la red: portada, resumen y comidas como bloques
+/// que laten suavemente, para que la pantalla no aparezca vacía ni dé un salto al cargar.
+private struct NutritionSkeleton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulsing = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 32) {
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .fill(Palette.card)
+                .frame(height: 176)
+            // Misma estructura que el resumen real: anillo y cifras arriba, macros debajo.
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top, spacing: 20) {
+                    Circle().stroke(Palette.secondary, lineWidth: 14).frame(width: 136, height: 136).padding(7)
+                    VStack(alignment: .leading, spacing: 10) {
+                        bar(width: 132, height: 34)
+                        bar(width: 104, height: 12)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
+                }
+                HStack(alignment: .top, spacing: 16) {
+                    bar(height: 44)
+                    bar(height: 44)
+                    bar(height: 44)
+                }
+                .padding(.top, 24)
+                bar(width: 220, height: 11).padding(.top, 16)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            VStack(alignment: .leading, spacing: 8) {
+                // Mismo eje que las tarjetas (sin sangría).
+                bar(width: 110, height: 11)
+                VStack(spacing: 0) {
+                    ForEach(0..<3, id: \.self) { i in
+                        HStack(spacing: 12) {
+                            Circle().fill(Palette.secondary).frame(width: 24, height: 24)
+                            VStack(alignment: .leading, spacing: 6) {
+                                bar(height: 12)
+                                bar(width: 140, height: 10)
+                            }
+                            Spacer(minLength: 0)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary).frame(width: 56, height: 56)
+                        }
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 72)
+                        .overlay(alignment: .bottom) {
+                            // 16 + 24 (check) + 12: el separador arranca donde el texto.
+                            if i < 2 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 52).padding(.trailing, 16) }
+                        }
+                    }
+                }
+                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            }
+        }
+        .opacity(pulsing ? 0.5 : 1)
+        .task {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulsing = true }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Cargando tu plan de comidas")
+    }
+
+    /// Bloque gris del esqueleto; sin ancho se estira a lo disponible.
+    private func bar(width: CGFloat? = nil, height: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: height / 2, style: .continuous)
+            .fill(Palette.secondary)
+            .frame(width: width, height: height)
+            .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
+    }
+}
+
 /// Tarjeta vacía de la web (EmptyState card), con foto opcional arriba.
 private struct EmptyCard: View {
     let photo: String?
     let title: String
     let message: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var url: URL?
+
+    init(photo: String?, title: String, message: String) {
+        self.photo = photo
+        self.title = title
+        self.message = message
+        // Caché sincrónica: si el plato ya tiene portada, se pinta en el primer frame.
+        _url = State(initialValue: photo.flatMap { AiCover.cachedMeal($0) ?? AiCover.mealFallback })
+    }
+
     /// EmptyState de la web: con foto, tarjeta alta con el texto abajo; sin foto, icono en su cuadrado tintado.
     var body: some View {
         Group {
@@ -246,7 +497,14 @@ private struct EmptyCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             }
         }
-        .task { if let photo { let u = await AiCover.meal(photo); withAnimation { url = u } } }
+        .task(id: photo) {
+            guard let photo else { return }
+            // Si cambia el plato se resuelve ya su foto (caché o respaldo), nunca la anterior.
+            url = AiCover.cachedMeal(photo) ?? AiCover.mealFallback
+            let resolved = await AiCover.meal(photo)
+            guard !Task.isCancelled, let resolved, resolved != url else { return }
+            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) { url = resolved }
+        }
     }
 }
 
@@ -254,35 +512,121 @@ private struct EmptyCard: View {
 struct MealPhoto: View {
     let dish: String
     @State private var url: URL?
+
+    init(dish: String) {
+        self.dish = dish
+        // Caché sincrónica: el plato ya visto pinta su foto en el primer frame.
+        _url = State(initialValue: AiCover.cachedMeal(dish) ?? AiCover.mealFallback)
+    }
+
     var body: some View {
         ZStack {
             Palette.secondary
-            if let url { CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear } }
+            if let url {
+                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+            }
         }
-        .task(id: dish) { url = await AiCover.meal(dish) }
+        .task(id: dish) {
+            // Al cambiar el plato se descarta la foto anterior antes de resolver la nueva.
+            url = AiCover.cachedMeal(dish) ?? AiCover.mealFallback
+            let resolved = await AiCover.meal(dish)
+            guard !Task.isCancelled, let resolved, resolved != url else { return }
+            url = resolved
+        }
         .accessibilityHidden(true)
     }
 }
 
-/// Portadas con IA de la edge function `session-cover` (como `useSessionCover.ts`): se guardan por clave.
+/// Portadas con IA de la edge function `session-cover` (como `useSessionCover.ts`): se guardan
+/// por clave normalizada para que el mismo plato muestre siempre la misma foto entre recargas.
 enum AiCover {
-    private static let store = "autopilot.aiCovers.v1"
     /// Foto de plato de respaldo, la misma que usa la web (`BRAND_PHOTOS.meal`).
     static let mealFallback = URL(string: "https://autopilotplan.com/healthy_meal_plate.jpg")
+    /// Antes era un único diccionario en UserDefaults; se conserva para migrar portadas ya guardadas.
+    private static let legacyStore = "autopilot.aiCovers.v1"
+
     /// Igual que la web: si la IA no da foto, se muestra siempre la foto de respaldo.
+    /// La petición es única por plato (`CoverStore`) y se cachea en memoria y en disco.
     static func meal(_ dish: String) async -> URL? {
-        let text = String(dish.trimmingCharacters(in: .whitespaces).prefix(120))
+        let text = normalized(dish)
         guard text.count >= 3 else { return mealFallback }
-        return await fetch(key: "m:\(text.lowercased())", body: ["meal": text]) ?? mealFallback
+        return await CoverStore.shared.cover(key: cacheKey(for: text), dish: text) ?? mealFallback
     }
-    private static func fetch(key: String, body: [String: String]) async -> URL? {
-        var cache = UserDefaults.standard.dictionary(forKey: store) as? [String: String] ?? [:]
-        if let u = cache[key] { return URL(string: u) }
-        struct R: Decodable { let url: String? }
-        guard let r: R = try? await Backend.client.functions.invoke("session-cover", options: FunctionInvokeOptions(body: body)), let u = r.url else { return nil }
-        cache[key] = u
-        UserDefaults.standard.set(cache, forKey: store)
-        return URL(string: u)
+
+    /// URL ya guardada para el plato, sin `await` ni red: así la vista pinta la foto correcta
+    /// en el primer frame (lectura sincrónica de caché, sin parpadeo).
+    static func cachedMeal(_ dish: String) -> URL? {
+        let text = normalized(dish)
+        guard text.count >= 3 else { return nil }
+        let key = cacheKey(for: text)
+        if let stored = UserDefaults.standard.string(forKey: key) { return URL(string: stored) }
+        return migrateLegacy(text: text, key: key)
+    }
+
+    // MARK: - Claves
+
+    /// Normaliza el nombre del plato: sin espacios sobrantes, con espacios simples y 120 caracteres.
+    private static func normalized(_ dish: String) -> String {
+        let text = dish.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return String(text.prefix(120))
+    }
+
+    /// Clave estable y corta por plato (FNV-1a de 64 bits del texto en minúsculas).
+    private static func cacheKey(for text: String) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in text.lowercased().utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return "autopilot.aiCover.v2.\(String(hash, radix: 16))"
+    }
+
+    /// Formato anterior: si el plato ya tenía portada, se guarda con la clave nueva para no
+    /// repetir la llamada lenta a la IA tras actualizar la app.
+    private static func migrateLegacy(text: String, key: String) -> URL? {
+        guard let legacy = UserDefaults.standard.dictionary(forKey: legacyStore) as? [String: String],
+              let stored = legacy["m:\(text.lowercased())"], let url = URL(string: stored) else { return nil }
+        UserDefaults.standard.set(url.absoluteString, forKey: key)
+        return url
+    }
+
+    /// Llamada real a la edge function. Devuelve nil si falla para poder mostrar `mealFallback`.
+    fileprivate static func request(_ dish: String) async -> URL? {
+        struct Response: Decodable { let url: String? }
+        guard let response: Response = try? await Backend.client.functions.invoke(
+            "session-cover", options: FunctionInvokeOptions(body: ["meal": dish])),
+            let stored = response.url, let url = URL(string: stored) else { return nil }
+        return url
+    }
+}
+
+/// Caché de portadas compartida: memoria + persistencia por clave y una sola petición en vuelo
+/// por plato, así varias `MealPhoto` del mismo plato no lanzan llamadas lentas duplicadas.
+private actor CoverStore {
+    static let shared = CoverStore()
+    private var memory: [String: URL] = [:]
+    private var inflight: [String: Task<URL?, Never>] = [:]
+    /// Instante del último fallo por plato: no se reintenta durante un minuto para no castigar
+    /// a la edge function (lenta) en cada redibujado.
+    private var failedAt: [String: Date] = [:]
+
+    func cover(key: String, dish: String) async -> URL? {
+        if let hit = memory[key] { return hit }
+        if let hit = AiCover.cachedMeal(dish) { memory[key] = hit; return hit }
+        if let running = inflight[key] { return await running.value }
+        if let at = failedAt[key], Date().timeIntervalSince(at) < 60 { return nil }
+        let task = Task.detached(priority: .utility) { await AiCover.request(dish) }
+        inflight[key] = task
+        let result = await task.value
+        inflight[key] = nil
+        if let result {
+            memory[key] = result
+            failedAt[key] = nil
+            UserDefaults.standard.set(result.absoluteString, forKey: key)
+        } else {
+            failedAt[key] = Date()
+        }
+        return result
     }
 }
 
@@ -300,6 +644,8 @@ struct TrainerClientsView: View {
                 Text(c.name ?? "Cliente").font(.apBody)
             }
             .frame(minHeight: 44)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Cliente: \(c.name ?? "sin nombre")")
         }
         .overlay { if loaded && clients.isEmpty { EmptyStateView(symbol: "person.2", title: "Sin clientes todavía") } }
         .scrollContentBackground(.hidden)

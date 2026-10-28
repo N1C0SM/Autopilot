@@ -26,6 +26,7 @@ struct AdminBlogView: View {
 
     @State private var posts: [Post] = []
     @State private var loading = true
+    @State private var failed = false
     @State private var folder = "all"
     @State private var aiTopic = ""
     @State private var aiAudience = ""
@@ -35,94 +36,57 @@ struct AdminBlogView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Blog").font(.apHeadline)
-                        Text("Artículos públicos en /blog. SEO orgánico a largo plazo.").font(.apFootnote).foregroundStyle(Palette.muted)
-                    }
-                    Spacer()
-                    Button { editing = .blank() } label: { Label("Nuevo artículo", systemImage: "plus") }.buttonStyle(.pill).frame(width: 200)
+            if loading {
+                AdminLoadingView(message: "Cargando los artículos")
+            } else if failed {
+                AdminErrorCard(message: "No se pudieron cargar los artículos del blog. Comprueba la conexión y vuelve a intentarlo.") {
+                    Task { await reload() }
                 }
-                Card {
-                    Label("Escribir con IA", systemImage: "sparkles").font(.apSubhead.weight(.semibold)).labelStyle(GoldIconLabel())
-                    Text("La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.").font(.apFootnote).foregroundStyle(Palette.muted)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
-                        labeled("¿De qué trata?") { TextField("Cuántos días entrenar a la semana si trabajas 10 horas", text: $aiTopic).textFieldStyle(.plain) }
-                        labeled("Para quién (opcional)") { TextField("Hombres de 30-45 con poco tiempo", text: $aiAudience).textFieldStyle(.plain) }
+                .padding(20)
+            } else {
+                VStack(alignment: .leading, spacing: 24) {
+                    AdminPaneHeader("Artículos públicos en /blog. SEO orgánico a largo plazo.") {
+                        Button { editing = .blank() } label: { Label("Nuevo artículo", systemImage: "plus") }
+                            .buttonStyle(.pill).frame(maxWidth: 260)
                     }
-                    Button { Task { await generate() } } label: {
-                        Label(generating ? "Escribiendo borrador..." : "Generar borrador", systemImage: "sparkles")
-                    }
-                    .buttonStyle(.pill).frame(maxWidth: 260).disabled(generating)
-                }
-                if loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 40) }
-                else if posts.isEmpty {
-                    VStack(spacing: 12) {
-                        Text("Aún no hay artículos.").font(.apSubhead).foregroundStyle(Palette.muted)
-                        Button { editing = .blank() } label: { Label("Crear el primero", systemImage: "plus") }.buttonStyle(.pillSecondary).frame(width: 220)
-                    }
-                    .frame(maxWidth: .infinity).padding(.vertical, 60)
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                } else if folder == "all" {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: 12)], spacing: 12) {
-                        ForEach(Self.categories + [("none", "Blog (sin categoría)")], id: \.0) { slug, name in
-                            let list = posts.filter { slug == "none" ? ($0.category ?? "").isEmpty : $0.category == slug }
-                            Button { folder = slug } label: {
-                                VStack(alignment: .leading) {
-                                    Text(name).font(.apHeadline).multilineTextAlignment(.leading)
-                                    Spacer(minLength: 12)
-                                    Text("\(list.count) artículos · \(list.filter(\.published).count) publicados").font(.apFootnote).foregroundStyle(Palette.muted)
-                                }
-                                .padding(16).frame(maxWidth: .infinity, minHeight: 110, alignment: .topLeading)
-                                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    Card {
+                        Label("Escribir con IA", systemImage: "sparkles").font(.apSubhead.weight(.semibold)).labelStyle(GoldIconLabel())
+                        Text("La IA crea un borrador. Nunca se publica solo: lo revisas, lo editas y decides tú.")
+                            .font(.apFootnote).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
+                            labeled("¿De qué trata?") {
+                                TextField("Cuántos días entrenar a la semana si trabajas 10 horas", text: $aiTopic)
+                                    .adminField()
+                                    .accessibilityLabel("De qué trata el artículo")
                             }
-                            .buttonStyle(.plain)
+                            labeled("Para quién (opcional)") {
+                                TextField("Hombres de 30-45 con poco tiempo", text: $aiAudience)
+                                    .adminField()
+                                    .accessibilityLabel("Para quién es el artículo")
+                            }
                         }
-                    }
-                } else {
-                    Button { folder = "all" } label: {
-                        (Text("← Todas las carpetas · ").foregroundColor(Palette.muted) + Text(folder == "none" ? "Blog (sin categoría)" : Self.categories.first { $0.0 == folder }?.1 ?? ""))
-                            .font(.apSubhead)
-                    }
-                    .buttonStyle(.plain).frame(minHeight: 44)
-                    ForEach(posts.filter { folder == "none" ? ($0.category ?? "").isEmpty : $0.category == folder }.sorted { ($0.order_index ?? .max) < ($1.order_index ?? .max) }) { p in
-                        HStack(spacing: 12) {
-                            if let c = p.cover_url, let u = URL(string: c), !c.isEmpty {
-                                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
-                                    .frame(width: 64, height: 48).clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            } else {
-                                RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Palette.secondary).frame(width: 64, height: 48)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(p.title).font(.apSubhead.weight(.medium)).lineLimit(1)
-                                    Text(p.published ? "Publicado" : "Borrador").font(.inter(.caption2).weight(.bold))
-                                        .padding(.horizontal, 6).padding(.vertical, 2)
-                                        .foregroundStyle(p.published ? Palette.gold : Palette.muted)
-                                        .background(p.published ? Palette.gold.opacity(0.2) : Palette.secondary, in: Capsule())
-                                }
-                                Text("\(p.category.flatMap { c in Self.categories.first { $0.0 == c }?.1 }.map { "\($0) · \(Self.reviewLabels[p.review_status ?? "draft"] ?? "") · " } ?? "")/blog/\(p.slug)")
-                                    .font(.inter(.caption2)).foregroundStyle(Palette.muted).lineLimit(1)
-                            }
-                            Spacer()
-                            if p.published, let u = URL(string: "https://autopilotplan.app/blog/\(p.slug)") {
-                                Link(destination: u) { Image(systemName: "arrow.up.right.square") }.foregroundStyle(Palette.muted).accessibilityLabel("Ver")
-                            }
-                            Button("Editar") { editing = p }.buttonStyle(.plain).foregroundStyle(Palette.gold).frame(minHeight: 44)
-                            Button { Task { await remove(p) } } label: { Image(systemName: "trash").foregroundStyle(Palette.destructive) }
-                                .buttonStyle(.plain).frame(width: 36, height: 44).accessibilityLabel("Eliminar")
+                        Button { Task { await generate() } } label: {
+                            Label(generating ? "Escribiendo borrador..." : "Generar borrador", systemImage: "sparkles")
                         }
-                        .padding(14)
-                        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                        .buttonStyle(.pill).frame(maxWidth: 260).disabled(generating)
+                    }
+                    if posts.isEmpty {
+                        EmptyStateView(symbol: "doc.text", title: "Aún no hay artículos",
+                                       message: "Crea el primero o genera un borrador con IA: tú decides cuándo se publica.")
+                    } else if folder == "all" {
+                        folders
+                    } else {
+                        folderContents
                     }
                 }
+                .padding(20).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .overlay(alignment: .top) { ToastView(text: toast) }
         .task { await reload() }
+        .refreshable { await reload() }
         .sheet(item: $editing) { p in
             BlogEditor(post: p) { message in
                 editing = nil
@@ -131,15 +95,113 @@ struct AdminBlogView: View {
         }
     }
 
+    /// Carpetas de la Academia, con el recuento de artículos y publicados de cada una.
+    private var folders: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 12)], spacing: 12) {
+            ForEach(Self.categories + [("none", "Blog (sin categoría)")], id: \.0) { slug, name in
+                let list = posts.filter { slug == "none" ? ($0.category ?? "").isEmpty : $0.category == slug }
+                Button {
+                    Haptics.selection()
+                    folder = slug
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        IconTile(symbol: slug == "none" ? "tray" : "folder", size: 36)
+                        Text(name).font(.apHeadline).multilineTextAlignment(.leading).lineLimit(2)
+                        Spacer(minLength: 2)
+                        Text("\(list.count) artículos · \(list.filter(\.published).count) publicados")
+                            .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .padding(16).frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityHint("Abre la carpeta de artículos")
+            }
+        }
+    }
+
+    /// Artículos de la carpeta elegida, en una sola tarjeta con separadores alineados al texto.
+    private var folderContents: some View {
+        let list = posts.filter { folder == "none" ? ($0.category ?? "").isEmpty : $0.category == folder }
+            .sorted { ($0.order_index ?? .max) < ($1.order_index ?? .max) }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                AdminTextButton(title: "Todas las carpetas", systemImage: "chevron.left") {
+                    Haptics.selection()
+                    folder = "all"
+                }
+                Spacer(minLength: 0)
+                Text(folder == "none" ? "Blog (sin categoría)" : Self.categories.first { $0.0 == folder }?.1 ?? "")
+                    .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+            }
+            AdminRows {
+                ForEach(Array(list.enumerated()), id: \.element.id) { i, p in
+                    Button { editing = p } label: {
+                        AdminListRow(p.title, detail: detail(p)) {
+                            cover(p)
+                        } trailing: {
+                            HStack(spacing: 6) {
+                                AdminStatusPill(text: p.published ? "Publicado" : "Borrador",
+                                                tint: p.published ? Palette.gold : Palette.muted)
+                                Menu {
+                                    if p.published, let u = URL(string: "https://autopilotplan.app/blog/\(p.slug)") {
+                                        Link("Ver en el blog", destination: u)
+                                    }
+                                    Button("Eliminar", role: .destructive) { Task { await remove(p) } }
+                                } label: {
+                                    Image(systemName: "ellipsis").font(.inter(.body).weight(.semibold))
+                                        .foregroundStyle(Palette.muted).frame(width: 44, height: 44)
+                                }
+                                .menuStyle(.borderlessButton).fixedSize()
+                                .accessibilityLabel("Opciones de \(p.title)")
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Abre el editor del artículo")
+                    .adminRowDivider(first: i == 0, leading: 92)
+                }
+            }
+        }
+    }
+
+    private func detail(_ p: Post) -> String {
+        let cat = p.category.flatMap { c in Self.categories.first { $0.0 == c }?.1 }
+        let review = Self.reviewLabels[p.review_status ?? "draft"] ?? ""
+        return [cat, review.isEmpty ? nil : review, "/blog/\(p.slug)"].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    @ViewBuilder private func cover(_ p: Post) -> some View {
+        let c = p.cover_url ?? ""
+        if !c.isEmpty, let u = URL(string: c) {
+            CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Palette.secondary }
+                .frame(width: 64, height: 48).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        } else {
+            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+                .frame(width: 64, height: 48)
+                .overlay { Image(systemName: "doc.text").foregroundStyle(Palette.muted) }
+                .accessibilityHidden(true)
+        }
+    }
+
     private func labeled<C: View>(_ label: String, @ViewBuilder content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.apFootnote)
-            content().padding(.horizontal, 14).frame(minHeight: 44).background(Palette.secondary, in: Capsule())
+            Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
+            content()
         }
     }
 
     private func reload() async {
-        posts = (try? await Backend.client.from("blog_posts").select().order("created_at", ascending: false).execute().value) ?? []
+        loading = true
+        do {
+            posts = try await Backend.client.from("blog_posts").select().order("created_at", ascending: false).execute().value
+            failed = false
+        } catch {
+            failed = true
+        }
         loading = false
     }
 

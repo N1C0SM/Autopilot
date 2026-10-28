@@ -2,6 +2,9 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 import Supabase
+#if os(iOS)
+import UIKit
+#endif
 
 /// Ajustes / Mi cuenta, calcado de `SettingsPanel.tsx`: cabecera con avatar, nombre y correo,
 /// y los grupos Perfil, Privacidad, Tus datos, Objetivo, Disponibilidad, Tu forma de entrenar,
@@ -9,12 +12,12 @@ import Supabase
 struct AccountView: View {
     @EnvironmentObject private var session: SessionModel
     @EnvironmentObject private var accounts: AccountStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var name = ""
     @State private var avatar: String?
     @State private var namePublic = false
     @State private var avatarPublic = false
-    @State private var progressPublic = false
     @State private var age = ""
     @State private var height = ""
     @State private var weight = ""
@@ -24,20 +27,28 @@ struct AccountView: View {
     @State private var newPassword = ""
     @State private var confirmPassword = ""
     @State private var restSeconds = UserDefaults.standard.integer(forKey: "rest-seconds").nonZero ?? 90
+    /// Texto de «Personalizado». El teclado numérico de iOS no tiene tecla Intro: `onSubmit` no
+    /// llegaba nunca y el descanso personalizado no se guardaba. Ahora se confirma al salir del campo.
+    @State private var restText = String(UserDefaults.standard.integer(forKey: "rest-seconds").nonZero ?? 90)
+    @FocusState private var restFocused: Bool
     @State private var toast: String?
+    @State private var toastTask: Task<Void, Never>?
     @State private var busy = false
     @State private var sports = ""
     @State private var nutritionPrefs = ""
     @State private var allergies = ""
     @State private var workoutView = UserDefaults.standard.string(forKey: "workout-view") ?? "list"
     @State private var photo: PhotosPickerItem?
-    @State private var travelUntil: String?
     @State private var exportDoc: JSONDoc?
     @State private var confirmDelete = false
     @State private var subTier: String?
     @State private var subStatus = ""
     @State private var subEnd: Date?
     @State private var isAdmin = false
+    /// Ficha y datos ya cargados del servidor. Sin esto, un fallo de red dejaba los campos vacíos
+    /// y «Guardar» podía sobrescribir con vacíos lo que ya había (pérdida de datos).
+    @State private var profileLoaded = false
+    @State private var onboardingLoaded = false
     /// Igual que la web: «training» = Plus; «full», «transform», «personal» = Coach.
     private var planName: String { ["full", "transform", "personal"].contains(subTier ?? "") ? "Coach" : subTier == "training" ? "Plus" : "Free" }
     private var paid: Bool { planName != "Free" }
@@ -45,7 +56,17 @@ struct AccountView: View {
 
     private func setRest(_ secs: Int) {
         let v = min(600, max(15, secs))
-        restSeconds = v; UserDefaults.standard.set(v, forKey: "rest-seconds"); Haptics.selection()
+        restSeconds = v
+        restText = String(v)
+        UserDefaults.standard.set(v, forKey: "rest-seconds"); Haptics.selection()
+    }
+
+    /// Confirma lo escrito en «Personalizado». Si no es un número, vuelve al valor guardado.
+    private func commitRest() {
+        let trimmed = restText.trimmingCharacters(in: .whitespaces)
+        guard let v = Int(trimmed) else { restText = String(restSeconds); return }
+        if v == restSeconds { restText = String(restSeconds); return }
+        setRest(v)
     }
 
     private static let goals = [("lose_weight", "Perder peso"), ("gain_muscle", "Ganar músculo"), ("improve_endurance", "Mejorar resistencia")]
@@ -57,24 +78,20 @@ struct AccountView: View {
                 header
 
                 group("Perfil") {
-                    row("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
-                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(1) }
+                    fieldRow("Nombre") { TextField("Nombre", text: $name).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
+                    row("Correo") { Text(session.session?.user.email ?? "").foregroundStyle(Palette.muted).lineLimit(2) }
                     actionRow("Guardar perfil") { await saveProfile() }
                 }
 
                 group("Privacidad", footer: "Tu entrenador siempre te ve. Esto decide qué pueden ver los demás.") {
-                    toggleRow("Nombre público", "Si está apagado, se muestran solo tus iniciales.", $namePublic)
-                    toggleRow("Foto de perfil pública", "Si está apagado, se muestra un icono genérico.", $avatarPublic)
-                    toggleRow("Progreso público", "Permite mostrar tu evolución (fotos, logros) fuera de tu cuenta.", $progressPublic)
+                    toggleRow("Nombre público", "Si está apagado, se muestran solo tus iniciales.", namePublicBinding)
+                    toggleRow("Foto de perfil pública", "Si está apagado, se muestra un icono genérico.", avatarPublicBinding)
                 }
-                .onChange(of: namePublic) { _, _ in Task { await savePrivacy() } }
-                .onChange(of: avatarPublic) { _, _ in Task { await savePrivacy() } }
-                .onChange(of: progressPublic) { _, _ in Task { await savePrivacy() } }
 
                 group("Tus datos") {
-                    row("Edad") { numberField($age) }
-                    row("Altura (cm)") { numberField($height) }
-                    row("Peso (kg)") { numberField($weight) }
+                    fieldRow("Edad") { numberField($age) }
+                    fieldRow("Altura (cm)") { numberField($height) }
+                    fieldRow("Peso (kg)") { numberField($weight) }
                 }
 
                 group("Objetivo") {
@@ -83,18 +100,22 @@ struct AccountView: View {
                             HStack {
                                 Text(label).font(.apBody)
                                 Spacer()
-                                if goal == value { Image(systemName: "checkmark").font(.inter(.body).weight(.semibold)).foregroundStyle(Palette.gold) }
+                                if goal == value {
+                                    Image(systemName: "checkmark").font(.inter(.body).weight(.semibold))
+                                        .foregroundStyle(Palette.gold).accessibilityHidden(true)
+                                }
                             }
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(label)
                         .accessibilityAddTraits(goal == value ? .isSelected : [])
                     }
                 }
 
                 group("Disponibilidad") {
-                    row("Días/semana") { numberField($days) }
-                    row("Minutos/sesión") { numberField($minutes) }
+                    fieldRow("Días/semana") { numberField($days) }
+                    fieldRow("Minutos/sesión") { numberField($minutes) }
                 }
                 group("Deportes") { TextField("Fútbol los martes, pádel…", text: $sports, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44) }
                 group("Preferencias nutricionales") { TextField("Vegetariano, sin lactosa…", text: $nutritionPrefs, axis: .vertical).textFieldStyle(.plain).frame(minHeight: 44) }
@@ -118,30 +139,38 @@ struct AccountView: View {
                             set: { setRest(Self.rests[$0].0) }))
                     }
                     .padding(.vertical, 6)
-                    row("Personalizado") {
-                        TextField("90", text: Binding(get: { String(restSeconds) }, set: { restSeconds = Int($0) ?? restSeconds }))
+                    fieldRow("Personalizado") {
+                        TextField("90", text: $restText)
                             .multilineTextAlignment(.trailing).textFieldStyle(.plain)
+                            .frame(width: 64)
                             #if os(iOS)
                             .keyboardType(.numberPad)
                             #endif
-                            .onSubmit { setRest(restSeconds) }
-                        Text("segundos").foregroundStyle(Palette.muted)
+                            .focused($restFocused)
+                            .onSubmit { commitRest(); restFocused = false }
+                            // Al cerrar el teclado (o tocar otro campo) se confirma y se persiste.
+                            .onChange(of: restFocused) { _, focused in if !focused { commitRest() } }
+                            .accessibilityLabel("Descanso personalizado, en segundos")
+                        Text("segundos").foregroundStyle(Palette.muted).lineLimit(1)
+                            .accessibilityHidden(true)
                     }
                 }
 
                 group("Cambiar contraseña") {
-                    row("Nueva") { SecureField("Mínimo 6 caracteres", text: $newPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
-                    row("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
+                    fieldRow("Nueva") { SecureField("Mínimo 6 caracteres", text: $newPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
+                    fieldRow("Confirmar") { SecureField("Repite la contraseña", text: $confirmPassword).multilineTextAlignment(.trailing).textFieldStyle(.plain) }
                     actionRow("Cambiar contraseña", disabled: newPassword.count < 6 || newPassword != confirmPassword) { await changePassword() }
                 }
 
-                if !isAdmin {
+                if !isAdmin, profileLoaded {
+                    // Hasta tener la ficha no se enseña el plan: «Free» por defecto mentiría a quien paga.
                     group("Suscripción") {
                         HStack(spacing: 12) {
                             Image(systemName: "crown").foregroundStyle(paid ? Palette.gold : Palette.muted).frame(width: 28)
+                                .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("Plan \(planName)").font(.apBody)
-                                Text(subActive ? (subStatus == "trialing" ? "Prueba gratuita activa" : "Suscripción activa") : paid ? "Acceso activo (pago único)" : "Cuenta Free · entrenador opcional")
+                                Text(subActive ? (subStatus == "trialing" ? "Prueba gratuita activa" : "Suscripción activa") : paid ? "Acceso activo (pago único)" : "Cuenta Free")
                                     .font(.apFootnote).foregroundStyle(Palette.muted)
                             }
                         }
@@ -171,7 +200,10 @@ struct AccountView: View {
                             }
                             Spacer()
                             Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
+                                .accessibilityHidden(true)
                         }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
                 }
 
@@ -182,45 +214,93 @@ struct AccountView: View {
                     linkRow("Aviso legal", "https://autopilotplan.app/legal/aviso-legal")
                 }
 
-                group("Modo viaje", footer: "Adapta tu plan cuando estás fuera de tu rutina habitual.") {
-                    Toggle(isOn: Binding(get: { travelActive }, set: { v in Task { await setTravel(v) } })) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Modo viaje").font(.apBody)
-                            Text(travelActive ? "Activo hasta \(String((travelUntil ?? "").prefix(10)))" : "Desactivado").font(.apFootnote).foregroundStyle(Palette.muted)
+                group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac. «Abrir siempre con» decide qué cuenta se abre al entrar en la app.") {
+                    fieldRow("Abrir siempre con") {
+                        Menu {
+                            Button {
+                                accounts.setDefault(nil)
+                            } label: {
+                                if accounts.defaultId == nil {
+                                    Label("Preguntar al abrir", systemImage: "checkmark")
+                                } else {
+                                    Text("Preguntar al abrir")
+                                }
+                            }
+                            Divider()
+                            ForEach(accounts.accounts) { a in
+                                Button {
+                                    accounts.setDefault(a.id)
+                                } label: {
+                                    if a.id == accounts.defaultId {
+                                        Label(defaultMenuTitle(a), systemImage: "checkmark")
+                                    } else {
+                                        Text(defaultMenuTitle(a))
+                                    }
+                                }
+                                .disabled(a.requirePassword || a.expired)
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(defaultSelectionLabel)
+                                    .font(.apBody)
+                                    .foregroundStyle(accounts.defaultAccount == nil ? Palette.muted : Palette.gold)
+                                    .lineLimit(1).minimumScaleFactor(0.75)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .font(.inter(.caption).weight(.semibold)).foregroundStyle(Palette.muted)
+                            }
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
                         }
+                        .menuStyle(.button).buttonStyle(.plain)
+                        .accessibilityLabel("Abrir siempre con")
+                        .accessibilityValue(defaultSelectionLabel)
                     }
-                    .tint(Palette.gold)
-                }
-
-                group("Cuentas en este dispositivo", footer: "Cambia de cuenta sin cerrar sesión, como los usuarios de un Mac.") {
                     ForEach(accounts.accounts) { a in
                         HStack(spacing: 12) {
-                            AvatarView(name: a.name, url: a.avatar, size: 44)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(a.name).font(.apBody)
-                                Text(a.expired ? "Vuelve a entrar" : a.email).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                            }
-                            Spacer()
+                            // El toque de la fila se expone como botón: antes era un
+                            // `onTapGesture` invisible para VoiceOver. «Quitar» va aparte para
+                            // que siga siendo un botón real.
                             if a.id == session.userIdString {
-                                Image(systemName: "checkmark").font(.inter(.body).weight(.bold)).foregroundStyle(Palette.gold).accessibilityLabel("Cuenta actual")
+                                accountIdentity(a)
+                                    .accessibilityElement(children: .combine)
+                                    .accessibilityLabel("\(a.name), \(a.email), cuenta actual")
                             } else {
-                                Button("Quitar") { accounts.forget(a.id) }.font(.apSubhead).foregroundStyle(Palette.muted).buttonStyle(.plain)
-                                    .frame(minHeight: 44).accessibilityLabel("Quitar \(a.name) de este dispositivo")
+                                Button { Haptics.tap(); session.showPicker = true } label: { accountIdentity(a) }
+                                    .buttonStyle(PressableCardStyle(scale: 0.99))
+                                    .accessibilityLabel("\(a.name), \(a.expired ? "vuelve a entrar" : a.email)\(a.id == accounts.defaultId ? ", cuenta predeterminada" : "")")
+                                    .accessibilityHint("Abre esta cuenta")
+                                Button("Quitar") { Haptics.warning(); accounts.forget(a.id) }
+                                    .font(.apSubhead).foregroundStyle(Palette.muted).buttonStyle(.plain)
+                                    .frame(minHeight: 44)
+                                    .accessibilityLabel("Quitar \(a.name) de este dispositivo")
                             }
                         }
-                        .contentShape(Rectangle())
-                        .onTapGesture { if a.id != session.userIdString { session.showPicker = true } }
+                        .contextMenu {
+                            if a.id == accounts.defaultId {
+                                Button("Ya no abrir con esta cuenta") { accounts.setDefault(nil) }
+                            } else {
+                                Button("Abrir siempre con esta cuenta") { accounts.setDefault(a.id) }
+                                    .disabled(a.requirePassword || a.expired)
+                            }
+                            if a.id != session.userIdString {
+                                Divider()
+                                Button("Quitar de este dispositivo", role: .destructive) { Haptics.warning(); accounts.forget(a.id) }
+                            }
+                        }
                     }
                     Button { session.addAnotherAccount() } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "plus").font(.inter(.body).weight(.bold)).foregroundStyle(Palette.gold)
                                 .frame(width: 44, height: 44).background(Palette.gold.opacity(0.15), in: Circle())
+                                .accessibilityHidden(true)
                             Text("Añadir otra cuenta").font(.apBody)
                             Spacer()
                         }
+                        .frame(minHeight: 44)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityHint("Inicia sesión con otra cuenta sin cerrar la actual")
                 }
 
                 group("Sesión", footer: "Cierra tu sesión en este dispositivo.") {
@@ -235,6 +315,7 @@ struct AccountView: View {
                             .padding(.horizontal, 16).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityHint("Pide confirmación y borra tu cuenta y tus datos")
                 }
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
@@ -242,52 +323,73 @@ struct AccountView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
+        // Gesto nativo: tirar hacia abajo vuelve a pedir la ficha y los datos sin vaciar la pantalla.
+        .refreshable { await load(clear: false) }
+        #if os(iOS)
+        // El teclado numérico no tiene tecla para cerrarse: sin «Listo» el descanso
+        // personalizado no se llegaba a confirmar nunca.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Listo") { commitRest(); restFocused = false; dismissKeyboard() }
+            }
+        }
+        #endif
         .overlay(alignment: .top) {
             if let toast {
                 Text(toast).font(.apSubhead.weight(.semibold)).padding(.horizontal, 16).padding(.vertical, 10)
                     .background(.ultraThinMaterial, in: Capsule()).padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    // Con «Reducir movimiento» el aviso entra con un fundido, sin deslizarse.
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                     .accessibilityAddTraits(.isStaticText)
             }
         }
-        .animation(.easeOut(duration: 0.2), value: toast)
-        .task { await load() }
+        .apAnimation(.easeOut(duration: 0.2), value: toast, reduceMotion: reduceMotion)
+        // Con `id` se recarga al cambiar de cuenta: la pantalla puede quedar montada al entrar
+        // con otra cuenta y antes seguía enseñando (y guardando) los datos de la anterior.
+        .task(id: session.userId) { await load() }
+        .onChange(of: session.role) { _, role in isAdmin = role == .admin }
         .onChange(of: photo) { _, p in Task { await uploadAvatar(p) } }
         .fileExporter(isPresented: Binding(get: { exportDoc != nil }, set: { if !$0 { exportDoc = nil } }), document: exportDoc,
-                      contentType: .json, defaultFilename: "autopilot-mis-datos-\(LocalDate.string()).json") { _ in show("Tus datos se han descargado") }
+                      contentType: .json, defaultFilename: "autopilot-mis-datos-\(LocalDate.string()).json") { result in
+            // El resultado del exportador antes se ignoraba: decía «descargado» también al cancelar o fallar.
+            switch result {
+            case .success: show("Tus datos se han descargado")
+            case .failure: show("No se pudieron guardar tus datos")
+            }
+        }
         .confirmationDialog("¿Eliminar tu cuenta?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Eliminar cuenta", role: .destructive) { Task { await deleteAccount() } }
             Button("Cancelar", role: .cancel) {}
         } message: { Text("Se borrarán tu cuenta y todos tus datos de forma permanente. No se puede deshacer.") }
     }
 
-    private var travelActive: Bool {
-        guard let t = travelUntil, let d = DateFormatter.ymd.date(from: String(t.prefix(10))) else { return false }
-        return d >= Calendar.current.startOfDay(for: Date())
-    }
-
-    private func setTravel(_ on: Bool) async {
-        guard let id = session.userId else { return }
-        let until: String? = on ? LocalDate.string(Calendar.current.date(byAdding: .day, value: 7, to: Date())!) : nil
-        struct U: Encodable { let travel_mode_until: String? }
-        do { try await Backend.client.from("profiles").update(U(travel_mode_until: until)).eq("user_id", value: id).execute(); travelUntil = until; show(on ? "Modo viaje activado 7 días" : "Modo viaje desactivado") }
-        catch { show("No se pudo cambiar") }
-    }
-
     private func uploadAvatar(_ p: PhotosPickerItem?) async {
-        guard let id = session.userId, let p, let data = try? await p.loadTransferable(type: Data.self), let img = PlatformImage(data: data), let jpg = img.jpegData(maxSide: 800) else { return }
+        // Sin foto nueva no hay nada que hacer (al cancelar el selector llega `nil`).
+        guard let p else { return }
+        // Se limpia la selección para poder volver a elegir la misma foto (si la subida falló).
+        defer { photo = nil }
+        guard let id = session.userId, let data = try? await p.loadTransferable(type: Data.self),
+              let img = PlatformImage(data: data), let jpg = img.jpegData(maxSide: 800) else {
+            Haptics.error(); show("No se pudo abrir la foto"); return
+        }
         let path = "\(id.uuidString.lowercased())/avatar.jpg"
         do {
             try await Backend.client.storage.from("avatars").upload(path, data: jpg, options: FileOptions(contentType: "image/jpeg", upsert: true))
             let url = try Backend.client.storage.from("avatars").getPublicURL(path: path).absoluteString + "?t=\(Int(Date().timeIntervalSince1970))"
             try await Backend.client.from("profiles").update(["avatar_url": url]).eq("user_id", value: id).execute()
-            avatar = url; Haptics.success(); show("Foto actualizada")
+            avatar = url
+            // La cuenta guardada en el dispositivo también cambia de foto (cabecera y picker).
+            accounts.updateProfile(id: id.uuidString.lowercased(), avatar: url)
+            Haptics.success(); show("Foto actualizada")
         } catch { Haptics.error(); show("No se pudo subir la foto") }
     }
 
     private func exportData() async {
         busy = true; defer { busy = false }
-        guard let token = try? await Backend.client.auth.session.accessToken else { return }
+        guard let token = try? await Backend.client.auth.session.accessToken else {
+            show("No se pudieron exportar tus datos"); return
+        }
         var req = URLRequest(url: Backend.url.appendingPathComponent("functions/v1/export-user-data"))
         req.httpMethod = "POST"
         req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
@@ -305,13 +407,62 @@ struct AccountView: View {
 
     // MARK: Piezas (ListGroup / ListRow de la web)
 
+    /// Distintivo de la cuenta que se abre al entrar en la app.
+    private var defaultBadge: some View {
+        Text("Predeterminada")
+            .font(.apCaption.weight(.semibold))
+            .foregroundStyle(Palette.gold)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Palette.gold.opacity(0.15), in: Capsule())
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityLabel("Cuenta predeterminada")
+    }
+
+    /// Texto del selector visible: la cuenta que se abre sola o «Preguntar al abrir».
+    private var defaultSelectionLabel: String {
+        accounts.defaultAccount?.name ?? "Preguntar al abrir"
+    }
+
+    /// Nombre de la cuenta en el selector, con el motivo si no puede ser la predeterminada.
+    private func defaultMenuTitle(_ a: SavedAccount) -> String {
+        if a.requirePassword { return "\(a.name) · pide contraseña" }
+        if a.expired { return "\(a.name) · vuelve a entrar" }
+        return a.name
+    }
+
+    /// Contenido visible de una cuenta del dispositivo (avatar, nombre, correo y distintivos).
+    private func accountIdentity(_ a: SavedAccount) -> some View {
+        HStack(spacing: 12) {
+            AvatarView(name: a.name, url: a.avatar, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(a.name).font(.apBody).lineLimit(2).minimumScaleFactor(0.85)
+                HStack(spacing: 6) {
+                    Text(a.expired ? "Vuelve a entrar" : a.email).font(.apFootnote)
+                        .foregroundStyle(Palette.muted).lineLimit(2)
+                    if a.id == accounts.defaultId { defaultBadge }
+                }
+            }
+            Spacer(minLength: 8)
+            if a.id == session.userIdString {
+                Image(systemName: "checkmark").font(.inter(.body).weight(.bold))
+                    .foregroundStyle(Palette.gold).accessibilityHidden(true)
+            }
+        }
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
     private var header: some View {
         VStack(spacing: 6) {
             AvatarView(name: name.isEmpty ? "?" : name, url: avatar, size: 88)
             Text(name.isEmpty ? "Tu perfil" : name).font(.apTitle2).padding(.top, 8)
+                .accessibilityAddTraits(.isHeader)
             Text(session.session?.user.email ?? "").font(.apBody).foregroundStyle(Palette.muted)
+                .lineLimit(2)
             PhotosPicker(selection: $photo, matching: .images) { Text("Cambiar foto").font(.apHeadline).foregroundStyle(Palette.gold) }
                 .buttonStyle(.plain).padding(.top, 6)
+                .frame(minHeight: 44)
+                .accessibilityHint("Abre tus fotos para elegir una nueva foto de perfil")
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
@@ -319,20 +470,41 @@ struct AccountView: View {
 
     private func group<Content: View>(_ title: String, footer: String? = nil, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Se ve en mayúsculas, pero VoiceOver lee el título natural y lo usa como cabecera
+            // para navegar entre secciones.
             Text(title.uppercased()).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
+                .accessibilityLabel(title)
+                .accessibilityAddTraits(.isHeader)
             VStack(alignment: .leading, spacing: 0) {
                 _VariadicView.Tree(SeparatedLayout()) { content() }
             }
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .accessibilityElement(children: .contain)
             if let footer { Text(footer).font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16) }
         }
     }
 
+    /// Fila de solo lectura: etiqueta y valor se leen juntos («Correo, ana@…»), no en dos paradas.
     private func row<V: View>(_ label: String, @ViewBuilder value: () -> V) -> some View {
         HStack(spacing: 12) {
-            Text(label).font(.apBody)
+            Text(label).font(.apBody).lineLimit(2).minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 12)
             value().font(.apBody)
+        }
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Fila con un control (campo, selector): la etiqueta visible se oculta a VoiceOver y se usa
+    /// como nombre del propio control, así no se lee dos veces.
+    private func fieldRow<V: View>(_ label: String, @ViewBuilder value: () -> V) -> some View {
+        HStack(spacing: 12) {
+            Text(label).font(.apBody).lineLimit(2).minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityHidden(true)
+            Spacer(minLength: 12)
+            value().font(.apBody).accessibilityLabel(Text(label))
         }
         .frame(minHeight: 44)
     }
@@ -363,9 +535,12 @@ struct AccountView: View {
                 Text(title).font(.apBody).foregroundStyle(Palette.foreground)
                 Spacer()
                 Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold)).foregroundStyle(Palette.muted)
+                    .accessibilityHidden(true)
             }
             .frame(minHeight: 44)
+            .contentShape(Rectangle())
         }
+        .accessibilityHint("Abre el documento en el navegador")
     }
 
     private func numberField(_ binding: Binding<String>) -> some View {
@@ -378,21 +553,46 @@ struct AccountView: View {
     }
 
     private func show(_ text: String) {
+        // El aviso aparece flotando sin mover el foco: se anuncia a VoiceOver en voz alta.
+        A11y.announce(text)
         toast = text
-        Task { try? await Task.sleep(for: .seconds(2)); toast = nil }
+        // Un aviso nuevo no debe apagarse con el temporizador del anterior.
+        toastTask?.cancel()
+        toastTask = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled, toast == text else { return }
+            toast = nil
+        }
+    }
+
+    /// El teclado numérico de iOS no tiene tecla para cerrarse: se baja a mano desde «Listo».
+    private func dismissKeyboard() {
+        #if os(iOS)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
     }
 
     // MARK: Datos
 
-    private func load() async {
+    private func load(clear: Bool = true) async {
         guard let id = session.userId else { return }
-        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let progress_public: Bool?; let travel_mode_until: String?; let subscription_tier: String?; let subscription_status: String?; let subscription_end: Date? }
-        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, progress_public, travel_mode_until, subscription_tier, subscription_status, subscription_end")
+        // Al cambiar de cuenta se vacía antes de pedir: si la petición falla no se mezclan los
+        // datos (ni se guardan encima) de la cuenta anterior. Al refrescar se mantienen.
+        if clear {
+            profileLoaded = false
+            onboardingLoaded = false
+            name = ""; avatar = nil; namePublic = false; avatarPublic = false
+            age = ""; height = ""; weight = ""; days = ""; minutes = ""
+            sports = ""; nutritionPrefs = ""; allergies = ""
+            goal = "gain_muscle"; subTier = nil; subStatus = ""; subEnd = nil
+        }
+        struct P: Decodable { let name: String?; let avatar_url: String?; let name_public: Bool?; let avatar_public: Bool?; let subscription_tier: String?; let subscription_status: String?; let subscription_end: Date? }
+        if let p: P = try? await Backend.client.from("profiles").select("name, avatar_url, name_public, avatar_public, subscription_tier, subscription_status, subscription_end")
             .eq("user_id", value: id).single().execute().value {
             name = p.name ?? ""; avatar = p.avatar_url
-            namePublic = p.name_public ?? false; avatarPublic = p.avatar_public ?? false; progressPublic = p.progress_public ?? false
-            travelUntil = p.travel_mode_until
+            namePublic = p.name_public ?? false; avatarPublic = p.avatar_public ?? false
             subTier = p.subscription_tier; subStatus = p.subscription_status ?? "inactive"; subEnd = p.subscription_end
+            profileLoaded = true
         }
         isAdmin = session.role == .admin
         struct Avail: Decodable { let days: AnyJSON?; let hours: AnyJSON? }
@@ -406,6 +606,7 @@ struct AccountView: View {
             sports = o.sports ?? ""; nutritionPrefs = o.nutrition_preferences ?? ""; allergies = o.allergies ?? ""
             if let d = o.availability?.days { days = Self.text(d) }
             if let h = o.availability?.hours, let hours = Double(Self.text(h)) { minutes = String(Int((hours * 60).rounded())) }
+            onboardingLoaded = true
         }
     }
 
@@ -418,28 +619,70 @@ struct AccountView: View {
         }
     }
 
+    /// Interruptores de privacidad: se guardan al tocarlos (no en `onChange`, que también se
+    /// disparaba al cargar y reescribía lo mismo). Si falla la red, el interruptor vuelve atrás.
+    private var namePublicBinding: Binding<Bool> {
+        Binding(get: { namePublic }, set: { value in
+            guard profileLoaded else { show("No se pudieron cargar tus ajustes"); return }
+            let previous = namePublic
+            namePublic = value
+            Task { await savePrivacy(previousName: previous) }
+        })
+    }
+
+    private var avatarPublicBinding: Binding<Bool> {
+        Binding(get: { avatarPublic }, set: { value in
+            guard profileLoaded else { show("No se pudieron cargar tus ajustes"); return }
+            let previous = avatarPublic
+            avatarPublic = value
+            Task { await savePrivacy(previousAvatar: previous) }
+        })
+    }
+
     private func saveProfile() async {
         guard let id = session.userId else { return }
+        // Sin ficha cargada, guardar un nombre vacío borraría el que ya había.
+        guard profileLoaded || !name.trimmingCharacters(in: .whitespaces).isEmpty else { show("No se pudieron cargar tus datos"); return }
         busy = true; defer { busy = false }
         do {
             try await Backend.client.from("profiles").update(["name": name]).eq("user_id", value: id).execute()
+            // La cuenta guardada en el dispositivo cambia de nombre también (¿Quién entrena?).
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty { accounts.updateProfile(id: id.uuidString.lowercased(), name: trimmed) }
             Haptics.success(); show("Perfil guardado")
         } catch { Haptics.error(); show("No se pudo guardar") }
     }
 
-    private func savePrivacy() async {
+    private func savePrivacy(previousName: Bool? = nil, previousAvatar: Bool? = nil) async {
         guard let id = session.userId else { return }
-        try? await Backend.client.from("profiles")
-            .update(["name_public": namePublic, "avatar_public": avatarPublic, "progress_public": progressPublic])
-            .eq("user_id", value: id).execute()
+        let sentName = namePublic, sentAvatar = avatarPublic
+        do {
+            try await Backend.client.from("profiles")
+                .update(["name_public": sentName, "avatar_public": sentAvatar])
+                .eq("user_id", value: id).execute()
+        } catch {
+            // Antes el `try?` se comía el error y el interruptor se quedaba como si se hubiera
+            // guardado. Se deshace el cambio y se avisa.
+            if let previousName, namePublic == sentName { namePublic = previousName }
+            if let previousAvatar, avatarPublic == sentAvatar { avatarPublic = previousAvatar }
+            Haptics.error(); show("No se pudo guardar la privacidad")
+        }
     }
 
     private func saveData() async {
         guard let id = session.userId else { return }
+        guard onboardingLoaded else { show("No se pudieron cargar tus datos"); return }
+        let num = { (s: String) in Double(s.replacingOccurrences(of: ",", with: ".")) }
+        let trimmed = { (s: String) in s.trimmingCharacters(in: .whitespaces) }
+        // Un campo a medio escribir no se envía como `nil` (borraría el dato que ya había): se avisa.
+        if !trimmed(age).isEmpty, Int(trimmed(age)) == nil { show("Revisa la edad"); return }
+        if !trimmed(height).isEmpty, num(height) == nil { show("Revisa la altura"); return }
+        if !trimmed(weight).isEmpty, num(weight) == nil { show("Revisa el peso"); return }
+        if !trimmed(days).isEmpty, Int(trimmed(days)) == nil { show("Revisa los días por semana"); return }
+        if !trimmed(minutes).isEmpty, num(minutes) == nil { show("Revisa los minutos por sesión"); return }
         busy = true; defer { busy = false }
         struct Avail: Encodable { let days: Int?; let hours: Double?; let auto_calculated: Bool }
         struct U: Encodable { let user_id: UUID; let age: Int?; let height: Double?; let weight: Double?; let goal: String; let availability: Avail; let sports: String; let nutrition_preferences: String; let allergies: String }
-        let num = { (s: String) in Double(s.replacingOccurrences(of: ",", with: ".")) }
         let row = U(user_id: id, age: Int(age), height: num(height), weight: num(weight), goal: goal,
                     availability: Avail(days: Int(days), hours: num(minutes).map { $0 / 60 }, auto_calculated: false),
                     sports: sports, nutrition_preferences: nutritionPrefs, allergies: allergies.trimmingCharacters(in: .whitespaces))

@@ -23,10 +23,21 @@ final class AccountStore: ObservableObject {
     static let shared = AccountStore()
     private let key = "accounts.v1"
     private let pendingLockKey = "accounts.pending-lock"
+    /// Cuenta que se abre al entrar en la app (Ajustes → Cuentas en este dispositivo).
+    private let defaultKey = "accounts.defaultId"
 
     @Published private(set) var accounts: [SavedAccount] = []
+    /// Id de la cuenta predeterminada, si se ha elegido alguna.
+    @Published private(set) var defaultId: String? = nil
 
-    init() { accounts = load() }
+    init() {
+        accounts = load()
+        defaultId = UserDefaults.standard.string(forKey: defaultKey)
+        // Si la cuenta ya no está en el dispositivo, la preferencia deja de valer.
+        if let id = defaultId, !accounts.contains(where: { $0.id == id }) {
+            clearDefault()
+        }
+    }
 
     private func load() -> [SavedAccount] {
         guard let data = Keychain.data(key) else { return [] }
@@ -73,15 +84,59 @@ final class AccountStore: ObservableObject {
         save(list)
     }
 
-    func forget(_ id: String) { save(accounts.filter { $0.id != id }) }
+    /// Cuenta que debe abrirse al arrancar (nil si no se ha fijado ninguna).
+    var defaultAccount: SavedAccount? {
+        guard let id = defaultId else { return nil }
+        return accounts.first { $0.id == id }
+    }
+
+    /// Fija la cuenta predeterminada; `nil` la quita. Solo cuentas guardadas.
+    func setDefault(_ id: String?) {
+        guard let id else {
+            clearDefault()
+            Haptics.selection()
+            return
+        }
+        guard accounts.contains(where: { $0.id == id }) else { return }
+        defaultId = id
+        UserDefaults.standard.set(id, forKey: defaultKey)
+        Haptics.selection()
+    }
+
+    private func clearDefault() {
+        defaultId = nil
+        UserDefaults.standard.removeObject(forKey: defaultKey)
+    }
+
+    func forget(_ id: String) {
+        save(accounts.filter { $0.id != id })
+        // Si era la predeterminada, se olvida también la preferencia.
+        if defaultId == id { clearDefault() }
+    }
 
     func setRequirePassword(_ id: String, _ value: Bool) {
         if accounts.contains(where: { $0.id == id }) {
             save(accounts.map { var a = $0; if a.id == id { a.requirePassword = value }; return a })
         } else {
-            // La sesión aún no se ha guardado: se aplica en cuanto llegue.
-            UserDefaults.standard.set([id: value], forKey: pendingLockKey)
+            // La sesión aún no se ha guardado: se aplica en cuanto llegue. Se conservan los
+            // pendientes de otras cuentas (antes se sobrescribían).
+            var pending = UserDefaults.standard.dictionary(forKey: pendingLockKey) as? [String: Bool] ?? [:]
+            pending[id] = value
+            UserDefaults.standard.set(pending, forKey: pendingLockKey)
         }
+    }
+
+    /// Refresca nombre y/o foto de una cuenta guardada tras editar el perfil o subir la foto:
+    /// así la cabecera y «¿Quién entrena?» no siguen mostrando los datos viejos hasta reentrar.
+    func updateProfile(id: String, name: String? = nil, avatar: String? = nil) {
+        guard accounts.contains(where: { $0.id == id }), name != nil || avatar != nil else { return }
+        save(accounts.map { account in
+            guard account.id == id else { return account }
+            var updated = account
+            if let name, !name.isEmpty { updated.name = name }
+            if let avatar, !avatar.isEmpty { updated.avatar = avatar }
+            return updated
+        })
     }
 
     private func takePendingLock(for id: String) -> Bool? {

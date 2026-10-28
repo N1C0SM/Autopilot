@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 /// Secciones de la app. Admin usa los mismos grupos que `src/app/components/admin/adminNav.ts`.
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
@@ -126,6 +127,29 @@ struct MainShell: View {
     @State private var selection: AppSection?
     @State private var showSettings = false
     @EnvironmentObject private var accounts: AccountStore
+    /// Sección visible del panel de Admin en iPhone y estado del cajón lateral.
+    @State private var adminSection: AppSection = .adminDashboard
+    @State private var adminMenuOpen = false
+    #if DEBUG
+    /// Solo para capturas de QA: `-previewSummary` abre el resumen de fin de entreno.
+    @State private var previewSummary = ProcessInfo.processInfo.arguments.contains("-previewSummary")
+    @State private var previewTracker = ProcessInfo.processInfo.arguments.contains("-previewWorkout")
+    @State private var previewWorkout: ActiveWorkout?
+    #endif
+
+    init() {
+        #if DEBUG
+        // Solo para capturas de QA: `-section=nutrition` abre esa pestaña al lanzar.
+        if let arg = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("-section=") }),
+           let section = AppSection(rawValue: String(arg.dropFirst("-section=".count))) {
+            _selection = State(initialValue: section)
+        }
+        // QA del Admin: abre el cajón lateral nada más entrar.
+        if ProcessInfo.processInfo.arguments.contains("-openAdminMenu") {
+            _adminMenuOpen = State(initialValue: true)
+        }
+        #endif
+    }
 
     private var initial: String {
         String((accounts.accounts.first { $0.id == session.userIdString }?.name ?? "?").prefix(1)).uppercased()
@@ -144,7 +168,9 @@ struct MainShell: View {
     var body: some View {
         Group {
             #if os(iOS)
-            if sizeClass == .compact && session.role == .user {
+            if sizeClass == .compact && session.role == .admin {
+                adminShell
+            } else if sizeClass == .compact && session.role == .user {
                 // Como la web en el móvil: cabecera con campana y avatar, y barra flotante abajo.
                 // La barra reserva su espacio: el final de cada pantalla queda siempre por encima de ella.
                 NavigationStack {
@@ -156,7 +182,7 @@ struct MainShell: View {
                             let current = selection ?? .home
                             VStack(alignment: .leading, spacing: 4) {
                                 ZStack {
-                                    if current == .home { Text("Hoy").font(.apHeadline).accessibilityAddTraits(.isHeader) }
+                                    // El saludo con la fecha ya dice que es hoy: sin título duplicado.
                                     HStack { Spacer(); HeaderButtons(initial: initial, avatar: accounts.accounts.first { $0.id == session.userIdString }?.avatar) { showSettings = true } }
                                 }
                                 .frame(height: 44)
@@ -188,10 +214,35 @@ struct MainShell: View {
             split
             #endif
         }
+        #if DEBUG
+        .task {
+            if (previewSummary || previewTracker), previewWorkout == nil { previewWorkout = Self.mockWorkout() }
+        }
+        .sheet(isPresented: $previewSummary) {
+            if let w = previewWorkout {
+                WorkoutSummaryView(workout: w, rpe: 8) { previewSummary = false }
+            }
+        }
+        .sheet(isPresented: $previewTracker) {
+            if let w = previewWorkout {
+                NavigationStack {
+                    WorkoutView(workout: w, userId: UUID()) { _ in previewTracker = false }
+                }
+            }
+        }
+        #endif
+        #if DEBUG
+        .task {
+            if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let line = "role=\(session.role) compact=\(sizeClass == .compact) selection=\(String(describing: selection))\n"
+                try? line.write(to: docs.appendingPathComponent("mainshell.log"), atomically: true, encoding: .utf8)
+            }
+        }
+        #endif
         .onReceive(NotificationCenter.default.publisher(for: .goToSection)) { note in
             if let s = note.object as? AppSection { selection = s }
         }
-        .onChange(of: session.role) { _, _ in selection = nil }
+        .onChange(of: session.role) { _, _ in selection = nil; adminMenuOpen = false }
         .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
             if session.role == .user && selection != .train {
                 selection = .train
@@ -225,6 +276,86 @@ struct MainShell: View {
         )
         .accessibilityAddTraits(active ? .isSelected : [])
     }
+
+    #if os(iOS)
+    /// Admin en iPhone: contenido a pantalla completa y la barra lateral como cajón
+    /// (hamburguesa). Al elegir una sección el cajón se cierra y cambia el contenido.
+    private var adminShell: some View {
+        ZStack(alignment: .leading) {
+            NavigationStack {
+                SectionView(section: adminSection, onNavigate: { adminSection = $0 })
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                Haptics.selection()
+                                withAnimation(.easeOut(duration: 0.22)) { adminMenuOpen = true }
+                            } label: {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.inter(.body).weight(.semibold))
+                                    .foregroundStyle(Palette.foreground)
+                            }
+                            .accessibilityLabel("Menú de administración")
+                        }
+                    }
+            }
+
+            if adminMenuOpen {
+                Color.black.opacity(0.5)
+                    .ignoresSafeArea()
+                    .onTapGesture { closeAdminMenu() }
+                    .transition(.opacity)
+                    .accessibilityLabel("Cerrar menú")
+                    .accessibilityAddTraits(.isButton)
+
+                AdminSidebarView(selection: $adminSection, onClose: closeAdminMenu)
+                    .frame(width: 310)
+                    .transition(.move(edge: .leading))
+            }
+        }
+        .animation(.easeOut(duration: 0.22), value: adminMenuOpen)
+    }
+
+    private func closeAdminMenu() {
+        withAnimation(.easeOut(duration: 0.2)) { adminMenuOpen = false }
+    }
+
+    #endif
+
+    #if DEBUG
+    @MainActor
+    static func mockWorkout() -> ActiveWorkout {
+        func ex(_ id: String, _ name: String, _ series: Int, _ reps: String, _ weight: String, _ rest: String, _ muscle: String) -> GymExercise {
+            let json = """
+            {"exercise_id":"\(id)","name":"\(name)","series":\(series),"reps":"\(reps)","weight":"\(weight)","rest":"\(rest)","muscle_group":"\(muscle)"}
+            """
+            return try! JSONDecoder().decode(GymExercise.self, from: Data(json.utf8))
+        }
+        let day = DayPlan(day: DayNames.today, type: "gimnasio", sport: nil, intensity: nil, duration: nil,
+                          routine_name: "Full Body B",
+                          muscle_focus: "Hombros, piernas, glúteos, isquiotibiales y core",
+                          exercises: [
+                            ex("1", "Press militar", 4, "4-6", "40", "180s", "Hombros"),
+                            ex("2", "Sentadilla", 4, "6", "100", "180s", "Piernas"),
+                            ex("3", "Remo con barra", 3, "10", "60", "90s", "Espalda"),
+                          ], custom: nil)
+        let w = ActiveWorkout(userId: "preview", day: day, previous: [:])
+        w.draft.startedAt = Date().addingTimeInterval(-42 * 60)
+        for (name, weight) in [("Press militar", "40"), ("Sentadilla", "100"), ("Remo con barra", "60")] {
+            if var sets = w.draft.logs[name] {
+                for i in sets.indices {
+                    sets[i].weight = weight
+                    sets[i].done = i < 2
+                    sets[i].rpe = i < 2 ? 8 : nil
+                }
+                if name == "Press militar" { sets[0].failure = true }
+                w.draft.logs[name] = sets
+            }
+        }
+        w.draft.supersets = [["Press militar", "Sentadilla"]]
+        w.records = ["Press militar", "Sentadilla"]
+        return w
+    }
+    #endif
 
     private var split: some View {
         NavigationSplitView {
@@ -352,7 +483,7 @@ extension AppSection {
     var navTitle: String {
         switch self {
         case .home: "Hoy"
-        case .train: "Plan"
+        case .train: "Entrenar"
         case .progress: "Progreso"
         default: title
         }

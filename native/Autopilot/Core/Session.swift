@@ -26,6 +26,12 @@ final class SessionModel: ObservableObject {
                 if let session { accounts.remember(session); await loadRole() }
                 let currentLocked = accounts.accounts.contains { $0.id == userIdString && $0.requirePassword }
                 showPicker = accounts.accounts.count >= 2 || currentLocked
+                #if DEBUG
+                // Solo para capturas de QA: `-skipPicker` entra directo con la sesión activa.
+                if ProcessInfo.processInfo.arguments.contains("-skipPicker") { showPicker = false }
+                #endif
+                // Cuenta predeterminada: si está disponible se entra directo en ella.
+                if await openDefaultIfNeeded() { showPicker = false }
                 ready = true
             case .signedIn, .tokenRefreshed, .userUpdated:
                 self.session = session
@@ -39,12 +45,50 @@ final class SessionModel: ObservableObject {
         }
     }
 
+    /// Entra directamente en la cuenta predeterminada al abrir. Devuelve `true` si la
+    /// app ya puede mostrarse sin pasar por «¿Quién entrena?».
+    private func openDefaultIfNeeded() async -> Bool {
+        guard let def = accounts.defaultAccount else { return false }
+        // Si pide contraseña o su sesión caducó se mantiene el comportamiento de siempre.
+        guard !def.requirePassword, !def.expired else { return false }
+        if def.id == userIdString { return true }
+        switch await accounts.switchTo(def.id) {
+        case .ok:
+            await switched()
+            return true
+        case .offline, .expired, .wrong:
+            return false
+        }
+    }
+
     private func loadRole() async {
-        guard let id = userId else { return }
+        guard let id = userId else {
+            role = .user
+            return
+        }
+        // Mientras se consultan los roles se puede cambiar de cuenta: el resultado solo se publica
+        // si sigue siendo la misma cuenta (antes, al cambiar de admin a usuario, podía quedar .admin).
+        // No se pone `.user` por defecto a propósito: MainShell reinicia la sección al cambiar el rol
+        // y un cambio transitorio devolvería al usuario a Inicio.
         func has(_ r: String) async -> Bool {
             (try? await Backend.client.rpc("has_role", params: ["_user_id": id.uuidString, "_role": r]).execute().value as Bool) ?? false
         }
-        if await has("admin") { role = .admin } else if await has("trainer") { role = .trainer } else { role = .user }
+        let isAdmin = await has("admin")
+        guard userId == id else { return }
+        #if DEBUG
+        // QA visual del panel de Admin sin cuenta admin en el dispositivo.
+        if ProcessInfo.processInfo.arguments.contains("-forceAdmin") {
+            role = .admin
+            return
+        }
+        #endif
+        if isAdmin {
+            role = .admin
+            return
+        }
+        let isTrainer = await has("trainer")
+        guard userId == id else { return }
+        role = isTrainer ? .trainer : .user
     }
 
     enum LoginError: Error { case invalid, unconfirmed, rateLimited, offline }
@@ -92,6 +136,8 @@ final class SessionModel: ObservableObject {
     }
 
     func switched() async {
+        // Si no se puede leer la sesión nueva, se prefiere pedir entrada a dejar en pantalla los
+        // datos de la cuenta anterior (con `try?` queda `nil` → LoginView).
         session = try? await Backend.client.auth.session
         await loadRole()
         showPicker = false

@@ -22,6 +22,7 @@ struct AdminLandingView: View {
     @State private var testimonials: [Testimonial] = []
     @State private var recs: [Recommendation] = []
     @State private var loading = true
+    @State private var failed = false
     @State private var toast: String?
     @State private var importing: String?
     @State private var uploading = false
@@ -32,9 +33,16 @@ struct AdminLandingView: View {
 
     var body: some View {
         ScrollView {
-            if loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 60) } else {
-                VStack(alignment: .leading, spacing: 40) {
-                    Text("Lo que se ve en la home pública y la IA que lo genera.").font(.apSubhead).foregroundStyle(Palette.muted)
+            if loading {
+                AdminLoadingView(message: "Cargando la landing")
+            } else if failed {
+                AdminErrorCard(message: "No se pudo cargar el contenido de la landing. Comprueba la conexión y vuelve a intentarlo.") {
+                    Task { await load() }
+                }
+                .padding(20)
+            } else {
+                VStack(alignment: .leading, spacing: 24) {
+                    AdminPaneHeader("Lo que se ve en la home pública y la IA que lo genera.")
                     aiSection
                     section("Secciones visibles en la landing", "Activa o desactiva bloques enteros de la home pública.") {
                         group {
@@ -54,18 +62,19 @@ struct AdminLandingView: View {
                         .buttonStyle(.pillSecondary).frame(maxWidth: 280)
                         if recs.isEmpty { EmptyStateView(symbol: "sparkles", title: "Sin recomendaciones", message: "Añade suplementos o material con su enlace.") }
                         ForEach($recs) { $r in
-                            VStack(spacing: 8) {
+                            Card(padding: 16) {
                                 HStack {
+                                    Text(r.title.isEmpty ? "Recomendación" : r.title).font(.apSubhead.weight(.semibold)).lineLimit(1)
                                     Spacer()
-                                    Button { recs.removeAll { $0.id == r.id } } label: { Image(systemName: "trash").foregroundStyle(Palette.destructive) }
-                                        .buttonStyle(.plain).accessibilityLabel("Eliminar \(r.title.isEmpty ? "recomendación" : r.title)")
+                                    AdminIconButton(symbol: "trash", label: "Eliminar \(r.title.isEmpty ? "recomendación" : r.title)", tint: Palette.destructive) {
+                                        recs.removeAll { $0.id == r.id }
+                                    }
                                 }
                                 field("Título (Creatina Monohidratada)", $r.title)
                                 field("Por qué la recomiendas", $r.description)
                                 field("Etiqueta (Top, Recomendado…)", $r.badge)
                                 field("URL (afiliado o web)", $r.url)
                             }
-                            .padding(16).background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         }
                         Button("Guardar recomendaciones") { Task { await saveRecs() } }.buttonStyle(.pill).frame(maxWidth: 320)
                     }
@@ -79,7 +88,14 @@ struct AdminLandingView: View {
                             Button { importing = "hero_video_poster_url" } label: { Label("Subir póster", systemImage: "photo") }.buttonStyle(.pillSecondary)
                         }
                         .frame(maxWidth: 420).disabled(uploading)
-                        if uploading { HStack { ProgressView(); Text("Subiendo…").foregroundStyle(Palette.muted) } }
+                        if uploading {
+                            HStack(spacing: 8) {
+                                ProgressView().tint(Palette.gold)
+                                Text("Subiendo…").font(.apFootnote).foregroundStyle(Palette.muted)
+                            }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Subiendo el archivo del hero")
+                        }
                         Button("Guardar vídeo") { Task { await saveFields(["hero_video_url", "hero_video_poster_url"]) } }.buttonStyle(.pill).frame(maxWidth: 320)
                     }
                     section("Enlaces a la app (App Store / Google Play)", "Pega aquí las URLs cuando publiques la app. Si dejas un campo vacío, ese botón se ocultará en la web.") {
@@ -106,10 +122,14 @@ struct AdminLandingView: View {
                     section("Redes sociales", "Aparecen en el pie de la web y en los datos para buscadores. Escribe el usuario o el enlace.") {
                         group {
                             ForEach(Array(Self.networks.enumerated()), id: \.element.0) { i, n in
-                                HStack {
+                                HStack(spacing: 12) {
                                     Text(n.1).font(.apBody).frame(width: 110, alignment: .leading)
-                                    TextField(n.0 == "whatsapp" ? "Teléfono con prefijo" : "usuario", text: Binding(get: { social[n.0] ?? "" }, set: { social[n.0] = $0 })).textFieldStyle(.plain)
+                                        .lineLimit(1).minimumScaleFactor(0.8)
+                                    TextField(n.0 == "whatsapp" ? "Teléfono con prefijo" : "usuario",
+                                              text: Binding(get: { social[n.0] ?? "" }, set: { social[n.0] = $0 }))
+                                        .adminField()
                                         .textContentTypeCompat(.username)
+                                        .accessibilityLabel("\(n.1) en redes sociales")
                                 }
                                 .rowStyle(first: i == 0)
                             }
@@ -120,18 +140,18 @@ struct AdminLandingView: View {
                         Button { Task { await addTestimonial() } } label: { Label("Añadir testimonio", systemImage: "plus") }.buttonStyle(.pillSecondary).frame(maxWidth: 280)
                         if testimonials.isEmpty { EmptyStateView(symbol: "star", title: "Sin testimonios", message: "Añade el primero para mostrarlo en la landing.") }
                         ForEach($testimonials) { $t in
-                            VStack(spacing: 8) {
+                            Card(padding: 16) {
                                 field("Nombre", $t.name)
                                 field("Resultado (-8kg en 3 meses)", Binding(get: { t.result ?? "" }, set: { t.result = $0 }))
                                 field("Texto del testimonio", $t.text)
-                                HStack {
-                                    Button("Guardar") { Task { await saveTestimonial(t) } }.foregroundStyle(Palette.gold)
-                                    Spacer()
-                                    Button("Eliminar", role: .destructive) { Task { await deleteTestimonial(t) } }.foregroundStyle(Palette.destructive)
+                                HStack(spacing: 16) {
+                                    AdminTextButton(title: "Guardar") { Task { await saveTestimonial(t) } }
+                                    Spacer(minLength: 0)
+                                    AdminTextButton(title: "Eliminar", systemImage: "trash", tint: Palette.destructive) {
+                                        Task { await deleteTestimonial(t) }
+                                    }
                                 }
-                                .buttonStyle(.plain).frame(minHeight: 44)
                             }
-                            .padding(16).background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         }
                     }
                 }
@@ -141,6 +161,7 @@ struct AdminLandingView: View {
         .screenBackground()
         .overlay(alignment: .top) { ToastView(text: toast) }
         .task { await load() }
+        .refreshable { await load() }
         .fileImporter(isPresented: Binding(get: { importing != nil }, set: { if !$0 { importing = nil } }),
                       allowedContentTypes: importing == "hero_video_url" ? [.movie, .mpeg4Movie] : [.image]) { result in
             let field = importing
@@ -188,75 +209,89 @@ struct AdminLandingView: View {
     private var aiSection: some View {
         section("Claves de IA", "Toda la IA (vídeos e imágenes de ejercicios, blog, ordenar libros, precios, comidas, sugerencias del chat…) puede funcionar con la IA de Lovable o con tu clave de OpenAI.") {
             VStack(alignment: .leading, spacing: 8) {
-                Text("MOTOR DE TEXTO").font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
-                VStack(spacing: 0) {
+                ListGroupView(header: "Motor de texto") {
                     ForEach(Array(textOrder.enumerated()), id: \.element) { i, pid in
                         let p = Self.providers.first { $0.0 == pid }!
                         let on = textEnabled.contains(pid)
                         HStack(spacing: 6) {
                             Text(on ? "\(i + 1)" : "–").font(.apSubhead.monospacedDigit()).foregroundStyle(Palette.muted).frame(width: 18)
+                                .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(p.1).font(.apBody).foregroundStyle(on ? Palette.foreground : Palette.muted)
-                                Text(p.2).font(.apFootnote).foregroundStyle(Palette.muted)
+                                Text(p.2).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(2)
                             }
-                            Spacer()
-                            Button { move(pid, -1) } label: { Image(systemName: "arrow.up") }.buttonStyle(.plain).frame(width: 40, height: 44).disabled(i == 0).accessibilityLabel("Subir \(p.1)")
-                            Button { move(pid, 1) } label: { Image(systemName: "arrow.down") }.buttonStyle(.plain).frame(width: 40, height: 44).disabled(i == textOrder.count - 1).accessibilityLabel("Bajar \(p.1)")
-                            Toggle("", isOn: Binding(get: { on }, set: { toggleProvider(pid, $0) })).labelsHidden().tint(Palette.gold).accessibilityLabel("Usar \(p.1)")
+                            Spacer(minLength: 8)
+                            AdminIconButton(symbol: "arrow.up", label: "Subir \(p.1)") { move(pid, -1) }
+                                .disabled(i == 0)
+                            AdminIconButton(symbol: "arrow.down", label: "Bajar \(p.1)") { move(pid, 1) }
+                                .disabled(i == textOrder.count - 1)
+                            Toggle("", isOn: Binding(get: { on }, set: { toggleProvider(pid, $0) }))
+                                .labelsHidden().tint(Palette.gold).accessibilityLabel("Usar \(p.1)")
+                                .frame(minWidth: 44, minHeight: 44)
                         }
                         .foregroundStyle(Palette.muted)
                         .rowStyle(first: i == 0)
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 Text("Planes, blog, comidas, chat y clasificación. Se prueba en este orden y, si uno falla o no tiene saldo, se pasa al siguiente.")
                     .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text("MOTOR DE IMÁGENES").font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
-                SegmentedPill(options: Self.engines.map(\.1), selection: Binding(
-                    get: { Self.engines.firstIndex { $0.0 == (secrets["AI_MEDIA_PROVIDER"] ?? "auto") } ?? 0 },
-                    set: { i in Task { await saveSecret("AI_MEDIA_PROVIDER", Self.engines[i].0, "Imágenes: \(Self.engines[i].1)") } }))
-                Text(Self.engines.first { $0.0 == (secrets["AI_MEDIA_PROVIDER"] ?? "auto") }?.2 ?? "").font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
+                ListGroupView(header: "Motor de imágenes") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SegmentedPill(options: Self.engines.map(\.1), selection: Binding(
+                            get: { Self.engines.firstIndex { $0.0 == (secrets["AI_MEDIA_PROVIDER"] ?? "auto") } ?? 0 },
+                            set: { i in Task { await saveSecret("AI_MEDIA_PROVIDER", Self.engines[i].0, "Imágenes: \(Self.engines[i].1)") } }))
+                        Text(Self.engines.first { $0.0 == (secrets["AI_MEDIA_PROVIDER"] ?? "auto") }?.2 ?? "")
+                            .font(.apFootnote).foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(16)
+                }
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text("MOTOR DE VÍDEOS").font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
-                Toggle("Vídeos de ejercicios", isOn: Binding(get: { secrets["AI_VIDEO_ENABLED"] != "0" },
-                                                             set: { v in Task { await saveSecret("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa") } }))
-                    .tint(Palette.gold).rowStyle(first: true)
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                Text("Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios.").font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
+                ListGroupView(header: "Motor de vídeos") {
+                    Toggle("Vídeos de ejercicios", isOn: Binding(get: { secrets["AI_VIDEO_ENABLED"] != "0" },
+                                                                 set: { v in Task { await saveSecret("AI_VIDEO_ENABLED", v ? "1" : "0", v ? "Vídeos activados" : "Vídeos en pausa") } }))
+                        .tint(Palette.gold).rowStyle(first: true)
+                    Text("Usa el mismo motor que las imágenes. Apágalo para pausar la generación de vídeos de ejercicios.")
+                        .font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16).padding(.bottom, 12)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             VStack(alignment: .leading, spacing: 8) {
-                Text("CLAVES DE API").font(.apFootnote).foregroundStyle(Palette.muted).padding(.horizontal, 16)
-                VStack(spacing: 0) {
+                ListGroupView(header: "Claves de API") {
                     ForEach(Array(Self.aiKeys.enumerated()), id: \.element.0) { i, k in
                         VStack(alignment: .leading, spacing: 10) {
-                            HStack(alignment: .top) {
+                            HStack(alignment: .top, spacing: 8) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(k.1).font(.apBody)
                                     Text(k.2).font(.apFootnote).foregroundStyle(Palette.muted)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
-                                Spacer()
+                                Spacer(minLength: 8)
                                 if !(secrets[k.0] ?? "").isEmpty {
-                                    Button("Quitar") { Task { await removeSecret(k.0) } }.foregroundStyle(Palette.destructive).buttonStyle(.plain)
-                                        .accessibilityLabel("Quitar la clave de \(k.1)")
+                                    AdminTextButton(title: "Quitar", tint: Palette.destructive) {
+                                        Task { await removeSecret(k.0) }
+                                    }
+                                    .accessibilityLabel("Quitar la clave de \(k.1)")
                                 }
                             }
                             HStack(spacing: 8) {
                                 SecureField(k.3, text: Binding(get: { secrets[k.0] ?? "" }, set: { secrets[k.0] = $0 }))
-                                    .textFieldStyle(.plain).padding(.horizontal, 14).frame(minHeight: 44).background(Palette.secondary, in: Capsule())
+                                    .adminField()
                                     .accessibilityLabel("Clave de \(k.1)")
-                                Button("Guardar") { Task { await saveSecret(k.0, (secrets[k.0] ?? "").trimmingCharacters(in: .whitespaces), "Clave guardada") } }
-                                    .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).padding(.horizontal, 14).frame(minHeight: 44)
-                                    .background(Palette.gold.opacity(0.15), in: Capsule()).buttonStyle(.plain)
+                                AdminSmallAction(title: "Guardar") {
+                                    Task { await saveSecret(k.0, (secrets[k.0] ?? "").trimmingCharacters(in: .whitespaces), "Clave guardada") }
+                                }
+                                .accessibilityLabel("Guardar la clave de \(k.1)")
                             }
                         }
                         .padding(16)
-                        .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 16) } }
+                        .adminRowDivider(first: i == 0)
                     }
                 }
-                .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
         }
     }
@@ -286,36 +321,37 @@ struct AdminLandingView: View {
     }
 
     private func group<C: View>(@ViewBuilder content: () -> C) -> some View {
-        VStack(spacing: 0) { content() }.background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        AdminRows { content() }
     }
 
     private func field(_ placeholder: String, _ value: Binding<String>) -> some View {
-        TextField(placeholder, text: value, axis: .vertical).textFieldStyle(.plain)
-            .padding(.horizontal, 14).padding(.vertical, 10).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        TextField(placeholder, text: value, axis: .vertical)
+            .adminFieldBox(minHeight: 44)
+            .font(.apBody)
+            .accessibilityLabel(placeholder)
     }
 
     private func settingToggle(_ title: String, _ subtitle: String?, _ key: String, first: Bool = false) -> some View {
         Toggle(isOn: Binding(get: { settings.bool(key) }, set: { v in settings[key] = .bool(v); Task { await saveFields([key]) } })) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.apBody)
-                if let subtitle { Text(subtitle).font(.apFootnote).foregroundStyle(Palette.muted) }
+                if let subtitle { Text(subtitle).font(.apFootnote).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
             }
         }
         .tint(Palette.gold).padding(.vertical, 6).rowStyle(first: first)
     }
 
     private func settingNumber(_ title: String, _ subtitle: String?, _ key: String, first: Bool = false, autosave: Bool = true) -> some View {
-        HStack {
+        HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.apBody)
-                if let subtitle { Text(subtitle).font(.apFootnote).foregroundStyle(Palette.muted) }
+                if let subtitle { Text(subtitle).font(.apFootnote).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
             }
-            Spacer()
-            TextField("0", text: Binding(get: { settings.str(key) }, set: { settings[key] = .integer(Int($0) ?? 0) }))
-                .textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: 64, height: 36)
-                .padding(.horizontal, 8).background(Palette.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .onSubmit { if autosave { Task { await saveFields([key]) } } }
-                .accessibilityLabel(title)
+            Spacer(minLength: 12)
+            AdminNumberField(label: title,
+                             value: Binding(get: { Int(settings.str(key)) ?? 0 }, set: { settings[key] = .integer($0) }),
+                             width: 72,
+                             onSubmit: { if autosave { Task { await saveFields([key]) } } })
         }
         .padding(.vertical, 6).rowStyle(first: first)
     }
@@ -323,7 +359,10 @@ struct AdminLandingView: View {
     private func settingText(_ title: String, _ placeholder: String, _ key: String, first: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).font(.apFootnote).foregroundStyle(Palette.muted)
-            TextField(placeholder, text: Binding(get: { settings.str(key) }, set: { settings[key] = .string($0) }), axis: .vertical).textFieldStyle(.plain)
+            TextField(placeholder, text: Binding(get: { settings.str(key) }, set: { settings[key] = .string($0) }), axis: .vertical)
+                .adminFieldBox(minHeight: 44)
+                .font(.apBody)
+                .accessibilityLabel(title)
         }
         .padding(.vertical, 8).rowStyle(first: first)
     }
@@ -331,10 +370,18 @@ struct AdminLandingView: View {
     // MARK: Datos
 
     private func load() async {
-        let rows: [Row] = (try? await Backend.client.from("settings")
-            .select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, recommendations, landing_ebooks_count, landing_recommendations_count")
-            .limit(1).execute().value) ?? []
-        settings = rows.first ?? [:]
+        loading = true
+        do {
+            let rows: [Row] = try await Backend.client.from("settings")
+                .select("id, trainer_name, trainer_photo_url, trainer_bio, contact_phone, hero_video_url, hero_video_poster_url, app_store_url, play_store_url, show_app_download, transformation_slots, show_blog, show_ebooks, show_recommendations, recommendations, landing_ebooks_count, landing_recommendations_count")
+                .limit(1).execute().value
+            settings = rows.first ?? [:]
+            failed = false
+        } catch {
+            failed = true
+            loading = false
+            return
+        }
         let sl: [[String: AnyJSON]] = (try? await Backend.client.from("settings").select("social_links").limit(1).execute().value) ?? []
         if case .object(let o) = sl.first?["social_links"] { for (k, v) in o { if case .string(let s) = v { social[k] = s } } }
         if let data = try? JSONEncoder().encode(settings["recommendations"] ?? .array([])) { recs = (try? JSONDecoder().decode([Recommendation].self, from: data)) ?? [] }

@@ -1,20 +1,15 @@
 import SwiftUI
 import Supabase
 
-/// Entrenar, calcado de `WorkoutTracker.tsx` (antes de empezar): selector de días,
-/// portada, título, «N ejercicios · M series», «Empezar entrenamiento» y la lista «Ejercicios».
+/// Entrenar: la rutina semanal con las fotos de cada ejercicio y el descanso del día que toque.
+/// El detalle de la sesión de hoy vive en Inicio; aquí solo el plan de la semana.
 struct TrainView: View {
     @EnvironmentObject private var session: SessionModel
     @StateObject private var model = PlanModel()
     @State private var active: ActiveWorkout?
-    @State private var selectedDay: String = DayNames.today
     @State private var starting = false
-    @State private var tab = 0
-
-    private var currentPlan: DayPlan? {
-        guard let plan = model.days.first(where: { $0.day == selectedDay }) else { return nil }
-        return plan.isGym || plan.type == "actividad" ? plan : nil
-    }
+    /// Día con un entreno a medias guardado (su acción pasa a ser «Continuar entreno»).
+    @State private var resumableDay: String?
 
     var body: some View {
         ScrollView {
@@ -25,15 +20,17 @@ struct TrainView: View {
                         Text("Comprobando tu sesión…").font(.apSubhead).foregroundStyle(Palette.muted)
                     }
                     .frame(maxWidth: .infinity, minHeight: 300)
+                } else if model.days.isEmpty {
+                    EmptyStateView(symbol: "dumbbell",
+                                   title: model.error ?? "Aún no hay rutina",
+                                   message: model.error == nil ? "En cuanto tengamos tu plan, verás aquí tu semana."
+                                                               : "Desliza hacia abajo para volver a intentarlo.")
                 } else {
-                    SegmentedPill(options: ["Entrenar", "Rutina semanal"], selection: $tab)
-                    if tab == 1 { weeklyRoutine } else {
-                    if !model.days.isEmpty { dayPicker }
-                    if let plan = currentPlan {
-                        if plan.isGym { gymSummary(plan) } else { activityDay(plan) }
-                    } else {
-                        restDay
-                    }
+                    WeeklyRoutineView(days: model.days,
+                                      initialDay: DayNames.today,
+                                      doneToday: model.completedToday(DayNames.today),
+                                      resumableDay: resumableDay) { day in
+                        Task { await open(day) }
                     }
                 }
             }
@@ -41,12 +38,19 @@ struct TrainView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
-        .refreshable { await model.load(userId: session.userId) }
-        .task { await model.load(userId: session.userId) }
-        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await model.load(userId: session.userId) } }
-        .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in
-            if active == nil, let day = model.days.first(where: { $0.day == DayNames.today }), day.isGym { Task { await start(day) } }
+        .refreshable { await load() }
+        .task {
+            await load()
+            #if DEBUG
+            // QA: `-resumeDraft` reanuda el entreno a medias al abrir Entrenar.
+            if ProcessInfo.processInfo.arguments.contains("-resumeDraft"), active == nil,
+               let idString = session.userIdString, let draft = ActiveWorkout.restore(userId: idString) {
+                await open(draft.day.day)
+            }
+            #endif
         }
+        .onReceive(NotificationCenter.default.publisher(for: .refreshSection)) { _ in Task { await load() } }
+        .onReceive(NotificationCenter.default.publisher(for: .startTodayWorkout)) { _ in Task { await openToday() } }
         #if os(iOS)
         .fullScreenCover(item: $active) { workout in workoutStack(workout) }
         #else
@@ -58,168 +62,66 @@ struct TrainView: View {
         NavigationStack {
             WorkoutView(workout: workout, userId: session.userId ?? UUID()) { finished in
                 active = nil
-                if finished { Task { await model.load(userId: session.userId) } }
+                if finished { Task { await load() } }
             }
         }
     }
 
-    // MARK: Selector de día (tarjeta con 7 días; activo en dorado, hoy con texto dorado, punto si hay sesión)
+    // MARK: Cargar y abrir la sesión de la rutina
 
-    private var dayPicker: some View {
-        HStack(spacing: 4) {
-            ForEach(DayNames.all, id: \.self) { day in
-                let plan = model.days.first { $0.day == day }
-                let hasWork = plan?.isGym == true || plan?.type == "actividad"
-                let isActive = day == selectedDay
-                let isToday = day == DayNames.today
-                Button {
-                    guard day != selectedDay else { return }
-                    Haptics.selection()
-                    selectedDay = day
-                } label: {
-                    VStack(spacing: 4) {
-                        Text(String(day.prefix(3))).font(.apFootnote.weight(isActive || isToday ? .semibold : .regular))
-                        Circle()
-                            .fill(hasWork ? (isActive ? Color.black : Palette.gold) : Color.clear)
-                            .frame(width: 5, height: 5)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .foregroundStyle(isActive ? Color.black : (isToday ? Palette.gold : Palette.muted))
-                    .background(isActive ? Palette.gold : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(day + (hasWork ? "" : " · descanso") + (isToday ? " · hoy" : ""))
-                .accessibilityAddTraits(isActive ? .isSelected : [])
-            }
-        }
-        .padding(6)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    private func load() async {
+        await model.load(userId: session.userId)
+        // Entreno a medias guardado: la rutina lo ofrece como «Continuar entreno».
+        resumableDay = session.userIdString.flatMap { ActiveWorkout.restore(userId: $0)?.day.day }
+        // Calienta las fotos de la semana: al entrar en la rutina ya están listas.
+        let urls = model.days.flatMap { ($0.exercises ?? []).compactMap(\.image_url) }.compactMap(URL.init(string:))
+        ImageCache.shared.prefetch(urls, maxSide: 140)
     }
 
-    // MARK: Día de gimnasio
+    /// Abre el día elegido en la rutina: reanuda el entreno a medias, empieza uno nuevo
+    /// o, si es una actividad, la marca como hecha hoy.
+    private func open(_ day: String) async {
+        guard let plan = model.days.first(where: { $0.day == day }) else { return }
 
-    private func gymSummary(_ plan: DayPlan) -> some View {
-        let exercises = plan.exercises ?? []
-        let totalSets = exercises.reduce(0) { $0 + max($1.series, 1) }
-        let parts = (plan.routine_name ?? plan.muscle_focus ?? selectedDay).components(separatedBy: " · ")
-        let completed = model.completedToday(plan.day)
-        return VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 2) {
-                if let cover = exercises.first?.image_url, let url = URL(string: cover) {
-                    CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Palette.card }
-                        .frame(maxWidth: .infinity).frame(height: 192)
-                        .overlay(LinearGradient(colors: [.black.opacity(0.7), .clear], startPoint: .bottom, endPoint: .center))
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                        .padding(.bottom, 14)
-                        .accessibilityHidden(true)
-                }
-                Text(parts.first ?? "").font(.inter(size: 32, weight: .bold)).lineLimit(1)
-                    .accessibilityAddTraits(.isHeader)
-                if parts.count > 1 {
-                    Text(parts.dropFirst().joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted).lineLimit(1)
-                }
-                if !exercises.isEmpty {
-                    Text("\(exercises.count) ejercicios · \(totalSets) series").font(.apFootnote.monospacedDigit())
-                        .foregroundStyle(Palette.muted).padding(.top, 4)
-                }
-                if selectedDay != DayNames.today {
-                    Text("Se registra hoy · \(Date().formatted(.dateTime.weekday(.wide).day().month(.wide).locale(Locale(identifier: "es_ES"))))")
-                        .font(.apFootnote).foregroundStyle(Palette.muted).padding(.top, 4)
-                }
-                if completed {
-                    Label("Entrenamiento completado", systemImage: "checkmark.circle.fill").font(.apHeadline)
-                        .foregroundStyle(Palette.gold).padding(.top, 20)
-                } else if exercises.isEmpty {
-                    Text("Este día no tiene ejercicios asignados todavía.").font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 16)
-                } else {
-                    // Una sola acción dorada: si hay un entreno a medias de este día, la misma cápsula lo reanuda.
-                    let resumable = ActiveWorkout.restore(userId: session.userIdString ?? "").flatMap { $0.day.day == plan.day ? $0 : nil }
-                    Button {
-                        if let r = resumable { Haptics.tap(); active = ActiveWorkout(draft: r) } else { Task { await start(plan) } }
-                    } label: {
-                        if starting { ProgressView().tint(.black) }
-                        else { Label(resumable == nil ? "Empezar entrenamiento" : "Continuar entreno", systemImage: "play.fill") }
-                    }
-                    .buttonStyle(PillButtonStyle(kind: .primary, height: 56))
-                    .disabled(starting)
-                    .padding(.top, 24)
-                }
-            }
+        // Un borrador guardado se reanuda SIEMPRE, antes de cualquier otro guard: es un entreno
+        // en curso. Antes podía quedar bloqueado por «ya completado» o por `starting` colgado.
+        if let idString = session.userIdString,
+           let draft = ActiveWorkout.restore(userId: idString), draft.day.day == plan.day {
+            Haptics.tap()
+            starting = false
+            active = ActiveWorkout(draft: draft)
+            return
+        }
 
-            if !exercises.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Ejercicios").font(.apFootnote).textCase(.uppercase).foregroundStyle(Palette.muted).padding(.horizontal, 16)
-                    VStack(spacing: 0) {
-                        ForEach(Array(exercises.enumerated()), id: \.element.id) { i, ex in
-                            Button { Task { await start(plan, focus: i) } } label: {
-                                ExerciseListRow(exercise: ex, separator: i > 0, done: false)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(completed || starting)
-                        }
-                    }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                }
-            }
+        guard !starting, !model.completedToday(plan.day) else { return }
+        if plan.isGym {
+            guard !(plan.exercises ?? []).isEmpty else { return }
+            await start(plan)
+        } else {
+            guard let id = session.userId else { return }
+            starting = true
+            defer { starting = false }
+            Haptics.success()
+            try? await TrainingRepo.complete(userId: id, day: plan.day, date: LocalDate.string(), rpe: nil)
+            await load()
         }
     }
 
-    // MARK: Actividad y descanso
-
-    private func activityDay(_ plan: DayPlan) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(plan.sport ?? "Actividad").font(.apTitle2).padding(.horizontal, 16)
-            VStack(spacing: 0) {
-                infoRow("flame", "Intensidad", plan.intensity)
-                Divider().overlay(Palette.separator).padding(.leading, 52)
-                infoRow("clock", "Duración", plan.duration)
-            }
-            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            Button(model.completedToday(plan.day) ? "Actividad completada" : "Marcar actividad como hecha") {
-                Task {
-                    guard let id = session.userId else { return }
-                    try? await TrainingRepo.complete(userId: id, day: plan.day, date: LocalDate.string(), rpe: nil)
-                    Haptics.success()
-                    await model.load(userId: id)
-                }
-            }
-            .buttonStyle(.pill)
-            .disabled(model.completedToday(plan.day))
+    /// Aviso «Empezar entreno de hoy» (menú del Mac): abre la sesión de hoy si toca.
+    private func openToday() async {
+        guard active == nil else { return }
+        // Si hay un borrador de hoy, se reanuda aunque el plan aún no haya cargado.
+        if let idString = session.userIdString,
+           let draft = ActiveWorkout.restore(userId: idString), draft.day.day == DayNames.today {
+            Haptics.tap()
+            starting = false
+            active = ActiveWorkout(draft: draft)
+            return
         }
-    }
-
-    private func infoRow(_ symbol: String, _ title: String, _ value: String?) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol).foregroundStyle(Palette.gold).frame(width: 24).accessibilityHidden(true)
-            Text(title).font(.apBody)
-            Spacer()
-            Text(value ?? "—").font(.apBody).foregroundStyle(Palette.muted)
-        }
-        .padding(.horizontal, 16).frame(minHeight: 50)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var restDay: some View {
-        RestCard(title: "Día de descanso", message: "Recupera, o elige otra sesión de tu semana") {
-            FlowRow {
-                ForEach(model.days.filter { $0.type == "actividad" || !($0.exercises ?? []).isEmpty }) { p in
-                    Button(p.day) { Haptics.selection(); selectedDay = p.day }
-                        .font(.apSubhead.weight(.medium))
-                        .padding(.horizontal, 16).frame(minHeight: 44)
-                        .background(Color.white.opacity(0.1), in: Capsule())
-                        .buttonStyle(.plain)
-                }
-            }
-        }
-    }
-
-    /// «Rutina semanal», calcada de `TrainingPlanView.tsx`.
-    private var weeklyRoutine: some View {
-        WeeklyRoutineView(days: model.days, initialDay: selectedDay) { day in
-            selectedDay = day; tab = 0
-        }
+        if model.days.isEmpty { await load() }
+        guard let day = model.days.first(where: { $0.day == DayNames.today }), day.isGym,
+              !model.completedToday(day.day) else { return }
+        await open(day.day)
     }
 
     private func start(_ day: DayPlan, focus: Int = 0) async {
@@ -276,7 +178,7 @@ struct ExerciseThumb: View {
         ZStack {
             RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Palette.secondary)
             if let url, let u = URL(string: url) {
-                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                CachedAsyncImage(url: u, maxSide: max(140, size * 2)) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
             } else {
                 Image(systemName: "dumbbell").foregroundStyle(Palette.muted)
             }
@@ -341,10 +243,16 @@ final class PlanModel: ObservableObject {
 }
 
 
-/// `TrainingPlanView` de la web: tira de días, la sesión elegida con su lista y las herramientas del plan.
+/// `TrainingPlanView` de la web: tira de días y la sesión elegida con las fotos de sus ejercicios.
+/// Es lo único que se muestra en Entrenar, junto con el descanso del día que toque.
 struct WeeklyRoutineView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let days: [DayPlan]
     let initialDay: String
+    /// El entreno de hoy ya está hecho: su acción pasa a ser «completado».
+    var doneToday = false
+    /// Día con un entreno a medias: su acción pasa a ser «Continuar entreno».
+    var resumableDay: String? = nil
     var onOpen: (String) -> Void
     @State private var expanded: String?
     @State private var detail: GymExercise?
@@ -371,29 +279,52 @@ struct WeeklyRoutineView: View {
         .sheet(item: $detail) { TechniqueSheet(exercise: $0).presentationBackground(Palette.card) }
     }
 
+    /// Tira de días con una sola selección visible: el día elegido va en píldora dorada y texto
+    /// negro; el día de hoy, si no está elegido, solo se insinúa con un punto dorado. Así HOY y
+    /// SELECCIONADO nunca compiten ni se confunden.
     private var dayStrip: some View {
         HStack(spacing: 4) {
             ForEach(DayNames.all, id: \.self) { day in
                 let plan = workPlan(day)
                 let isToday = day == DayNames.today
                 let isExpanded = expanded == day
+                // Los 7 días se pueden tocar: los que no tienen sesión muestran su descanso.
                 Button {
                     Haptics.selection()
-                    withAnimation(.snappy) { expanded = isExpanded ? nil : day }
+                    withAnimation(reduceMotion ? nil : .snappy) { expanded = day }
                 } label: {
-                    Text(String(day.prefix(3))).font(.apSubhead.weight(.semibold))
-                        .foregroundStyle(isExpanded || isToday ? Palette.gold : plan != nil ? Palette.foreground : Palette.muted.opacity(0.6))
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(isExpanded ? Palette.gold.opacity(0.15) : (isToday || plan != nil) ? Palette.secondary : .clear))
+                    VStack(spacing: 3) {
+                        Text(String(day.prefix(3))).font(.apSubhead.weight(isExpanded ? .semibold : .medium))
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                        // El punto ocupa su hueco siempre: las iniciales de los 7 días comparten
+                        // línea base, haya punto o no.
+                        Circle()
+                            .fill(isToday ? (isExpanded ? Color.black : Palette.gold) : Color.clear)
+                            .frame(width: 4, height: 4)
+                    }
+                    .foregroundStyle(isExpanded ? Color.black
+                                     : (isToday || plan != nil) ? Palette.foreground : Palette.muted)
+                    .frame(width: 44, height: 44)
+                    .background {
+                        if isExpanded { Circle().fill(Palette.gold) }
+                        else if plan != nil { Circle().fill(Palette.secondary) }
+                    }
+                    .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .disabled(plan == nil)
                 .frame(maxWidth: .infinity)
-                .accessibilityLabel("\(day), \(plan?.title ?? "descanso")\(isToday ? ", hoy" : "")")
+                .accessibilityLabel("\(day)\(isToday ? ", hoy" : ""), \(plan.map { "sesión: \($0.title)" } ?? "descanso")")
+                .accessibilityAddTraits(isExpanded ? .isSelected : [])
+                .accessibilityValue(isToday ? "hoy" : "")
             }
         }
         .padding(6)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        // Control compacto de 7 columnas fijas: se limita el crecimiento del texto para que las
+        // iniciales nunca se trunquen con Dynamic Type. El nombre completo del día lo lee VoiceOver.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+        .accessibilityElement(children: .contain)
+        .sensoryFeedback(.selection, trigger: expanded)
     }
 
     @ViewBuilder private func session(_ day: String, _ plan: DayPlan) -> some View {
@@ -406,98 +337,250 @@ struct WeeklyRoutineView: View {
                 Text(plan.title).font(.apTitle1)
                 if plan.isGym, let summary { Text(summary).font(.apSubhead).foregroundStyle(Palette.muted).padding(.top, 2) }
             }
-            if !plan.isGym || !exercises.isEmpty {
-                Button("Abrir \(plan.isGym ? "sesión" : "actividad") del \(day.lowercased())") { Haptics.tap(); onOpen(day) }.buttonStyle(.pill)
-            }
+            action(day, plan)
             if plan.isGym {
                 if !exercises.isEmpty {
                     VStack(spacing: 0) {
                         ForEach(Array(exercises.enumerated()), id: \.offset) { i, ex in
                             Button { detail = ex } label: {
                                 HStack(spacing: 12) {
+                                    // Miniaturas uniformes (44) y mismo padding en todas las filas.
                                     ExerciseThumb(url: ex.image_url, size: 44)
-                                    HStack(spacing: 8) {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(ex.name).font(.apBody).lineLimit(2)
-                                            let info = [ex.rest, ex.muscle_group].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
-                                            if !info.isEmpty { Text(info).font(.apSubhead).foregroundStyle(Palette.muted).lineLimit(1) }
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(ex.name).font(.apHeadline).lineLimit(2)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                        let info = [ex.rest, ex.muscle_group].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+                                        if !info.isEmpty {
+                                            Text(info).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
                                         }
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        Text("\(ex.series) × \(ex.reps)").font(.apBody.monospacedDigit()).foregroundStyle(Palette.muted)
-                                        Image("lu-chevron-left").renderingMode(.template).resizable().frame(width: 16, height: 16)
-                                            .rotationEffect(.degrees(180)).foregroundStyle(Palette.muted.opacity(0.6))
                                     }
-                                    .padding(.vertical, 10).padding(.trailing, 16)
-                                    .overlay(alignment: .bottom) { if i < exercises.count - 1 { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    // Ancho propio y números tabulares: la columna queda alineada
+                                    // a la derecha en todas las filas y no se parte nunca.
+                                    Text("\(ex.series) × \(ex.reps)").font(.apSubhead.monospacedDigit())
+                                        .foregroundStyle(Palette.muted)
+                                        .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                                    Image("lu-chevron-left").renderingMode(.template).resizable().frame(width: 16, height: 16)
+                                        .rotationEffect(.degrees(180)).foregroundStyle(Palette.muted.opacity(0.6))
+                                        .accessibilityHidden(true)
                                 }
-                                .padding(.leading, 16).frame(minHeight: 44).contentShape(Rectangle())
+                                .padding(.horizontal, 16).padding(.vertical, 10)
+                                .frame(minHeight: 64)
+                                .overlay(alignment: .bottom) {
+                                    // 16 + 44 (foto) + 12: el separador empieza donde el texto.
+                                    if i < exercises.count - 1 {
+                                        Rectangle().fill(Palette.separator).frame(height: 0.5)
+                                            .padding(.leading, 72).padding(.trailing, 16)
+                                    }
+                                }
+                                .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button { Haptics.tap(); detail = ex } label: {
+                                    Label("Ficha de técnica", systemImage: "info.circle")
+                                }
+                            }
+                            .accessibilityHint("Abre la ficha de técnica del ejercicio")
                         }
                     }
                     .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
             } else {
                 VStack(spacing: 0) {
                     infoRow("lu-flame", "Intensidad", plan.intensity ?? "", last: false)
-                    infoRow("lu-clock", "Duración", plan.duration ?? "", last: true)
+                    infoRow("lu-clock", "Duración", planDurations(plan), last: true)
                 }
                 .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
         }
     }
 
+    /// Acción del día elegido: empezar o continuar el entreno, marcar la actividad o el estado hecho.
+    @ViewBuilder private func action(_ day: String, _ plan: DayPlan) -> some View {
+        let exercises = plan.exercises ?? []
+        let done = day == DayNames.today && doneToday
+        if plan.isGym {
+            if done {
+                completedLabel("Entrenamiento completado")
+            } else if exercises.isEmpty {
+                Text("Este día no tiene ejercicios asignados todavía.")
+                    .font(.apSubhead).foregroundStyle(Palette.muted)
+            } else {
+                Button(resumableDay == day ? "Continuar entreno" : "Empezar entrenamiento") { Haptics.tap(); onOpen(day) }
+                    .buttonStyle(.pill)
+            }
+        } else if done {
+            completedLabel("Actividad completada")
+        } else {
+            Button("Marcar actividad como hecha") { Haptics.tap(); onOpen(day) }.buttonStyle(.pill)
+        }
+    }
+
+    /// Estado «hecho» del día: misma forma y alto que la píldora de acción, en verde y sin acción.
+    private func completedLabel(_ title: String) -> some View {
+        Label(title, systemImage: "checkmark.circle.fill")
+            .font(.apHeadline).foregroundStyle(Palette.success)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(Palette.success.opacity(0.14), in: Capsule())
+            .accessibilityElement(children: .combine)
+    }
+
+    /// Duración del plan; si el campo viene vacío, se estima por series y descansos.
+    private func planDurations(_ plan: DayPlan) -> String {
+        if let d = plan.duration?.trimmingCharacters(in: .whitespaces), !d.isEmpty { return d }
+        let exercises = plan.exercises ?? []
+        guard !exercises.isEmpty else { return "—" }
+        let seconds = exercises.reduce(0.0) { total, e in
+            let rest = Double(e.rest.filter { $0.isNumber }) ?? 60
+            return total + Double(max(e.series, 1)) * (rest + 40)
+        }
+        return "≈ \(Int((seconds / 60).rounded())) min"
+    }
+
     private func infoRow(_ icon: String, _ title: String, _ value: String, last: Bool) -> some View {
         HStack(spacing: 12) {
-            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20).foregroundStyle(Palette.muted).frame(width: 28)
-            HStack { Text(title).font(.apBody); Spacer(); Text(value).font(.apBody).foregroundStyle(Palette.muted) }
-                .frame(minHeight: 44)
-                .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20)
+                .foregroundStyle(Palette.muted).frame(width: 28)
+            Text(title).font(.apBody)
+            Spacer(minLength: 8)
+            Text(value).font(.apBody).foregroundStyle(Palette.muted)
+                .lineLimit(1).fixedSize(horizontal: true, vertical: false)
         }
+        .frame(minHeight: 48)
         .padding(.horizontal, 16)
-    }
-
-    @ViewBuilder private func rest(_ day: String) -> some View {
-        let i = DayNames.all.firstIndex(of: day) ?? 0
-        let next = (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
-        VStack(spacing: 8) {
-            Image("lu-moon").renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
-            Text(day == DayNames.today ? "Hoy es día de descanso" : "\(day) es día de descanso").font(.apHeadline)
-            Text("Toca otro día para ver su sesión.").font(.apSubhead).foregroundStyle(Palette.muted)
-            if let next {
-                Button("Ver el \(next.lowercased())") { Haptics.selection(); withAnimation(.snappy) { expanded = next } }
-                    .buttonStyle(.pillSecondary).fixedSize().padding(.top, 8)
+        .overlay(alignment: .bottom) {
+            // 16 + 28 (icono) + 12: el separador empieza donde empieza el texto.
+            if !last {
+                Rectangle().fill(Palette.separator).frame(height: 0.5)
+                    .padding(.leading, 56).padding(.trailing, 16)
             }
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 32)
+        .accessibilityElement(children: .combine)
     }
 
-    private func emptyCard(icon: String, title: String, message: String) -> some View {
-        VStack(spacing: 8) {
-            Image(icon).renderingMode(.template).resizable().frame(width: 28, height: 28).foregroundStyle(Palette.gold)
-            Text(title).font(.apHeadline)
-            Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+    /// Descanso del día elegido: luna, eyebrow, título, subtexto y acción en el mismo eje, con el
+    /// radio hero y la misma altura reservada que la tarjeta de descanso de Inicio.
+    @ViewBuilder private func rest(_ day: String) -> some View {
+        let i = DayNames.all.firstIndex(of: day) ?? 0
+        let nextDay = (1...7).map { DayNames.all[(i + $0) % 7] }.first { workPlan($0) != nil }
+        let nextPlan = nextDay.flatMap { workPlan($0) }
+        let exercises = nextPlan?.exercises ?? []
+        // Portada de la próxima sesión: la foto del primer ejercicio que tenga imagen.
+        let cover = exercises.compactMap(\.image_url).first { !$0.isEmpty }
+        VStack(alignment: .leading, spacing: 0) {
+            // La foto de la próxima sesión se ve arriba; el texto va abajo, sobre el degradado.
+            Spacer(minLength: 112)
+
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(Palette.gold.opacity(0.18)).frame(width: 28, height: 28)
+                    Image("lu-moon").renderingMode(.template).resizable().frame(width: 14, height: 14)
+                        .foregroundStyle(Palette.gold)
+                }
+                Text("Descanso").font(.apCaption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                    .foregroundStyle(Palette.gold)
+            }
+            .accessibilityHidden(true)
+
+            Text(day == DayNames.today ? "Hoy toca descansar" : "El \(day.lowercased()) toca descansar")
+                .font(.apTitle2).multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 12)
+                .accessibilityAddTraits(.isHeader)
+            Text("Recupera; toca otro día para ver su sesión.")
+                .font(.apSubhead).foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 32).padding(.horizontal, 24)
-        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 24)
+        // Misma altura mínima que `RestCard` en Inicio: con foto la tarjeta crece lo justo.
+        .frame(maxWidth: .infinity, minHeight: 288, alignment: .topLeading)
+        .background {
+            GeometryReader { geo in
+                ZStack {
+                    Group {
+                        if let cover, let url = URL(string: cover) {
+                            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { restBackdrop }
+                        } else {
+                            restBackdrop
+                        }
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    // Degradado: la portada se ve arriba y el texto queda legible abajo.
+                    LinearGradient(stops: [
+                        .init(color: .black.opacity(0.05), location: 0),
+                        .init(color: .black.opacity(0.30), location: 0.32),
+                        .init(color: .black.opacity(0.72), location: 0.58),
+                        .init(color: .black.opacity(0.94), location: 0.82),
+                        .init(color: .black.opacity(0.98), location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                }
+            }
+            .accessibilityHidden(true)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+    }
+
+    /// Fondo elegante cuando la próxima sesión aún no tiene foto: degradado de tarjeta y halo dorado.
+    private var restBackdrop: some View {
+        LinearGradient(colors: [Palette.secondary, Palette.card], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .overlay(alignment: .topTrailing) {
+                Circle()
+                    .fill(RadialGradient(colors: [Palette.gold.opacity(0.20), .clear], center: .center, startRadius: 0, endRadius: 150))
+                    .frame(width: 300, height: 300)
+                    .offset(x: 90, y: -120)
+            }
+    }
+
+    /// «N ejercicios · M series» para el gimnasio; intensidad y duración para una actividad.
+
+    /// Estado sin día elegido: misma tarjeta, mismo radio y misma altura que el descanso, para que
+    /// pasar de un día a otro no cambie el tamaño del bloque.
+    private func emptyCard(icon: String, title: String, message: String) -> some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Circle().fill(Palette.gold.opacity(0.15)).frame(width: 64, height: 64)
+                Image(icon).renderingMode(.template).resizable().frame(width: 26, height: 26).foregroundStyle(Palette.gold)
+            }
+            .accessibilityHidden(true)
+            Text(title).font(.apHeadline).padding(.top, 16)
+            Text(message).font(.apSubhead).foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+        }
+        .padding(.horizontal, 20).padding(.vertical, 24)
+        .frame(maxWidth: .infinity, minHeight: 288)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
     private var tools: some View {
         VStack(spacing: 0) {
             Button { copy() } label: { toolRow(copied ? "lu-check" : "lu-copy", copied ? "Plan copiado" : "Copiar plan", last: false) }.buttonStyle(.plain)
-            ShareLink(item: PlanText.file(days)) { toolRow("lu-download", "Descargar plan", last: false) }.buttonStyle(.plain)
-            ShareLink(item: PlanText.calendar(days)) { toolRow("lu-calendar", "Exportar plan al calendario", last: true) }.buttonStyle(.plain)
+            ShareLink(item: PlanText.file(days)) { toolRow("lu-download", "Descargar plan", last: true) }.buttonStyle(.plain)
         }
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private func toolRow(_ icon: String, _ label: String, last: Bool) -> some View {
         HStack(spacing: 12) {
-            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20).foregroundStyle(Palette.muted).frame(width: 28)
-            Text(label).font(.apBody).foregroundStyle(Palette.foreground).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
+            Image(icon).renderingMode(.template).resizable().frame(width: 20, height: 20)
+                .foregroundStyle(Palette.muted).frame(width: 28)
+            Text(label).font(.apBody).foregroundStyle(Palette.foreground)
+                .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
         }
-        .padding(.leading, 16).contentShape(Rectangle())
+        .padding(.horizontal, 16)
+        .overlay(alignment: .bottom) {
+            if !last {
+                Rectangle().fill(Palette.separator).frame(height: 0.5)
+                    .padding(.leading, 56).padding(.trailing, 16)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     private func copy() {
@@ -512,7 +595,7 @@ struct WeeklyRoutineView: View {
     }
 }
 
-/// Texto del plan como `planToText` de la web, y un .ics semanal para el calendario.
+/// Texto del plan como `planToText` de la web (copiar y descargar).
 enum PlanText {
     static func text(_ days: [DayPlan]) -> String {
         var t = "MI PLAN DE ENTRENAMIENTO\n" + String(repeating: "═", count: 40) + "\n\n"
@@ -533,19 +616,5 @@ enum PlanText {
         try? text(days).write(to: u, atomically: true, encoding: .utf8)
         return u
     }
-    static func calendar(_ days: [DayPlan]) -> URL {
-        let codes = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-        let cal = Calendar(identifier: .iso8601)
-        let monday = cal.date(from: cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: Date())) ?? Date()
-        let f = DateFormatter(); f.dateFormat = "yyyyMMdd"
-        var ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Autopilot//Plan//ES\r\n"
-        for d in days where d.type == "gimnasio" || d.type == "actividad" {
-            guard let i = DayNames.all.firstIndex(of: d.day), let date = cal.date(byAdding: .day, value: i, to: monday) else { continue }
-            ics += "BEGIN:VEVENT\r\nUID:autopilot-\(codes[i])@autopilotplan.app\r\nDTSTART:\(f.string(from: date))T180000\r\nDURATION:PT1H\r\nRRULE:FREQ=WEEKLY;BYDAY=\(codes[i])\r\nSUMMARY:\(d.title)\r\nEND:VEVENT\r\n"
-        }
-        ics += "END:VCALENDAR\r\n"
-        let u = FileManager.default.temporaryDirectory.appendingPathComponent("plan-autopilot.ics")
-        try? ics.write(to: u, atomically: true, encoding: .utf8)
-        return u
-    }
+
 }

@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 /// Lenguaje de diseño de Autopilot (.claude/design): negro, dorado contenido,
 /// tarjetas sin borde de 22/28 pt, botones y campos en píldora, cifras grandes redondeadas.
@@ -7,6 +12,9 @@ enum Palette {
     static let foreground = Color.white
     static let card = Color(red: 0.107, green: 0.107, blue: 0.113)
     static let secondary = Color(red: 0.177, green: 0.177, blue: 0.183)
+    /// Texto secundario. Contraste medido (WCAG): 7,5:1 sobre `card`, 9,2:1 sobre negro y
+    /// 6,0:1 sobre `secondary`, así que ya cumple AA/AAA para texto normal; no hace falta
+    /// subir la luminosidad. Los grises con opacidad solo se usan en adornos (chevrones, iconos).
     static let muted = Color(red: 0.67, green: 0.67, blue: 0.69)
     static let gold = Color(red: 0.844, green: 0.706, blue: 0.356)
     static let destructive = Color(red: 1.0, green: 0.259, blue: 0.22)
@@ -23,6 +31,46 @@ enum Radius {
     static let card: CGFloat = 22
     static let hero: CGFloat = 28
 }
+
+/// Preferencias de accesibilidad del sistema leídas de forma síncrona: `@Environment` solo
+/// funciona dentro de una vista, y los `ButtonStyle` o los ayudantes estáticos no son vistas.
+enum A11y {
+    /// «Reducir movimiento»: las animaciones no esenciales deben quedar en cambio instantáneo.
+    static var reduceMotion: Bool {
+        #if os(iOS)
+        UIAccessibility.isReduceMotionEnabled
+        #elseif os(macOS)
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #else
+        false
+        #endif
+    }
+
+    /// VoiceOver activo: no se roba el foco (teclado, campos) al abrir una pantalla.
+    static var voiceOver: Bool {
+        #if os(iOS)
+        UIAccessibility.isVoiceOverRunning
+        #elseif os(macOS)
+        NSWorkspace.shared.isVoiceOverEnabled
+        #else
+        false
+        #endif
+    }
+
+    /// Anuncio para VoiceOver: estados que cambian sin mover el foco (error, aviso, éxito).
+    static func announce(_ text: String) {
+        AccessibilityNotification.Announcement(text).post()
+    }
+}
+
+extension View {
+    /// Anima solo si el usuario no ha pedido reducir el movimiento; con la preferencia activa el
+    /// cambio de estado es instantáneo (las transiciones alternativas usan `.opacity`).
+    @ViewBuilder func apAnimation<V: Equatable>(_ animation: Animation?, value: V, reduceMotion: Bool) -> some View {
+        self.animation(reduceMotion ? nil : animation, value: value)
+    }
+}
+
 
 /// Escala tipográfica de la web (`type-*`) en Inter; crece con el tamaño de texto (Dynamic Type).
 extension Font {
@@ -68,6 +116,10 @@ struct PillButtonStyle: ButtonStyle {
             .foregroundStyle(kind == .primary ? Color.black : Palette.foreground)
             .background(kind == .primary ? Palette.gold : (kind == .destructive ? Palette.destructive : Palette.secondary), in: Capsule())
             .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
+            // Microinteracción: la píldora se hunde un punto al pulsarla. Con «Reducir
+            // movimiento» solo cambia la opacidad (que ya es instantánea, sin animación).
+            .scaleEffect(configuration.isPressed && !A11y.reduceMotion ? 0.97 : 1)
+            .animation(A11y.reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.72), value: configuration.isPressed)
             .contentShape(Capsule())
     }
 }
@@ -76,6 +128,26 @@ extension ButtonStyle where Self == PillButtonStyle {
     static var pill: PillButtonStyle { PillButtonStyle() }
     static var pillSecondary: PillButtonStyle { PillButtonStyle(kind: .secondary) }
     static var pillDestructive: PillButtonStyle { PillButtonStyle(kind: .destructive) }
+}
+
+/// Botón-tarjeta: además de abrir, se hunde de forma imperceptible al pulsarlo. Es el feedback
+/// táctil que espera cualquiera al tocar una tarjeta grande (Inicio, Ajustes). Con «Reducir
+/// movimiento» solo cambia la opacidad.
+struct PressableCardStyle: ButtonStyle {
+    var scale: CGFloat = 0.985
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !A11y.reduceMotion ? scale : 1)
+            .opacity(isEnabled ? (configuration.isPressed ? 0.93 : 1) : 0.4)
+            .animation(A11y.reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.78), value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressableCardStyle {
+    static var pressableCard: PressableCardStyle { PressableCardStyle() }
+    static func pressableCard(scale: CGFloat) -> PressableCardStyle { PressableCardStyle(scale: scale) }
 }
 
 /// Campo en píldora con etiqueta accesible.
@@ -150,17 +222,25 @@ struct FigureTile: View {
     let value: String
     var hint: String?
     var accent = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Card(padding: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.75)
                 Text(value).font(.apFigureSmall).foregroundStyle(accent ? Palette.gold : Palette.foreground)
+                    // Los dígitos ruedan al cambiar la cifra (sin animación con Reducir movimiento).
+                    .contentTransition(.numericText())
                     .lineLimit(1).minimumScaleFactor(0.6)
-                if let hint { Text(hint).font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1) }
+                if let hint {
+                    Text(hint).font(.apFootnote).foregroundStyle(Palette.muted)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                }
             }
         }
         .accessibilityElement(children: .combine)
+        .apAnimation(.snappy(duration: 0.25), value: value, reduceMotion: reduceMotion)
     }
 }
 
@@ -174,7 +254,7 @@ struct EmptyStateView: View {
         VStack(spacing: 10) {
             Image(systemName: symbol).font(.system(size: 36, weight: .semibold)).foregroundStyle(Palette.gold)
                 .accessibilityHidden(true)
-            Text(title).font(.apHeadline)
+            Text(title).font(.apHeadline).accessibilityAddTraits(.isHeader)
             if let message { Text(message).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.center) }
         }
         .frame(maxWidth: .infinity)

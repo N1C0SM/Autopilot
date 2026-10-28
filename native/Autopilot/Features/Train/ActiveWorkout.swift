@@ -1,8 +1,5 @@
 import Foundation
 import UserNotifications
-#if os(iOS)
-import ActivityKit
-#endif
 
 /// Borrador del entreno en curso, guardado por usuario (como `activeWorkout.ts`):
 /// incluye el día, las series y el fin del descanso como hora absoluta, así se
@@ -15,6 +12,8 @@ struct WorkoutDraft: Codable {
     var startedAt: Date
     var restEndsAt: Date?
     var currentExercise: Int
+    /// Grupos de superset (nombres de ejercicio). Opcional por compatibilidad.
+    var supersets: [[String]]? = nil
 }
 
 @MainActor
@@ -35,7 +34,7 @@ final class ActiveWorkout: ObservableObject {
     /// Récords batidos al terminar.
     @Published var records: [String] = []
 
-    private static func key(_ userId: String) -> String { "active-workout.\(userId)" }
+    private nonisolated static func key(_ userId: String) -> String { "active-workout.\(userId)" }
 
     static func restore(userId: String) -> WorkoutDraft? {
         guard let data = UserDefaults.standard.data(forKey: key(userId)) else { return nil }
@@ -57,28 +56,132 @@ final class ActiveWorkout: ObservableObject {
         }
         self.init(draft: WorkoutDraft(userId: userId, day: day, date: LocalDate.string(), logs: logs,
                                       startedAt: Date(), restEndsAt: nil, currentExercise: 0))
-        persist()
+        // Un entreno recién empezado se guarda ya: si la app se cierra, «Continuar entreno» existe.
+        persistNow()
     }
 
     var exercises: [GymExercise] { draft.day.exercises ?? [] }
-    var doneSets: Int { draft.logs.values.flatMap { $0 }.filter { $0.done && $0.isWarmup != true }.count }
-    var totalSets: Int { draft.logs.values.flatMap { $0 }.filter { $0.isWarmup != true }.count }
+
+    // Contadores con bucles directos: se leen en el pie y en la barra (que se redibuja cada
+    // segundo con el cronómetro) y antes creaban arrays intermedios en cada lectura.
+    var doneSets: Int {
+        var count = 0
+        for sets in draft.logs.values {
+            for set in sets where set.done && set.isWarmup != true { count += 1 }
+        }
+        return count
+    }
+
+    var totalSets: Int {
+        var count = 0
+        for sets in draft.logs.values {
+            for set in sets where set.isWarmup != true { count += 1 }
+        }
+        return count
+    }
+
     var volumeKg: Double {
         var total = 0.0
-        for set in draft.logs.values.joined() where set.done && set.isWarmup != true {
-            let kg = Double(set.weight.replacingOccurrences(of: ",", with: ".")) ?? 0
-            total += Double(set.reps) * kg
+        for sets in draft.logs.values {
+            for set in sets where set.done && set.isWarmup != true {
+                let kg = Double(set.weight.replacingOccurrences(of: ",", with: ".")) ?? 0
+                total += Double(set.reps) * kg
+            }
         }
         return total
     }
 
+    // MARK: Supersets
+
+    /// Posición en el superset («A», «B»…) y miembros, si el ejercicio pertenece a uno.
+    func supersetPosition(of name: String) -> (letter: String, members: [String])? {
+        guard let groups = draft.supersets else { return nil }
+        for group in groups {
+            if let i = group.firstIndex(of: name) {
+                return (String(UnicodeScalar(65 + min(i, 25))!), group)
+            }
+        }
+        return nil
+    }
+
+    /// Compañero de superset (el otro ejercicio del grupo).
+    func supersetPartner(of name: String) -> String? {
+        supersetPosition(of: name)?.members.first { $0 != name }
+    }
+
+    /// Crea un superset con el siguiente ejercicio de la sesión, o saca el ejercicio del suyo.
+    func toggleSuperset(_ name: String) {
+        var groups = draft.supersets ?? []
+        if let gi = groups.firstIndex(where: { $0.contains(name) }) {
+            groups[gi].removeAll { $0 == name }
+            if groups[gi].count < 2 { groups.remove(at: gi) }
+        } else {
+            guard let i = exercises.firstIndex(where: { $0.name == name }), i + 1 < exercises.count else { return }
+            let next = exercises[i + 1].name
+            if let gi = groups.firstIndex(where: { $0.contains(next) }) {
+                groups[gi].append(name)
+            } else {
+                groups.append([name, next])
+            }
+        }
+        draft.supersets = groups.isEmpty ? nil : groups
+        persist()
+    }
+
+    // MARK: Guardado del borrador
+
+    private var persistTask: Task<Void, Never>?
+
+    /// Guardado diferido: teclear kg/reps o marcar series no puede serializar y escribir el JSON
+    /// entero en el hilo principal en cada pulsación (era el principal tirón de la sesión).
+    /// Se escribe 0,4 s después del último cambio y, si hace falta, al salir/ir a segundo plano.
     func persist() {
-        if let data = try? JSONEncoder().encode(draft) { UserDefaults.standard.set(data, forKey: Self.key(draft.userId)) }
+        persistTask?.cancel()
+        let snapshot = draft
+        persistTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            await Self.write(snapshot)
+            self?.persistTask = nil
+        }
+    }
+
+    /// Escritura inmediata (síncrona): al empezar, al salir de la sesión y al ir a segundo plano.
+    /// Aquí interesa no perder los últimos cambios aunque la app se suspenda justo después.
+    func persistNow() {
+        persistTask?.cancel()
+        persistTask = nil
+        Self.writeNow(draft)
+    }
+
+    /// Cancela el guardado pendiente (evita resucitar un borrador ya borrado).
+    func cancelPersist() {
+        persistTask?.cancel()
+        persistTask = nil
+    }
+
+    /// Descarta la sesión: borra el borrador y cancela cualquier guardado pendiente.
+    func discard() {
+        cancelPersist()
+        Self.clear(userId: draft.userId)
+    }
+
+    /// Codificar y escribir fuera del MainActor (`UserDefaults` es seguro entre hilos).
+    private nonisolated static func write(_ draft: WorkoutDraft) async {
+        writeNow(draft)
+    }
+
+    private nonisolated static func writeNow(_ draft: WorkoutDraft) {
+        guard let data = try? JSONEncoder().encode(draft) else { return }
+        UserDefaults.standard.set(data, forKey: key(draft.userId))
     }
 
     func update(_ exercise: String, set index: Int, _ change: (inout SetLog) -> Void) {
         guard var sets = draft.logs[exercise], sets.indices.contains(index) else { return }
+        let before = sets[index]
         change(&sets[index])
+        // Sin cambios no hay publicación ni guardado: evita redibujados inútiles al teclear.
+        guard sets[index] != before else { return }
         draft.logs[exercise] = sets
         persist()
     }
@@ -165,24 +268,45 @@ final class ActiveWorkout: ObservableObject {
     }
 
     /// Mejor serie por 1RM estimado (Epley) frente al récord guardado; las de calentamiento nunca cuentan.
+    /// Antes se hacía una consulta por ejercicio (en serie): ahora es una sola consulta para todos los
+    /// ejercicios de la sesión y un único upsert.
     private func detectRecords(userId: UUID) async -> [String] {
         struct PR: Encodable { let user_id: UUID; let exercise_name: String; let weight: Double; let reps: Int; let estimated_1rm: Double; let achieved_at: String }
-        struct Best: Decodable { let estimated_1rm: Double? }
-        var inserts: [PR] = []
+        struct Best: Decodable { let exercise_name: String; let estimated_1rm: Double? }
+
+        // 1) Mejor serie hecha de la sesión, por ejercicio.
+        var sessionBest: [(name: String, weight: Double, reps: Int, e1rm: Double)] = []
         for (name, sets) in draft.logs {
             let done = sets.compactMap { s -> (Double, Int)? in
                 guard s.done, s.isWarmup != true, s.reps > 0, let w = Progression.weight(s.weight) else { return nil }
                 return (w, s.reps)
             }
             guard let best = done.max(by: { $0.0 * (1 + Double($0.1) / 30) < $1.0 * (1 + Double($1.1) / 30) }) else { continue }
-            let e1rm = best.0 * (1 + Double(best.1) / 30)
-            let existing: [Best] = (try? await Backend.client.from("personal_records").select("estimated_1rm")
-                .eq("user_id", value: userId).eq("exercise_name", value: name).order("estimated_1rm", ascending: false).limit(1).execute().value) ?? []
-            if e1rm > (existing.first?.estimated_1rm ?? 0) {
-                inserts.append(PR(user_id: userId, exercise_name: name, weight: best.0, reps: best.1, estimated_1rm: (e1rm * 10).rounded() / 10, achieved_at: draft.date))
-            }
+            sessionBest.append((name, best.0, best.1, best.0 * (1 + Double(best.1) / 30)))
         }
-        if !inserts.isEmpty { _ = try? await Backend.client.from("personal_records").upsert(inserts, onConflict: "user_id,exercise_name,weight,reps").execute() }
+        guard !sessionBest.isEmpty else { return [] }
+
+        // 2) Récords ya guardados: una única consulta para todos los nombres de la sesión.
+        let names = sessionBest.map(\.name)
+        let existing: [Best] = (try? await Backend.client.from("personal_records")
+            .select("exercise_name, estimated_1rm")
+            .eq("user_id", value: userId)
+            .in("exercise_name", values: names)
+            .execute().value) ?? []
+        var bestByExercise: [String: Double] = [:]
+        for row in existing {
+            bestByExercise[row.exercise_name] = max(bestByExercise[row.exercise_name] ?? 0, row.estimated_1rm ?? 0)
+        }
+
+        // 3) Solo se guardan los que superan el récord anterior.
+        let inserts: [PR] = sessionBest.compactMap { item in
+            guard item.e1rm > (bestByExercise[item.name] ?? 0) else { return nil }
+            return PR(user_id: userId, exercise_name: item.name, weight: item.weight, reps: item.reps,
+                      estimated_1rm: (item.e1rm * 10).rounded() / 10, achieved_at: draft.date)
+        }
+        if !inserts.isEmpty {
+            _ = try? await Backend.client.from("personal_records").upsert(inserts, onConflict: "user_id,exercise_name,weight,reps").execute()
+        }
         return inserts.map(\.exercise_name)
     }
 
@@ -208,50 +332,17 @@ final class ActiveWorkout: ObservableObject {
         draft.restEndsAt = nil
         persist()
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest"])
-        updateLiveActivity(endsAt: nil)
     }
 
-    // MARK: Isla dinámica
-
-    #if os(iOS)
-    private var activity: Activity<RestActivityAttributes>?
-    #endif
-
-    /// Muestra o actualiza el descanso en la isla dinámica y la pantalla de bloqueo.
-    private func updateLiveActivity(endsAt: Date?) {
-        #if os(iOS)
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        guard let endsAt else {
-            let a = activity; activity = nil
-            Task { await a?.end(nil, dismissalPolicy: .immediate) }
-            return
-        }
-        // Ejercicio y serie que tocan después del descanso.
-        var exercise = workout_currentName(), next = ""
-        for ex in exercises {
-            if let i = (draft.logs[ex.name] ?? []).firstIndex(where: { !$0.done }) {
-                let set = draft.logs[ex.name]![i]
-                exercise = swaps[ex.name] ?? ex.name
-                next = "serie \(i + 1) · \(set.weight.isEmpty ? "" : "\(set.weight.replacingOccurrences(of: ".", with: ",")) kg × ")\(set.reps)"
-                break
-            }
-        }
-        let state = RestActivityAttributes.ContentState(endsAt: endsAt, exercise: exercise, nextSet: next, doneSets: doneSets, totalSets: totalSets)
-        let content = ActivityContent(state: state, staleDate: endsAt.addingTimeInterval(60))
-        if let activity {
-            Task { await activity.update(content) }
-        } else {
-            activity = try? Activity.request(attributes: RestActivityAttributes(workoutTitle: draft.day.title), content: content)
-        }
-        #endif
-    }
-
-    private func workout_currentName() -> String { exercises[safe: draft.currentExercise]?.name ?? draft.day.title }
+    /// Solo se pide autorización la primera vez (las siguientes llamadas son trabajo inútil).
+    private static var didRequestNotificationAuth = false
 
     private func scheduleRestNotification(at date: Date) {
-        updateLiveActivity(endsAt: date)
         let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        if !Self.didRequestNotificationAuth {
+            Self.didRequestNotificationAuth = true
+            center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        }
         center.removePendingNotificationRequests(withIdentifiers: ["rest"])
         let content = UNMutableNotificationContent()
         content.title = "Descanso terminado"
@@ -278,6 +369,8 @@ final class ActiveWorkout: ObservableObject {
             try await TrainingRepo.complete(userId: userId, day: draft.day.day, date: draft.date, rpe: rpe)
             records = await detectRecords(userId: userId)
             skipRest()
+            // El borrador ya no hace falta: se cancela el guardado diferido y se borra el de disco.
+            cancelPersist()
             Self.clear(userId: draft.userId)
             
             // Integración Apple Health (v1.0 Roadmap): registrar HKWorkout en Apple Salud
@@ -295,6 +388,20 @@ final class ActiveWorkout: ObservableObject {
             Haptics.success()
             return true
         } catch {
+            #if DEBUG
+            // Deja el error real en Documents para poder leerlo desde el Mac.
+            if let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+                let line = "\(Date()) \(String(describing: error))\n"
+                let url = docs.appendingPathComponent("save-error.log")
+                if let data = line.data(using: .utf8) {
+                    if let handle = try? FileHandle(forWritingTo: url) {
+                        handle.seekToEndOfFile(); handle.write(data); try? handle.close()
+                    } else {
+                        try? data.write(to: url)
+                    }
+                }
+            }
+            #endif
             // El borrador sigue guardado: se puede reintentar sin perder nada.
             saveError = "No se pudo guardar. Tus series siguen aquí; inténtalo de nuevo."
             Haptics.error()

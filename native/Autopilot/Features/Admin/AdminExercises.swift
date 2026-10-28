@@ -24,6 +24,7 @@ struct AdminExercisesView: View {
 
     @State private var exercises: [Exercise] = []
     @State private var fetched = false
+    @State private var failed = false
     @State private var search = ""
     @State private var muscle = ""
     @State private var type = ""
@@ -59,78 +60,105 @@ struct AdminExercisesView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Button("Nuevo ejercicio") { editing = .blank() }.buttonStyle(.pill).frame(maxWidth: 260)
-                    Button { batchConfirm = true } label: { Label("Generar medios pendientes", systemImage: "sparkles") }
-                        .buttonStyle(.pillSecondary).frame(maxWidth: 300).disabled(batch != nil || pending.isEmpty)
+            if !fetched {
+                AdminLoadingView(message: "Cargando los ejercicios")
+            } else if failed {
+                AdminErrorCard(message: "No se pudo cargar la biblioteca de ejercicios. Comprueba la conexión y vuelve a intentarlo.") {
+                    fetched = false
+                    Task { await load() }
                 }
-                if let b = batch {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Text("Generando \(b.current) de \(b.total) · \(b.name)").font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                            Spacer()
-                            Button("Cancelar") { batchTask?.cancel(); batch = nil }.font(.apSubhead).foregroundStyle(Palette.gold).buttonStyle(.plain)
-                        }
-                        ProgressView(value: Double(b.current - 1), total: Double(max(b.total, 1))).tint(Palette.gold)
-                    }
-                }
-                HStack {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
-                    TextField("Buscar ejercicio…", text: $search).textFieldStyle(.plain)
-                    if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel("Borrar búsqueda") }
-                }
-                .padding(.horizontal, 16).frame(minHeight: 44).background(Palette.secondary, in: Capsule())
-                HStack(spacing: 12) {
-                    filterMenu("Músculo", $muscle, Self.muscles.filter { m in exercises.contains { $0.muscle_group == m } })
-                    filterMenu("Tipo", $type, Self.types)
-                }
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(mediaOptions, id: \.0) { k, l, n in
-                            Button("\(l) · \(n)") { media = k; Haptics.selection() }
-                                .font(.apSubhead.weight(.medium)).padding(.horizontal, 14).frame(minHeight: 36)
-                                .foregroundStyle(media == k ? Palette.gold : Palette.muted)
-                                .background(media == k ? Palette.gold.opacity(0.15) : Palette.secondary, in: Capsule()).buttonStyle(.plain)
+                .padding(20)
+            } else {
+                VStack(alignment: .leading, spacing: 24) {
+                    AdminPaneHeader("Biblioteca de ejercicios: clasificación, patrón, alternativa e imagen y vídeo de técnica con IA. Lo que genera la IA se guarda a medida que termina.") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Button("Nuevo ejercicio") { editing = .blank() }
+                                .buttonStyle(.pill).frame(maxWidth: 260)
+                            Button { batchConfirm = true } label: { Label("Generar medios pendientes", systemImage: "sparkles") }
+                                .buttonStyle(.pillSecondary).frame(maxWidth: 300)
+                                .disabled(batch != nil || pending.isEmpty)
                         }
                     }
-                }
-                if !fetched { ProgressView().frame(maxWidth: .infinity).padding(.top, 40) }
-                else if filtered.isEmpty {
-                    EmptyStateView(symbol: exercises.isEmpty ? "dumbbell" : "magnifyingglass", title: exercises.isEmpty ? "Aún no hay ejercicios" : "Sin resultados",
-                                   message: exercises.isEmpty ? "Añade el primero con el botón Nuevo ejercicio." : "Prueba con otra búsqueda o cambia los filtros.")
-                } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(filtered.prefix(visible).enumerated()), id: \.element.id) { i, ex in
-                            Button { editing = ex } label: {
-                                HStack(spacing: 12) {
-                                    ExerciseThumb(url: ex.image_url)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(ex.name).font(.apBody).lineLimit(1)
-                                        Text([ex.muscle_group, ex.exercise_type, ex.movement_pattern].compactMap { $0 }.joined(separator: " · "))
-                                            .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
-                                    }
-                                    Spacer()
-                                    if !(ex.video_url ?? "").isEmpty || !(ex.image_url ?? "").isEmpty {
-                                        Button { preview = ex } label: { Image(systemName: "play.fill") }.buttonStyle(.plain)
-                                            .foregroundStyle(Palette.muted).frame(width: 44, height: 44).accessibilityLabel("Ver el vídeo de \(ex.name)")
-                                    }
-                                }
-                                .padding(.horizontal, 16).padding(.vertical, 6)
-                                .overlay(alignment: .top) { if i > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).padding(.leading, 80) } }
-                                .contentShape(Rectangle())
+
+                    if let b = batch {
+                        Card(padding: 16) {
+                            HStack {
+                                Text("Generando \(b.current) de \(b.total) · \(b.name)")
+                                    .font(.apFootnote).foregroundStyle(Palette.muted).lineLimit(1)
+                                Spacer(minLength: 8)
+                                AdminTextButton(title: "Cancelar") { batchTask?.cancel(); batch = nil }
                             }
-                            .buttonStyle(.plain)
-                            .onAppear { if i == visible - 1 { visible += 60 } }
+                            ProgressView(value: Double(b.current - 1), total: Double(max(b.total, 1)))
+                                .tint(Palette.gold)
+                                .accessibilityLabel("Generando medios")
+                                .accessibilityValue("\(b.current) de \(b.total)")
                         }
                     }
-                    .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+
+                    HStack {
+                        Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
+                            .accessibilityHidden(true)
+                        TextField("Buscar ejercicio…", text: $search).textFieldStyle(.plain)
+                            .accessibilityLabel("Buscar ejercicio")
+                        if !search.isEmpty {
+                            AdminIconButton(symbol: "xmark", label: "Borrar búsqueda", tint: Palette.muted) { search = "" }
+                        }
+                    }
+                    .padding(.leading, 16).padding(.trailing, 4).frame(minHeight: 52)
+                    .background(Palette.secondary, in: Capsule())
+
+                    HStack(alignment: .top, spacing: 12) {
+                        filterMenu("Músculo", $muscle, Self.muscles.filter { m in exercises.contains { $0.muscle_group == m } })
+                        filterMenu("Tipo", $type, Self.types)
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(mediaOptions, id: \.0) { k, l, n in
+                                AdminChip(title: "\(l) · \(n)", selected: media == k) {
+                                    media = k; Haptics.selection()
+                                }
+                            }
+                        }
+                    }
+
+                    if filtered.isEmpty {
+                        EmptyStateView(symbol: exercises.isEmpty ? "dumbbell" : "magnifyingglass",
+                                       title: exercises.isEmpty ? "Aún no hay ejercicios" : "Sin resultados",
+                                       message: exercises.isEmpty ? "Añade el primero con el botón Nuevo ejercicio." : "Prueba con otra búsqueda o cambia los filtros.")
+                    } else {
+                        AdminRows {
+                            ForEach(Array(filtered.prefix(visible).enumerated()), id: \.element.id) { i, ex in
+                                Button { editing = ex } label: {
+                                    AdminListRow(ex.name, detail: [ex.muscle_group, ex.exercise_type, ex.movement_pattern].compactMap { $0 }.joined(separator: " · ")) {
+                                        ExerciseThumb(url: ex.image_url, size: 52)
+                                    } trailing: {
+                                        HStack(spacing: 2) {
+                                            if !(ex.video_url ?? "").isEmpty || !(ex.image_url ?? "").isEmpty {
+                                                AdminIconButton(symbol: "play.fill", label: "Ver el vídeo de \(ex.name)") {
+                                                    preview = ex
+                                                }
+                                            }
+                                            Image(systemName: "chevron.right").font(.inter(.footnote).weight(.semibold))
+                                                .foregroundStyle(Palette.muted).accessibilityHidden(true)
+                                        }
+                                    }
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Abre la ficha del ejercicio")
+                                .onAppear { if i == visible - 1 { visible += 60 } }
+                                .adminRowDivider(first: i == 0, leading: 80)
+                            }
+                        }
+                    }
                 }
+                .padding(20).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading)
         }
         .screenBackground()
         .task { await load() }
+        .refreshable { await load() }
         .confirmationDialog("Generar medios pendientes", isPresented: $batchConfirm, titleVisibility: .visible) {
             Button("Generar") { startBatch() }
             Button("Ahora no", role: .cancel) {}
@@ -142,11 +170,16 @@ struct AdminExercisesView: View {
         }
         .sheet(item: $preview) { ex in
             VStack(spacing: 12) {
-                if let v = ex.video_url, let u = URL(string: v) { VideoPlayer(player: AVPlayer(url: u)).frame(minHeight: 360) }
-                else if let i = ex.image_url, let u = URL(string: i) { CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() } }
+                if let v = ex.video_url, let u = URL(string: v) {
+                    VideoPlayer(player: AVPlayer(url: u)).frame(minHeight: 360)
+                        .accessibilityLabel("Vídeo de técnica de \(ex.name)")
+                } else if let i = ex.image_url, let u = URL(string: i) {
+                    CachedAsyncImage(url: u) { $0.resizable().scaledToFit() } placeholder: { ProgressView() }
+                        .accessibilityLabel("Imagen de \(ex.name)")
+                }
                 Text(ex.name).font(.apTitle3)
                 Text([ex.muscle_group, ex.exercise_type].compactMap { $0 }.joined(separator: " · ")).font(.apSubhead).foregroundStyle(Palette.muted)
-                Button("Cerrar") { preview = nil }.buttonStyle(.pillSecondary)
+                Button("Cerrar") { preview = nil }.buttonStyle(.pillSecondary).frame(maxWidth: 280)
             }
             .padding(20).frame(minWidth: 480).screenBackground()
         }
@@ -182,7 +215,7 @@ struct AdminExercisesView: View {
 
     private func filterMenu(_ label: String, _ value: Binding<String>, _ options: [String]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.apSubhead).foregroundStyle(Palette.muted)
+            Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
             Picker(label, selection: value) {
                 Text("Todos").tag("")
                 ForEach(options, id: \.self) { o in Text(o).tag(o) }
@@ -194,9 +227,14 @@ struct AdminExercisesView: View {
     }
 
     private func load() async {
-        exercises = (try? await Backend.client.from("exercises")
-            .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode")
-            .order("muscle_group").order("recommended_order").order("name").execute().value) ?? []
+        do {
+            exercises = try await Backend.client.from("exercises")
+                .select("id, name, muscle_group, image_url, video_url, exercise_type, movement_pattern, level, priority, stimulus_type, load_level, fatigue_level, recommended_order, alternative_id, skill_tag, progression_order, is_stable, is_progressable, high_tension, tracking_mode")
+                .order("muscle_group").order("recommended_order").order("name").execute().value
+            failed = false
+        } catch {
+            failed = true
+        }
         fetched = true
     }
 }
