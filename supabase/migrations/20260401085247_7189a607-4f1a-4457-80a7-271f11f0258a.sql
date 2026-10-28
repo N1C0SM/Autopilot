@@ -1,0 +1,1 @@
+ALTER TABLE public.settings ADD COLUMN payment_link_test text DEFAULT '', ADD COLUMN payment_link_live text DEFAULT '';
