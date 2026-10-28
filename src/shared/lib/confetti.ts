@@ -3,7 +3,8 @@
  * Usa canvas-confetti para una animación ligera y performante.
  */
 
-let confetti: typeof import('canvas-confetti').default | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let confetti: any = null;
 
 // Carga dinámica para no bloquear el bundle principal
 const loadConfetti = async () => {
