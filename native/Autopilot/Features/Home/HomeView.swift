@@ -43,7 +43,7 @@ struct HomeView: View {
         #if os(macOS)
         return 0
         #else
-        return wideLayout ? 24 : 16
+        return wideLayout ? 32 : 16
         #endif
     }
 

@@ -44,7 +44,7 @@ struct ProgressScreen: View {
         #if os(macOS)
         return 0
         #else
-        return 16
+        return isWide ? 32 : 16
         #endif
     }
 

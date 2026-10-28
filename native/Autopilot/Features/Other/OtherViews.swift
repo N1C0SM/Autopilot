@@ -19,7 +19,7 @@ struct NutritionView: View {
         #if os(macOS)
         return 0
         #else
-        return 16
+        return singleColumn ? 16 : 32
         #endif
     }
 
