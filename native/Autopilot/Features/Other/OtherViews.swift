@@ -86,7 +86,7 @@ struct NutritionView: View {
         } else {
             // Escritorio (md/lg de la web): el resumen (portada, objetivos/macros y avisos) y las
             // comidas en dos columnas. En el iPhone la rejilla se queda en una y conserva el orden.
-            LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn), alignment: .leading, spacing: singleColumn ? 32 : 24) {
+            LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn || !hasMeals), alignment: .leading, spacing: singleColumn ? 32 : 24) {
                 VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
                     if hasMeals { coverCard }
                     if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
@@ -186,12 +186,16 @@ struct NutritionView: View {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 16) {
                         if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
-                        summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount)
+                        // Con el anillo de macros las kcal ya van dentro: aquí solo el rótulo.
+                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount) }
+                        else { Text("Objetivo diario").font(.apTitle3) }
                     }
                 } else {
                     HStack(alignment: .center, spacing: 20) {
                         if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
-                        summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount)
+                        // Con el anillo de macros las kcal ya van dentro: aquí solo el rótulo.
+                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount) }
+                        else { Text("Objetivo diario").font(.apTitle3) }
                     }
                 }
             }

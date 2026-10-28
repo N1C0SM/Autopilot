@@ -235,9 +235,9 @@ struct ProgressScreen: View {
                 // Primera vez en «Físico»: esqueleto mientras llegan las filas y se firman las fotos.
                 physiqueSkeleton
             } else if isWide {
-                // Escritorio como la web: comparación acotada (`max-w-xl`) y rejilla de fotos más ancha.
+                // Escritorio: comparación a todo el ancho y rejilla de fotos debajo.
                 VStack(alignment: .leading, spacing: 24) {
-                    comparisonBlock.frame(maxWidth: 576, alignment: .leading)
+                    comparisonBlock.frame(maxWidth: .infinity, alignment: .leading)
                     photoMonths
                 }
             } else {
@@ -355,8 +355,9 @@ struct ProgressScreen: View {
                 if isWide {
                     // Escritorio como la web (`lg:grid-cols-[280px_1fr]`): la mejor marca fija a
                     // 280 pt y la lista ocupando el resto del ancho.
-                    HStack(alignment: .top, spacing: 32) {
-                        recordsHero(best).frame(width: 280)
+                    // Escritorio: la mejor marca a todo el ancho arriba y la lista debajo.
+                    VStack(alignment: .leading, spacing: 24) {
+                        recordsHero(best).frame(maxWidth: .infinity)
                         VStack(alignment: .leading, spacing: 16) {
                             recordsHeader
                             recordsTable
@@ -491,9 +492,9 @@ struct ProgressScreen: View {
         ProgressSkeletonPulse {
             Group {
                 if isWide {
-                    // Misma disposición que el contenido real (280 + resto): sin saltos al cargar.
-                    HStack(alignment: .top, spacing: 32) {
-                        ProgressSkeletonBlock(height: 256, radius: Radius.hero).frame(width: 280)
+                    // Misma disposición que el contenido real (apilado): sin saltos al cargar.
+                    VStack(alignment: .leading, spacing: 24) {
+                        ProgressSkeletonBlock(height: 256, radius: Radius.hero)
                         VStack(alignment: .leading, spacing: 16) {
                             ProgressSkeletonBlock(height: 12, radius: 6, width: 188)
                             recordsSkeletonRows
