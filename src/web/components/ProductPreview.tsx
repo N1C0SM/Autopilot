@@ -161,6 +161,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
     return () => clearTimeout(id);
   }, [rest]);
   const [setValues, setSetValues] = useState<Record<string, { weight: string; reps: number }>>({});
+  const [progressTab, setProgressTab] = useState("evolution");
   const [progressExercise, setProgressExercise] = useState(demoProgressExercises[0]);
   const [progressMetric, setProgressMetric] = useState<"volumeKg" | "bestEstimated1RmKg">("volumeKg");
   const totalSets = exercises.reduce((total, exercise) => total + exercise.sets, 0);
@@ -307,18 +308,19 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                             <p className="type-footnote text-muted-foreground">{ex.last}</p>
                           </div>
                           <div className="space-y-1">
-                            <div className="grid grid-cols-[1.5rem_1fr_1fr_2.75rem] gap-2 px-1.5 type-group-header">
-                              <span className="text-center">#</span><span className="text-center">kg</span><span className="text-center">Reps</span><span />
+                            <div className="grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] gap-2 px-1.5 type-group-header">
+                              <span className="text-center">#</span><span className="text-center">Anterior</span><span className="text-center">kg</span><span className="text-center">Reps</span><span />
                             </div>
                             {Array.from({ length: ex.sets }, (_, setIndex) => {
                               const setKey = `${ex.name}::${setIndex}`;
                               const isDone = completed.includes(setKey);
                               const currentSet = setValues[setKey];
                               return (
-                                <div key={setKey} className={`grid grid-cols-[1.5rem_1fr_1fr_2.75rem] items-center gap-2 rounded-xl p-1.5 transition-colors duration-200 ${isDone ? "bg-primary/15" : ""}`}>
+                                <div key={setKey} className={`grid grid-cols-[24px_52px_minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-2 rounded-xl p-1.5 transition-colors duration-200 ${isDone ? "bg-primary/15" : ""}`}>
                                   <span className="text-center type-subhead font-semibold tabular-nums text-muted-foreground">{setIndex + 1}</span>
-                                  <Input type="text" inputMode="decimal" enterKeyHint="next" placeholder={ex.load.replace(/\s*kg$/, "")} value={currentSet?.weight ?? ""} onChange={(e) => updateSetValue(setKey, "weight", e.target.value)} aria-label={`Peso de la serie ${setIndex + 1} de ${ex.name}`} className="px-1 text-center tabular-nums" />
-                                  <Input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min="0" placeholder={String(ex.reps)} value={currentSet?.reps ?? ""} onChange={(e) => updateSetValue(setKey, "reps", e.target.value)} aria-label={`Repeticiones de la serie ${setIndex + 1} de ${ex.name}`} className="px-1 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                                  <span className="text-center type-caption2 tabular-nums text-muted-foreground">{ex.last.replace("Última vez: ", "").replace(" kg", "")}</span>
+                                  <Input type="text" inputMode="decimal" enterKeyHint="next" placeholder={ex.load.replace(/\s*kg$/, "")} value={currentSet?.weight ?? ""} onChange={(e) => updateSetValue(setKey, "weight", e.target.value)} aria-label={`Peso de la serie ${setIndex + 1} de ${ex.name}`} className="rounded-full px-1 text-center tabular-nums" />
+                                  <Input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min="0" placeholder={String(ex.reps)} value={currentSet?.reps ?? ""} onChange={(e) => updateSetValue(setKey, "reps", e.target.value)} aria-label={`Repeticiones de la serie ${setIndex + 1} de ${ex.name}`} className="rounded-full px-1 text-center tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                                   <button type="button" aria-pressed={isDone} aria-label={`${isDone ? "Desmarcar" : "Marcar"} serie ${setIndex + 1} de ${ex.name}`}
                                     onClick={() => { const wasDone = isDone; void (wasDone ? hapticTap() : hapticImpact("medium")); toggleSet(ex.name, setIndex); if (!wasDone) setRest(90); }}
                                     className="flex h-11 w-11 items-center justify-center transition-transform duration-150 active:scale-90">
@@ -451,12 +453,9 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 {view === "progress" && (
                   <div>
                     <h1 className="type-large-title">{titles.progress}</h1>
-                    <Tabs defaultValue="evolution" className="mt-4"><TabsList className="w-full"><TabsTrigger value="evolution">Fuerza</TabsTrigger><TabsTrigger value="photos">Físico</TabsTrigger><TabsTrigger value="records">Récords</TabsTrigger><TabsTrigger value="scan">Scan</TabsTrigger></TabsList></Tabs>
+                    <Tabs value={progressTab} onValueChange={setProgressTab} className="mt-4"><TabsList className="w-full"><TabsTrigger value="evolution">Fuerza</TabsTrigger><TabsTrigger value="photos">Físico</TabsTrigger><TabsTrigger value="records">Récords</TabsTrigger><TabsTrigger value="scan">Scan</TabsTrigger></TabsList></Tabs>
                     <p className="mt-1 type-subhead text-muted-foreground">Tu progreso · muestra ficticia</p>
-                    <div className="mt-5">
-                      <PhoneWeek planned={week.planned} today={week.today} />
-                      <p className="mt-3 type-subhead"><span className="font-semibold">{week.done} de {week.planned.length} sesiones esta semana</span> <span className="text-muted-foreground">· la rutina marca tus días</span></p>
-                    </div>
+                    {progressTab === "evolution" && <>
                     <div className="relative mt-6">
                       <select
                         aria-label="Ejercicio para ver progresión en demo"
@@ -468,7 +467,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                       </select>
                       <ChevronsUpDown className="pointer-events-none absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" aria-hidden="true" />
                     </div>
-                    <div className="mt-2">
+                    <div className="mt-2 h-64">
                       <Suspense fallback={<Skeleton className="h-36 w-full rounded-2xl" aria-label="Cargando gráfica" />}>
                         <ExerciseProgressChart
                           exerciseName={progressExercise}
@@ -494,12 +493,13 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                         ))}
                       </div>
                     )}
-                    <ListGroup className="mt-6" header="Récords personales">
+                    </>}
+                    {progressTab === "records" && <ListGroup className="mt-6" header="Récords personales">
                       {demoBestRecords.map(({ name, best }) => (
                         <ListRow key={name} title={<span className="font-semibold">{name}</span>} subtitle={`${best.bestSetLabel} · ~${best.bestEstimated1RmKg} kg`} />
                       ))}
-                    </ListGroup>
-                    <div className="mt-6 flex gap-3">
+                    </ListGroup>}
+                    {progressTab === "photos" && <div className="mt-6 flex gap-3">
                       <Camera className="mt-0.5 h-6 w-6 shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
                       <div className="min-w-0">
                         <p className="type-headline">Fotos de progreso</p>
@@ -511,6 +511,8 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                         )}
                       </div>
                     </div>
+                    }
+                    {progressTab === "scan" && <div className="mt-6 rounded-2xl bg-card p-5"><Camera className="h-6 w-6 text-primary" /><p className="mt-3 type-title3">Scan corporal</p><p className="mt-2 type-subhead text-muted-foreground">No hay fotos personales en esta demo.</p>{onFree && <Button variant="tinted" className="mt-4" onClick={onFree}>Crear mi cuenta</Button>}</div>}
                     <p className="mt-4 type-footnote text-muted-foreground">Datos ficticios de ejemplo. En tu cuenta, las gráficas se construyen con tus propias series completadas.</p>
                   </div>
                 )}

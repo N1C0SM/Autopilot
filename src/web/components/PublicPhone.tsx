@@ -55,7 +55,7 @@ export type PhoneTab = { key: string; label: string; icon: LucideIcon };
 export function PhoneTabBar({ tabs, active, onSelect, label = "Secciones de la demo" }: { tabs: readonly PhoneTab[]; active: string; onSelect: (key: string) => void; label?: string }) {
   const cols = tabs.length === 5 ? "grid-cols-5" : "grid-cols-4";
   const item = (isActive: boolean) => cn(
-    "relative flex h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-full type-caption2 font-medium transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
+    "relative flex h-14 min-w-0 w-full flex-col px-0 py-0 [&_svg]:size-6 hover:bg-transparent items-center justify-center gap-0.5 rounded-full type-caption2 font-medium text-[11px] leading-tight transition-[background-color,transform] duration-150 ease-out active:scale-[0.94]",
     isActive ? "bg-primary/90 text-primary-foreground" : "text-muted-foreground",
   );
   const glyphs = { home: House, training: Barbell, nutrition: ForkKnife, progress: ChartLineUp };

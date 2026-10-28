@@ -55,8 +55,8 @@ export default function PhoneStory() {
             </div>;
           })}
         </div>
-        <div className="relative mx-auto h-[min(44rem,62vh)] w-full max-w-[19rem] md:max-w-[22rem]" style={{ transform: `scale(${0.97 + Math.sin((t % 1) * Math.PI) * 0.03})` }}>
-          <div className="absolute inset-0 origin-top scale-[0.85] md:scale-100">
+        <div className="relative mx-auto h-[min(44rem,62vh)] w-full max-w-[19rem] md:max-w-[19rem]" style={{ transform: `scale(${0.97 + Math.sin((t % 1) * Math.PI) * 0.03})` }}>
+          <div className="absolute inset-0 origin-top scale-[0.72] md:scale-[0.85]">
             {scenes.map((_, i) => {
               const local = t - i;
               const o = i === current ? Math.min(1, local * 6 + (i === 0 ? 1 : 0), (1 - local) * 6 + (i === scenes.length - 1 ? 1 : 0)) : 0;

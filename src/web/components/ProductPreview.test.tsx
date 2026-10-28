@@ -71,6 +71,7 @@ describe("public product preview", () => {
     await waitFor(() => expect(screen.getByRole("img", { name: "Gráfica de volumen para Sentadilla goblet" })).toBeVisible());
     fireEvent.click(screen.getByRole("button", { name: "Fuerza estimada" }));
     await waitFor(() => expect(screen.getByRole("img", { name: "Gráfica de fuerza estimada para Sentadilla goblet" })).toBeVisible());
+    fireEvent.click(screen.getByRole("tab", { name: "Récords" }));
     expect(screen.getByText("Récords personales")).toBeVisible();
     expect(screen.queryByText("Cintura")).not.toBeInTheDocument();
   });
