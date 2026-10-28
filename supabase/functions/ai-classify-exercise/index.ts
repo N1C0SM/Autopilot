@@ -1,0 +1,90 @@
+import { aiFetch } from "../_shared/ai-provider.ts";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
+
+const MUSCLE_GROUPS = ["Pecho","Espalda","Hombros","Bíceps","Tríceps","Piernas","Glúteos","Core","Cardio","Cuerpo completo","Isquiotibiales","Gemelos","Antebrazos","Trapecios","Romboides","Lumbares","Serrato","Aductores","Abductores","Cuello"];
+const EXERCISE_TYPES = ["Calistenia","Gimnasio","Mixto"];
+const MOVEMENT_PATTERNS = ["Empuje","Tirón","Sentadilla","Bisagra","Core"];
+const STIMULUS_TYPES = ["Fuerza","Hipertrofia","Resistencia","Isométrico"];
+const LOAD_LEVELS = ["Alta","Media","Baja"];
+const FATIGUE_LEVELS = ["Alta","Media","Baja"];
+const SKILL_TAGS = ["handstand","muscle_up","planche","front_lever","back_lever","human_flag","pistol_squat","press_banca","sentadilla","peso_muerto","press_militar","dominadas","l_sit","ring_dips","one_arm_pull_up","one_arm_push_up","dragon_flag","manna"];
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  try {
+    const token = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+    if (!token) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+    const { data: { user } } = await sb.auth.getUser(token);
+    if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const { data: isAdmin } = await sb.rpc("has_role", { _user_id: user.id, _role: "admin" });
+    if (!isAdmin) return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const { name } = await req.json();
+    if (!name || typeof name !== "string") {
+      return new Response(JSON.stringify({ error: "name required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY missing");
+
+    const sys = `Eres un experto en biomecánica y entrenamiento (gimnasio + calistenia). Clasificas ejercicios en metadatos estructurados. Responde SIEMPRE llamando la función classify_exercise con valores EXACTOS de los enums. Si no estás seguro de skill_tag o progression_order, devuélvelos como null.`;
+
+    const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: `Clasifica este ejercicio: "${name}"` },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "classify_exercise",
+            description: "Devuelve los metadatos del ejercicio",
+            parameters: {
+              type: "object",
+              properties: {
+                muscle_group: { type: "string", enum: MUSCLE_GROUPS },
+                exercise_type: { type: "string", enum: EXERCISE_TYPES },
+                movement_pattern: { type: "string", enum: MOVEMENT_PATTERNS },
+                level: { type: "integer", description: "1=Básico, 2=Intermedio, 3=Avanzado (solo 1, 2 o 3)" },
+                priority: { type: "integer", description: "1=Base (compuesto principal), 2=Desarrollo, 3=Accesorio (solo 1, 2 o 3)" },
+                stimulus_type: { type: "string", enum: STIMULUS_TYPES },
+                load_level: { type: "string", enum: LOAD_LEVELS },
+                fatigue_level: { type: "string", enum: FATIGUE_LEVELS },
+                recommended_order: { type: "integer", description: "1=Inicio sesión, 2=Medio, 3=Final (solo 1, 2 o 3)" },
+                skill_tag: { type: "string", description: `Una de: ${SKILL_TAGS.join(", ")} o cadena vacía si no aplica` },
+                progression_order: { type: "integer", description: "1=más fácil de la skill, 0 si no aplica" },
+              },
+              required: ["muscle_group","exercise_type","movement_pattern","level","priority","stimulus_type","load_level","fatigue_level","recommended_order"],
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "classify_exercise" } },
+      }),
+    });
+
+    if (!resp.ok) {
+      if (resp.status === 429) return new Response(JSON.stringify({ error: "Rate limit, intenta en unos segundos" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (resp.status === 402) return new Response(JSON.stringify({ error: "Sin créditos de IA" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const t = await resp.text();
+      console.error("ai gateway", resp.status, t);
+      return new Response(JSON.stringify({ error: "AI gateway error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const data = await resp.json();
+    const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) throw new Error("no tool call");
+    const parsed = JSON.parse(args);
+    return new Response(JSON.stringify(parsed), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    console.error(e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "unknown" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+});

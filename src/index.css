@@ -1,0 +1,551 @@
+/* No web fonts: the app uses the platform's system font (San Francisco on Apple devices). */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Native app polish (Capacitor / mobile web) */
+html, body, #root {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* The app is dark-only: tell the system so native form controls, pickers, the
+   keyboard accessory and scroll indicators render dark too. */
+:root {
+  color-scheme: dark;
+}
+
+/* Running inside the native shell (`html.native` is set by initPlatformClasses):
+   behave like an app, not a document. No text selection on chrome, no long-press
+   callout on links and images, no double-tap zoom. Text the user may want to copy
+   opts back in with `.selectable`; inputs always stay selectable. */
+html.native {
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+html.native body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+html.native input,
+html.native textarea,
+html.native [contenteditable="true"],
+html.native .selectable,
+html.native .prose {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+html.native img,
+html.native a {
+  -webkit-user-drag: none;
+}
+
+/* The insertion point takes the app tint, like every UITextField. */
+input, textarea, select, [contenteditable="true"] {
+  caret-color: hsl(var(--primary));
+}
+
+/* Apple HIG — Reduced motion: respect the user's system preference.
+   Short cross-fades replace slides/springs/parallax. Interruptibility and
+   information remain; vestibular motion is softened or removed. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.12s !important;
+    transition-timing-function: ease-out !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Apple HIG — Reduced transparency: frostier/solid surfaces. */
+@media (prefers-reduced-transparency: reduce) {
+  .backdrop-blur,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg,
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-3xl,
+  .app-chrome,
+  .material {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .app-chrome { background: hsl(var(--background)) !important; }
+  .material { background: hsl(var(--popover)) !important; }
+}
+
+/* Apple HIG — Increase Contrast: stronger separators and secondary labels, the
+   same way UIKit darkens systemFill and separator when the setting is on. */
+@media (prefers-contrast: more) {
+  :root {
+    --border: 240 2% 40%;
+    --input: 240 2% 40%;
+    --muted-foreground: 240 3% 80%;
+    --secondary: 240 2% 24%;
+    --accent: 240 2% 32%;
+  }
+}
+
+/* Dynamic Type probe (native only, invisible): `-apple-system-body` resolves to
+   the body text style at the size the user chose in iOS Settings. `syncDynamicType()`
+   measures it and writes `--type-scale`. */
+.dynamic-type-probe {
+  position: fixed;
+  top: 0;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  font: -apple-system-body;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Zonas seguras reales del dispositivo (notch, Dynamic Island, home indicator) */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* UINavigationBar: 44pt of content below the status bar. */
+  --nav-bar-height: 44px;
+  --mobile-nav-height: 4.25rem;
+  --mobile-nav-offset: 0.75rem;
+  --mobile-nav-content-padding: calc(var(--mobile-nav-height) + var(--mobile-nav-offset) + 2.5rem + env(safe-area-inset-bottom, 0px));
+}
+/* PWA instalada: evita que la página entera rebote y arrastre la barra */
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+}
+
+/* Con el teclado abierto en nativo, la barra inferior no debe tapar el input */
+body.keyboard-open .mobile-tabbar,
+body.keyboard-open .admin-mobile-nav {
+  display: none;
+}
+body.keyboard-open main {
+  padding-bottom: 1rem !important;
+}
+
+/* Push/pop de las pantallas secundarias (Ajustes, Recursos), como un
+   UINavigationController: la nueva entra desde la derecha y, al volver, el
+   contenido llega desde la izquierda. Reduce Motion ya las deja en un fundido. */
+@keyframes ios-push-in {
+  from { opacity: 0; transform: translate3d(30px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes ios-pop-in {
+  from { opacity: 0; transform: translate3d(-22px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+.mobile-screen-push { animation: ios-push-in 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+.mobile-screen-pop { animation: ios-pop-in 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* FullCalendar dark theme tweaks */
+.fc-themed .fc {
+  --fc-border-color: hsl(var(--border));
+  --fc-page-bg-color: transparent;
+  --fc-neutral-bg-color: hsl(var(--secondary) / 0.3);
+  --fc-neutral-text-color: hsl(var(--muted-foreground));
+  --fc-today-bg-color: hsl(var(--primary) / 0.06);
+  --fc-now-indicator-color: hsl(var(--primary));
+  font-family: inherit;
+  color: hsl(var(--foreground));
+}
+.fc-themed .fc-toolbar-title { font-size: 1rem; font-weight: 700; text-transform: capitalize; }
+.fc-themed .fc .fc-button {
+  background: hsl(var(--secondary));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+  text-transform: capitalize;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  box-shadow: none;
+}
+.fc-themed .fc .fc-button:hover { background: hsl(var(--secondary) / 0.7); }
+.fc-themed .fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc-themed .fc .fc-button-primary:not(:disabled):active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+.fc-themed .fc-col-header-cell-cushion,
+.fc-themed .fc-daygrid-day-number,
+.fc-themed .fc-timegrid-axis-cushion,
+.fc-themed .fc-timegrid-slot-label-cushion { color: hsl(var(--muted-foreground)); font-size: 0.75rem; }
+.fc-themed .fc-event {
+  border: none !important;
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.fc-themed .fc-event:hover { filter: brightness(1.1); }
+.fc-themed .fc-day-today { background: hsl(var(--primary) / 0.05) !important; }
+.fc-themed .fc-scrollgrid, .fc-themed .fc-scrollgrid td, .fc-themed .fc-scrollgrid th { border-color: hsl(var(--border)) !important; }
+.fc-themed .fc-timegrid-slot { height: 2.2em !important; }
+@media (max-width: 640px) {
+  .fc-themed .fc-toolbar { flex-wrap: wrap; gap: 0.5rem; }
+  .fc-themed .fc-toolbar-title { font-size: 0.85rem; }
+  .fc-themed .fc .fc-button { font-size: 0.68rem; padding: 0.2rem 0.45rem; }
+  .fc-themed .fc-col-header-cell-cushion { font-size: 0.65rem; }
+}
+
+@layer base {
+  :root {
+    /* iOS dark system palette. The gold tint is the only brand colour; every
+       neutral is the system's own so the app sits next to Apple's without a seam.
+         background  = systemBackground                    #000000
+         card        = secondarySystemGroupedBackground    #1C1C1E
+         secondary   = tertiarySystemGroupedBackground     #2C2C2E  (also control fills)
+         accent      = pressed / highlighted row fill      #3A3A3C
+         border      = opaque separator                    #38383A
+         muted-fg    = secondaryLabel                      ~#98989E */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+
+    --card: 240 3% 11%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 240 3% 11%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 43 61% 60%;
+    --primary-foreground: 0 0% 0%;
+
+    --secondary: 240 2% 18%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 240 2% 18%;
+    --muted-foreground: 240 3% 68%;
+
+    --accent: 240 2% 23%;
+    --accent-foreground: 0 0% 100%;
+
+    /* systemRed / systemGreen, dark appearance. */
+    --destructive: 3 100% 61%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 135 64% 50%;
+    --success-foreground: 0 0% 100%;
+
+    --border: 240 2% 22%;
+    --input: 240 2% 22%;
+    --ring: 43 61% 60%;
+
+    --radius: 0.75rem;
+
+    /* Dynamic Type: 1 = tamaño Large del sistema (17 pt). `syncDynamicType()` lo
+       ajusta al tamaño de texto elegido en Ajustes → Pantalla y brillo → Texto.
+       Solo se escala la tipografía, no la rejilla: las tarjetas no se deforman. */
+    --type-scale: 1;
+
+    --sidebar-background: 240 3% 11%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 43 61% 60%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 240 2% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 240 2% 22%;
+    --sidebar-ring: 43 61% 60%;
+
+    /* Inter (self-hosted, variable) on every platform: one typeface, typography-led design. */
+    --font-display: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-sans: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-body: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --font-rounded: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+    --gradient-hero: linear-gradient(135deg, hsl(44 78% 72%) 0%, hsl(38 66% 52%) 100%);
+    --gradient-gold: linear-gradient(180deg, hsl(44 78% 74%) 0%, hsl(40 66% 52%) 100%);
+    /* Elevación mínima: un filo, no una sombra difusa de 80px. */
+    --shadow-glow: 0 0 0 1px hsl(42 68% 58% / 0.35);
+    --shadow-card: none;
+    --shadow-premium: 0 0 0 1px hsl(42 58% 54% / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    overflow-x: clip;
+    max-width: 100vw;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Let the system font pick its optical size per text size. */
+    font-optical-sizing: auto;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* The system font tracks itself per size; with Inter / Web, tight negative tracking gives
+     the exact crisp density of San Francisco headlines. */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  h1 { line-height: 1.2; letter-spacing: -0.025em; }
+  h2 { line-height: 1.25; letter-spacing: -0.02em; }
+  h3 { line-height: 1.25; letter-spacing: -0.015em; }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary) / 0.9);
+    outline-offset: 3px;
+  }
+
+  /* Superficie plana: el borde separa, no la sombra. Nada de degradados apilados
+     ni de cuatro capas de box-shadow en cada tarjeta. */
+  .bg-card {
+    background-image: none;
+    box-shadow: none;
+  }
+
+  /* Bar material (navigation bar, tab bar, toolbars). */
+  .app-chrome {
+    border-color: hsl(var(--border) / 0.75);
+    background: hsl(var(--background) / 0.82);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+
+  /* Misma tipografía en móvil y escritorio: una sola identidad, no dos. */
+  .mobile-dashboard-shell {
+    background-color: hsl(var(--background));
+    background-image: none;
+  }
+
+  .mobile-dashboard-content {
+    box-sizing: border-box;
+    width: 100%;
+  }
+}
+
+@layer components {
+  /* iOS text styles. Sizes are the system's Large values (points = CSS px) multiplied
+     by `--type-scale`, so the app follows the text size chosen in iOS Settings like a
+     UIKit app. Each sets size, leading and the style's own weight; colour and emphasis
+     come from utilities (`text-muted-foreground`, `font-semibold`), which win because
+     they sit in a later layer. Tracking is in `em` so it scales with the text. */
+  /* Titulares de marketing (portada y páginas públicas): un único tamaño de display. */
+  .type-display     { font-family: var(--font-display); font-size: calc(40px * var(--type-scale)); line-height: 1.05; font-weight: 700; letter-spacing: -0.035em; }
+  @media (min-width: 640px) { .type-display { font-size: calc(56px * var(--type-scale)); } }
+  @media (min-width: 768px) { .type-display { font-size: calc(72px * var(--type-scale)); } }
+  .type-display-sm  { font-family: var(--font-display); font-size: calc(40px * var(--type-scale)); line-height: 1.05; font-weight: 700; letter-spacing: -0.03em; }
+  @media (min-width: 640px) { .type-display-sm { font-size: calc(56px * var(--type-scale)); } }
+  .type-large-title { font-family: var(--font-display); font-size: calc(34px * var(--type-scale)); line-height: calc(41px * var(--type-scale)); font-weight: 700; letter-spacing: -0.03em; }
+  .type-title1      { font-family: var(--font-display); font-size: calc(28px * var(--type-scale)); line-height: calc(34px * var(--type-scale)); font-weight: 700; letter-spacing: -0.025em; }
+  .type-title2      { font-family: var(--font-display); font-size: calc(22px * var(--type-scale)); line-height: calc(28px * var(--type-scale)); font-weight: 700; letter-spacing: -0.02em; }
+  .type-title3      { font-family: var(--font-display); font-size: calc(20px * var(--type-scale)); line-height: calc(25px * var(--type-scale)); font-weight: 700; letter-spacing: -0.02em; }
+  .type-headline    { font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); font-weight: 600; letter-spacing: -0.01em; }
+  .type-body        { font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); font-weight: 400; letter-spacing: -0.011em; }
+  .type-callout     { font-size: calc(16px * var(--type-scale)); line-height: calc(21px * var(--type-scale)); font-weight: 400; letter-spacing: -0.009em; }
+  .type-subhead     { font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); font-weight: 400; letter-spacing: -0.006em; }
+  .type-footnote    { font-size: calc(13px * var(--type-scale)); line-height: calc(18px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-caption1    { font-size: calc(12px * var(--type-scale)); line-height: calc(16px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+  .type-caption2    { font-size: calc(11px * var(--type-scale)); line-height: calc(13px * var(--type-scale)); font-weight: 400; letter-spacing: normal; }
+
+  /* Header above an inset grouped list (Settings): footnote, uppercase, secondary label. */
+  .type-group-header {
+    font-size: calc(13px * var(--type-scale));
+    line-height: calc(18px * var(--type-scale));
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Control metrics: UIKit sizes on the phone, compact from `md` up. They live in
+     the components layer so a utility at the call site (h-8, text-xs, rounded-lg)
+     still wins on every breakpoint. La etiqueta crece con Dynamic Type; la altura
+     se mantiene en los 44 pt táctiles de la HIG. */
+  .btn-md   { height: 44px; padding-inline: 18px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
+  .btn-sm   { height: 34px; padding-inline: 14px; border-radius: 9999px; font-size: calc(15px * var(--type-scale)); line-height: calc(20px * var(--type-scale)); }
+  .btn-lg   { height: 50px; padding-inline: 24px; border-radius: 9999px; font-size: calc(17px * var(--type-scale)); line-height: calc(22px * var(--type-scale)); }
+  .btn-icon { height: 44px; width: 44px; border-radius: 9999px; }
+  
+  /* iOS transition timing: 150ms ease for consistent feel */
+  * { transition-timing-function: ease-out; }
+  .field {
+    height: 44px;
+    padding-inline: 12px;
+    border-radius: 10px;
+    border-width: 0;
+    background-color: hsl(var(--secondary));
+    font-size: 17px;
+    line-height: 22px;
+  }
+  .label-text { font-size: 15px; line-height: 20px; }
+  .menu-item  { min-height: 44px; padding-inline: 16px; font-size: 17px; line-height: 22px; }
+  @media (min-width: 768px) {
+    .btn-md   { height: 44px; font-size: 16px; line-height: 22px; }
+    .btn-sm   { height: 36px; font-size: 14px; line-height: 20px; }
+    .btn-icon { height: 44px; width: 44px; }
+    .field    { height: 44px; font-size: 16px; line-height: 22px; }
+    .label-text { font-size: 15px; }
+    .menu-item  { min-height: 40px; padding-inline: 14px; font-size: 16px; line-height: 22px; }
+  }
+
+  /* Menu / popover material (context menus, pickers). */
+  .material {
+    background: hsl(var(--popover) / 0.78);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
+    backdrop-filter: saturate(180%) blur(30px);
+  }
+}
+
+@layer utilities {
+  /* Mobile browsers: follow the visible viewport so bottom buttons are never hidden behind browser bars. */
+  .min-h-screen { min-height: 100vh; min-height: 100dvh; }
+  .h-screen { height: 100vh; height: 100dvh; }
+
+  /* Gradient text is not part of the system vocabulary: the tint is a flat colour. */
+  .text-gradient {
+    color: hsl(var(--primary));
+  }
+
+  .glow-shadow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .card-shadow {
+    box-shadow: var(--shadow-card);
+  }
+
+  .premium-shadow {
+    box-shadow: var(--shadow-premium);
+  }
+
+  .grain {
+    background-image: radial-gradient(hsl(42 30% 70% / 0.025) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+
+  .hairline {
+    border-color: hsl(42 30% 70% / 0.08);
+  }
+
+  .gold-text {
+    color: hsl(var(--primary));
+  }
+
+  /* Hairline separators: half a point on Retina, 1px on standard displays so it never drops. */
+  .sep-t { border-top: 0.5px solid hsl(var(--border)); }
+  .sep-b { border-bottom: 0.5px solid hsl(var(--border)); }
+  .sep-l { border-left: 0.5px solid hsl(var(--border)); }
+  .sep-r { border-right: 0.5px solid hsl(var(--border)); }
+  @media not all and (min-resolution: 144dpi) {
+    .sep-t { border-top-width: 1px; }
+    .sep-b { border-bottom-width: 1px; }
+    .sep-l { border-left-width: 1px; }
+    .sep-r { border-right-width: 1px; }
+  }
+
+  /* Safe-area padding helpers. */
+  .pt-safe { padding-top: var(--safe-top); }
+  .pb-safe { padding-bottom: var(--safe-bottom); }
+  .pl-safe { padding-left: var(--safe-left); }
+  .pr-safe { padding-right: var(--safe-right); }
+  .px-safe { padding-left: var(--safe-left); padding-right: var(--safe-right); }
+
+  /* Minimum hit target, 44 × 44 pt. */
+  .min-touch { min-height: 44px; min-width: 44px; }
+
+  /* Horizontal scroll for tables and long content without visible scrollbar */
+  .overflow-x-scroll-auto {
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .overflow-x-scroll-auto::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Pressed feedback for rows and cards: the fill dims while the finger is down. */
+  .pressable { transition: opacity 0.12s ease-out, background-color 0.12s ease-out; }
+  .pressable:active { opacity: 0.6; }
+}
+
+/* Tabs deslizables en móvil sin barra de scroll visible */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Scrollbars prémium estilo macOS/iOS en Web (Chrome, Edge, Firefox en Windows y Linux) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border) / 0.5) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--secondary) / 0.8);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Smooth loading states */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth fade-in */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Sonner ignores `offset` under 600px and pins toasts 20px from the top, which puts
+   them over the clock and the Dynamic Island. Keep them below the status bar. */
+@media (max-width: 600px) {
+  [data-sonner-toaster][data-y-position="top"] {
+    top: calc(var(--safe-top, env(safe-area-inset-top, 0px)) + 8px) !important;
+  }
+}
+
+/* Identidad pública: cada sección aparece al entrar en pantalla (solo navegadores con scroll-driven animations). */
+@keyframes reveal-section { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal-sections > section:not([data-pinned]) { animation: reveal-section linear both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+  }
+}
+
+/* HIG · Reducir movimiento: las entradas de tailwindcss-animate quedan en fundidos, sin desplazamiento ni zoom. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in { --tw-enter-translate-x: 0 !important; --tw-enter-translate-y: 0 !important; --tw-enter-scale: 1 !important; }
+}

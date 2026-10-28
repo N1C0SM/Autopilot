@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS workout_logs_user_day_date_exercise_key ON public.workout_logs (user_id, day_label, logged_at, exercise_name);
