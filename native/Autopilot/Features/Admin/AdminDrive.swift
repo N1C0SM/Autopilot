@@ -207,8 +207,8 @@ struct AdminDriveView: View {
             .adminRowDivider(first: first, leading: 72)
         } else {
             let thumb = covers[b.id] ?? (kind == "pack" ? (b.pack_items?.first).flatMap { covers[$0] } : nil)
-            // Un vídeo subido enseña su propio fotograma, con la proporción real del archivo.
-            let videoURL = thumb == nil ? videoThumbs[b.id].flatMap(URL.init(string:)) : nil
+            // Un vídeo subido enseña siempre su primer fotograma, con la proporción real del archivo.
+            let videoURL = AdminDriveView.isVideo(b.file_path) ? videoThumbs[b.id].flatMap(URL.init(string:)) : nil
             let detail: String = {
                 switch kind {
                 case "book": return "\(b.file_path != nil ? "Archivo listo" : "Sin archivo") · \(b.cover_path != nil ? "con portada" : "sin portada")"
@@ -268,7 +268,14 @@ struct AdminDriveView: View {
             failed = true; loading = false; return
         }
         loading = false
-        for b in books where covers[b.id] == nil {
+        for b in books {
+            // Un vídeo siempre pide su archivo: su primer fotograma es la miniatura, tenga o no portada.
+            if let f = b.file_path, AdminDriveView.isVideo(f), videoThumbs[b.id] == nil,
+               let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
+                videoThumbs[b.id] = u.absoluteString
+                continue
+            }
+            guard covers[b.id] == nil else { continue }
             if let c = b.cover_path {
                 if c.hasPrefix("http") { covers[b.id] = c }
                 else if let u = try? await Backend.client.storage.from("library").createSignedURL(path: c, expiresIn: 3600) { covers[b.id] = u.absoluteString }
@@ -276,10 +283,6 @@ struct AdminDriveView: View {
                       let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
                 // Un archivo suelto que sea imagen se muestra como miniatura.
                 covers[b.id] = u.absoluteString
-            } else if let f = b.file_path, AdminDriveView.isVideo(f),
-                      let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
-                // Los vídeos necesitan su URL firmada para sacar el fotograma.
-                videoThumbs[b.id] = u.absoluteString
             }
         }
     }
@@ -588,10 +591,20 @@ struct DriveVideoThumb: View {
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 320, height: 320)
-        guard let result = try? await generator.image(at: .zero) else { return }
-        let frame = DriveVideoFrames.Frame(image: Self.platformImage(result.image), ratio: ratio)
-        DriveVideoFrames.shared.store(frame, for: key)
-        image = frame.image
+        // El primer fotograma, el de verdad: sin tolerancia no se cuela un segundo después.
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        var frame = try? await generator.image(at: .zero)
+        if frame == nil {
+            // Algún archivo no deja el fotograma exacto: se acepta el más cercano antes de quedarse sin miniatura.
+            generator.requestedTimeToleranceBefore = CMTime(seconds: 0.5, preferredTimescale: 600)
+            generator.requestedTimeToleranceAfter = CMTime(seconds: 0.5, preferredTimescale: 600)
+            frame = try? await generator.image(at: .zero)
+        }
+        guard let result = frame, !Task.isCancelled else { return }
+        let stored = DriveVideoFrames.Frame(image: Self.platformImage(result.image), ratio: ratio)
+        DriveVideoFrames.shared.store(stored, for: key)
+        image = stored.image
     }
 
     private static func platformImage(_ cg: CGImage) -> PlatformImage {

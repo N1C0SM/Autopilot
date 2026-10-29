@@ -99,16 +99,19 @@ const storagePathsOf = (items: Book[]) => {
 };
 
 /**
- * Miniatura de un vídeo con la proporción real del archivo: un vídeo vertical
- * se ve vertical y uno horizontal, horizontal (`preload="metadata"`, sin descargarlo).
+ * Miniatura de un vídeo con la proporción real del archivo y su primer fotograma: un vídeo
+ * vertical se ve vertical y uno horizontal, horizontal (`preload="metadata"`, sin descargarlo).
+ * El `#t=0.1` y el pequeño «seek» hacen que el navegador pinte ese primer fotograma como
+ * póster; sin ellos Safari y Chrome dejan el hueco en negro.
  */
 const VideoThumb = ({ src }: { src: string }) => {
   const [ratio, setRatio] = useState<number | null>(null);
   const width = Math.min(Math.max(60 * (ratio ?? 0.75), 34), 107);
+  const source = src.includes("#") ? src : `${src}#t=0.1`;
   return (
     <div className="relative shrink-0 overflow-hidden rounded-[10px] bg-secondary" style={{ height: 60, width }}>
       <video
-        src={src}
+        src={source}
         preload="metadata"
         muted
         playsInline
@@ -117,6 +120,9 @@ const VideoThumb = ({ src }: { src: string }) => {
         onLoadedMetadata={(e) => {
           const v = e.currentTarget;
           if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
+          if (v.currentTime === 0) {
+            try { v.currentTime = 0.1; } catch { /* algunos navegadores no dejan hasta tener datos */ }
+          }
         }}
         className="h-full w-full object-cover"
       />
@@ -202,6 +208,13 @@ const LibraryDrive = () => {
       const coverEntries: Record<string, string> = {};
       const thumbEntries: Record<string, string> = {};
       for (const b of books) {
+        const media = mediaKindOf(b.file_path);
+        // Un vídeo siempre pide su archivo: su primer fotograma es la miniatura, tenga o no portada.
+        if (media === "video" && b.file_path && !thumbs[b.id]) {
+          const { data } = await supabase.storage.from("library").createSignedUrl(b.file_path, 3600);
+          if (data?.signedUrl) thumbEntries[b.id] = data.signedUrl;
+          continue;
+        }
         if (b.cover_path && !covers[b.id]) {
           if (b.cover_path.startsWith("http")) coverEntries[b.id] = b.cover_path;
           else {
@@ -210,9 +223,8 @@ const LibraryDrive = () => {
           }
           continue;
         }
-        // Un archivo suelto que sea imagen o vídeo se muestra como miniatura.
-        const media = mediaKindOf(b.file_path);
-        if (!b.cover_path && b.file_path && !thumbs[b.id] && (media === "image" || media === "video")) {
+        // Una imagen suelta se muestra como miniatura.
+        if (media === "image" && b.file_path && !thumbs[b.id]) {
           const { data } = await supabase.storage.from("library").createSignedUrl(b.file_path, 3600);
           if (data?.signedUrl) thumbEntries[b.id] = data.signedUrl;
         }
@@ -532,7 +544,8 @@ const LibraryDrive = () => {
       if (fileKind === "video") {
         return (
           <video
-            src={previewUrl}
+            // El `#t=0.1` pinta el primer fotograma como póster antes de darle a reproducir.
+            src={previewUrl.includes("#") ? previewUrl : `${previewUrl}#t=0.1`}
             controls
             playsInline
             preload="metadata"
@@ -1022,8 +1035,10 @@ const LibraryDrive = () => {
             }
 
             const packCover = kind === "pack" ? covers[(b.pack_items || [])[0]] : undefined;
-            const thumb = covers[b.id] || packCover;
             const fileUrl = thumbs[b.id];
+            // Un vídeo enseña siempre su primer fotograma: es lo que de verdad hay dentro.
+            const videoFileUrl = mediaKindOf(b.file_path) === "video" ? fileUrl : undefined;
+            const thumb = videoFileUrl ? undefined : covers[b.id] || packCover;
             const detail =
               kind === "book" ? `${b.file_path ? "Archivo listo" : "Sin archivo"} · ${b.cover_path ? "con portada" : "sin portada"}`
               : kind === "pack" ? `${(b.pack_items || []).length} libros incluidos`
@@ -1031,9 +1046,11 @@ const LibraryDrive = () => {
               : kind === "video" ? (b.file_path ? mediaLabel(b.file_path) : b.video_url ? "Enlace añadido" : "Sin contenido")
               : b.buy_url_test || b.buy_url_live || b.buy_url ? `Stripe ${b.buy_url_test ? "Test" : ""}${b.buy_url_test && b.buy_url_live ? " + " : ""}${b.buy_url_live ? "Live" : ""}`.trim() : "Sin enlace";
 
-            // Con archivo propio, la miniatura es el archivo: un vídeo vertical se ve
-            // vertical y uno horizontal, horizontal.
-            const leading = thumb ? (
+            // Con archivo propio, la miniatura es el archivo: un vídeo muestra su primer
+            // fotograma con su proporción real (vertical se ve vertical).
+            const leading = videoFileUrl ? (
+              <VideoThumb src={videoFileUrl} />
+            ) : thumb ? (
               <ImageWithFallback
                 src={thumb}
                 className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover"
@@ -1043,8 +1060,6 @@ const LibraryDrive = () => {
                   </div>
                 }
               />
-            ) : fileUrl && mediaKindOf(b.file_path) === "video" ? (
-              <VideoThumb src={fileUrl} />
             ) : fileUrl ? (
               <ImageWithFallback
                 src={fileUrl}
