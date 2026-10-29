@@ -383,9 +383,13 @@ struct ScanView: View {
             let height_cm: Double?; let weight_kg: Double?; let age: Int?; let gender: String?
         }
         do {
-            let r: ScanResult = try await Backend.client.functions.invoke("analyze-physique", options: FunctionInvokeOptions(
+            // JSON en bruto: se guarda entero en scan_history (antes se perdía el detalle de Plus
+            // al volver a codificar solo los campos que pintaba la app).
+            let raw: Data = try await Backend.client.functions.invoke("analyze-physique", options: FunctionInvokeOptions(
                 body: Body(currentImage: frontURL, backImage: backURL, objectiveImage: nil,
-                           height_cm: bio.height, weight_kg: bio.weight, age: bio.age, gender: bio.gender)))
+                           height_cm: bio.height, weight_kg: bio.weight, age: bio.age, gender: bio.gender))) { data, _ in data }
+            let r = try JSONDecoder().decode(ScanResult.self, from: raw)
+            let fullResult = try JSONDecoder().decode(AnyJSON.self, from: raw)
             // Igual que la web: fotos al bucket privado y el resultado a scan_history.
             let stamp = Int(Date().timeIntervalSince1970 * 1000)
             // Las dos subidas a la vez: antes eran dos esperas en serie antes de guardar el scan.
@@ -393,13 +397,13 @@ struct ScanView: View {
             async let backPath = upload(backData, suffix: "back", userId: id, stamp: stamp)
             let (frontPhoto, backPhoto) = await (frontPath, backPath)
             struct Insert: Encodable {
-                let user_id: UUID; let current_photo_url: String?; let back_photo_url: String?; let result: ScanResult
+                let user_id: UUID; let current_photo_url: String?; let back_photo_url: String?; let result: AnyJSON
                 let attractiveness: Double?; let potential: Double?; let physique: Double?; let style: Double?
                 let months_with_plan: Double?; let emailed_to: String?
             }
             // El guardado en el historial ya no se traga el error: si falla, se avisa.
             let insert = Insert(
-                user_id: id, current_photo_url: frontPhoto, back_photo_url: backPhoto, result: r,
+                user_id: id, current_photo_url: frontPhoto, back_photo_url: backPhoto, result: fullResult,
                 attractiveness: r.attractiveness, potential: r.potential, physique: r.physique, style: r.style,
                 months_with_plan: r.months_with_plan, emailed_to: session.session?.user.email)
             var saved = false
@@ -558,6 +562,28 @@ struct ScanResult: Codable {
     /// Scan básico (Free): el servidor quita el detalle de Plus y dice qué se desbloquea.
     var basic: Bool?
     var locked_sections: [String]?
+    /// Detalle de Plus («Lectura estimada por IA»), igual que en la web.
+    var body_composition: BodyComposition?
+    var muscle_breakdown: [MuscleScore]?
+    var posture: Posture?
+    var proportions: Proportions?
+    var genetic_markers: [String]?
+    var `protocol`: ScanProtocol?
+
+    struct BodyComposition: Codable {
+        var body_fat_pct: Double?; var lean_mass_kg: Double?; var weight_kg: Double?
+        var somatotype: String?; var frame_size: String?; var fat_distribution: String?
+    }
+    struct MuscleScore: Codable, Hashable { var group: String; var score: Double; var verdict: String? }
+    struct Posture: Codable { var issues: [String]?; var severity: String?; var note: String? }
+    struct Proportions: Codable {
+        var shoulder_to_waist_ratio: Double?; var v_taper_score: Double?; var symmetry_score: Double?
+        var upper_lower_balance: String?; var weakest_link: String?
+    }
+    struct ScanProtocol: Codable {
+        var training_days_per_week: Double?; var weekly_sets_priority: Double?; var calorie_adjustment_kcal: Double?
+        var protein_g_per_kg: Double?; var cardio_minutes_per_week: Double?; var key_lifts: [String]?; var avoid: [String]?
+    }
 
     /// Item de «Mejoras»: el JSON trae `label` y `priority`. Antes se decodificaban
     /// `title`/`description`, que no existen, y las tarjetas salían vacías.
@@ -579,6 +605,7 @@ struct ScanResultView: View {
             metrics
             if let s = result.summary, !s.isEmpty { summaryCard(s) }
             if let list = result.improvements, !list.isEmpty { improvements(list) }
+            if hasDetail { detail }
             if result.basic == true { plusCard }
             Button("Hacer otro scan", action: onAgain).buttonStyle(.pillSecondary)
         }
@@ -659,6 +686,186 @@ struct ScanResultView: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+    }
+
+    // MARK: - Lectura estimada por IA (Plus)
+
+    private var hasDetail: Bool {
+        result.body_composition != nil || !(result.muscle_breakdown ?? []).isEmpty || result.proportions != nil
+            || !(result.posture?.issues ?? []).isEmpty || result.posture?.note != nil
+            || !(result.genetic_markers ?? []).isEmpty || result.protocol != nil
+    }
+
+    private func sentence(_ s: String) -> String { s.prefix(1).uppercased() + s.dropFirst() }
+    private func whole(_ v: Double) -> String { NumberText.integer(Int(v.rounded())) }
+
+    private var detail: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Lectura estimada por IA").font(.apTitle3)
+                Text("Es una estimación visual, no un diagnóstico médico.").font(.apFootnote).foregroundStyle(Palette.muted)
+            }
+            if let bc = result.body_composition {
+                block("Composición corporal estimada") {
+                    HStack(spacing: 12) {
+                        if let v = bc.body_fat_pct { FigureTile(label: "Grasa", value: NumberText.decimal(v), hint: "%", accent: true) }
+                        if let v = bc.lean_mass_kg { FigureTile(label: "Masa magra", value: NumberText.decimal(v), hint: "kg") }
+                        if let v = bc.weight_kg { FigureTile(label: "Peso est.", value: NumberText.decimal(v), hint: "kg") }
+                    }
+                    if bc.somatotype != nil || bc.frame_size != nil || bc.fat_distribution != nil {
+                        panel {
+                            if let v = bc.somatotype { infoRow("Somatotipo", sentence(v)) }
+                            if let v = bc.frame_size { infoRow("Estructura", sentence(v)) }
+                            if let v = bc.fat_distribution { infoRow("Distribución de grasa", sentence(v)) }
+                        }
+                    }
+                }
+            }
+            if let groups = result.muscle_breakdown, !groups.isEmpty {
+                block("Lectura por grupo muscular") {
+                    panel {
+                        ForEach(Array(groups.enumerated()), id: \.offset) { _, m in
+                            meter(m.group, "\(NumberText.decimal(m.score))/10", m.score / 10, strong: m.score >= 7,
+                                  note: (m.verdict?.isEmpty == false) ? m.verdict : nil)
+                        }
+                    }
+                }
+            }
+            if let pr = result.proportions {
+                block("Proporciones y simetría") {
+                    panel {
+                        if let v = pr.shoulder_to_waist_ratio {
+                            meter("Ratio hombro/cintura", NumberText.decimal(v, digits: 2), v / 1.8, strong: v >= 1.5, note: "Ideal ~1,60")
+                        }
+                        if let v = pr.v_taper_score { meter("V-taper", "\(NumberText.decimal(v))/10", v / 10, strong: v >= 7) }
+                        if let v = pr.symmetry_score { meter("Simetría", "\(NumberText.decimal(v))/10", v / 10, strong: v >= 7) }
+                        if let v = pr.upper_lower_balance { infoRow("Balance", sentence(v)) }
+                        if let v = pr.weakest_link { infoRow("Eslabón más débil", sentence(v)) }
+                    }
+                }
+            }
+            if let po = result.posture, !(po.issues ?? []).isEmpty || po.note != nil {
+                block("Postura", badge: po.severity.map { severity in
+                    (sentence(severity), severity == "severa" ? Palette.destructive : severity == "moderada" ? Palette.gold : Palette.muted)
+                }) {
+                    panel {
+                        ForEach(Array((po.issues ?? []).enumerated()), id: \.offset) { _, issue in
+                            Text(sentence(issue)).font(.apSubhead).padding(.vertical, 8)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        if let note = po.note {
+                            Text(note).font(.apFootnote).foregroundStyle(Palette.muted).padding(.vertical, 8)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            if let markers = result.genetic_markers, !markers.isEmpty {
+                block("Rasgos visuales que juegan a tu favor (o en contra)") {
+                    panel {
+                        ForEach(Array(markers.enumerated()), id: \.offset) { _, g in
+                            Text(sentence(g)).font(.apSubhead).padding(.vertical, 8)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    Text("Señales observadas en tus fotos: no es un estudio genético.")
+                        .font(.apFootnote).foregroundStyle(Palette.muted)
+                }
+            }
+            if let pc = result.protocol {
+                block("Protocolo recomendado por la IA") {
+                    panel {
+                        if let v = pc.training_days_per_week { infoRow("Días de entreno por semana", whole(v)) }
+                        if let v = pc.weekly_sets_priority { infoRow("Series del grupo prioritario", whole(v)) }
+                        if let v = pc.protein_g_per_kg { infoRow("Proteína por kg", "\(NumberText.decimal(v)) g") }
+                        if let v = pc.calorie_adjustment_kcal { infoRow("Calorías frente a mantenimiento", "\(v > 0 ? "+" : "")\(whole(v)) kcal") }
+                        if let v = pc.cardio_minutes_per_week { infoRow("Cardio por semana", "\(whole(v)) min") }
+                    }
+                    if let lifts = pc.key_lifts, !lifts.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Ejercicios clave").font(.apSubhead.weight(.semibold))
+                            FlowRow(spacing: 8) {
+                                ForEach(Array(lifts.enumerated()), id: \.offset) { _, lift in
+                                    Text(lift).font(.apSubhead)
+                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                        .background(Palette.card, in: Capsule())
+                                }
+                            }
+                        }
+                    }
+                    if let avoid = pc.avoid, !avoid.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Evita").font(.apSubhead.weight(.semibold))
+                            ForEach(Array(avoid.enumerated()), id: \.offset) { _, item in
+                                HStack(alignment: .top, spacing: 10) {
+                                    Image(systemName: "xmark").font(.inter(size: 13, weight: .semibold))
+                                        .foregroundStyle(Palette.destructive).padding(.top, 2).accessibilityHidden(true)
+                                    Text(item).font(.apSubhead).foregroundStyle(Palette.muted)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func block<Content: View>(_ title: String, badge: (String, Color)? = nil,
+                                      @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title).font(.apHeadline).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if let badge {
+                    Text(badge.0).font(.apSubhead.weight(.semibold)).foregroundStyle(badge.1)
+                }
+            }
+            content()
+        }
+    }
+
+    private func panel<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .padding(.horizontal, 18).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    private func infoRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label).font(.apSubhead)
+            Spacer(minLength: 8)
+            Text(value).font(.apSubhead).foregroundStyle(Palette.muted).multilineTextAlignment(.trailing).monospacedDigit()
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func meter(_ label: String, _ value: String, _ fraction: Double, strong: Bool, note: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(label).font(.apSubhead.weight(.semibold))
+                Spacer(minLength: 8)
+                Text(value).font(.apSubhead.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(strong ? Palette.gold : Palette.foreground)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Palette.secondary)
+                    Capsule().fill(strong ? Palette.gold : Color.white.opacity(0.4))
+                        .frame(width: geo.size.width * min(1, max(0, fraction)))
+                }
+            }
+            .frame(height: 6)
+            .accessibilityHidden(true)
+            if let note {
+                Text(note).font(.apFootnote).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Mejoras

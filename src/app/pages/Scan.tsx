@@ -1,4 +1,5 @@
-import { errorMessage, errorStatus, functionErrorMessage } from "@/shared/lib/runtimeValues";
+import { errorMessage, errorStatus } from "@/shared/lib/runtimeValues";
+import { scanErrorMessage } from "@/shared/lib/scanErrors";
 import { formatDecimal } from "@/shared/lib/numberFormat";
 import { compressImage, toBrowserFriendlyImage } from "@/shared/lib/imageCompression";
 import { IconTile } from "@/shared/components/ui/icon-tile";
@@ -719,18 +720,8 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       // En caso contrario, el efecto del paso "analyzing" hará la transición a "lead"
     } catch (e: unknown) {
       console.error(e);
-      const status = errorStatus(e);
       // El motivo del servidor solo elige el aviso (igual que en la app): nunca se enseña tal cual.
-      const msg = await functionErrorMessage(e, errorMessage(e));
-      if (status === 429 || /too many|429/i.test(msg)) {
-        toast.error("Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo.");
-      } else if (/payment/i.test(msg)) {
-        toast.error("El análisis con IA está pausado: el servicio no tiene saldo. Estamos en ello; inténtalo más tarde.");
-      } else if (!navigator.onLine) {
-        toast.error("Sin conexión. Comprueba tu internet e inténtalo de nuevo.");
-      } else {
-        toast.error("No hemos podido analizar las fotos. Inténtalo de nuevo en unos segundos.");
-      }
+      toast.error(await scanErrorMessage(e));
       setPhase("upload");
     } finally {
       clearInterval(interval);

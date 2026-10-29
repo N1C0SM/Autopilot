@@ -50,7 +50,7 @@ const TrainingPlanView = lazy(() => import("@/app/components/dashboard/TrainingP
 const WorkoutProgress = lazy(() => import("@/app/components/dashboard/WorkoutProgress"));
 const PRsList = lazy(() => import("@/app/components/dashboard/PRsList"));
 const Recursos = lazy(() => import("@/web/pages/Recursos"));
-const Scan = lazy(() => import("@/app/pages/Scan"));
+const ProgressScan = lazy(() => import("@/app/components/scan/ProgressScan"));
 const PlanEditor = lazy(() => import("@/app/components/dashboard/PlanEditor"));
 const FreeSessionBuilder = lazy(() => import("@/app/components/dashboard/FreeSessionBuilder"));
 
@@ -173,6 +173,8 @@ const Dashboard = () => {
     if (section !== "training") setPlanFocusDay(undefined);
   }, [section]);
   const [progressTab, setProgressTab] = useState<"evolution" | "photos" | "records" | "scan">("evolution");
+  // Tras un scan, «Físico» vuelve a pedir las fotos (como la app).
+  const [photosVersion, setPhotosVersion] = useState(0);
   const [completedThisWeek, setCompletedThisWeek] = useState(cached?.completedThisWeek ?? 0);
   const [completedToday, setCompletedToday] = useState(cached?.completedToday ?? false);
   const [workoutMode, setWorkoutMode] = useState(false);
@@ -889,27 +891,14 @@ const Dashboard = () => {
               <WorkoutProgress userId={user.id} compact />
             </TabsContent>
             <TabsContent value="photos" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
-              <ProgressPhotos userId={user.id} onGoScan={() => setProgressTab("scan")} />
+              <ProgressPhotos key={photosVersion} userId={user.id} onGoScan={() => setProgressTab("scan")} />
             </TabsContent>
             <TabsContent value="records" forceMount tabIndex={-1} className="mt-0 data-[state=inactive]:hidden">
               <PRsList userId={user.id} />
             </TabsContent>
             <TabsContent value="scan" tabIndex={-1} className="mt-0">
-              <Scan
-                inline
-                onOpenPlan={() => {
-                  setAutoStartWorkout(false);
-                  setTrainingView("plan");
-                  setSection("training");
-                }}
-                onStartWorkout={() => {
-                  setAutoStartWorkout(true);
-                  setTrainingView("tracker");
-                  setWorkoutMode(true);
-                  setSection("training");
-                }}
-                onPlanChanged={() => { void fetchData(); }}
-              />
+              {/* Igual que la app (iPhone/Mac): el scan público de la landing es otra pantalla. */}
+              <ProgressScan onScanned={() => setPhotosVersion((v) => v + 1)} />
             </TabsContent>
           </Suspense>
           </div>
