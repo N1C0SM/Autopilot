@@ -20,6 +20,7 @@ export interface ChannelFunnel {
   visits: number;
   scans: number;
   signups: number;
+  firstWorkout: number;
   week2Eligible: number;
   activeWeek2: number;
   plus: number;
@@ -63,6 +64,7 @@ export function parseAcquisitionFunnel(raw: unknown): AcquisitionFunnel {
       visits: num(c.visits),
       scans: num(c.scans),
       signups: num(c.signups),
+      firstWorkout: num(c.first_workout),
       week2Eligible: num(c.week2_eligible),
       activeWeek2: num(c.active_week2),
       plus: num(c.plus),
@@ -73,11 +75,12 @@ export function parseAcquisitionFunnel(raw: unknown): AcquisitionFunnel {
       visits: acc.visits + c.visits,
       scans: acc.scans + c.scans,
       signups: acc.signups + c.signups,
+      firstWorkout: acc.firstWorkout + c.firstWorkout,
       week2Eligible: acc.week2Eligible + c.week2Eligible,
       activeWeek2: acc.activeWeek2 + c.activeWeek2,
       plus: acc.plus + c.plus,
     }),
-    { visits: 0, scans: 0, signups: 0, week2Eligible: 0, activeWeek2: 0, plus: 0 },
+    { visits: 0, scans: 0, signups: 0, firstWorkout: 0, week2Eligible: 0, activeWeek2: 0, plus: 0 },
   );
   return { from: data.from ?? "", to: data.to ?? "", trackingSince: data.tracking_since ?? null, channels, total };
 }
@@ -89,4 +92,84 @@ export async function fetchAcquisitionFunnel(range: { from: string; to: string }
   const { data, error } = await (supabase as any).rpc("admin_acquisition_funnel", { _from: range.from, _to: range.to });
   if (error) throw error;
   return parseAcquisitionFunnel(data);
+}
+
+/** Paso más avanzado que alcanzó una cuenta (mismo orden que `acquisition_stage` en SQL). */
+export const ACQUISITION_STAGES = ["cuenta", "scan", "entreno", "activo", "plus"] as const;
+export type AcquisitionStage = (typeof ACQUISITION_STAGES)[number];
+
+export const STAGE_LABELS: Record<AcquisitionStage, string> = {
+  cuenta: "Solo creó la cuenta",
+  scan: "Hizo el scan",
+  entreno: "Entrenó al menos una vez",
+  activo: "Activo la 2ª semana",
+  plus: "Plus",
+};
+
+export interface AcquisitionUser {
+  userId: string;
+  name: string | null;
+  email: string | null;
+  signupAt: string;
+  channel: AcquisitionChannel;
+  source: string | null;
+  medium: string | null;
+  campaign: string | null;
+  landingPath: string | null;
+  stage: AcquisitionStage;
+  firstWorkout: string | null;
+  lastWorkout: string | null;
+}
+
+export interface AcquisitionUsersPage {
+  total: number;
+  users: AcquisitionUser[];
+}
+
+const str = (v: unknown) => (typeof v === "string" && v ? v : null);
+const asChannel = (v: unknown): AcquisitionChannel =>
+  (ACQUISITION_CHANNELS as readonly string[]).includes(String(v)) ? (v as AcquisitionChannel) : "directo";
+const asStage = (v: unknown): AcquisitionStage =>
+  (ACQUISITION_STAGES as readonly string[]).includes(String(v)) ? (v as AcquisitionStage) : "cuenta";
+
+/** Convierte la respuesta de `admin_acquisition_users`. */
+export function parseAcquisitionUsers(raw: unknown): AcquisitionUsersPage {
+  const data = (raw ?? {}) as { total?: unknown; users?: Record<string, unknown>[] };
+  return {
+    total: num(data.total),
+    users: (data.users ?? []).map((u) => ({
+      userId: String(u.user_id ?? ""),
+      name: str(u.name),
+      email: str(u.email),
+      signupAt: String(u.signup_at ?? ""),
+      channel: asChannel(u.channel),
+      source: str(u.source),
+      medium: str(u.medium),
+      campaign: str(u.campaign),
+      landingPath: str(u.landing_path),
+      stage: asStage(u.stage),
+      firstWorkout: str(u.first_workout),
+      lastWorkout: str(u.last_workout),
+    })),
+  };
+}
+
+export const USERS_PAGE_SIZE = 50;
+
+/** Cuentas del rango con su origen y el paso en el que se quedaron (solo admins). */
+export async function fetchAcquisitionUsers(
+  range: { from: string; to: string },
+  filters: { channel?: AcquisitionChannel | null; stage?: AcquisitionStage | null; offset?: number } = {},
+): Promise<AcquisitionUsersPage> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("admin_acquisition_users", {
+    _from: range.from,
+    _to: range.to,
+    _channel: filters.channel ?? null,
+    _stage: filters.stage ?? null,
+    _limit: USERS_PAGE_SIZE,
+    _offset: filters.offset ?? 0,
+  });
+  if (error) throw error;
+  return parseAcquisitionUsers(data);
 }

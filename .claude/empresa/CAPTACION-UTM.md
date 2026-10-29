@@ -32,6 +32,14 @@ un Short de YouTube: `utm_medium=post`.
   hechos en la web. Activo 2ª semana = al menos un entreno entre los días 8 y 14.
 - Se excluyen admins, entrenadores y cuentas de `metrics_excluded_users`.
 
+## Persona a persona
+
+Admin → Captación → **Personas**: cada cuenta del rango con su red, medio, campaña,
+página por la que entró, fecha de alta, último entreno y el **paso en el que se quedó**
+(Solo creó la cuenta → Hizo el scan → Entrenó al menos una vez → Activo la 2ª semana → Plus),
+filtrable por red y por paso. El bloque **Embudo** muestra cuánto se pierde entre cada paso.
+Los visitantes sin cuenta solo se cuentan: no se sigue a nadie que no se ha registrado.
+
 ## Siguiente paso (fuera de alcance)
 
 Traer seguidores, alcance y clics de Metricool al mismo panel (requiere la API del

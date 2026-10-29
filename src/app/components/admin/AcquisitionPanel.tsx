@@ -5,14 +5,24 @@ import { Spinner } from "@/shared/components/ui/spinner";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { SectionHeader } from "@/shared/components/ui/section-header";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import { StatusBadge, type StatusTone } from "@/shared/components/ui/status-badge";
 import { hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import {
+  ACQUISITION_CHANNELS,
+  ACQUISITION_STAGES,
   CHANNEL_LABELS,
   RANGE_OPTIONS,
+  STAGE_LABELS,
+  USERS_PAGE_SIZE,
   fetchAcquisitionFunnel,
+  fetchAcquisitionUsers,
   rangeDates,
+  type AcquisitionChannel,
   type AcquisitionFunnel,
+  type AcquisitionStage,
+  type AcquisitionUser,
   type ChannelFunnel,
   type RangeKey,
 } from "@/shared/lib/acquisitionFunnel";
@@ -95,12 +105,16 @@ const AcquisitionPanel = () => {
             {" "}Activo en 2ª semana: al menos un entreno entre los días 8 y 14 desde el alta (solo cuenta a quien ya los ha cumplido). Sin cuentas de prueba ni del equipo.
           </p>
 
+          <FunnelSteps total={total} tracking={!!tracking} className={cn(loading && "opacity-60")} />
+
           <Card className={cn(loading && "opacity-60")}>
             <SectionHeader title="Por red" size="sm" className="mb-2" />
             <ul className="divide-y divide-border/60">
               {data.channels.map((c) => <ChannelRow key={c.channel} row={c} tracking={!!tracking} />)}
             </ul>
           </Card>
+
+          <UsersList range={range} />
         </>
       ) : null}
     </div>
@@ -112,6 +126,7 @@ function ChannelRow({ row, tracking }: { row: ChannelFunnel; tracking: boolean }
   const stats = [
     { label: "Visitas", value: tracking ? row.visits : "—" },
     { label: "Scans", value: tracking ? row.scans : "—" },
+    { label: "1er entreno", value: row.firstWorkout },
     { label: "Activos 2ª sem.", value: row.week2Eligible > 0 ? `${row.activeWeek2}/${row.week2Eligible}` : "—" },
     { label: "Plus", value: row.plus },
   ];
@@ -124,7 +139,7 @@ function ChannelRow({ row, tracking }: { row: ChannelFunnel; tracking: boolean }
           <span className="ml-1.5 type-footnote text-muted-foreground">{row.signups === 1 ? "cuenta" : "cuentas"}</span>
         </span>
       </div>
-      <dl className="mt-2 grid grid-cols-4 gap-2">
+      <dl className="mt-2 grid grid-cols-5 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="min-w-0">
             <dt className="truncate type-caption1 text-muted-foreground">{s.label}</dt>
@@ -133,6 +148,130 @@ function ChannelRow({ row, tracking }: { row: ChannelFunnel; tracking: boolean }
         ))}
       </dl>
     </li>
+  );
+}
+
+/** Embudo completo con lo que se pierde entre cada paso. */
+function FunnelSteps({ total, tracking, className }: { total: Omit<ChannelFunnel, "channel">; tracking: boolean; className?: string }) {
+  const steps = [
+    { label: "Visitas", value: tracking ? total.visits : null },
+    { label: "Scans", value: tracking ? total.scans : null },
+    { label: "Cuentas", value: total.signups },
+    { label: "1er entreno", value: total.firstWorkout },
+    { label: "Activos 2ª sem.", value: total.activeWeek2 },
+    { label: "Plus", value: total.plus },
+  ];
+  return (
+    <Card className={className}>
+      <SectionHeader title="Embudo" size="sm" className="mb-3" />
+      <ol className="divide-y divide-border/60">
+        {steps.map((st, i) => {
+          const prev = i > 0 ? steps[i - 1].value : null;
+          const kept = st.value != null && prev != null && prev > 0 ? Math.round((st.value / prev) * 100) : null;
+          return (
+            <li key={st.label} className="flex items-baseline justify-between gap-3 py-3">
+              <span className="type-body">{st.label}</span>
+              <span className="flex items-baseline gap-3 tabular-nums">
+                {kept != null && (
+                  <span className={cn("type-footnote", kept < 30 ? "text-destructive" : "text-muted-foreground")}>
+                    {kept}% sigue · se pierde {100 - kept}%
+                  </span>
+                )}
+                <span className="type-figure text-[24px]">{st.value ?? "—"}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="mt-2 type-footnote text-muted-foreground">
+        Las visitas y los scans de quien no crea cuenta solo se cuentan: no se sigue a nadie sin cuenta. Persona a persona, abajo, solo cuentas.
+      </p>
+    </Card>
+  );
+}
+
+const STAGE_TONE: Record<AcquisitionStage, StatusTone> = { cuenta: "neutral", scan: "neutral", entreno: "accent", activo: "success", plus: "success" };
+const fmtDay = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "—");
+
+/** Cada cuenta del rango: de dónde vino y en qué paso se quedó. */
+function UsersList({ range }: { range: RangeKey }) {
+  const [channel, setChannel] = useState<AcquisitionChannel | "all">("all");
+  const [stage, setStage] = useState<AcquisitionStage | "all">("all");
+  const [users, setUsers] = useState<AcquisitionUser[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const load = useCallback(async (offset: number) => {
+    setLoading(true);
+    try {
+      const page = await fetchAcquisitionUsers(rangeDates(range), {
+        channel: channel === "all" ? null : channel,
+        stage: stage === "all" ? null : stage,
+        offset,
+      });
+      setUsers((prev) => (offset === 0 ? page.users : [...prev, ...page.users]));
+      setTotal(page.total);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [range, channel, stage]);
+
+  useEffect(() => { void load(0); }, [load]);
+
+  return (
+    <Card>
+      <SectionHeader title="Personas" size="sm" className="mb-1" />
+      <p className="mb-3 type-footnote text-muted-foreground">De dónde vino cada cuenta y en qué paso del embudo se quedó.</p>
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <Select value={channel} onValueChange={(v) => { void hapticSelection(); setChannel(v as AcquisitionChannel | "all"); }}>
+          <SelectTrigger aria-label="Red"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las redes</SelectItem>
+            {ACQUISITION_CHANNELS.map((c) => <SelectItem key={c} value={c}>{CHANNEL_LABELS[c]}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={stage} onValueChange={(v) => { void hapticSelection(); setStage(v as AcquisitionStage | "all"); }}>
+          <SelectTrigger aria-label="Paso"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los pasos</SelectItem>
+            {ACQUISITION_STAGES.map((st) => <SelectItem key={st} value={st}>{STAGE_LABELS[st]}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      {error && <p role="alert" className="py-2 type-footnote text-destructive">No se pudo cargar la lista.</p>}
+      {!error && !loading && users.length === 0 && <p className="py-6 text-center type-subhead text-muted-foreground">Nadie con estos filtros en el rango.</p>}
+      <ul className="divide-y divide-border/60">
+        {users.map((u) => (
+          <li key={u.userId} className="py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate type-headline">{u.name || u.email || u.userId.slice(0, 8)}</p>
+                {u.name && u.email ? <p className="truncate type-footnote text-muted-foreground">{u.email}</p> : null}
+              </div>
+              <StatusBadge tone={STAGE_TONE[u.stage]}>{STAGE_LABELS[u.stage]}</StatusBadge>
+            </div>
+            <p className="mt-1 type-footnote text-muted-foreground">
+              {CHANNEL_LABELS[u.channel]}
+              {u.medium ? ` · ${u.medium}` : ""}
+              {u.campaign ? ` · ${u.campaign}` : ""}
+              {u.landingPath ? ` · entró por ${u.landingPath}` : ""}
+              {` · alta ${fmtDay(u.signupAt)}`}
+              {u.lastWorkout ? ` · último entreno ${fmtDay(u.lastWorkout)}` : ""}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {loading && <div className="flex justify-center py-4"><Spinner size="sm" /></div>}
+      {!loading && users.length < total && (
+        <Button variant="plain" className="mt-2 w-full" onClick={() => { void hapticTap(); void load(users.length); }}>
+          Ver {Math.min(USERS_PAGE_SIZE, total - users.length)} más de {total}
+        </Button>
+      )}
+    </Card>
   );
 }
 
