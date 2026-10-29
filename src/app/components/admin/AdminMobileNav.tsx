@@ -1,4 +1,4 @@
-import { LayoutDashboard, BarChart3, Dumbbell, SlidersHorizontal, Target } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Dumbbell, SlidersHorizontal, Target } from "lucide-react";
 import type { AdminSection } from "@/app/pages/Admin";
 import FloatingMobileNav from "@/app/components/mobile/FloatingMobileNav";
 
@@ -9,7 +9,7 @@ interface Props {
 
 const TABS: { label: string; section: AdminSection; icon: typeof LayoutDashboard }[] = [
   { label: "Dashboard", section: "dashboard", icon: LayoutDashboard },
-  { label: "Negocio", section: "metrics", icon: BarChart3 },
+  { label: "Crecimiento", section: "acquisition", icon: TrendingUp },
   { label: "Ejercicios", section: "exercises", icon: Dumbbell },
   { label: "Reglas", section: "rules", icon: SlidersHorizontal },
   { label: "Físicos", section: "physiques", icon: Target },

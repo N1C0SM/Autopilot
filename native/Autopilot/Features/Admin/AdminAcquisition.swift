@@ -1,6 +1,22 @@
 import SwiftUI
 import Supabase
 
+/// Admin → Crecimiento: Captación (de dónde vienen y dónde se pierden) y Negocio
+/// (planes, ingresos y actividad) en una sola sección, igual que la web.
+struct AdminGrowthView: View {
+    @State private var tab = 0
+
+    var body: some View {
+        VStack(spacing: 12) {
+            SegmentedPill(options: ["Captación", "Negocio"], selection: $tab)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+            if tab == 0 { AdminAcquisitionView() } else { AdminMetricsWebView() }
+        }
+        .screenBackground()
+    }
+}
+
 /// Admin → Captación: de qué red llega cada usuario y hasta dónde avanza.
 /// Mismo cálculo que la web: todo sale agregado de `admin_acquisition_funnel` (solo admins).
 struct AdminAcquisitionView: View {

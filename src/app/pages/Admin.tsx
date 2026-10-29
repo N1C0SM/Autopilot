@@ -17,6 +17,8 @@ import type { TestAccountKind } from "@/app/components/admin/CreateTestAccountDi
 import { clientProfiles } from "@/shared/lib/adminMetrics";
 import { listTestAccountIds } from "@/shared/lib/testAccounts";
 import { Button } from "@/shared/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { hapticSelection } from "@/shared/lib/native";
 import { toast } from "sonner";
 
 const AdminMetrics = lazy(() => import("@/app/components/admin/AdminMetrics"));
@@ -72,8 +74,8 @@ export type AdminSection = "dashboard" | "metrics" | "acquisition" | "users" | "
 
 const SECTION_TITLES: Record<AdminSection, string> = {
   dashboard: "Dashboard",
-  metrics: "Negocio",
-  acquisition: "Captación",
+  metrics: "Crecimiento",
+  acquisition: "Crecimiento",
   users: "Usuarios",
   trainers: "Entrenadores",
   reminders: "Recordatorios",
@@ -101,7 +103,10 @@ const Admin = () => {
   const [trainerIds, setTrainerIds] = useState<Set<string>>(new Set());
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [section, setSection] = useState<AdminSection>(() =>
-    { const requested = new URLSearchParams(window.location.search).get("s"); return requested && Object.prototype.hasOwnProperty.call(SECTION_TITLES, requested) ? requested as AdminSection : "dashboard"; });
+    { const requested = new URLSearchParams(window.location.search).get("s"); if (requested === "metrics") return "acquisition"; return requested && Object.prototype.hasOwnProperty.call(SECTION_TITLES, requested) ? requested as AdminSection : "dashboard"; });
+  // Crecimiento agrupa Captación (de dónde vienen) y Negocio (cuánto vale); «metrics» abre la pestaña Negocio.
+  const [growthTab, setGrowthTab] = useState<"captacion" | "negocio">(() =>
+    new URLSearchParams(window.location.search).get("s") === "metrics" ? "negocio" : "captacion");
   const isMobile = useIsMobile();
   const contentRef = useRef<HTMLElement>(null);
 
@@ -170,9 +175,11 @@ const Admin = () => {
     setSection("users");
   };
 
-  const handleNavigate = (s: AdminSection) => {
+  const handleNavigate = (target: AdminSection) => {
+    const s = target === "metrics" ? "acquisition" : target;
+    if (target === "metrics") setGrowthTab("negocio");
     setSection(s);
-    window.history.replaceState(null, "", `${window.location.pathname}?s=${s}`);
+    window.history.replaceState(null, "", `${window.location.pathname}?s=${target}`);
     if (s !== "users") setSelectedUser(null);
   };
 
@@ -423,14 +430,16 @@ const Admin = () => {
             )}
 
             {section === "acquisition" && (
-              <div className="w-full">
-                <AcquisitionPanel />
-              </div>
-            )}
-
-            {section === "metrics" && (
-              <div className="w-full">
-                <AdminMetrics users={clients} onRefresh={refreshUsers} onOpenAcquisition={() => handleNavigate("acquisition")} />
+              <div className="w-full space-y-5">
+                <Tabs value={growthTab} onValueChange={(v) => { void hapticSelection(); setGrowthTab(v as "captacion" | "negocio"); }}>
+                  <TabsList className="w-full sm:w-80" aria-label="Crecimiento">
+                    <TabsTrigger value="captacion">Captación</TabsTrigger>
+                    <TabsTrigger value="negocio">Negocio</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                {growthTab === "captacion"
+                  ? <AcquisitionPanel />
+                  : <AdminMetrics users={clients} onRefresh={refreshUsers} />}
               </div>
             )}
             </Suspense>

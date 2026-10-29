@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, UserCog, Dumbbell, SlidersHorizontal, Mail, Globe, CreditCard, BarChart3, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle, Route, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, UserCog, Dumbbell, SlidersHorizontal, Mail, Globe, CreditCard, MailOpen, Target, FileText, FolderOpen, Layers, UserCircle, Route, TrendingUp } from "lucide-react";
 import type { AdminSection } from "@/app/pages/Admin";
 
 export type AdminNavItem = { title: string; section: AdminSection; icon: typeof LayoutDashboard };
@@ -7,8 +7,7 @@ export type AdminNavItem = { title: string; section: AdminSection; icon: typeof 
 export const ADMIN_NAV_GROUPS: { label: string; items: AdminNavItem[] }[] = [
   { label: "General", items: [
     { title: "Dashboard", section: "dashboard", icon: LayoutDashboard },
-    { title: "Negocio", section: "metrics", icon: BarChart3 },
-    { title: "Captación", section: "acquisition", icon: Megaphone },
+    { title: "Crecimiento", section: "acquisition", icon: TrendingUp },
     { title: "Roadmap", section: "roadmap", icon: Route },
   ] },
   { label: "Personas", items: [

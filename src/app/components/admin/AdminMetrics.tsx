@@ -41,7 +41,7 @@ interface MetricsData extends ReturnType<typeof summarizeClientPlans> {
 const fmtEur = (n: number) => n.toLocaleString("es-ES") + " €";
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
-const AdminMetrics = ({ users, onRefresh, onOpenAcquisition }: { users: Profile[]; onRefresh: () => Promise<Profile[]>; onOpenAcquisition?: () => void }) => {
+const AdminMetrics = ({ users, onRefresh }: { users: Profile[]; onRefresh: () => Promise<Profile[]> }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<MetricsData | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -164,14 +164,6 @@ const AdminMetrics = ({ users, onRefresh, onOpenAcquisition }: { users: Profile[
         <div className="flex items-center justify-between gap-3">
           <p className="type-subhead text-muted-foreground">
             Cómo va el negocio: planes, ingresos y actividad.
-            {onOpenAcquisition && (
-              <>
-                {" "}
-                <button type="button" onClick={() => { void hapticTap(); onOpenAcquisition(); }} className="text-primary active:opacity-60">
-                  De dónde vienen → Captación
-                </button>
-              </>
-            )}
           </p>
           <div className="-mr-3 flex shrink-0 items-center">
             <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void refresh(); }} aria-label="Actualizar" className="text-primary [&_svg]:size-5">

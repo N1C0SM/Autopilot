@@ -21,7 +21,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     static let trainerSections: [AppSection] = [.trainerClients, .trainerProfile, .settings]
 
     static let adminGroups: [(label: String, items: [AppSection])] = [
-        ("General", [.adminDashboard, .adminMetrics, .adminAcquisition, .adminRoadmap]),
+        ("General", [.adminDashboard, .adminAcquisition, .adminRoadmap]),
         ("Personas", [.adminUsers, .adminTrainers, .adminReminders]),
         ("Entrenamiento", [.adminExercises, .adminRules, .adminPhysiques, .adminDrive]),
         ("Contenido", [.adminLanding, .adminBlog, .adminEmails]),
@@ -51,7 +51,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .trainerProfile: "Mi perfil"
         case .adminDashboard: "Dashboard"
         case .adminMetrics: "Negocio"
-        case .adminAcquisition: "Captación"
+        case .adminAcquisition: "Crecimiento"
         case .adminRoadmap: "Roadmap"
         case .adminUsers: "Usuarios"
         case .adminTrainers: "Entrenadores"
@@ -81,7 +81,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .trainerProfile: "person.crop.circle"
         case .adminDashboard: "square.grid.2x2"
         case .adminMetrics: "chart.bar.xaxis"
-        case .adminAcquisition: "megaphone"
+        case .adminAcquisition: "chart.line.uptrend.xyaxis"
         case .adminRoadmap: "point.topleft.down.to.point.bottomright.curvepath"
         case .adminUsers: "person.2"
         case .adminTrainers: "person.badge.key"
@@ -444,7 +444,7 @@ struct SectionView: View {
             case .trainerProfile: TrainerProfileView()
             case .adminDashboard: AdminDashboardView(onNavigate: onNavigate)
             case .adminMetrics: AdminMetricsWebView()
-            case .adminAcquisition: AdminAcquisitionView()
+            case .adminAcquisition: AdminGrowthView()
             case .adminUsers: AdminUsersView()
             case .adminRoadmap: RoadmapView()
             case .adminReminders: AdminRemindersView()
