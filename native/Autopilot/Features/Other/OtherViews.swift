@@ -35,8 +35,6 @@ struct NutritionView: View {
     struct Meal: Decodable, Hashable { let name: String?; let description: String? }
     struct Row: Decodable { let macros_json: Macros?; let meals_json: [Meal]? }
     static let defaultDish = "Pollo a la plancha con arroz integral y verduras asadas"
-    /// Ancho de la tarjeta vacía: en Mac no se estira a 1000 pt, que recortaría la foto del plato.
-    private static let emptyCardWidth: CGFloat = 640
     /// Intentos totales al cargar el plan: el primero más dos reintentos automáticos.
     private static let loadAttempts = 3
     /// Espera entre reintentos (backoff creciente) para dejar pasar fallos transitorios.
@@ -82,10 +80,8 @@ struct NutritionView: View {
             // Sin Plus (la RLS no deja leer el plan): el aviso de Plus, no un «no hay plan».
             EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
                       message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
-                .frame(maxWidth: Self.emptyCardWidth, alignment: .leading)
         } else if !hasMeals && kcal <= 0 {
             EmptyCard(photo: Self.defaultDish, title: "Aún no hay plan de comidas", message: "En cuanto tengamos tus macros, verás aquí tus calorías y las comidas del día.")
-                .frame(maxWidth: 560)
         } else {
             // Escritorio (md/lg de la web): el resumen (portada, objetivos/macros y avisos) y las
             // comidas en dos columnas. En el iPhone la rejilla se queda en una y conserva el orden.
@@ -102,11 +98,9 @@ struct NutritionView: View {
                         // Como `MealsPlusCard` de la web; en iOS sin enlace a pagos externos.
                         EmptyCard(photo: Self.defaultDish, title: "Tus comidas, hechas para ti",
                                   message: "Con Plus, Autopilot te prepara las comidas de cada día con tus gustos, alergias y objetivo del onboarding, ajustadas a tus macros. Incluido en Plus.")
-                            .frame(maxWidth: Self.emptyCardWidth, alignment: .leading)
                     } else if generating || hasAccess == nil {
                         EmptyCard(photo: Self.defaultDish, title: "Preparando tus comidas…",
                                   message: "Autopilot está creando tus comidas con tus gustos y alergias del onboarding.")
-                            .frame(maxWidth: Self.emptyCardWidth, alignment: .leading)
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             EmptyCard(photo: Self.defaultDish, title: "Sin comidas todavía",
@@ -115,7 +109,6 @@ struct NutritionView: View {
                                 Button("Volver a intentarlo") { Task { await generateMeals() } }.buttonStyle(.pillSecondary)
                             }
                         }
-                        .frame(maxWidth: Self.emptyCardWidth, alignment: .leading)
                     }
                 }
             }

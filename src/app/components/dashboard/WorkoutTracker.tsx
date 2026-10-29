@@ -5,7 +5,7 @@ import { supabase } from "@/shared/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check, ChevronLeft, CloudOff, Dumbbell, Flame, Clock, CalendarDays,
-  TrendingDown, TrendingUp, Plus, X, Trophy, Info, Play, MoreHorizontal,
+  TrendingDown, Plus, X, Trophy, Info, Play, MoreHorizontal,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
@@ -22,7 +22,7 @@ import ExerciseFocus from "@/app/components/ExerciseFocus";
 import { useExerciseMetadata } from "@/shared/hooks/useExerciseMetadata";
 import { getWorkoutRestPreference, getWorkoutView, WORKOUT_VIEW_EVENT } from "@/shared/lib/workoutPreferences";
 import { readActiveWorkout, saveActiveWorkout, clearActiveWorkout, clearPendingOfflineSeries, remainingRestSeconds, formatElapsed, playRestBeep } from "@/shared/lib/activeWorkout";
-import { applyProgressionToPendingSets, getProgressionSuggestion, summarizePreviousSets } from "@/shared/lib/workoutProgression";
+import { getProgressionSuggestion } from "@/shared/lib/workoutProgression";
 import { parsePositiveWeight } from "@/shared/lib/weight";
 import { WorkoutSummary } from "@/app/components/dashboard/WorkoutSummary";
 import { ExerciseSwap } from "@/app/components/dashboard/ExerciseSwap";
@@ -644,15 +644,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
       return next;
     });
     void hapticTap();
-  };
-
-  const applyProgression = (exerciseName: string, progression: NonNullable<ReturnType<typeof getProgressionSuggestion>>) => {
-    setExerciseLogs((current) => ({
-      ...current,
-      [exerciseName]: applyProgressionToPendingSets(current[exerciseName] || [], progression),
-    }));
-    void hapticTap();
-    toast.success("Propuesta aplicada a las series pendientes. Puedes ajustarla antes de empezar.");
   };
 
   const toggleSetDone = (exerciseName: string, setIndex: number, restSeconds?: number, suggestedWeight?: string) => {
@@ -1690,51 +1681,6 @@ const WorkoutTracker = ({ userId, dayPlans, initialDay, autoStart = false, resum
                       className="overflow-hidden"
                     >
                       <div className="px-2 pb-3 pt-2">
-                        {/* Sugerencia de sobrecarga progresiva y cálculo de la siguiente carga */}
-                        {progression && !allDone && (() => {
-                          const kg = progression.weight ? `${Number(progression.weight).toLocaleString("es-ES", { maximumFractionDigits: 2 })} kg` : "";
-                          const headline = progression.label === "Subir"
-                            ? `Hoy: ${kg}`
-                            : progression.label === "Añadir rep"
-                              ? "Hoy: +1 rep por serie"
-                              : progression.label === "Mantener"
-                                ? (kg ? `Hoy: mantén ${kg}` : "Hoy: mantén la carga")
-                                : (kg ? `Hoy: repite ${kg}` : "Hoy: repite el objetivo");
-                          const lastTime = summarizePreviousSets(prevSets?.filter((set) => !isWorkoutSetWarmup(set)));
-                          const canApply = progression.label === "Subir" || progression.label === "Añadir rep";
-                          return (
-                            <section aria-label="Por qué esta carga" className="mb-3 rounded-[14px] bg-muted/40 px-3 py-2">
-                              {/* Una línea: lo que haces hoy + aplicar. El porqué, solo si lo pides. */}
-                              <div className="flex min-h-11 items-center gap-2">
-                                <p className="min-w-0 flex-1 truncate type-subhead font-semibold tabular-nums text-foreground">{headline}</p>
-                                {canApply && (
-                                  <button
-                                    type="button"
-                                    aria-label={progression.label === "Subir" ? `Usar ${kg} en las series` : "Aplicar +1 rep"}
-                                    onClick={() => {
-                                      void hapticImpact("medium");
-                                      applyProgression(ex.name, progression);
-                                    }}
-                                    className="min-h-11 shrink-0 rounded-full px-3 type-subhead font-semibold text-primary transition active:opacity-50"
-                                  >
-                                    Aplicar
-                                  </button>
-                                )}
-                              </div>
-                              <details className="group">
-                                <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 type-footnote text-muted-foreground">
-                                  <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                                  Por qué
-                                </summary>
-                                <div className="pb-1">
-                                  {lastTime && <p className="type-footnote tabular-nums text-muted-foreground">{lastTime}</p>}
-                                  <p className="mt-0.5 type-footnote text-foreground/80">{progression.reason}</p>
-                                </div>
-                              </details>
-                            </section>
-                          );
-                        })()}
-
                         {/* Column headers */}
                         <div className={`${SET_GRID} pb-1.5 pl-3 pr-2 type-caption1 text-muted-foreground`}>
                           <span className="whitespace-nowrap">Serie</span>

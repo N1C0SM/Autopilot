@@ -209,8 +209,8 @@ const LibraryDrive = () => {
       const thumbEntries: Record<string, string> = {};
       for (const b of books) {
         const media = mediaKindOf(b.file_path);
-        // Un vídeo siempre pide su archivo: su primer fotograma es la miniatura, tenga o no portada.
-        if (media === "video" && b.file_path && !thumbs[b.id]) {
+        // Un vídeo sin miniatura propia enseña su primer fotograma.
+        if (media === "video" && b.file_path && !b.cover_path && !thumbs[b.id]) {
           const { data } = await supabase.storage.from("library").createSignedUrl(b.file_path, 3600);
           if (data?.signedUrl) thumbEntries[b.id] = data.signedUrl;
           continue;
@@ -664,14 +664,16 @@ const LibraryDrive = () => {
           </div>
         </div>
 
-        {(isBook || isPack) && (
+        {(isBook || isPack || isVideo) && (
           <div className="grid gap-6 sm:grid-cols-2">
-            {/* Portada */}
-            <div className={`space-y-1 ${isPack ? "sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-sm" : ""}`}>
+            {/* Portada del libro, del pack o miniatura del vídeo */}
+            <div className={`space-y-1 ${isPack || isVideo ? "sm:col-span-2 sm:mx-auto sm:w-full sm:max-w-sm" : ""}`}>
               <div className="flex items-center justify-between gap-2 px-4">
-                <Label className="type-group-header">Portada</Label>
+                <Label className="type-group-header">{isVideo ? "Miniatura" : "Portada"}</Label>
                 <label className={uploadLink}>
-                  {open.cover_path ? "Cambiar portada" : "Subir portada"}
+                  {open.cover_path
+                    ? (isVideo ? "Cambiar miniatura" : "Cambiar portada")
+                    : (isVideo ? "Subir miniatura" : "Subir portada")}
                   <input
                     type="file"
                     accept="image/*"
@@ -684,14 +686,14 @@ const LibraryDrive = () => {
                   />
                 </label>
               </div>
-              <div className={previewBox}>
+              <div className={`relative w-full overflow-hidden rounded-2xl bg-card ${isVideo ? "aspect-video" : "aspect-[3/4]"}`}>
                 <ImageWithFallback
                   src={covers[open.id]}
-                  alt="Portada"
+                  alt={isVideo ? "Miniatura" : "Portada"}
                   className="h-full w-full object-cover"
                   fallback={
                     <div className={emptyPreview}>
-                      <ImageIcon className="h-6 w-6" strokeWidth={1.75} /> Sin portada
+                      <ImageIcon className="h-6 w-6" strokeWidth={1.75} /> {isVideo ? "Sin miniatura" : "Sin portada"}
                     </div>
                   }
                 />
@@ -711,7 +713,7 @@ const LibraryDrive = () => {
                           )
                         }
                       >
-                        <Download className="mr-2 h-4 w-4" /> Descargar portada
+                        <Download className="mr-2 h-4 w-4" /> {isVideo ? "Descargar miniatura" : "Descargar portada"}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem asChild>
@@ -725,7 +727,9 @@ const LibraryDrive = () => {
                             if (f) upload(open, "cover", f);
                           }}
                         />
-                        <Upload className="mr-2 h-4 w-4" /> {open.cover_path ? "Cambiar portada" : "Subir portada"}
+                        <Upload className="mr-2 h-4 w-4" /> {open.cover_path
+                          ? (isVideo ? "Cambiar miniatura" : "Cambiar portada")
+                          : (isVideo ? "Subir miniatura" : "Subir portada")}
                       </label>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1036,8 +1040,8 @@ const LibraryDrive = () => {
 
             const packCover = kind === "pack" ? covers[(b.pack_items || [])[0]] : undefined;
             const fileUrl = thumbs[b.id];
-            // Un vídeo enseña siempre su primer fotograma: es lo que de verdad hay dentro.
-            const videoFileUrl = mediaKindOf(b.file_path) === "video" ? fileUrl : undefined;
+            // Un vídeo enseña la miniatura que se le subió y, si no tiene, su primer fotograma.
+            const videoFileUrl = !covers[b.id] && mediaKindOf(b.file_path) === "video" ? fileUrl : undefined;
             const thumb = videoFileUrl ? undefined : covers[b.id] || packCover;
             const detail =
               kind === "book" ? `${b.file_path ? "Archivo listo" : "Sin archivo"} · ${b.cover_path ? "con portada" : "sin portada"}`

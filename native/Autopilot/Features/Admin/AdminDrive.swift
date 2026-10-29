@@ -207,8 +207,8 @@ struct AdminDriveView: View {
             .adminRowDivider(first: first, leading: 72)
         } else {
             let thumb = covers[b.id] ?? (kind == "pack" ? (b.pack_items?.first).flatMap { covers[$0] } : nil)
-            // Un vídeo subido enseña siempre su primer fotograma, con la proporción real del archivo.
-            let videoURL = AdminDriveView.isVideo(b.file_path) ? videoThumbs[b.id].flatMap(URL.init(string:)) : nil
+            // Un vídeo enseña la miniatura que se le subió y, si no tiene, su primer fotograma.
+            let videoURL = covers[b.id] == nil && AdminDriveView.isVideo(b.file_path) ? videoThumbs[b.id].flatMap(URL.init(string:)) : nil
             let detail: String = {
                 switch kind {
                 case "book": return "\(b.file_path != nil ? "Archivo listo" : "Sin archivo") · \(b.cover_path != nil ? "con portada" : "sin portada")"
@@ -269,8 +269,8 @@ struct AdminDriveView: View {
         }
         loading = false
         for b in books {
-            // Un vídeo siempre pide su archivo: su primer fotograma es la miniatura, tenga o no portada.
-            if let f = b.file_path, AdminDriveView.isVideo(f), videoThumbs[b.id] == nil,
+            // Un vídeo sin miniatura propia necesita su archivo para sacar el primer fotograma.
+            if let f = b.file_path, b.cover_path == nil, AdminDriveView.isVideo(f), videoThumbs[b.id] == nil,
                let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
                 videoThumbs[b.id] = u.absoluteString
                 continue
@@ -382,11 +382,15 @@ struct DriveItemEditor: View {
                             if let c = cover, let u = URL(string: c) { CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { BrandLoader() } }
                             else { Image(systemName: AdminDriveView.kindSymbol[kind] ?? "doc").font(.inter(.title)).foregroundStyle(Palette.muted) }
                         }
-                        .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .frame(width: kind == "video" ? 132 : 96, height: kind == "video" ? 74 : 132)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         VStack(alignment: .leading, spacing: 8) {
                             Text(AdminDriveView.kindLabel[kind] ?? "").font(.apSubhead).foregroundStyle(Palette.muted)
-                            if kind != "video" && kind != "file" {
-                                PhotosPicker(selection: $coverItem, matching: .images) { Text(cover == nil ? "Subir portada" : "Reemplazar portada").foregroundStyle(Palette.gold) }
+                            if kind != "file" {
+                                PhotosPicker(selection: $coverItem, matching: .images) {
+                                    Text((cover == nil ? "Subir " : "Reemplazar ") + (kind == "video" ? "miniatura" : "portada"))
+                                        .foregroundStyle(Palette.gold)
+                                }
                             }
                             if kind == "book" || kind == "file" || kind == "video" {
                                 Button(book.file_path == nil ? "Subir archivo" : "Reemplazar archivo") { importingFile = true }.foregroundStyle(Palette.gold)
@@ -494,13 +498,13 @@ struct DriveItemEditor: View {
 
     private func uploadCover(_ p: PhotosPickerItem?) async {
         guard let p, let data = try? await p.loadTransferable(type: Data.self), let img = PlatformImage(data: data), let jpg = img.jpegData(maxSide: 1200) else { return }
-        busy = "Subiendo portada…"; defer { busy = nil }
+        busy = kind == "video" ? "Subiendo miniatura…" : "Subiendo portada…"; defer { busy = nil }
         let path = "library-covers/\(book.folder)/portada-\(Int(Date().timeIntervalSince1970 * 1000)).jpg"
         do {
             try await Backend.client.storage.from("site-assets").upload(path, data: jpg, options: FileOptions(contentType: "image/jpeg", upsert: true))
             let url = try Backend.client.storage.from("site-assets").getPublicURL(path: path).absoluteString
             try await Backend.client.from("library_books").update(["cover_path": url]).eq("id", value: book.id).execute()
-            book.cover_path = url; cover = url; message = "Portada reemplazada"
+            book.cover_path = url; cover = url; message = kind == "video" ? "Miniatura actualizada" : "Portada reemplazada"
         } catch { message = "No se pudo subir la portada" }
     }
 

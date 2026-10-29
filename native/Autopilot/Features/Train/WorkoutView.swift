@@ -256,7 +256,6 @@ struct SessionExerciseCard: View {
     private var isOpen: Bool { true }
     private var firstPending: Int? { sets.firstIndex { !$0.done } }
     @State private var technique = false
-    @State private var showWhy = false
     /// Celebración breve al completar todas las series del ejercicio.
     @State private var justCompleted = false
     @State private var swapSheet = false
@@ -315,36 +314,6 @@ struct SessionExerciseCard: View {
             // Siempre desplegado: cero fricción para anotar (nada de tocar dos veces).
             if isOpen {
                 VStack(spacing: 6) {
-                    if !allDone, let p = Progression.suggestion(exercise, previous: workout.previous[exercise.name], previousRpe: workout.previousRpe) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            HStack {
-                                Text(p.headline).font(.apSubhead.weight(.semibold).monospacedDigit()).lineLimit(1)
-                                Spacer()
-                                if p.canApply {
-                                    Button("Aplicar") { workout.applyProgression(exercise.name, p) }
-                                        .font(.apSubhead.weight(.semibold)).foregroundStyle(Palette.gold).buttonStyle(.plain).frame(minHeight: 44)
-                                        .accessibilityLabel(p.label == .up ? "Usar \(p.weight) kg en las series" : "Aplicar +1 rep")
-                                }
-                            }
-                            .frame(minHeight: 44)
-                            Button { showWhy.toggle() } label: {
-                                Label("Por qué", systemImage: "chart.line.uptrend.xyaxis").font(.apFootnote).foregroundStyle(Palette.muted)
-                                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Por qué esta carga")
-                            .accessibilityAddTraits(showWhy ? .isSelected : [])
-                            if showWhy {
-                                if let last = Progression.summarize(workout.previous[exercise.name]) { Text(last).font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted) }
-                                Text(p.reason).font(.apFootnote).foregroundStyle(Palette.foreground.opacity(0.8)).padding(.bottom, 6)
-                            }
-                        }
-                        .padding(.horizontal, 12).padding(.vertical, 4)
-                        .background(Palette.secondary.opacity(0.6), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .accessibilityElement(children: .contain)
-                        .accessibilityLabel("Por qué esta carga")
-                    }
                     HStack(spacing: 8) {
                         Text("Serie").frame(width: 24)
                         Text("Previa").frame(width: 52)
