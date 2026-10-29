@@ -60,7 +60,7 @@ export function publicFaqs(p: PlanFlags): Faq[] {
     },
     p.plus && p.coach && { q: "¿Puedo tener nutrición sin entrenador?", a: `Sí. ${p.plusName} (${euro(p.plusPrice)}/mes) incluye nutrición y progresión automática, sin atención humana.` },
     p.coach && { q: `¿Qué incluye el plan ${p.coachName}?`, a: `${p.coachName} (${euro(p.coachPrice)}/mes) incluye todo lo de ${p.plus ? p.plusName : "Free"} y añade a Nicolás, el fundador: revisa tu plan, lo ajusta si cambian tus horarios o tu material y te responde ${COACH_CONTACT_CHANNEL} en horario normal, no 24/7.` },
-    {
+    p.coach && {
       q: "¿Quién prepara y ajusta mi plan?",
       a: `La rutina se genera con reglas de entrenamiento fijas a partir de tu objetivo, nivel, días y material.${p.plus ? ` En ${p.plusName}, la progresión de cargas se calcula con lo que registras.` : ""}${coachExtra(`En ${p.coachName}, además, Nicolás revisa tu caso, ajusta el plan y responde a tus dudas ${COACH_CONTACT_CHANNEL}.`)}`,
     },
