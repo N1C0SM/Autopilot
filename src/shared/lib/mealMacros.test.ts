@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mealMacros, splitExact, sumMacros } from "./mealMacros";
+import { mealIngredients, mealMacros, splitExact, sumMacros } from "./mealMacros";
 
 const target = { kcal: 2366, protein: 154, carbs: 280, fats: 70 };
 const meals = ["Desayuno", "Almuerzo", "Merienda", "Cena"].map((name) => ({ name, description: name }));
@@ -23,6 +23,19 @@ describe("macros por comida", () => {
 
   it("sin gramos de la IA, cada comida es una parte igual", () => {
     expect(mealMacros(meals, target).map((m) => m.protein)).toEqual([39, 39, 38, 38]);
+  });
+
+  it("lista los ingredientes con su peso y descarta los incompletos", () => {
+    const meal = {
+      name: "Almuerzo",
+      description: "Pollo con arroz",
+      ingredients: [{ food: "Arroz basmati, en crudo", grams: 80, unit: "g" }, { food: "Leche", grams: 200.4, unit: "ml" }, { food: "", grams: 10 }, { food: "Sal" }],
+    };
+    expect(mealIngredients(meal)).toEqual([
+      { food: "Arroz basmati, en crudo", amount: "80 g" },
+      { food: "Leche", amount: "200 ml" },
+    ]);
+    expect(mealIngredients(meals[0])).toEqual([]);
   });
 
   it("reparte enteros exactos", () => {

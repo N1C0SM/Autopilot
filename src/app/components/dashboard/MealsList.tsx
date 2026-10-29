@@ -12,7 +12,7 @@ import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
-import { mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
+import { mealIngredients, mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
 import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
 import NutritionSetup from "@/app/components/dashboard/NutritionSetup";
 
@@ -316,6 +316,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
           {meals.map((meal, i) => {
             const isDone = done.has(meal.name);
             const own = perMeal[i];
+            const ingredients = mealIngredients(meal);
             return (
               <button
                 // Key por comida, no por índice: al regenerar el plan la fila se remonta
@@ -353,6 +354,17 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                   >
                     {meal.description}
                   </span>
+                  {ingredients.length > 0 && (
+                    // Peso de cada ingrediente para pesarlo en báscula.
+                    <span className={cn("mt-1.5 block type-footnote transition-colors duration-150", isDone ? "text-muted-foreground/60" : "text-foreground/80")}>
+                      {ingredients.map((item, n) => (
+                        <span key={n} className="flex justify-between gap-3 py-px">
+                          <span className="min-w-0">{item.food}</span>
+                          <span className="shrink-0 tabular-nums">{item.amount}</span>
+                        </span>
+                      ))}
+                    </span>
+                  )}
                   {own && (
                     <span
                       className={cn(

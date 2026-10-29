@@ -7,9 +7,17 @@
  * replica este cálculo en `NutritionView` (OtherViews.swift): mismas cifras en todas partes.
  */
 
+/** Ingrediente con su peso, para pesarlo en báscula. */
+export interface PlanIngredient {
+  food?: string;
+  grams?: number;
+  unit?: string;
+}
+
 export interface PlanMeal {
   name: string;
   description: string;
+  ingredients?: PlanIngredient[];
   protein?: number;
   carbs?: number;
   fats?: number;
@@ -49,6 +57,13 @@ export function mealMacros(meals: PlanMeal[], target: MealMacros): MealMacros[] 
   const fats = splitExact(target.fats, weightsOf(meals, "fats"));
   const kcal = splitExact(target.kcal, meals.map((_, i) => protein[i] * 4 + carbs[i] * 4 + fats[i] * 9));
   return meals.map((_, i) => ({ kcal: kcal[i], protein: protein[i], carbs: carbs[i], fats: fats[i] }));
+}
+
+/** Ingredientes válidos de la comida, con su cantidad lista para pintar («80 g», «200 ml»). */
+export function mealIngredients(meal: PlanMeal): { food: string; amount: string }[] {
+  return (Array.isArray(meal.ingredients) ? meal.ingredients : [])
+    .filter((i) => typeof i?.food === "string" && i.food.trim() && typeof i.grams === "number" && i.grams > 0)
+    .map((i) => ({ food: (i.food as string).trim(), amount: `${Math.round(i.grams as number)} ${i.unit === "ml" ? "ml" : "g"}` }));
 }
 
 /** Suma de las comidas marcadas: marcarlas todas da exactamente el objetivo. */

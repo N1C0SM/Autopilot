@@ -80,5 +80,8 @@ describe("paridad web ↔ apps nativas", () => {
     // El reparto exacto vive en mealMacros.ts y la app lo replica.
     expect(web).toMatch(/mealMacros\(meals, \{ kcal, protein: p, carbs: c, fats: f \}\)/);
     expect(app).toMatch(/static func splitExact\(_ total: Double, _ weights: \[Double\]\) -> \[Int\]/);
+    // Ingredientes con su peso para pesarlos, en las dos.
+    expect(web).toMatch(/const ingredients = mealIngredients\(meal\);/);
+    expect(app).toMatch(/let weighed = meal\.weighed/);
   });
 });

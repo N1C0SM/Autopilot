@@ -35,8 +35,22 @@ struct NutritionView: View {
     /// Plus sin preferencias de comidas: se le preguntan antes de prepararlas (como la web).
     @State private var needsSetup = false
     struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
-    /// Gramos de cada macro si la IA los dio; si no, la comida cuenta como una parte igual del día.
-    struct Meal: Codable, Hashable { let name: String?; let description: String?; var protein: Double? = nil; var carbs: Double? = nil; var fats: Double? = nil }
+    /// Ingredientes con su peso (para pesarlos) y gramos de cada macro si la IA los dio; sin
+    /// macros, la comida cuenta como una parte igual del día.
+    struct Meal: Codable, Hashable {
+        let name: String?; let description: String?
+        var ingredients: [Ingredient]? = nil
+        var protein: Double? = nil; var carbs: Double? = nil; var fats: Double? = nil
+        /// Ingredientes válidos con su cantidad lista para pintar («80 g», «200 ml»), como `mealIngredients`.
+        var weighed: [(food: String, amount: String)] {
+            (ingredients ?? []).compactMap { i in
+                guard let food = i.food?.trimmingCharacters(in: .whitespaces), !food.isEmpty, let g = i.grams, g > 0 else { return nil }
+                return (food, "\(Int(g.rounded())) \(i.unit == "ml" ? "ml" : "g")")
+            }
+        }
+    }
+    /// Todo opcional: un ingrediente incompleto se descarta sin romper la carga del plan.
+    struct Ingredient: Codable, Hashable { let food: String?; let grams: Double?; var unit: String? = nil }
     /// Macros de una comida ya cuadrados con el objetivo del día (enteros).
     struct MealMacros: Equatable { var kcal = 0; var protein = 0; var carbs = 0; var fats = 0 }
     struct Row: Codable { let macros_json: Macros?; let meals_json: [Meal]? }
@@ -319,6 +333,21 @@ struct NutritionView: View {
                         Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : Palette.foreground)
                             .fixedSize(horizontal: false, vertical: true)
                         if let d = meal.description { Text(d).font(.apSubhead).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1)).lineLimit(2) }
+                        let weighed = meal.weighed
+                        if !weighed.isEmpty {
+                            // Peso de cada ingrediente para pesarlo en báscula.
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(Array(weighed.enumerated()), id: \.offset) { _, item in
+                                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                        Text(item.food).fixedSize(horizontal: false, vertical: true)
+                                        Spacer(minLength: 0)
+                                        Text(item.amount).monospacedDigit()
+                                    }
+                                }
+                            }
+                            .font(.apFootnote).foregroundStyle(isDone ? Palette.muted.opacity(0.6) : Palette.foreground.opacity(0.8))
+                            .padding(.top, 4)
+                        }
                         if let own {
                             Text("\(NumberText.integer(own.kcal)) kcal · P \(own.protein) g · C \(own.carbs) g · G \(own.fats) g")
                                 .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1))
