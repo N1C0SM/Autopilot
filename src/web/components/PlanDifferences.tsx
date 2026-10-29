@@ -22,8 +22,8 @@ const PlanDifferences = () => {
     { text: "Revisión humana de tu plan", free: false, plus: false, coach: true },
   ];
   const plans = [
-    { key: "free" as const, name: "Free", price: 0, tagline: "Tu rutina, tu registro y tus macros." },
-    p.plus && { key: "plus" as const, name: p.plusName, price: p.plusPrice, tagline: "Tu scan completo y tus comidas." },
+    { key: "free" as const, name: "Free", price: 0, tagline: "Tu rutina, tus macros y un scan básico." },
+    p.plus && { key: "plus" as const, name: p.plusName, price: p.plusPrice, tagline: "Tu scan avanzado y tus comidas." },
     p.coach && { key: "coach" as const, name: p.coachName, price: p.coachPrice, tagline: "Plus con revisión humana." },
   ].filter(Boolean) as { key: "free" | "plus" | "coach"; name: string; price: number; tagline: string }[];
   // Una fila que ningún plan visible incluye es de un plan oculto: no se anuncia.
@@ -41,7 +41,7 @@ const PlanDifferences = () => {
           <p className="type-subhead text-primary">Así se diferencian los planes</p>
           <h2 className="mt-2 type-title1 sm:text-[40px] sm:leading-[44px]">Elige según lo que necesitas</h2>
           <p className="mt-4 type-body text-muted-foreground">
-            Empieza gratis con tu rutina, tus macros y un scan básico. Con Plus ves tu scan completo y tus comidas de cada día.
+            Empieza gratis con tu rutina, tus macros y un scan básico: nota de tu físico y 2 mejoras. Con Plus se desbloquea el scan avanzado —composición, músculos, postura, protocolo y tu yo futuro— y las comidas de cada día.
           </p>
         </div>
 
