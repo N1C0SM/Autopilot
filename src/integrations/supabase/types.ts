@@ -1336,6 +1336,39 @@ export type Database = {
         }
         Relationships: []
       }
+      scan_cache: {
+        Row: {
+          aspect: number
+          created_at: string
+          id: string
+          mean: number
+          prints: Json
+          result: Json
+          version: string
+          views: string
+        }
+        Insert: {
+          aspect: number
+          created_at?: string
+          id?: string
+          mean: number
+          prints: Json
+          result: Json
+          version: string
+          views: string
+        }
+        Update: {
+          aspect?: number
+          created_at?: string
+          id?: string
+          mean?: number
+          prints?: Json
+          result?: Json
+          version?: string
+          views?: string
+        }
+        Relationships: []
+      }
       scan_card_uploads: {
         Row: {
           anon_session_id: string | null
