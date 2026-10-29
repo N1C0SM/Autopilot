@@ -5,6 +5,16 @@ import { Check, Clock, TriangleAlert, UserRound, type LucideIcon } from "lucide-
 import { hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import { Button } from "@/shared/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
 import { EmptyState } from "@/shared/components/ui/empty-state";
 import { ListGroup } from "@/shared/components/ui/list";
 import { ProgressRing } from "@/shared/components/ui/progress-ring";
@@ -101,6 +111,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   const [generating, setGenerating] = useState(false);
   const [generateFailed, setGenerateFailed] = useState(false);
   const [noAccess, setNoAccess] = useState(false);
+  const [confirmingNew, setConfirmingNew] = useState(false);
   const asked = useRef(false);
   const generate = async () => {
     asked.current = true;
@@ -312,6 +323,7 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
           action={!generating && generateFailed ? <Button variant="secondary" size="lg" onClick={() => void generate()}>Volver a intentarlo</Button> : undefined}
         />
       ) : (
+        <div className="space-y-3">
         <ListGroup header="Comidas de hoy">
           {meals.map((meal, i) => {
             const isDone = done.has(meal.name);
@@ -381,6 +393,28 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
             );
           })}
         </ListGroup>
+        {/* Comidas nuevas cuando quieras, como en Ajustes: solo cambian las comidas, no el entreno. */}
+        <Button variant="secondary" size="lg" className="w-full" disabled={generating} onClick={() => { void hapticTap(); setConfirmingNew(true); }}>
+          {generating ? "Regenerando comidas…" : "Regenerar comidas"}
+        </Button>
+        {generateFailed && !generating && (
+          <p role="alert" className="type-footnote text-muted-foreground">No se pudieron regenerar las comidas. Inténtalo de nuevo en unos minutos.</p>
+        )}
+        <AlertDialog open={confirmingNew} onOpenChange={setConfirmingNew}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Regenerar tus comidas?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Recalcularemos el plan de comidas con tus datos actuales y sustituirá a las comidas guardadas cuando termine. El plan de entrenamiento no cambia.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter stacked>
+              <AlertDialogCancel>Ahora no</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void generate()}>Regenerar comidas</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        </div>
       )}
     </div>
   );

@@ -85,6 +85,24 @@ describe("paridad web ↔ apps nativas", () => {
     expect(app).toMatch(/let weighed = meal\.weighed/);
   });
 
+  it("Nutrición: una sola columna (resumen arriba, comidas debajo) también en Mac, como la web", () => {
+    const web = read("src/app/components/dashboard/MealsList.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    expect(web).not.toMatch(/(md|lg):grid-cols/);
+    expect(app).not.toMatch(/NutritionGrid|LazyVGrid/);
+  });
+
+  it("Nutrición: «Regenerar comidas» con la misma confirmación en la web y en la app", () => {
+    const web = read("src/app/components/dashboard/MealsList.tsx");
+    const app = read("native/Autopilot/Features/Other/OtherViews.swift");
+    const note = "Recalcularemos el plan de comidas con tus datos actuales y sustituirá a las comidas guardadas cuando termine. El plan de entrenamiento no cambia.";
+    for (const src of [web, app]) {
+      expect(src).toContain("¿Regenerar tus comidas?");
+      expect(src).toContain(note);
+      expect(src).toContain("Regenerando comidas…");
+    }
+  });
+
   it("Scan: mismos avisos de error en la web y en la app, nunca el mensaje técnico del servidor", () => {
     const web = read("src/app/pages/Scan.tsx");
     const app = read("native/Autopilot/Features/Scan/ScanView.swift");
