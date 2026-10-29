@@ -216,7 +216,7 @@ struct MainShell: View {
         }
         #if DEBUG
         .task {
-            if (previewSummary || previewTracker), previewWorkout == nil { previewWorkout = Self.mockWorkout() }
+            if (previewSummary || previewTracker), previewWorkout == nil { previewWorkout = await Self.mockWorkout() }
         }
         .sheet(isPresented: $previewSummary) {
             if let w = previewWorkout {
@@ -323,7 +323,7 @@ struct MainShell: View {
 
     #if DEBUG
     @MainActor
-    static func mockWorkout() -> ActiveWorkout {
+    static func mockWorkout() async -> ActiveWorkout {
         func ex(_ id: String, _ name: String, _ series: Int, _ reps: String, _ weight: String, _ rest: String, _ muscle: String) -> GymExercise {
             let json = """
             {"exercise_id":"\(id)","name":"\(name)","series":\(series),"reps":"\(reps)","weight":"\(weight)","rest":"\(rest)","muscle_group":"\(muscle)"}
@@ -334,20 +334,21 @@ struct MainShell: View {
                           routine_name: "Full Body B",
                           muscle_focus: "Hombros, piernas, glúteos, isquiotibiales y core",
                           exercises: [
-                            ex("1", "Press militar", 4, "4-6", "40", "180s", "Hombros"),
-                            ex("2", "Sentadilla", 4, "6", "100", "180s", "Piernas"),
+                            ex("1", "Press militar con barra de pie estricto", 4, "4-6", "40", "180s", "Hombros"),
+                            ex("2", "Press inclinado con barra", 4, "6", "42.5", "180s", "Pecho"),
                             ex("3", "Remo con barra", 3, "10", "60", "90s", "Espalda"),
                           ], custom: nil)
-        let w = ActiveWorkout(userId: "preview", day: day, previous: [:])
+        // Fotos reales de la biblioteca, como en un entreno de verdad.
+        let w = ActiveWorkout(userId: "preview", day: await TrainingRepo.withImages([day]).first ?? day, previous: [:])
         w.draft.startedAt = Date().addingTimeInterval(-42 * 60)
-        for (name, weight) in [("Press militar", "40"), ("Sentadilla", "100"), ("Remo con barra", "60")] {
+        for (name, weight) in [("Press militar con barra de pie estricto", "40"), ("Press inclinado con barra", "42,5"), ("Remo con barra", "60")] {
             if var sets = w.draft.logs[name] {
                 for i in sets.indices {
                     sets[i].weight = weight
                     sets[i].done = i < 2
                     sets[i].rpe = i < 2 ? 8 : nil
                 }
-                if name == "Press militar" { sets[0].failure = true }
+                if name == "Press militar con barra de pie estricto" { sets[0].failure = true }
                 w.draft.logs[name] = sets
             }
         }

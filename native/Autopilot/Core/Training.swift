@@ -303,12 +303,34 @@ enum TrainingRepo {
             prefetchCompletions(userId: userId)
             return cached
         }
-        let days = try await fetchPlan(userId: userId)
+        let days = await withImages(try await fetchPlan(userId: userId))
         TrainingCache.shared.storePlan(days, userId: userId)
         // PlanModel pide el plan y *después* las completions, en serie: se adelanta la segunda
         // consulta aquí para que esa espera ya la encuentre hecha (o comparta la petición en vuelo).
         prefetchCompletions(userId: userId)
         return days
+    }
+
+    /// Rellena la foto de los ejercicios que no la traen en el plan (p. ej. rutinas creadas a
+    /// mano o generadas antes de tener imagen) con la de la biblioteca, buscando por nombre.
+    static func withImages(_ days: [DayPlan]) async -> [DayPlan] {
+        let missing = Set(days.flatMap { $0.exercises ?? [] }.filter { ($0.image_url ?? "").isEmpty }.map(\.name))
+        guard !missing.isEmpty else { return days }
+        struct R: Decodable { let name: String; let image_url: String? }
+        let rows: [R] = (try? await Backend.client.from("exercises").select("name, image_url")
+            .in("name", values: Array(missing)).execute().value) ?? []
+        var byName: [String: String] = [:]
+        for r in rows { if let u = r.image_url, !u.isEmpty { byName[r.name] = u } }
+        guard !byName.isEmpty else { return days }
+        return days.map { d in
+            var d = d
+            d.exercises = d.exercises?.map { e in
+                var e = e
+                if (e.image_url ?? "").isEmpty { e.image_url = byName[e.name] }
+                return e
+            }
+            return d
+        }
     }
 
     /// Plan cacheado aunque esté algo viejo: permite pintar al instante antes de refrescar.
