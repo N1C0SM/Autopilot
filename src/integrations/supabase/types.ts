@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      acquisition_events: {
+        Row: {
+          campaign: string | null
+          created_at: string
+          id: string
+          kind: string
+          medium: string | null
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          campaign?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          medium?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          campaign?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          medium?: string | null
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_secrets: {
         Row: {
           key: string
@@ -1960,6 +1990,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_acquisition: {
+        Row: {
+          campaign: string | null
+          created_at: string
+          landing_path: string | null
+          medium: string | null
+          source: string | null
+          user_id: string
+        }
+        Insert: {
+          campaign?: string | null
+          created_at?: string
+          landing_path?: string | null
+          medium?: string | null
+          source?: string | null
+          user_id: string
+        }
+        Update: {
+          campaign?: string | null
+          created_at?: string
+          landing_path?: string | null
+          medium?: string | null
+          source?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_consents: {
         Row: {
           consent_type: string
@@ -2178,6 +2235,56 @@ export type Database = {
     }
     Functions: {
       accept_trainer_invitation: { Args: { _token: string }; Returns: string }
+      acquisition_channel: { Args: { _source: string }; Returns: string }
+      acquisition_clean: {
+        Args: { _max?: number; _value: string }
+        Returns: string
+      }
+      acquisition_cohort: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          active_week2: boolean
+          campaign: string
+          channel: string
+          email: string
+          first_workout: string
+          landing_path: string
+          last_workout: string
+          medium: string
+          name: string
+          paid: boolean
+          scanned: boolean
+          signup_at: string
+          source: string
+          user_id: string
+          week2_eligible: boolean
+        }[]
+      }
+      acquisition_stage: {
+        Args: {
+          _active_week2: boolean
+          _first_workout: string
+          _paid: boolean
+          _scanned: boolean
+          _week2_eligible: boolean
+        }
+        Returns: string
+      }
+      admin_acquisition_funnel: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
+      admin_acquisition_users: {
+        Args: {
+          _channel?: string
+          _from: string
+          _limit?: number
+          _offset?: number
+          _stage?: string
+          _to: string
+        }
+        Returns: Json
+      }
       admin_assign_user_to_trainer: {
         Args: { _email: string; _trainer_id: string }
         Returns: string
@@ -2194,6 +2301,15 @@ export type Database = {
       }
       admin_unassign_user_from_trainer: {
         Args: { _trainer_id: string; _user_id: string }
+        Returns: undefined
+      }
+      claim_acquisition: {
+        Args: {
+          _campaign?: string
+          _landing?: string
+          _medium?: string
+          _source?: string
+        }
         Returns: undefined
       }
       get_apk_download_enabled: { Args: never; Returns: boolean }
@@ -2335,6 +2451,15 @@ export type Database = {
         Returns: boolean
       }
       nutrition_targets_valid: { Args: { targets: Json }; Returns: boolean }
+      record_acquisition_event: {
+        Args: {
+          _campaign?: string
+          _kind: string
+          _medium?: string
+          _source?: string
+        }
+        Returns: undefined
+      }
       roadmap_set_current: { Args: { target: string }; Returns: undefined }
       trainer_assign_user_by_email: {
         Args: { _email: string }
