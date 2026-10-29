@@ -86,7 +86,7 @@ describe("paridad web ↔ apps nativas", () => {
   });
 
   it("Scan: mismos avisos de error en la web y en la app, nunca el mensaje técnico del servidor", () => {
-    const web = read("src/app/pages/Scan.tsx");
+    const errors = read("src/shared/lib/scanErrors.ts");
     const app = read("native/Autopilot/Features/Scan/ScanView.swift");
     for (const msg of [
       "Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo.",
@@ -94,17 +94,52 @@ describe("paridad web ↔ apps nativas", () => {
       "Sin conexión. Comprueba tu internet e inténtalo de nuevo.",
       "No hemos podido analizar las fotos. Inténtalo de nuevo en unos segundos.",
     ]) {
-      expect(web).toContain(msg);
+      expect(errors).toContain(msg);
       expect(app).toContain(msg);
     }
     expect(app).not.toMatch(/self\.error = "[^"]*\\\(serverMessage\)/);
-    // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir).
+    for (const file of ["src/app/pages/Scan.tsx", "src/app/components/scan/ProgressScan.tsx"]) {
+      expect(read(file)).toMatch(/scanErrorMessage\(e\)/);
+    }
+  });
+
+  it("Scan con cuenta: la web pinta las mismas pantallas que la app (subida, carga y resultado con el detalle de Plus)", () => {
+    const web = read("src/app/components/scan/ProgressScan.tsx");
+    const plusCard = read("src/app/components/scan/ScanPlusCard.tsx");
+    const app = read("native/Autopilot/Features/Scan/ScanView.swift");
+    expect(read("src/app/pages/Dashboard.tsx")).toMatch(/<ProgressScan /);
+    for (const text of [
+      "AI SCAN", "Tu análisis corporal", "Delante", "Atrás", "Obligatoria", "Opcional", "Cambiar foto",
+      "Tu objetivo", "Sin definir", "Se usa para personalizar el análisis.", "Cómo tomar las fotos",
+      "Cámara a 2-3 m, a la altura del ombligo, cuerpo entero y móvil en vertical.",
+      "Luz natural frontal y uniforme, sin contraluz ni flash, con fondo liso y claro.",
+      "Ropa ajustada, pies a la anchura de los hombros y brazos relajados. Para la de atrás, date la vuelta sin moverte.",
+      "Analizar mi físico", "Analizando…", "Analizando tu físico…", "Unos segundos y listo.",
+      "Con una sola foto ya podemos analizarte: valoraremos solo lo que se vea en esa vista. Con las dos fotos el análisis es más completo.",
+      "Privado: solo para tu análisis · Sin registro · Menos de 1 minuto",
+      "Tu físico", "Puntuación global de tu físico", "Sin puntuación global", "Atractivo", "Potencial", "Estilo",
+      "Qué mejorar", "Hacer otro scan",
+      "El análisis no se pudo guardar en tu historial.", "Las fotos no se pudieron guardar en tu historial.",
+      "Lectura estimada por IA", "Es una estimación visual, no un diagnóstico médico.",
+      "Composición corporal estimada", "Masa magra", "Peso est.", "Somatotipo", "Estructura", "Distribución de grasa",
+      "Lectura por grupo muscular", "Proporciones y simetría", "Ratio hombro/cintura", "Ideal ~1,60", "V-taper", "Simetría",
+      "Balance", "Eslabón más débil", "Postura",
+      "Rasgos visuales que juegan a tu favor (o en contra)", "Señales observadas en tus fotos: no es un estudio genético.",
+      "Protocolo recomendado por la IA", "Días de entreno por semana", "Series del grupo prioritario", "Proteína por kg",
+      "Calorías frente a mantenimiento", "Cardio por semana", "Ejercicios clave", "Evita",
+    ]) {
+      expect(web, text).toContain(text);
+      expect(app, text).toContain(text);
+    }
+    expect(plusCard).toContain("Tu scan completo, con Plus");
+    expect(app).toContain("Tu scan completo, con Plus");
+    // La app guarda el resultado entero (con el detalle de Plus), no solo lo que pinta.
+    expect(app).toMatch(/let fullResult = try JSONDecoder\(\)\.decode\(AnyJSON\.self, from: raw\)/);
+    // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir),
+    // reducida a 1600 px en JPEG: el servidor reconoce la misma foto venga de donde venga.
     expect(web).toMatch(/type="file"\s+accept="image\/\*"/);
     expect(app).toMatch(/\.fileImporter\(isPresented: \$importingFile, allowedContentTypes: \[\.image\]\)/);
-    // Las dos mandan la foto reducida a 1600 px en JPEG: el servidor reconoce la misma foto
-    // venga del dispositivo que venga y da el mismo resultado.
     expect(web).toMatch(/compressImage\(await toBrowserFriendlyImage\(input\), \{ maxDimension: 1600/);
     expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
-    expect(web).not.toMatch(/toast\.error\(msg\)|toast\.error\(`[^`]*\$\{msg\}/);
   });
 });
