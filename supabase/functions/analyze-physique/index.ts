@@ -7,6 +7,7 @@ import { getAiConfig } from "../_shared/ai-provider.ts";
 import { hasFullScan, toBasicScan } from "../_shared/scan-access.ts";
 import { z } from "npm:zod";
 import { jsonrepair } from "npm:jsonrepair@3";
+import jpeg from "npm:jpeg-js@0.4.4";
 
 // El modelo a veces devuelve "12-15%", "~14", "no estimable" o null.
 // Extraemos el primer número válido; si no hay ninguno → undefined.
@@ -96,9 +97,12 @@ const AnalysisSchema = z.object({
       if (Array.isArray(val)) {
         return val.flatMap((item) => {
           const o = jsonObject(item);
-          const group = [o.group, o.name, o.muscle, o.muscle_group, o.grupo, o.label].find((g) => typeof g === "string" && g.trim());
+          const group = [o.group, o.name, o.muscle, o.muscle_group, o.grupo, o.grupo_muscular, o.musculo, o["músculo"], o.zona, o.area, o.label]
+            .find((g) => typeof g === "string" && g.trim());
           if (!group) return [];
-          return [{ ...o, group, score: toNum(o.score) ?? 5, verdict: String(o.verdict ?? o.note ?? o.comment ?? "") }];
+          const score = toNum(o.score ?? o.puntuacion ?? o["puntuación"] ?? o.nota ?? o.rating) ?? 5;
+          const verdict = [o.verdict, o.veredicto, o.lectura, o.note, o.comment, o.comentario].find((v) => typeof v === "string") ?? "";
+          return [{ group, score, verdict }];
         });
       }
       if (typeof val === "object") {
@@ -251,6 +255,82 @@ const extractJson = (text: string) => {
   throw lastErr;
 };
 
+const INCOMPLETE = "El análisis llegó incompleto. Vuelve a intentarlo.";
+// Súbelo al cambiar el prompt o el esquema: los análisis guardados dejan de reutilizarse.
+const SCAN_CACHE_VERSION = "v2";
+
+// ===== Misma foto = mismo resultado, venga del dispositivo que venga =====
+// Cada dispositivo reduce y comprime la foto a su manera (bytes distintos), así que la foto
+// se reconoce por su contenido: miniatura 32×32 en grises. Probado con la misma foto
+// reducida/recomprimida/con otro perfil de color (correlación ≥ 0,997) frente a fotos
+// distintas (≤ 0,6) y retoques de la misma foto (~0,97, cuentan como distintas).
+type PhotoPrint = { aspect: number; mean: number; thumb: string };
+const PRINT_SIDE = 32;
+const SAME_PHOTO = 0.99;
+
+const photoPrint = (dataUrl: unknown): PhotoPrint | null => {
+  if (typeof dataUrl !== "string") return null;
+  const b64 = dataUrl.match(/^data:image\/jpe?g;base64,(.+)$/)?.[1];
+  // Solo las fotos ya reducidas por la app (~1600 px): una de 12 Mpx costaría demasiada CPU.
+  if (!b64 || b64.length > 3_000_000) return null;
+  try {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const { width, height, data } = jpeg.decode(bytes, { useTArray: true, formatAsRGBA: false, maxMemoryUsageInMB: 128 });
+    const sums = new Float64Array(PRINT_SIDE * PRINT_SIDE);
+    const counts = new Uint32Array(PRINT_SIDE * PRINT_SIDE);
+    for (let y = 0; y < height; y++) {
+      const row = Math.min(PRINT_SIDE - 1, Math.floor((y * PRINT_SIDE) / height)) * PRINT_SIDE;
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 3;
+        const cell = row + Math.min(PRINT_SIDE - 1, Math.floor((x * PRINT_SIDE) / width));
+        sums[cell] += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        counts[cell]++;
+      }
+    }
+    const thumb = Uint8Array.from(sums, (sum, cell) => Math.round(sum / Math.max(1, counts[cell])));
+    return {
+      aspect: Math.round((width / height) * 1000) / 1000,
+      mean: thumb.reduce((a, b) => a + b, 0) / thumb.length,
+      thumb: btoa(String.fromCharCode(...thumb)),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const thumbValues = (b64: unknown) =>
+  typeof b64 === "string" ? Array.from(atob(b64), (c) => c.charCodeAt(0)) : [];
+
+const correlation = (a: number[], b: number[]) => {
+  if (!a.length || a.length !== b.length) return 0;
+  const ma = a.reduce((x, y) => x + y, 0) / a.length;
+  const mb = b.reduce((x, y) => x + y, 0) / b.length;
+  let num = 0, da = 0, db = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i] - ma, y = b[i] - mb;
+    num += x * y; da += x * x; db += y * y;
+  }
+  return da && db ? num / Math.sqrt(da * db) : 0;
+};
+
+const CORE_KEYS = new Set(["attractiveness", "potential", "physique", "style", "similarity", "summary"]);
+
+// Un campo raro de la IA en una sección opcional (grupos, postura, protocolo…) no tumba el
+// scan entero: se quita esa sección y se valida otra vez. Solo falla si falta lo básico.
+const parseAnalysis = (raw: Record<string, unknown>) => {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = AnalysisSchema.safeParse(raw);
+    if (res.success) return res.data;
+    for (const issue of res.error.issues) {
+      const key = issue.path[0];
+      if (typeof key !== "string" || CORE_KEYS.has(key)) throw new Error(INCOMPLETE);
+      console.warn(`[analyze-physique] sección descartada «${key}»: ${issue.message}`);
+      delete raw[key];
+    }
+  }
+  throw new Error(INCOMPLETE);
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   // El Scan es la puerta de entrada para visitantes sin cuenta: no exige sesión.
@@ -289,6 +369,38 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Sube al menos una foto (de delante o de atrás) para poder analizarla" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // La IA varía entre lecturas aunque la foto sea idéntica: el primer análisis de cada foto se
+    // guarda con su huella visual y se reutiliza, así la misma foto da siempre las mismas cifras.
+    const sent = { front: currentImage, back: backImage, objective: objectiveImage };
+    const prints: Record<string, PhotoPrint> = {};
+    for (const [view, image] of Object.entries(sent)) {
+      const print = image ? photoPrint(image) : null;
+      if (print) prints[view] = print;
+    }
+    const views = Object.keys(sent).filter((v) => sent[v as keyof typeof sent]).join(",");
+    const primary = prints.front ?? prints.back;
+    // Solo si se reconocen todas las fotos enviadas (p. ej. no un PNG de una versión antigua).
+    const cacheable = !!primary && Object.keys(prints).length === views.split(",").length;
+    const respond = async (analysis: Record<string, unknown>) => {
+      // Free y visitantes: scan básico (el detalle es de Plus). Se recorta aquí, no en la app.
+      const full = await hasFullScan(req, sb);
+      return new Response(JSON.stringify(full ? analysis : toBasicScan(analysis)), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    };
+    if (cacheable && primary) {
+      const { data: rows } = await sb.from("scan_cache").select("prints, result")
+        .eq("version", SCAN_CACHE_VERSION).eq("views", views)
+        .gte("aspect", primary.aspect - 0.02).lte("aspect", primary.aspect + 0.02)
+        .gte("mean", primary.mean - 12).lte("mean", primary.mean + 12)
+        .order("created_at", { ascending: true }).limit(200);
+      // El análisis más antiguo de esa foto es el que vale.
+      const mine = Object.entries(prints).map(([view, p]) => [view, thumbValues(p.thumb)] as const);
+      const hit = (rows ?? []).find((row: { prints?: Record<string, { thumb?: string }> }) =>
+        mine.every(([view, values]) => correlation(values, thumbValues(row.prints?.[view]?.thumb)) >= SAME_PHOTO));
+      if (hit?.result) return await respond(hit.result as Record<string, unknown>);
     }
 
     // Cadena de visión: créditos de Lovable primero, luego ChatGPT y por último Claude.
@@ -348,7 +460,7 @@ Deno.serve(async (req) => {
     if (objectiveImage) userContent.push({ type: "image", image: objectiveImage });
 
     const text = await generateVision(visionProviders, {
-      temperature: 0.1,
+      temperature: 0,
       maxOutputTokens: 4000,
       system:
         [
@@ -365,7 +477,7 @@ Deno.serve(async (req) => {
           'inferred_goal: "lose_weight"|"gain_muscle"|"recomp"|"improve_endurance"|"general_health". inferred_focus: "gimnasio"|"calistenia"|"mixto". inferred_intensity 1-10. inferred_specific_goals: 2-3 metas concretas. locked_insights: GENERA EXACTAMENTE 8 insights premium SIEMPRE, con label corto (3-5 palabras) y teaser intrigante de 1 frase que abra un loop de curiosidad SIN revelar el valor. Cubre estas 8 categorías obligatoriamente: 1) Ratio calórico exacto, 2) Volumen prioritario semanal, 3) Frecuencia óptima del músculo más débil, 4) Orden de ejercicios, 5) % grasa objetivo realista, 6) Semanas hasta primer hito visible, 7) Predicción de plateau, 8) Cardio mínimo efectivo. Cada item incluye category con uno de: "calorias"|"volumen"|"frecuencia"|"orden"|"grasa"|"hito"|"plateau"|"cardio".',
           '— CAPA CLÍNICA OBLIGATORIA (esto es lo que nos diferencia de ChatGPT, RELLÉNALA SIEMPRE): ',
           'body_composition: { body_fat_pct (rango realista 6-30 hombres, 14-38 mujeres), lean_mass_kg, weight_kg, somatotype ("ectomorfo"/"meso"/"endo" o híbridos), frame_size ("pequeño"/"medio"/"grande" según muñeca/clavícula), fat_distribution ("abdominal","uniforme","tren inferior","cara/cuello"…) }. Estima por proporción visual y sombras musculares; no digas que no puedes estimar.',
-          'muscle_breakdown: 4-8 grupos, SOLO los visibles en las vistas recibidas, y SIEMPRE cubriendo todos los grupos de cada vista recibida — SOLO frontal: los 5 "Pecho", "Deltoides", "Brazos", "Core/abdomen", "Cuádriceps"; SOLO trasera: "Espalda alta", "Dorsales", "Deltoides posterior", "Tríceps", "Cadena posterior (glúteo+isquio)", "Gemelos"; ambas vistas: 6-8 combinando anteriores y posteriores. PROHIBIDO devolver un único grupo (p. ej. solo "Pecho") cuando la vista recibida permite leer más: cada grupo visible debe aparecer con su score 0-10 y verdict de 1 frase específica ("Deltoide medio plano, falta de redondeo lateral evidente desde la frontal").',
+          'muscle_breakdown: array de objetos con EXACTAMENTE estas claves: [{ "group": "Pecho", "score": 6, "verdict": "…" }]; 4-8 grupos, SOLO los visibles en las vistas recibidas, y SIEMPRE cubriendo todos los grupos de cada vista recibida — SOLO frontal: los 5 "Pecho", "Deltoides", "Brazos", "Core/abdomen", "Cuádriceps"; SOLO trasera: "Espalda alta", "Dorsales", "Deltoides posterior", "Tríceps", "Cadena posterior (glúteo+isquio)", "Gemelos"; ambas vistas: 6-8 combinando anteriores y posteriores. PROHIBIDO devolver un único grupo (p. ej. solo "Pecho") cuando la vista recibida permite leer más: cada grupo visible debe aparecer con su score 0-10 y verdict de 1 frase específica ("Deltoide medio plano, falta de redondeo lateral evidente desde la frontal").',
           'posture: { issues (lista corta: "hombros adelantados", "cabeza adelantada", "anteversión pélvica", "asimetría hombro D-I", "cifosis dorsal"…), severity ("leve"/"moderada"/"severa"), note (1 frase) }.',
           'proportions: { shoulder_to_waist_ratio (1.0-1.9, ideal estético ~1.6), v_taper_score 0-10, symmetry_score 0-10, upper_lower_balance ("tren superior dominante"/"equilibrado"/"tren inferior dominante"), weakest_link (grupo concreto) }.',
           'genetic_markers: 2-4 strings sobre lo que la genética le DA o le QUITA ("clavículas anchas — ventaja para anchura de espalda", "inserción alta de bíceps — pico difícil de conseguir", "gemelo de inserción corta — limitará tamaño"). Sé honesto.',
@@ -404,9 +516,12 @@ Deno.serve(async (req) => {
       if (toNum(r.attractiveness) == null && avg != null) r.attractiveness = avg;
       if (toNum(r.style) == null && avg != null) r.style = avg;
       if (toNum(r.potential) == null && avg != null) r.potential = Math.min(10, Math.round((avg + 1) * 10) / 10);
-      if (toNum(r.physique) == null) throw new Error("El análisis llegó incompleto. Vuelve a intentarlo.");
+      if (toNum(r.physique) == null) throw new Error(INCOMPLETE);
+      if (typeof r.summary !== "string" || !r.summary.trim()) {
+        r.summary = [r.headline_diagnosis, r.bottleneck].find((t) => typeof t === "string" && t.trim()) ?? "";
+      }
     }
-    const parsed = AnalysisSchema.parse(raw);
+    const parsed = parseAnalysis(raw as Record<string, unknown>);
 
     // Si el modelo no devuelve prioridades usables, derivamos una del diagnóstico.
     if (!parsed.improvements?.length) {
@@ -443,14 +558,19 @@ Deno.serve(async (req) => {
       parsed.similarity = 0;
     }
 
-    // Free y visitantes: scan básico (el detalle es de Plus). Se recorta aquí, no en la app.
-    const full = await hasFullScan(req, sb);
-    return new Response(JSON.stringify(full ? parsed : toBasicScan(parsed as Record<string, unknown>)), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Sin la tabla (migración aún sin aplicar) el scan funciona igual, solo sin reutilizar.
+    if (cacheable && primary) {
+      await sb.from("scan_cache").insert({
+        version: SCAN_CACHE_VERSION, views, aspect: primary.aspect, mean: primary.mean, prints, result: parsed,
+      });
+    }
+    return await respond(parsed as Record<string, unknown>);
   } catch (e: unknown) {
     console.error("analyze-physique error:", e);
-    return new Response(JSON.stringify({ error: errorMessage(e) || "Error desconocido" }), {
+    // Nunca un volcado técnico (JSON de validación, trazas) hacia la app.
+    const message = errorMessage(e).trim();
+    const safe = message && !/^[[{]/.test(message) ? message : "No se pudo analizar la foto";
+    return new Response(JSON.stringify({ error: safe }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -102,4 +102,27 @@ describe("paridad web ↔ apps nativas", () => {
       expect(src).toContain("Regenerando comidas…");
     }
   });
+
+  it("Scan: mismos avisos de error en la web y en la app, nunca el mensaje técnico del servidor", () => {
+    const web = read("src/app/pages/Scan.tsx");
+    const app = read("native/Autopilot/Features/Scan/ScanView.swift");
+    for (const msg of [
+      "Has hecho muchos análisis seguidos. Espera un rato y vuelve a intentarlo.",
+      "El análisis con IA está pausado: el servicio no tiene saldo. Estamos en ello; inténtalo más tarde.",
+      "Sin conexión. Comprueba tu internet e inténtalo de nuevo.",
+      "No hemos podido analizar las fotos. Inténtalo de nuevo en unos segundos.",
+    ]) {
+      expect(web).toContain(msg);
+      expect(app).toContain(msg);
+    }
+    expect(app).not.toMatch(/self\.error = "[^"]*\\\(serverMessage\)/);
+    // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir).
+    expect(web).toMatch(/type="file"\s+accept="image\/\*"/);
+    expect(app).toMatch(/\.fileImporter\(isPresented: \$importingFile, allowedContentTypes: \[\.image\]\)/);
+    // Las dos mandan la foto reducida a 1600 px en JPEG: el servidor reconoce la misma foto
+    // venga del dispositivo que venga y da el mismo resultado.
+    expect(web).toMatch(/compressImage\(await toBrowserFriendlyImage\(input\), \{ maxDimension: 1600/);
+    expect(app).toMatch(/PlatformImage\.downscaled\(from: data, maxSide: 1600\)/);
+    expect(web).not.toMatch(/toast\.error\(msg\)|toast\.error\(`[^`]*\$\{msg\}/);
+  });
 });
