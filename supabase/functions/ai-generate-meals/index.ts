@@ -50,7 +50,7 @@ Macros diarios objetivo: P=${macros?.protein}g, C=${macros?.carbs}g, F=${macros?
 Preferencias / qué le gusta comer: ${preferences || "sin preferencias específicas"}
 Alergias / intolerancias: ${allergies || "ninguna"}
 
-Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos coherentes con sus preferencias. Cada comida debe tener nombre y descripción específica con cantidades aproximadas (gramos o medidas caseras). NO uses ningún alimento que el usuario haya marcado como alergia.`;
+Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos coherentes con sus preferencias. El usuario pesa la comida con báscula: desglosa cada comida en sus ingredientes con el peso exacto en gramos (ml para líquidos), indicando si es en crudo o cocido cuando cambie el peso (p. ej. «Arroz basmati, en crudo»: 80 g). Nada de medidas caseras. La descripción es solo el nombre corto del plato, sin cantidades. Da los gramos de proteína, carbohidratos y grasas de cada comida calculados con esos pesos: la suma de todas las comidas debe dar exactamente los macros diarios objetivo. NO uses ningún alimento que el usuario haya marcado como alergia.`;
 
     const resp = await aiFetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -76,9 +76,25 @@ Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos cohere
                     type: "object",
                     properties: {
                       name: { type: "string", description: "Nombre del momento de la comida (Desayuno, Almuerzo, etc.)" },
-                      description: { type: "string", description: "Descripción detallada de la comida con cantidades" },
+                      description: { type: "string", description: "Nombre corto del plato, sin cantidades" },
+                      ingredients: {
+                        type: "array",
+                        description: "Ingredientes con su peso para pesarlos en báscula",
+                        items: {
+                          type: "object",
+                          properties: {
+                            food: { type: "string", description: "Alimento y su estado si cambia el peso (en crudo, cocido, escurrido)" },
+                            grams: { type: "number", description: "Cantidad exacta" },
+                            unit: { type: "string", enum: ["g", "ml"], description: "g, o ml para líquidos" },
+                          },
+                          required: ["food", "grams", "unit"],
+                        },
+                      },
+                      protein: { type: "number", description: "Gramos de proteína de esta comida" },
+                      carbs: { type: "number", description: "Gramos de carbohidratos de esta comida" },
+                      fats: { type: "number", description: "Gramos de grasas de esta comida" },
                     },
-                    required: ["name", "description"],
+                    required: ["name", "description", "ingredients", "protein", "carbs", "fats"],
                   },
                 },
               },

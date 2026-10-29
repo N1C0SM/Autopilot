@@ -5,7 +5,29 @@ import { calcNutritionMacros, detectDiet, nutritionMacroError, type CalculatedMa
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-type Meal = { name: string; description: string };
+/**
+ * Ingredientes con su peso (para pesarlos) y gramos de macros por comida si la IA los dio:
+ * la app cuadra los macros con el objetivo del día (`mealMacros.ts`).
+ */
+type Ingredient = { food: string; grams: number; unit: "g" | "ml" };
+type Meal = { name: string; description: string; ingredients?: Ingredient[]; protein?: number; carbs?: number; fats?: number };
+
+const grams = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined;
+
+const parseIngredients = (value: unknown): Ingredient[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const list: Ingredient[] = [];
+  for (const item of value) {
+    if (item === null || typeof item !== "object" || Array.isArray(item)) continue;
+    const record = item as Record<string, unknown>;
+    const food = typeof record.food === "string" ? record.food.trim().slice(0, 80) : "";
+    const amount = grams(record.grams);
+    if (!food || !amount) continue;
+    list.push({ food, grams: amount, unit: record.unit === "ml" ? "ml" : "g" });
+  }
+  return list.length ? list.slice(0, 12) : undefined;
+};
 
 const parseMeals = (value: unknown): Meal[] | null => {
   if (!Array.isArray(value) || value.length < 3) return null;
@@ -15,7 +37,14 @@ const parseMeals = (value: unknown): Meal[] | null => {
     const record = item as Record<string, unknown>;
     if (typeof record.name !== "string" || !record.name.trim()) return null;
     if (typeof record.description !== "string" || !record.description.trim()) return null;
-    meals.push({ name: record.name, description: record.description });
+    const meal: Meal = { name: record.name, description: record.description };
+    const ingredients = parseIngredients(record.ingredients);
+    if (ingredients) meal.ingredients = ingredients;
+    for (const key of ["protein", "carbs", "fats"] as const) {
+      const value = grams(record[key]);
+      if (value !== undefined) meal[key] = value;
+    }
+    meals.push(meal);
   }
   return meals;
 };

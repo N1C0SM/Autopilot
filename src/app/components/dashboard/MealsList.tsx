@@ -12,24 +12,26 @@ import type { MacroTargets } from "@/shared/lib/nutrition";
 import { nutritionMacroError } from "@/shared/lib/nutritionValidation";
 import { useMealPhoto } from "@/shared/hooks/useSessionCover";
 import { BRAND_PHOTOS } from "@/shared/lib/brandPhotos";
+import { mealIngredients, mealMacros, sumMacros, type PlanMeal } from "@/shared/lib/mealMacros";
 import MealsPlusCard from "@/app/components/dashboard/MealsPlusCard";
 import NutritionSetup from "@/app/components/dashboard/NutritionSetup";
 
-/** Foto del plato generada con IA, con el mismo estilo oscuro y dorado que las sesiones. */
+/**
+ * Foto propia del plato, generada con IA. Sin foto propia no se pinta ninguna:
+ * nunca la misma foto de respaldo repetida en todas las comidas.
+ */
 const MealPhoto = ({ dish, dim }: { dish: string; dim: boolean }) => {
-  const src = useMealPhoto(dish) || BRAND_PHOTOS.meal;
-  return <span aria-hidden="true" className={cn("relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-secondary transition-opacity", dim && "opacity-50")}>
-    {src && <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />}
+  const src = useMealPhoto(dish);
+  if (!src) return null;
+  return <span aria-hidden="true" className="shrink-0 py-2">
+    <span className={cn("relative block h-14 w-14 overflow-hidden rounded-xl bg-secondary transition-opacity", dim && "opacity-50")}>
+      <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover animate-in fade-in duration-500" />
+    </span>
   </span>;
 };
 
-interface Meal {
-  name: string;
-  description: string;
-}
-
 interface Props {
-  meals: Meal[];
+  meals: PlanMeal[];
   macros?: MacroTargets | null;
   onOpenProfile?: () => void;
   userId?: string;
@@ -69,12 +71,10 @@ const Notice = ({
   </div>
 );
 
-// Plato fijo para la portada cuando aún no hay comidas: una sola foto compartida por todos.
+// Plato de referencia para las tarjetas sin comidas: una sola foto compartida por todos.
 const DEFAULT_DISH = "Pollo a la plancha con arroz integral y verduras asadas";
 
 const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: Props) => {
-  // Portada de Nutrición, como la de las sesiones: el primer plato del día o uno de referencia.
-  const coverPhoto = useMealPhoto(meals[0]?.description || DEFAULT_DISH) || BRAND_PHOTOS.meal;
   const emptyMealPhoto = useMealPhoto(DEFAULT_DISH) || BRAND_PHOTOS.meal;
   const [done, setDone] = useState<Set<string>>(new Set());
 
@@ -158,22 +158,23 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
   const showTargets = Boolean(macros) && kcal > 0 && !targetError;
   const doneCount = meals.filter((meal) => done.has(meal.name)).length;
   const remaining = meals.length - doneCount;
+  // Con comidas, cada una lleva sus macros y todas suman el objetivo exacto: al marcarlas
+  // se suman al resumen (estimado según el plan; no se pesa lo que se come).
+  const tracking = hasMeals && showTargets;
+  const perMeal = tracking ? mealMacros(meals, { kcal, protein: p, carbs: c, fats: f }) : [];
+  const eaten = sumMacros(perMeal.filter((_, i) => done.has(meals[i].name)));
 
-  // Las barras muestran qué parte de la energía del día aporta cada macro: es un dato del
-  // plan, no un consumo (marcar comidas no mide lo que se come).
+  // Sin comidas, las barras muestran qué parte de la energía del día aporta cada macro.
   const macroEnergy = p * 4 + c * 4 + f * 9;
   const macroSummary = [
-    { label: "Proteína", value: p, energy: p * 4 },
-    { label: "Carbos", value: c, energy: c * 4 },
-    { label: "Grasas", value: f, energy: f * 9 },
-  ].map((m) => ({ ...m, share: macroEnergy > 0 ? Math.round((m.energy / macroEnergy) * 100) : 0 }));
+    { label: "Proteína", value: p, eaten: eaten.protein, energy: p * 4 },
+    { label: "Carbos", value: c, eaten: eaten.carbs, energy: c * 4 },
+    { label: "Grasas", value: f, eaten: eaten.fats, energy: f * 9 },
+  ].map((m) => ({ ...m, share: macroEnergy > 0 ? Math.round((m.energy / macroEnergy) * 100) : 0 }))
+    .map((m) => ({ ...m, bar: tracking ? (m.value > 0 ? Math.min(100, (m.eaten / Math.max(1, Math.round(m.value))) * 100) : 0) : m.share }));
 
   return (
     <div className="space-y-8">
-      {coverPhoto && meals.length > 0 && <div aria-hidden="true" className="relative h-44 overflow-hidden rounded-[28px] bg-card">
-        <img src={coverPhoto} alt="" decoding="async" className="absolute inset-0 h-full w-full object-cover animate-in fade-in duration-500" />
-        <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-      </div>}
       {(hasMeals || showTargets) && (
         <section aria-label="Resumen de hoy" className="rounded-2xl bg-card p-4">
           <div className="flex items-center gap-5">
@@ -203,9 +204,11 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                       hasMeals ? "text-[34px]" : "text-[48px]",
                     )}
                   >
-                    {fmt(kcal)}
+                    {fmt(tracking ? eaten.kcal : kcal)}
                   </p>
-                  <p className="mt-1.5 type-subhead text-muted-foreground">kcal de objetivo diario</p>
+                  <p className="mt-1.5 type-subhead text-muted-foreground">
+                    {tracking ? `de ${fmt(kcal)} kcal` : "kcal de objetivo diario"}
+                  </p>
                 </>
               ) : (
                 <>
@@ -229,25 +232,31 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                   <div
                     key={m.label}
                     role="group"
-                    aria-label={`${m.label}: objetivo diario de ${fmt(m.value)} gramos, ${m.share} % de las calorías`}
+                    aria-label={tracking
+                      ? `${m.label}: ${fmt(m.eaten)} de ${fmt(m.value)} gramos`
+                      : `${m.label}: objetivo diario de ${fmt(m.value)} gramos, ${m.share} % de las calorías`}
                   >
                     {/* Con letra grande el porcentaje baja de línea en vez de cortar la etiqueta. */}
                     <div className="flex flex-wrap items-baseline justify-between gap-x-1">
                       <p className="type-footnote text-muted-foreground">{m.label}</p>
-                      <p className="type-footnote tabular-nums text-muted-foreground">{m.share} %</p>
+                      {!tracking && <p className="type-footnote tabular-nums text-muted-foreground">{m.share} %</p>}
                     </div>
                     <p className="mt-0.5 font-rounded text-[22px] font-bold leading-7 tabular-nums">
-                      {fmt(m.value)}
-                      <span className="ml-0.5 type-subhead font-semibold text-muted-foreground">g</span>
+                      {fmt(tracking ? m.eaten : m.value)}
+                      <span className="ml-0.5 type-subhead font-semibold text-muted-foreground">
+                        {tracking ? `/${fmt(m.value)} g` : "g"}
+                      </span>
                     </p>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-primary/20" aria-hidden="true">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${m.share}%` }} />
+                      <div className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out" style={{ width: `${m.bar}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
               <p className="mt-4 type-footnote text-muted-foreground">
-                Objetivos de tu plan para hoy. Marcar comidas no mide las calorías consumidas.
+                {tracking
+                  ? "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes."
+                  : "Objetivos de tu plan para hoy."}
               </p>
             </>
           )}
@@ -304,8 +313,10 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
         />
       ) : (
         <ListGroup header="Comidas de hoy">
-          {meals.map((meal) => {
+          {meals.map((meal, i) => {
             const isDone = done.has(meal.name);
+            const own = perMeal[i];
+            const ingredients = mealIngredients(meal);
             return (
               <button
                 // Key por comida, no por índice: al regenerar el plan la fila se remonta
@@ -343,8 +354,29 @@ const MealsList = ({ meals, macros, onOpenProfile, userId, onMealsGenerated }: P
                   >
                     {meal.description}
                   </span>
+                  {ingredients.length > 0 && (
+                    // Peso de cada ingrediente para pesarlo en báscula.
+                    <span className={cn("mt-1.5 block type-footnote transition-colors duration-150", isDone ? "text-muted-foreground/60" : "text-foreground/80")}>
+                      {ingredients.map((item, n) => (
+                        <span key={n} className="flex justify-between gap-3 py-px">
+                          <span className="min-w-0">{item.food}</span>
+                          <span className="shrink-0 tabular-nums">{item.amount}</span>
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  {own && (
+                    <span
+                      className={cn(
+                        "mt-1 block type-footnote tabular-nums transition-colors duration-150",
+                        isDone ? "text-muted-foreground/60" : "text-muted-foreground",
+                      )}
+                    >
+                      {fmt(own.kcal)} kcal · P {own.protein} g · C {own.carbs} g · G {own.fats} g
+                    </span>
+                  )}
                 </span>
-                <span className="py-2"><MealPhoto dish={meal.description || meal.name} dim={isDone} /></span>
+                <MealPhoto dish={meal.description || meal.name} dim={isDone} />
               </button>
             );
           })}

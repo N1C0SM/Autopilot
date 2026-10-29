@@ -1,8 +1,8 @@
 import SwiftUI
 import Supabase
 
-/// Nutrición, calcada de `MealsList.tsx`: portada del primer plato, resumen con anillo de comidas
-/// hechas y objetivos, y «Comidas de hoy» marcables con su foto (o «Sin comidas todavía»).
+/// Nutrición, calcada de `MealsList.tsx`: resumen con anillo de comidas hechas y objetivos, y
+/// «Comidas de hoy» marcables con la foto propia de cada plato (o «Sin comidas todavía»).
 struct NutritionView: View {
     @EnvironmentObject private var session: SessionModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -26,7 +26,8 @@ struct NutritionView: View {
     /// Evita dos cargas simultáneas (`.task` + botón de reintentar).
     @State private var loading = false
     @State private var done: Set<String> = []
-    @State private var cover: URL?
+    /// Foto propia de cada plato (clave: el plato). Sin foto propia, la fila va sin foto.
+    @State private var photos: [String: URL] = [:]
     /// Sin comidas: nil = comprobando, true = tiene Plus (se generan), false = aviso de Plus.
     @State private var hasAccess: Bool?
     @State private var generating = false
@@ -34,7 +35,24 @@ struct NutritionView: View {
     /// Plus sin preferencias de comidas: se le preguntan antes de prepararlas (como la web).
     @State private var needsSetup = false
     struct Macros: Codable { let calories: Double?; let protein: Double?; let carbs: Double?; let fats: Double? }
-    struct Meal: Codable, Hashable { let name: String?; let description: String? }
+    /// Ingredientes con su peso (para pesarlos) y gramos de cada macro si la IA los dio; sin
+    /// macros, la comida cuenta como una parte igual del día.
+    struct Meal: Codable, Hashable {
+        let name: String?; let description: String?
+        var ingredients: [Ingredient]? = nil
+        var protein: Double? = nil; var carbs: Double? = nil; var fats: Double? = nil
+        /// Ingredientes válidos con su cantidad lista para pintar («80 g», «200 ml»), como `mealIngredients`.
+        var weighed: [(food: String, amount: String)] {
+            (ingredients ?? []).compactMap { i in
+                guard let food = i.food?.trimmingCharacters(in: .whitespaces), !food.isEmpty, let g = i.grams, g > 0 else { return nil }
+                return (food, "\(Int(g.rounded())) \(i.unit == "ml" ? "ml" : "g")")
+            }
+        }
+    }
+    /// Todo opcional: un ingrediente incompleto se descarta sin romper la carga del plan.
+    struct Ingredient: Codable, Hashable { let food: String?; let grams: Double?; var unit: String? = nil }
+    /// Macros de una comida ya cuadrados con el objetivo del día (enteros).
+    struct MealMacros: Equatable { var kcal = 0; var protein = 0; var carbs = 0; var fats = 0 }
     struct Row: Codable { let macros_json: Macros?; let meals_json: [Meal]? }
     static let defaultDish = "Pollo a la plancha con arroz integral y verduras asadas"
     /// Intentos totales al cargar el plan: el primero más dos reintentos automáticos.
@@ -89,7 +107,6 @@ struct NutritionView: View {
             // comidas en dos columnas. En el iPhone la rejilla se queda en una y conserva el orden.
             LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn || !hasMeals), alignment: .leading, spacing: singleColumn ? 32 : 24) {
                 VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
-                    if hasMeals { coverCard }
                     if hasMeals || showTargets { summary(kcal: kcal, p: p, c: c, f: f, energy: energy, hasMeals: hasMeals, showTargets: showTargets) }
                     if hasMeals && macros == nil { macroNotice }
                 }
@@ -122,17 +139,6 @@ struct NutritionView: View {
         }
     }
 
-    /// Portada del primer plato (héroe de la web): 176 pt, radio 28 y degradado hacia negro.
-    @ViewBuilder private var coverCard: some View {
-        if let cover {
-            Color.clear.frame(height: 176)
-                .overlay { CachedAsyncImage(url: cover, maxSide: 420) { $0.resizable().scaledToFill() } placeholder: { Palette.card } }
-                .overlay { LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: .center, endPoint: .bottom) }
-                .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                .accessibilityHidden(true)
-        }
-    }
-
     /// Aviso de macros sin personalizar: las comidas de abajo siguen siendo orientativas.
     private var macroNotice: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -153,7 +159,10 @@ struct NutritionView: View {
                 .font(.apFootnote.weight(.semibold)).tracking(0.6)
                 .foregroundStyle(Palette.muted)
             VStack(spacing: 0) {
-                ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in mealRow(meal, last: i == meals.count - 1) }
+                let split = perMeal
+                ForEach(Array(meals.enumerated()), id: \.offset) { i, meal in
+                    mealRow(meal, own: split.indices.contains(i) ? split[i] : nil, last: i == meals.count - 1)
+                }
             }
             .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
@@ -186,28 +195,33 @@ struct NutritionView: View {
     /// Resumen del día: anillo de comidas hechas y objetivos. Con texto grande el anillo pasa
     /// encima del texto para que nada se comprima ni se salga de la tarjeta.
     private func summary(kcal: Double, p: Double, c: Double, f: Double, energy: Double, hasMeals: Bool, showTargets: Bool) -> some View {
-        let doneCount = meals.filter { done.contains($0.name ?? "") }.count
+        let doneCount = meals.filter { done.contains($0.name ?? "Comida") }.count
+        // Con comidas, lo marcado se suma al resumen; marcadas todas, da el objetivo exacto.
+        let split = hasMeals && showTargets ? perMeal : []
+        let eaten: MealMacros? = split.isEmpty ? nil : zip(meals, split)
+            .filter { done.contains($0.0.name ?? "Comida") }
+            .reduce(MealMacros()) { s, m in MealMacros(kcal: s.kcal + m.1.kcal, protein: s.protein + m.1.protein, carbs: s.carbs + m.1.carbs, fats: s.fats + m.1.fats) }
         return VStack(alignment: .leading, spacing: 0) {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     VStack(alignment: .leading, spacing: 16) {
                         if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
                         // Con el anillo de macros las kcal ya van dentro: aquí solo el rótulo.
-                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount) }
+                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount, eatenKcal: eaten?.kcal) }
                         else { Text("Objetivo diario").font(.apTitle3) }
                     }
                 } else {
                     HStack(alignment: .center, spacing: 20) {
                         if hasMeals { mealsRing(doneCount: doneCount) } else if showTargets { macroRing(kcal: kcal, p: p, c: c, f: f) }
                         // Con el anillo de macros las kcal ya van dentro: aquí solo el rótulo.
-                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount) }
+                        if hasMeals || !showTargets { summaryNumbers(kcal: kcal, hasMeals: hasMeals, showTargets: showTargets, doneCount: doneCount, eatenKcal: eaten?.kcal) }
                         else { Text("Objetivo diario").font(.apTitle3) }
                     }
                 }
             }
             if showTargets {
-                macroRow(p: p, c: c, f: f, energy: energy).padding(.top, 24)
-                Text("Objetivos de tu plan para hoy. Marcar comidas no mide las calorías consumidas.")
+                macroRow(p: p, c: c, f: f, energy: energy, eaten: eaten).padding(.top, 24)
+                Text(eaten != nil ? "Al marcar una comida se suman sus macros del plan. Es una estimación: no se pesa lo que comes." : "Objetivos de tu plan para hoy.")
                     .font(.apFootnote).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 16)
@@ -264,14 +278,16 @@ struct NutritionView: View {
     }
 
     /// Objetivo en kcal o, sin macros todavía, cuántas comidas quedan.
-    private func summaryNumbers(kcal: Double, hasMeals: Bool, showTargets: Bool, doneCount: Int) -> some View {
+    private func summaryNumbers(kcal: Double, hasMeals: Bool, showTargets: Bool, doneCount: Int, eatenKcal: Int?) -> some View {
         let remaining = meals.count - doneCount
         return VStack(alignment: .leading, spacing: 6) {
             if showTargets {
-                Text(NumberText.integer(Int(kcal)))
+                Text(NumberText.integer(eatenKcal ?? Int(kcal.rounded())))
                     .font(.inter(size: hasMeals ? 34 : 48, weight: .bold).monospacedDigit())
                     .lineLimit(1).minimumScaleFactor(0.6)
-                Text("kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
+                    .contentTransition(.numericText())
+                    .animation(reduceMotion ? nil : .snappy, value: eatenKcal)
+                Text(eatenKcal != nil ? "de \(NumberText.integer(Int(kcal.rounded()))) kcal" : "kcal de objetivo diario").font(.apSubhead).foregroundStyle(Palette.muted)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text(remaining == 0 ? "Día completo" : "Te \(remaining == 1 ? "queda" : "quedan") \(remaining) \(remaining == 1 ? "comida" : "comidas")")
@@ -286,23 +302,23 @@ struct NutritionView: View {
 
     /// Los tres macros: tres columnas en horizontal y apilados con texto grande (cada fila
     /// conserva su barra a todo el ancho, así el porcentaje y los gramos no se parten).
-    @ViewBuilder private func macroRow(p: Double, c: Double, f: Double, energy: Double) -> some View {
+    @ViewBuilder private func macroRow(p: Double, c: Double, f: Double, energy: Double, eaten: MealMacros?) -> some View {
         if dynamicTypeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 16) {
-                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
-                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
-                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
+                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0, eaten: eaten?.protein)
+                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0, eaten: eaten?.carbs)
+                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0, eaten: eaten?.fats)
             }
         } else {
             HStack(alignment: .top, spacing: 16) {
-                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0)
-                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0)
-                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0)
+                macro("Proteína", p, energy > 0 ? p * 4 / energy : 0, eaten: eaten?.protein)
+                macro("Carbos", c, energy > 0 ? c * 4 / energy : 0, eaten: eaten?.carbs)
+                macro("Grasas", f, energy > 0 ? f * 9 / energy : 0, eaten: eaten?.fats)
             }
         }
     }
 
-    private func mealRow(_ meal: Meal, last: Bool) -> some View {
+    private func mealRow(_ meal: Meal, own: MealMacros?, last: Bool) -> some View {
         let name = meal.name ?? "Comida"
         let isDone = done.contains(name)
         return Button { toggle(name) } label: {
@@ -317,11 +333,33 @@ struct NutritionView: View {
                         Text(name).font(.apHeadline).foregroundStyle(isDone ? Palette.muted : Palette.foreground)
                             .fixedSize(horizontal: false, vertical: true)
                         if let d = meal.description { Text(d).font(.apSubhead).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1)).lineLimit(2) }
+                        let weighed = meal.weighed
+                        if !weighed.isEmpty {
+                            // Peso de cada ingrediente para pesarlo en báscula.
+                            VStack(alignment: .leading, spacing: 2) {
+                                ForEach(Array(weighed.enumerated()), id: \.offset) { _, item in
+                                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                        Text(item.food).fixedSize(horizontal: false, vertical: true)
+                                        Spacer(minLength: 0)
+                                        Text(item.amount).monospacedDigit()
+                                    }
+                                }
+                            }
+                            .font(.apFootnote).foregroundStyle(isDone ? Palette.muted.opacity(0.6) : Palette.foreground.opacity(0.8))
+                            .padding(.top, 4)
+                        }
+                        if let own {
+                            Text("\(NumberText.integer(own.kcal)) kcal · P \(own.protein) g · C \(own.carbs) g · G \(own.fats) g")
+                                .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted.opacity(isDone ? 0.6 : 1))
+                                .padding(.top, 2)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // La foto ocupa lo mismo en todas las filas (56 · radio 12), como en el esqueleto.
-                    MealPhoto(dish: meal.description ?? name).frame(width: 56, height: 56)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous)).opacity(isDone ? 0.5 : 1)
+                    // Solo la foto propia del plato (56 · radio 12); sin ella, ninguna: nunca la misma repetida.
+                    if let url = photos[Self.dish(meal)] {
+                        MealPhoto(url: url).frame(width: 56, height: 56)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous)).opacity(isDone ? 0.5 : 1)
+                    }
                 }
                 .padding(.vertical, 8)
                 .overlay(alignment: .bottom) { if !last { Rectangle().fill(Palette.separator).frame(height: 0.5) } }
@@ -362,7 +400,7 @@ struct NutritionView: View {
         if !loaded, let cached = Snapshots.load(Row.self, Self.cacheKey(id)) {
             macros = cached.macros_json
             meals = cached.meals_json ?? []
-            if let dish = meals.first?.description { cover = AiCover.cachedMeal(dish) ?? AiCover.mealFallback }
+            photos = Self.cachedPhotos(meals)
             loaded = true
         }
 
@@ -374,16 +412,13 @@ struct NutritionView: View {
             macros = row?.macros_json
             if macros?.protein == nil && macros?.calories == nil { macros = await estimatedMacros(id) }
             meals = row?.meals_json ?? []
-            // La portada se resuelve desde caché antes de pintar: sin parpadeo ni salto.
-            let coverDish = meals.first?.description ?? Self.defaultDish
-            if !meals.isEmpty {
-                cover = AiCover.cachedMeal(coverDish) ?? AiCover.mealFallback
-            }
+            // Las fotos ya guardadas se pintan en el primer frame: sin parpadeo ni salto.
+            photos = Self.cachedPhotos(meals)
             loaded = true
             failed = false
             if !meals.isEmpty {
-                // Portada y fotos de todas las comidas en paralelo; la lista ya está pintada.
-                await prefetchCovers(coverDish: coverDish)
+                // Fotos de todas las comidas en paralelo; la lista ya está pintada.
+                await prefetchPhotos()
             } else if hasAccess == nil {
                 // Sin comidas: con Plus se generan solas (el servidor vuelve a comprobar el acceso).
                 // Lo decide el servidor: si responde «no_access», toca el aviso de Plus.
@@ -429,7 +464,8 @@ struct NutritionView: View {
         guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
         macros = row.macros_json
         meals = row.meals_json ?? []
-        if !meals.isEmpty { await prefetchCovers(coverDish: meals.first?.description ?? Self.defaultDish) }
+        photos = Self.cachedPhotos(meals)
+        if !meals.isEmpty { await prefetchPhotos() }
     }
 
     /// Objetivo estimado con peso, sexo y objetivo del onboarding: kcal y proteína como la web;
@@ -459,49 +495,109 @@ struct NutritionView: View {
         throw lastError ?? URLError(.unknown)
     }
 
-    /// Precarga en paralelo la portada y la foto de cada plato. `MealPhoto` encontrará
-    /// después la URL en caché, así que no se repiten las llamadas lentas a `session-cover`.
-    private func prefetchCovers(coverDish: String) async {
-        let dishes = Set(meals.map { $0.description ?? $0.name ?? "" }.filter { !$0.isEmpty && $0 != coverDish })
-        async let coverURL = AiCover.meal(coverDish)
-        async let photos: Void = prefetchPhotos(dishes)
-        let resolved = await coverURL
-        if !Task.isCancelled { cover = resolved }
-        _ = await photos
+    /// Plato de la comida: la clave de su foto.
+    static func dish(_ meal: Meal) -> String { meal.description ?? meal.name ?? "Comida" }
+
+    /// Fotos propias ya guardadas, sin red, para pintarlas en el primer frame.
+    static func cachedPhotos(_ meals: [Meal]) -> [String: URL] {
+        var found: [String: URL] = [:]
+        for meal in meals {
+            let dish = dish(meal)
+            if let url = AiCover.cachedMeal(dish) { found[dish] = url }
+        }
+        return found
     }
 
     /// Fotos de las comidas a la vez; `CoverStore` garantiza una sola petición por plato.
-    private func prefetchPhotos(_ dishes: Set<String>) async {
-        await withTaskGroup(of: Void.self) { group in
+    /// Solo se guardan las propias de cada plato: sin foto propia, la fila va sin foto.
+    private func prefetchPhotos() async {
+        let dishes = Set(meals.map(Self.dish).filter { photos[$0] == nil })
+        guard !dishes.isEmpty else { return }
+        let found = await withTaskGroup(of: (String, URL?).self, returning: [String: URL].self) { group in
             for dish in dishes {
-                group.addTask { _ = await AiCover.meal(dish) }
+                group.addTask { (dish, await AiCover.ownMeal(dish)) }
             }
+            var found: [String: URL] = [:]
+            for await (dish, url) in group { if let url { found[dish] = url } }
+            return found
         }
+        if !Task.isCancelled { photos.merge(found) { _, new in new } }
     }
 
-    private func macro(_ label: String, _ grams: Double, _ share: Double) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+    /// Macro del día. Con comidas (`eaten`), lo marcado sobre el objetivo; sin ellas, el objetivo
+    /// y qué parte de la energía aporta.
+    private func macro(_ label: String, _ grams: Double, _ share: Double, eaten: Int?) -> some View {
+        let target = Int(grams.rounded())
+        let fill = eaten.map { grams > 0 ? Double($0) / Double(max(1, target)) : 0 } ?? share
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text(label).font(.apFootnote).foregroundStyle(Palette.muted)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
-                Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit())
-                    .foregroundStyle(Palette.muted).lineLimit(1)
+                if eaten == nil {
+                    Text("\(Int((share * 100).rounded())) %").font(.apFootnote.monospacedDigit())
+                        .foregroundStyle(Palette.muted).lineLimit(1)
+                }
             }
-            (Text(NumberText.integer(Int(grams.rounded()))).font(.inter(size: 22, weight: .bold).monospacedDigit()) + Text("g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
+            (Text(NumberText.integer(eaten ?? target)).font(.inter(size: 22, weight: .bold).monospacedDigit()) + Text(eaten != nil ? "/\(NumberText.integer(target)) g" : "g").font(.apSubhead.weight(.semibold)).foregroundColor(Palette.muted))
                 .lineLimit(1).minimumScaleFactor(0.7)
                 .padding(.top, 2)
             GeometryReader { geo in
                 Capsule().fill(Palette.gold.opacity(0.2))
                     .overlay(alignment: .leading) {
-                        Capsule().fill(Palette.gold).frame(width: geo.size.width * max(0, min(1, share)))
+                        Capsule().fill(Palette.gold).frame(width: geo.size.width * max(0, min(1, fill)))
+                            .animation(reduceMotion ? nil : .snappy, value: fill)
                     }
             }
             .frame(height: 6).padding(.top, 8)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label): objetivo diario de \(Int(grams)) gramos, \(Int(share * 100)) % de las calorías")
+        .accessibilityLabel(eaten.map { "\(label): \($0) de \(target) gramos" } ?? "\(label): objetivo diario de \(Int(grams)) gramos, \(Int(share * 100)) % de las calorías")
+    }
+
+    /// Macros de cada comida cuadrados con el objetivo (como `mealMacros.ts`); vacío sin objetivo.
+    private var perMeal: [MealMacros] {
+        guard !meals.isEmpty, let m = macros else { return [] }
+        let p = m.protein ?? 0, c = m.carbs ?? 0, f = m.fats ?? 0
+        let kcal = (m.calories ?? 0) > 0 ? m.calories! : (p * 4 + c * 4 + f * 9).rounded()
+        guard kcal > 0 else { return [] }
+        return Self.mealMacros(meals, kcal: kcal, protein: p, carbs: c, fats: f)
+    }
+
+    /// Reparte proteína, carbos y grasas entre las comidas (en la proporción de la IA o a partes
+    /// iguales) y las kcal según su energía: todo suma exactamente el objetivo del día.
+    static func mealMacros(_ meals: [Meal], kcal: Double, protein: Double, carbs: Double, fats: Double) -> [MealMacros] {
+        let p = splitExact(protein, weights(meals) { $0.protein })
+        let c = splitExact(carbs, weights(meals) { $0.carbs })
+        let f = splitExact(fats, weights(meals) { $0.fats })
+        let k = splitExact(kcal, meals.indices.map { Double(p[$0] * 4 + c[$0] * 4 + f[$0] * 9) })
+        return meals.indices.map { MealMacros(kcal: k[$0], protein: p[$0], carbs: c[$0], fats: f[$0]) }
+    }
+
+    private static func weights(_ meals: [Meal], _ value: (Meal) -> Double?) -> [Double] {
+        let own = meals.allSatisfy { value($0).map { $0.isFinite && $0 >= 0 } ?? false }
+        return meals.map { own ? value($0) ?? 1 : 1 }
+    }
+
+    /// Reparte `total` (redondeado) en enteros proporcionales a `weights` que suman exactamente `total`.
+    static func splitExact(_ total: Double, _ weights: [Double]) -> [Int] {
+        guard !weights.isEmpty else { return [] }
+        let target = max(0, Int(total.rounded()))
+        let sum = weights.reduce(0, +)
+        let ws = sum > 0 ? weights : weights.map { _ in 1 }
+        let wsum = sum > 0 ? sum : Double(ws.count)
+        let raw = ws.map { Double(target) * $0 / wsum }
+        var out = raw.map { Int($0.rounded(.down)) }
+        var rest = target - out.reduce(0, +)
+        // Mayor resto primero; a igualdad, la comida anterior (igual que la web).
+        let order = raw.indices.sorted { a, b in
+            let fa = raw[a] - raw[a].rounded(.down), fb = raw[b] - raw[b].rounded(.down)
+            return fa != fb ? fa > fb : a < b
+        }
+        var k = 0
+        while rest > 0 { out[order[k % order.count]] += 1; k += 1; rest -= 1 }
+        return out
     }
 }
 
@@ -518,12 +614,7 @@ private struct NutritionSkeleton: View {
         // La misma rejilla que el contenido real: esqueleto de resumen y de comidas en dos
         // columnas en iPad/Mac y en una en el iPhone, para que al llegar los datos nada salte.
         LazyVGrid(columns: NutritionGrid.columns(singleColumn: singleColumn), alignment: .leading, spacing: singleColumn ? 32 : 24) {
-            VStack(alignment: .leading, spacing: singleColumn ? 32 : 24) {
-                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                    .fill(Palette.card)
-                    .frame(height: 176)
-                summarySkeleton
-            }
+            summarySkeleton
             mealsSkeleton
         }
         .opacity(pulsing ? 0.5 : 1)
@@ -713,30 +804,14 @@ private struct EmptyCard: View {
     }
 }
 
-/// Foto del plato generada por `session-cover`.
+/// Foto propia del plato generada por `session-cover`; la fila solo la pinta si existe.
 struct MealPhoto: View {
-    let dish: String
-    @State private var url: URL?
-
-    init(dish: String) {
-        self.dish = dish
-        // Caché sincrónica: el plato ya visto pinta su foto en el primer frame.
-        _url = State(initialValue: AiCover.cachedMeal(dish) ?? AiCover.mealFallback)
-    }
+    let url: URL
 
     var body: some View {
         ZStack {
             Palette.secondary
-            if let url {
-                CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-            }
-        }
-        .task(id: dish) {
-            // Al cambiar el plato se descarta la foto anterior antes de resolver la nueva.
-            url = AiCover.cachedMeal(dish) ?? AiCover.mealFallback
-            let resolved = await AiCover.meal(dish)
-            guard !Task.isCancelled, let resolved, resolved != url else { return }
-            url = resolved
+            CachedAsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
         }
         .accessibilityHidden(true)
     }
@@ -750,12 +825,17 @@ enum AiCover {
     /// Antes era un único diccionario en UserDefaults; se conserva para migrar portadas ya guardadas.
     private static let legacyStore = "autopilot.aiCovers.v1"
 
-    /// Igual que la web: si la IA no da foto, se muestra siempre la foto de respaldo.
-    /// La petición es única por plato (`CoverStore`) y se cachea en memoria y en disco.
+    /// Tarjetas vacías, igual que la web: si la IA no da foto, la foto de respaldo.
     static func meal(_ dish: String) async -> URL? {
+        await ownMeal(dish) ?? mealFallback
+    }
+
+    /// Foto propia del plato o nil: las filas de comidas nunca repiten el respaldo.
+    /// La petición es única por plato (`CoverStore`) y se cachea en memoria y en disco.
+    static func ownMeal(_ dish: String) async -> URL? {
         let text = normalized(dish)
-        guard text.count >= 3 else { return mealFallback }
-        return await CoverStore.shared.cover(key: cacheKey(for: text), dish: text) ?? mealFallback
+        guard text.count >= 3 else { return nil }
+        return await CoverStore.shared.cover(key: cacheKey(for: text), dish: text)
     }
 
     /// URL ya guardada para el plato, sin `await` ni red: así la vista pinta la foto correcta
