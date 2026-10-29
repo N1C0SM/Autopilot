@@ -1,4 +1,5 @@
 import { getAuthedUser } from "../_shared/require-user.ts";
+import { hasFullScan } from "../_shared/scan-access.ts";
 import { errorMessage } from "../_shared/runtime-values.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -82,6 +83,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    // «Tu yo futuro» es parte del scan completo (Plus).
+    if (!(await hasFullScan(req, sb))) {
+      return new Response(JSON.stringify({ error: "Tu yo futuro está incluido en Plus.", locked: true }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const key = `generate-future-self:${ip}`;
     const windowSec = 3600;
     const limit = 8;

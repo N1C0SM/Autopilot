@@ -34,8 +34,10 @@ export const TIERS = {
       "Rutina inicial según tu objetivo, días y material",
       "Registro de series, repeticiones y kg",
       "Historial, peso y récords",
+      "Calorías y macros para tu objetivo",
+      "Scan básico: nota de tu físico y 2 mejoras",
     ],
-    notIncluded: ["Nutrición y progresión automática", "Atención personal"],
+    notIncluded: ["Scan completo y comidas de cada día", "Progresión automática"],
     cta: "Empezar gratis",
   },
   training: {
@@ -48,12 +50,12 @@ export const TIERS = {
     tagline: "Te dice qué comer y cuánto subir.",
     features: [
       "Todo Free",
-      "Plan de nutrición: calorías y macros para tu objetivo",
+      "Scan completo: composición, músculos, postura, protocolo y tu yo futuro",
+      "Comidas de cada día según tus gustos y alergias",
       "Progresión de cargas calculada con tus registros",
-      "Análisis corporal por foto con IA",
       "Estadísticas avanzadas de tu evolución",
     ],
-    notIncluded: ["Atención personal"],
+    notIncluded: [],
     cta: "Elegir Plus",
   },
   full: {

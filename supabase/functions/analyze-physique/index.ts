@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.95.0";
 import { generateText } from "npm:ai";
 import { createOpenAICompatible } from "npm:@ai-sdk/openai-compatible";
 import { getAiConfig } from "../_shared/ai-provider.ts";
+import { hasFullScan, toBasicScan } from "../_shared/scan-access.ts";
 import { z } from "npm:zod";
 import { jsonrepair } from "npm:jsonrepair@3";
 
@@ -433,7 +434,9 @@ Deno.serve(async (req) => {
       parsed.similarity = 0;
     }
 
-    return new Response(JSON.stringify(parsed), {
+    // Free y visitantes: scan básico (el detalle es de Plus). Se recorta aquí, no en la app.
+    const full = await hasFullScan(req, sb);
+    return new Response(JSON.stringify(full ? parsed : toBasicScan(parsed as Record<string, unknown>)), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: unknown) {

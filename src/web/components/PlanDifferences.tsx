@@ -15,10 +15,11 @@ const PlanDifferences = () => {
         { text: "Rutina inicial según tu objetivo, días y material", included: true },
         { text: "Registro de series, repeticiones y kg", included: true },
         { text: "Historial, peso y récords", included: true },
-        { text: "Análisis corporal por foto con IA (scan)", included: true },
-        { text: "Plan de nutrición y macros", included: false },
+        { text: "Calorías y macros para tu objetivo", included: true },
+        { text: "Scan básico: nota de tu físico, resumen y 2 mejoras", included: true },
+        { text: "Scan completo: composición, músculos, postura, protocolo y tu yo futuro", included: false },
+        { text: "Comidas de cada día según tus gustos", included: false },
         { text: "Progresión de cargas automática", included: false },
-        { text: "Chat con Nicolás", included: false },
       ],
     },
     p.plus && {
@@ -27,11 +28,11 @@ const PlanDifferences = () => {
       tagline: "Te dice qué comer y cuánto subir.",
       features: [
         { text: "Todo lo de Free", included: true },
-        { text: "Plan de nutrición: calorías y macros", included: true },
+        { text: "Scan completo: composición, músculos, postura, protocolo y tu yo futuro", included: true },
+        { text: "Comparativa de scans antes y después", included: true },
+        { text: "Comidas de cada día según tus gustos y alergias", included: true },
         { text: "Progresión de cargas con tus registros", included: true },
-        { text: "Análisis corporal por foto con IA", included: true },
         { text: "Estadísticas avanzadas", included: true },
-        { text: "Chat con Nicolás", included: false },
       ],
     },
     p.coach && {
@@ -57,7 +58,7 @@ const PlanDifferences = () => {
           <p className="type-subhead text-primary">Así se diferencian los planes</p>
           <h2 className="mt-2 type-title1 sm:text-[40px] sm:leading-[44px]">Elige según lo que necesitas</h2>
           <p className="mt-4 type-body text-muted-foreground">
-            Empieza gratis y añade características según avances. El scan (análisis por IA) es gratis para todos.
+            Empieza gratis con tu rutina, tus macros y un scan básico. Con Plus ves tu scan completo y tus comidas de cada día.
           </p>
         </div>
 

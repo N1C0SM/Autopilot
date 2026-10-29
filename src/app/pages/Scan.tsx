@@ -49,6 +49,7 @@ import poseFrontImg from "@/shared/assets/pose-front.png";
 import poseBackImg from "@/shared/assets/pose-back.png";
 import ProjectionTimeline from "@/app/components/scan/ProjectionTimeline";
 import LockedInsightsGrid from "@/app/components/scan/LockedInsightsGrid";
+import ScanPlusCard from "@/app/components/scan/ScanPlusCard";
 import StickyConversionBar from "@/app/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/app/components/scan/ScanCoverageCard";
 import ScanShareCard from "@/app/components/scan/ScanShareCard";
@@ -145,6 +146,9 @@ type Result = {
   inferred_intensity?: number;
   inferred_specific_goals?: string[];
   locked_insights?: { label: string; teaser: string; category?: string }[];
+  /** Scan básico (Free y visitantes): el servidor quita el detalle de Plus. */
+  basic?: boolean;
+  locked_sections?: string[];
   body_composition?: {
     body_fat_pct?: number;
     lean_mass_kg?: number;
@@ -1896,7 +1900,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               )}
 
               {user && routeUserId && !inline && <ScanProgressPanel userId={user.id} compact />}
-              {user && routeUserId && !inline && (
+              {user && routeUserId && !inline && !result.basic && (
                 <BeforeAfterCompare
                   userId={user.id}
                   currentPhoto={currentImg}
@@ -1984,7 +1988,13 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 );
               })()}
 
+              {/* Scan básico: lo de Plus en una tarjeta, en lugar del yo futuro y el detalle */}
+              {result.basic && (
+                <ScanPlusCard sections={result.locked_sections} onUpgrade={() => navigate(user ? "/planes" : signupWithPlan)} />
+              )}
+
               {/* Yo futuro: contenido rico, una sola superficie */}
+              {!result.basic && (
               <section>
                 <h2 className="type-title2">
                   {result.months_with_plan ?? result.estimated_months
@@ -2058,6 +2068,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   )}
                 </div>
               </section>
+              )}
 
               {!isPaid && !user && (
                 <LockedInsightsGrid

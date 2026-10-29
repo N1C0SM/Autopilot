@@ -510,6 +510,9 @@ struct ScanResult: Codable {
     var headline_diagnosis: String?
     var bottleneck: String?
     var months_without_plan: Double?
+    /// Scan básico (Free): el servidor quita el detalle de Plus y dice qué se desbloquea.
+    var basic: Bool?
+    var locked_sections: [String]?
 
     /// Item de «Mejoras»: el JSON trae `label` y `priority`. Antes se decodificaban
     /// `title`/`description`, que no existen, y las tarjetas salían vacías.
@@ -531,6 +534,7 @@ struct ScanResultView: View {
             metrics
             if let s = result.summary, !s.isEmpty { summaryCard(s) }
             if let list = result.improvements, !list.isEmpty { improvements(list) }
+            if result.basic == true { plusCard }
             Button("Hacer otro scan", action: onAgain).buttonStyle(.pillSecondary)
         }
     }
@@ -586,6 +590,30 @@ struct ScanResultView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// Scan básico: lo que se desbloquea con Plus (como `ScanPlusCard` de la web). Sin enlace
+    /// de pago en iOS (normas de la App Store).
+    private var plusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image("lu-lock").renderingMode(.template).resizable().frame(width: 18, height: 18)
+                .foregroundStyle(Palette.gold)
+                .frame(width: 40, height: 40).background(Palette.gold.opacity(0.15), in: Circle())
+            Text("Tu scan completo, con Plus").font(.inter(size: 28, weight: .bold)).tracking(-0.7)
+            Text("Este es tu scan básico. Con Plus ves el análisis entero de tu físico:")
+                .font(.apSubhead).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+            ForEach(result.locked_sections ?? [], id: \.self) { item in
+                HStack(alignment: .top, spacing: 10) {
+                    Image("lu-check").renderingMode(.template).resizable().frame(width: 14, height: 14)
+                        .foregroundStyle(Palette.gold).padding(.top, 3)
+                    Text(item).font(.apSubhead).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Text("Incluido en Plus").font(.apFootnote.weight(.semibold)).foregroundStyle(Palette.gold).padding(.top, 6)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Palette.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
     // MARK: - Mejoras
