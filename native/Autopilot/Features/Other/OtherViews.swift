@@ -475,6 +475,8 @@ struct NutritionView: View {
         if result?.reason == "no_access" { hasAccess = false; return }
         hasAccess = true
         guard result?.meals_updated == true, let id = session.userId, let row = (try? await fetchPlan(id)) ?? nil else { generateFailed = true; return }
+        // Copia en disco al día, como `load()`: sin red se abren las comidas nuevas, no las viejas.
+        Snapshots.save(row, Self.cacheKey(id))
         macros = row.macros_json
         meals = row.meals_json ?? []
         photos = Self.cachedPhotos(meals)
