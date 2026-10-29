@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, RotateCcw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { resetAcquisitionEvents } from "@/shared/lib/acquisition";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { EmptyState } from "@/shared/components/ui/empty-state";
@@ -7,15 +19,18 @@ import { SectionHeader } from "@/shared/components/ui/section-header";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/shared/components/ui/status-badge";
-import { hapticSelection, hapticTap } from "@/shared/lib/native";
+import { hapticNotify, hapticSelection, hapticTap } from "@/shared/lib/native";
 import { cn } from "@/shared/lib/utils";
 import {
   ACQUISITION_CHANNELS,
   ACQUISITION_STAGES,
+  CAMPAIGN_LABELS,
   CHANNEL_LABELS,
+  MEDIUM_LABELS,
   RANGE_OPTIONS,
   STAGE_LABELS,
   USERS_PAGE_SIZE,
+  fetchAcquisitionCampaigns,
   fetchAcquisitionFunnel,
   fetchAcquisitionUsers,
   rangeDates,
@@ -23,6 +38,7 @@ import {
   type AcquisitionFunnel,
   type AcquisitionStage,
   type AcquisitionUser,
+  type CampaignFunnel,
   type ChannelFunnel,
   type RangeKey,
 } from "@/shared/lib/acquisitionFunnel";
@@ -36,6 +52,19 @@ const AcquisitionPanel = () => {
   const [data, setData] = useState<AcquisitionFunnel | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [usersKey, setUsersKey] = useState(0);
+
+  const resetEvents = async () => {
+    try {
+      const n = await resetAcquisitionEvents();
+      toast.success(n === 1 ? "Borrada 1 visita o scan de prueba" : `Borrados ${n} visitas y scans de prueba`);
+      await load(range);
+      setUsersKey((k) => k + 1);
+    } catch {
+      toast.error("No se pudo reiniciar. ¿Está aplicada la migración de reinicio?");
+    }
+  };
 
   const load = useCallback(async (key: RangeKey) => {
     setLoading(true);
@@ -70,9 +99,14 @@ const AcquisitionPanel = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <p className="type-subhead text-muted-foreground">De qué red llega cada usuario y hasta dónde avanza.</p>
-          <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void load(range); }} aria-label="Actualizar" className="-mr-3 shrink-0 text-primary [&_svg]:size-5">
-            <RefreshCw />
-          </Button>
+          <div className="-mr-3 flex shrink-0 items-center">
+            <Button variant="ghost" size="icon" onClick={() => { void hapticTap(); void load(range); }} aria-label="Actualizar" className="text-primary [&_svg]:size-5">
+              <RefreshCw />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => { void hapticNotify("warning"); setConfirmingReset(true); }} aria-label="Empezar a medir desde cero" className="text-destructive [&_svg]:size-5">
+              <RotateCcw />
+            </Button>
+          </div>
         </div>
         <Tabs value={range} onValueChange={(v) => { void hapticSelection(); setRange(v as RangeKey); }}>
           <TabsList className="w-full sm:w-80" aria-label="Rango de fechas">
@@ -102,6 +136,7 @@ const AcquisitionPanel = () => {
             {tracking
               ? `Midiendo el origen desde el ${fmtDate(tracking)}. Las cuentas anteriores aparecen como «sin origen».`
               : "El origen se empieza a medir cuando se publique esta versión: hasta entonces todas las cuentas aparecen como «sin origen» y no hay visitas ni scans registrados."}
+            {" "}Tus visitas no cuentan: este navegador queda marcado al abrir Admin, y en el móvil abre una vez autopilotplan.com/?no_contar=1 desde Instagram, TikTok, YouTube, Threads y Facebook.
             {" "}Activo en 2ª semana: al menos un entreno entre los días 8 y 14 desde el alta (solo cuenta a quien ya los ha cumplido). Sin cuentas de prueba ni del equipo.
           </p>
 
@@ -114,9 +149,26 @@ const AcquisitionPanel = () => {
             </ul>
           </Card>
 
-          <UsersList range={range} />
+          <CampaignsList key={`c${usersKey}`} range={range} />
+
+          <UsersList key={usersKey} range={range} />
         </>
       ) : null}
+
+      <AlertDialog open={confirmingReset} onOpenChange={setConfirmingReset}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Empezar a medir desde cero?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se borran las visitas y los scans registrados hasta ahora (por ejemplo, tus pruebas con los enlaces de las bios). Las cuentas y su origen no se tocan. No se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction destructive onClick={() => { void resetEvents(); }}>Borrar y empezar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
@@ -186,6 +238,58 @@ function FunnelSteps({ total, tracking, className }: { total: Omit<ChannelFunnel
       <p className="mt-2 type-footnote text-muted-foreground">
         Las visitas y los scans de quien no crea cuenta solo se cuentan: no se sigue a nadie sin cuenta. Persona a persona, abajo, solo cuentas.
       </p>
+    </Card>
+  );
+}
+
+/** Cada publicación (red + dónde estaba el enlace + pieza): qué trajo. */
+function CampaignsList({ range }: { range: RangeKey }) {
+  const [rows, setRows] = useState<CampaignFunnel[] | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetchAcquisitionCampaigns(rangeDates(range))
+      .then((r) => { if (alive) { setRows(r); setError(false); } })
+      .catch(() => { if (alive) setError(true); });
+    return () => { alive = false; };
+  }, [range]);
+
+  const label = (r: CampaignFunnel) => {
+    if (r.campaign) return CAMPAIGN_LABELS[r.campaign] ?? r.campaign;
+    if (r.medium === "bio") return "Enlace de la bio";
+    return r.channel === "directo" ? "Sin enlace etiquetado" : "Sin publicación concreta";
+  };
+
+  return (
+    <Card>
+      <SectionHeader title="Por publicación" size="sm" className="mb-1" />
+      <p className="mb-2 type-footnote text-muted-foreground">
+        Qué trajo cada reel, carrusel, short, hilo o historia. Solo se puede saber cuando el enlace es pulsable en la propia publicación (Facebook, YouTube, Threads, historias con enlace); en Instagram y TikTok cuenta como «Enlace de la bio».
+      </p>
+      {error && <p role="alert" className="py-2 type-footnote text-destructive">No se pudo cargar.</p>}
+      {rows && rows.length === 0 && <p className="py-6 text-center type-subhead text-muted-foreground">Aún no hay visitas con enlace etiquetado en el rango.</p>}
+      {!rows && !error && <div className="flex justify-center py-4"><Spinner size="sm" /></div>}
+      <ul className="divide-y divide-border/60">
+        {(rows ?? []).map((r) => (
+          <li key={`${r.channel}-${r.medium}-${r.campaign}`} className="py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate type-headline">{label(r)}</p>
+                <p className="truncate type-footnote text-muted-foreground">
+                  {CHANNEL_LABELS[r.channel]}{r.medium ? ` · ${MEDIUM_LABELS[r.medium] ?? r.medium}` : ""}
+                </p>
+              </div>
+              <span className="shrink-0 tabular-nums">
+                <span className="type-figure text-[24px]">{r.signups}</span>
+                <span className="ml-1.5 type-footnote text-muted-foreground">{r.signups === 1 ? "cuenta" : "cuentas"}</span>
+              </span>
+            </div>
+            <p className="mt-1 type-footnote tabular-nums text-muted-foreground">
+              {r.visits} visitas · {r.scans} scans · {r.firstWorkout} entrenaron · {r.activeWeek2} activos 2ª sem. · {r.plus} Plus
+            </p>
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

@@ -173,3 +173,51 @@ export async function fetchAcquisitionUsers(
   if (error) throw error;
   return parseAcquisitionUsers(data);
 }
+
+/** Nombre legible de cada pieza publicada (utm_campaign); lo desconocido se muestra tal cual. */
+export const CAMPAIGN_LABELS: Record<string, string> = {
+  como_funciona: "Reel «Cómo funciona»",
+  reel_scan: "Reel del scan",
+  reel_pov: "Reel POV",
+  carrusel_senales: "Carrusel «3 señales»",
+  carrusel_scan: "Carrusel del scan",
+  carrusel_plan: "Carrusel del plan",
+  destacadas: "Historias / destacadas",
+};
+
+export const MEDIUM_LABELS: Record<string, string> = { bio: "Bio", post: "Publicación", story: "Historia", dm: "Mensaje", referral: "Enlace" };
+
+export interface CampaignFunnel {
+  channel: AcquisitionChannel;
+  medium: string | null;
+  campaign: string | null;
+  visits: number;
+  scans: number;
+  signups: number;
+  firstWorkout: number;
+  activeWeek2: number;
+  plus: number;
+}
+
+/** Convierte la respuesta de `admin_acquisition_campaigns`. */
+export function parseAcquisitionCampaigns(raw: unknown): CampaignFunnel[] {
+  return (Array.isArray(raw) ? raw : []).map((r: Record<string, unknown>) => ({
+    channel: asChannel(r.channel),
+    medium: str(r.medium),
+    campaign: str(r.campaign),
+    visits: num(r.visits),
+    scans: num(r.scans),
+    signups: num(r.signups),
+    firstWorkout: num(r.first_workout),
+    activeWeek2: num(r.active_week2),
+    plus: num(r.plus),
+  }));
+}
+
+/** Visitas, scans y embudo por publicación concreta (solo admins). */
+export async function fetchAcquisitionCampaigns(range: { from: string; to: string }): Promise<CampaignFunnel[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any).rpc("admin_acquisition_campaigns", { _from: range.from, _to: range.to });
+  if (error) throw error;
+  return parseAcquisitionCampaigns(data);
+}

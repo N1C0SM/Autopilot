@@ -7,6 +7,7 @@ import { PGlite } from "@electric-sql/pglite";
 const MIGRATIONS = [
   "20261029180000_captacion_atribucion.sql",
   "20261029190000_captacion_por_usuario.sql",
+  "20261029200000_captacion_reinicio_y_publicaciones.sql",
 ].map((f) => resolve(__dirname, "../../../supabase/migrations", f));
 
 const ADMIN = "00000000-0000-0000-0000-00000000000a";
@@ -114,5 +115,37 @@ describe("captación por usuario", () => {
       "SELECT public.admin_acquisition_funnel('2026-09-01'::date, '2026-09-30'::date) AS f");
     const tiktok = rows[0].f.channels.find((c) => c.channel === "tiktok")!;
     expect(tiktok).toMatchObject({ signups: 3, first_workout: 2 });
+  });
+
+  it("solo un admin puede borrar las visitas y scans; las cuentas siguen", async () => {
+    await as(null);
+    await db.query("SELECT public.record_acquisition_event('visit', 'tiktok', 'bio', NULL)");
+    await as(ONLY_ACCOUNT);
+    await expect(db.query("SELECT public.admin_reset_acquisition_events()")).rejects.toThrow(/admin only/);
+    await as(ADMIN);
+    const { rows } = await db.query<{ n: number }>("SELECT public.admin_reset_acquisition_events() AS n");
+    expect(rows[0].n).toBeGreaterThan(0);
+    await db.exec("RESET ROLE");
+    const left = await db.query<{ n: number }>("SELECT count(*)::int AS n FROM public.acquisition_events");
+    expect(left.rows[0].n).toBe(0);
+    await as(ADMIN);
+    expect((await users()).total).toBe(5);
+  });
+
+  it("agrupa por publicación (red + medio + campaña)", async () => {
+    await as(null);
+    await db.query("SELECT public.record_acquisition_event('visit', 'tiktok', 'post', 'reel_scan')");
+    await db.query("SELECT public.record_acquisition_event('visit', 'tiktok', 'post', 'reel_scan')");
+    await db.query("SELECT public.record_acquisition_event('scan', 'tiktok', 'post', 'reel_scan')");
+    await db.query("SELECT public.record_acquisition_event('visit', 'facebook', 'post', 'reel_pov')");
+    await as(ONLY_ACCOUNT);
+    await expect(db.query("SELECT public.admin_acquisition_campaigns(current_date, current_date)")).rejects.toThrow(/admin only/);
+    await as(ADMIN);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid" }).format(new Date());
+    const { rows } = await db.query<{ r: { channel: string; campaign: string | null; visits: number; scans: number }[] }>(
+      "SELECT public.admin_acquisition_campaigns($1::date, $1::date) AS r", [today]);
+    const scan = rows[0].r.find((x) => x.channel === "tiktok" && x.campaign === "reel_scan");
+    expect(scan).toMatchObject({ visits: 2, scans: 1 });
+    expect(rows[0].r.find((x) => x.channel === "facebook")?.campaign).toBe("reel_pov");
   });
 });

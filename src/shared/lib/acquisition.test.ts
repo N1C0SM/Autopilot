@@ -8,6 +8,8 @@ import {
   captureFirstTouch,
   claimAcquisition,
   FIRST_TOUCH_TTL_MS,
+  isStaffDevice,
+  markStaffDevice,
   parseTouch,
   readFirstTouch,
   recordAcquisitionEvent,
@@ -95,5 +97,20 @@ describe("persistencia", () => {
     await claimAcquisition("user-2", touch);
     await claimAcquisition("user-2", touch);
     expect(rpc).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("navegador del equipo", () => {
+  it("no registra visitas, scans ni origen del alta desde un navegador marcado", async () => {
+    markStaffDevice();
+    await recordAcquisitionEvent("visit", { source: "tiktok", medium: "bio", campaign: null, landing: "/", at: NOW });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(acquisitionMetadata({ source: "tiktok", medium: "bio", campaign: null, landing: "/", at: NOW })).toEqual({});
+  });
+
+  it("se marca al entrar una vez con ?no_contar=1", () => {
+    expect(isStaffDevice("")).toBe(false);
+    expect(isStaffDevice("?no_contar=1")).toBe(true);
+    expect(isStaffDevice("")).toBe(true);
   });
 });

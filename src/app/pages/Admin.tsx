@@ -19,6 +19,7 @@ import { listTestAccountIds } from "@/shared/lib/testAccounts";
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { hapticSelection } from "@/shared/lib/native";
+import { markStaffDevice } from "@/shared/lib/acquisition";
 import { toast } from "sonner";
 
 const AdminMetrics = lazy(() => import("@/app/components/admin/AdminMetrics"));
@@ -108,6 +109,8 @@ const Admin = () => {
   const [growthTab, setGrowthTab] = useState<"captacion" | "negocio">(() =>
     new URLSearchParams(window.location.search).get("s") === "metrics" ? "negocio" : "captacion");
   const isMobile = useIsMobile();
+  // Quien abre Admin es del equipo: sus visitas a la web no cuentan en Captación.
+  useEffect(() => { markStaffDevice(); }, []);
   const contentRef = useRef<HTMLElement>(null);
 
   const [testIds, setTestIds] = useState<Set<string>>(new Set());

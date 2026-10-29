@@ -75,6 +75,27 @@ struct AdminAcquisitionView: View {
     ]
     private static let pageSize = 50
 
+    /// Cada publicación (red + dónde estaba el enlace + pieza) y lo que trajo.
+    private struct Campaign: Decodable, Identifiable {
+        let channel: String
+        let medium: String?
+        let campaign: String?
+        let visits: Int
+        let scans: Int
+        let signups: Int
+        let first_workout: Int
+        let active_week2: Int
+        let plus: Int
+        var id: String { "\(channel)-\(medium ?? "")-\(campaign ?? "")" }
+    }
+
+    private static let campaignLabels = [
+        "como_funciona": "Reel «Cómo funciona»", "reel_scan": "Reel del scan", "reel_pov": "Reel POV",
+        "carrusel_senales": "Carrusel «3 señales»", "carrusel_scan": "Carrusel del scan", "carrusel_plan": "Carrusel del plan",
+        "destacadas": "Historias / destacadas",
+    ]
+    private static let mediumLabels = ["bio": "Bio", "post": "Publicación", "story": "Historia", "dm": "Mensaje", "referral": "Enlace"]
+
     private static let ranges: [(label: String, days: Int?)] = [("7 días", 7), ("30 días", 30), ("90 días", 90), ("Todo", nil)]
     private static let labels = [
         "tiktok": "TikTok", "instagram": "Instagram", "youtube": "YouTube", "threads": "Threads",
@@ -91,6 +112,7 @@ struct AdminAcquisitionView: View {
     @State private var peopleTotal = 0
     @State private var peopleLoading = false
     @State private var peopleFailed = false
+    @State private var campaigns: [Campaign]?
 
     var body: some View {
         ScrollView {
@@ -123,6 +145,7 @@ struct AdminAcquisitionView: View {
         .refreshable { await load() }
         .task(id: range) { await load() }
         .task(id: "\(range)-\(channelFilter ?? "")-\(stageFilter ?? "")") { await loadPeople(offset: 0) }
+        .task(id: range) { await loadCampaigns() }
     }
 
     @ViewBuilder
@@ -156,7 +179,57 @@ struct AdminAcquisitionView: View {
             }
         }
         .opacity(loading ? 0.6 : 1)
+        campaignsCard
         peopleCard
+    }
+
+    private var campaignsCard: some View {
+        Card {
+            SectionTitle(title: "Por publicación")
+            Text("Qué trajo cada reel, carrusel, short, hilo o historia. Solo se sabe cuando el enlace es pulsable en la propia publicación (Facebook, YouTube, Threads, historias con enlace); en Instagram y TikTok cuenta como «Enlace de la bio».")
+                .font(.apFootnote).foregroundStyle(Palette.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if let campaigns {
+                if campaigns.isEmpty {
+                    Text("Aún no hay visitas con enlace etiquetado en el rango.").font(.apSubhead).foregroundStyle(Palette.muted)
+                        .frame(maxWidth: .infinity).padding(.vertical, 12)
+                }
+                ForEach(Array(campaigns.enumerated()), id: \.element.id) { index, c in
+                    if index > 0 { Rectangle().fill(Palette.separator).frame(height: 0.5).accessibilityHidden(true) }
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(campaignTitle(c)).font(.apHeadline).lineLimit(1)
+                                Text((Self.labels[c.channel] ?? c.channel) + (c.medium.map { " · " + (Self.mediumLabels[$0] ?? $0) } ?? ""))
+                                    .font(.apFootnote).foregroundStyle(Palette.muted)
+                            }
+                            Spacer(minLength: 8)
+                            Text("\(c.signups)").font(.apFigureSmall)
+                            Text(c.signups == 1 ? "cuenta" : "cuentas").font(.apFootnote).foregroundStyle(Palette.muted)
+                        }
+                        Text("\(c.visits) visitas · \(c.scans) scans · \(c.first_workout) entrenaron · \(c.active_week2) activos 2ª sem. · \(c.plus) Plus")
+                            .font(.apFootnote.monospacedDigit()).foregroundStyle(Palette.muted)
+                    }
+                    .padding(.vertical, 6)
+                    .accessibilityElement(children: .combine)
+                }
+            } else {
+                ProgressView().frame(maxWidth: .infinity).padding(.vertical, 8)
+            }
+        }
+    }
+
+    private func campaignTitle(_ c: Campaign) -> String {
+        if let campaign = c.campaign { return Self.campaignLabels[campaign] ?? campaign }
+        if c.medium == "bio" { return "Enlace de la bio" }
+        return c.channel == "directo" ? "Sin enlace etiquetado" : "Sin publicación concreta"
+    }
+
+    private func loadCampaigns() async {
+        let bounds = rangeBounds()
+        campaigns = try? await Backend.client
+            .rpc("admin_acquisition_campaigns", params: ["_from": bounds.from, "_to": bounds.to])
+            .execute().value
     }
 
     /// Embudo completo con lo que se pierde entre cada paso.

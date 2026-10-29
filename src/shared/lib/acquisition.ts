@@ -22,6 +22,7 @@ export type AcquisitionEventKind = "visit" | "scan";
 
 const STORAGE_KEY = "autopilot_acq";
 const CLAIMED_KEY = "autopilot_acq_claimed";
+const STAFF_KEY = "autopilot_acq_staff";
 export const FIRST_TOUCH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const OWN_HOSTS = /(^|\.)autopilotplan\.com$|^localhost$|^127\.0\.0\.1$|lovable\.(app|dev)$|lovableproject\.com$/i;
 
@@ -33,6 +34,20 @@ const clean = (value: string | null | undefined, max = 64): string | null => {
 const storage = (): Storage | null => {
   try { return typeof window !== "undefined" ? window.localStorage : null; } catch { return null; }
 };
+
+/**
+ * Navegador del equipo: sus visitas y scans no cuentan. Se marca al abrir Admin
+ * o al entrar una vez con `?no_contar=1` (para los navegadores de Instagram/TikTok
+ * del móvil, donde no hay sesión de admin).
+ */
+export function markStaffDevice(): void {
+  try { storage()?.setItem(STAFF_KEY, "1"); } catch { /* Sin almacenamiento: no se puede marcar. */ }
+}
+
+export function isStaffDevice(search = typeof window !== "undefined" ? window.location.search : ""): boolean {
+  if (new URLSearchParams(search).get("no_contar") === "1") markStaffDevice();
+  try { return storage()?.getItem(STAFF_KEY) === "1"; } catch { return false; }
+}
 
 /** Lee la URL y el referrer y devuelve el contacto que describen (sin guardarlo). */
 export function parseTouch(search: string, pathname: string, referrer: string, now = Date.now()): FirstTouch {
@@ -89,12 +104,19 @@ export function captureFirstTouch(
 
 /** Metadatos del alta (`signUp`): el trigger de la base de datos los guarda en `user_acquisition`. */
 export function acquisitionMetadata(touch: FirstTouch | null = readFirstTouch()): Record<string, string> {
-  if (!touch) return {};
+  if (!touch || isStaffDevice()) return {};
   const meta: Record<string, string> = { acq_landing: touch.landing };
   if (touch.source) meta.acq_source = touch.source;
   if (touch.medium) meta.acq_medium = touch.medium;
   if (touch.campaign) meta.acq_campaign = touch.campaign;
   return meta;
+}
+
+/** Admin: borra visitas y scans registrados hasta ahora para medir desde cero (las cuentas no se tocan). */
+export async function resetAcquisitionEvents(): Promise<number> {
+  const { data, error } = await rpc("admin_reset_acquisition_events", {});
+  if (error) throw error;
+  return Number(data) || 0;
 }
 
 // Las funciones nuevas aún no están en los tipos generados.
@@ -103,6 +125,7 @@ const rpc = (fn: string, args: Record<string, unknown>) => (supabase as any).rpc
 
 /** Registra una visita nueva o un scan con la fuente del primer contacto. Nunca rompe la experiencia. */
 export async function recordAcquisitionEvent(kind: AcquisitionEventKind, touch: FirstTouch | null = readFirstTouch()): Promise<void> {
+  if (isStaffDevice()) return;
   try {
     await rpc("record_acquisition_event", {
       _kind: kind,
@@ -119,7 +142,7 @@ export async function recordAcquisitionEvent(kind: AcquisitionEventKind, touch: 
  */
 export async function claimAcquisition(userId: string, touch: FirstTouch | null = readFirstTouch()): Promise<void> {
   const store = storage();
-  if (!touch || !store) return;
+  if (!touch || !store || isStaffDevice()) return;
   try {
     if (store.getItem(CLAIMED_KEY) === userId) return;
     const { error } = await rpc("claim_acquisition", {
