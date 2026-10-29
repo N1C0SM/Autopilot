@@ -3,17 +3,34 @@ import { Navigate, useLocation } from "react-router-dom";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { ReactNode, useEffect, useState } from "react";
 import { supabase } from "@/shared/integrations/supabase/client";
+import { readScreen, writeScreen } from "@/shared/lib/screenCache";
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
-  const [planStatus, setPlanStatus] = useState<string | null>(null);
-  const [checking, setChecking] = useState(true);
+  /**
+   * El estado del plan se recuerda: sin esto, cada entrada a una pantalla privada
+   * esperaba a la red con un spinner a pantalla completa. Con copia se entra de
+   * inmediato y la comprobación sigue por detrás (si cambió, redirige igual).
+   */
+  const [cachedStatus] = useState<string | null>(
+    () => (user ? readScreen<string>(user.id, "plan-status") : null),
+  );
+  const [planStatus, setPlanStatus] = useState<string | null>(cachedStatus);
+  const [checking, setChecking] = useState(!cachedStatus);
 
   useEffect(() => {
     if (!user) {
       setChecking(false);
       return;
+    }
+    // Si la sesión se restauró después del primer render, la copia se busca aquí.
+    if (!cachedStatus) {
+      const cached = readScreen<string>(user.id, "plan-status");
+      if (cached) {
+        setPlanStatus(cached);
+        setChecking(false);
+      }
     }
     supabase
       .from("profiles")
@@ -21,10 +38,12 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => {
-        setPlanStatus(data?.plan_status ?? null);
+        const status = data?.plan_status ?? null;
+        setPlanStatus(status);
+        if (status) writeScreen(user.id, "plan-status", status);
         setChecking(false);
       });
-  }, [user]);
+  }, [user, cachedStatus]);
 
   if (loading || checking) {
     return (
