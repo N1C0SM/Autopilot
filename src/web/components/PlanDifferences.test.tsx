@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import PlanDifferences from "@/web/components/PlanDifferences";
 
 vi.mock("@/shared/lib/planCatalog", async () => {
   const actual = await vi.importActual<typeof import("@/shared/lib/planCatalog")>("@/shared/lib/planCatalog");
@@ -54,5 +55,3 @@ describe("plans comparison scan rows", () => {
     expect(screen.getAllByText("Tu scan avanzado y tus comidas.").length).toBeGreaterThan(0);
   });
 });
-
-import PlanDifferences from "@/web/components/PlanDifferences";
