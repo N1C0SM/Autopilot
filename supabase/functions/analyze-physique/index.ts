@@ -91,7 +91,16 @@ const AnalysisSchema = z.object({
   muscle_breakdown: z.preprocess(
     (val) => {
       if (val == null) return undefined;
-      if (Array.isArray(val)) return val;
+      // El modelo no siempre llama «group» al grupo (name, muscle, grupo…): normalizamos
+      // y descartamos los que no traen nombre, en vez de tumbar el análisis entero.
+      if (Array.isArray(val)) {
+        return val.flatMap((item) => {
+          const o = jsonObject(item);
+          const group = [o.group, o.name, o.muscle, o.muscle_group, o.grupo, o.label].find((g) => typeof g === "string" && g.trim());
+          if (!group) return [];
+          return [{ ...o, group, score: toNum(o.score) ?? 5, verdict: String(o.verdict ?? o.note ?? o.comment ?? "") }];
+        });
+      }
       if (typeof val === "object") {
         return Object.entries(val as Record<string, unknown>).map(([group, v]) => {
           if (v && typeof v === "object") {
