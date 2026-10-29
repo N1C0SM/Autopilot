@@ -93,6 +93,15 @@ Diseña un plan de comidas REAL, sabroso y realista usando SOLO alimentos cohere
     if (!resp.ok) {
       const text = await resp.text();
       console.error("[ai-generate-meals] AI error", resp.status, text);
+      // Keep credit/quota/policy statuses so callers can show a clear message instead of a 500.
+      if ([402, 403, 429].includes(resp.status)) {
+        const error = resp.status === 429
+          ? "La IA está saturada ahora mismo. Inténtalo de nuevo en unos minutos."
+          : resp.status === 402 ? "Sin créditos de IA suficientes para generar el menú." : "La IA no está disponible ahora mismo.";
+        return new Response(JSON.stringify({ error, code: resp.status }), {
+          status: resp.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       throw new Error(`AI error ${resp.status}`);
     }
     const json = await resp.json();
