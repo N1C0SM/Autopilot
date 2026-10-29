@@ -54,12 +54,11 @@ import StickyConversionBar from "@/app/components/scan/StickyConversionBar";
 import ScanCoverageCard from "@/app/components/scan/ScanCoverageCard";
 import ScanShareCard from "@/app/components/scan/ScanShareCard";
 import ScanRecommendations, { recommendFor } from "@/app/components/scan/ScanRecommendations";
-import { euro, usePlanAvailability } from "@/shared/lib/planCatalog";
+import { usePlanAvailability } from "@/shared/lib/planCatalog";
 import SocialProofStrip from "@/app/components/scan/SocialProofStrip";
 import ScanProgressPanel from "@/app/components/scan/ScanProgressPanel";
 import BeforeAfterCompare from "@/app/components/scan/BeforeAfterCompare";
 import { FindingRow, MeterRow, ScanImage, StatRow, type Stat } from "@/app/components/scan/ScanResultParts";
-import { TRIAL_DAYS } from "@/shared/config/pricing";
 import { signedUrlFor, signedUrlsFor } from "@/shared/lib/storageSign";
 import { toLocalDateString } from "@/shared/lib/localDates";
 import { clearAnonScanId, getOrCreateAnonScanId } from "@/shared/lib/scanAttribution";
@@ -1220,6 +1219,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
     }
     return `/signup?from=scan&next=${encodeURIComponent(scanBasePath)}`;
   })();
+  const freeSignup = `/signup?from=scan&next=${encodeURIComponent(scanBasePath)}`;
 
   if (isUnauthorized || isAwaitingAuth) {
     return (
@@ -1248,7 +1248,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
       {result && !isPaid && (
         // Sólo embudo para visitantes anónimos: usuarios logueados ven modo cuenta.
         !user &&
-        <StickyConversionBar onCta={() => navigate(signupWithPlan)} />
+        <StickyConversionBar onCta={() => navigate(freeSignup)} />
       )}
       {/* Barra de navegación: atrás en el leading; el título grande vive en el contenido */}
       {!embedded && (
@@ -1745,14 +1745,18 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
               {/* Protagonista: la puntuación de físico en un anillo, como Actividad */}
               <section>
                 {inline ? (
-                  <h2 className="type-title2">Tu AI Physique Report</h2>
+                  <h2 className="type-title2">Tu análisis físico</h2>
                 ) : (
-                  <h1 data-nav-title className="type-large-title">Tu AI Physique Report</h1>
+                  <h1 data-nav-title className="type-large-title">Tu análisis físico</h1>
                 )}
-                <p className="mt-1 flex items-center gap-1.5 type-subhead text-success">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  Análisis completo
-                </p>
+                {result.basic ? (
+                  <p className="mt-1 type-subhead text-muted-foreground">Scan básico · gratis</p>
+                ) : (
+                  <p className="mt-1 flex items-center gap-1.5 type-subhead text-success">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    Análisis completo
+                  </p>
+                )}
 
                 <div className="mt-8 flex flex-col items-center text-center">
                   <ProgressRing value={result.physique * 10} size={200} stroke={14} label="Puntuación de físico">
@@ -1796,7 +1800,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                   Orientación visual aproximada. No sustituye una valoración profesional.
                 </p>
 
-                <div className="mt-6 overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-5">
+                <div className="mt-6 overflow-hidden rounded-[22px] bg-card p-4 sm:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1920,7 +1924,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     {result.bottleneck && (
                       <FindingRow icon={AlertTriangle} title="Lo que más te frena" description={result.bottleneck} />
                     )}
-                    {(result.improvements ?? []).map((m, i) => (
+                    {(result.improvements ?? []).filter((m) => m.label.trim() !== result.bottleneck?.trim()).map((m, i) => (
                       <FindingRow
                         key={i}
                         icon={TrendingUp}
@@ -2287,8 +2291,9 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                 </section>
               )}
 
-              {/* Proyección + prueba social — antes del CTA final */}
-              {!isPaid && !user && (
+              {/* Proyección + prueba social — antes del CTA final. El básico no la lleva: sin
+                  objetivo ni protocolo serían meses inventados, y «tu yo futuro» es de Plus. */}
+              {!isPaid && !user && !result.basic && (
                 <ProjectionTimeline
                   currentScore={result.physique}
                   monthsWithPlan={result.months_with_plan ?? result.estimated_months}
@@ -2322,49 +2327,24 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
                     )}
                   </h2>
                   <p className="mx-auto mt-3 max-w-md type-subhead text-muted-foreground">
-                    La IA detectó {result.improvements.length} puntos críticos y tu cuello de botella exacto.
-                    Te proponemos el plan de entrenamiento + nutrición que los ataca, ajustado a ti. Sin cambios de fondo,
-                    lo más probable es que el siguiente scan siga pareciéndose a este.
+                    Crea tu cuenta gratis y Autopilot te monta una rutina para tu objetivo, tus días y tu material,
+                    con este scan guardado para comparar el siguiente.
                   </p>
-                  <p className="mt-6 flex flex-wrap items-baseline justify-center gap-x-2">
-                    <span className="font-rounded type-title2 font-bold tabular-nums">Desde {euro(plans.plus ? plans.plusPrice : plans.coachPrice)}/mes</span>
-                    {(plans.plus || plans.coach) && <span className="type-subhead text-muted-foreground">{TRIAL_DAYS} días de prueba</span>}
-                  </p>
+                  {/* Primero que la gente lo use: la acción principal es la cuenta gratis, no el pago. */}
                   <div className="mx-auto mt-6 max-w-sm space-y-2">
-                    {(() => {
-                      const { rec } = recommendFor({
-                        bottleneck: result.bottleneck,
-                        improvements: result.improvements,
-                        monthsWithPlan: result.months_with_plan,
-                        plans,
-                      });
-                      const scanPath = location.pathname + location.search;
-                      const to = user ? scanPath : rec.kind === "plan" ? `${rec.to}&from=scan&next=${encodeURIComponent(scanPath)}` : `/signup?from=scan&next=${encodeURIComponent(scanPath)}`;
-                      return (
-                        <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(to); }}>
-                          {user ? "Volver a mi cuenta" : `Empezar con ${rec.name}`}
-                        </Button>
-                      );
-                    })()}
+                    <Button size="lg" className="w-full" onClick={() => { void hapticTap(); navigate(freeSignup); }}>
+                      Crear mi cuenta gratis
+                    </Button>
+                    {(plans.plus || plans.coach) && (
+                      <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); navigate(signupWithPlan); }}>
+                        Ver el scan completo con {plans.plus ? plans.plusName : plans.coachName}
+                      </Button>
+                    )}
                     <Button variant="plain" className="w-full" onClick={() => { void hapticTap(); reset(); }}>
                       Hacer otro scan
                     </Button>
                   </div>
-                  {!user && (plans.plus || plans.coach) && (
-                    <p className="mt-3 type-footnote text-muted-foreground">
-                      7 días de prueba en los planes mensuales · Requiere tarjeta · No se cobra hasta el día 8
-                    </p>
-                  )}
-                  <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 type-footnote text-muted-foreground">
-                    <li className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Cancela en 1 clic
-                    </li>
-                    <li className="flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                      Sin permanencia
-                    </li>
-                  </ul>
+                  <p className="mt-3 type-footnote text-muted-foreground">Gratis · Sin tarjeta</p>
                 </section>
               ) : (
                 <section className="mx-auto w-full max-w-sm space-y-2">
@@ -2435,7 +2415,7 @@ const Scan = ({ inline = false, onOpenPlan, onStartWorkout, onPlanChanged }: { i
   if (embedded) {
     return (
       <MobileAppShell
-        title={result ? "Tu AI Physique Report" : "Análisis físico con IA"}
+        title={result ? "Tu análisis físico" : "Análisis físico con IA"}
         titleInContent
         active="progress"
         userId={user.id}

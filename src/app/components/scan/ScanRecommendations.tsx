@@ -96,16 +96,21 @@ export function recommendFor({ bottleneck, improvements, monthsWithPlan, plans =
 function Recommendations({ bottleneck, improvements, monthsWithPlan }: Props) {
   const plans = usePlanAvailability();
   const { priority, limitation, rec } = recommendFor({ bottleneck, improvements, monthsWithPlan, plans });
+  // La IA escribe frases completas: sin punto final duplicado ni la misma frase dos veces.
+  const clean = (s: string) => s.trim().replace(/\.+$/, "");
+  const first = priority && clean(priority) !== clean(limitation) ? clean(priority) : "";
 
   return (
     <section>
       <h2 className="type-title2">Lo que te recomendamos</h2>
-      <p className="type-body mt-2">
-        Lo que más te limita ahora: <span className="font-semibold">{limitation}</span>.
-      </p>
-      <p className="type-subhead text-muted-foreground mt-1">
-        Lo primero que deberías trabajar es <span className="text-foreground">{priority || limitation}</span>.
-      </p>
+      <p className="type-subhead text-muted-foreground mt-2">Lo que más te limita ahora</p>
+      <p className="type-body mt-0.5">{clean(limitation)}.</p>
+      {first && (
+        <>
+          <p className="type-subhead text-muted-foreground mt-3">Lo primero que deberías trabajar</p>
+          <p className="type-body mt-0.5">{first}.</p>
+        </>
+      )}
 
       <Link
         to={rec.to}

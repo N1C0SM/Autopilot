@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { euro, usePlanAvailability } from "@/shared/lib/planCatalog";
 import { isIOSNative } from "@/shared/lib/platform";
 import { hapticTap } from "@/shared/lib/native";
 import { Button } from "@/shared/components/ui/button";
 
 function StickyBar({ onCta }: { onCta: () => void }) {
   const [show, setShow] = useState(false);
-  const plans = usePlanAvailability();
 
   useEffect(() => {
     const onScroll = () => {
@@ -33,8 +31,8 @@ function StickyBar({ onCta }: { onCta: () => void }) {
         >
           <div className="material rounded-2xl shadow-2xl p-2 pl-4 flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <div className="type-headline truncate">Tu plan, adaptado a ti · 7 días de prueba</div>
-              <div className="type-footnote text-muted-foreground truncate">{[plans.plus && `${plans.plusName} desde ${euro(plans.plusPrice)}/mes`, plans.coach && `Nicolás en ${plans.coachName}`, "no se cobra hasta el día 8"].filter(Boolean).join(" · ")}</div>
+              <div className="type-headline truncate">Tu rutina, a partir de este scan</div>
+              <div className="type-footnote text-muted-foreground truncate">Gratis · Sin tarjeta</div>
             </div>
             <Button
               className="shrink-0 rounded-full px-5"
@@ -43,7 +41,7 @@ function StickyBar({ onCta }: { onCta: () => void }) {
                 onCta();
               }}
             >
-              Elegir plan
+              Crear cuenta
             </Button>
           </div>
         </motion.div>

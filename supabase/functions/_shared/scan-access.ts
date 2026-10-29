@@ -36,6 +36,14 @@ export function toBasicScan(parsed: Record<string, unknown>): Record<string, unk
   for (const k of ["body_composition", "muscle_breakdown", "posture", "proportions", "genetic_markers", "protocol",
     "months_with_plan", "months_without_plan", "estimated_months", "inferred_specific_goals"]) delete basic[k];
   if (Array.isArray(basic.improvements)) basic.improvements = (basic.improvements as unknown[]).slice(0, 2);
+  // Los insights bloqueados llevan cifras de Plus (kcal, % graso, semanas): al básico solo
+  // le llega el título, para que no se puedan leer en la respuesta ni quitando el desenfoque.
+  if (Array.isArray(basic.locked_insights)) {
+    basic.locked_insights = (basic.locked_insights as unknown[]).map((li) => {
+      const o = (li && typeof li === "object" ? li : {}) as Record<string, unknown>;
+      return { label: o.label, category: o.category, teaser: "Incluido en tu scan completo con Plus" };
+    });
+  }
   basic.basic = true;
   basic.locked_sections = SCAN_LOCKED_SECTIONS;
   return basic;
