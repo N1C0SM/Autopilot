@@ -34,7 +34,7 @@ const SharedBook = () => {
       <ResourcesStatus
         icon={Download}
         title="Tu contenido de Autopilot"
-        description={msg || "Este enlace solo se puede usar una vez. Pulsa el botón cuando estés listo y guarda los PDF."}
+        description={msg || "Este enlace solo se puede usar una vez. Pulsa el botón cuando estés listo y guarda los archivos."}
       >
         {state !== "done" && state !== "error" && (
           <Button variant="hero" size="lg" className="w-full" disabled={state === "busy"} onClick={() => { void hapticTap(); download(); }}>

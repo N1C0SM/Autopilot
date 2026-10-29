@@ -3,8 +3,8 @@ import PhotosUI
 import UniformTypeIdentifiers
 import Supabase
 
-/// Drive · Libros, calcado de `LibraryDrive.tsx`: ruta de carpetas, «Nuevo» (carpeta, libro, pack),
-/// lista con portada y estado, y ficha (portada, PDF, precio, libros del pack, enlace de 1 descarga, publicar).
+/// Drive · Libros, calcado de `LibraryDrive.tsx`: ruta de carpetas, «Nuevo» (carpeta, libro, pack, vídeo, archivo),
+/// lista con portada y estado, y ficha (portada, archivo de cualquier tipo, precio, libros del pack, enlace de 1 descarga, publicar).
 struct AdminDriveView: View {
     struct Book: Codable, Identifiable, Hashable {
         let id: String; var title: String; var description: String?; var price: String?; var buy_url: String?
@@ -13,8 +13,32 @@ struct AdminDriveView: View {
         var published: Bool; var sort_order: Int?; var pack_items: [String]?
         var resolvedKind: String { kind ?? (is_pack == true ? "pack" : is_folder == true ? "folder" : "book") }
     }
-    static let kindLabel = ["folder": "Carpeta", "book": "Libro", "pack": "Pack", "video": "Vídeo", "recommendation": "Recomendación"]
-    static let kindSymbol = ["folder": "folder", "book": "book.closed", "pack": "shippingbox", "video": "play.rectangle", "recommendation": "star"]
+    static let kindLabel = ["folder": "Carpeta", "book": "Libro", "pack": "Pack", "video": "Vídeo", "recommendation": "Recomendación", "file": "Archivo"]
+    static let kindSymbol = ["folder": "folder", "book": "book.closed", "pack": "shippingbox", "video": "play.rectangle", "recommendation": "star", "file": "doc"]
+
+    private static let imageExt = ["jpg", "jpeg", "png", "webp", "gif", "avif", "heic", "heif", "bmp", "svg"]
+    private static let videoExt = ["mp4", "mov", "m4v", "webm", "ogv", "avi", "mkv"]
+    private static let audioExt = ["mp3", "m4a", "wav", "aac", "ogg", "flac"]
+
+    private static func ext(_ path: String) -> String {
+        (path as NSString).pathExtension.lowercased()
+    }
+
+    /// Etiqueta corta del tipo de archivo ("Imagen", "Vídeo", "PDF", "ZIP"…).
+    static func mediaLabel(_ path: String?) -> String {
+        guard let path, !path.isEmpty else { return "Archivo" }
+        let e = ext(path)
+        if imageExt.contains(e) { return "Imagen" }
+        if videoExt.contains(e) { return "Vídeo" }
+        if audioExt.contains(e) { return "Audio" }
+        if e == "pdf" { return "PDF" }
+        return e.isEmpty ? "Archivo" : e.uppercased()
+    }
+
+    static func isImage(_ path: String?) -> Bool {
+        guard let path else { return false }
+        return imageExt.contains(ext(path))
+    }
 
     @State private var books: [Book] = []
     @State private var covers: [String: String] = [:]
@@ -39,7 +63,7 @@ struct AdminDriveView: View {
                 .padding(20)
             } else {
                 VStack(alignment: .leading, spacing: 24) {
-                    AdminPaneHeader("Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y recomendaciones. Nada se ve fuera hasta que tú lo publicas.") {
+                    AdminPaneHeader("Todo tu contenido en un solo sitio: carpetas, libros, packs, vídeos y archivos de cualquier tipo. Nada se ve fuera hasta que tú lo publicas.") {
                         HStack(spacing: 12) {
                             breadcrumb
                             Spacer(minLength: 0)
@@ -49,7 +73,7 @@ struct AdminDriveView: View {
                     let items = books.filter { $0.parent_id == parentId }
                     if items.isEmpty {
                         EmptyStateView(symbol: "folder", title: path.isEmpty ? "El Drive está vacío" : "Esta carpeta está vacía",
-                                       message: "Pulsa «Nuevo» para crear una carpeta, un libro o un pack.")
+                                       message: "Pulsa «Nuevo» para crear una carpeta, un libro, un pack, un vídeo o un archivo.")
                     } else {
                         AdminRows {
                             ForEach(Array(items.enumerated()), id: \.element.id) { i, b in
@@ -102,8 +126,10 @@ struct AdminDriveView: View {
     private var newMenu: some View {
         Menu {
             Button { Task { await create("folder") } } label: { Label("Carpeta", systemImage: "folder.badge.plus") }
-            Button { Task { await create("book") } } label: { Label("Libro (portada + PDF)", systemImage: "book.closed") }
+            Button { Task { await create("book") } } label: { Label("Libro (portada + archivo)", systemImage: "book.closed") }
             Button { Task { await create("pack") } } label: { Label("Pack (elige libros)", systemImage: "shippingbox") }
+            Button { Task { await create("video") } } label: { Label("Vídeo (archivo o enlace)", systemImage: "play.rectangle") }
+            Button { Task { await create("file") } } label: { Label("Archivo (imagen, vídeo, PDF…)", systemImage: "doc") }
         } label: {
             Label("Nuevo", systemImage: "plus")
                 .font(.apHeadline)
@@ -114,7 +140,7 @@ struct AdminDriveView: View {
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .accessibilityLabel("Crear carpeta, libro o pack")
+        .accessibilityLabel("Crear carpeta, libro, pack, vídeo o archivo")
     }
 
     @ViewBuilder private func row(_ b: Book, first: Bool) -> some View {
@@ -143,9 +169,11 @@ struct AdminDriveView: View {
             let thumb = covers[b.id] ?? (kind == "pack" ? (b.pack_items?.first).flatMap { covers[$0] } : nil)
             let detail: String = {
                 switch kind {
-                case "book": return "\(b.file_path != nil ? "PDF listo" : "Sin PDF") · \(b.cover_path != nil ? "con portada" : "sin portada")"
+                case "book": return "\(b.file_path != nil ? "Archivo listo" : "Sin archivo") · \(b.cover_path != nil ? "con portada" : "sin portada")"
                 case "pack": return "\((b.pack_items ?? []).count) libros incluidos"
-                case "video": return b.video_url?.isEmpty == false ? "Enlace añadido" : "Sin enlace"
+                case "file": return b.file_path != nil ? AdminDriveView.mediaLabel(b.file_path) : "Sin archivo"
+                case "video": return b.file_path != nil ? AdminDriveView.mediaLabel(b.file_path)
+                    : (b.video_url?.isEmpty == false ? "Enlace añadido" : "Sin contenido")
                 default: return (b.buy_url ?? b.buy_url_live ?? b.buy_url_test) != nil ? "Con enlace" : "Sin enlace"
                 }
             }()
@@ -190,14 +218,19 @@ struct AdminDriveView: View {
         }
         loading = false
         for b in books where covers[b.id] == nil {
-            guard let c = b.cover_path else { continue }
-            if c.hasPrefix("http") { covers[b.id] = c }
-            else if let u = try? await Backend.client.storage.from("library").createSignedURL(path: c, expiresIn: 3600) { covers[b.id] = u.absoluteString }
+            if let c = b.cover_path {
+                if c.hasPrefix("http") { covers[b.id] = c }
+                else if let u = try? await Backend.client.storage.from("library").createSignedURL(path: c, expiresIn: 3600) { covers[b.id] = u.absoluteString }
+            } else if let f = b.file_path, AdminDriveView.isImage(f),
+                      let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
+                // Un archivo suelto que sea imagen se muestra como miniatura.
+                covers[b.id] = u.absoluteString
+            }
         }
     }
 
     private func create(_ kind: String) async {
-        let title = ["pack": "Pack completo", "folder": "Nueva carpeta", "video": "Nuevo vídeo", "recommendation": "Nueva recomendación"][kind] ?? "Nuevo libro"
+        let title = ["pack": "Pack completo", "folder": "Nueva carpeta", "video": "Nuevo vídeo", "recommendation": "Nueva recomendación", "file": "Nuevo archivo"][kind] ?? "Nuevo libro"
         struct Insert: Encodable { let title: String; let folder: String; let kind: String; let is_pack: Bool; let is_folder: Bool; let parent_id: String?; let sort_order: Int }
         do {
             let b: Book = try await Backend.client.from("library_books")
@@ -225,7 +258,8 @@ struct DriveItemEditor: View {
     @State var cover: String?
     var onDone: (AdminDriveView.Book?) -> Void
     @State private var coverItem: PhotosPickerItem?
-    @State private var importingPDF = false
+    @State private var filePhotoItem: PhotosPickerItem?
+    @State private var importingFile = false
     @State private var busy: String?
     @State private var message: String?
     @State private var confirmDelete = false
@@ -245,12 +279,17 @@ struct DriveItemEditor: View {
                         .frame(width: 96, height: 132).clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         VStack(alignment: .leading, spacing: 8) {
                             Text(AdminDriveView.kindLabel[kind] ?? "").font(.apSubhead).foregroundStyle(Palette.muted)
-                            if kind != "video" {
+                            if kind != "video" && kind != "file" {
                                 PhotosPicker(selection: $coverItem, matching: .images) { Text(cover == nil ? "Subir portada" : "Reemplazar portada").foregroundStyle(Palette.gold) }
                             }
-                            if kind == "book" {
-                                Button(book.file_path == nil ? "Subir PDF" : "Reemplazar PDF") { importingPDF = true }.foregroundStyle(Palette.gold)
-                                if book.file_path != nil { Text("PDF listo").font(.apFootnote).foregroundStyle(Palette.success) }
+                            if kind == "book" || kind == "file" || kind == "video" {
+                                Button(book.file_path == nil ? "Subir archivo" : "Reemplazar archivo") { importingFile = true }.foregroundStyle(Palette.gold)
+                                PhotosPicker(selection: $filePhotoItem, matching: .any(of: [.images, .videos])) {
+                                    Text("Elegir de Fotos").foregroundStyle(Palette.gold)
+                                }
+                                if book.file_path != nil {
+                                    Text("\(AdminDriveView.mediaLabel(book.file_path)) listo").font(.apFootnote).foregroundStyle(Palette.success)
+                                }
                             }
                         }
                         .buttonStyle(.plain)
@@ -286,7 +325,7 @@ struct DriveItemEditor: View {
                         }
                     } header: { Text("Libros incluidos en el pack") } footer: { Text("El cliente podrá descargar cada libro incluido una sola vez. Caduca en 7 días.") }
                 }
-                if (kind == "book" && book.file_path != nil) || (kind == "pack" && !(book.pack_items ?? []).isEmpty) {
+                if book.file_path != nil || (kind == "pack" && !(book.pack_items ?? []).isEmpty) {
                     Section {
                         Button(kind == "pack" ? "Copiar enlace de 1 descarga del pack" : "Copiar enlace de 1 descarga") { Task { await shareOnce() } }
                     } footer: { Text("El cliente podrá descargarlo una sola vez. Caduca en 7 días.") }
@@ -315,8 +354,9 @@ struct DriveItemEditor: View {
         .frame(minWidth: 520, minHeight: 680)
         .tint(Palette.gold)
         .onChange(of: coverItem) { _, p in Task { await uploadCover(p) } }
-        .fileImporter(isPresented: $importingPDF, allowedContentTypes: [.pdf]) { result in
-            if case .success(let url) = result { Task { await uploadPDF(url) } }
+        .onChange(of: filePhotoItem) { _, p in Task { await uploadPhotoFile(p) } }
+        .fileImporter(isPresented: $importingFile, allowedContentTypes: [.item]) { result in
+            if case .success(let url) = result { Task { await uploadFile(url) } }
         }
         .confirmationDialog("¿Eliminar?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Eliminar", role: .destructive) {
@@ -358,18 +398,40 @@ struct DriveItemEditor: View {
         } catch { message = "No se pudo subir la portada" }
     }
 
-    private func uploadPDF(_ url: URL) async {
+    /// Sube cualquier archivo: imágenes, vídeos, PDF, EPUB, ZIP… Se guarda con su
+    /// extensión y tipo MIME reales para que la descarga y la vista previa funcionen.
+    private func uploadFile(_ url: URL) async {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url), !data.isEmpty else { message = "El PDF está vacío"; return }
-        busy = "Subiendo PDF…"; defer { busy = nil }
-        let path = "\(book.folder)/libro-\(Int(Date().timeIntervalSince1970 * 1000)).pdf"
+        guard let data = try? Data(contentsOf: url), !data.isEmpty else { message = "El archivo está vacío"; return }
+        let ext = url.pathExtension.lowercased()
+        let safeExt = ext.isEmpty ? "bin" : ext
+        let type = UTType(filenameExtension: safeExt)?.preferredMIMEType ?? "application/octet-stream"
+        await uploadData(data, ext: safeExt, type: type)
+    }
+
+    /// Imágenes y vídeos elegidos de la fototeca (en iPhone no salen en el selector de archivos).
+    private func uploadPhotoFile(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self), !data.isEmpty else {
+            message = "No se pudo leer el archivo"; filePhotoItem = nil; return
+        }
+        let contentType = item.supportedContentTypes.first
+        let ext = contentType?.preferredFilenameExtension ?? "jpg"
+        let type = contentType?.preferredMIMEType ?? "image/jpeg"
+        await uploadData(data, ext: ext, type: type)
+        filePhotoItem = nil
+    }
+
+    private func uploadData(_ data: Data, ext: String, type: String) async {
+        busy = "Subiendo archivo…"; defer { busy = nil }
+        let path = "\(book.folder)/archivo-\(Int(Date().timeIntervalSince1970 * 1000)).\(ext)"
         do {
-            try await Backend.client.storage.from("library").upload(path, data: data, options: FileOptions(contentType: "application/pdf", upsert: true))
+            try await Backend.client.storage.from("library").upload(path, data: data, options: FileOptions(contentType: type, upsert: true))
             try await Backend.client.from("library_books").update(["file_path": path]).eq("id", value: book.id).execute()
             if let old = book.file_path, old != path { _ = try? await Backend.client.storage.from("library").remove(paths: [old]) }
-            book.file_path = path; message = "PDF reemplazado correctamente"
-        } catch { message = "No se pudo subir el PDF" }
+            book.file_path = path; message = "Archivo reemplazado correctamente"
+        } catch { message = "No se pudo subir el archivo" }
     }
 
     private func shareOnce() async {

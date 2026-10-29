@@ -30,12 +30,14 @@ Deno.serve(async (req) => {
     } else if (item.file_path) {
       files = [{ title: item.title, file_path: item.file_path }];
     }
-    if (!files.length) return json({ error: "Todavía no hay PDF disponible. Inténtalo más tarde." }, 404);
+    if (!files.length) return json({ error: "Todavía no hay ningún archivo disponible. Inténtalo más tarde." }, 404);
 
     const out: { title: string; url: string }[] = [];
+    // El Drive acepta cualquier archivo: la descarga conserva su extensión real.
+    const extOf = (p: string) => (p.match(/\.([a-z0-9]{1,8})$/i)?.[1] || "pdf").toLowerCase();
     for (const f of files) {
       const { data: s } = await db.storage.from("library")
-        .createSignedUrl(f.file_path, 900, { download: `${f.title}.pdf` });
+        .createSignedUrl(f.file_path, 900, { download: `${f.title}.${extOf(f.file_path)}` });
       if (s?.signedUrl) out.push({ title: f.title, url: s.signedUrl });
     }
     if (!out.length) return json({ error: "No se pudo preparar la descarga." }, 500);
