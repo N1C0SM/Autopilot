@@ -2270,6 +2270,10 @@ export type Database = {
         }
         Returns: string
       }
+      admin_acquisition_campaigns: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
       admin_acquisition_funnel: {
         Args: { _from: string; _to: string }
         Returns: Json
@@ -2299,6 +2303,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_reset_acquisition_events: { Args: never; Returns: number }
       admin_unassign_user_from_trainer: {
         Args: { _trainer_id: string; _user_id: string }
         Returns: undefined

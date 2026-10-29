@@ -113,6 +113,13 @@
       "when": 1793272157780,
       "tag": "0015_captacion_completa_segura",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793273657996,
+      "tag": "0016_acquisition_reset_and_campaigns",
+      "breakpoints": true
     }
   ]
 }
