@@ -78,7 +78,9 @@ export async function aiFetch(url: string, init: RequestInit = {}): Promise<Resp
   const path = url.replace(LOVABLE, "");
   const body = typeof init.body === "string" ? JSON.parse(init.body) : null;
   // Imágenes y vídeos usan el motor de medios configurado; el texto usa el orden de texto.
-  const isMedia = path.includes("/images/") || path.includes("/video") || /image|video/.test(String(body?.model || ""));
+  // Requests carrying photos (vision) also count as media: Claude/DeepSeek are text-only here.
+  const hasImageInput = /"image_url"|"input_image"/.test(typeof init.body === "string" ? init.body : "");
+  const isMedia = hasImageInput || path.includes("/images/") || path.includes("/video") || /image|video/.test(String(body?.model || ""));
   const chain = isMedia ? cfg.mediaOrder : cfg.order;
   let last: Response | null = null;
   for (let i = 0; i < chain.length; i++) {
