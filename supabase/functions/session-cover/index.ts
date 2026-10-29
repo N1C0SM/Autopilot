@@ -133,7 +133,9 @@ Deno.serve(async (req) => {
     if (!r.ok) {
       const body = await r.json().catch(() => null);
       console.error(`cover failed [${r.status}]: ${body?.error?.message || body?.message || ""}`);
-      return json({ error: r.status === 402 ? "Sin créditos de IA suficientes" : "No se pudo generar la portada" }, r.status === 402 ? 402 : 502);
+      // The cover is optional: the client keeps its stock photo, so no-credit/quota is not an error.
+      if (r.status === 402 || r.status === 429) return json({ url: null, unavailable: "no_ai_credits" });
+      return json({ error: "No se pudo generar la portada" }, 502);
     }
     const out = await r.json();
     const b64 = out?.data?.[0]?.b64_json;
