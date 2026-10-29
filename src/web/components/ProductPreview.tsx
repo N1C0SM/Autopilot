@@ -56,7 +56,7 @@ const DEMO_SHOTS: Record<View, string> = {
 const baseSide: Record<View, { title: string; points: string[] }> = {
   home: {
     title: "Abres la app y sabes qué toca hoy.",
-    points: ["Tu sesión de hoy, tus macros y tu último récord en una pantalla.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "Con Plus, tus comidas de cada día y tu scan completo."],
+    points: ["Tu sesión de hoy, tus macros y tu último récord en una pantalla.", "Empieza gratis y registra tus entrenamientos sin tarjeta.", "Con Plus, tus comidas de cada día y tu scan avanzado."],
   },
   training: {
     title: "Cada serie, un toque.",
@@ -236,7 +236,7 @@ function ProductPreviewContent({ onPlans, onFree }: { onPlans: () => void; onFre
                 <li key={p} className="flex items-start gap-3 type-body text-muted-foreground"><Check className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden="true" />{p}</li>
               ))}
             </ul>
-            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{`Capturas reales de la app. Gratis incluye rutina, registro, progreso, macros y scan básico${plans.plus ? `; ${plans.plusName} añade tus comidas y el scan completo por ${euro(plans.plusPrice)}/mes tras la prueba` : ""}.`}</p>
+            <p className="mt-6 max-w-md type-footnote text-muted-foreground">{`Capturas reales de la app. Gratis incluye rutina, registro, progreso, macros y scan básico${plans.plus ? `; ${plans.plusName} añade tus comidas y el scan avanzado por ${euro(plans.plusPrice)}/mes tras la prueba` : ""}.`}</p>
           </div>
 
           <div className="order-1 mx-auto w-full max-w-[22rem] md:order-2">
