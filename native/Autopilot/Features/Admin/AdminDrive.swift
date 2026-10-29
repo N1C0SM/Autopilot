@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import AVFoundation
 import Supabase
 
 /// Drive · Libros, calcado de `LibraryDrive.tsx`: ruta de carpetas, «Nuevo» (carpeta, libro, pack, vídeo, archivo),
@@ -40,8 +41,15 @@ struct AdminDriveView: View {
         return imageExt.contains(ext(path))
     }
 
+    static func isVideo(_ path: String?) -> Bool {
+        guard let path else { return false }
+        return videoExt.contains(ext(path))
+    }
+
     @State private var books: [Book] = []
     @State private var covers: [String: String] = [:]
+    /// URLs firmadas de los vídeos subidos, para sacar su miniatura.
+    @State private var videoThumbs: [String: String] = [:]
     @State private var path: [(id: String, title: String)] = []
     @State private var loading = true
     @State private var failed = false
@@ -49,8 +57,10 @@ struct AdminDriveView: View {
     @State private var renaming: Book?
     @State private var newName = ""
     @State private var toast: String?
+    @State private var confirmDeleteAll = false
 
     private var parentId: String? { path.last?.id }
+    private var items: [Book] { books.filter { $0.parent_id == parentId } }
 
     var body: some View {
         ScrollView {
@@ -67,10 +77,10 @@ struct AdminDriveView: View {
                         HStack(spacing: 12) {
                             breadcrumb
                             Spacer(minLength: 0)
+                            if !items.isEmpty { moreMenu }
                             newMenu
                         }
                     }
-                    let items = books.filter { $0.parent_id == parentId }
                     if items.isEmpty {
                         EmptyStateView(symbol: "folder", title: path.isEmpty ? "El Drive está vacío" : "Esta carpeta está vacía",
                                        message: "Pulsa «Nuevo» para crear una carpeta, un libro, un pack, un vídeo o un archivo.")
@@ -100,6 +110,14 @@ struct AdminDriveView: View {
             TextField("Nombre", text: $newName)
             Button("Guardar") { if let r = renaming { Task { _ = try? await Backend.client.from("library_books").update(["title": newName]).eq("id", value: r.id).execute(); await load() } } }
             Button("Cancelar", role: .cancel) {}
+        }
+        .confirmationDialog("¿Eliminar todo lo que hay aquí?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
+            Button("Eliminar \(items.count) elementos", role: .destructive) {
+                Task { await deleteAll(items.map(\.id)) }
+            }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Se eliminarán sus archivos. No se puede deshacer.")
         }
     }
 
@@ -143,6 +161,24 @@ struct AdminDriveView: View {
         .accessibilityLabel("Crear carpeta, libro, pack, vídeo o archivo")
     }
 
+    /// Menú «···» de la carpeta actual: borrar todo lo que contiene de una vez.
+    private var moreMenu: some View {
+        Menu {
+            Button(role: .destructive) { confirmDeleteAll = true } label: {
+                Label("Eliminar todo de aquí", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.inter(.body).weight(.semibold))
+                .foregroundStyle(Palette.foreground)
+                .frame(width: 44, height: 44)
+                .background(Palette.secondary, in: Capsule())
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .accessibilityLabel("Más opciones de esta carpeta")
+    }
+
     @ViewBuilder private func row(_ b: Book, first: Bool) -> some View {
         let kind = b.resolvedKind
         if kind == "folder" {
@@ -164,9 +200,15 @@ struct AdminDriveView: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Abre la carpeta")
+            .contextMenu {
+                Button("Renombrar") { newName = b.title; renaming = b }
+                Button("Eliminar carpeta", role: .destructive) { Task { await remove(b) } }
+            }
             .adminRowDivider(first: first, leading: 72)
         } else {
             let thumb = covers[b.id] ?? (kind == "pack" ? (b.pack_items?.first).flatMap { covers[$0] } : nil)
+            // Un vídeo subido enseña su propio fotograma, con la proporción real del archivo.
+            let videoURL = thumb == nil ? videoThumbs[b.id].flatMap(URL.init(string:)) : nil
             let detail: String = {
                 switch kind {
                 case "book": return "\(b.file_path != nil ? "Archivo listo" : "Sin archivo") · \(b.cover_path != nil ? "con portada" : "sin portada")"
@@ -180,17 +222,21 @@ struct AdminDriveView: View {
             Button { open = b } label: {
                 AdminListRow(b.title.isEmpty ? "Sin título" : b.title,
                              detail: "\(Self.kindLabel[kind] ?? "") · \(detail)") {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
-                        if let t = thumb, let u = URL(string: t) {
-                            CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
-                        } else {
-                            Image(systemName: Self.kindSymbol[kind] ?? "doc").foregroundStyle(Palette.muted)
+                    if let videoURL {
+                        DriveVideoThumb(url: videoURL)
+                    } else {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+                            if let t = thumb, let u = URL(string: t) {
+                                CachedAsyncImage(url: u) { $0.resizable().scaledToFill() } placeholder: { Color.clear }
+                            } else {
+                                Image(systemName: Self.kindSymbol[kind] ?? "doc").foregroundStyle(Palette.muted)
+                            }
                         }
+                        .frame(width: 44, height: 60)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .accessibilityHidden(true)
                     }
-                    .frame(width: 44, height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .accessibilityHidden(true)
                 } trailing: {
                     HStack(spacing: 6) {
                         AdminStatusPill(text: b.published ? "Publicado" : "Borrador",
@@ -203,6 +249,11 @@ struct AdminDriveView: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Abre la ficha para editarlo")
+            .contextMenu {
+                Button("Abrir") { open = b }
+                Button("Renombrar") { newName = b.title; renaming = b }
+                Button("Eliminar", role: .destructive) { Task { await remove(b) } }
+            }
             .adminRowDivider(first: first, leading: 72)
         }
     }
@@ -225,6 +276,10 @@ struct AdminDriveView: View {
                       let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
                 // Un archivo suelto que sea imagen se muestra como miniatura.
                 covers[b.id] = u.absoluteString
+            } else if let f = b.file_path, AdminDriveView.isVideo(f),
+                      let u = try? await Backend.client.storage.from("library").createSignedURL(path: f, expiresIn: 3600) {
+                // Los vídeos necesitan su URL firmada para sacar el fotograma.
+                videoThumbs[b.id] = u.absoluteString
             }
         }
     }
@@ -241,11 +296,59 @@ struct AdminDriveView: View {
         } catch { show("No se pudo crear") }
     }
 
+    /// Rutas reales en el almacén de un elemento. Las portadas nuevas viven en
+    /// `site-assets` y se guardan como URL pública, así que hay que extraer la ruta.
+    private func storagePaths(_ b: Book) -> (library: [String], site: [String]) {
+        var library: [String] = []
+        var site: [String] = []
+        if let f = b.file_path { library.append(f) }
+        if let c = b.cover_path {
+            if c.hasPrefix("http") {
+                if let r = c.range(of: "/site-assets/") {
+                    let rest = String(c[r.upperBound...]).components(separatedBy: "?").first ?? ""
+                    if !rest.isEmpty { site.append(rest.removingPercentEncoding ?? rest) }
+                }
+            } else {
+                library.append(c)
+            }
+        }
+        return (library, site)
+    }
+
     private func remove(_ b: Book) async {
-        let paths = [b.file_path, b.cover_path].compactMap { $0 }.filter { !$0.hasPrefix("http") }
-        if !paths.isEmpty { _ = try? await Backend.client.storage.from("library").remove(paths: paths) }
-        _ = try? await Backend.client.from("library_books").delete().eq("id", value: b.id).execute()
-        books.removeAll { $0.id == b.id }
+        let paths = storagePaths(b)
+        if !paths.library.isEmpty { _ = try? await Backend.client.storage.from("library").remove(paths: paths.library) }
+        if !paths.site.isEmpty { _ = try? await Backend.client.storage.from("site-assets").remove(paths: paths.site) }
+        do {
+            try await Backend.client.from("library_books").delete().eq("id", value: b.id).execute()
+            books.removeAll { $0.id == b.id }
+            show("Eliminado")
+        } catch { show("No se pudo eliminar") }
+    }
+
+    /// Borra lo seleccionado y todo lo que cuelga de ello (subcarpetas incluidas).
+    private func deleteAll(_ ids: [String]) async {
+        var all = Set(ids)
+        var added = true
+        while added {
+            added = false
+            for b in books {
+                if let parent = b.parent_id, all.contains(parent), !all.contains(b.id) {
+                    all.insert(b.id); added = true
+                }
+            }
+        }
+        guard !all.isEmpty else { return }
+        let targets = books.filter { all.contains($0.id) }
+        let library = targets.flatMap { storagePaths($0).library }
+        let site = targets.flatMap { storagePaths($0).site }
+        if !library.isEmpty { _ = try? await Backend.client.storage.from("library").remove(paths: library) }
+        if !site.isEmpty { _ = try? await Backend.client.storage.from("site-assets").remove(paths: site) }
+        do {
+            try await Backend.client.from("library_books").delete().in("id", values: Array(all)).execute()
+            books.removeAll { all.contains($0.id) }
+            show(all.count == 1 ? "Eliminado" : "\(all.count) elementos eliminados")
+        } catch { show("No se pudo eliminar") }
     }
 
     private func show(_ t: String) { toast = t; Task { try? await Task.sleep(for: .seconds(2.5)); toast = nil } }
@@ -447,4 +550,66 @@ struct DriveItemEditor: View {
             message = "Enlace copiado: sirve para 1 descarga, caduca en 7 días"
         } catch { message = "No se pudo crear el enlace" }
     }
+}
+
+/// Miniatura de un vídeo subido, con la proporción real del archivo: si el vídeo es
+/// vertical se ve vertical y si es horizontal, horizontal. El fotograma se genera una
+/// sola vez por URL y se guarda en memoria.
+struct DriveVideoThumb: View {
+    let url: URL
+    @State private var image: PlatformImage?
+    @State private var ratio: CGFloat = 9.0 / 16.0
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Palette.secondary)
+            if let image {
+                Image(platformImage: image).resizable().scaledToFill()
+            } else {
+                Image(systemName: "play.rectangle").foregroundStyle(Palette.muted)
+            }
+        }
+        .frame(width: min(max(60 * ratio, 34), 107), height: 60)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .task(id: url.absoluteString) { await load() }
+        .accessibilityHidden(true)
+    }
+
+    private func load() async {
+        let key = url.absoluteString
+        if let hit = DriveVideoFrames.shared.frame(for: key) {
+            image = hit.image; ratio = hit.ratio; return
+        }
+        let asset = AVURLAsset(url: url)
+        if let track = try? await asset.loadTracks(withMediaType: .video).first,
+           let size = try? await track.load(.naturalSize), size.width > 0, size.height > 0 {
+            ratio = size.width / size.height
+        }
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 320, height: 320)
+        guard let result = try? await generator.image(at: .zero) else { return }
+        let frame = DriveVideoFrames.Frame(image: Self.platformImage(result.image), ratio: ratio)
+        DriveVideoFrames.shared.store(frame, for: key)
+        image = frame.image
+    }
+
+    private static func platformImage(_ cg: CGImage) -> PlatformImage {
+        #if os(iOS)
+        return UIImage(cgImage: cg, scale: 1, orientation: .up)
+        #else
+        return NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+        #endif
+    }
+}
+
+/// Fotogramas ya generados de las miniaturas de vídeo del Drive.
+@MainActor
+final class DriveVideoFrames {
+    static let shared = DriveVideoFrames()
+    struct Frame { let image: PlatformImage; let ratio: CGFloat }
+    private var cache: [String: Frame] = [:]
+
+    func frame(for key: String) -> Frame? { cache[key] }
+    func store(_ frame: Frame, for key: String) { cache[key] = frame }
 }

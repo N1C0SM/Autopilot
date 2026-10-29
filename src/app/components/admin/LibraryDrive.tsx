@@ -80,6 +80,50 @@ const mediaLabel = (path: string | null | undefined): string => {
   return extOf(path || "").toUpperCase() || "Archivo";
 };
 
+/** Rutas del almacén de un elemento, separadas por bucket (`site-assets` o `library`). */
+const storagePathsOf = (items: Book[]) => {
+  const library: string[] = [];
+  const site: string[] = [];
+  for (const b of items) {
+    if (b.file_path) library.push(b.file_path);
+    if (!b.cover_path) continue;
+    if (b.cover_path.startsWith("http")) {
+      const marker = "/site-assets/";
+      const at = b.cover_path.indexOf(marker);
+      if (at >= 0) site.push(decodeURIComponent(b.cover_path.slice(at + marker.length).split("?")[0]));
+    } else {
+      library.push(b.cover_path);
+    }
+  }
+  return { library, site };
+};
+
+/**
+ * Miniatura de un vídeo con la proporción real del archivo: un vídeo vertical
+ * se ve vertical y uno horizontal, horizontal (`preload="metadata"`, sin descargarlo).
+ */
+const VideoThumb = ({ src }: { src: string }) => {
+  const [ratio, setRatio] = useState<number | null>(null);
+  const width = Math.min(Math.max(60 * (ratio ?? 0.75), 34), 107);
+  return (
+    <div className="relative shrink-0 overflow-hidden rounded-[10px] bg-secondary" style={{ height: 60, width }}>
+      <video
+        src={src}
+        preload="metadata"
+        muted
+        playsInline
+        aria-hidden="true"
+        tabIndex={-1}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
+        }}
+        className="h-full w-full object-cover"
+      />
+    </div>
+  );
+};
+
 
 interface Book {
   id: string;
@@ -125,8 +169,11 @@ const LibraryDrive = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [covers, setCovers] = useState<Record<string, string>>({});
-  /** Miniaturas de archivos que son imágenes y no tienen portada propia. */
+  /** Miniaturas de archivos que son imágenes o vídeos y no tienen portada propia. */
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  /** Modo selección para borrar varios elementos (o todo) de una vez. */
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
   const [path, setPath] = useState<{ id: string; title: string }[]>([]);
   const { ask, dialog: confirmDialog } = useConfirm();
   const { ask: askText, dialog: promptDialog } = useTextPrompt();
@@ -163,8 +210,9 @@ const LibraryDrive = () => {
           }
           continue;
         }
-        // Un archivo suelto que sea imagen se muestra como miniatura.
-        if (!b.cover_path && b.file_path && !thumbs[b.id] && mediaKindOf(b.file_path) === "image") {
+        // Un archivo suelto que sea imagen o vídeo se muestra como miniatura.
+        const media = mediaKindOf(b.file_path);
+        if (!b.cover_path && b.file_path && !thumbs[b.id] && (media === "image" || media === "video")) {
           const { data } = await supabase.storage.from("library").createSignedUrl(b.file_path, 3600);
           if (data?.signedUrl) thumbEntries[b.id] = data.signedUrl;
         }
@@ -230,20 +278,71 @@ const LibraryDrive = () => {
   };
 
   const rename = async (b: Book) => {
-    const title = await askText({ title: "Nombre de la carpeta", initialValue: b.title });
+    const title = await askText({ title: "Nombre", initialValue: b.title });
     if (!title) return;
-    await supabase.from("library_books").update({ title }).eq("id", b.id);
+    const { error } = await supabase.from("library_books").update({ title }).eq("id", b.id);
+    if (error) { toast.error("No se pudo renombrar"); return; }
     patch(b.id, { title });
   };
 
-  const remove = async (b: Book) => {
-    if (!(await ask({ title: `¿Eliminar «${b.title || "sin título"}»?`, description: "Se eliminará con todo lo que contiene." }))) return;
-    const paths = [b.cover_path, b.file_path].filter((x) => x && !x.startsWith("http")) as string[];
-    if (paths.length) await supabase.storage.from("library").remove(paths);
-    await supabase.from("library_books").delete().eq("id", b.id);
+  /** Un elemento y todo lo que cuelga de él (las subcarpetas se borran en cascada). */
+  const withDescendants = (ids: string[]) => {
+    const all = new Set(ids);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const b of books) {
+        if (b.parent_id && all.has(b.parent_id) && !all.has(b.id)) { all.add(b.id); added = true; }
+      }
+    }
+    return [...all];
+  };
+
+  const removeMany = async (ids: string[]): Promise<boolean> => {
+    const all = withDescendants(ids);
+    const targets = books.filter((b) => all.includes(b.id));
+    const { library, site } = storagePathsOf(targets);
+    // Primero los archivos y después las filas: si algo falla, se ve el error en vez de
+    // dejar elementos fantasma apuntando a archivos que ya no existen.
+    if (library.length) {
+      const { error } = await supabase.storage.from("library").remove(library);
+      if (error) console.warn("No se pudieron borrar todos los archivos", error);
+    }
+    if (site.length) {
+      const { error } = await supabase.storage.from("site-assets").remove(site);
+      if (error) console.warn("No se pudieron borrar todas las portadas", error);
+    }
+    const { error } = await supabase.from("library_books").delete().in("id", all);
+    if (error) {
+      console.error("Could not delete Drive items", error);
+      toast.error("No se pudo eliminar");
+      return false;
+    }
+    setBooks((arr) => arr.filter((b) => !all.includes(b.id)));
     setOpenId(null);
-    toast.success("Eliminado");
-    load();
+    setSelected([]);
+    setSelecting(false);
+    toast.success(all.length === 1 ? "Eliminado" : `${all.length} elementos eliminados`);
+    return true;
+  };
+
+  const remove = async (b: Book) => {
+    const confirmed = await ask({
+      title: `¿Eliminar «${b.title || "sin título"}»?`,
+      description: b.kind === "folder" || b.is_folder
+        ? "Se eliminará la carpeta con todo lo que contiene."
+        : "Se eliminará el elemento y su archivo. No se puede deshacer.",
+    });
+    if (confirmed) await removeMany([b.id]);
+  };
+
+  const removeSelected = async () => {
+    if (!selected.length) return;
+    const confirmed = await ask({
+      title: selected.length === 1 ? "¿Eliminar 1 elemento?" : `¿Eliminar ${selected.length} elementos?`,
+      description: "Se eliminarán sus archivos. No se puede deshacer.",
+    });
+    if (confirmed) await removeMany(selected);
   };
 
   const upload = async (b: Book, kind: "cover" | "file", file: File) => {
@@ -348,8 +447,11 @@ const LibraryDrive = () => {
 
   const previewPath = books.find((b) => b.id === openId)?.file_path || null;
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  /** Proporción real del vídeo para que la vista previa respete su orientación. */
+  const [videoRatio, setVideoRatio] = useState<number | null>(null);
   useEffect(() => {
     setPreviewUrl(null);
+    setVideoRatio(null);
     if (!previewPath) return;
     let active = true;
     supabase.storage.from("library").createSignedUrl(previewPath, 1800).then(({ data, error }) => {
@@ -428,7 +530,19 @@ const LibraryDrive = () => {
         return <img src={previewUrl} alt={open.title || "Archivo"} className="h-full w-full bg-secondary object-contain" />;
       }
       if (fileKind === "video") {
-        return <video src={previewUrl} controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" />;
+        return (
+          <video
+            src={previewUrl}
+            controls
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={(e) => {
+              const v = e.currentTarget;
+              if (v.videoWidth && v.videoHeight) setVideoRatio(v.videoWidth / v.videoHeight);
+            }}
+            className="h-full w-full bg-black object-contain"
+          />
+        );
       }
       if (fileKind === "audio") {
         return (
@@ -474,7 +588,10 @@ const LibraryDrive = () => {
             />
           </label>
         </div>
-        <div className={isVideo ? "relative aspect-video w-full overflow-hidden rounded-2xl bg-card" : previewBox}>
+        <div
+          className={`${isVideo ? "relative w-full overflow-hidden rounded-2xl bg-card" : previewBox} ${isVideo && !videoRatio ? "aspect-video" : ""}`}
+          style={isVideo && videoRatio ? { aspectRatio: String(videoRatio), maxHeight: "70vh" } : undefined}
+        >
           {renderPreview()}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -771,6 +888,7 @@ const LibraryDrive = () => {
 
   const items = books.filter((b) => (b.parent_id || null) === parentId);
   const countInside = (id: string) => books.filter((b) => b.parent_id === id).length;
+  const allSelected = items.length > 0 && selected.length === items.length;
 
   return (
     <div className="w-full space-y-4">
@@ -783,7 +901,7 @@ const LibraryDrive = () => {
       <div className="flex items-center justify-between gap-2">
         <nav aria-label="Ruta" className="no-scrollbar -ml-2 flex min-w-0 flex-1 items-center overflow-x-auto type-subhead">
           <button
-            onClick={() => { void hapticTap(); setPath([]); }}
+            onClick={() => { void hapticTap(); setPath([]); setSelected([]); }}
             className={`inline-flex min-h-[44px] shrink-0 items-center px-2 transition-opacity active:opacity-60 ${path.length === 0 ? "font-semibold" : "text-primary"}`}
           >
             Drive
@@ -792,7 +910,7 @@ const LibraryDrive = () => {
             <span key={p.id} className="flex shrink-0 items-center">
               <ChevronRight className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
               <button
-                onClick={() => { void hapticTap(); setPath((arr) => arr.slice(0, i + 1)); }}
+                onClick={() => { void hapticTap(); setPath((arr) => arr.slice(0, i + 1)); setSelected([]); }}
                 className={`inline-flex min-h-[44px] items-center px-2 transition-opacity active:opacity-60 ${i === path.length - 1 ? "font-semibold" : "text-primary"}`}
               >
                 {p.title}
@@ -801,30 +919,61 @@ const LibraryDrive = () => {
           ))}
         </nav>
         <div className="-mr-2 flex shrink-0 items-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="plain" onClick={() => void hapticTap()}>Nuevo</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuItem onClick={() => create("folder")}>
-                <FolderPlus className="mr-2 h-4 w-4" /> Carpeta
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("book")}>
-                <BookOpen className="mr-2 h-4 w-4" /> Libro (portada + archivo)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("pack")}>
-                <Package className="mr-2 h-4 w-4" /> Pack (elige libros)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("video")}>
-                <Video className="mr-2 h-4 w-4" /> Vídeo (archivo o enlace)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => create("file")}>
-                <FileIcon className="mr-2 h-4 w-4" /> Archivo (imagen, vídeo, PDF…)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {selecting ? (
+            <Button variant="plain" onClick={() => { void hapticTap(); setSelecting(false); setSelected([]); }}>
+              Cancelar
+            </Button>
+          ) : (
+            <>
+              {items.length > 0 && (
+                <Button variant="plain" onClick={() => { void hapticTap(); setSelected([]); setSelecting(true); }}>
+                  Seleccionar
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="plain" onClick={() => void hapticTap()}>Nuevo</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem onClick={() => create("folder")}>
+                    <FolderPlus className="mr-2 h-4 w-4" /> Carpeta
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => create("book")}>
+                    <BookOpen className="mr-2 h-4 w-4" /> Libro (portada + archivo)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => create("pack")}>
+                    <Package className="mr-2 h-4 w-4" /> Pack (elige libros)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => create("video")}>
+                    <Video className="mr-2 h-4 w-4" /> Vídeo (archivo o enlace)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => create("file")}>
+                    <FileIcon className="mr-2 h-4 w-4" /> Archivo (imagen, vídeo, PDF…)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
         </div>
       </div>
+
+      {selecting && (
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="plain"
+            className="-ml-3"
+            onClick={() => {
+              void hapticTap();
+              setSelected(allSelected ? [] : items.map((b) => b.id));
+            }}
+          >
+            {allSelected ? "Ninguno" : "Todos"}
+          </Button>
+          <Button variant="destructive" disabled={selected.length === 0} onClick={() => void removeSelected()}>
+            {selected.length ? `Eliminar (${selected.length})` : "Eliminar"}
+          </Button>
+        </div>
+      )}
 
       {items.length === 0 ? (
         <EmptyState
@@ -836,6 +985,11 @@ const LibraryDrive = () => {
         <ListGroup>
           {items.map((b) => {
             const kind: Kind = b.kind || (b.is_pack ? "pack" : b.is_folder ? "folder" : "book");
+            const isSelected = selected.includes(b.id);
+            const toggleSelect = () => {
+              void hapticSelection();
+              setSelected((s) => (s.includes(b.id) ? s.filter((x) => x !== b.id) : [...s, b.id]));
+            };
             if (kind === "folder") {
               return (
                 <ListRow
@@ -843,28 +997,33 @@ const LibraryDrive = () => {
                   icon={<Folder />}
                   title={b.title}
                   subtitle={`${countInside(b.id)} elementos`}
-                  onClick={() => setPath((p) => [...p, { id: b.id, title: b.title }])}
+                  onClick={selecting ? toggleSelect : () => setPath((p) => [...p, { id: b.id, title: b.title }])}
                   trailing={
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="-mr-2 text-muted-foreground" aria-label={`Opciones de ${b.title || "la carpeta"}`} onClick={() => void hapticTap()}>
-                          <MoreHorizontal className="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuItem onClick={() => void rename(b)}>Renombrar</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(b)}>
-                          Eliminar carpeta
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    selecting ? (
+                      <Checkbox checked={isSelected} onCheckedChange={toggleSelect} aria-label={`Seleccionar ${b.title || "la carpeta"}`} />
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="-mr-2 text-muted-foreground" aria-label={`Opciones de ${b.title || "la carpeta"}`} onClick={() => void hapticTap()}>
+                            <MoreHorizontal className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem onClick={() => void rename(b)}>Renombrar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(b)}>
+                            Eliminar carpeta
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )
                   }
                 />
               );
             }
 
             const packCover = kind === "pack" ? covers[(b.pack_items || [])[0]] : undefined;
-            const thumb = covers[b.id] || thumbs[b.id] || packCover;
+            const thumb = covers[b.id] || packCover;
+            const fileUrl = thumbs[b.id];
             const detail =
               kind === "book" ? `${b.file_path ? "Archivo listo" : "Sin archivo"} · ${b.cover_path ? "con portada" : "sin portada"}`
               : kind === "pack" ? `${(b.pack_items || []).length} libros incluidos`
@@ -872,25 +1031,66 @@ const LibraryDrive = () => {
               : kind === "video" ? (b.file_path ? mediaLabel(b.file_path) : b.video_url ? "Enlace añadido" : "Sin contenido")
               : b.buy_url_test || b.buy_url_live || b.buy_url ? `Stripe ${b.buy_url_test ? "Test" : ""}${b.buy_url_test && b.buy_url_live ? " + " : ""}${b.buy_url_live ? "Live" : ""}`.trim() : "Sin enlace";
 
+            // Con archivo propio, la miniatura es el archivo: un vídeo vertical se ve
+            // vertical y uno horizontal, horizontal.
+            const leading = thumb ? (
+              <ImageWithFallback
+                src={thumb}
+                className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover"
+                fallback={
+                  <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
+                    {kindIcon(kind)}
+                  </div>
+                }
+              />
+            ) : fileUrl && mediaKindOf(b.file_path) === "video" ? (
+              <VideoThumb src={fileUrl} />
+            ) : fileUrl ? (
+              <ImageWithFallback
+                src={fileUrl}
+                className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover"
+                fallback={
+                  <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
+                    {kindIcon(kind)}
+                  </div>
+                }
+              />
+            ) : (
+              <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
+                {kindIcon(kind)}
+              </div>
+            );
+
             return (
               <ListRow
                 key={b.id}
-                leading={
-                  <ImageWithFallback
-                    src={thumb}
-                    className="h-[60px] w-11 shrink-0 rounded-[10px] object-cover"
-                    fallback={
-                      <div className="flex h-[60px] w-11 shrink-0 items-center justify-center rounded-[10px] bg-secondary text-muted-foreground">
-                        {kindIcon(kind)}
-                      </div>
-                    }
-                  />
-                }
+                leading={leading}
                 title={b.title || "Sin título"}
                 subtitle={`${KIND_LABEL[kind]} · ${detail}`}
-                value={b.published ? "Publicado" : "Borrador"}
-                chevron
-                onClick={() => setOpenId(b.id)}
+                value={selecting ? undefined : b.published ? "Publicado" : "Borrador"}
+                onClick={selecting ? toggleSelect : () => setOpenId(b.id)}
+                trailing={
+                  selecting ? (
+                    <Checkbox checked={isSelected} onCheckedChange={toggleSelect} aria-label={`Seleccionar ${b.title || "el elemento"}`} />
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="-mr-2 text-muted-foreground" aria-label={`Opciones de ${b.title || "el elemento"}`} onClick={() => void hapticTap()}>
+                          <MoreHorizontal className="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem onClick={() => setOpenId(b.id)}>
+                          <Eye className="mr-2 h-4 w-4" /> Abrir
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void rename(b)}>Renombrar</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => void remove(b)}>
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )
+                }
               />
             );
           })}
