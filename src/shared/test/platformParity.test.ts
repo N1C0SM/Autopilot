@@ -98,6 +98,9 @@ describe("paridad web ↔ apps nativas", () => {
       expect(app).toContain(msg);
     }
     expect(app).not.toMatch(/self\.error = "[^"]*\\\(serverMessage\)/);
+    // La foto se sube como archivo en la web y en el Mac (allí la fototeca puede no existir).
+    expect(web).toMatch(/type="file"\s+accept="image\/\*"/);
+    expect(app).toMatch(/\.fileImporter\(isPresented: \$importingFile, allowedContentTypes: \[\.image\]\)/);
     expect(web).not.toMatch(/toast\.error\(msg\)|toast\.error\(`[^`]*\$\{msg\}/);
   });
 });

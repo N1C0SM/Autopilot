@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import ImageIO
+import UniformTypeIdentifiers
 import Supabase
 #if os(iOS)
 import UIKit
@@ -25,6 +26,9 @@ struct ScanView: View {
     @State private var backJPEG: Data?
     @State private var frontItem: PhotosPickerItem?
     @State private var backItem: PhotosPickerItem?
+    /// Mac: la foto se elige como archivo (la fototeca puede no existir: «No Library Found»).
+    @State private var importingFile = false
+    @State private var importingFront = true
     @State private var goal = ""
     @State private var analyzing = false
     @State private var result: ScanResult?
@@ -65,6 +69,12 @@ struct ScanView: View {
         .onChange(of: frontItem) { _, item in Task { await pick(item, isFront: true) } }
         .onChange(of: backItem) { _, item in Task { await pick(item, isFront: false) } }
         .task { await loadBiometrics() }
+        #if os(macOS)
+        .fileImporter(isPresented: $importingFile, allowedContentTypes: [.image]) { result in
+            let isFront = importingFront
+            if case .success(let url) = result { Task { await pickFile(url, isFront: isFront) } }
+        }
+        #endif
     }
 
     // MARK: - Cabecera
@@ -86,10 +96,10 @@ struct ScanView: View {
         ZStack {
             HStack(spacing: 12) {
                 photoTile(title: "Delante", hint: "Cuerpo completo", badge: "Obligatoria",
-                          image: front, item: $frontItem, silhouette: "figure.stand")
+                          image: front, item: $frontItem, isFront: true, silhouette: "figure.stand")
                     .disabled(analyzing)
                 photoTile(title: "Atrás", hint: "Opcional", badge: "Opcional",
-                          image: back, item: $backItem, silhouette: "figure.stand")
+                          image: back, item: $backItem, isFront: false, silhouette: "figure.stand")
                     .disabled(analyzing)
             }
             .opacity(analyzing ? 0.35 : 1)
@@ -193,65 +203,80 @@ struct ScanView: View {
     }
 
     private func photoTile(title: String, hint: String, badge: String,
-                           image: PlatformImage?, item: Binding<PhotosPickerItem?>,
+                           image: PlatformImage?, item: Binding<PhotosPickerItem?>, isFront: Bool,
                            silhouette: String) -> some View {
+        #if os(macOS)
+        Button {
+            importingFront = isFront
+            importingFile = true
+        } label: { photoTileLabel(title: title, hint: hint, badge: badge, image: image, silhouette: silhouette) }
+        .buttonStyle(.plain)
+        .accessibilityLabel(image == nil ? "\(title), \(hint), \(badge). Pulsa para elegir foto" : "\(title) elegida. Pulsa para cambiarla")
+        .accessibilityHint("Abre una ventana para elegir el archivo de la foto")
+        #else
         PhotosPicker(selection: item, matching: .images) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).fill(Palette.card)
-                if let image {
-                    Image(platformImage: image).resizable().scaledToFill()
-                        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
-                } else {
-                    RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 6]))
-                        .foregroundStyle(Palette.gold.opacity(0.35))
-                    Image(systemName: silhouette)
-                        .font(.inter(size: 150, weight: .ultraLight))
-                        .foregroundStyle(Color.white.opacity(0.06))
-                        .accessibilityHidden(true)
-                    // Todo centrado: cruz, título y pista.
-                    VStack(spacing: 8) {
-                        Image(systemName: "plus")
-                            .font(.inter(size: 20, weight: .bold)).foregroundStyle(Palette.gold)
-                            .frame(width: 54, height: 54)
-                            .background(Palette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        Text(title).font(.apHeadline)
-                        Text(hint).font(.apSubhead).foregroundStyle(Palette.muted)
-                    }
-                }
-
-                // Badge arriba a la derecha, sin desplazar el centro.
-                VStack {
-                    HStack {
-                        Spacer()
-                        Text(badge)
-                            .font(.apCaption.weight(.semibold))
-                            .foregroundStyle(badge == "Opcional" ? Palette.muted : Palette.gold)
-                            .padding(.horizontal, 9).padding(.vertical, 4)
-                            .background(.black.opacity(0.45), in: Capsule())
-                    }
-                    Spacer()
-                }
-                .padding(10)
-
-                if image != nil {
-                    VStack {
-                        Spacer()
-                        Text("Cambiar foto")
-                            .font(.apFootnote.weight(.semibold))
-                            .foregroundStyle(Palette.foreground)
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .padding(.bottom, 12)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity).frame(height: 240)
-            .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            photoTileLabel(title: title, hint: hint, badge: badge, image: image, silhouette: silhouette)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(image == nil ? "\(title), \(hint), \(badge). Toca para elegir foto" : "\(title) elegida. Toca para cambiarla")
         .accessibilityHint("Abre tu fototeca para elegir la foto")
+        #endif
+    }
+
+    private func photoTileLabel(title: String, hint: String, badge: String,
+                                image: PlatformImage?, silhouette: String) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).fill(Palette.card)
+            if let image {
+                Image(platformImage: image).resizable().scaledToFill()
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6, 6]))
+                    .foregroundStyle(Palette.gold.opacity(0.35))
+                Image(systemName: silhouette)
+                    .font(.inter(size: 150, weight: .ultraLight))
+                    .foregroundStyle(Color.white.opacity(0.06))
+                    .accessibilityHidden(true)
+                // Todo centrado: cruz, título y pista.
+                VStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.inter(size: 20, weight: .bold)).foregroundStyle(Palette.gold)
+                        .frame(width: 54, height: 54)
+                        .background(Palette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    Text(title).font(.apHeadline)
+                    Text(hint).font(.apSubhead).foregroundStyle(Palette.muted)
+                }
+            }
+
+            // Badge arriba a la derecha, sin desplazar el centro.
+            VStack {
+                HStack {
+                    Spacer()
+                    Text(badge)
+                        .font(.apCaption.weight(.semibold))
+                        .foregroundStyle(badge == "Opcional" ? Palette.muted : Palette.gold)
+                        .padding(.horizontal, 9).padding(.vertical, 4)
+                        .background(.black.opacity(0.45), in: Capsule())
+                }
+                Spacer()
+            }
+            .padding(10)
+
+            if image != nil {
+                VStack {
+                    Spacer()
+                    Text("Cambiar foto")
+                        .font(.apFootnote.weight(.semibold))
+                        .foregroundStyle(Palette.foreground)
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(.bottom, 12)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity).frame(height: 240)
+        .clipShape(RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
 
@@ -299,6 +324,19 @@ struct ScanView: View {
     /// decodificada en el MainActor era un tirón visible al elegirla) y se guarda ya en JPEG.
     private func pick(_ item: PhotosPickerItem?, isFront: Bool) async {
         let picked = await Self.picked(item)
+        show(picked, isFront: isFront, requested: item != nil)
+    }
+
+    /// Mac: archivo elegido en el Finder; se lee y se reduce fuera del hilo principal.
+    private func pickFile(_ url: URL, isFront: Bool) async {
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
+        let data = await Task.detached(priority: .userInitiated) { try? Data(contentsOf: url) }.value
+        let picked = await Self.prepared(data)
+        show(picked, isFront: isFront, requested: true)
+    }
+
+    private func show(_ picked: (image: PlatformImage, jpeg: Data)?, isFront: Bool, requested: Bool) {
         if isFront {
             front = picked?.image
             frontJPEG = picked?.jpeg
@@ -307,11 +345,16 @@ struct ScanView: View {
             backJPEG = picked?.jpeg
         }
         // No se deja la foto anterior en pantalla si la nueva no se pudo abrir.
-        if item != nil, picked == nil { error = "No se pudo abrir esa foto. Prueba con otra." }
+        if requested, picked == nil { error = "No se pudo abrir esa foto. Prueba con otra." }
     }
 
     private static func picked(_ item: PhotosPickerItem?) async -> (image: PlatformImage, jpeg: Data)? {
-        guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return nil }
+        guard let item else { return nil }
+        return await prepared(try? await item.loadTransferable(type: Data.self))
+    }
+
+    private static func prepared(_ data: Data?) async -> (image: PlatformImage, jpeg: Data)? {
+        guard let data else { return nil }
         return await Task.detached(priority: .userInitiated) { () -> (image: PlatformImage, jpeg: Data)? in
             guard let image = PlatformImage.downscaled(from: data, maxSide: 1600),
                   let jpeg = image.jpegData() else { return nil }
