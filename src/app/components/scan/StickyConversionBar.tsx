@@ -32,7 +32,7 @@ function StickyBar({ onCta }: { onCta: () => void }) {
         >
           <div className="material rounded-2xl shadow-2xl p-2 pl-4 flex items-center gap-3">
             <div className="min-w-0 flex-1">
-              <div className="type-headline truncate">Tu rutina, a partir de este scan</div>
+              <div className="type-headline truncate">Tu rutina a medida</div>
               <div className="type-footnote text-muted-foreground truncate">Gratis · Sin tarjeta</div>
             </div>
             <Button
